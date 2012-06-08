@@ -1,0 +1,197 @@
+    /* Help & Manual Premium Pack Version 1.51 CSS Settings */
+	/* Copyright 2008 - 2011 by Tim Green */
+
+@media screen{
+
+/* Resetting styles for topics without headers */
+  body {    
+      margin:0; 
+      padding:0; 
+      padding: 10px 15px 5px 10px;
+     } 
+
+  #idcontent {    
+      padding: 0;
+      margin: 0;
+   } 
+
+  #innerdiv { 
+  	/* Transparent border stops Firefox italics bug */
+	  border: 1px solid transparent !important;
+	  border: 0;
+      padding: 0;
+      margin: 0; 
+   } 
+  /* Styles for the various hyperlink types */
+a { color: blue; text-decoration: none; }
+a:visited {color: blue; }
+a:hover {color: blue; text-decoration: underline; }
+a.weblink {color: blue; text-decoration: underline; }
+a.weblink:visited {color: blue; }
+a.weblink:hover {color: blue; text-decoration: underline; }
+a.popuplink {color: red; text-decoration: none; }
+a.popuplink:visited {color: red;}
+a.popuplink:hover {color: red; text-decoration: underline; }
+a.filelink {color: green; text-decoration: none; }
+a.filelink:visited {color: green; }
+a.filelink:hover {color: green; text-decoration: underline; }
+/* Hide annoying link and image link selection outlines */
+a {outline: 0 none;}
+
+/* Sortable Tables */
+    table a.sortheader img {
+    border: 0;
+    }
+    a.sortheader {
+	color: black;
+	text-decoration: none;
+	white-space: nowrap;
+	}
+    a.sortheader:visited {
+	color: black;
+	text-decoration: none;
+	}	
+    a.sortheader:hover {
+	color: black;
+	text-decoration: none;
+	}	
+
+/* Advanced Popups Container */
+ 
+div.popups {
+	visibility: hidden;
+	width: auto;
+	margin: 0;
+	padding: 0 7px 7px 0;
+	overflow: auto;
+	position: absolute;
+	z-index: 900;
+	border: 0px solid red;
+	border-width: 2px;    
+	border-style: solid;
+    border-bottom-color: #333333;
+    border-right-color: #555555;
+    border-left-color: #EEEEEE;
+    border-top-color: #EEEEEE;
+	-moz-border-radius: 5px; 
+	-webkit-border-radius: 5px; 
+	border-radius: 5px;
+	-moz-box-shadow: 2px 2px 3px #969696; 
+	-webkit-box-shadow: 2px 2px 3px #969696;
+	box-shadow: 2px 2px 3px #969696;
+	background-color: #fff;  zoom: 1;  
+	filter: progid:DXImageTransform.Microsoft.Shadow(color='#969696', Direction=135, Strength=3);
+}
+
+/* Permalink Box */	
+	
+div#permalink {
+	position: fixed;
+	bottom: 60px;
+	left: 20px;
+	z-index: 1000;
+	visibility: hidden;
+	padding: 3px 0 2px 0;
+	background-color:#fdfcdc;
+	overflow: hidden;
+	zoom: 100%;
+}
+div#permalink textarea {
+	position: relative;
+	text-align: center;
+	margin: 0 auto;
+	word-wrap: break-word;
+	font-family: Verdana, Tahoma, Arial, Sans-Serif;
+	font-size: 11px; 
+	font-weight: bold;
+}
+
+.dlgHowTo {
+	font-family: Verdana, Tahoma, Arial, Sans-Serif;
+	font-size: 12px;
+	line-height: 1.1em;
+	margin: 0;
+	padding: 2px;
+	text-align: center;
+	white-space: nowrap;  
+}
+
+
+/* IntenseDebate comments styles */
+
+   p#commentLink1 {
+   text-align: right;
+   margin: -8px 0 5px 0;
+   }
+   p#commentLink2 {
+   text-align: right;
+   margin: 5px 0;
+   }
+   
+   a.commentLink {
+   font-size: 10pt; 
+   font-family: 'Arial'; 
+   font-style: normal; 
+   font-weight: bold; 
+   color: blue; 
+   text-decoration: none;
+   }
+   a.commentLink:visited {
+   color: blue;
+   }
+   a.commentLink:hover {
+   text-decoration: underline;
+   }
+   span.comments {
+   color: red;
+   }
+   
+   div#commentsBox {
+   display: none;
+   z-index: 2000;
+   width: 90%;
+   min-width: 500px;
+   max-width: 800px;
+    border: 1px solid #ccc; 
+   -moz-border-radius: 10px;
+   -webkit-border-radius: 10px;
+   border-radius: 10px;
+   -moz-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   -webkit-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);   
+   background-color: #F5F5F5; 
+   padding: 10px; 
+   margin: 20px auto 10px auto; 
+   }
+   
+   table#TOGGLEcomments {
+   display: block;
+   z-index: 1999;
+   width: 100%;
+   border: 1px solid #ccc; 
+   -moz-border-radius: 10px;
+   -webkit-border-radius: 10px;
+   border-radius: 10px;
+   -moz-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   -webkit-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);   
+   border-spacing:0px; 
+   background-color: #F5F5F5; 
+   margin-bottom: 25px; 
+   }
+   
+   td#commentsCell {
+   text-align: left; 
+   text-indent: 0px; 
+   padding: 10px; 
+   margin: 0px 0px 5px 0px; 
+   }
+
+
+} /* End Media Screen */
+
+@media print{
+     #idnav, .idnav, .idnav a, #breadcrumbs,#autoTocWrapper,#idheader,#permalink ,.popups,.help-url{ display:none;}
+     #printheader {display:block; font-weight: bold; margin: 5px 0 20px 0;}
+     #printtitle {font-weight: bold;}
+} /* End Media Print Block*/

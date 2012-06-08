@@ -141,7 +141,7 @@ class TargetResource(MetricResource, ConfParamResource):
         queryset = ManagedTarget.objects.all()
         resource_name = 'target'
         excludes = ['not_deleted', 'bytes_per_inode']
-        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}
+        filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'host_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['volume_name', 'name']

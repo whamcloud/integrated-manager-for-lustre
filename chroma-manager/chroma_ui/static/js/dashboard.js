@@ -865,9 +865,9 @@ var Dashboard = (function() {
     });
 
     chart_manager.add_chart('readwrite', 'servers', {
-      // FIXME: filter by targets on this server
       url: function() { return 'target/metric/'; },
       api_params: { reduce_fn: 'sum', kind: 'OST'},
+      api_params_callback: function(api_params, chart) { api_params.host_id = dashboard_server.id; return api_params; },
       metrics: ["stats_read_bytes", "stats_write_bytes"],
       series_callbacks: [
         function(timestamp, data, index, chart) {

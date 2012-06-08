@@ -112,10 +112,10 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # Define where we expect targets for volumes to be started on depending on our failover state.
         volumes_expected_hosts_in_normal_state = {
-            mgt_volume['id']: target_hosts['mgt']['primary']['nodename'],
-            mdt_volume['id']: target_hosts['mdt']['primary']['nodename'],
-            ost_volume_1['id']: target_hosts['ost1']['primary']['nodename'],
-            ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
+            mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
+            mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
+            ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
+            ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
         }
 
         # Verify targets are started on the correct hosts
@@ -140,10 +140,10 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         if config['failover_is_configured']:
             # Test MGS failover
             volumes_expected_hosts_in_failover_state = {
-                mgt_volume['id']: target_hosts['mgt']['failover']['nodename'],
-                mdt_volume['id']: target_hosts['mdt']['primary']['nodename'],
-                ost_volume_1['id']: target_hosts['ost1']['primary']['nodename'],
-                ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
+                mgt_volume['id']: target_hosts['mgt']['failover']['fqdn'],
+                mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
+                ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
+                ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
             }
 
             self.failover(
@@ -162,10 +162,10 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
             # Test MDS failover
             volumes_expected_hosts_in_failover_state = {
-                mgt_volume['id']: target_hosts['mgt']['primary']['nodename'],
-                mdt_volume['id']: target_hosts['mdt']['failover']['nodename'],
-                ost_volume_1['id']: target_hosts['ost1']['primary']['nodename'],
-                ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
+                mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
+                mdt_volume['id']: target_hosts['mdt']['failover']['fqdn'],
+                ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
+                ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
             }
 
             self.failover(
@@ -184,10 +184,10 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
             # Test failing over an OSS
             volumes_expected_hosts_in_failover_state = {
-                mgt_volume['id']: target_hosts['mgt']['primary']['nodename'],
-                mdt_volume['id']: target_hosts['mdt']['primary']['nodename'],
-                ost_volume_1['id']: target_hosts['ost1']['failover']['nodename'],
-                ost_volume_2['id']: target_hosts['ost2']['primary']['nodename'],
+                mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
+                mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
+                ost_volume_1['id']: target_hosts['ost1']['failover']['fqdn'],
+                ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
             }
 
             self.failover(

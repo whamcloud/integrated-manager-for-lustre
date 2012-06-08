@@ -1,3 +1,4 @@
+import re
 import time
 
 from testconfig import config
@@ -139,9 +140,10 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         # Verify target attributes
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
+            target_host_config = self.get_host_config(target_config['primary_server'])
             self.assertEqual(target_config['kind'], target['kind'])
-            self.assertEqual(target_config['primary_server_name'], target['primary_server_name'])
-            self.assertEqual(target_config['primary_server_name'], target['active_host_name'])
+            self.assertEqual(target_host_config['fqdn'], target['primary_server_name'])
+            self.assertEqual(target_host_config['fqdn'], target['active_host_name'])
             self.assertTrue(target['immutable_state'])
             self.assertEqual('mounted', target['state'])
 
@@ -168,10 +170,24 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         # Verify detects target unmount.
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
-            self.remote_command(
-                target_config['primary_server_name'],
-                "umount %s" % target_config['mount_path']
+            target_host_config = self.get_host_config(target_config['primary_server'])
+            stdin, stdout, stderr = self.remote_command(
+                target_host_config['address'],
+                'mount'
             )
+            if re.search("on %s" % target_config['mount_path'], stdout.read()):
+                self.remote_command(
+                    target_host_config['address'],
+                    "umount %s" % target_config['mount_path'],
+                )
+                stdin, stdout, stderr = self.remote_command(
+                    target_host_config['address'],
+                    'mount'
+                )
+                self.assertNotRegexpMatches(
+                    stdout.read(),
+                    "on %s" % target_config['mount_path']
+                )
 
         # Wait for audit
         time.sleep(30)
@@ -181,7 +197,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         self.assertEqual(response.successful, True, response.text)
         targets = response.json['objects']
         for target in targets:
-            self.assertEqual('unmounted', target['state'])
+            self.assertEqual('unmounted', target['state'], target)
 
         # Verify filesystem is unavailable
         response = self.chroma_manager.get(

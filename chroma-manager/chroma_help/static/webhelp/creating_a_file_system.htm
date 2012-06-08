@@ -1,0 +1,219 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head> 
+   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+   <title>Creating a Lustre File System</title> 
+   <meta name="generator" content="Help &amp; Manual" /> 
+   <meta name="keywords" content="" />
+   <meta name="description" content="Creating a Lustre File System" />
+   <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link type="text/css" href="custom.css" rel="stylesheet" />
+   <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+   <script type="text/javascript" src="nsh.js"></script>
+
+
+   <script type="text/javascript">
+
+var togTocButton = "";
+$(document).ready(function() {
+  chromeBugCheck("workaround",false);
+   
+   });
+</script>
+
+
+
+<!-- CSS set with project variables and local attributes -->
+<style type="text/css">
+   body { background: #fff; } 
+   #breadcrumbs { width: 100%; background-color: white; border: 1px solid #636363; padding: 2px 0 1px 2px;
+   margin: 3px 0; font-size: 8pt; color: #636363;}
+   #breadcrumbs a { color: #636363; text-decoration: none;}
+   #breadcrumbs a:visited { color: #636363; }
+   #breadcrumbs a:hover { color: #000; text-decoration: none; }
+   .help-url { font-size: 8pt; font-family: Verdana, Helvetica, sans-serif; 
+               color: #636363; text-align: center; margin: 15px 15px 0px 15px; 
+               padding-top: 5px; padding-bottom: 15px; border-top: 1px solid #000;}
+   .help-url a { color: #636363; text-decoration: none; }
+   .help-url a:visited { color: #636363; }
+   .help-url a:hover { color: #636363; text-decoration: underline; }
+   .highlight {background-color: #ffff40;}
+</style>
+
+
+
+<!-- Adjustment for IE -->
+<!--[if lte IE 8]>
+<style type="text/css">
+.topichead { padding-right: 0; }
+#autoTocWrapper ul li { padding: 3px 3px 4px 3px;}
+</style>
+<![endif]-->
+<!--[if lte IE 7]>
+<style type="text/css">
+#innerdiv {height: 100%;}
+</style>
+<![endif]-->
+   
+
+
+   <script type="text/javascript" src="helpman_settings.js"></script>
+   <script type="text/javascript" src="helpman_topicinit.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "creating_a_file_system.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head> 
+<body>
+<!--ZOOMSTOP-->
+
+<div id="printheader">
+<span id="printtitle">Chroma User Guide</span><br />
+<h1 class="p_Heading1"><span class="f_Heading1">Creating a Lustre File System</span></h1>
+</div>
+<div id="idheader" style= "background: #e4e4e4 url('bg_topichd.gif') repeat-x bottom;"> 
+<table id="breadtable" width="100%" border="0" cellspacing="0" cellpadding="0"> 
+  <tr >
+  <td align="left" class="breadhead" height="5">
+        
+  </td>
+  </tr>
+</table>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" id="headtable"> 
+
+<!-- Script version of NavHeader -->
+<tr id="scriptNavHead" valign="middle" style="height: auto;">
+   
+   <td align="left" class="topichead">
+   <h1 class="p_Heading1"><span class="f_Heading1">Creating a Lustre File System</span></h1>
+
+   </td>
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="configuring_the_chroma_manage2.htm"
+        onmouseover="document.images.prev.src='button_prev_h.gif'" 
+        onmouseout="document.images.prev.src='button_prev.gif'">
+        <img name="prev" src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
+     
+   </td>
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="mounting_file_system_clients.htm"
+        onmouseover="document.images.next.src='button_next_h.gif'" 
+        onmouseout="document.images.next.src='button_next.gif'"><img name="next" src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
+        
+   </td>
+   
+   
+   
+  
+   <td width="4">&nbsp;</td>
+  </tr>
+<!-- End script navheader version -->
+
+<!-- NoScript version of navheader -->
+  <tr id="noScriptNavHead" valign="middle" style="height: auto;"> 
+    <td align="left" class="topichead"> 
+    <h1 class="p_Heading1"><span class="f_Heading1">Creating a Lustre File System</span></h1>
+
+    </td>
+    <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="configuring_the_chroma_manage2.htm">
+        <img src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
+     
+   </td>
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="mounting_file_system_clients.htm">
+        <img src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
+        
+   </td>
+   
+   
+   
+   
+   <td width="4">&nbsp;</td>
+  </tr>
+<!-- End noscript navheader version -->
+  </table>
+<div id="autoTocWrapper"></div></div> 
+
+<div id="idcontent"><div id="innerdiv">
+
+<!--[if lt IE 7]><div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;'><a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode"><img src="http://storage.ie6countdown.com/assets/100/images/banners/warning_bar_0000_us.jpg" border="0" height="42" width="820" alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today." /></a></div><![endif]-->
+<!--ZOOMRESTART-->
+<p class="p_BodyText"><span class="f_BodyText">To create a new Lustre file system to be monitored and managed by Chroma Manager, complete these steps.</span></p>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="border:none;border-spacing:0px;padding:0px;line-height: normal;"><tr style="vertical-align:baseline"><td style="border:none;padding:0;width:18px"><img id="TOGGLE0186A1_ICON" src="hmtoggle_plus1.gif" width="9" height="9" alt="hmtoggle_plus1" style="border:none" /></td><td style="border:none;padding:0"><span class="f_BodyText" style="font-weight: bold;">A. <a class="dropdown-toggle" style="font-size: 11pt; font-family: Arial; font-style: normal; font-weight: bold; color: #000000; background-color: transparent; text-decoration: none;" href="javascript:HMToggle('toggle','TOGGLE0186A1','TOGGLE0186A1_ICON')">Identify the Lustre servers to Chroma Manager</a></span></td></tr></table></div><div id="TOGGLE0186A1" style="text-align: left; text-indent: -18px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 18px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; padding:0px;"><p class="p_BodyText" style="margin: 0px 0px 6px 17px;"><span class="f_BodyText">To configure the servers to be used for the file system:</span></p>
+<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 37px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">Go to </span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Configuration &gt; Servers</span><span class="f_BodyText"> &nbsp;to display the </span><span class="f_BodyText" style="font-style: italic;">Server Configuration</span><span class="f_BodyText"> page.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 37px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">Click +</span><span class="f_BodyText" style="font-weight: bold;">Add Server</span><span class="f_BodyText">.</span><span class="f_BodyText"> The </span><span class="f_BodyText" style="font-style: italic;">Add Server</span><span class="f_BodyText"> dialog is displayed.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 37px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">3.</span><span class="f_BodyText">In the </span><span class="f_BodyText" style="font-weight: bold;">Hostname</span><span class="f_BodyText"> field, enter the name of the server to be added.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 37px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">4.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Continue</span><span class="f_BodyText">.</span></p><p class="p_BodyText" style="margin: 0px 0px 6px 55px;"><span class="f_BodyText">Chroma Manager checks to ensure each server is up and connected to the network. &nbsp;Chroma Manager then does an audit of the storage resources on each server. It then checks the networking, loads Lustre modules, and makes sure the Lustre networking layer is functioning. When all checks are completed, the server is fully qualified as a Lustre server.</span></p>
+<p style="text-align: left; padding: 0px 0px 0px 36px; margin: 0px 0px 6px 17px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">5.</span><span class="f_BodyText">To add another server, click </span><span class="f_BodyText" style="font-weight: bold;">Add Another </span><span class="f_BodyText">and repeat steps 3-4.</span></p><p style="text-align: left; padding: 0px 0px 0px 36px; margin: 0px 0px 6px 17px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">6.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Close</span><span class="f_BodyText">.</span></p></td>
+</tr>
+</table>
+</div>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="border:none;border-spacing:0px;padding:0px;line-height: normal;"><tr style="vertical-align:baseline"><td style="border:none;padding:0;width:18px"><img id="TOGGLE0186A2_ICON" src="hmtoggle_plus1.gif" width="9" height="9" alt="hmtoggle_plus1" style="border:none" /></td><td style="border:none;padding:0"><span class="f_BodyText" style="font-weight: bold;">B. <a class="dropdown-toggle" style="font-size: 11pt; font-family: Arial; font-style: normal; font-weight: bold; color: #000000; background-color: transparent; text-decoration: none;" href="javascript:HMToggle('toggle','TOGGLE0186A2','TOGGLE0186A2_ICON')">Configure the volumes</a></span></td></tr></table></div><div id="TOGGLE0186A2" style="text-align: left; text-indent: -18px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 18px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; padding:0px;"><p class="p_BodyText" style="margin: 0px 0px 6px 19px;">To view the volumes that were discovered and make adjustments to default configurations, complete these steps:</p>
+<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 38px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">Go to </span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Configuration &gt; Volumes</span><span class="f_BodyText"> to display the </span><span class="f_BodyText" style="font-style: italic;">Volume Configuration</span><span class="f_BodyText"> page. A list of available volumes is displayed (if a volume does not contain unused block devices, it will not appear on this list).</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 38px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">For volumes that are configured for high availability (status is </span><span class="f_BodyText" style="font-style: italic;">configured-ha</span><span class="f_BodyText">), modify the default failover settings as needed by adjusting the options in the </span><span class="f_BodyText" style="font-style: italic;">Primary Server</span><span class="f_BodyText"> and </span><span class="f_BodyText" style="font-style: italic;">Failover Server</span><span class="f_BodyText"> columns.</span></p></td>
+</tr>
+</table>
+</div>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="border:none;border-spacing:0px;padding:0px;line-height: normal;"><tr style="vertical-align:baseline"><td style="border:none;padding:0;width:18px"><img id="TOGGLE0186A3_ICON" src="hmtoggle_plus1.gif" width="9" height="9" alt="hmtoggle_plus1" style="border:none" /></td><td style="border:none;padding:0"><span class="f_BodyText" style="font-weight: bold;"><a class="dropdown-toggle" style="font-size: 11pt; font-family: Arial; font-style: normal; font-weight: bold; color: #000000; background-color: transparent; text-decoration: none;" href="javascript:HMToggle('toggle','TOGGLE0186A3','TOGGLE0186A3_ICON')"> C. Configure the management target (MGT)</a></span></td></tr></table></div><div id="TOGGLE0186A3" style="text-align: left; text-indent: -18px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 18px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; padding:0px;"><p class="p_BodyText" style="margin: 0px 0px 6px 23px;">To configure the management target, complete these steps:</p>
+<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 37px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">Go to </span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Configuration &gt; MGTs</span><span class="f_BodyText"> to display the </span><span class="f_BodyText" style="font-style: italic;">MGT Configuration</span><span class="f_BodyText"> page.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 37px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText" style="color: #ff0000;">Need to add steps here to describe two options ... setting up MGS/MDS on same server and setting up the MGS and MDS on different servers.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 37px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">3.</span><span class="f_BodyText" style="color: #ff0000;">...</span></p><p class="p_BodyText" style="margin: 0px 0px 6px 37px;"><span class="f_BodyText">&nbsp;</span></p>
+</td>
+</tr>
+</table>
+</div>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="border:none;border-spacing:0px;padding:0px;line-height: normal;"><tr style="vertical-align:baseline"><td style="border:none;padding:0;width:18px"><img id="TOGGLE0186A4_ICON" src="hmtoggle_plus1.gif" width="9" height="9" alt="hmtoggle_plus1" style="border:none" /></td><td style="border:none;padding:0"><span class="f_BodyText" style="font-weight: bold;"><a class="dropdown-toggle" style="font-size: 11pt; font-family: Arial; font-style: normal; font-weight: bold; color: #000000; background-color: transparent; text-decoration: none;" href="javascript:HMToggle('toggle','TOGGLE0186A4','TOGGLE0186A4_ICON')">D. Create the file system</a></span></td></tr></table></div><div id="TOGGLE0186A4" style="text-align: left; text-indent: -18px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 18px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; padding:0px;"><p class="p_BodyText" style="margin: 0px 0px 6px 19px;"><span class="f_BodyText">To create a file system, complete these steps:</span></p>
+<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 19px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">Go to </span><span class="f_BodyText" style="font-weight: bold;">Configuration &gt; File Systems</span><span class="f_BodyText"> to display the </span><span class="f_BodyText" style="font-style: italic;">File System Configuration</span><span class="f_BodyText"> page.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 19px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">New File System</span><span class="f_BodyText"> to display the </span><span class="f_BodyText" style="font-style: italic;">New File System Configuration</span><span class="f_BodyText"> page.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 19px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">3.</span><span class="f_BodyText" style="font-style: italic;">(Step 1)</span><span class="f_BodyText"> In the </span><span class="f_BodyText" style="font-weight: bold;">File System Name</span><span class="f_BodyText"> field, enter the name of the new file system.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 19px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">4.</span><span class="f_BodyText" style="font-style: italic;">(Step 2)</span><span class="f_BodyText"> Choose a management target (MGT) from the table displayed.  </span></p><p class="p_BodyText" style="margin: 0px 0px 6px 37px;"><span class="f_BodyText">If a management target has been created previously, the following options will be available. Use one of these options to select the MGT. </span></p>
+<p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 38px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">If the MGT is to be installed on an existing server in the file system, use the drop down list provided to select the server to be used.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 38px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">If a new MGT is to be created, click </span><span class="f_BodyText" style="font-weight: bold;">Select Storage</span><span class="f_BodyText"> to display a list of available servers and then click the server to be used. </span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 19px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">5.</span><span class="f_BodyText" style="font-style: italic;">(Step 3)</span><span class="f_BodyText"> Choose a metadata target (MDT) by clicking </span><span class="f_BodyText" style="font-weight: bold;">Select Storage</span><span class="f_BodyText"> and selecting the server to be used.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 19px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">6.</span><span class="f_BodyText" style="font-style: italic;">(Step 4)</span><span class="f_BodyText"> Choose the object storage targets (OSTs) for the file system by checking the boxes next to the targets to be included in the system.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 19px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">7.</span><span class="f_BodyText">(Step 5) Click </span><span class="f_BodyText" style="font-weight: bold;">Create file system now</span><span class="f_BodyText"> to create the file system. </span></p><p style="text-align: left; padding: 0px 0px 0px 21px; margin: 0px 0px 6px 14px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">8.</span><span class="f_BodyText">To follow the process as the file system is created, click on </span><span class="f_BodyText" style="font-weight: bold;">Notifications</span><span class="f_BodyText"> on the left side of the screen and select </span><span class="f_BodyText" style="font-weight: bold;">Commands</span><span class="f_BodyText"> at the bottom of the notifications list.</span></p></td>
+</tr>
+</table>
+</div>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 0px;"><table style="border:none;border-spacing:0px;padding:0px;line-height: 1.10;"><tr style="vertical-align:baseline"><td style="border:none;padding:0;width:18px"><img id="TOGGLE0186A5_ICON" src="hmtoggle_plus1.gif" width="9" height="9" alt="hmtoggle_plus1" style="border:none" /></td><td style="border:none;padding:0"><span class="f_BodyText" style="font-weight: bold;">E. <a class="dropdown-toggle" style="font-size: 11pt; font-family: Arial; font-style: normal; font-weight: bold; color: #000000; background-color: transparent; text-decoration: none;" href="javascript:HMToggle('toggle','TOGGLE0186A5','TOGGLE0186A5_ICON')">View the new file system</a></span></td></tr></table></div><div id="TOGGLE0186A5" style="text-align: left; text-indent: -18px; line-height: 1.10; padding: 0px 0px 0px 0px; margin: 0px 0px 8px 18px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; padding:0px;"><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 18px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">To view the file system configuration, go to the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> page and select the name of the file system in the table displayed.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 18px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">To view the dashboard metrics for the file system, go to </span><span class="f_BodyText" style="font-weight: bold;">Dashboard</span><span class="f_BodyText"> and select </span><span class="f_BodyText" style="font-weight: bold;">File Systems</span><span class="f_BodyText"> and the </span><span class="f_BodyText" style="font-style: italic;">name of the file system</span><span class="f_BodyText"> in the fields displayed at the top of the page.</span></p></td>
+</tr>
+</table>
+</div>
+<p style="text-indent: -24px; margin: 0px 0px 0px 72px;"><span style="font-size: 10pt; color: #000000;">&nbsp;</span></p>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<!--ZOOMSTOP--> 
+
+</div></div> 
+<script type="text/javascript">
+HMInitToggle('TOGGLE0186A1_ICON','hm.type','dropdown','hm.state','0','hm.src0','hmtoggle_plus0.gif','hm.src1','hmtoggle_plus1.gif','onclick','HMToggle(\'toggle\',\'TOGGLE0186A1\',\'TOGGLE0186A1_ICON\')');
+HMInitToggle('TOGGLE0186A1','hm.type','dropdown','hm.state','0');
+HMInitToggle('TOGGLE0186A2_ICON','hm.type','dropdown','hm.state','0','hm.src0','hmtoggle_plus0.gif','hm.src1','hmtoggle_plus1.gif','onclick','HMToggle(\'toggle\',\'TOGGLE0186A2\',\'TOGGLE0186A2_ICON\')');
+HMInitToggle('TOGGLE0186A2','hm.type','dropdown','hm.state','0');
+HMInitToggle('TOGGLE0186A3_ICON','hm.type','dropdown','hm.state','0','hm.src0','hmtoggle_plus0.gif','hm.src1','hmtoggle_plus1.gif','onclick','HMToggle(\'toggle\',\'TOGGLE0186A3\',\'TOGGLE0186A3_ICON\')');
+HMInitToggle('TOGGLE0186A3','hm.type','dropdown','hm.state','0');
+HMInitToggle('TOGGLE0186A4_ICON','hm.type','dropdown','hm.state','0','hm.src0','hmtoggle_plus0.gif','hm.src1','hmtoggle_plus1.gif','onclick','HMToggle(\'toggle\',\'TOGGLE0186A4\',\'TOGGLE0186A4_ICON\')');
+HMInitToggle('TOGGLE0186A4','hm.type','dropdown','hm.state','0');
+HMInitToggle('TOGGLE0186A5_ICON','hm.type','dropdown','hm.state','0','hm.src0','hmtoggle_plus0.gif','hm.src1','hmtoggle_plus1.gif','onclick','HMToggle(\'toggle\',\'TOGGLE0186A5\',\'TOGGLE0186A5_ICON\')');
+HMInitToggle('TOGGLE0186A5','hm.type','dropdown','hm.state','0');
+</script>
+</body>
+<!--[if IE]>
+<script type="text/javascript" defer="defer">
+$("#hmcontent",window.parent.document).ready(function() {
+var doTogJump=setTimeout("toggleJump()", 0);
+      });
+</script>
+<![endif]-->
+</html>

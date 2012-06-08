@@ -4,7 +4,7 @@
 # ========================================================
 
 
-from argparse import REMAINDER
+from argparse import REMAINDER, SUPPRESS
 import sys
 import traceback
 
@@ -75,24 +75,37 @@ def api_cli():
         sys.exit(3)
 
 
-def standard_cli(args=None):
-    config = Configuration()
-    parser = ResettableArgumentParser(description="Chroma API CLI")
+def standard_cli(args=None, config=None):
+    config = config
+    if not config:
+        config = Configuration()
+    parser = ResettableArgumentParser(description="Chroma CLI", add_help=False)
     dispatcher = Dispatcher()
 
-    parser.add_argument("--api-url", help="Entry URL for Chroma API")
+    parser.add_argument("--api_url", help="Entry URL for Chroma API")
     parser.add_argument("--username", help="Chroma username")
     parser.add_argument("--password", help="Chroma password")
     parser.add_argument("--output", "-o", help="Output format",
                         choices=StandardFormatter.formats())
-    parser.add_argument("--nowait", help="Don't wait for jobs to complete",
+    parser.add_argument("--nowait", "-n", help="Don't wait for jobs to complete",
                         action="store_true")
     parser.clear_resets()
 
-    parser.add_argument("primary_action", choices=dispatcher.handled_actions)
-    parser.add_argument("options", nargs=REMAINDER)
-
+    # fake-y help arg to allow it to pass through to the real one
+    parser.add_argument("--help", "-h", help="show this help message and exit",
+                        default=SUPPRESS, action='store_true')
+    parser.add_argument("args", nargs=REMAINDER)
     ns = parser.parse_args(args)
+    parser.reset()
+
+    parser.add_argument("--help", "-h", help="show this help message and exit",
+                        default=SUPPRESS, action='help')
+    subparsers = parser.add_subparsers()
+    dispatcher.add_subparsers(subparsers, ns)
+
+    if 'noun' in ns and 'verb' in ns:
+        args = [ns.noun, ns.verb] + ns.args
+    ns = parser.parse_args(args, ns)
 
     # Allow CLI options to override defaults/.chroma config values
     config.update(dict([[key, val] for key, val in ns.__dict__.items()
@@ -108,14 +121,19 @@ def standard_cli(args=None):
 
     from chroma_cli.exceptions import ApiException
     try:
-        dispatcher(ns.primary_action)(api=api, formatter=formatter)(parser=parser, args=args, namespace=ns)
+        ns.handler(api=api, formatter=formatter)(parser=parser, args=args, ns=ns)
     except ApiException, e:
         print e
         sys.exit(1)
     except Exception, e:
         exc_info = sys.exc_info()
         trace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-        print "Internal client error from handler '%s': %s" % (ns.primary_action, trace)
+        handler = "unknown"
+        if 'handler' in ns:
+            handler = ns.handler.nouns[0]
+            if 'verb' in ns:
+                handler += ".%s" % ns.verb
+        print "Internal client error from handler '%s': %s" % (handler, trace)
         sys.exit(1)
 
     sys.exit(0)
