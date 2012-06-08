@@ -95,6 +95,7 @@ class Dispatcher(object):
                 else:
                     # This should be fine until it's not.
                     verb_parser = verb_subparsers.add_parser(verb, help="%s for %s" % (verb, key))
+                    verb_parser.add_argument("subject", metavar=key)
 
                 verb_parser.set_defaults(handler=handler['klass'])
 
