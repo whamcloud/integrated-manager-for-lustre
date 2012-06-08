@@ -19,7 +19,7 @@ def step(context, args):
     try:
         sys.stdout = context.stdout
         sys.stderr = context.stderr
-        if context.cli_config:
+        if 'cli_config' in context and context.cli_config:
             standard_cli(args=args.split(), config=context.cli_config)
         else:
             standard_cli(args.split())
