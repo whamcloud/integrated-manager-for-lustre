@@ -5,7 +5,7 @@
 
 
 from itertools import product
-from argparse import REMAINDER
+from argparse import REMAINDER, SUPPRESS
 
 from chroma_cli.output import StandardFormatter
 from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound
@@ -138,13 +138,17 @@ class Handler(object):
 
         if 'verb' in ns and ns.verb == "add":
             parser.reset()
-            self._api_fields_to_parser_args(parser)
+            self._api_fields_to_parser_args(parser, add_help=True)
             ns = parser.parse_args(ns.args, ns)
 
         verb_method = getattr(self, ns.verb)
         verb_method(ns)
 
-    def _api_fields_to_parser_args(self, parser):
+    def _api_fields_to_parser_args(self, parser, add_help=False):
+        if add_help:
+            parser.add_argument("--help", "-h",
+                                help="show this help message and exit",
+                                default=SUPPRESS, action='help')
         for name, attrs in self.api_endpoint.fields.items():
             if attrs['readonly']:
                 continue
