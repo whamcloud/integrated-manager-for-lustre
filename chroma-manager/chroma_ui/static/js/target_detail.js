@@ -35,6 +35,7 @@ var TargetDetail = Backbone.View.extend({
       });
 
       populate_conf_param_table(conf_params, $(this.el).find(".conf_param_table"));
+      ContextualHelp.load_snippets('#target_dialog_config_param_tab');
     }
 
     return this;

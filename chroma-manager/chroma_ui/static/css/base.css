@@ -829,6 +829,19 @@ table#global_filesystem_table th {
     font-style: italic;
 }
 
+.contextual_help_icon {
+	margin: 0.75em 0 0.75em 0.75em;
+	float: left;
+}
+
+.contextual_help {
+	margin: auto;
+	margin-left: 2em;
+}
+.contextual_help p {
+	margin: .75em 0.25em .75em .75em;
+}
+
 div.dataTables_wrapper th {
     white-space: nowrap;
 }

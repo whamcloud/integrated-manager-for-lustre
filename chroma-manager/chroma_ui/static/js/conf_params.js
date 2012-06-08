@@ -5,7 +5,7 @@
 
 
 var ConfParamDialog = function(options) {
-  var el = $("<div><table width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
+  var el = $("<div><div class='help_loader' style='padding: 0 6px 6px 6px;' data-topic='_advanced_settings' /><table width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
   var _options = $.extend({}, options)
 
   el.find('table').dataTable( {
@@ -22,11 +22,27 @@ var ConfParamDialog = function(options) {
       { "bVisible": false }
     ]
   });
+
+  if (_options.conf_params) {
+    populate_conf_param_table(_options.conf_params, el.find('table'))
+  }
+
+  if (_options.help) {
+    var blank_data = {};
+    $.each(_options.help, function(name, help) {
+      blank_data[name] = null;
+    });
+    populate_conf_param_table(blank_data, el.find('table'), _options.help)
+  }
+
+
+  // initialize (but don't open) settings dialog
   el.dialog
     ({
       autoOpen: false,
       width: 450,
-      height:470,
+      height: 'auto',
+      //maxHeight: $(window).height() - 100,
       modal: true,
       position:"center",
       buttons:
@@ -48,17 +64,8 @@ var ConfParamDialog = function(options) {
       }
     });
 
-  if (_options.conf_params) {
-    populate_conf_param_table(_options.conf_params, el.find('table'))
-  }
-
-  if (_options.help) {
-    var blank_data = {};
-    $.each(_options.help, function(name, help) {
-      blank_data[name] = null;
-    });
-    populate_conf_param_table(blank_data, el.find('table'), _options.help)
-  }
+  //populate help snippets
+  ContextualHelp.load_snippets(el.find('div').first());
 
   function open() {
     el.dialog('open');

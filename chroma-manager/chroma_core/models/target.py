@@ -417,7 +417,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
 
     def get_confirmation_string(self):
         if isinstance(self.target.downcast(), ManagedOst):
-            return "Ensure that you have followed the manual OST removal procedure before continuing"
+            return "Remove the OST from the file system. It will no longer be seen in Chroma Manager. Before removing the OST, manually remove all data from the OST. When an OST is removed, files stored on the OST will no longer be accessible."
         else:
             return None
 
@@ -461,7 +461,7 @@ class RemoveTargetJob(StateChangeJob):
     def get_confirmation_string(self):
         if isinstance(self.target.downcast(), ManagedOst):
             if self.target.state == 'registered':
-                return "Ensure that you have followed the manual OST removal procedure before continuing"
+                return "Remove the OST from the file system. It will no longer be seen in Chroma Manager. Before removing the OST, manually remove all data from the OST. When an OST is removed, files stored on the OST will no longer be accessible."
             else:
                 return None
         else:

@@ -234,6 +234,9 @@
             conf_param_dialog.open()
         }
       });
+
+      ContextualHelp.load_snippets("#filesystem_create_form");
+
     }
     return {draw:draw}
   }();
@@ -291,6 +294,11 @@
               <tr>
                 <th><label for='bytes_per_inode'>Bytes per inode:</label></th>
                 <td><input id='bytes_per_inode' value='2048'/>bytes</td>
+              </tr>
+              <tr>
+                <td colspan='2'>
+                    <div class='help_loader' style='max-width: 400px;' data-topic="_advanced_settings" />
+                </td>
               </tr>
             </table>
             <span id='mdt_advanced_estimate'></span>

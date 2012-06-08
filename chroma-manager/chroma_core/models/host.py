@@ -972,10 +972,10 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     @classmethod
     def get_confirmation(cls, instance):
-        return """Force-removing a server will cause Chroma to remove records of that server
-without attempting to contact the server.  Any targets which depend on this server will also
-be removed without any attempt to un-configure them.  This action should only be used if
-the server is permanently unavailable."""
+        return """The record for the server in Chroma Manager is removed without
+attempting to contact the server. Any targets that depend on this server will
+also be removed without any attempt to unconfigure them. This action should only
+be used if the server is permanently unavailable."""
 
 
 class RemoveUnconfiguredHostJob(StateChangeJob):
