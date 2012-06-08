@@ -1,0 +1,167 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head> 
+   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+   <title>Configuring an Existing Lustre File System</title> 
+   <meta name="generator" content="Help &amp; Manual" /> 
+   <meta name="keywords" content="" />
+   <meta name="description" content="Configuring an Existing Lustre File System" />
+   <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link type="text/css" href="custom.css" rel="stylesheet" />
+   <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+   <script type="text/javascript" src="nsh.js"></script>
+
+
+   <script type="text/javascript">
+
+var togTocButton = "";
+$(document).ready(function() {
+  chromeBugCheck("workaround",false);
+   
+   });
+</script>
+
+
+
+<!-- CSS set with project variables and local attributes -->
+<style type="text/css">
+   body { background: #fff; } 
+   #breadcrumbs { width: 100%; background-color: white; border: 1px solid #636363; padding: 2px 0 1px 2px;
+   margin: 3px 0; font-size: 8pt; color: #636363;}
+   #breadcrumbs a { color: #636363; text-decoration: none;}
+   #breadcrumbs a:visited { color: #636363; }
+   #breadcrumbs a:hover { color: #000; text-decoration: none; }
+   .help-url { font-size: 8pt; font-family: Verdana, Helvetica, sans-serif; 
+               color: #636363; text-align: center; margin: 15px 15px 0px 15px; 
+               padding-top: 5px; padding-bottom: 15px; border-top: 1px solid #000;}
+   .help-url a { color: #636363; text-decoration: none; }
+   .help-url a:visited { color: #636363; }
+   .help-url a:hover { color: #636363; text-decoration: underline; }
+   .highlight {background-color: #ffff40;}
+</style>
+
+
+
+<!-- Adjustment for IE -->
+<!--[if lte IE 8]>
+<style type="text/css">
+.topichead { padding-right: 0; }
+#autoTocWrapper ul li { padding: 3px 3px 4px 3px;}
+</style>
+<![endif]-->
+<!--[if lte IE 7]>
+<style type="text/css">
+#innerdiv {height: 100%;}
+</style>
+<![endif]-->
+   
+
+
+   <script type="text/javascript" src="helpman_settings.js"></script>
+   <script type="text/javascript" src="helpman_topicinit.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "configuring_an_existing_lustr2.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head> 
+<body>
+<!--ZOOMSTOP-->
+
+<div id="printheader">
+<span id="printtitle">Chroma User Guide</span><br />
+<h1 class="p_Heading1"><span class="f_Heading1">Configuring an</span><span class="f_Heading1" style="color: #ff0000;"> </span><span class="f_Heading1">Existing</span><span class="f_Heading1"> Lustre File System</span></h1>
+</div>
+<div id="idheader" style= "background: #e4e4e4 url('bg_topichd.gif') repeat-x bottom;"> 
+<table id="breadtable" width="100%" border="0" cellspacing="0" cellpadding="0"> 
+  <tr >
+  <td align="left" class="breadhead" height="5">
+        
+  </td>
+  </tr>
+</table>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" id="headtable"> 
+
+<!-- Script version of NavHeader -->
+<tr id="scriptNavHead" valign="middle" style="height: auto;">
+   
+   <td align="left" class="topichead">
+   <h1 class="p_Heading1"><span class="f_Heading1">Configuring an</span><span class="f_Heading1" style="color: #ff0000;"> </span><span class="f_Heading1">Existing</span><span class="f_Heading1"> Lustre File System</span></h1>
+
+   </td>
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="mounting_file_system_clients.htm"
+        onmouseover="document.images.prev.src='button_prev_h.gif'" 
+        onmouseout="document.images.prev.src='button_prev.gif'">
+        <img name="prev" src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
+     
+   </td>
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="monitoring_a_file_system.htm"
+        onmouseover="document.images.next.src='button_next_h.gif'" 
+        onmouseout="document.images.next.src='button_next.gif'"><img name="next" src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
+        
+   </td>
+   
+   
+   
+  
+   <td width="4">&nbsp;</td>
+  </tr>
+<!-- End script navheader version -->
+
+<!-- NoScript version of navheader -->
+  <tr id="noScriptNavHead" valign="middle" style="height: auto;"> 
+    <td align="left" class="topichead"> 
+    <h1 class="p_Heading1"><span class="f_Heading1">Configuring an</span><span class="f_Heading1" style="color: #ff0000;"> </span><span class="f_Heading1">Existing</span><span class="f_Heading1"> Lustre File System</span></h1>
+
+    </td>
+    <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="mounting_file_system_clients.htm">
+        <img src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
+     
+   </td>
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="monitoring_a_file_system.htm">
+        <img src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
+        
+   </td>
+   
+   
+   
+   
+   <td width="4">&nbsp;</td>
+  </tr>
+<!-- End noscript navheader version -->
+  </table>
+<div id="autoTocWrapper"></div></div> 
+
+<div id="idcontent"><div id="innerdiv">
+
+<!--[if lt IE 7]><div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;'><a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode"><img src="http://storage.ie6countdown.com/assets/100/images/banners/warning_bar_0000_us.jpg" border="0" height="42" width="820" alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today." /></a></div><![endif]-->
+<!--ZOOMRESTART-->
+<p class="p_BodyText"><span class="f_BodyText">A Lustre file system that was created outside Chroma manager can be monitored, but not managed, by Chroma Manager. Before completing the procedure below, make sure that the </span><span class="f_CodeExample">chroma-agent</span><span class="f_BodyText"> package has been installed on each of your Lustre file system storage servers. See the documentation provided by your storage solution provider for details.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">To configure an existing Lustre file system to be monitored by Chroma Manager, complete these steps:</span></p>
+<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 21px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">Go to </span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Configuration &gt; Servers</span><span class="f_BodyText"> and click </span><span class="f_BodyText" style="font-weight: bold;">+Add server</span><span class="f_BodyText">. </span><span class="f_BodyText">The </span><span class="f_BodyText" style="font-style: italic;">Add Server</span><span class="f_BodyText"> dialog is displayed.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 21px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">In the </span><span class="f_BodyText" style="font-weight: bold;">Hostname</span><span class="f_BodyText"> field, enter the name of the server to be added.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 21px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">3.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Continue</span><span class="f_BodyText">.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 21px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">4.</span><span class="f_BodyText">Chroma Manager checks to ensure each server is up and connected to the network. &nbsp;Chroma Manager then does an audit of the storage resources on each server. It then checks the networking, loads Lustre modules, and makes sure the Lustre networking layer is functioning.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 21px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">5.</span><span class="f_BodyText"> Click </span><span class="f_BodyText" style="font-weight: bold;">Close</span><span class="f_BodyText">.</span></p><p>&nbsp;</p>
+
+<!--ZOOMSTOP--> 
+
+</div></div> 
+</body>
+<!--[if IE]>
+<script type="text/javascript" defer="defer">
+$("#hmcontent",window.parent.document).ready(function() {
+var doTogJump=setTimeout("toggleJump()", 0);
+      });
+</script>
+<![endif]-->
+</html>

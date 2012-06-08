@@ -1,5 +1,83 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">
 <html>
-  <body>
-    Placeholder
-  </body>
+<head>
+<title>Chroma User Guide</title>
+<!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+<style type="text/css">
+body, html { overflow: hidden; }
+</style> 
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="helpman_settings.js"></script>
+<script type="text/javascript" src="helpman_navigation.js"></script>
+<script type="text/javascript" src="mobileInit.js"></script>
+<script type="text/javascript">
+var hmContents = document.getElementById ? "chromaonlinehelp_content.htm" : "chromaonlinehelp_content.htm";
+var indexPage = "chromaonlinehelp_kwindex.htm";
+var searchPage = "chromaonlinehelp_ftsearch.htm";
+var defaulttopic="introducing_chroma.htm";
+var IE6 = /msie 6|MSIE 6/.test(navigator.userAgent);
+var frSpace = /Opera|opera/.test(navigator.userAgent) ? "5" : "2";
+// Normal init for good browsers
+var wkResize = "";
+
+if (!IE6) {
+   parseUrl(document.location.search);
+
+    document.write('<frameset name="hmframeset" id="hmframeset" cols="280,*" border="6" frameborder="1" framespacing="'+frSpace+'">');
+    document.write('<frame name="hmnavigation" id="hmnavigation" src="'+hmContents+'" title="Navigation frame"'+wkResize+' />');
+    document.write('<frame name="hmcontent" id="hmcontent" src="' + defaulttopic + '" title="Content frame" />');
+    document.write('</frameset>');
+
+    }
+// Special init for IE6
+else {
+   parseUrl(document.location.search);
+
+    document.write('<frameset name="hmframeset" id="hmframeset" cols="280,*" frameborder="1" framespacing="1">');
+    document.write('<frame name="hmnavigation" id="hmnavigation" src="'+hmContents+'" title="Navigation frame" scrolling="yes" noresize="noresize" />');
+    document.write('<frame name="hmcontent" id="hmcontent" src="' + defaulttopic + '" title="Content frame" />');
+    document.write('</frameset>');
+
+}
+$(document).ready(function() {
+   if (!document.all) {
+      mobDat = {
+      iOSalert : "Use two fingers to scroll contents and topics on iPad and iPhone!",
+      aOSalert : "Sorry, this online help is not compatible with your mobile browser!",
+      aOSredirect : "",
+      mobRedirect : "",
+      iPhRedirect : "",
+      iPdRedirect : ""
+      }
+   mobInit(mobDat);
+} else {
+   var hmIsTOC = false;
+   try { 
+      var navDoc = document.getElementById("hmnavigation");
+      if (navDoc && navDoc.src.indexOf("_content.htm") > 0) hmIsTOC = true;
+   } catch(err) {}
+   if (false && hmIsTOC){
+      setTimeout(function() {hmnavigation.location = hmContents;}, 200);
+      }
+   }
+});
+</script>
+</head>
+<noscript>
+
+  <frameset cols="280,*" frameborder="0" framespacing="0">
+    <frame name="hmnavigation" id="hmnavigation" src="chromaonlinehelp_content.htm" title="Navigation frame" scrolling="yes" />
+    <frame name="hmcontent" id="hmcontent" src="introducing_chroma.htm" title="Content frame" />
+    <noframes>
+    <body>
+      <p>This page requires frames<br /><a href="chromaonlinehelp_content.htm">Click here to view the table of contents without frames</a></p>
+    </body>
+    </noframes>
+  </frameset>
+
+</noscript>
 </html>
+

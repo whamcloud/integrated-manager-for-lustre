@@ -1,0 +1,322 @@
+/* Help & Manual Premium Pack Version 1.51 CSS Settings */
+/* Copyright 2008 - 2011 by Tim Green */
+
+/* Styles for the various hyperlink types */
+a { color: blue; text-decoration: none; }
+a:visited {color: blue; }
+a:hover {color: blue; text-decoration: underline; }
+a.weblink {color: blue; text-decoration: underline; }
+a.weblink:visited {color: blue; }
+a.weblink:hover {color: blue; text-decoration: underline; }
+a.popuplink {color: red; text-decoration: none; }
+a.popuplink:visited {color: red;}
+a.popuplink:hover {color: red; text-decoration: underline; }
+a.filelink {color: green; text-decoration: none; }
+a.filelink:visited {color: green; }
+a.filelink:hover {color: green; text-decoration: underline; }
+
+/* Hide annoying link selection outlines */
+a {outline: 0 none;}
+
+@media screen{
+   html {
+	overflow: auto;
+   }
+  body {    
+      margin:0; 
+      padding:0;
+	  overflow: hidden;
+    } 
+   #idheader { 
+      width:100%; 
+      height:auto; 
+      padding: 0 0 5px 0; 
+      margin: 0; 
+   } 
+   /* Active header is off until turned on by script */
+   #scriptNavHead {
+   	  display: none;
+   	  }
+   #noScriptNavHead {
+      
+      }
+	#printheader {
+	  display:none;
+   }
+   /* Set the padding in the OUTER div for MSIE and CHM to prevent the 
+      width bug and the horizontal scrollbar bug from activating. */ 
+
+  #idcontent {    
+      width: 100%;
+      padding: 0px !important; 
+      padding: 10px 15px 5px 10px; 
+ 	  border: 0px solid red;
+	  overflow: hidden;
+   } 
+   
+   
+
+/* Set the padding in the INNER div for all other browsers. */ 
+
+  #innerdiv {    
+	/* Transparent border stops Firefox italics bug */
+	border: 1px solid transparent !important;
+	border: 0;
+	padding: 10px 5px 5px 10px !important;  
+	padding: 0px;
+   } 
+
+	#breadtable {
+	margin:0;
+	padding: 0;
+	}
+	.breadhead {
+	margin: 0;
+	padding: 5px 9px 0 5px;
+	}
+	
+    .topichead {
+       padding: 0px 10px 3px 8px;
+    }
+    .idnav {
+       white-space: nowrap; 
+       font-size: 1pt; 
+       padding: 0 1px 1px 2px; 
+       margin: 0; 
+    }
+
+
+   /* Toggle TOC Button elements */
+   
+   div#togtocbox {
+      position:relative;
+      padding:0; 
+      margin: 0;
+   }
+   
+   img#togtoc {
+       position: absolute; 
+       bottom:-3px; 
+       margin-left: -23px;
+    }
+
+   /* Components of the Topic AutoTOC Window */ 
+   
+       #autoTocWrapper {
+       display: none; 
+       z-index: 1000;                       
+       padding: 0;
+       margin: 0;
+       border: 1px solid white;
+       border-top: 0;
+       width: auto;
+       position: absolute;
+       top: 35px;
+       right: 18px;
+       background-color: #fff;
+       }
+       
+   #autoTocMiddle {
+       border-left: 0;
+       border-right: 1px solid #888;
+       border-bottom: 1px solid #888;
+       padding: 0;
+       margin: 0;
+       } 
+   #autoTocInner {
+       /* The default border color is changed to same color 
+       as the navbox border by the AutoTOC script.  */
+       border: 1px solid black;
+       border-top: 0;
+       margin: 0;
+       padding: 0;
+       }
+       
+    /* The default border link text and hover colors are changed to the values for 
+       <%ATOC_LINKCOLOR%> and <%ATOC_HOVERCOLOR%> by the AutoTOC script.  */
+
+	p.autoTOC {
+		color: #333;
+		font-size: 13px;
+		font-weight: bold;
+		margin:0; padding:0;
+		line-height: 100%;
+	}
+       
+    #autoTocWrapper ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	text-indent: 0;
+	}
+	
+	/* The default background color is set to the same color as 
+	the topic header background by the AutoTOC script.  */
+	#autoTocWrapper ul li {
+	padding: 2px 3px 5px 3px;
+	background-color: #ccc;
+	background-image: url("bg_topichd.gif");
+	background-repeat: repeat-x;
+	background-position: 0px -27px;
+	cursor: pointer;
+	}
+/* Sortable Tables */
+    table a.sortheader img {
+    border: 0;
+    }
+    a.sortheader {
+	color: black;
+	text-decoration: none;
+	white-space: nowrap;
+	}
+    a.sortheader:visited {
+	color: black;
+	text-decoration: none;
+	}	
+    a.sortheader:hover {
+	color: black;
+	text-decoration: none;
+	}	
+
+/* Advanced Popups Container */
+ 
+div.popups {
+	visibility: hidden;
+	width: auto;
+	margin: 0;
+	padding: 0 7px 7px 0;
+	overflow: auto;
+	position: absolute;
+	z-index: 900;
+	border: 0px solid red;
+	border-width: 2px;    
+	border-style: solid;
+    border-bottom-color: #333333;
+    border-right-color: #555555;
+    border-left-color: #EEEEEE;
+    border-top-color: #EEEEEE;
+	-moz-border-radius: 5px; 
+	-webkit-border-radius: 5px; 
+	border-radius: 5px;
+	-moz-box-shadow: 2px 2px 3px #969696; 
+	-webkit-box-shadow: 2px 2px 3px #969696;
+	box-shadow: 2px 2px 3px #969696;
+	background-color: #fff;  zoom: 1;  
+	filter: progid:DXImageTransform.Microsoft.Shadow(color='#969696', Direction=135, Strength=3);
+}
+
+/* Permalink Box */	
+	
+div#permalink {
+	position: absolute;
+	bottom: 60px;
+	left: 20px;
+	z-index: 1000;
+	visibility: hidden;
+	padding: 3px 0 2px 0;
+	background-color:#fdfcdc;
+	overflow: hidden;
+	zoom: 100%;
+}
+div#permalink textarea {
+	position: relative;
+	text-align: center;
+	margin: 0 auto;
+	word-wrap: break-word;
+	font-family: Verdana, Tahoma, Arial, Sans-Serif;
+	font-size: 11px; 
+	font-weight: bold;
+}
+
+.dlgHowTo {
+	font-family: Verdana, Tahoma, Arial, Sans-Serif;
+	font-size: 12px;
+	line-height: 1.1em;
+	margin: 0;
+	padding: 2px;
+	text-align: center;
+	white-space: nowrap;  
+}
+
+/* IntenseDebate comments styles */
+
+   p#commentLink1 {
+   text-align: right;
+   margin: -8px 0 5px 0;
+   }
+   p#commentLink2 {
+   text-align: right;
+   margin: 5px 0;
+   }
+   
+   a.commentLink {
+   font-size: 10pt; 
+   font-family: 'Arial'; 
+   font-style: normal; 
+   font-weight: bold; 
+   color: blue; 
+   text-decoration: none;
+   }
+   a.commentLink:visited {
+   color: blue;
+   }
+   a.commentLink:hover {
+   text-decoration: underline;
+   }
+   span.comments {
+   color: red;
+   }
+   
+   div#commentsBox {
+   display: none;
+   z-index: 2000;
+   width: 90%;
+   min-width: 500px;
+   max-width: 800px;
+    border: 1px solid #ccc; 
+   -moz-border-radius: 10px;
+   -webkit-border-radius: 10px;
+   border-radius: 10px;
+   -moz-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   -webkit-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);   
+   background-color: #F5F5F5; 
+   padding: 10px; 
+   margin: 20px auto 10px auto; 
+   }
+   
+   table#TOGGLEcomments {
+   display: block;
+   z-index: 1999;
+   width: 100%;
+   border: 1px solid #ccc; 
+   -moz-border-radius: 10px;
+   -webkit-border-radius: 10px;
+   border-radius: 10px;
+   -moz-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   -webkit-box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);
+   box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4);   
+   border-spacing:0px; 
+   background-color: #F5F5F5; 
+   margin-bottom: 25px; 
+   }
+   
+   td#commentsCell {
+   text-align: left; 
+   text-indent: 0px; 
+   padding: 10px; 
+   margin: 0px 0px 5px 0px; 
+   }
+
+
+} /* End Media Screen Block*/
+
+@media print{
+     /* Hide header and turn on the print header in the printed version. */
+	 body {overflow: auto;}
+	 #idcontent {overflow: hidden;}
+     #idnav, .idnav, .idnav a, #breadcrumbs,#autoTocWrapper,#idheader,#permalink ,.popups,.help-url{ display:none;}
+     #printheader {display:block; font-weight: bold; margin: 0px; padding: 0px 0px 15px 0px;}
+     #printtitle {font-weight: bold;}
+     /* .topichead { padding: 5px 5px 20px 5px; } */ 
+} /* End Media Print Block*/

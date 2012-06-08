@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+   <title>Chroma User Guide</title>
+   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="Content-Style-Type" content="text/css" />
+   <meta name="robots" content="noindex, nofollow" />
+   <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+   <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+
+<style type="text/css">
+
+/* Tabbed Browsing */
+
+a {outline: 0 none;} 
+ 
+  body {
+    padding: 0; 
+    margin: 0;
+    font: 11px/1.5em Verdana,Tahoma,Arial,Helvetica,Sans-Serif;
+    background-color: #e4e4e4; 
+    background-image: url("lines.gif");
+    background-attachment: fixed;
+    }
+
+ #ns-header {
+   width: 100%;
+   min-width: 280px;
+   position: fixed;
+   top: 0; left: 0;
+   padding:0;
+   margin: 0;
+   float: left;
+   clear: both;
+   z-index: 1;
+ }
+  #header {
+    overflow: auto;
+    float:left;
+    width:100%;
+    background: #e4e4e4 url("nav_bg.gif") repeat-x bottom;
+   }
+
+#header ul {
+    margin:0;
+    padding:10px 10px 0;
+    list-style:none;
+    }
+  #header li {
+    float:left;
+    background:url("tableft.gif") no-repeat left top;
+    padding: 0 2px 0 4px;
+    margin-bottom: 5px;
+    }
+    
+  a.tablink {
+    display:block;
+    background:url("tabright.gif")
+    no-repeat right top;
+    padding:5px 10px 2px 3px;
+    text-decoration:none;
+    font-size: 8pt;
+    font-weight: bold;
+    }
+  a.tablink:hover {
+	text-decoration: none;
+	}
+  #header #current {
+    background-position: 0% -42px;
+    }
+  #header #current a {
+    background-position: 100% -42px;
+    padding-bottom: 3px;}
+    
+  #header #current a:hover {
+    color: #000;
+    }
+
+  #header li.noncurrent a {
+  color: #636363
+  }
+   
+  #header li.noncurrent:hover {
+    background-position: 0% -42px;
+    margin: -2px 0 0 0;
+    } 
+
+  #header li.noncurrent:hover a {
+    background-position: 100% -42px;
+    padding-bottom: 4px;
+    color: #000;
+    }
+
+
+   #body-shift {
+   margin: 0;
+   padding: 88px 0 0 0;
+   }
+   
+    #body-wrap {
+      position: relative;
+      padding: 0 5px 5px 10px;
+      float:left;
+      clear:left;
+      height: 100%;
+      width: 100%;
+      } 
+
+   #callout-wrap {
+     display: none;
+     position: relative;
+     width: auto;
+     }
+   
+   #callout {
+    position: absolute;
+    top: 5px;
+    left: 30px;
+    display: block;
+    background: #fbf8a9;
+    border: 1px solid #757575;
+    padding: 3px;
+    } 
+
+   #scrollPadder {
+     margin: 0;
+     padding: 0;
+     float: left;
+   }  
+   
+   #indexRefs, #indexRefsNoJS { 
+      width: 100%;
+      background-color: #fff; 
+      padding: 3px 5px 0px 15px; 
+      float: left; 
+   }
+   a.idxrefs {
+     font-weight: bold;
+   }    
+
+
+/* End Tabbed Browsing */     
+   
+/* Suppress Index underlines in non-IE browsers */
+
+	a { color: black; text-decoration: none }
+	a:visited {color: black}
+	a:hover { text-decoration: underline }
+   
+/* Styles for Index components (you can edit these) */   
+   
+       .navtitle    { font-size: 12pt; font-weight: bold; margin: 12px 0 0 10px; color: #000; }
+       .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; } 
+       
+       .navbar      { font-size: 10pt; }
+       .idxsection  { font-family: Arial,Helvetica; font-weight: bold; font-size: 11pt; color: #000000; text-decoration: none;
+                      margin-top: 8px; margin-bottom: 3px; white-space: nowrap;}
+       .idxkeyword  { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; }
+       .idxkeyword2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; }
+       .idxlink     { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #000000;  }
+
+       TABLE.idxtable { background: #fff; border-width: 1px; border-color: #000000; border-collapse: collapse; }
+       TD.idxtable    { background: #fff; }
+   </style>
+
+<!-- Adjust for MSIE -->
+<!--[if lte IE 8]>
+<style type="text/css">
+  #header, #header #current a {
+    padding-bottom: 5px;
+   }
+  #header a {
+    padding: 4px 10px 4px 3px;
+    margin-bottom: -2px;
+    }
+  #header li.noncurrent:hover a  {
+    padding-bottom: 6px; }
+  
+  TABLE.idxtable { filter: progid:DXImageTransform.Microsoft.Shadow(color=B0B0B0, Direction=135, Strength=4); }
+
+</style>
+<![endif]--> 
+<!--[if lte IE 6]>
+<style type="text/css">
+   #indexRefs, #indexRefsNoJS { 
+      width: auto;
+      float: none; 
+   }
+   #callout-wrap, #callout { z-index: 1000; }
+   #body-wrap { height: auto; }
+   #body-shift { margin: 0; padding:0; }
+</style>
+<![endif]-->     
+
+<!-- Static page display when JavaScript is off -->
+<noscript>
+<style type="text/css">
+#ns-header {
+position: static;  
+min-width: 0; }
+#indexRefs {
+display: none;
+}
+#indexRefsNoJS {
+  width: auto;
+  background-color: transparent;
+  }
+#body-shift { margin: 0; padding:0; }
+</style>
+</noscript>
+<script type="text/javascript">var headElement="ns-header",idxCallout="No index entries<br />beginning with",idxHl="#ffff00";</script>
+<script type="text/javascript" src="navinith.js"></script>
+<script type="text/javascript" src="idxinit.js"></script>
+   <script type="text/javascript" src="helpman_settings.js"></script>
+</head>
+<body>
+  <div id="ns-header">
+  <div id="header">
+  <p class="navtitle">Chroma User Guide</p>
+  
+    <ul>
+      <li class="noncurrent"><a href="chromaonlinehelp_content.htm" class="tablink" title="Table of Contents">Contents</a></li>
+      <li id="current"><a href="#" class="tablink" title="Keyword Index">Index</a></li>
+      <li class="noncurrent"><a href="chromaonlinehelp_ftsearch.htm" class="tablink" title="Full-text Search">Search</a></li>
+    </ul>
+  </div>
+<div id="indexRefs">
+  <a href="javascript:gotoIndex('#A')" class="idxrefs">A</a>
+  <a href="javascript:gotoIndex('#B')" class="idxrefs">B</a>
+  <a href="javascript:gotoIndex('#C')" class="idxrefs">C</a>
+  <a href="javascript:gotoIndex('#D')" class="idxrefs">D</a>
+  <a href="javascript:gotoIndex('#E')" class="idxrefs">E</a>
+  <a href="javascript:gotoIndex('#F')" class="idxrefs">F</a>
+  <a href="javascript:gotoIndex('#G')" class="idxrefs">G</a>
+  <a href="javascript:gotoIndex('#H')" class="idxrefs">H</a>
+  <a href="javascript:gotoIndex('#I')" class="idxrefs">I</a>
+  <a href="javascript:gotoIndex('#J')" class="idxrefs">J</a>
+  <a href="javascript:gotoIndex('#K')" class="idxrefs">K</a>
+  <a href="javascript:gotoIndex('#L')" class="idxrefs">L</a>
+  <a href="javascript:gotoIndex('#M')" class="idxrefs">M</a>
+  <a href="javascript:gotoIndex('#N')" class="idxrefs">N</a>
+  <br />
+  <a href="javascript:gotoIndex('#O')" class="idxrefs">O</a>
+  <a href="javascript:gotoIndex('#P')" class="idxrefs">P</a>
+  <a href="javascript:gotoIndex('#Q')" class="idxrefs">Q</a>
+  <a href="javascript:gotoIndex('#R')" class="idxrefs">R</a>
+  <a href="javascript:gotoIndex('#S')" class="idxrefs">S</a>
+  <a href="javascript:gotoIndex('#T')" class="idxrefs">T</a>
+  <a href="javascript:gotoIndex('#U')" class="idxrefs">U</a>
+  <a href="javascript:gotoIndex('#V')" class="idxrefs">V</a>
+  <a href="javascript:gotoIndex('#W')" class="idxrefs">W</a>
+  <a href="javascript:gotoIndex('#X')" class="idxrefs">X</a>
+  <a href="javascript:gotoIndex('#Y')" class="idxrefs">Y</a>
+  <a href="javascript:gotoIndex('#Z')" class="idxrefs">Z</a>
+<div id="callout-wrap">
+<div id="callout">
+</div>
+</div>
+<script type="text/javascript">
+document.write('<form id="searchForm" style="margin-top: 2px; margin-bottom: 2px;">' +
+'<input type="text" name="idxSearch" size="20" value="" id="idxSearch" class="zoom_searchbox" />' +
+'&nbsp;<button type="button" onclick="hmGoIndex();">Search</button></form>');
+// Index args checker
+if (window.frameElement) {
+if (parent.hmIndexArg != "") {
+  var indexCheck = setInterval(function(){
+    var box = document.getElementById("idxSearch");
+  try {if (box.name) {
+       clearInterval(indexCheck);
+       box.value = parent.hmIndexArg;
+       parent.hmIndexArg = "";
+       hmGoIndex();
+    }
+  } catch(err) {}
+  },100);
+} } // Index args checker 
+</script>
+</div>
+<!-- Noscript version of the index links -->
+<noscript>
+<div id="indexRefsNoJS">
+  <a href="#A" class="idxrefs">A</a>
+  <a href="#B" class="idxrefs">B</a>
+  <a href="#C" class="idxrefs">C</a>
+  <a href="#D" class="idxrefs">D</a>
+  <a href="#E" class="idxrefs">E</a>
+  <a href="#F" class="idxrefs">F</a>
+  <a href="#G" class="idxrefs">G</a>
+  <a href="#H" class="idxrefs">H</a>
+  <a href="#I" class="idxrefs">I</a>
+  <a href="#J" class="idxrefs">J</a>
+  <a href="#K" class="idxrefs">K</a>
+  <a href="#L" class="idxrefs">L</a>
+  <a href="#M" class="idxrefs">M</a>
+  <a href="#N" class="idxrefs">N</a>
+  <br />
+  <a href="#O" class="idxrefs">O</a>
+  <a href="#P" class="idxrefs">P</a>
+  <a href="#Q" class="idxrefs">Q</a>
+  <a href="#R" class="idxrefs">R</a>
+  <a href="#S" class="idxrefs">S</a>
+  <a href="#T" class="idxrefs">T</a>
+  <a href="#U" class="idxrefs">U</a>
+  <a href="#V" class="idxrefs">V</a>
+  <a href="#W" class="idxrefs">W</a>
+  <a href="#X" class="idxrefs">X</a>
+  <a href="#Y" class="idxrefs">Y</a>
+  <a href="#Z" class="idxrefs">Z</a>
+</div>
+</noscript>
+</div>
+<div id="body-shift">
+<table id="body-wrap" cellpadding="0" border="0"><tr><td valign="top">
+<script type="text/javascript">
+
+  function hmInitHideLinks(cssCode) {
+  	var styleElement = document.createElement("style");
+  	styleElement.type = "text/css";
+  	if (styleElement.styleSheet) {
+    	styleElement.styleSheet.cssText = cssCode;
+  	}
+  	else {
+    	styleElement.appendChild(document.createTextNode(cssCode));
+  	}
+  	document.getElementsByTagName("head")[0].appendChild(styleElement);
+  }
+
+  hmInitHideLinks("#idx div { display: none }");
+
+  var currentdiv = null;
+  var canhidelinks = true;
+
+  function hmshowLinks(divID) {
+    var thisdiv = document.getElementById(divID);
+    canhidelinks = true;
+    hmhideLinks();
+    if (thisdiv) {
+      currentdiv = thisdiv;
+      $(currentdiv).show();
+      $(currentdiv).mouseover(hmdivMouseOver).mouseout(hmdivMouseOut);
+      $(document).mouseup(hmhideLinks);
+    }
+  }
+  function hmdivMouseOver() { canhidelinks = false; };
+  function hmdivMouseOut() { canhidelinks = true; };
+  function hmhideLinks() {
+    if (canhidelinks) {
+      if (currentdiv) {
+        $(currentdiv).hide();
+        $(currentdiv).unbind("onmouseover", "onmouseout");
+      }
+      currentdiv = null;
+      $(document).unbind("onmouseup");
+    }
+  }
+</script>
+<div id="idx" style="margin:0;padding:0;border:none">
+<a name="M" id="M"></a><p class="idxsection">- M -</p>
+<p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">Metadata Server</span></a></p>
+<p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">Metadata Target</span></a></p>
+<a name="O" id="O"></a><p class="idxsection">- O -</p>
+<p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">Object Storage Server</span></a></p>
+</div>
+
+</td></tr></table><!--  body-wrap -->
+</div>
+<div id="scrollPadder" >&nbsp; </div>
+</body>
+<!--[if gt IE 6]>
+<script type="text/javascript">
+headResizeIDX();
+</script>
+<![endif]--> 
+</html>

@@ -1,0 +1,173 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head> 
+   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+   <title>What Is Lustre?</title> 
+   <meta name="generator" content="Help &amp; Manual" /> 
+   <meta name="keywords" content="Metadata Server,Metadata Target,Object Storage Server" />
+   <meta name="description" content="Enterprise Lustre Overview" />
+   <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link type="text/css" href="custom.css" rel="stylesheet" />
+   <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+   <script type="text/javascript" src="nsh.js"></script>
+
+
+   <script type="text/javascript">
+
+var togTocButton = "";
+$(document).ready(function() {
+  chromeBugCheck("workaround",false);
+   
+   });
+</script>
+
+
+
+<!-- CSS set with project variables and local attributes -->
+<style type="text/css">
+   body { background: #fff; } 
+   #breadcrumbs { width: 100%; background-color: white; border: 1px solid #636363; padding: 2px 0 1px 2px;
+   margin: 3px 0; font-size: 8pt; color: #636363;}
+   #breadcrumbs a { color: #636363; text-decoration: none;}
+   #breadcrumbs a:visited { color: #636363; }
+   #breadcrumbs a:hover { color: #000; text-decoration: none; }
+   .help-url { font-size: 8pt; font-family: Verdana, Helvetica, sans-serif; 
+               color: #636363; text-align: center; margin: 15px 15px 0px 15px; 
+               padding-top: 5px; padding-bottom: 15px; border-top: 1px solid #000;}
+   .help-url a { color: #636363; text-decoration: none; }
+   .help-url a:visited { color: #636363; }
+   .help-url a:hover { color: #636363; text-decoration: underline; }
+   .highlight {background-color: #ffff40;}
+</style>
+
+
+
+<!-- Adjustment for IE -->
+<!--[if lte IE 8]>
+<style type="text/css">
+.topichead { padding-right: 0; }
+#autoTocWrapper ul li { padding: 3px 3px 4px 3px;}
+</style>
+<![endif]-->
+<!--[if lte IE 7]>
+<style type="text/css">
+#innerdiv {height: 100%;}
+</style>
+<![endif]-->
+   
+
+
+   <script type="text/javascript" src="helpman_settings.js"></script>
+   <script type="text/javascript" src="helpman_topicinit.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "enterprise_lustre_overview.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head> 
+<body>
+<!--ZOOMSTOP-->
+
+<div id="printheader">
+<span id="printtitle">Chroma User Guide</span><br />
+<h1 class="p_Heading1"><span class="f_Heading1">Enterprise Lustre Overview</span></h1>
+</div>
+<div id="idheader" style= "background: #e4e4e4 url('bg_topichd.gif') repeat-x bottom;"> 
+<table id="breadtable" width="100%" border="0" cellspacing="0" cellpadding="0"> 
+  <tr >
+  <td align="left" class="breadhead" height="5">
+        
+  </td>
+  </tr>
+</table>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" id="headtable"> 
+
+<!-- Script version of NavHeader -->
+<tr id="scriptNavHead" valign="middle" style="height: auto;">
+   
+   <td align="left" class="topichead">
+   <h1 class="p_Heading1"><span class="f_Heading1">Enterprise Lustre Overview</span></h1>
+
+   </td>
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="a_quick_tour.htm"
+        onmouseover="document.images.prev.src='button_prev_h.gif'" 
+        onmouseout="document.images.prev.src='button_prev.gif'">
+        <img name="prev" src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
+     
+   </td>
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="getting_started.htm"
+        onmouseover="document.images.next.src='button_next_h.gif'" 
+        onmouseout="document.images.next.src='button_next.gif'"><img name="next" src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
+        
+   </td>
+   
+   
+   
+  
+   <td width="4">&nbsp;</td>
+  </tr>
+<!-- End script navheader version -->
+
+<!-- NoScript version of navheader -->
+  <tr id="noScriptNavHead" valign="middle" style="height: auto;"> 
+    <td align="left" class="topichead"> 
+    <h1 class="p_Heading1"><span class="f_Heading1">Enterprise Lustre Overview</span></h1>
+
+    </td>
+    <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="a_quick_tour.htm">
+        <img src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
+     
+   </td>
+   <td align="center" width="20" class="idnav" valign="bottom">
+     <a href="getting_started.htm">
+        <img src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
+        
+   </td>
+   
+   
+   
+   
+   <td width="4">&nbsp;</td>
+  </tr>
+<!-- End noscript navheader version -->
+  </table>
+<div id="autoTocWrapper"></div></div> 
+
+<div id="idcontent"><div id="innerdiv">
+
+<!--[if lt IE 7]><div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;'><a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode"><img src="http://storage.ie6countdown.com/assets/100/images/banners/warning_bar_0000_us.jpg" border="0" height="42" width="820" alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today." /></a></div><![endif]-->
+<!--ZOOMRESTART-->
+<p class="p_BodyText"><span class="f_BodyText">Enterprise Lustre is a global single-namespace file system architecture that allows parallel access by many clients to all the data in the file system across on many servers and storage devices. Designed to take advantage of the reliability features of enterprise-class storage hardware, Enterprise Lustre supports availability features such as redundant servers with storage failover. Metadata and data are stored on separate servers to allow each system to be optimized for the different workloads.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+<p><img src="whamcloud_lustre_diagram_final4.jpg" width="750" height="306" alt="WhamCloud_Lustre_diagram_FINAL4" style="border:none" /></p>
+<p>&nbsp;</p>
+<p class="p_ImageCaption"><span class="f_ImageCaption">Lustre Storage System</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The components of an Enterprise Lustre storage system are:</span></p>
+<p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_Notetoengineer" style="font-style: italic; font-weight: bold; color: #000000;">Management Server</span><span style="font-style: italic; font-weight: bold;"> (MGS)</span> - The MGS stores configuration information for all the Lustre file systems in a cluster and provides this information to other Lustre components. Each Lustre target contacts the MGS to provide <span class="f_BodyText">information, and Lustre clients contact the MGS to retrieve information. It is preferable that the MGS have its own storage space so that it can be managed independently. However, the MGS can be co-located and and share storage space with an MDS.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Management target (MGT)</span><span class="f_BodyText"> -</span><span class="f_BodyText" style="color: #ff0000;"> The MGT provides storage for MGS configuration information. </span><span class="f_BodyText" style="font-weight: bold; color: #ff0000;">[this entry needs to describe &quot;metadata target (MGT)&quot; as it is used in the Chroma UI]</span><br />
+<span class="f_BodyText" style="font-weight: bold; color: #ff0000;">&nbsp;</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Metadata Server (MDS)</span><span class="f_BodyText"> - The MDS makes metadata stored in one or more MDTs available to Lustre clients. Each MDS manages the names and directories in the Lustre file system and provides network request handling for one or more local MDTs.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Metadata Target (MDT)</span><span class="f_BodyText"> - The MDT stores metadata (such as file names, directories, permissions and file layout) on storage attached to an MDS. Each file system has one MDT. An MDT on a shared storage target can be available to multiple MDSs, although only one can access it at a time. If an active MDS fails, a standby MDS can serve the MDT and make it available to clients. This is referred to as MDS failover.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Object Storage Server (OSS)</span><span class="f_BodyText"> - The OSS provides file I/O service and network request handling for one or more local OSTs. Typically, an OSS serves between two and eight OSTs with up to 16 TB each. A typical configuration is an MDT on a dedicated node, two or more OSTs on each OSS node, and a client on each of a large number of compute nodes.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Object Storage Target (OST)</span><span class="f_BodyText"> - User file data is stored in one or more objects, each object on a separate OST in a Lustre file system. The number of objects per file is configurable by the user and can be tuned to optimize performance for a given workload.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span style="font-style: italic; font-weight: bold;">Lustre clients</span> - &nbsp;Lustre clients are computational, visualization or desktop nodes that are running Lustre client software, allowing them to mount the Lustre file system.</p><p>&nbsp;</p>
+<p>For more information about the Lustre file system see the<span class="f_BodyText"> <a href="http://wiki.whamcloud.com/display/PUB/Documentation" target="_blank" class="weblink">Lustre Operations Manual</a>.</span></p>
+
+<!--ZOOMSTOP--> 
+
+</div></div> 
+</body>
+<!--[if IE]>
+<script type="text/javascript" defer="defer">
+$("#hmcontent",window.parent.document).ready(function() {
+var doTogJump=setTimeout("toggleJump()", 0);
+      });
+</script>
+<![endif]-->
+</html>
