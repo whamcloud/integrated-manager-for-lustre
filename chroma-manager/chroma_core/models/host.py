@@ -859,8 +859,9 @@ class DeleteHostStep(Step):
             # then crash, then get restarted.
             pass
 
-        from chroma_core.models import ManagedHost
+        from chroma_core.models import ManagedHost, AgentSession
         ManagedHost.delete(kwargs['host_id'])
+        AgentSession.objects.filter(host = kwargs['host_id']).delete()
         if kwargs['force']:
             ManagedHost._base_manager.filter(id = kwargs['host_id']).update(state = 'removed')
 

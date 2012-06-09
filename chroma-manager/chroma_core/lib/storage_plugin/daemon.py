@@ -221,6 +221,7 @@ class AgentDaemon(object):
         self._session_state = {}
         self._stopping = False
         self._processing_lock = threading.Lock()
+        self._session_blacklist = set()
 
     def stop(self):
         self._stopping = True
@@ -244,28 +245,28 @@ class AgentDaemon(object):
 
     def remove_host_resources(self, host_id):
         storage_plugin_log.info("AgentDaemon: removing resources for host %s" % host_id)
+
+        # Stop the session, and block it from starting again
         with self._processing_lock:
             try:
                 del self._session_state[host_id]
             except KeyError:
                 storage_plugin_log.warning("remove_host_resources: No sessions for host %s" % host_id)
+            self._session_blacklist.add(host_id)
 
-            from chroma_core.lib.storage_plugin.query import ResourceQuery
-            from chroma_core.lib.storage_plugin.resource_manager import resource_manager
-            from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-            for plugin_name in storage_plugin_manager.loaded_plugins.keys():
-                try:
-                    record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
-                            host_id = host_id, plugin_name = plugin_name)
-                except StorageResourceRecord.DoesNotExist:
-                    pass
-                else:
-                    resource_manager.global_remove_resource(record.id)
+        from chroma_core.lib.storage_plugin.query import ResourceQuery
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        for plugin_name in storage_plugin_manager.loaded_plugins.keys():
+            try:
+                record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
+                        host_id = host_id, plugin_name = plugin_name)
+            except StorageResourceRecord.DoesNotExist:
+                pass
+            else:
+                resource_manager.global_remove_resource(record.id)
 
         storage_plugin_log.info("AgentDaemon: finished removing resources for host %s" % host_id)
-        # FIXME: race: I return from here having removed the resources, then something is
-        # in the queue of agent updates, causes the resources to be created again before
-        # the caller has actually deleted the host record.
 
     def await_session(self, host_id):
         started = False
@@ -286,6 +287,11 @@ class AgentDaemon(object):
         host_id = message['host_id']
         session_id = message['session_id']
         updates = message['updates']
+
+        if host_id in self._session_blacklist:
+            storage_plugin_log.info("Dropping message from blacklisted host %s (undergoing removal)" % host_id)
+            return
+
         try:
             host = ManagedHost.objects.get(id = host_id)
         except ManagedHost.DoesNotExist:
