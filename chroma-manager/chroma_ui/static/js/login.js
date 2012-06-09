@@ -88,7 +88,7 @@ var Login = function() {
     $('#login_dialog + div button:first').attr('id', 'cancel');
     $('#login_dialog + div button:last').attr('id', 'submit');
 
-    $('#user_info #authenticated #username').parent('a').click(function(ev)
+    $('#user_info #authenticated #account').click(function(ev)
     {
       UserDialog.edit(Login.getUser());
       ev.preventDefault();

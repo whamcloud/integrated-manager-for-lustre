@@ -10,22 +10,28 @@
       <li><a id="event_menu" class="navigation" href="event/">History</a></li>
       <li><a id="log_menu" class="navigation" href="log/">Logs</a></li>
     </ul>
-    <span class='fsadmin_only' style="float:right; padding-right:10px;">
+    <span class='fsadmin_only header_help_link'>
       <a href='{{STATIC_URL}}webhelp/help_wrapper.html'><img src='{{STATIC_URL}}images/fugue/question-frame.png'></a>
     </span>
-    <span id="user_info" style="float:right; padding-right:10px;">
+
+    <span id="user_info">
       <span id="authenticated">
-        <a href='#'><span id="username"></span></a>
-        <a href="#" id='logout'>Logout</a>
+        <span id="username"></span>
+        <span class='account_links'>[<a href='#' id='account'>Account</a>&nbsp;|&nbsp;<a href="#" id='logout'>Logout</a>]</span>
       </span>
       <span id="anonymous">
         <a href="#" id='login'>Login</a>
       </span>
     </span>
-    <span style="float:right; padding-right:10px;">
-      Version: {{app_version}}
+    <span class='header_version'>
+        <a class='navigation' href="/ui/about/">
+      {% if IS_RELEASE %}
+      {{VERSION}}
+      {% else %}
+      Build {{BUILD}}
+      {% endif %}
+            </a>
     </span>
-
   </div>
 </div>
 

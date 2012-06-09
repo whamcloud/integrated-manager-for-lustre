@@ -103,9 +103,7 @@ TEMPLATE_LOADERS = (
 )
 
 from django.conf import global_settings
-TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS +\
-    ("django.core.context_processors.request",
-     "chroma_ui.context_processors.app_version")
+TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + ("django.core.context_processors.request",)
 
 ROOT_URLCONF = 'urls'
 
@@ -318,9 +316,11 @@ ALLOW_ANONYMOUS_READ = True
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
 try:
-    from production_version import VERSION
+    from production_version import BUILD, VERSION, IS_RELEASE
 except ImportError:
-    VERSION = "dev"
+    BUILD = "dev"
+    VERSION = None
+    IS_RELEASE = False
 
 try:
     LOCAL_SETTINGS

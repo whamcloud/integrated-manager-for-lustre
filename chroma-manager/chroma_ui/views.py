@@ -13,6 +13,7 @@ from django.template import RequestContext
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
 from chroma_api.target import TargetResource
+import settings
 
 
 def _build_cache():
@@ -44,4 +45,10 @@ def index(request):
 
         from django.core.serializers import json as django_json
         return render_to_response("base.html",
-                RequestContext(request, {'cache': json.dumps(_build_cache(), cls = django_json.DjangoJSONEncoder), 'server_time': datetime.datetime.utcnow()}))
+                RequestContext(request,
+                        {'cache': json.dumps(_build_cache(), cls = django_json.DjangoJSONEncoder),
+                         'server_time': datetime.datetime.utcnow(),
+                         'BUILD': settings.BUILD,
+                         'VERSION': settings.VERSION,
+                         'IS_RELEASE': settings.IS_RELEASE
+                         }))

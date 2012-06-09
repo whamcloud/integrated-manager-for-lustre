@@ -4,8 +4,15 @@
 # ========================================================
 
 
-__version__ = '0.4.0'
-__version_info__ = tuple([int(num) for num in __version__.split('.')])
+try:
+        from production_version import VERSION, BUILD, IS_RELEASE
+        __version__ = VERSION
+        __build__ = BUILD
+        __is_release__ = IS_RELEASE
+except ImportError:
+        __version__ = '0.4.0'
+        __build__ = 'dev'
+        __is_release__ = False
 
 
 def version():

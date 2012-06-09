@@ -17,6 +17,7 @@
     </script>
 
     <link rel="stylesheet" href="{{STATIC_URL}}css/base.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/header.css" type="text/css" />
     <link href="{{STATIC_URL}}css/datatables.css" rel="stylesheet" type="text/css" />
     <link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css"  rel="stylesheet" type="text/css" />
     <link href="{{STATIC_URL}}css/BreadCrumb.css" rel="stylesheet" type="text/css" />
@@ -153,7 +154,7 @@
               {% include 'about.html' %}
           </div>
           <p class='footer'>
-              Chroma™ (version {{app_version}}) is Copyright © 2012 Whamcloud Inc. All rights reserved.
+              Chroma™ {% if IS_RELEASE %}{{VERSION}} (build {{BUILD}}){%else%}{{BUILD}}{%endif%} is Copyright © 2012 Whamcloud Inc. All rights reserved.
               <a href="/ui/about/" class='navigation'>About Chroma.</a>
           </p>
       </div>

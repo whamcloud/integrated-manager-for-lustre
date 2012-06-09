@@ -5,7 +5,18 @@
 
 <h2>About Chroma</h2>
 
-Chroma™ (version {{app_version}}) is Copyright © 2012 <a href="http://www.whamcloud.com/">Whamcloud Inc</a>. All rights reserved.
+<p>Chroma™ is Copyright © 2012 <a href="http://www.whamcloud.com/">Whamcloud Inc</a>. All rights reserved.</p>
+    <p>
+        {% if IS_RELEASE %}
+            Version: {{VERSION}}
+            <br>
+            Build: {{BUILD}}
+        {% else %}
+            Build: {{BUILD}}
+        {% endif %}
+    </p>
+
+
 
 <h2>Licensing notices</h2>
 

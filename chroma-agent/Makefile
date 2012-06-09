@@ -1,10 +1,26 @@
-VERSION := $(shell python -c 'from chroma_agent import __version__; print __version__')
-ifeq ($(origin RELEASE), undefined)
-  RELEASE := $(shell echo `date +%Y%m%d%H%M`_`git rev-parse --short HEAD`)
+
+# The build number, for dev/test/support
+BUILD := $(shell echo 0.4.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
+# The A.B.C.D release number for releases, or a build number for test/dev builds
+VERSION := $(BUILD)
+# Flag for whether this is a release build
+IS_RELEASE := False
+
+ifeq ($(IS_RELEASE),True)
+  PACKAGE_VERSION := $(VERSION)
+else
+  PACKAGE_VERSION := $(BUILD)
 endif
 
+PACKAGE_RELEASE := 1
 
 all: rpms
+
+version:
+	echo 'VERSION = "$(VERSION)"' > chroma_agent/production_version.py
+	echo 'BUILD = "$(BUILD)"' >> chroma_agent/production_version.py
+	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_agent/production_version.py
+	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> chroma_agent/production_version.py
 
 cleandist:
 	rm -rf dist
@@ -12,7 +28,7 @@ cleandist:
 
 production:
 	
-tarball:
+tarball: version
 	rm -f MANIFEST
 	python setup.py sdist
 
@@ -23,8 +39,8 @@ rpms: production cleandist tarball
 	cp chroma-agent-init.sh _topdir/SOURCES
 	cp chroma-agent.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
-		--define "version $(VERSION)" \
-		--define "release $(RELEASE)" \
+		--define "version $(PACKAGE_VERSION)" \
+		--define "release $(PACKAGE_RELEASE)" \
 		-bb _topdir/SPECS/chroma-agent.spec
 	mv _topdir/RPMS/noarch/chroma-agent-*.noarch.rpm dist/
 	rm -rf _topdir
