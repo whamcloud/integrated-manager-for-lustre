@@ -26,7 +26,7 @@ export WORKER_NAMES="serial jobs periodic_slow"
 run_celeryd() {
     local op=$1
 
-    python ${MANAGE_PY} worker_multi $op ${WORKER_NAMES} -Q:serial periodic,serialize -Q:jobs jobs -Q:periodic_slow periodic_slow -B:serial -c:serial 1 --autoscale:jobs=64,1 --pidfile=$PIDFILE --logfile=$LOGFILE --scheduler=chroma_core.tasks.EphemeralScheduler
+    python ${MANAGE_PY} worker_multi $op ${WORKER_NAMES} -Q:serial periodic,serialize -Q:jobs jobs -Q:periodic_slow periodic_slow -B:serial -c:serial 1 -c:jobs=32 --pidfile=$PIDFILE --logfile=$LOGFILE --scheduler=chroma_core.tasks.EphemeralScheduler
 
 }
 

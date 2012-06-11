@@ -85,7 +85,8 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
             self.assertTrue(host['immutable_state'])
             available_job_classes = [j['class_name'] for j in host['available_jobs']]
             self.assertIn('ForceRemoveHostJob', available_job_classes)
-            self.assertListEqual([], host['available_transitions'])
+            available_transition_states = [t['state'] for t in host['available_transitions']]
+            self.assertListEqual(['removed'], available_transition_states)
 
         # Issue command to detect existing filesystem
         response = self.chroma_manager.post(

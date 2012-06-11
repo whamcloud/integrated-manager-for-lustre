@@ -19,7 +19,7 @@ from chroma_core.lib.job import job_log
 from chroma_core.lib.util import all_subclasses
 from chroma_core.models.conf_param import ApplyConfParams
 from chroma_core.models.host import ConfigureLNetJob, ManagedHost, GetLNetStateJob
-from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job
+from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job, SchedulingError
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
 
 
@@ -572,7 +572,7 @@ class StateManager(object):
         from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
         if new_state not in instance.states:
-            raise RuntimeError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
+            raise SchedulingError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue

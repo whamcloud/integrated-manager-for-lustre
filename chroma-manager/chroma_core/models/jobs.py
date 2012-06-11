@@ -23,6 +23,13 @@ from chroma_core.lib.util import all_subclasses
 MAX_STATE_STRING = 32
 
 
+class SchedulingError(Exception):
+    """An operation could not be fulfilled either because the transition
+    change requested would leave the system in an invalid state, or because
+    the transition has requirements which cannot be met"""
+    pass
+
+
 class Command(models.Model):
     jobs = models.ManyToManyField('Job')
 
@@ -66,7 +73,7 @@ class Command(models.Model):
 
             # Check if the new state is valid
             if state not in object.states:
-                raise RuntimeError("'%s' is an invalid state for %s, valid states are %s" % (state, object, object.states))
+                raise SchedulingError("'%s' is an invalid state for %s, valid states are %s" % (state, object, object.states))
 
         if not dirty:
             return None
@@ -228,7 +235,7 @@ class StatefulObject(models.Model):
         """Return an iterable of state strings, which is navigable using StateChangeJobs"""
         for s in begin_state, end_state:
             if not s in cls.states:
-                raise RuntimeError("%s not legal state for %s, legal states are %s" % (s, cls, cls.states))
+                raise SchedulingError("%s not legal state for %s, legal states are %s" % (s, cls, cls.states))
 
         if not hasattr(cls, 'route_map'):
             cls._build_maps()
@@ -236,7 +243,7 @@ class StatefulObject(models.Model):
         try:
             return cls.route_map[(begin_state, end_state)]
         except KeyError:
-            raise RuntimeError("%s->%s not legal state transition for %s" % (begin_state, end_state, cls))
+            raise SchedulingError("%s->%s not legal state transition for %s" % (begin_state, end_state, cls))
 
     def get_available_states(self, begin_state):
         """States which should be advertised externally (i.e. exclude states which
@@ -246,7 +253,7 @@ class StatefulObject(models.Model):
             return []
         else:
             if not begin_state in self.states:
-                raise RuntimeError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
+                raise SchedulingError("%s not legal state for %s, legal states are %s" % (begin_state, self.__class__, self.states))
 
             if not hasattr(self, 'transition_map'):
                 self.__class__._build_maps()

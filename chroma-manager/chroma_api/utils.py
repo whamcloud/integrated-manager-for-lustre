@@ -5,6 +5,7 @@
 
 
 import datetime
+from celery.beat import SchedulingError
 import dateutil.parser
 import bisect
 
@@ -160,7 +161,12 @@ class StatefulModelResource(CustomModelResource):
                     report = StateManagerClient.get_transition_consequences(stateful_object, new_state)
                 raise custom_response(self, request, http.HttpResponse, report)
             else:
-                command = Command.set_state([(stateful_object, new_state)])
+                try:
+                    command = Command.set_state([(stateful_object, new_state)])
+                except SchedulingError, e:
+                    raise custom_response(self, request, http.HttpBadRequest,
+                            {'state': e.message})
+
                 if command:
                     raise custom_response(self, request, http.HttpAccepted,
                             {'command': dehydrate_command(command)})

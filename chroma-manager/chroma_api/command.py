@@ -9,10 +9,12 @@ from django.contrib.contenttypes.models import ContentType
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.utils import custom_response
 
 from chroma_core.models import Command
 from tastypie.resources import ModelResource
-from tastypie import fields
+from tastypie import fields, http
+from chroma_core.models.jobs import SchedulingError
 from chroma_core.models.utils import await_async_result
 from chroma_core.tasks import command_run_jobs
 
@@ -71,6 +73,11 @@ class CommandResource(ModelResource):
 
     def obj_create(self, bundle, request = None):
         async_result = command_run_jobs.delay(bundle.data['jobs'], bundle.data['message'])
-        command_id = await_async_result(async_result)
+        try:
+            command_id = await_async_result(async_result)
+        except SchedulingError, e:
+            raise custom_response(self, request, http.HttpBadRequest,
+                    {'state': e.message})
+
         bundle.obj = Command.objects.get(pk = command_id)
         return bundle
