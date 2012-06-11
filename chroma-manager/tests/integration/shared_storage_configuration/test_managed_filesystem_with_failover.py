@@ -127,6 +127,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         )
         self.assertEqual(response.successful, True, response.text)
         mount_command = response.json['mount_command']
+        self.assertTrue(mount_command)
 
         client = config['lustre_clients'].keys()[0]
         self.mount_filesystem(client, "testfs", mount_command)

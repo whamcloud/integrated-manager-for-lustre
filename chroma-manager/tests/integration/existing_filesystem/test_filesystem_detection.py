@@ -161,6 +161,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
 
         # Verify a client can use the filesystem using the mount command provided
         mount_command = filesystem['mount_command']
+        self.assertTrue(mount_command)
         client = config['lustre_clients'].keys()[0]
         self.mount_filesystem(client, config['filesystem']['name'], mount_command)
         try:
