@@ -1,6 +1,5 @@
 /* Float Clearing
  ---------------------------------------------------------------------*/
-
 .module:after
 {
 	clear: both;
@@ -479,7 +478,7 @@ span.transition_buttons {
   overflow:auto;
 }
 
-div.toplevel {
+div.toplevel, div.relative {
     position: relative;
 }
 
@@ -504,7 +503,6 @@ table.chart_grid tr {
 }
 
 table.chart_grid tr td {
-    position: relative;
     vertical-align: top;
 }
 
