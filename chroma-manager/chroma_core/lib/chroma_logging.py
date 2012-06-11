@@ -7,6 +7,7 @@
 import settings
 import logging.handlers
 import os
+import sys
 from pwd import getpwnam
 
 
@@ -20,5 +21,9 @@ class WatchedFileHandlerWithOwner(logging.handlers.WatchedFileHandler):
         stream = logging.handlers.WatchedFileHandler._open(self)
         if stream and not settings.DEBUG:
             pwd = getpwnam(self._owner)
-            os.chown(self.baseFilename, pwd.pw_uid, pwd.pw_gid)
+            try:
+                os.chown(self.baseFilename, pwd.pw_uid, pwd.pw_gid)
+            except Exception, e:
+                sys.stderr.write("Error trying to chown %s to %s.%s from uid %s: %s" % (self.baseFilename, pwd.pw_uid, pwd.pw_gid, os.geteuid(), e))
+                raise e
         return stream
