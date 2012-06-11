@@ -5,6 +5,7 @@
 
 
 import logging
+import chroma_core.lib.chroma_logging
 import subprocess
 from datetime import datetime, timedelta
 
@@ -27,14 +28,14 @@ def close_logs(panel):
     """Celery remote control command to close log files to avoid
     keeping stale handles after rotation.
 
-    This is used in addition to the behaviour of WatchedFileHandler, to ensure files
+    This is used in addition to the behaviour of WatchedFileHandlerWithOwner, to ensure files
     are closed even by processes that never write to them (and therefore would
     otherwise never close them)  See HYD-960.
     """
     for logger_name, logger in logging.root.manager.loggerDict.items():
         if isinstance(logger, logging.Logger):
             for handler in logger.handlers:
-                if isinstance(handler, logging.handlers.WatchedFileHandler):
+                if isinstance(handler, chroma_core.lib.chroma_logging.WatchedFileHandlerWithOwner):
                     handler.close()
 
 

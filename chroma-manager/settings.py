@@ -8,7 +8,7 @@ import sys
 import os
 import socket
 import logging
-import logging.handlers
+import chroma_core.lib.chroma_logging
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -272,7 +272,7 @@ def setup_log(log_name, filename = None):
     logger = logging.getLogger(log_name)
     logger.setLevel(logging.DEBUG)
     path = os.path.join(LOG_PATH, filename)
-    handler = logging.handlers.WatchedFileHandler(path)
+    handler = chroma_core.lib.chroma_logging.WatchedFileHandlerWithOwner(path, owner = "apache")
     handler.setFormatter(logging.Formatter('[%(asctime)s: %(levelname)s/%(name)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
     logger.addHandler(handler)
     if DEBUG:
