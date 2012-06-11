@@ -8,10 +8,12 @@
 from collections import defaultdict
 import datetime
 import json
+import traceback
 from dateutil import tz
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models.query_utils import Q
+import sys
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
 from chroma_core.lib.util import all_subclasses
@@ -396,7 +398,10 @@ class StateManager(object):
             for lock in json.loads(job.locks_json):
                 if lock['write']:
                     lock = StateLock.from_dict(job, lock)
-                    self._completion_hooks(lock.locked_item, command)
+                    try:
+                        self._completion_hooks(lock.locked_item, command)
+                    except Exception:
+                        job_log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
 
         for command in Command.objects.filter(jobs = job):
             command.check_completion()
@@ -416,7 +421,7 @@ class StateManager(object):
             locks = job.create_locks()
             for l in locks:
                 LockCache.add(l)
-            job.create_dependencies()
+            self._create_dependencies(job)
             job.save()
             job_log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
             command.jobs.add(job)
@@ -479,6 +484,49 @@ class StateManager(object):
                 depended_jobs.append(description)
 
         return {'transition_job': transition_job, 'dependency_jobs': depended_jobs}
+
+    def _create_dependencies(self, job):
+        """Examine overlaps between self's statelocks and those of
+           earlier jobs which are still pending, and generate wait_for
+           dependencies when we have a write lock and they have a read lock
+           or generate depend_on dependencies when we have a read or write lock and
+           they have a write lock"""
+        wait_fors = set()
+        for lock in LockCache.get_by_job(job):
+            job_log.debug("Job %s: %s" % (job, lock))
+            if lock.write:
+                wl = lock
+                # Depend on the most recent pending write to this stateful object,
+                # trust that it will have depended on any before that.
+                prior_write_lock = LockCache.get_latest_write(wl.locked_item, not_job = job)
+                if prior_write_lock:
+                    if wl.begin_state and prior_write_lock.end_state:
+                        assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (job, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
+                    job_log.debug("Job %s:   pwl %s" % (job, prior_write_lock))
+                    wait_fors.add(prior_write_lock.job.id)
+                    # We will only wait_for read locks after this write lock, as it
+                    # will have wait_for'd any before it.
+                    read_barrier_id = prior_write_lock.job.id
+                else:
+                    read_barrier_id = 0
+
+                # Wait for any reads of the stateful object between the last write and
+                # our position.
+                prior_read_locks = LockCache.get_read_locks(wl.locked_item, after = read_barrier_id, not_job = job)
+                for i in prior_read_locks:
+                    job_log.debug("Job %s:   prl %s" % (job, i))
+                    wait_fors.add(i.job.id)
+            else:
+                rl = lock
+                prior_write_lock = LockCache.get_latest_write(rl.locked_item, not_job = job)
+                if prior_write_lock:
+                    # See comment by locked_state in StateReadLock
+                    wait_fors.add(prior_write_lock.job.id)
+                job_log.debug("Job %s:   pwl2 %s" % (job, prior_write_lock))
+
+        wait_fors = list(wait_fors)
+        if wait_fors:
+            job.wait_for_json = json.dumps(wait_fors)
 
     def _sort_graph(self, objects, edges):
         """Sort items in a graph by their longest path from a leaf.  Items
@@ -571,7 +619,7 @@ class StateManager(object):
                 job.locks_json = json.dumps([l.to_dict() for l in locks])
                 for l in locks:
                     LockCache.add(l)
-                job.create_dependencies()
+                self._create_dependencies(job)
                 job.save()
                 job_log.debug("  dep %s -> Job %s" % (d, job.pk))
                 command.jobs.add(job)

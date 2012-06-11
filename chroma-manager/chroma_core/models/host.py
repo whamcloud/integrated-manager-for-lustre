@@ -549,7 +549,7 @@ class GetLNetStateJob(Job):
             job = self,
             locked_item = self.host,
             begin_state = "configured",
-            end_state = '',
+            end_state = None,
             write = True
         )]
 
@@ -939,7 +939,7 @@ class ForceRemoveHostJob(AdvertisedJob):
         locks.append(StateLock(
             job = self,
             locked_item = self.host,
-            begin_state = "",
+            begin_state = None,
             end_state = 'removed',
             write = True
         ))
@@ -950,7 +950,7 @@ class ForceRemoveHostJob(AdvertisedJob):
             locks.append(StateLock(
                 job = self,
                 locked_item = object,
-                begin_state = "",
+                begin_state = None,
                 end_state = 'removed',
                 write = True))
 
@@ -962,6 +962,9 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     def description(self):
         return "Force remove host %s from configuration" % self.host
+
+    def get_deps(self):
+        return DependOn(self.host, 'configured', acceptable_states=self.host.not_state('removed'))
 
     def get_steps(self):
         return [(DeleteHostDependents, {'host_id': self.host.id}),

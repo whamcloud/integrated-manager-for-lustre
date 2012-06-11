@@ -8,7 +8,6 @@ import os
 import time
 import datetime
 import threading
-import pickle
 
 from django.db import transaction
 
@@ -111,6 +110,14 @@ class PluginSession(threading.Thread):
         self.stopping = True
 
 
+class DaemonRpcError(object):
+    def __init__(self, backtrace):
+        self.backtrace = backtrace
+
+    def __str__(self):
+        return "DaemonRpcError: %s" % self.backtrace
+
+
 class DaemonRpc(object):
     def __init__(self, wrapped = None):
         self._stopping = False
@@ -138,9 +145,8 @@ class DaemonRpc(object):
             'kwargs': kwargs})
 
         if 'exception' in result:
-            exception = pickle.loads(str(result['exception']))
             storage_plugin_log.error("DaemonRpc._call: exception: %s" % result['backtrace'])
-            raise exception
+            raise DaemonRpcError(result['backtrace'])
 
         storage_plugin_log.info("Completed rpc '%s' (result=%s)" % (fn_name, result))
 
@@ -159,16 +165,15 @@ class DaemonRpc(object):
             request_id = body['id']
             try:
                 result = {'result': self._local_call(body['method'], *body['args'], **body['kwargs'])}
-            except Exception, e:
+            except Exception:
                 import sys
                 import traceback
                 exc_info = sys.exc_info()
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
                 result = {
-                        'exception': pickle.dumps(e),
                         'backtrace': backtrace
                         }
-                storage_plugin_log.error("DaemonRpc: exception calling %s" % body['method'])
+                storage_plugin_log.error("DaemonRpc: exception calling %s: %s" % (body['method'], backtrace))
             PluginResponse.send(queue_name, "", request_id, result)
 
         # Enter a loop to service requests until self.stopping is set

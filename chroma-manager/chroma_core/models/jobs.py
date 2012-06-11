@@ -394,49 +394,6 @@ class Job(models.Model):
         from celery.result import AsyncResult
         return AsyncResult(self.task_id).state
 
-    def create_dependencies(self):
-        """Examine overlaps between self's statelocks and those of
-           earlier jobs which are still pending, and generate wait_for
-           dependencies when we have a write lock and they have a read lock
-           or generate depend_on dependencies when we have a read or write lock and
-           they have a write lock"""
-        from chroma_core.lib.state_manager import LockCache
-        wait_fors = set()
-        for lock in LockCache.get_by_job(self):
-            job_log.debug("Job %s: %s" % (self, lock))
-            if lock.write:
-                wl = lock
-                # Depend on the most recent pending write to this stateful object,
-                # trust that it will have depended on any before that.
-                prior_write_lock = LockCache.get_latest_write(wl.locked_item, not_job = self)
-                if prior_write_lock:
-                    assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (self, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
-                    job_log.debug("Job %s:   pwl %s" % (self, prior_write_lock))
-                    wait_fors.add(prior_write_lock.job.id)
-                    # We will only wait_for read locks after this write lock, as it
-                    # will have wait_for'd any before it.
-                    read_barrier_id = prior_write_lock.job.id
-                else:
-                    read_barrier_id = 0
-
-                # Wait for any reads of the stateful object between the last write and
-                # our position.
-                prior_read_locks = LockCache.get_read_locks(wl.locked_item, after = read_barrier_id, not_job = self)
-                for i in prior_read_locks:
-                    job_log.debug("Job %s:   prl %s" % (self, i))
-                    wait_fors.add(i.job.id)
-            else:
-                rl = lock
-                prior_write_lock = LockCache.get_latest_write(rl.locked_item, not_job = self)
-                if prior_write_lock:
-                    # See comment by locked_state in StateReadLock
-                    wait_fors.add(prior_write_lock.job.id)
-                job_log.debug("Job %s:   pwl2 %s" % (self, prior_write_lock))
-
-        wait_fors = list(wait_fors)
-        if wait_fors:
-            self.wait_for_json = json.dumps(wait_fors)
-
     def create_locks(self):
         locks = []
         from chroma_core.lib.state_manager import get_deps
@@ -449,7 +406,6 @@ class Job(models.Model):
             ))
 
         if isinstance(self, StateChangeJob):
-            #stateful_object = ObjectCache.get()
             stateful_object = self.get_stateful_object()
             target_klass, origins, new_state = self.state_transition
 
