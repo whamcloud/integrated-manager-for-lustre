@@ -1,5 +1,6 @@
 *.py[co]
-*.sw?
+*.swp
+*.swo
 *.log
 *bak
 local_settings.py
