@@ -594,6 +594,20 @@ def target_running(args):
 
 
 def clear_targets(args):
+    if not args.force:
+        from os import _exit
+        import textwrap
+        warning = """
+        clear-targets will forcibly unmount and unconfigure all Lustre targets
+        on EVERY node in this HA domain.  This is an irreversible and
+        potentially very destructive operation.  Data loss may occur.  Please
+        do not use it unless you fully understand the consequences!  If you
+        are sure that this command does what you intend to do, then you must
+        supply the --force flag to avoid seeing this message.
+        """
+        print "WARNING: %s" % textwrap.fill(textwrap.dedent(warning))
+        _exit(1)
+
     for resource, attrs in query_ha_targets(args).items():
         print "Stopping %s" % resource
         _stop_target(attrs['ha_label'])
@@ -707,5 +721,7 @@ class TargetsPlugin(ActionPlugin):
         p.set_defaults(func=target_running)
 
         p = parser.add_parser("clear-targets",
-                              help="clear targets from HA config")
+                              help="clear all targets on ALL nodes from HA config (DESTRUCTIVE!)")
+        p.add_argument('--force', action='store_true',
+                       help="Confirm this action")
         p.set_defaults(func=clear_targets)

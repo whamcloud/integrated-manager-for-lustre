@@ -122,7 +122,7 @@ EOF
             _, stdout, _ = self.remote_command(address, "chroma-agent -h")
             available_commands = stdout.read()
             if re.search('clear-targets', available_commands):
-                self.remote_command(address, "chroma-agent clear-targets")
+                self.remote_command(address, "chroma-agent clear-targets --force")
 
         self.verify_cluster_has_no_managed_targets(chroma_manager)
 
