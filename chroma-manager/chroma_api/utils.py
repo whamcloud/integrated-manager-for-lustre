@@ -242,6 +242,7 @@ class MetricResource:
         :latest: boolean -- if true, you are asking for a single time point, the latest value
         :update: boolean -- if true, then begin,end specifies the region you've already presented
                  and you're asking for values *since* end.
+        :max_points: maximum number of datapoints returned, may result in lower resolution samples
         :reduce_fn: one of 'average', 'sum'
         :group_by: an attribute name of the object you're fetching.  For example, to get
                    the total OST stats for a filesystem, when requesting from
@@ -286,7 +287,11 @@ class MetricResource:
 
         if update and latest:
             errors['update'].append("update and latest are mutually exclusive")
-
+        if 'max_points' in request.GET:
+            try:
+                kwargs['max_points'] = int(request.GET['max_points'])
+            except ValueError:
+                errors['max_points'].append("max_points must be a valid integer")
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
@@ -305,9 +310,9 @@ class MetricResource:
     def _format_timestamp(self, ts):
         return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
 
-    def _fetch(self, metrics_obj, metrics, begin, end):
+    def _fetch(self, metrics_obj, metrics, begin, end, **kwargs):
         if begin and end:
-            return metrics_obj.fetch("Average", fetch_metrics = metrics, start_time = begin, end_time = end)
+            return metrics_obj.fetch("Average", fetch_metrics = metrics, start_time = begin, end_time = end, **kwargs)
         else:
             return (metrics_obj.fetch_last(fetch_metrics = metrics),)
 
@@ -419,7 +424,7 @@ class MetricResource:
 
         return reduced_result
 
-    def get_metric_list(self, request, metrics, begin, end, **kwargs):
+    def get_metric_list(self, request, metrics, begin, end, max_points=500, **kwargs):
         errors = {}
 
         reduce_fn = request.GET.get('reduce_fn', None)
@@ -434,39 +439,22 @@ class MetricResource:
 
         result = {}
         for obj in objs:
-            stats = self._fetch(R3dMetricStore(obj), metrics, begin, end)
-            result[obj.id] = []
-            # Assume these come out in chronological order
-            for datapoint in stats:
-                # Assume the database was storing UTC
-                timestamp = datapoint[0]
-                data = datapoint[1]
-
-                ENFORCE_NULLNESS = False
-                if ENFORCE_NULLNESS:
-                    if len(data) != len(metrics):
-                        # Discard, we didn't get all our metrics
-                        continue
-
-                    if None in data.values():
-                        # Discard, incomplete sample
-                        continue
-
-                else:
+            store = R3dMetricStore(obj)
+            for points in store.SAMPLES:
+                series = result[obj.id] = []
+                # Assume these come out in chronological order
+                for timestamp, data in self._fetch(store, metrics, begin, end, step=points * settings.AUDIT_PERIOD):
                     # FIXME
                     # This branch is necessary because stats which are really zero are sometimes
                     # populated as None (the ones that Lustre doesn't report until they're nonzero)
                     # -- None is overloaded to either mean "no data at this timestamp" or "lustre
                     # didn't report the stat because it's zero"
-                    non_none = False
-                    for k, v in data.items():
-                        if v == None:
-                            data[k] = 0.0
-                        else:
-                            non_none = True
-                    if not non_none:
-                        continue
-                result[obj.id].append({'ts': timestamp, 'data': data})
+                    nones = [key for key, value in data.items() if value is None]
+                    data.update(dict.fromkeys(nones, 0.0))
+                    if len(nones) < len(data):
+                        series.append({'ts': timestamp, 'data': data})
+                if len(series) <= max_points:
+                    break
 
         if reduce_fn and not group_by:
             reduced_result = self._reduce(metrics, result, reduce_fn)

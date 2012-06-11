@@ -5,24 +5,20 @@
 
 <h2>About Chroma</h2>
 
-<p>Chroma™ is Copyright © 2012 <a href="http://www.whamcloud.com/">Whamcloud Inc</a>. All rights reserved.</p>
-    <p>
-        {% if IS_RELEASE %}
-            Version: {{VERSION}}
-            <br>
-            Build: {{BUILD}}
-        {% else %}
-            Build: {{BUILD}}
-        {% endif %}
-    </p>
-
-
+<p>
+    {% if IS_RELEASE %}
+      Chroma™ {{VERSION}} (build {{BUILD}})
+    {% else %}
+      Chroma™ build: {{BUILD}}
+    {% endif %}
+</p>
+<p>Copyright © 2012 <a href="http://www.whamcloud.com/">Whamcloud Inc</a>. All rights reserved.</p>
 
 <h2>Licensing notices</h2>
 
 <h3>GPL components</h3>
 
-<p>The Chroma storage appliance includes some third party software licensed under the GNU GPL.  Please
+<p>The Chroma Storage appliance includes some third party software licensed under the GNU GPL.  Please
 contact Whamcloud if you require the source code to GPL components.</p>
 
 <h3>Icons</h3>

@@ -40,6 +40,9 @@ class R3dMetricStore(MetricStore):
     """
     Base class for R3D-backed metric stores.
     """
+    # 10s, 1m, 5m, 1h, 1d
+    SAMPLES = 1, 6, 30, 360, 360 * 24
+
     def _create_r3d(self,
             measured_object,
             sample_period,
@@ -57,8 +60,7 @@ class R3dMetricStore(MetricStore):
             samples = (1, 60),
         else:
             metrics_log.debug('full archive for %s' % measured_object)
-            # 10s, 1m, 5m, 1h, 1d
-            samples = [(points, points * 10 ** 4) for points in (1, 6, 30, 360, 360 * 24)]
+            samples = [(points, points * 10 ** 4) for points in self.SAMPLES]
 
         # We want our start time to be prior to the first insert, but
         # not so far back that we waste lots of time with filling in

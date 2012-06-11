@@ -233,7 +233,8 @@ LUSTRE_MKFS_OPTIONS_OST = None
 CELERY_ROUTES = (
         {"chroma_core.tasks.audit_all": {"queue": "periodic"}},
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
-        {"chroma_core.tasks.parse_log_entries": {"queue": "parselog"}},
+        {"chroma_core.tasks.parse_log_entries": {"queue": "periodic_slow"}},
+        {"chroma_core.tasks.prune_database": {"queue": "periodic_slow"}},
         {"chroma_core.tasks.janitor": {"queue": "periodic"}},
 
         {"chroma_core.tasks.command_run_jobs": {"queue": "serialize"}},
@@ -312,6 +313,13 @@ AGENT_CLOCK_TOLERANCE = 20
 # Set to False to require logins even for read-only access
 # to chroma_api
 ALLOW_ANONYMOUS_READ = True
+
+# The value at which log entries in the database will be aged out to a
+# flat text file in /var/log/chroma/db_log
+DBLOG_HW = 1200000
+# The value at which we stop aging database log entries out to a flat
+# text file
+DBLOG_LW = 1000000
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
 

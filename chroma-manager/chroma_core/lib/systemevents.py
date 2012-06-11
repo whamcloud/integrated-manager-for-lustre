@@ -233,3 +233,40 @@ class SystemEventsAudit:
                     break
 
         return entry_count
+
+    def prune_log_entries(self):
+        from chroma_core.lib.lustre_audit import audit_log
+
+        dblog_hw = settings.DBLOG_HW
+        dblog_lw = settings.DBLOG_LW
+        num_entries = Systemevents.objects.all().count()
+        if num_entries > dblog_hw:
+            remove_num_entries = num_entries - dblog_lw
+            removed_num_entries = 0
+
+            trans_size = min(10000, remove_num_entries)
+            with transaction.commit_on_success():
+                while remove_num_entries > 0:
+                    removed_entries = Systemevents.objects.all().order_by('id')[0:trans_size]
+                    audit_log.debug("writing %s batch of entries" % trans_size)
+                    try:
+                        f = open(settings.LOG_PATH + "/db_log", "a")
+                        for line in removed_entries:
+                            f.write("%s\n" % line.__str__())
+                            last_id = line.id
+                        f.close()
+                        Systemevents.objects.filter(id__lte = last_id).delete()
+
+                    except Exception, e:
+                        audit_log.error("error opening/writing/closing the db_log: %s" % e)
+                        f.close()
+                        return removed_num_entries
+
+                    remove_num_entries -= trans_size
+                    removed_num_entries += trans_size
+                    if remove_num_entries < trans_size:
+                        trans_size = remove_num_entries
+
+                return removed_num_entries
+
+        return 0
