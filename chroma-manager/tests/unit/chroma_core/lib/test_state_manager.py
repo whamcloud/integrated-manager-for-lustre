@@ -1,4 +1,4 @@
-
+from chroma_core.models.jobs import SchedulingError
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
 from chroma_core.lib.state_manager import StateManagerClient
 import datetime
@@ -67,7 +67,7 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 1)
 
     def test_invalid_state(self):
-        with self.assertRaisesRegexp(RuntimeError, "is invalid for"):
+        with self.assertRaisesRegexp(SchedulingError, "is invalid for"):
             self.set_state(self.host, 'lnet_rhubarb')
 
     def test_1step(self):
