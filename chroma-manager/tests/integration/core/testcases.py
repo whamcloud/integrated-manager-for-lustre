@@ -546,7 +546,8 @@ EOF
         self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
         self.assertEqual(len(addresses), len(hosts) - len(pre_existing_hosts))
-        self.assertListEqual([h['state'] for h in hosts], ['lnet_up'] * len(hosts))
+        for host in hosts:
+            self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'])
 
         new_hosts = [h for h in hosts if h['id'] not in [s['id'] for s in pre_existing_hosts]]
 
