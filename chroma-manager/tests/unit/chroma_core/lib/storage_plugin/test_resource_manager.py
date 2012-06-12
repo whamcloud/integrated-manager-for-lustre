@@ -491,6 +491,25 @@ class TestAlerts(ResourceManagerTestCase):
                     resource_manager.session_notify_alert(scannable_pk, resource._handle, active, name, attribute)
                     return active
 
+    def test_multiple_alerts(self):
+        """Test multiple AlertConditions acting on the same attribute"""
+        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK'})
+        lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
+
+        # Open session
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+        resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
+
+        from chroma_core.lib.storage_plugin.api.alert_conditions import ValueCondition
+
+        # Go into failed state and send notification
+        controller_resource.multi_status = 'FAIL1'
+        self.assertEqual(True, self._update_alerts(resource_record.pk, controller_resource, ValueCondition))
+
+        # Check that the alert is now set on couplet
+        from chroma_core.models import AlertState
+        self.assertEqual(AlertState.objects.filter(active = True).count(), 2)
+
     def test_raise_alert(self):
         resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK'})
         lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
