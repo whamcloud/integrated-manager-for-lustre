@@ -280,10 +280,14 @@ class StateManager(object):
         available_states = stateful_object.get_available_states(from_state)
         transitions = []
         for to_state in available_states:
-            verb = stateful_object.get_verb(from_state, to_state)
-            # NB: a None verb means its an internal transition that shouldn't be advertised
-            if verb != None:
-                transitions.append({"state": to_state, "verb": verb})
+            try:
+                verb = stateful_object.get_verb(from_state, to_state)
+            except KeyError:
+                job_log.warning("Object %s in state %s advertised an unreachable state %s" % (stateful_object, from_state, to_state))
+            else:
+                # NB: a None verb means its an internal transition that shouldn't be advertised
+                if verb != None:
+                    transitions.append({"state": to_state, "verb": verb})
 
         return transitions
 
@@ -294,6 +298,8 @@ class StateManager(object):
         """
         if hasattr(changed_item, 'content_type'):
             changed_item = changed_item.downcast()
+
+        job_log.debug("_completion_hooks %s (%s) state=%s" % (changed_item, changed_item.__class__, changed_item.state))
 
         if isinstance(changed_item, FilesystemMember):
             fs = changed_item.filesystem
@@ -398,10 +404,13 @@ class StateManager(object):
             for lock in json.loads(job.locks_json):
                 if lock['write']:
                     lock = StateLock.from_dict(job, lock)
+                    job_log.debug("Job %s completing, held writelock on %s" % (job_id, lock.locked_item))
                     try:
                         self._completion_hooks(lock.locked_item, command)
                     except Exception:
                         job_log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
+        else:
+            job_log.debug("Job %s completing, held no locks" % job_id)
 
         for command in Command.objects.filter(jobs = job):
             command.check_completion()
@@ -419,6 +428,7 @@ class StateManager(object):
                     self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command)
             job_log.info("add_jobs: done checking dependencies")
             locks = job.create_locks()
+            job.locks_json = json.dumps([l.to_dict() for l in locks])
             for l in locks:
                 LockCache.add(l)
             self._create_dependencies(job)

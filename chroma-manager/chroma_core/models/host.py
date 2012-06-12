@@ -692,7 +692,9 @@ class EnableLNetJob(StateChangeJob):
     state_transition = (ManagedHost, 'configured', 'lnet_unloaded')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
-    state_verb = 'Enable LNet'
+    # Hide this transition as it does not actually do
+    # anything (should go away with HYD-1215)
+    state_verb = None
 
     def description(self):
         return "Enabling LNet on %s" % self.managed_host
