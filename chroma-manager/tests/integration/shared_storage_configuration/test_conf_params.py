@@ -54,6 +54,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         filesystem = response.json['objects'][0]
 
         mount_command = filesystem['mount_command']
+        self.assertTrue(mount_command)
 
         client = config['lustre_clients'].keys()[0]
         self.mount_filesystem(client, "testfs", mount_command)
@@ -163,6 +164,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         )
         self.assertEqual(response.successful, True, response.text)
         mount_command = response.json['mount_command']
+        self.assertTrue(mount_command)
 
         client_hostname = config['lustre_clients'].keys()[0]
         self.mount_filesystem(client_hostname, "testfs", mount_command)

@@ -547,10 +547,24 @@ EOF
         self.assertEqual(response.successful, True, response.text)
         hosts = response.json['objects']
         self.assertEqual(len(addresses), len(hosts) - len(pre_existing_hosts))
-        for host in hosts:
-            self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'])
 
         new_hosts = [h for h in hosts if h['id'] not in [s['id'] for s in pre_existing_hosts]]
+
+        for host in new_hosts:
+            self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'])
+
+        # Start lnet on each new host
+        for host in new_hosts:
+            self.set_state(host['resource_uri'], 'lnet_up')
+
+        response = self.chroma_manager.get(
+            '/api/host/',
+        )
+        self.assertEqual(response.successful, True, response.text)
+        hosts = response.json['objects']
+
+        new_hosts = [h for h in hosts if h['id'] not in [s['id'] for s in pre_existing_hosts]]
+        self.assertListEqual([h['state'] for h in new_hosts], ['lnet_up'] * len(new_hosts))
 
         return new_hosts
 

@@ -2,11 +2,12 @@
 name=WhamOS-$releasever - Master
 baseurl=https://build.whamcloudlabs.com/MAGICKEY/job/chroma/arch=x86_64%2Cdistro=el6/lastSuccessfulBuild/artifact/dist/
 gpgcheck=0
-enabled=1
+enabled=0
 sslverify=0
 
 [coeus-master]
 name=coeusmaster
 baseurl=https://build.whamcloudlabs.com/MAGICKEY/job/coeus-updates/arch=x86_64%2Cdistro=el6-lab/lastSuccessfulBuild/artifact/artifacts/repo/
+enabled=0
 gpgcheck=0
 sslverify=0
