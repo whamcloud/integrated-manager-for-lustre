@@ -104,18 +104,36 @@
                 });
     }
 
+    function storage_attribute_markup(attr) {
+        var markup;
+        if (attr['class'] == 'ResourceReference') {
+            if (attr.raw) {
+                /* For ResourceReference fields, 'raw' is a URI */
+                return uri_properties_link(attr.raw, attr.markup);
+            } else {
+                return "";
+            }
+        } else {
+            return attr['markup'];
+        }
+    }
 
 /* Populate table of storage resources */
   var resourceTable = null;
   function load_resource_table() {
       var selected = $('#resource_class_select option:selected').val()
-      var tokens = selected.split(",")
-      var module_name = tokens[0]
-      var class_name = tokens[1]
+      var tokens = selected.split(",");
+      var module_name = tokens[0];
+      var class_name = tokens[1];
 
       Api.get("storage_resource_class/" + module_name + "/" + class_name + "/", {},
           success_callback = function(resource_class) {
             var columns = resource_class.columns;
+            var field_attributes = {};
+            _.each(resource_class.fields, function(field) {
+              field_attributes[field.name] = field;
+            });
+
             var aoColumns = [
               {'mdataProp': 'id', sTitle: 'ID', 'bVisible': false, bSortable: false},
               {'mDataProp': 'alias', 'sTitle': 'Name', bSortable: false}];
@@ -124,7 +142,7 @@
                 bSortable: true, sClass: 'txtleft', sTitle: c['label'], mDataProp: "attr_" + c['name']
               })
             });
-            aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false})
+            aoColumns.push({mDataProp: '_alert_markup', sWidth: "1%", bSortable: false});
 
             if (resourceTable) {
                 resourceTable.fnDestroy();
@@ -144,7 +162,7 @@
                         row.DT_RowClass = "resource_alert";
                       }
                       $.each(row.attributes, function(attr_name, attr_val) {
-                        row["attr_" + attr_name] = attr_val['markup'];
+                        row["attr_" + attr_name] = storage_attribute_markup(attr_val);
                       });
                       row.alias = uri_properties_link(row.resource_uri, row.alias);
                       row['0'] = ""

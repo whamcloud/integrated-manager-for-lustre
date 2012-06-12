@@ -163,7 +163,7 @@ class ResourceReference(BaseResourceAttribute):
         name = conditional_escape(name)
 
         from django.utils.safestring import mark_safe
-        return mark_safe("<a class='storage_resource' href='#%s'>%s</a>" % (value._handle, name))
+        return mark_safe("%s" % name)
 
     def validate(self, value):
         if value == None and self.optional:

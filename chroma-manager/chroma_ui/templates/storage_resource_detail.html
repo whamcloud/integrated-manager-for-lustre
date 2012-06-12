@@ -14,7 +14,7 @@
             <% $.each(attributes, function(name, attr_info) { %>
             <tr>
                 <th><%= attr_info.label %></th>
-                <td><%= attr_info.markup %></td>
+                <td><%= storage_attribute_markup(attr_info) %></td>
             </tr>
             <% }); %>
         </table>

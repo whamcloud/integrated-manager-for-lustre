@@ -197,10 +197,18 @@ class StorageResourceResource(MetricResource, ModelResource):
 
             val = getattr(resource, name)
             if isinstance(val, BaseStorageResource):
-                raw = val._handle
+                if val._handle:
+                    from chroma_api.urls import api
+                    raw = api.get_resource_uri(StorageResourceRecord.objects.get(pk = val._handle))
+                else:
+                    raw = None
             else:
                 raw = val
-            result[name] = {'raw': raw, 'markup': props.to_markup(val), 'label': props.get_label(name)}
+            result[name] = {
+                'raw': raw,
+                'markup': props.to_markup(val),
+                'label': props.get_label(name),
+                'class': props.__class__.__name__}
         return result
 
     class Meta:
