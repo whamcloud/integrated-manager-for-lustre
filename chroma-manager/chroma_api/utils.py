@@ -444,12 +444,19 @@ class MetricResource:
         objs = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
 
         result = {}
+        try:
+            min_step = (end - begin) / max_points / settings.AUDIT_PERIOD
+        except TypeError:
+            min_step = datetime.timedelta()
         for obj in objs:
             store = R3dMetricStore(obj)
             for points in store.SAMPLES:
+                step = points * settings.AUDIT_PERIOD
+                if min_step > datetime.timedelta(seconds=step):
+                    continue  # skip if expected number of points is much larger than max_points
                 series = result[obj.id] = []
                 # Assume these come out in chronological order
-                for timestamp, data in self._fetch(store, metrics, begin, end, step=points * settings.AUDIT_PERIOD):
+                for timestamp, data in self._fetch(store, metrics, begin, end, step=step):
                     # FIXME
                     # This branch is necessary because stats which are really zero are sometimes
                     # populated as None (the ones that Lustre doesn't report until they're nonzero)
