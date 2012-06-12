@@ -59,6 +59,8 @@ function add_host_dialog() {
   var test_skipped;
   element.find('.add_host_submit_button').click(function(ev) {
       select_page('add_host_loading');
+      element.find('.add_host_skip_button').button('enable');
+
 
       test_skipped = false;
 
@@ -93,6 +95,7 @@ function add_host_dialog() {
   }
 
   element.find('.add_host_skip_button').click(function(ev) {
+    element.find('.add_host_skip_button').button('disable');
     create_host();
     ev.preventDefault();
   });
