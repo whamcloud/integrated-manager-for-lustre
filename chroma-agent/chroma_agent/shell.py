@@ -15,7 +15,7 @@ def run(arg_list, shell = False):
     using this function.
     """
 
-    daemon_log.info("shell.run: %s" % arg_list)
+    daemon_log.debug("shell.run: %s" % arg_list)
     import sys
     import pty
     import fcntl
