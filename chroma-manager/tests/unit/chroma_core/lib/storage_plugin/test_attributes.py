@@ -1,5 +1,6 @@
 
 from django.test import TestCase
+from django.utils.html import conditional_escape
 
 from chroma_core.lib.storage_plugin import base_resource_attribute
 from chroma_core.lib.storage_plugin.api import attributes
@@ -88,21 +89,17 @@ class TestReferenceAttribute(TestCase):
 
         self.assertEqual(rr.to_markup(None), '')
 
-        def hyperlink_markup(id, label):
-            from django.utils.html import conditional_escape
-            return "<a class='storage_resource' href='#%s'>%s</a>" % (id, conditional_escape(label))
-
         from chroma_core.models import StorageResourceRecord
         resource = StorageResourceRecord.objects.get(id = self.record_pk).to_resource()
         markup = rr.to_markup(resource)
-        self.assertEqual(markup, hyperlink_markup(self.record_pk, resource.get_label()))
+        self.assertEqual(markup, conditional_escape(resource.get_label()))
 
         record = StorageResourceRecord.objects.get(pk = self.record_pk)
         record.alias = 'test alias'
         record.save()
 
         markup = rr.to_markup(resource)
-        self.assertEqual(markup, hyperlink_markup(self.record_pk, 'test alias'))
+        self.assertEqual(markup, conditional_escape('test alias'))
 
     def test_validate(self):
         rr = attributes.ResourceReference(optional = True)
