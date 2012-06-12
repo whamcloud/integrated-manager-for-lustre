@@ -5,7 +5,7 @@
 
 
 import datetime
-from celery.beat import SchedulingError
+from chroma_core.models.jobs import SchedulingError
 import dateutil.parser
 import bisect
 
@@ -177,7 +177,11 @@ class StatefulModelResource(CustomModelResource):
 
     def obj_delete(self, request = None, **kwargs):
         obj = self.obj_get(request, **kwargs)
-        command = Command.set_state([(obj, 'removed')])
+        try:
+            command = Command.set_state([(obj, 'removed')])
+        except SchedulingError, e:
+            raise custom_response(self, request, http.HttpBadRequest,
+                    {'__all__': e.message})
         raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command)})
 
