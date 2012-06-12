@@ -83,7 +83,7 @@ class ChromaManagerOps(NodeOps):
             sudo('chroma-config stop')
             self._setup_chroma_repo()
             if use_master:
-                sudo('yum --enablerepo=chroma-master -y update')
+                sudo('yum --enablerepo=chroma-master --enablerepo=coeus-master -y update')
             else:
                 sudo('yum -y update')
 
@@ -121,7 +121,7 @@ class ChromaManagerOps(NodeOps):
 
     def add_server(self, appliance_ops):
         with self.open_session():
-            sudo("chroma-api host create --address %s" % appliance_ops.appliance.node.name)
+            sudo("chroma server-add %s" % appliance_ops.appliance.node.name)
 
 #        from provisioning.lib.chroma_manager_client import AuthorizedHttpRequests
 #        manager_url = "http://%s/" % self.session.instance.ip_address

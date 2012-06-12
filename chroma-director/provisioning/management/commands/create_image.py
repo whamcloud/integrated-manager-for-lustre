@@ -12,11 +12,12 @@ import json
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-        make_option("--name", type=str,
-            default =  "chroma-manager-%s" % time.strftime("%y%m%d"),
+        make_option("--name", type=str, default='',
             help="name of the new image"),
         make_option("--type", choices = ["manager", "storage"],
             help = "manager or storage instance"),
+        make_option("--master", action="store_true",
+            help="Update from master repository"),
         make_option("--plain", action="store_true",
             help = "just boot image"),
         make_option("--recover", action="store_true",
@@ -28,7 +29,7 @@ class Command(BaseCommand):
 
     def prepare_manager_image(self, node):
         image_ops = ManagerImageOps(node)
-        image_ops.install_deps()
+        image_ops.install_deps(self.options.master)
         ami_id = image_ops.make_image(self.options.name)
         image_ops.terminate()
         config = {
@@ -46,7 +47,7 @@ class Command(BaseCommand):
 
     def prepare_storage_image(self, node):
         image_ops = StorageImageOps(node)
-        image_ops.install_deps()
+        image_ops.install_deps(self.options.master)
         # The first reboot takes a lot longer than subsequent ones, so get it out of the way now
         # (something to do with SElinux rescanning root)
         # However, fabric->ssh  is raising an SSHException('SSH session not active') after the reboot
@@ -74,6 +75,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.options = LazyStruct(**options)
+        if len(self.options.name) == 0:
+            self.options.name = "chroma-%s-%s" %(self.options.type, time.strftime("%y%m%d"))
         if not self.options.recover:
             image = self._create_instances()
         else:
@@ -81,7 +84,6 @@ class Command(BaseCommand):
 
         if self.options.plain:
             return
-
         if self.options.type == "manager":
             self.prepare_manager_image(image)
         else:
