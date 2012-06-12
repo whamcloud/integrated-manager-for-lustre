@@ -13,6 +13,11 @@ import settings
 from chroma_core.models import ManagedHost, ManagedTarget, ManagedFilesystem, StorageResourceRecord
 from chroma_core.models import Job, Command, Volume, VolumeNode
 
+# Ensure that the auto post_syncdb hook is installed
+# before our hook, so that Permission objects will be there
+# by the time we are called.
+import django.contrib.auth.management
+
 
 def setup_groups(sender, **kwargs):
     if auth.models.Group.objects.count() == 0:
