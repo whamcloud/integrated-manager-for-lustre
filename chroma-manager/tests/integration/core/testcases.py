@@ -38,6 +38,7 @@ class ChromaIntegrationTestCase(TestCase):
             '/api/filesystem/',
             params = {'limit': 0}
         )
+        self.assertEqual(response.status_code, 200)
         filesystems = response.json['objects']
 
         if len(filesystems) > 0:
@@ -623,7 +624,7 @@ EOF
         self.add_hosts([config['lustre_servers'][0]['address']])
 
         ha_volumes = self.get_usable_volumes()
-        self.assertGreaterEqual(len(ha_volumes), 4)
+        self.assertGreaterEqual(len(ha_volumes), 3)
 
         mgt_volume = ha_volumes[0]
         mdt_volume = ha_volumes[1]

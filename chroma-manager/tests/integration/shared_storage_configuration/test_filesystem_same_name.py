@@ -16,6 +16,8 @@ class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
         Test that creating a filesystem with the same name as a
         previously removed filesystem on the same MGS.
         """
+        self.assertGreaterEqual(len(config['lustre_servers'][0]['device_paths']), 5)
+
         reused_name = 'testfs'
         other_name = 'foofs'
 
