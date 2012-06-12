@@ -556,19 +556,19 @@ def migrate_target(args):
     # a migration scores at 500 to force it higher than stickiness
     score = 500
     shell.try_run(shlex.split("crm configure location %s-migrated %s %s: %s" % \
-                        (args.label, args.label, score, args.node)))
+                        (args.ha_label, args.ha_label, score, args.node)))
 
 
 def unmigrate_target(args):
     from time import sleep
 
     # just remove the migration constraint
-    shell.try_run(['crm', 'configure', 'delete', '%s-migrated' % args.label])
+    shell.try_run(['crm', 'configure', 'delete', '%s-migrated' % args.ha_label])
     sleep(1)
 
-    shell.try_run(['crm_resource', '-r', args.label, '-p', 'target-role',
+    shell.try_run(['crm_resource', '-r', args.ha_label, '-p', 'target-role',
                    '-m', '-v', 'Stopped'])
-    shell.try_run(['crm_resource', '-r', args.label, '-p', 'target-role',
+    shell.try_run(['crm_resource', '-r', args.ha_label, '-p', 'target-role',
                    '-m', '-v', 'Started'])
 
 
