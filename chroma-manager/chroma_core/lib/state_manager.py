@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
@@ -299,7 +298,17 @@ class StateManager(object):
         if hasattr(changed_item, 'content_type'):
             changed_item = changed_item.downcast()
 
-        job_log.debug("_completion_hooks %s (%s) state=%s" % (changed_item, changed_item.__class__, changed_item.state))
+        job_log.debug("_completion_hooks command %s, %s (%s) state=%s" % (command, changed_item, changed_item.__class__, changed_item.state))
+
+        def running_or_failed(klass, **kwargs):
+            """Look for jobs of the same type with the same params, either incomplete (don't start the job because
+            one is already pending) or complete in the same command (don't start the job because we already tried and failed)"""
+            if command:
+                count = klass.objects.filter(~Q(state = 'complete') | Q(command = command), **kwargs).count()
+            else:
+                count = klass.objects.filter(~Q(state = 'complete'), **kwargs).count()
+
+            return bool(count)
 
         if isinstance(changed_item, FilesystemMember):
             fs = changed_item.filesystem
@@ -315,14 +324,14 @@ class StateManager(object):
 
         if isinstance(changed_item, ManagedHost):
             if changed_item.state == 'lnet_up' and changed_item.lnetconfiguration.state != 'nids_known':
-                if not ConfigureLNetJob.objects.filter(~Q(state = 'complete'), lnet_configuration = changed_item.lnetconfiguration).count():
+                if not running_or_failed(ConfigureLNetJob, lnet_configuration = changed_item.lnetconfiguration):
                     job = ConfigureLNetJob(lnet_configuration = changed_item.lnetconfiguration, old_state = 'nids_unknown')
                     if not command:
                         command = Command.objects.create(message = "Configuring LNet on %s" % changed_item)
                     self.add_jobs([job], command)
 
             if changed_item.state == 'configured':
-                if not GetLNetStateJob.objects.filter(~Q(state = 'complete'), host = changed_item).count():
+                if not running_or_failed(GetLNetStateJob, host = changed_item):
                     job = GetLNetStateJob(host = changed_item)
                     if not command:
                         command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
@@ -335,7 +344,7 @@ class StateManager(object):
                 mgs = changed_item
 
             if mgs.conf_param_version != mgs.conf_param_version_applied:
-                if not ApplyConfParams.objects.filter(~Q(state = 'complete'), mgs = mgs).count():
+                if not running_or_failed(ApplyConfParams, mgs = mgs):
                     job = ApplyConfParams(mgs = mgs)
                     if get_deps(job).satisfied():
                         if not command:
