@@ -558,6 +558,11 @@ def migrate_target(args):
     shell.try_run(shlex.split("crm configure location %s-migrated %s %s: %s" % \
                         (args.ha_label, args.ha_label, score, args.node)))
 
+    shell.try_run(['crm_resource', '-r', args.ha_label, '-p', 'target-role',
+                   '-m', '-v', 'Stopped'])
+    shell.try_run(['crm_resource', '-r', args.ha_label, '-p', 'target-role',
+                   '-m', '-v', 'Started'])
+
 
 def unmigrate_target(args):
     from time import sleep
