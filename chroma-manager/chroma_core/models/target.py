@@ -272,7 +272,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
             return []
         else:
             available_states = super(ManagedMdt, self).get_available_states(begin_state)
-            available_states = list(set(available_states) ^ set(['removed', 'forgotten']))
+            available_states = list(set(available_states) - set(['removed', 'forgotten']))
 
             return available_states
 
@@ -294,11 +294,11 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
             available_states = super(ManagedMgs, self).get_available_states(begin_state)
 
             # Exclude the transition to 'forgotten' because immutable_state is False
-            available_states = list(set(available_states) ^ set(['forgotten']))
+            available_states = list(set(available_states) - set(['forgotten']))
 
             # Only advertise removal if the FS has already gone away
             if self.managedfilesystem_set.count() > 0:
-                available_states = list(set(available_states) ^ set(['removed']))
+                available_states = list(set(available_states) - set(['removed']))
                 if 'removed' in available_states:
                     available_states.remove('removed')
 
