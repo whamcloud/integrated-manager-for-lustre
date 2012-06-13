@@ -172,9 +172,14 @@
         var targets = data.objects;
         $.each(targets, function(i, target)
         {
+          var tooltip = "";
+          $.each(target.volume.volume_nodes, function(i, node) {
+            tooltip = tooltip + node.host_label + ":" + node.path + "\n";
+          });
+          var volume_markup = "<span title='" + $.trim(tooltip) + "'>" + target.volume.label + "</span>"
           var row = [
                   object_properties_link(target),
-                  target.volume_name,
+                  volume_markup,
                   uri_properties_link(target.primary_server, target.primary_server_name),
                   uri_properties_link(target.failover_servers[0], target.failover_server_name),
                   target.active_host_name,

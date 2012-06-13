@@ -100,9 +100,9 @@
         if (volume.volume_nodes.length > 0) {
           var tooltip = "";
           $.each(volume.volume_nodes, function(i, node) {
-              tooltip = tooltip + node.host_label + ":" + node.path;
+              tooltip = tooltip + node.host_label + ":" + node.path + "\n";
           });
-          volume.label = "<span title='" + tooltip + "'>" + volume.label + "</span>"
+          volume.label = "<span title='" + $.trim(tooltip) + "'>" + volume.label + "</span>"
         }
 
         return volume;
