@@ -7,6 +7,7 @@
 import datetime
 from collections import defaultdict
 import json
+import traceback
 
 from django.db import models
 from django.db import transaction
@@ -14,6 +15,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 
 from picklefield.fields import PickledObjectField
+import sys
 from polymorphic.models import DowncastMetaclass
 
 from chroma_core.models.utils import WorkaroundDateTimeField, await_async_result
@@ -569,13 +571,7 @@ class Job(models.Model):
     def _deps_satisfied(self):
         from chroma_core.lib.job import job_log
 
-        try:
-            result = self.all_deps().satisfied()
-        except Exception, e:
-            # Catchall exception handler to ensure progression even if Job
-            # subclasses have bugs in their get_deps etc.
-            job_log.error("Job %s: internal error %s" % (self.id, e))
-            result = False
+        result = self.all_deps().satisfied()
 
         job_log.debug("Job %s: deps satisfied=%s" % (self.id, result))
         for d in self.all_deps().all():
@@ -595,7 +591,16 @@ class Job(models.Model):
         # is - are this Job's immediate dependencies satisfied?  And are any deps
         # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
 
-        deps_satisfied = self._deps_satisfied()
+        try:
+            deps_satisfied = self._deps_satisfied()
+        except Exception:
+            # Catchall exception handler to ensure progression even if Job
+            # subclasses have bugs in their get_deps etc.
+            job_log.error("Job %s: exception in dependency check: %s" % (self.id,
+                '\n'.join(traceback.format_exception(*(sys.exc_info())))))
+            result = False
+            self.complete(cancelled = True)
+            return
 
         if not deps_satisfied:
             job_log.warning("Job %d: cancelling because of failed dependency" % (self.id))
