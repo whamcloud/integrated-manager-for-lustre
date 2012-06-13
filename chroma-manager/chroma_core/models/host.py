@@ -1017,7 +1017,7 @@ class RelearnNidsJob(Job):
 
 class WriteConfStep(Step):
     def run(self, args):
-        from chroma_core.models.target import ManagedTarget
+        from chroma_core.models.target import ManagedTarget, FilesystemMember
 
         target = ManagedTarget.objects.get(pk = args['target_id']).downcast()
         primary_tm = target.managedtargetmount_set.get(primary = True)
@@ -1026,8 +1026,11 @@ class WriteConfStep(Step):
         agent_args = {
             'writeconf': True,
             'erase_params': True,
-            'mgsnode': tuple(primary_tm.host.lnetconfiguration.get_nids()),
             'device': primary_tm.volume_node.path}
+
+        if isinstance(target, FilesystemMember):
+            agent_args['mgsnode'] = tuple(target.filesystem.mgs.nids()[0:1])
+
         fail_nids = target.get_failover_nids()
         if fail_nids:
             agent_args['failnode'] = fail_nids
@@ -1079,8 +1082,18 @@ class UpdateNidsJob(Job):
     def get_deps(self):
         filesystems, targets = self._targets_on_hosts()
 
+        target_hosts = set()
+        target_primary_hosts = set()
+        for target in targets:
+            for mtm in target.managedtargetmount_set.all():
+                if mtm.primary:
+                    target_primary_hosts.add(mtm.host)
+                target_hosts.add(mtm.host)
+
         return DependAll(
-            [DependOn(fs, 'stopped') for fs in filesystems]
+            [DependOn(host, 'lnet_up') for host in target_primary_hosts]
+            + [DependOn(host.lnetconfiguration, 'nids_known') for host in target_hosts]
+            + [DependOn(fs, 'stopped') for fs in filesystems]
             + [DependOn(t, 'unmounted') for t in targets]
         )
 
