@@ -134,8 +134,6 @@ var ChromaRouter = Backbone.Router.extend({
     $('a.navigation').removeClass('active');
     $("#" + name + "_menu").addClass('active');
 
-    window.title = name + " - Chroma Server"
-
     if (name == 'alert') {
       AlertView.draw();
     } else if (name == 'event') {
