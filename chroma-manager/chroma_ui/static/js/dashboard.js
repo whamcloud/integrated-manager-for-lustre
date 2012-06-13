@@ -373,9 +373,8 @@ var Dashboard = (function() {
     }
     else if (dashboard_target.kind === 'MDT') {
       //ost_Area_mgtOps_Data($('#ls_ostId').val(), "false");
-      $("#target_space_usage_container,#target_read_write_container_div").hide();
-      $("td.target_space_usage div.magni").hide();
-      $("#target_mdt_ops_container_div,#target_inodes_container").show();
+      $("#target_read_write_container_div").hide();
+      $("#target_space_usage_container,#target_mdt_ops_container_div,#target_inodes_container").show();
       init_charts('targets_mdt');
     }
     else {
@@ -1013,6 +1012,48 @@ var Dashboard = (function() {
     });
 
     chart_manager.chart_group('targets_mdt');
+    chart_manager.add_chart('freespace','targets_mdt', {
+      url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
+      api_params: {},
+      metrics: ["kbytestotal", "kbytesfree"],
+      data_callback: function(chart, data) {
+        // Generate a number of series objects and return them
+        var result = {};
+        var update_data = [];
+        _.each(data, function(point, target_id) {
+          usedPercent = (point.data.kbytestotal - point.data.kbytesfree)/point.data.kbytestotal * 100;
+          update_data.push([new Date(point.ts).getTime(), usedPercent])
+        });
+        result[0] = {
+          id: 0,
+          label: "Space Used",
+          data: update_data
+        }
+        return result;
+      },
+      series_template: {type: 'area'},
+      chart_config: {
+        chart: {
+          renderTo: 'target_space_usage_container',
+          plotShadow: false
+        },
+        colors: [ '#C76560' ],
+        title:{ text: 'Space Usage'},
+        tooltip: {valueSuffix: '%'},
+        zoomType: 'xy',
+        xAxis: { type:'datetime' },
+        yAxis: [{
+          max:100, min:0, startOnTick:false,  tickInterval: 20,
+          title: null,
+          labels: {formatter: percentage_formatter}
+        }],
+        plotOptions: {
+          area: {
+            stacking: null
+          }
+        }
+      }
+    });
     chart_manager.add_chart('mdops', 'targets_mdt', {
       url: function() { return 'target/' + dashboard_target.id + '/metric/'; },
       api_params: {},
