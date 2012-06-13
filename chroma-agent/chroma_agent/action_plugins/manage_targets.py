@@ -461,6 +461,8 @@ def unmount_target(args):
 
 def start_target(args):
     from time import sleep
+    # do a cleanup first, just to clear any previously errored state
+    shell.try_run(['crm', 'resource', 'cleanup', args.ha_label])
     shell.try_run(['crm_resource', '-r', args.ha_label, '-p', 'target-role',
                    '-m', '-v', 'Started'])
 
