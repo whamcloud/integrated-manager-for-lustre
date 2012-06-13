@@ -35,6 +35,7 @@ class Lun(resources.LogicalDrive):
         ]
 
     lun_id = attributes.String()
+    couplet = attributes.ResourceReference()
 
     read_bytes_sec = statistics.Gauge(units = "B/s", label = "Read bandwidth")
     write_bytes_sec = statistics.Gauge(units = "B/s", label = "Write bandwidth")
@@ -96,11 +97,11 @@ class FakeControllerPlugin(Plugin):
         #for host in hosts:
         #    self.update_or_create(FakeVirtualMachine, address = host)
 
-        #luns = ['lun_rhubarb1', 'lun_rhubarb2']
+        luns = ['lun_rhubarb1', 'lun_rhubarb2']
         self._luns = []
-        #for lun in luns:
-        #   lun, creaated = self.update_or_create(Lun, parents = [couplet], lun_id = lun, size = 73 * 1024 * 1024 * 1024)
-        #    self._luns.append(lun)
+        for lun in luns:
+            lun, creaated = self.update_or_create(Lun, parents = [couplet], lun_id = lun, size = 73 * 1024 * 1024 * 1024, couplet = couplet)
+            self._luns.append(lun)
 
         self.update_or_create(ScsiLun, serial_80 = "SQEMU    QEMU HARDDISK  MPATH-testdev01", size = 73 * 1024 * 1024 * 1024)
 
