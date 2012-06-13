@@ -68,6 +68,16 @@ class AlertState(models.Model):
         app_label = 'chroma_core'
 
     @classmethod
+    def subclasses(cls, exclude=[]):
+        all_subclasses = []
+        for subclass in cls.__subclasses__():
+            if subclass.__name__ in exclude:
+                continue
+            all_subclasses.append(subclass)
+            all_subclasses.extend(subclass.subclasses(exclude))
+        return all_subclasses
+
+    @classmethod
     def filter_by_item(cls, item):
         if hasattr(item, 'content_type'):
             # A DowncastMetaclass object
@@ -161,6 +171,18 @@ class AlertState(models.Model):
             alert_state = None
 
         return alert_state
+
+
+class AlertSubscription(models.Model):
+    """Represents a user's election to be notified of specific alert classes"""
+    from django.contrib.auth.models import User
+
+    user = models.ForeignKey(User, related_name='alert_subscriptions')
+    alert_type = models.ForeignKey(ContentType)
+    # TODO: alert thresholds?
+
+    class Meta:
+        app_label = 'chroma_core'
 
 
 class AlertEmail(models.Model):
