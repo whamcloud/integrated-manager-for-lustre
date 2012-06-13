@@ -24,7 +24,7 @@ Host: %s
 Command: %s
 Exception: %s (%s)
 %s
-""" % (ManagedHost.objects.get(pk = self.host_id),
+""" % (ManagedHost._base_manager.get(pk = self.host_id),
         self.cmdline,
         self.agent_exception,
         self.agent_exception.__class__.__name__,
