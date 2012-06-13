@@ -5,11 +5,8 @@
 
 
 class AlertCondition(object):
-    def __init__(self):
-        self._name = None
+    def __init__(self, *args, **kwargs):
+        self._id = kwargs.pop('id', None)
 
-    def set_name(self, name):
-        self._name = name
-
-    def alert_classes(self):
+    def id(self):
         raise NotImplementedError()

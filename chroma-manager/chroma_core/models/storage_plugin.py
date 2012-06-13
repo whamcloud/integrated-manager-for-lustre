@@ -363,7 +363,7 @@ class StorageResourceAlert(AlertState):
     attribute = models.CharField(max_length = 128, blank = True, null = True)
 
     def __str__(self):
-        return "<%s:%s %d>" % (self.alert_class, self.attribute, self.pk)
+        return "<%s:%s %s>" % (self.alert_class, self.attribute, self.pk)
 
     def message(self):
         from chroma_core.lib.storage_plugin.query import ResourceQuery

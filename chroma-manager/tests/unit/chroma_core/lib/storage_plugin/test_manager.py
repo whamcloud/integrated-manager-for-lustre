@@ -129,6 +129,8 @@ class TestValidate(TestCase):
         self.assertListEqual(errors, ['Module unloadable_plugin_0classes does not define a BaseStoragePlugin!'])
         errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "unloadable_plugin_2classes.py"))
         self.assertListEqual(errors, ["Module unloadable_plugin_2classes defines more than one BaseStoragePlugin: [<class 'unloadable_plugin_2classes.TestPluginOne'>, <class 'unloadable_plugin_2classes.TestPluginTwo'>]!"])
+        errors = ValidateCommand().execute(os.path.join(os.path.abspath(os.path.dirname(__file__)), "unloadable_plugin_alerts_clash.py"))
+        self.assertListEqual(errors, ["Resource class 'Controller': Multiple AlertConditions on the same attribute must be disambiguated with 'id' parameters."])
 
     def test_example_package(self):
         dirname = os.path.dirname(__file__) + "/../../../../../example_storage_plugin_package/"

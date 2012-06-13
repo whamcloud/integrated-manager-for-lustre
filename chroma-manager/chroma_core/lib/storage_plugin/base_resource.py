@@ -7,7 +7,6 @@
 from collections import defaultdict
 from exceptions import KeyError, AttributeError, RuntimeError, ValueError
 import threading
-from chroma_core.lib.storage_plugin.base_alert_condition import AlertCondition
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
 from chroma_core.lib.storage_plugin.base_statistic import BaseStatistic
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
@@ -83,9 +82,6 @@ class StorageResourceMetaclass(type):
             elif isinstance(field_obj, BaseStatistic):
                 meta.storage_statistics[field_name] = field_obj
                 del dct[field_name]
-            elif isinstance(field_obj, AlertCondition):
-                meta.alert_conditions[field_name] = field_obj
-                del dct[field_name]
 
         if hasattr(meta, 'identifier') and isinstance(meta.identifier, BaseAutoId):
             from chroma_core.lib.storage_plugin.api.attributes import String
@@ -94,9 +90,14 @@ class StorageResourceMetaclass(type):
 
         # Build map to find the AlertCondition which
         # generated a particular alert
+        all_alert_classes = set()
         for alert_condition in meta.alert_conditions:
-            for alert_class in alert_condition.alert_classes():
+            alert_classes = alert_condition.alert_classes()
+            if set(alert_classes) & all_alert_classes:
+                raise ResourceProgrammingError(name, "Multiple AlertConditions on the same attribute must be disambiguated with 'id' parameters.")
+            for alert_class in alert_classes:
                 meta.alert_classes[alert_class] = alert_condition
+            all_alert_classes |= set(alert_classes)
 
         dct['_meta'] = meta
 

@@ -22,6 +22,8 @@ class AlertState(models.Model):
     # of this when the alert_item is deleted -- do it manually
     alert_item = WorkaroundGenericForeignKey('alert_item_type', 'alert_item_id')
 
+    alert_type = models.CharField(max_length = 128)
+
     begin = WorkaroundDateTimeField(help_text = "Time at which the alert started")
     end = WorkaroundDateTimeField(help_text = "Time at which the alert was resolved\
             if active is false, else time that the alert was last checked (e.g.\
@@ -64,7 +66,7 @@ class AlertState(models.Model):
         return None
 
     class Meta:
-        unique_together = ('alert_item_type', 'alert_item_id', 'content_type', 'active')
+        unique_together = ('alert_item_type', 'alert_item_id', 'alert_type', 'active')
         app_label = 'chroma_core'
 
     @classmethod
@@ -127,6 +129,8 @@ class AlertState(models.Model):
         except cls.DoesNotExist:
             from chroma_core.lib.job import job_log
             job_log.info("AlertState: Raised %s on %s" % (cls, alert_item))
+            if not 'alert_type' in kwargs:
+                kwargs['alert_type'] = cls.__name__
             alert_state = cls(
                     active = True,
                     begin = now,
@@ -138,11 +142,12 @@ class AlertState(models.Model):
                 be = alert_state.begin_event()
                 if be:
                     be.save()
-            except IntegrityError:
+            except IntegrityError, e:
+                job_log.warning("AlertState: IntegrityError %s saving %s : %s : %s" % (e, cls.__name__, alert_item, kwargs))
                 # Handle colliding inserts: drop out here, no need to update
                 # the .end of the existing record as we are logically concurrent
                 # with the creator.
-                pass
+                return None
         return alert_state
 
     @classmethod
