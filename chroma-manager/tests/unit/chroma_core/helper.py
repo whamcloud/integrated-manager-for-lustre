@@ -3,6 +3,7 @@ import datetime
 import logging
 from django.test import TestCase
 import mock
+from chroma_core.lib.agent import AgentException
 from chroma_core.models.jobs import Command
 from chroma_core.models import Volume, VolumeNode
 
@@ -31,15 +32,18 @@ class MockAgent(object):
     def __init__(self, host, log = None, console_callback = None, timeout = None):
         self.host = host
 
+    def _fail(self):
+        raise AgentException(self.host.id)
+
     def invoke(self, cmdline, args = None):
         self.calls.append((cmdline, args))
         self.host_calls[self.host].append((cmdline, args))
 
         if not self.succeed:
-            raise RuntimeError("Test-generated failure")
+            self._fail()
 
         if cmdline in self.fail_globs:
-            raise RuntimeError("Test-generated failure")
+            self._fail()
 
         logging.getLogger('mock_agent').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
         logging.getLogger('job').info("invoke_agent %s %s %s" % (self.host, cmdline, args))

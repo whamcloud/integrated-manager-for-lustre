@@ -28,11 +28,12 @@ class ChromaApiTestCase(JobTestCaseWithHost, ResourceTestCase):
         from chroma_api.urls import api
         for name, resource in api._registry.items():
             if 'get' in resource._meta.list_allowed_methods:
-                response = self.api_client.get(resource.get_resource_list_uri())
-                self.assertHttpOK(response)
+                list_uri = resource.get_resource_list_uri()
+                response = self.api_client.get(list_uri, data = {'limit': 0})
+                self.assertEqual(response.status_code, 200, "%s: %s %s" % (list_uri, response.status_code, self.deserialize(response)))
                 if 'get' in resource._meta.detail_allowed_methods:
                     objects = self.deserialize(response)['objects']
 
                     for o in objects:
-                        self.api_client.get(o['resource_uri'])
-                        self.assertHttpOK(response)
+                        response = self.api_client.get(o['resource_uri'])
+                        self.assertEqual(response.status_code, 200, "%s: %s %s" % (o['resource_uri'], response.status_code, self.deserialize(response)))
