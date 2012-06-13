@@ -598,7 +598,6 @@ class Job(models.Model):
             # subclasses have bugs in their get_deps etc.
             job_log.error("Job %s: exception in dependency check: %s" % (self.id,
                 '\n'.join(traceback.format_exception(*(sys.exc_info())))))
-            result = False
             self.complete(cancelled = True)
             return
 
