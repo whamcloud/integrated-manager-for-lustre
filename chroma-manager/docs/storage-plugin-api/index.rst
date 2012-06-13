@@ -163,9 +163,45 @@ Lustre target/filesystem.
 Alert conditions
 ~~~~~~~~~~~~~~~~
 
-Bad values of attributes may be declared using class attributes 
-of the types from ``chroma_core.lib.storage_plugin.api.alert_conditions``,
-see :ref:`storage_plugin_alert_conditions`
+Plugins may communicate error states to Chroma by declare *Alert conditions*
+which monitor the values of resource attributes and display alerts in the
+Chroma Manager user interface when an error condition is encountered.
+
+Alert conditions are specified for each resource in the Meta section, like this:
+::
+
+    class HardDrive(Resource):
+        class Meta:
+            identifier = ScopedId('shelf', 'slot')
+            alert_conditions = [
+                alert_conditions.ValueCondition('status', warn_states = ['FAILED'], message = "Drive failure")
+               ] 
+        shelf = attributes.ResourceReference()
+        slot = attributes.Integer()
+        status = attributes.String()
+
+There are several types of alert condition available, see :ref:`storage_plugin_alert_conditions`
+
+If a resource has more than one alert condition which refers to the same attribute, it is
+necessary to add an `id` argument to allow Chroma to uniquely identify each one.  For example:
+::
+
+    class HardDrive(Resource):
+        class Meta:
+            identifier = ScopedId('shelf', 'slot')
+            alert_conditions = [
+                alert_conditions.ValueCondition('status', warn_states = ['NEARFAILURE'], message = "Drive near failure", id = 'nearfailure'),
+                alert_conditions.ValueCondition('status', warn_states = ['FAILED'], message = "Drive failure", id = 'failure')
+               ] 
+        shelf = attributes.ResourceReference()
+        slot = attributes.Integer()
+        status = attributes.String()
+
+You can tell if it is necessary to add an explicit ID by looking for an error in the
+output of validation (:ref:`validation`) -- if a plugin passes validation without `id`
+arguments to alert conditions, it is recommended to omit `id`.
+
+
 
 .. _scannable_storage_resources:
 
@@ -315,6 +351,8 @@ the read and write bandwidth on the same chart:
 
 Running a plugin
 ----------------
+
+.. _validation:
 
 Validating
 ~~~~~~~~~~
