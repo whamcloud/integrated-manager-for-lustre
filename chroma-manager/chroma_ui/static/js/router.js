@@ -70,18 +70,16 @@ var ChromaRouter = Backbone.Router.extend({
       }
       mydiv.dialog({
         buttons: [{text: "Close", 'class': "close", click: function(){
-          $(this).remove();
-          window.history.back();
+          $(this).dialog('close');
         }}],
+        close: function(event, ui) {
+          window.history.back();
+          $(this).remove();
+        },
         width: 600,
         height: 600,
         modal: true,
-        title: title,
-        open: function(event, ui) {
-          // Hide the window close button to have a single close handler
-          // (the button) which manages history.
-          mydiv.parent().find('.ui-dialog-titlebar-close').hide();
-        }
+        title: title
       });
       var cd = new view_class({model: c, el: mydiv.parent()});
       cd.render();
@@ -133,8 +131,6 @@ var ChromaRouter = Backbone.Router.extend({
 
     $('a.navigation').removeClass('active');
     $("#" + name + "_menu").addClass('active');
-
-    window.title = name + " - Chroma Server"
 
     if (name == 'alert') {
       AlertView.draw();

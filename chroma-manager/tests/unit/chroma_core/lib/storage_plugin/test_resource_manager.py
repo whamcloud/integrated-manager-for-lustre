@@ -484,15 +484,51 @@ class TestAlerts(ResourceManagerTestCase):
     def _update_alerts(self, scannable_pk, resource, alert_klass):
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
 
+        result = []
         for ac in resource._meta.alert_conditions:
             if isinstance(ac, alert_klass):
                 alert_list = ac.test(resource)
+
                 for name, attribute, active in alert_list:
                     resource_manager.session_notify_alert(scannable_pk, resource._handle, active, name, attribute)
-                    return active
+                    result.append((name, attribute, active))
+
+        return result
+
+    def _update_alerts_anytrue(self, *args, **kwargs):
+        alerts = self._update_alerts(*args, **kwargs)
+        for alert in alerts:
+            if alert[2]:
+                return True
+        return False
+
+    def test_multiple_alerts(self):
+        """Test multiple AlertConditions acting on the same attribute"""
+        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK', 'multi_status': 'OK'})
+        lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
+
+        # Open session
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+        resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
+
+        from chroma_core.lib.storage_plugin.api.alert_conditions import ValueCondition
+
+        # Go into failed state and send notification
+        controller_resource.multi_status = 'FAIL1'
+        alerts = self._update_alerts(resource_record.pk, controller_resource, ValueCondition)
+        n = 0
+        for alert in alerts:
+            if alert[2]:
+                n += 1
+
+        self.assertEqual(n, 2, alerts)
+
+        # Check that the alert is now set on couplet
+        from chroma_core.models import AlertState
+        self.assertEqual(AlertState.objects.filter(active = True).count(), 2)
 
     def test_raise_alert(self):
-        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK'})
+        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK', 'multi_status': 'OK'})
         lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
 
         # Open session
@@ -503,7 +539,7 @@ class TestAlerts(ResourceManagerTestCase):
 
         # Go into failed state and send notification
         controller_resource.status = 'FAILED'
-        self.assertEqual(True, self._update_alerts(resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(resource_record.pk, controller_resource, ValueCondition))
 
         from chroma_core.models import AlertState, StorageAlertPropagated
 
@@ -514,7 +550,7 @@ class TestAlerts(ResourceManagerTestCase):
 
         # Leave failed state and send notification
         controller_resource.status = 'OK'
-        self.assertEqual(False, self._update_alerts(resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(False, self._update_alerts_anytrue(resource_record.pk, controller_resource, ValueCondition))
 
         # Check that the alert is now unset on couplet
         self.assertEqual(AlertState.objects.filter(active = True).count(), 0)
@@ -522,7 +558,7 @@ class TestAlerts(ResourceManagerTestCase):
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 0)
 
     def test_alert_deletion(self):
-        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK'})
+        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK', 'multi_status': 'OK'})
         lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
 
         # Open session
@@ -533,7 +569,7 @@ class TestAlerts(ResourceManagerTestCase):
 
         # Go into failed state and send notification
         controller_resource.status = 'FAILED'
-        self.assertEqual(True, self._update_alerts(resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(resource_record.pk, controller_resource, ValueCondition))
 
         from chroma_core.models import AlertState, StorageAlertPropagated
 
@@ -550,7 +586,7 @@ class TestAlerts(ResourceManagerTestCase):
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 0)
 
     def test_bound_alert(self):
-        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK'})
+        resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK', 'multi_status': 'OK'})
         lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
 
         from chroma_core.lib.storage_plugin.api.alert_conditions import UpperBoundCondition, LowerBoundCondition
@@ -560,13 +596,13 @@ class TestAlerts(ResourceManagerTestCase):
         resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
 
         controller_resource.temperature = 86
-        self.assertEqual(True, self._update_alerts(resource_record.pk, controller_resource, UpperBoundCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(resource_record.pk, controller_resource, UpperBoundCondition))
 
         controller_resource.temperature = 84
-        self.assertEqual(False, self._update_alerts(resource_record.pk, controller_resource, UpperBoundCondition))
+        self.assertEqual(False, self._update_alerts_anytrue(resource_record.pk, controller_resource, UpperBoundCondition))
 
         controller_resource.temperature = -1
-        self.assertEqual(True, self._update_alerts(resource_record.pk, controller_resource, LowerBoundCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(resource_record.pk, controller_resource, LowerBoundCondition))
 
         controller_resource.temperature = 1
-        self.assertEqual(False, self._update_alerts(resource_record.pk, controller_resource, LowerBoundCondition))
+        self.assertEqual(False, self._update_alerts_anytrue(resource_record.pk, controller_resource, LowerBoundCondition))

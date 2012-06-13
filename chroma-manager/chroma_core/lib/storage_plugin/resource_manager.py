@@ -709,8 +709,9 @@ class ResourceManager(object):
             if active:
                 if not (record_pk, alert_class) in self._active_alerts:
                     alert_state = self._persist_alert(record_pk, active, alert_class, attribute)
-                    self._persist_alert_propagate(alert_state)
-                    self._active_alerts[(record_pk, alert_class)] = alert_state.pk
+                    if alert_state:
+                        self._persist_alert_propagate(alert_state)
+                        self._active_alerts[(record_pk, alert_class)] = alert_state.pk
             else:
                 alert_state = self._persist_alert(record_pk, active, alert_class, attribute)
                 if alert_state:
@@ -752,7 +753,7 @@ class ResourceManager(object):
     @transaction.autocommit
     def _persist_alert(self, record_pk, active, alert_class, attribute):
         record = StorageResourceRecord.objects.get(pk = record_pk)
-        alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute)
+        alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute, alert_type = "StorageResourceAlert_%s" % alert_class)
         return alert_state
 
     @transaction.autocommit

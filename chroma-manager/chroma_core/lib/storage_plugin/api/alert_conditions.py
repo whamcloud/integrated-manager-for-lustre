@@ -29,7 +29,7 @@ class BoundCondition(AlertCondition):
             if bound == None:
                 continue
             else:
-                alert_name = "_%s_%s_%s" % (self._name, self.attribute, sev)
+                alert_name = "_%s_%s_%s" % (self._id, self.attribute, sev)
                 result.append(alert_name)
 
         return result
@@ -45,7 +45,7 @@ class BoundCondition(AlertCondition):
             if bound == None:
                 continue
             # FIXME: nowhere to put the severity for an alert yet
-            alert_name = "_%s_%s_%s" % (self._name, self.attribute, sev)
+            alert_name = "_%s_%s_%s" % (self._id, self.attribute, sev)
             if self.upper:
                 active = getattr(resource, self.attribute) > bound
             else:
@@ -85,7 +85,7 @@ class ValueCondition(AlertCondition):
 
         AttrValAlertCondition('status', error_states = ['FAILED'], message = "Widget failed")"""
 
-    def __init__(self, attribute, error_states = [], warn_states = [], info_states = [], message = None, *args, **kwargs):
+    def __init__(self, attribute, error_states = list([]), warn_states = list([]), info_states = list([]), message = None, *args, **kwargs):
         self.error_states = error_states
         self.warn_states = warn_states
         self.info_states = info_states
@@ -104,7 +104,7 @@ class ValueCondition(AlertCondition):
             if len(states) == 0:
                 continue
             else:
-                alert_name = "_%s_%s_%s" % (self._name, self.attribute, sev)
+                alert_name = "_%s_%s_%s" % (self._id, self.attribute, sev)
                 result.append(alert_name)
 
         return result
@@ -120,7 +120,7 @@ class ValueCondition(AlertCondition):
             if len(states) == 0:
                 continue
             # FIXME: nowhere to put the severity for an alert yet
-            alert_name = "_%s_%s_%s" % (self._name, self.attribute, sev)
+            alert_name = "_%s_%s_%s" % (self._id, self.attribute, sev)
             active = getattr(resource, self.attribute) in states
             result.append([alert_name, self.attribute, active])
 
