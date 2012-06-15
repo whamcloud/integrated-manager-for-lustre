@@ -843,3 +843,20 @@ table#global_filesystem_table th {
 div.dataTables_wrapper th {
     white-space: nowrap;
 }
+
+/* This tooltip styling is necessary to prevent big tooltips getting
+ * clipped at the edge of the chart */
+.highcharts-container
+{
+    overflow: visible !important;
+}
+
+div.chart_tooltip {
+    position: relative;
+    z-index: 50;
+    background-color: white;
+    border: 2px solid rgb(0, 108, 169);
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 9pt;
+}
