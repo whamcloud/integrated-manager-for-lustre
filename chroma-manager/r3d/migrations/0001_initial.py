@@ -1,9 +1,4 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
+# encoding: utf-8
 import datetime
 from south.db import db
 from south.v2 import SchemaMigration
@@ -16,12 +11,20 @@ class Migration(SchemaMigration):
         # Adding model 'Database'
         db.create_table('r3d_database', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('start', self.gf('django.db.models.fields.BigIntegerField')(default=1317186508)),
+            ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
+            ('start', self.gf('django.db.models.fields.BigIntegerField')(default=1339681242)),
             ('step', self.gf('django.db.models.fields.BigIntegerField')(default=300)),
             ('last_update', self.gf('django.db.models.fields.BigIntegerField')(blank=True)),
+            ('ds_pickle', self.gf('r3d.models.PickledObjectField')(null=True)),
+            ('prep_pickle', self.gf('r3d.models.PickledObjectField')(null=True)),
+            ('rra_pointers', self.gf('r3d.models.PickledObjectField')(null=True)),
+            ('content_type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['contenttypes.ContentType'], null=True)),
+            ('object_id', self.gf('django.db.models.fields.PositiveIntegerField')(null=True)),
         ))
         db.send_create_signal('r3d', ['Database'])
+
+        # Adding unique constraint on 'Database', fields ['content_type', 'object_id']
+        db.create_unique('r3d_database', ['content_type_id', 'object_id'])
 
         # Adding model 'Datasource'
         db.create_table('r3d_datasource', (
@@ -33,9 +36,6 @@ class Migration(SchemaMigration):
             ('heartbeat', self.gf('django.db.models.fields.BigIntegerField')()),
             ('min_reading', self.gf('r3d.models.SciFloatField')(null=True, blank=True)),
             ('max_reading', self.gf('r3d.models.SciFloatField')(null=True, blank=True)),
-            ('last_reading', self.gf('r3d.models.SciFloatField')(null=True, blank=True)),
-            ('pdp_scratch', self.gf('r3d.models.SciFloatField')(default=0.0, null=True)),
-            ('unknown_seconds', self.gf('django.db.models.fields.BigIntegerField')(default=0)),
         ))
         db.send_create_signal('r3d', ['Datasource'])
 
@@ -51,42 +51,26 @@ class Migration(SchemaMigration):
             ('xff', self.gf('r3d.models.SciFloatField')(default=0.5)),
             ('cdp_per_row', self.gf('django.db.models.fields.BigIntegerField')()),
             ('rows', self.gf('django.db.models.fields.BigIntegerField')()),
-            ('current_row', self.gf('django.db.models.fields.BigIntegerField')(default=0)),
         ))
         db.send_create_signal('r3d', ['Archive'])
 
-        # Adding model 'CDP'
-        db.create_table('r3d_cdp', (
+        # Adding model 'ArchiveRow'
+        db.create_table('r3d_archiverow', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('archive', self.gf('django.db.models.fields.related.ForeignKey')(related_name='cdps', to=orm['r3d.Archive'])),
-            ('datasource', self.gf('django.db.models.fields.related.ForeignKey')(related_name='cdps', to=orm['r3d.Datasource'])),
-            ('value', self.gf('r3d.models.SciFloatField')(null=True)),
+            ('archive_id', self.gf('django.db.models.fields.IntegerField')()),
+            ('slot', self.gf('django.db.models.fields.BigIntegerField')(default=0)),
+            ('ds_pickle', self.gf('r3d.models.PickledObjectField')(null=True)),
         ))
-        db.send_create_signal('r3d', ['CDP'])
-
-        # Adding model 'CdpPrep'
-        db.create_table('r3d_cdpprep', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('archive', self.gf('django.db.models.fields.related.ForeignKey')(related_name='preps', to=orm['r3d.Archive'])),
-            ('datasource', self.gf('django.db.models.fields.related.ForeignKey')(related_name='preps', to=orm['r3d.Datasource'])),
-            ('value', self.gf('r3d.models.SciFloatField')(null=True)),
-            ('primary', self.gf('r3d.models.SciFloatField')(null=True)),
-            ('secondary', self.gf('r3d.models.SciFloatField')(null=True)),
-            ('unknown_pdps', self.gf('django.db.models.fields.BigIntegerField')(default=0)),
-        ))
-        db.send_create_signal('r3d', ['CdpPrep'])
-
-        # Adding unique constraint on 'CdpPrep', fields ['archive', 'datasource']
-        db.create_unique('r3d_cdpprep', ['archive_id', 'datasource_id'])
+        db.send_create_signal('r3d', ['ArchiveRow'])
 
 
     def backwards(self, orm):
         
-        # Removing unique constraint on 'CdpPrep', fields ['archive', 'datasource']
-        db.delete_unique('r3d_cdpprep', ['archive_id', 'datasource_id'])
-
         # Removing unique constraint on 'Datasource', fields ['database', 'name']
         db.delete_unique('r3d_datasource', ['database_id', 'name'])
+
+        # Removing unique constraint on 'Database', fields ['content_type', 'object_id']
+        db.delete_unique('r3d_database', ['content_type_id', 'object_id'])
 
         # Deleting model 'Database'
         db.delete_table('r3d_database')
@@ -97,48 +81,46 @@ class Migration(SchemaMigration):
         # Deleting model 'Archive'
         db.delete_table('r3d_archive')
 
-        # Deleting model 'CDP'
-        db.delete_table('r3d_cdp')
-
-        # Deleting model 'CdpPrep'
-        db.delete_table('r3d_cdpprep')
+        # Deleting model 'ArchiveRow'
+        db.delete_table('r3d_archiverow')
 
 
     models = {
+        'contenttypes.contenttype': {
+            'Meta': {'ordering': "('name',)", 'unique_together': "(('app_label', 'model'),)", 'object_name': 'ContentType', 'db_table': "'django_content_type'"},
+            'app_label': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
+        },
         'r3d.archive': {
             'Meta': {'object_name': 'Archive'},
             'cdp_per_row': ('django.db.models.fields.BigIntegerField', [], {}),
             'cls': ('django.db.models.fields.CharField', [], {'max_length': '30'}),
-            'current_row': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
             'database': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'archives'", 'to': "orm['r3d.Database']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'mod': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
             'rows': ('django.db.models.fields.BigIntegerField', [], {}),
             'xff': ('r3d.models.SciFloatField', [], {'default': '0.5'})
         },
-        'r3d.cdp': {
-            'Meta': {'object_name': 'CDP'},
-            'archive': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'cdps'", 'to': "orm['r3d.Archive']"}),
-            'datasource': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'cdps'", 'to': "orm['r3d.Datasource']"}),
+        'r3d.archiverow': {
+            'Meta': {'object_name': 'ArchiveRow'},
+            'archive_id': ('django.db.models.fields.IntegerField', [], {}),
+            'ds_pickle': ('r3d.models.PickledObjectField', [], {'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'value': ('r3d.models.SciFloatField', [], {'null': 'True'})
-        },
-        'r3d.cdpprep': {
-            'Meta': {'unique_together': "(('archive', 'datasource'),)", 'object_name': 'CdpPrep'},
-            'archive': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'preps'", 'to': "orm['r3d.Archive']"}),
-            'datasource': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'preps'", 'to': "orm['r3d.Datasource']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'primary': ('r3d.models.SciFloatField', [], {'null': 'True'}),
-            'secondary': ('r3d.models.SciFloatField', [], {'null': 'True'}),
-            'unknown_pdps': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
-            'value': ('r3d.models.SciFloatField', [], {'null': 'True'})
+            'slot': ('django.db.models.fields.BigIntegerField', [], {'default': '0'})
         },
         'r3d.database': {
-            'Meta': {'object_name': 'Database'},
+            'Meta': {'unique_together': "(('content_type', 'object_id'),)", 'object_name': 'Database'},
+            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
+            'ds_pickle': ('r3d.models.PickledObjectField', [], {'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'last_update': ('django.db.models.fields.BigIntegerField', [], {'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
-            'start': ('django.db.models.fields.BigIntegerField', [], {'default': '1317186508'}),
+            'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'object_id': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'}),
+            'prep_pickle': ('r3d.models.PickledObjectField', [], {'null': 'True'}),
+            'rra_pointers': ('r3d.models.PickledObjectField', [], {'null': 'True'}),
+            'start': ('django.db.models.fields.BigIntegerField', [], {'default': '1339681242'}),
             'step': ('django.db.models.fields.BigIntegerField', [], {'default': '300'})
         },
         'r3d.datasource': {
@@ -147,13 +129,10 @@ class Migration(SchemaMigration):
             'database': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'datasources'", 'to': "orm['r3d.Database']"}),
             'heartbeat': ('django.db.models.fields.BigIntegerField', [], {}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'last_reading': ('r3d.models.SciFloatField', [], {'null': 'True', 'blank': 'True'}),
             'max_reading': ('r3d.models.SciFloatField', [], {'null': 'True', 'blank': 'True'}),
             'min_reading': ('r3d.models.SciFloatField', [], {'null': 'True', 'blank': 'True'}),
             'mod': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
-            'pdp_scratch': ('r3d.models.SciFloatField', [], {'default': '0.0', 'null': 'True'}),
-            'unknown_seconds': ('django.db.models.fields.BigIntegerField', [], {'default': '0'})
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'})
         }
     }
 
