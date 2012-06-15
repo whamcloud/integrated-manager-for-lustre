@@ -4,7 +4,7 @@
    <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
    <title>Getting Started</title> 
    <meta name="generator" content="Help &amp; Manual" /> 
-   <meta name="keywords" content="" />
+   <meta name="keywords" content="Chroma Manager,chroma-agent package,monitoring an existing Lustre file system" />
    <meta name="description" content="Getting Started" />
    <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -22,6 +22,8 @@ var togTocButton = "";
 $(document).ready(function() {
   chromeBugCheck("workaround",false);
    
+   togTocButton = 'not used' == "button" ? true : false;
+   togTOCinit('280','Show Navigation Pane','Hide Navigation Pane',togTocButton);
    });
 </script>
 
@@ -92,11 +94,15 @@ $(document).ready(function() {
 <!-- Script version of NavHeader -->
 <tr id="scriptNavHead" valign="middle" style="height: auto;">
    
-   <td align="left" class="topichead">
+    <td id="togbuttoncell" style="display: none;" align="left" class="idnav" width="10">
+	<img href="#" id="togtocbutton" border="0" title="Show/Hide Contents" alt="Show/Hide Contents" src="toc.gif" />
+   </td>
+   <td align="left" id="togtocheader" class="topichead" style="padding-left: 10px;" >
+  <div id="togtocbox"><img name="togtoc" id="togtoc" src="togtoc_hide.gif" align="left" border="0" alt="Hide Navigation Pane" title="Hide Navigation Pane" />
    <h1 class="p_Heading1"><span class="f_Heading1">Getting Started</span></h1>
 
+   </div>
    </td>
-   
    <td align="center" width="20" class="idnav" valign="bottom">
      <a href="enterprise_lustre_overview.htm"
         onmouseover="document.images.prev.src='button_prev_h.gif'" 
@@ -113,6 +119,17 @@ $(document).ready(function() {
    </td>
    
    
+   <td id="tgnav" align="center" width="20" class="idnav" valign="bottom">
+   
+   <img name="toggletoggler" src="toggle_d.gif" border="0" alt="No expanding text in this topic" title="No expanding text in this topic" />
+   </td>
+   
+   
+   <td id="print-button" align="center" width="20" class="idnav" valign="bottom">
+     <a href="javascript:printTopic('getting_started.htm?toc=0&printWindow'); "
+     onmouseover="document.images.printbutton.src='print_h.gif'" 
+     onmouseout="document.images.printbutton.src='print.gif'"><img name="printbutton" border="0" alt="Print this topic" title="Print this topic" src="print.gif" /></a>
+   </td>  
    
   
    <td width="4">&nbsp;</td>
@@ -137,6 +154,14 @@ $(document).ready(function() {
    </td>
    
    
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img name="toggler" src="toggle_d.gif" border="0" alt="JavaScript is required for expanding text" title="JavaScript is required for expanding text" />
+   </td>
+   
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img border="0" alt="JavaScript is required for the print function" title="JavaScript is required for the print function" src="print_d.gif" />
+   </td>
    
    
    <td width="4">&nbsp;</td>
@@ -160,7 +185,7 @@ $(document).ready(function() {
 </table>
 </div>
 <p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Monitoring Only</span></p>
-<p class="p_BodyText"><span class="f_BodyText">To monitor an existing file system, the </span><span class="f_CodeExample">chroma-agent</span><span class="f_BodyText"> &nbsp;package must be installed on the storage servers in the system. The st</span><span class="f_BodyText">orage servers are then registered with the Chroma</span><span class="f_BodyText"> Manager to allow the Chroma Manager to </span><span class="f_BodyText">monitor performance and other metrics. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">To monitor an existing file system, the </span><span class="f_CodeExample">chroma-agent</span><span class="f_BodyText"> &nbsp;package must be installed on the storage servers in the system. The st</span><span class="f_BodyText">orage servers are then registered with the Chroma</span><span class="f_BodyText"> Manager to allow Chroma Manager to </span><span class="f_BodyText">monitor performance and other metrics. </span></p>
 <p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">For a procedure to install </span><span class="f_CodeExample">chroma-agent</span><span class="f_BodyText"> on your storage servers, </span><span class="f_BodyText">refer to the documentation provided by your storage solution provider. </span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">To complete the setup, see <a href="configuring_an_existing_lustr2.htm" class="topiclink">Configuring an Existing Lustre File System</a>.</span></p><p class="p_BodyText"><span class="f_BodyText">Lustre commands can be used to manage metadata or object storage servers in an existing Lustre storage system that has been set up outside Chroma Manager and is being monitored, but not managed, in Chroma Manager.</span></p>
 
 <!--ZOOMSTOP--> 

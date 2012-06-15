@@ -4,7 +4,7 @@
    <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
    <title>A Quick Tour</title> 
    <meta name="generator" content="Help &amp; Manual" /> 
-   <meta name="keywords" content="" />
+   <meta name="keywords" content="Alerts page,Configuration page,Configuration page File Systems,Configuration page MGTs (management targets),Configuration page Servers,Configuration page Storage,Configuration page Volumes,Dashboard,Event History,File Systems,History page,Logs page,MGTs page,Servers page,Storage page,Volumes page" />
    <meta name="description" content="A Quick Tour" />
    <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -22,6 +22,8 @@ var togTocButton = "";
 $(document).ready(function() {
   chromeBugCheck("workaround",false);
    
+   togTocButton = 'not used' == "button" ? true : false;
+   togTOCinit('280','Show Navigation Pane','Hide Navigation Pane',togTocButton);
    });
 </script>
 
@@ -92,11 +94,15 @@ $(document).ready(function() {
 <!-- Script version of NavHeader -->
 <tr id="scriptNavHead" valign="middle" style="height: auto;">
    
-   <td align="left" class="topichead">
+    <td id="togbuttoncell" style="display: none;" align="left" class="idnav" width="10">
+	<img href="#" id="togtocbutton" border="0" title="Show/Hide Contents" alt="Show/Hide Contents" src="toc.gif" />
+   </td>
+   <td align="left" id="togtocheader" class="topichead" style="padding-left: 10px;" >
+  <div id="togtocbox"><img name="togtoc" id="togtoc" src="togtoc_hide.gif" align="left" border="0" alt="Hide Navigation Pane" title="Hide Navigation Pane" />
    <h1 class="p_Heading1"><span class="f_Heading1">A Quick Tour</span></h1>
 
+   </div>
    </td>
-   
    <td align="center" width="20" class="idnav" valign="bottom">
      <a href="introducing_chroma.htm"
         onmouseover="document.images.prev.src='button_prev_h.gif'" 
@@ -113,6 +119,17 @@ $(document).ready(function() {
    </td>
    
    
+   <td id="tgnav" align="center" width="20" class="idnav" valign="bottom">
+   
+   <img name="toggletoggler" src="toggle_d.gif" border="0" alt="No expanding text in this topic" title="No expanding text in this topic" />
+   </td>
+   
+   
+   <td id="print-button" align="center" width="20" class="idnav" valign="bottom">
+     <a href="javascript:printTopic('a_quick_tour.htm?toc=0&printWindow'); "
+     onmouseover="document.images.printbutton.src='print_h.gif'" 
+     onmouseout="document.images.printbutton.src='print.gif'"><img name="printbutton" border="0" alt="Print this topic" title="Print this topic" src="print.gif" /></a>
+   </td>  
    
   
    <td width="4">&nbsp;</td>
@@ -137,6 +154,14 @@ $(document).ready(function() {
    </td>
    
    
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img name="toggler" src="toggle_d.gif" border="0" alt="JavaScript is required for expanding text" title="JavaScript is required for expanding text" />
+   </td>
+   
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img border="0" alt="JavaScript is required for the print function" title="JavaScript is required for the print function" src="print_d.gif" />
+   </td>
    
    
    <td width="4">&nbsp;</td>
@@ -152,9 +177,9 @@ $(document).ready(function() {
 <p class="p_BodyText"><span class="f_BodyText">The Chroma Manager user interface is organized as a set</span><span class="f_BodyText"> of pages</span><span class="f_Notetowriter" style="color: #000000;"> offering monitoring and management functionality:</span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Dashboard</span><span class="f_BodyText"> - Used for monitoring file systems at the file system level and server level to gather information for monitoring performance and other parameters. </span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Configuration</span><span class="f_BodyText"> - Contains a series of pages used to create, configure, and manage file systems:  </span></p>
-<p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">File Systems</span><span class="f_BodyText"> - Provides access to a step-by-step procedure to create a file system and features to configure the file system and file system components. Tasks such as starting, stopping, or removing an entire file system or a management, metadata, or object storage target in a file system can also be performed on this page.  </span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">MGTs</span><span class="f_BodyText"> - Provides features to create and configure a management server.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Volumes</span><span class="f_BodyText"> - Provides features to configure primary and failover servers in file systems with servers configured for high availability.</span></p><p class="p_BodyText" style="margin: 0px 0px 6px 37px;"><span class="f_BodyText">Volumes (also called LUNs or block devices) are the underlying units of storage used to create Lustre file systems. &nbsp;Each Lustre target corresponds to a single volume. If servers in the volume have been configured for high availability, primary and secondary servers can be designated for a Lustre target. Only volumes that are not already in use as Lustre targets or local file systems are shown. A volume may be accessible on one or more servers via different device nodes, and it may be accessible via multiple device nodes on the same host.</span></p>
+<p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">File Systems</span><span class="f_BodyText"> - Provides access to a step-by-step procedure to create a file system and features to configure the file system and file system components. Tasks such as starting, stopping, or removing an entire file system or starting, stopping, or removing a management, metadata, or object storage target in a file system can also be performed on this page.  </span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">MGTs</span><span class="f_BodyText"> - Provides features to create and configure a management server.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Volumes</span><span class="f_BodyText"> - Provides features to configure primary and failover servers in file systems with servers configured for high availability.</span></p><p class="p_BodyText" style="margin: 0px 0px 6px 37px;"><span class="f_BodyText">Volumes (also called LUNs or block devices) are the underlying units of storage used to create Lustre file systems. &nbsp;Each Lustre target corresponds to a single volume. If servers in the volume have been configured for high availability, primary and secondary servers can be designated for a Lustre target. Only volumes that are not already in use as Lustre targets or local file systems are shown. A volume may be accessible on one or more servers via different device nodes, and it may be accessible via multiple device nodes on the same host.</span></p>
 <p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Servers</span><span class="f_BodyText"> - Allows a server to be added to Chroma Manager, provides server status information, and allows a server to be started, stopped, or removed.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Storage</span><span class="f_BodyText"> - Provides a means to configure and view a custom storage system appliance provided by a storage solution provider. The features on this page are specific to the appliance provided by the storage solution provider.</span></p><p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Alerts</span><span class="f_BodyText"> – Shows active alerts and alert history.</span></p>
-<p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Events</span><span class="f_BodyText"> – Displays a list of events and allows filtering of events by host, severity, and event type. </span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">History</span><span class="f_BodyText"> – Displays a history of events and allows filtering of events by host, severity, and event type. </span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Logs</span><span class="f_BodyText"> – Displays log information and allows filtering by host, date range, and messages from Lustre or all sources. </span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 

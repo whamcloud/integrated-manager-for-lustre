@@ -22,7 +22,8 @@ var IE6 = /msie 6|MSIE 6/.test(navigator.userAgent);
 var frSpace = /Opera|opera/.test(navigator.userAgent) ? "5" : "2";
 // Normal init for good browsers
 var wkResize = "";
-
+var WebKit = /WebKit|webkit/.test(navigator.userAgent);
+wkResize = (WebKit && ("workaround" == "workaround")) ? 'noresize="noresize"' : "";
 if (!IE6) {
    parseUrl(document.location.search);
 

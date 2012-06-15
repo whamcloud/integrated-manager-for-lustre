@@ -4,7 +4,7 @@
    <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
    <title>Mounting File System Clients</title> 
    <meta name="generator" content="Help &amp; Manual" /> 
-   <meta name="keywords" content="" />
+   <meta name="keywords" content="client mount information,Lustre client,mounting a client" />
    <meta name="description" content="Mounting File System Clients" />
    <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -22,6 +22,8 @@ var togTocButton = "";
 $(document).ready(function() {
   chromeBugCheck("workaround",false);
    
+   togTocButton = 'not used' == "button" ? true : false;
+   togTOCinit('280','Show Navigation Pane','Hide Navigation Pane',togTocButton);
    });
 </script>
 
@@ -92,11 +94,15 @@ $(document).ready(function() {
 <!-- Script version of NavHeader -->
 <tr id="scriptNavHead" valign="middle" style="height: auto;">
    
-   <td align="left" class="topichead">
+    <td id="togbuttoncell" style="display: none;" align="left" class="idnav" width="10">
+	<img href="#" id="togtocbutton" border="0" title="Show/Hide Contents" alt="Show/Hide Contents" src="toc.gif" />
+   </td>
+   <td align="left" id="togtocheader" class="topichead" style="padding-left: 10px;" >
+  <div id="togtocbox"><img name="togtoc" id="togtoc" src="togtoc_hide.gif" align="left" border="0" alt="Hide Navigation Pane" title="Hide Navigation Pane" />
    <h1 class="p_Heading1"><span class="f_Heading1">Mounting File System Clients</span></h1>
 
+   </div>
    </td>
-   
    <td align="center" width="20" class="idnav" valign="bottom">
      <a href="creating_a_file_system.htm"
         onmouseover="document.images.prev.src='button_prev_h.gif'" 
@@ -113,6 +119,17 @@ $(document).ready(function() {
    </td>
    
    
+   <td id="tgnav" align="center" width="20" class="idnav" valign="bottom">
+   
+   <img name="toggletoggler" src="toggle_d.gif" border="0" alt="No expanding text in this topic" title="No expanding text in this topic" />
+   </td>
+   
+   
+   <td id="print-button" align="center" width="20" class="idnav" valign="bottom">
+     <a href="javascript:printTopic('mounting_file_system_clients.htm?toc=0&printWindow'); "
+     onmouseover="document.images.printbutton.src='print_h.gif'" 
+     onmouseout="document.images.printbutton.src='print.gif'"><img name="printbutton" border="0" alt="Print this topic" title="Print this topic" src="print.gif" /></a>
+   </td>  
    
   
    <td width="4">&nbsp;</td>
@@ -137,6 +154,14 @@ $(document).ready(function() {
    </td>
    
    
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img name="toggler" src="toggle_d.gif" border="0" alt="JavaScript is required for expanding text" title="JavaScript is required for expanding text" />
+   </td>
+   
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img border="0" alt="JavaScript is required for the print function" title="JavaScript is required for the print function" src="print_d.gif" />
+   </td>
    
    
    <td width="4">&nbsp;</td>

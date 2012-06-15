@@ -4,7 +4,7 @@
    <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
    <title>Introducing Chroma Enterprise</title> 
    <meta name="generator" content="Help &amp; Manual" /> 
-   <meta name="keywords" content="" />
+   <meta name="keywords" content="Chroma Manager,Chroma Storage appliance,command line interface (CLI),Enterprise Lustre,Lustre file system,metadata server,object storage server,user interface (UI)" />
    <meta name="description" content="Introducing Chroma Enterprise" />
    <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -22,6 +22,8 @@ var togTocButton = "";
 $(document).ready(function() {
   chromeBugCheck("workaround",false);
    
+   togTocButton = 'not used' == "button" ? true : false;
+   togTOCinit('280','Show Navigation Pane','Hide Navigation Pane',togTocButton);
    });
 </script>
 
@@ -92,11 +94,15 @@ $(document).ready(function() {
 <!-- Script version of NavHeader -->
 <tr id="scriptNavHead" valign="middle" style="height: auto;">
    
-   <td align="left" class="topichead">
+    <td id="togbuttoncell" style="display: none;" align="left" class="idnav" width="10">
+	<img href="#" id="togtocbutton" border="0" title="Show/Hide Contents" alt="Show/Hide Contents" src="toc.gif" />
+   </td>
+   <td align="left" id="togtocheader" class="topichead" style="padding-left: 10px;" >
+  <div id="togtocbox"><img name="togtoc" id="togtoc" src="togtoc_hide.gif" align="left" border="0" alt="Hide Navigation Pane" title="Hide Navigation Pane" />
    <h1 class="p_Heading1"><span class="f_Heading1">Introducing Chroma Enterprise</span></h1>
 
+   </div>
    </td>
-   
    <td align="center" width="20" class="idnav" valign="bottom">
      
      <img src="button_prev_d.gif" border="0" alt="This is the first topic" title="This is the first topic" />
@@ -110,6 +116,17 @@ $(document).ready(function() {
    </td>
    
    
+   <td id="tgnav" align="center" width="20" class="idnav" valign="bottom">
+   
+   <img name="toggletoggler" src="toggle_d.gif" border="0" alt="No expanding text in this topic" title="No expanding text in this topic" />
+   </td>
+   
+   
+   <td id="print-button" align="center" width="20" class="idnav" valign="bottom">
+     <a href="javascript:printTopic('introducing_chroma.htm?toc=0&printWindow'); "
+     onmouseover="document.images.printbutton.src='print_h.gif'" 
+     onmouseout="document.images.printbutton.src='print.gif'"><img name="printbutton" border="0" alt="Print this topic" title="Print this topic" src="print.gif" /></a>
+   </td>  
    
   
    <td width="4">&nbsp;</td>
@@ -133,6 +150,14 @@ $(document).ready(function() {
    </td>
    
    
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img name="toggler" src="toggle_d.gif" border="0" alt="JavaScript is required for expanding text" title="JavaScript is required for expanding text" />
+   </td>
+   
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img border="0" alt="JavaScript is required for the print function" title="JavaScript is required for the print function" src="print_d.gif" />
+   </td>
    
    
    <td width="4">&nbsp;</td>
@@ -145,20 +170,13 @@ $(document).ready(function() {
 
 <!--[if lt IE 7]><div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;'><a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode"><img src="http://storage.ie6countdown.com/assets/100/images/banners/warning_bar_0000_us.jpg" border="0" height="42" width="820" alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today." /></a></div><![endif]-->
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">The Chroma Enterprise scalable storage solution tightly integrates management, monitoring, and high availability features with Enterprise Lustre software to create a high performance global file system based on enterprise-class storage hardware. Chroma Enterprise comprises the Chroma Manager, one or more Chroma Storage software appliances, and enterprise-class storage from any storage solution provider that supports the Chroma Storage software, as shown below.</span></p>
-<p class="p_BodyText"><img src="chromaenterprise.png" width="604" height="431" alt="ChromaEnterprise" style="border:none" /></p>
+<p class="p_BodyText"><span class="f_BodyText">The Chroma Enterprise scalable storage solution tightly integrates management, monitoring, and high availability features with Enterprise Lustre software to create a high performance global file system based on enterprise-class storage hardware. Chroma Enterprise comprises Chroma Manager, one or more Chroma Storage software appliances, and enterprise-class storage from any storage solution provider that supports the Chroma Storage software, as shown below.</span></p>
+<p><img src="chromaenterprise75percent.jpg" width="736" height="524" alt="ChromaEnterprise75percent" style="border:none" /></p>
 <p style="margin: 0px 0px 11px 0px;"><span style="font-weight: bold;">Chroma Enterprise scalable storage solution</span></p>
-<p class="p_BodyText"><span class="f_BodyText">The Chroma Storage software appliance runs on servers attached to enterprise storage hardware provided by a storage solution provider to form the Enterprise Lustre file system. Key components are the open source <a href="enterprise_lustre_overview.htm" class="topiclink">Enterprise Lustre</a> software integrated with Linux CentOS and additional user libraries to enable a truly integrated software storage appliance. The Chroma Storage software appliance delivers fast IO to applications across an Infiniband or Ethernet network.</span></p>
-<p class="p_BodyText"><span class="f_BodyText">The Chroma Manager includes features to simplify the creation and management of the Enterprise Lustre file system using either a browser-based UI or a command line interface (CLI). </span></p>
-<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="background-color:#fbfd9b; border:none; border-spacing:0px;">
-<tr style="text-align:left;vertical-align:top;">
-<td style="vertical-align:top; padding:0px;"><p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">To manage Chroma Storage from the command line, you must run Chroma CLI commands on the Chroma Manager server.</span><span class="f_BodyText"> </span><span class="f_BodyText" style="font-style: italic;">Do not run Lustre commands from the UNIX command line of a metadata or object storage server in a Chroma Storage appliance that is being managed using Chroma Manager. </span></p>
-</td>
-</tr>
-</table>
-</div>
+<p class="p_BodyText"><span class="f_BodyText">The Chroma Storage software appliance runs on servers attached to enterprise storage hardware provided by a storage solution provider to form the Enterprise Lustre file system. Key components are the open source <a href="enterprise_lustre_overview.htm" class="topiclink">Enterprise Lustre</a> software integrated with Linux and additional user libraries to enable an integrated software storage appliance. The Chroma Storage software appliance delivers fast IO to applications across an Infiniband or Ethernet network.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Chroma Manager includes features to simplify the creation and management of the Enterprise Lustre file system using either the browser-based user interface (UI) or the Chroma command line interface (CLI). </span></p>
 <p class="p_BodyText"><span class="f_BodyText">Lustre commands can be used to manage metadata or object storage servers in an existing Lustre storage system that has been set up outside Chroma Manager and is being monitored, but not managed, in Chroma Manager.</span></p>
-<p class="p_BodyText"><span class="f_BodyText">The Chroma Manager also serves as a central vantage point from which to monitor the entire distributed Enterprise Lustre file system, with storage-monitoring features that enable monitoring of Lustre file system usage, performance metrics, and events or errors at the Lustre level. &nbsp;Plugins provided by storage solution providers make hardware-level performance data, disk errors and faults, and other relevant hardware-related information available to the Chroma Manager.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Chroma Manager also serves as a central vantage point from which to monitor the entire distributed Enterprise Lustre file system, with storage-monitoring features that enable monitoring of Lustre file system usage, performance metrics, and events or errors at the Lustre level. Plugins provided by storage solution providers make hardware-level performance data, disk errors and faults, and other relevant hardware-related information available to Chroma Manager.</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>

@@ -4,7 +4,7 @@
    <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
    <title>What Is Lustre?</title> 
    <meta name="generator" content="Help &amp; Manual" /> 
-   <meta name="keywords" content="Metadata Server,Metadata Target,Object Storage Server" />
+   <meta name="keywords" content="high availability,Lustre client,management target,metadata target,object storage target" />
    <meta name="description" content="Enterprise Lustre Overview" />
    <meta name="copyright" content="© 2012 Whamcloud, Inc.. All rights Reserved." />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -22,6 +22,8 @@ var togTocButton = "";
 $(document).ready(function() {
   chromeBugCheck("workaround",false);
    
+   togTocButton = 'not used' == "button" ? true : false;
+   togTOCinit('280','Show Navigation Pane','Hide Navigation Pane',togTocButton);
    });
 </script>
 
@@ -92,11 +94,15 @@ $(document).ready(function() {
 <!-- Script version of NavHeader -->
 <tr id="scriptNavHead" valign="middle" style="height: auto;">
    
-   <td align="left" class="topichead">
+    <td id="togbuttoncell" style="display: none;" align="left" class="idnav" width="10">
+	<img href="#" id="togtocbutton" border="0" title="Show/Hide Contents" alt="Show/Hide Contents" src="toc.gif" />
+   </td>
+   <td align="left" id="togtocheader" class="topichead" style="padding-left: 10px;" >
+  <div id="togtocbox"><img name="togtoc" id="togtoc" src="togtoc_hide.gif" align="left" border="0" alt="Hide Navigation Pane" title="Hide Navigation Pane" />
    <h1 class="p_Heading1"><span class="f_Heading1">Enterprise Lustre Overview</span></h1>
 
+   </div>
    </td>
-   
    <td align="center" width="20" class="idnav" valign="bottom">
      <a href="a_quick_tour.htm"
         onmouseover="document.images.prev.src='button_prev_h.gif'" 
@@ -113,6 +119,17 @@ $(document).ready(function() {
    </td>
    
    
+   <td id="tgnav" align="center" width="20" class="idnav" valign="bottom">
+   
+   <img name="toggletoggler" src="toggle_d.gif" border="0" alt="No expanding text in this topic" title="No expanding text in this topic" />
+   </td>
+   
+   
+   <td id="print-button" align="center" width="20" class="idnav" valign="bottom">
+     <a href="javascript:printTopic('enterprise_lustre_overview.htm?toc=0&printWindow'); "
+     onmouseover="document.images.printbutton.src='print_h.gif'" 
+     onmouseout="document.images.printbutton.src='print.gif'"><img name="printbutton" border="0" alt="Print this topic" title="Print this topic" src="print.gif" /></a>
+   </td>  
    
   
    <td width="4">&nbsp;</td>
@@ -137,6 +154,14 @@ $(document).ready(function() {
    </td>
    
    
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img name="toggler" src="toggle_d.gif" border="0" alt="JavaScript is required for expanding text" title="JavaScript is required for expanding text" />
+   </td>
+   
+   
+   <td align="center" width="20" class="idnav" valign="bottom">
+   <img border="0" alt="JavaScript is required for the print function" title="JavaScript is required for the print function" src="print_d.gif" />
+   </td>
    
    
    <td width="4">&nbsp;</td>
@@ -149,14 +174,9 @@ $(document).ready(function() {
 
 <!--[if lt IE 7]><div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;'><a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode"><img src="http://storage.ie6countdown.com/assets/100/images/banners/warning_bar_0000_us.jpg" border="0" height="42" width="820" alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today." /></a></div><![endif]-->
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">Enterprise Lustre is a global single-namespace file system architecture that allows parallel access by many clients to all the data in the file system across on many servers and storage devices. Designed to take advantage of the reliability features of enterprise-class storage hardware, Enterprise Lustre supports availability features such as redundant servers with storage failover. Metadata and data are stored on separate servers to allow each system to be optimized for the different workloads.</span></p>
-<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
-<p><img src="whamcloud_lustre_diagram_final4.jpg" width="750" height="306" alt="WhamCloud_Lustre_diagram_FINAL4" style="border:none" /></p>
-<p>&nbsp;</p>
-<p class="p_ImageCaption"><span class="f_ImageCaption">Lustre Storage System</span></p>
-<p class="p_BodyText"><span class="f_BodyText">The components of an Enterprise Lustre storage system are:</span></p>
-<p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_Notetoengineer" style="font-style: italic; font-weight: bold; color: #000000;">Management Server</span><span style="font-style: italic; font-weight: bold;"> (MGS)</span> - The MGS stores configuration information for all the Lustre file systems in a cluster and provides this information to other Lustre components. Each Lustre target contacts the MGS to provide <span class="f_BodyText">information, and Lustre clients contact the MGS to retrieve information. It is preferable that the MGS have its own storage space so that it can be managed independently. However, the MGS can be co-located and and share storage space with an MDS.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Management target (MGT)</span><span class="f_BodyText"> -</span><span class="f_BodyText" style="color: #ff0000;"> The MGT provides storage for MGS configuration information. </span><span class="f_BodyText" style="font-weight: bold; color: #ff0000;">[this entry needs to describe &quot;metadata target (MGT)&quot; as it is used in the Chroma UI]</span><br />
-<span class="f_BodyText" style="font-weight: bold; color: #ff0000;">&nbsp;</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Metadata Server (MDS)</span><span class="f_BodyText"> - The MDS makes metadata stored in one or more MDTs available to Lustre clients. Each MDS manages the names and directories in the Lustre file system and provides network request handling for one or more local MDTs.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Metadata Target (MDT)</span><span class="f_BodyText"> - The MDT stores metadata (such as file names, directories, permissions and file layout) on storage attached to an MDS. Each file system has one MDT. An MDT on a shared storage target can be available to multiple MDSs, although only one can access it at a time. If an active MDS fails, a standby MDS can serve the MDT and make it available to clients. This is referred to as MDS failover.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Object Storage Server (OSS)</span><span class="f_BodyText"> - The OSS provides file I/O service and network request handling for one or more local OSTs. Typically, an OSS serves between two and eight OSTs with up to 16 TB each. A typical configuration is an MDT on a dedicated node, two or more OSTs on each OSS node, and a client on each of a large number of compute nodes.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Object Storage Target (OST)</span><span class="f_BodyText"> - User file data is stored in one or more objects, each object on a separate OST in a Lustre file system. The number of objects per file is configurable by the user and can be tuned to optimize performance for a given workload.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span style="font-style: italic; font-weight: bold;">Lustre clients</span> - &nbsp;Lustre clients are computational, visualization or desktop nodes that are running Lustre client software, allowing them to mount the Lustre file system.</p><p>&nbsp;</p>
+<p class="p_BodyText"><span class="f_BodyText">Enterprise Lustre is a global single-namespace file system architecture that allows parallel access by many clients to all the data in the file system across many servers and storage devices. Designed to take advantage of the reliability features of enterprise-class storage hardware, Enterprise Lustre supports availability features such as redundant servers with storage failover. Metadata and data are stored on separate servers to allow each system to be optimized for the different workloads.</span></p>
+<p class="p_BodyText">The components of an Enterprise Lustre storage system implemented as a Chroma Storage appliance include:</p>
+<p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 0px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>Management target (MGT) - The MGT stores configuration information for all the Lustre file systems in a cluster and provides this information to other Lustre components. Each Lustre object storage target (OST) contacts the MGT to provide information, and Lustre clients contact the MGT to retrieve information.</p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 0px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>Metadata target (MDT) - Each file system has one MDT. The MDT stores metadata (such as file names, directories, permissions, and file layout) for attached storage and makes them available to clients.</p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 0px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>Object storage targets (OSTs) - User file data is stored in one or more objects that are located on separate OSTs in the file system. The number of objects per file is configurable by the user and can be tuned to optimize performance for a given workload.</p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 0px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>Lustre clients - &nbsp;Lustre clients are computational, visualization, or desktop nodes that are running Lustre client software, allowing them to mount the Lustre file system.</p><p class="p_BodyText">The servers on which the MGT, MDT, or OSTs are located can all be configured as high availability (HA) servers so that if the server for a target fails, a standby server can continue to make the target available.</p>
 <p>For more information about the Lustre file system see the<span class="f_BodyText"> <a href="http://wiki.whamcloud.com/display/PUB/Documentation" target="_blank" class="weblink">Lustre Operations Manual</a>.</span></p>
 
 <!--ZOOMSTOP--> 
