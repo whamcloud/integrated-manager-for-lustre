@@ -10,8 +10,8 @@ class TestUserResource(ChromaApiTestCase):
         """Superuser changing his own password -- old_password required"""
 
         me = self.deserialize(self.api_client.get("/api/session/"))['user']
-        me['password1'] = "newpwd"
-        me['password2'] = "newpwd"
+        me['new_password1'] = "newpwd"
+        me['new_password2'] = "newpwd"
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
         self.assertHttpBadRequest(response)
 
@@ -25,8 +25,8 @@ class TestUserResource(ChromaApiTestCase):
         muggle = User.objects.create_user("muggle", "", "muggle123")
         muggle.groups.add(Group.objects.get(name='filesystem_users'))
         muggle_data = self.deserialize(self.api_client.get("/api/user/%s/" % muggle.id))
-        muggle_data['password1'] = "newpwd"
-        muggle_data['password2'] = "newpwd"
+        muggle_data['new_password1'] = "newpwd"
+        muggle_data['new_password2'] = "newpwd"
         response = self.api_client.put(muggle_data['resource_uri'], data = muggle_data)
         self.assertHttpAccepted(response)
 
@@ -41,11 +41,37 @@ class TestUserResource(ChromaApiTestCase):
         me = self.deserialize(self.api_client.get("/api/session/"))['user']
         self.assertEqual(int(me['id']), int(muggle.id))
 
-        me['password1'] = "newpwd"
-        me['password2'] = "newpwd"
+        me['new_password1'] = "newpwd"
+        me['new_password2'] = "newpwd"
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
         self.assertHttpBadRequest(response)
 
         me['old_password'] = "muggle123"
         response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
         self.assertHttpAccepted(response)
+
+    def test_user_details_update(self):
+        """Users should be able to update their details (first/last, email)"""
+        username = "joebob"
+        password = "nancysue"
+
+        joebob = User.objects.create_user(username, "", password)
+        joebob.groups.add(Group.objects.get(name='filesystem_users'))
+
+        # Log in
+        self.api_client.client.login(username = username, password = password)
+
+        me = self.deserialize(self.api_client.get("/api/session/"))['user']
+        self.assertEqual(int(me['id']), int(joebob.id))
+        self.assertEqual(me['email'], "")
+
+        me['first_name'] = "Joebob"
+        me['last_name'] = "Josephson"
+        me['email'] = "joebob@joebob.rocks"
+        response = self.api_client.put("/api/user/%s/" % me['id'], data = me)
+        self.assertHttpAccepted(response)
+
+        me = self.deserialize(self.api_client.get("/api/session/"))['user']
+        self.assertEqual(int(me['id']), int(joebob.id))
+        self.assertEqual(me['email'], "joebob@joebob.rocks")
+        self.assertEqual(me['full_name'], "Joebob Josephson")
