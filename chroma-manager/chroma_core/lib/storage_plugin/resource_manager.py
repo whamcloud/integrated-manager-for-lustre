@@ -578,7 +578,7 @@ class ResourceManager(object):
         targets = ManagedTarget.objects.filter(volume = volume)
         nodes = VolumeNode.objects.filter(volume = volume)
         if targets.count() == 0 and nodes.count() == 0:
-            log.warn("Removing Volume %s" % volume.id)
+            log.info("Removing Volume %s" % volume.id)
             volume.storage_resource = None
             volume.save()
             Volume.delete(volume.id)
@@ -593,7 +593,7 @@ class ResourceManager(object):
     def _try_removing_volume_node(self, volume_node):
         targets = ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node)
         if targets.count() == 0:
-            log.warn("Removing VolumeNode %s" % volume_node.id)
+            log.info("Removing VolumeNode %s" % volume_node.id)
             VolumeNode.delete(volume_node.id)
             self._try_removing_volume(volume_node.volume)
             return True
@@ -993,8 +993,6 @@ class ResourceManager(object):
 
     # Use commit on success to avoid situations where a resource record
     # lands in the DB without its attribute records.
-    # FIXME: there are cases where _persist_new_resource gets called outside
-    # of _persist_new_resources, make sure it's wrapped in a transaction too
     @transaction.commit_on_success
     def _persist_new_resources(self, session, resources):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
