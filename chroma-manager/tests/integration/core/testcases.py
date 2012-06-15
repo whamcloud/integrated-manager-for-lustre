@@ -576,7 +576,7 @@ EOF
         self.assertEqual(response.successful, True, response.text)
         return response.json['objects']
 
-    def get_shared_volumes(self):
+    def get_shared_volumes(self, required_hosts = 2):
         # Volumes suitable for shared storage test
         # (i.e. they have both a primary and a secondary node)
         volumes = self.get_usable_volumes()
@@ -585,7 +585,8 @@ EOF
         for v in volumes:
             has_primary = len([node for node in v['volume_nodes'] if node['primary']]) == 1
             has_two = len([node for node in v['volume_nodes'] if node['use']]) >= 2
-            if has_primary and has_two:
+            accessible_enough = len(v['volume_nodes']) >= required_hosts
+            if has_primary and has_two and accessible_enough:
                 ha_volumes.append(v)
 
         return ha_volumes

@@ -18,7 +18,7 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
 
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a failover node)
-        ha_volumes = self.get_shared_volumes()
+        ha_volumes = self.get_shared_volumes(required_hosts = 4)
         self.assertGreaterEqual(len(ha_volumes), 4)
 
         mgt_volume = ha_volumes[0]
