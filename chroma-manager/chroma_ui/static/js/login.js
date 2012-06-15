@@ -94,7 +94,7 @@ var Login = function() {
 
     $('#user_info #authenticated #account').click(function(ev)
     {
-      UserDialog.edit(Login.getUser());
+      Backbone.history.navigate("/user/" + Login.getUser().id + "/", true);
       ev.preventDefault();
     })
   }
@@ -145,37 +145,6 @@ var Login = function() {
   }
 }();
 
-var UserDialog = function() {
-  function edit(user, callback) {
-    $.each(user.groups, function(i, group) {
-      delete group.resource_uri
-    });
-
-    $(_.template($('#user_detail_dialog_template').html())({user: user})).dialog({
-      resizable: false,
-      width: 'auto',
-      buttons: {
-        "Cancel": function() {$(this).dialog('close')},
-        "Save": {
-          "text": "Save",
-          "class": "save_button",
-          "click": function(){
-            var dialog = $(this);
-            ValidatedForm.save($(this), Api.put, "user/" + user.id + "/", user, function() {
-              dialog.dialog('close');
-              if (callback) {
-                callback();
-              }
-            });
-          }
-        }
-      }
-    });
-  }
-
-  return {edit: edit}
-}();
-
 var ValidatedForm = function() {
   function add_error(input, message) {
     input.before("<span class='error'>" + message + "</span>");
@@ -221,10 +190,17 @@ var ValidatedForm = function() {
     clear_errors(element);
   }
 
+  function reset(element, obj) {
+    element.find('input').each(function() {
+      $(this).val(obj.get($(this).attr('name')));
+    });
+  }
+
   return {
     add_error: add_error,
     save: save,
     clear: clear,
+    reset: reset,
     clear_errors: clear_errors
   }
 }();

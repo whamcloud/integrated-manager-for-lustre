@@ -1,10 +1,11 @@
-    #
+#
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 
 
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from tastypie.bundle import Bundle
 
 from chroma_api.authentication import AnonymousAuthentication
@@ -12,14 +13,24 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource
 from tastypie import fields
 
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
 
 
+class ChromaUserChangeForm(UserChangeForm):
+    class Meta(UserChangeForm.Meta):
+        fields = ('username', 'first_name', 'last_name', 'email',)
+
+
 class UserAuthorization(DjangoAuthorization):
     def apply_limits(self, request, object_list):
-        if not request.user.is_authenticated():
+        if request.method is None:
+            # IFF the request method is None, then this must be an
+            # internal request being done by Resource.get_via_uri()
+            # and is therefore safe.
+            return object_list
+        elif not request.user.is_authenticated():
             # Anonymous sees nothing
             return object_list.none()
         elif request.user.has_perm('add_user'):
@@ -37,40 +48,29 @@ class UserValidation(Validation):
         data = bundle.data or {}
         if request.method == "PUT":
             errors = {}
-
             try:
-                user_id = data['id']
+                user = get_object_or_404(User, pk=data['id'])
             except KeyError:
                 errors['id'] = ['id attribute is mandatory']
             else:
-                try:
-                    user = User.objects.get(id = user_id)
-                except User.DoesNotExist:
-                    errors['id'] = ['not found']
-                else:
+                if data['new_password1'] or data['new_password2']:
+                    from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
                     # Non-superusers always require old_password
                     # Superusers require old_password when editing themselves
                     if not request.user.is_superuser or request.user.id == user.id:
-                        try:
-                            old_password = data['old_password']
-                        except KeyError:
-                            errors['old_password'] = ['Old password may not be blank']
-                        else:
-                            if not user.check_password(old_password):
-                                errors['old_password'] = ['Old password incorrect']
-
-            if not data['password1']:
-                errors['password1'] = ['Password may not be blank']
-            if not data['password2']:
-                errors['password2'] = ['Password may not be blank']
-
-            if data['password1'] and data['password2']:
-                if data['password1'] != data['password2']:
-                    err = ['Passwords do not match']
-                    if 'password2' in errors:
-                        errors['password2'].extend(err)
+                        form = PasswordChangeForm(user, data)
                     else:
-                        errors['password2'] = err
+                        form = SetPasswordForm(user, data)
+
+                    if not form.is_valid():
+                        errors.update(form.errors)
+
+                    return errors
+
+                form = ChromaUserChangeForm(data, instance=user)
+                if not form.is_valid():
+                    errors.update(form.errors)
+
             return errors
         elif request.method == "POST":
             form = UserCreationForm(data)
@@ -93,11 +93,14 @@ class UserResource(ModelResource):
     groups = fields.ToManyField('chroma_api.group.GroupResource', attribute = 'groups',
         full = True, null = True, help_text = "List of groups that this user is a member \
                 of.  May only be modified by superusers")
+    alert_subscriptions = fields.ToManyField('chroma_api.alert.AlertSubscriptionResource', attribute = 'alert_subscriptions', null = True, full = True)
     full_name = fields.CharField(help_text = "Human readable form derived from ``first_name`` and ``last_name``")
 
-    password1 = fields.CharField(help_text = "Used for modifying password (request must be\
-            made by the same user or by a superuser")
+    password1 = fields.CharField(help_text = "Used in creating a user (request must be made by a superuser")
     password2 = fields.CharField(help_text = "Password confirmation, must match ``password1``")
+    new_password1 = fields.CharField(help_text = "Used for modifying password (request must be\
+            made by the same user or by a superuser")
+    new_password2 = fields.CharField(help_text = "Password confirmation, must match ``new_password1``")
 
     def hydrate_groups(self, bundle):
         from chroma_api.group import GroupResource
@@ -121,9 +124,31 @@ class UserResource(ModelResource):
                     raise ImmediateHttpResponse(HttpForbidden())
         return bundle
 
-    def hydrate_password1(self, bundle):
-        bundle.obj.set_password(bundle.data['password1'])
+    # This seems wrong. Without it, the hydration goes awry with what
+    # comes in via PUT. We aren't managing user alert subscriptions
+    # via the User resource, though, so perhaps this is not so bad.
+    def hydrate_alert_subscriptions(self, bundle):
+        try:
+            del bundle.data['alert_subscriptions'][:]
+        except KeyError:
+            pass
+
         return bundle
+
+    def _hydrate_password(self, bundle, key):
+        try:
+            new_password = bundle.data[key]
+            if new_password:
+                bundle.obj.set_password(new_password)
+        except KeyError:
+            pass
+        return bundle
+
+    def hydrate_password2(self, bundle):
+        return self._hydrate_password(bundle, 'password2')
+
+    def hydrate_new_password2(self, bundle):
+        return self._hydrate_password(bundle, 'new_password2')
 
     def obj_create(self, bundle, request = None, **kwargs):
         bundle = super(UserResource, self).obj_create(bundle, request, **kwargs)
@@ -150,7 +175,7 @@ class UserResource(ModelResource):
         authorization = UserAuthorization()
         queryset = User.objects.all()
         validation = UserValidation()
-        fields = ['first_name', 'full_name', 'groups', 'id', 'last_name', 'password1', 'password2', 'resource_uri', 'username', 'email']
+        fields = ['first_name', 'full_name', 'groups', 'id', 'last_name', 'new_password1', 'new_password2', 'password1', 'password2', 'resource_uri', 'username', 'email']
         ordering = ['username', 'email']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']

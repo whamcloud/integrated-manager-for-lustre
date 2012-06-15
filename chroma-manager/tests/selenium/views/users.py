@@ -21,7 +21,18 @@ class Users(DatatableView):
         # Initialise elements on this page
         self.create_new_user_button = self.driver.find_element_by_css_selector("#create_user")
         self.create_user_dialog = "div.create_user_dialog"
-        self.edit_user_dialog = "div.edit_user_dialog"
+        self.user_detail = "div.user_detail div.tabs"
+        self.user_details_tab = '%s a[href="#user_details_tab"]' % self.user_detail
+        self.user_details_panel = '%s div#user_details_tab' % self.user_detail
+        self.user_password_tab = '%s a[href="#user_password_tab"]' % self.user_detail
+        self.user_password_panel = '%s div#user_password_tab' % self.user_detail
+        self.user_alerts_tab = '%s a[href="#user_alert_subs_tab"]' % self.user_detail
+        self.user_alerts_panel = '%s div#user_alert_subs_tab' % self.user_detail
+        self.user_alerts_form = '%s ul#user_alerts_form' % self.user_alerts_panel
+        self.update_alerts_button = "button.update_subscriptions"
+        self.all_alerts_button = "button.select_all_subscriptions"
+        self.no_alerts_button = "button.clear_subscriptions"
+
         self.delete_user_dialog = "div.delete_user_dialog"
 
         self.user_group = "div.create_user_dialog select"
@@ -31,12 +42,18 @@ class Users(DatatableView):
         self.email = "div.create_user_dialog input[name=email]"
         self.password1 = "div.create_user_dialog input[name=password1]"
         self.password2 = "div.create_user_dialog input[name=password2]"
-
-        self.old_password = "div.edit_user_dialog input[name=old_password]"
-        self.edit_password1 = "div.edit_user_dialog input[name=password1]"
-        self.edit_password2 = "div.edit_user_dialog input[name=password2]"
         self.create_user_button = "button.create_button"
-        self.edit_save_button = "button.save_button"
+
+        self.edit_email = "%s input[name=email]" % self.user_details_panel
+        self.edit_first_name = "%s input[name=first_name]" % self.user_details_panel
+        self.edit_last_name = "%s input[name=last_name]" % self.user_details_panel
+        self.edit_save_button = "button.save_user"
+
+        self.old_password = "%s input[name=old_password]" % self.user_password_panel
+        self.edit_password1 = "%s input[name=new_password1]" % self.user_password_panel
+        self.edit_password2 = "%s input[name=new_password2]" % self.user_password_panel
+        self.change_password_button = "button.change_password"
+
         self.delete_button = "button.delete_button"
 
         self.error_span = "span.error"
@@ -59,22 +76,66 @@ class Users(DatatableView):
         self.driver.find_element_by_css_selector(self.create_user_button).click()
         self.quiesce()
 
-    def edit(self, username, new_password, new_confirm_password):
-        # Edit user data
+    def edit(self, username, email, first_name, last_name):
+        # Edit user details
         target_host_row = self.locate_user(username)
         buttons = target_host_row.find_elements_by_tag_name("button")
         for button in buttons:
             if button.text == static_text['edit_user']:
                 button.click()
-                wait_for_element(self.driver, self.edit_user_dialog, self.medium_wait)
-                enter_text_for_element(self.driver, self.edit_password1, new_password)
-                enter_text_for_element(self.driver, self.edit_password2, new_confirm_password)
+                wait_for_element(self.driver, self.user_detail, self.medium_wait)
+                enter_text_for_element(self.driver, self.edit_email, email)
+                enter_text_for_element(self.driver, self.edit_first_name, first_name)
+                enter_text_for_element(self.driver, self.edit_last_name, last_name)
                 # Click save button
                 self.driver.find_element_by_css_selector(self.edit_save_button).click()
+                # Click close button
+                self.driver.find_element_by_css_selector('button.close').click()
                 self.quiesce()
                 return
 
         raise RuntimeError("Cannot edit user with username " + username)
+
+    def change_password(self, username, new_password, new_confirm_password):
+        # Change user password
+        target_host_row = self.locate_user(username)
+        buttons = target_host_row.find_elements_by_tag_name("button")
+        for button in buttons:
+            if button.text == static_text['edit_user']:
+                button.click()
+                wait_for_element(self.driver, self.user_detail, self.medium_wait)
+                self.driver.find_element_by_css_selector(self.user_password_tab).click()
+                enter_text_for_element(self.driver, self.edit_password1, new_password)
+                enter_text_for_element(self.driver, self.edit_password2, new_confirm_password)
+                # Click save button
+                self.driver.find_element_by_css_selector(self.change_password_button).click()
+                # Click close button
+                self.driver.find_element_by_css_selector('button.close').click()
+                self.quiesce()
+                return
+
+        raise RuntimeError("Cannot change password for user: %s" + username)
+
+    def edit_alerts(self, username, alert_subscriptions):
+        # Change user's alert subscriptions
+        target_host_row = self.locate_user(username)
+        buttons = target_host_row.find_elements_by_tag_name("button")
+        for button in buttons:
+            if button.text == static_text['edit_user']:
+                button.click()
+                wait_for_element(self.driver, self.user_detail, self.medium_wait)
+                self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
+                alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
+                self._fill_out_alerts_form(alerts_form, alert_subscriptions)
+
+                # Click save button
+                self.driver.find_element_by_css_selector(self.update_alerts_button).click()
+                # Click close button
+                self.driver.find_element_by_css_selector('button.close').click()
+                self.quiesce()
+                return
+
+        raise RuntimeError("Cannot edit alerts for user: %s" + username)
 
     def delete(self, username):
         # Delete user
@@ -83,6 +144,7 @@ class Users(DatatableView):
         for button in buttons:
             if button.text == static_text['delete_user']:
                 button.click()
+                self.quiesce()
                 wait_for_element(self.driver, self.delete_user_dialog, self.medium_wait)
                 # Click delete button
                 self.driver.find_element_by_css_selector(self.delete_button).click()
@@ -102,10 +164,97 @@ class Users(DatatableView):
     def edit_own_password(self, password, new_password):
         self.driver.find_element_by_css_selector("#account").click()
         self.quiesce()
+        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        self.driver.find_element_by_css_selector(self.user_password_tab).click()
         enter_text_for_element(self.driver, self.old_password, password)
         enter_text_for_element(self.driver, self.edit_password1, new_password)
         enter_text_for_element(self.driver, self.edit_password2, new_password)
+        # Click save button
+        self.driver.find_element_by_css_selector(self.change_password_button).click()
+        # Click close button
+        self.driver.find_element_by_css_selector('button.close').click()
+        self.quiesce()
+
+    def edit_own_details(self, username, email, first_name, last_name):
+        self.driver.find_element_by_css_selector("#account").click()
+        self.quiesce()
+        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        enter_text_for_element(self.driver, self.edit_email, email)
+        enter_text_for_element(self.driver, self.edit_first_name, first_name)
+        enter_text_for_element(self.driver, self.edit_last_name, last_name)
+        # Click save button
         self.driver.find_element_by_css_selector(self.edit_save_button).click()
+        # Click close button
+        self.driver.find_element_by_css_selector('button.close').click()
+        self.quiesce()
+
+    def list_own_subscribed_alerts(self):
+        self.driver.find_element_by_css_selector("#account").click()
+        self.quiesce()
+        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
+        alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
+        subscribed = [el.get_attribute('name') for el in alerts_form.find_elements_by_css_selector('input[type="checkbox"]') if el.is_selected()]
+
+        # Click close button
+        self.driver.find_element_by_css_selector('button.close').click()
+        self.quiesce()
+
+        return subscribed
+
+    def subscribe_to_no_alerts(self):
+        self.driver.find_element_by_css_selector("#account").click()
+        self.quiesce()
+        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
+
+        # Click select all button
+        self.driver.find_element_by_css_selector(self.no_alerts_button).click()
+        # Click save button
+        self.driver.find_element_by_css_selector(self.update_alerts_button).click()
+        # Click close button
+        self.driver.find_element_by_css_selector('button.close').click()
+        self.quiesce()
+
+    def subscribe_to_all_alerts(self):
+        self.driver.find_element_by_css_selector("#account").click()
+        self.quiesce()
+        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
+
+        # Click select all button
+        self.driver.find_element_by_css_selector(self.all_alerts_button).click()
+        # Click save button
+        self.driver.find_element_by_css_selector(self.update_alerts_button).click()
+        # Click close button
+        self.driver.find_element_by_css_selector('button.close').click()
+        self.quiesce()
+
+    def _fill_out_alerts_form(self, alerts_form, user_subscriptions):
+        for checkbox in alerts_form.find_elements_by_css_selector('input[type="checkbox"]'):
+            if checkbox.get_attribute('name') in user_subscriptions:
+                # If it's supposed to be checked
+                if not checkbox.is_selected():
+                    # ... and it's not, click it.
+                    checkbox.click()
+            else:
+                # If it's not supposed to be checked
+                if checkbox.is_selected():
+                    # ... and it is, click it.
+                    checkbox.click()
+
+    def edit_own_subscribed_alerts(self, user_subscriptions):
+        self.driver.find_element_by_css_selector("#account").click()
+        self.quiesce()
+        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
+        alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
+        self._fill_out_alerts_form(alerts_form, user_subscriptions)
+
+        # Click save button
+        self.driver.find_element_by_css_selector(self.update_alerts_button).click()
+        # Click close button
+        self.driver.find_element_by_css_selector('button.close').click()
         self.quiesce()
 
     @property
