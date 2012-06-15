@@ -5,7 +5,7 @@
           <ul>
             <li><a href='#properties_tab' onfocus="this.blur()" tabindex="-1">Properties</a></li>
             <li><a href='#devices_tab' onfocus="this.blur()" tabindex="-1">Devices</a></li>
-            <% if (target.conf_params) { %>
+            <% if (target.conf_params && !target.immutable_state) { %>
               <li><a href='#target_dialog_config_param_tab' onfocus="this.blur()" tabindex="-1">Advanced</a></li>
             <% } %>
           </ul>
@@ -25,7 +25,7 @@
           <div id='devices_tab'>
           </div>
 
-          <% if (target.conf_params) { %>
+          <% if (target.conf_params && !target.immutable_state) { %>
               <div id='target_dialog_config_param_tab'>
                 <div class='help_loader' style='padding: 0 6px 6px 6px;' data-topic='_advanced_settings' />
                 <table border="0" cellspacing="0" cellpadding="0" class="conf_param_table">

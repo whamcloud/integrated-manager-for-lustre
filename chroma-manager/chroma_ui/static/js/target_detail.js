@@ -18,7 +18,7 @@ var TargetDetail = Backbone.View.extend({
     $(this.el).find('.tabs').tabs({'show': function(event, ui) {view.tab_select(event, ui)}});
 
     var conf_params = this.model.get('conf_params');
-    if (conf_params != null) {
+    if (conf_params != null && !this.model.get('immutable_state')) {
       $(this.el).find(".conf_param_table").dataTable( {
         "iDisplayLength":30,
         "bProcessing": true,
