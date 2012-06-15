@@ -71,38 +71,25 @@
 
           Api.get_datatables(url, aoData,
             function(data) {
-              var row_decoration_pre = "<div class='log_line'>"
-              var row_decoration_post = "</div>"
-              /* Annotate the rows with DT_RowClass */
               _.each(data.aaData, function(row) {
-                if (row.message.search("LustreError") != -1) {
-                  row.DT_RowClass = 'log_error';
-                } else {
-                  row.DT_RowClass = 'log_info';
-                }
-
+                // set styling for error vs info
+                row.DT_RowClass = row.message.search("LustreError") != -1 ? 'log_error' : 'log_info';
                 row.devicereportedtime = shortLocalTime(row.devicereportedtime);
                 row.syslogtag = row.syslogtag.slice(0, -1);
-                row.message = row_decoration_pre + _.escape(row.message) + row_decoration_post;
 
-                var substituted = "";
-                var cursor = 0;
-                for (var i = 0; i < row.substitutions.length; i++) {
-                    var substitution = row.substitutions[i];
-                    var len_delta = substitution.label - (substitution.end - substitution.start);
-
-                    substitution.start += row_decoration_pre.length;
-                    substitution.end += row_decoration_pre.length;
-                    substituted += row.message.substr(cursor, substitution.start - cursor);
+                var substituted = "",
+                    cursor = 0;
+                _.each(row.substitutions, function(substitution) {
+                    // get all text before our substitution
+                    substituted += _.escape(row.message.substr(cursor, substitution.start - cursor));
+                    substituted += uri_properties_link(substitution.resource_uri, _.escape(substitution.label));
                     cursor = substitution.end;
-                    var tooltip = row.message.substr(substitution.start, substitution.end - substitution.start);
-                    substituted += uri_properties_link(substitution.resource_uri, substitution.label);
-                }
+                });
+                // catch the end bit (or the whole message if there are no substitutions)
                 if (cursor < row.message.length) {
-                    substituted += row.message.substr(cursor, row.message.length - cursor);
+                    substituted += _.escape(row.message.substr(cursor, row.message.length - cursor));
                 }
-
-                row.message = substituted;
+                row.message = "<div class='log_line'>" + substituted + "</div>";
               });
               callback(data);
             },
