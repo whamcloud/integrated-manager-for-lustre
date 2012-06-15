@@ -105,15 +105,6 @@ def _device_node(device_name, major_minor, path, size, parent):
         serial_80 = scsi_id_command(["scsi_id", "-g", "-p", "0x80", path])
         serial_83 = scsi_id_command(["scsi_id", "-g", "-p", "0x83", path])
 
-    # The downside to using -p 0x80 is that if the user hasn't manually
-    # set serials for their scsi devices, multiple different devices on
-    # the same host return the same string, so we need an explicit
-    # exclusion for that
-    if serial_80 == "SQEMU    QEMU HARDDISK  0":
-        serial_80 = None
-    if serial_83 and serial_83.find("0QEMU    QEMU HARDDISK") == 0:
-        serial_83 = None
-
     info = {'major_minor': major_minor,
             'path': path,
             'serial_80': serial_80,

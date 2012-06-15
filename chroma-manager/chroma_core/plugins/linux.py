@@ -172,6 +172,21 @@ class Linux(Plugin):
             else:
                 return None
 
+        # Scrub dodgy QEMU SCSI IDs
+        for bdev in devices['devs'].values():
+            qemu_pattern = "QEMU HARDDISK"
+            if bdev['serial_80'] and bdev['serial_80'].find(qemu_pattern) != -1:
+                # Virtual environments can set an ID that trails QEMU HARDDISK, in which case
+                # we should pick that up, or this might not be a real ID at all.
+                # We have seen at least "SQEMU    QEMU HARDDISK" and "SQEMU    QEMU HARDDISK  0"
+                # for devices without manually set IDs, so apply a general condition that the trailing
+                # portion must be more than N characters for us to treat it like an ID
+                trailing_id = bdev['serial_80'].split(qemu_pattern)[1].strip()
+                if len(trailing_id) < 4:
+                    bdev['serial_80'] = None
+            if bdev['serial_83'] and bdev['serial_83'].find(qemu_pattern) != -1:
+                bdev['serial_83'] = None
+
         # Create ScsiDevices
         res_by_serial = {}
         for bdev in devices['devs'].values():

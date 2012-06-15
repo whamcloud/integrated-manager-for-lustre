@@ -489,20 +489,23 @@ class ResourceManager(object):
 
         existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
         logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
+        logicaldrive_id_handled = set()
         with Volume.delayed as volumes:
             for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
-                if not logicaldrive_id in logicaldrive_id_to_volume:
+                if logicaldrive_id not in logicaldrive_id_to_volume and logicaldrive_id not in logicaldrive_id_handled:
                     size = logicaldrive_id_to_size[logicaldrive_id]
                     try:
                         label = self._label_cache[logicaldrive_id]
                     except KeyError:
                         label = StorageResourceRecord.objects.get(pk = logicaldrive_id).to_resource().get_label()
+
                     volumes.insert(dict(
                         size = size,
                         storage_resource_id = logicaldrive_id,
                         not_deleted = True,
                         label = label
                     ))
+                    logicaldrive_id_handled.add(logicaldrive_id)
 
         existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
         logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
