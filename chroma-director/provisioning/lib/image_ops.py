@@ -21,7 +21,7 @@ class ImageOps(NodeOps):
             sudo('rm -rf /root/.*hist*')
             sudo('rm -rf /var/log/*.gz')
             sudo('rm -f /etc/ssh/ssh_host*')
-            sudo('rm -f /etc/yum.repos.d/chroma*.repo')
+            sudo('rm -f /etc/yum.repos.d/chroma*.repo*')
             sudo('find /home -maxdepth 1 -type d -exec rm -rf {}/.ssh \;')
 
 
@@ -39,9 +39,13 @@ class ImageOps(NodeOps):
         print "New AMI is %s  %s" % (image.id, image.state)
         return image.id
 
-    def _update_whamos(self):
+    def _update_whamos(self, use_master):
         sudo('yum -y remove cups') # XXX base image specific
         sudo('userdel -r vishal') # XXX base image specific
+        if use_master:
+            sudo('yum --enablerepo=chroma-master --enablerepo=coeus-master -y update')
+        else:
+            sudo('yum -y update')
 
 
 class StorageImageOps(ImageOps):
@@ -49,7 +53,7 @@ class StorageImageOps(ImageOps):
     def install_deps(self, use_master):
         with self.open_session():
             self._setup_chroma_repo()
-            self._update_whamos()
+            self._update_whamos(use_master)
             if use_master:
                 sudo('yum --enablerepo=coeus-master install -y lustre kernel-2.6.32*lustre.*')
             else:
@@ -72,7 +76,7 @@ class ManagerImageOps(ImageOps):
     def install_deps(self, use_master):
         with self.open_session():
             self._setup_chroma_repo()
-            self._update_whamos()
+            self._update_whamos(use_master)
             #run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-6.noarch.rpm')
             #sudo('rpm -i --force epel-release-6-6.noarch.rpm')
             if use_master:
