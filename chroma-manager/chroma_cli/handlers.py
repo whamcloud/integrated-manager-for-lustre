@@ -416,8 +416,8 @@ class ConfigHandler(Handler):
 
     def dump(self, ns):
         import json
-        response = self.api.endpoints['configuration'].get()
-        print json.dumps(json.loads(response.content), indent=4)
+        response = self.api.endpoints['configuration'].get_decoded()
+        print json.dumps(response, indent=4)
 
     def load(self, ns):
         import json
