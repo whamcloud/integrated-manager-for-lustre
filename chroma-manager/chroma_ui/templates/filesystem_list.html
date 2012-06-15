@@ -37,7 +37,7 @@
               } else {
                 row.mds_hostname = "";
               }
-              row.ost_count = row.osts.length;
+              row.client_count = formatBigNumber(row.client_count);
               row.bytes_total = formatBytes(row.bytes_total);
               row.bytes_free = formatBytes(row.bytes_free);
               row.state_transitions = LiveObject.actions(row);
@@ -50,7 +50,7 @@
           { "sClass": 'txtleft', mDataProp: 'name'},
           { "sClass": 'txtleft', mDataProp: 'mgs_hostname', bSortable: false},
           { "sClass": 'txtleft', mDataProp: 'mds_hostname', bSortable: false},
-          { "sClass": 'txtright', mDataProp: 'ost_count', bSortable: false},
+          { "sClass": 'txtright', mDataProp: 'client_count', bSortable: false},
           { "sClass": 'txtright', mDataProp: 'bytes_total', bSortable: false},
           { "sClass": 'txtright', mDataProp: 'bytes_free', bSortable: false},
           { "sClass": 'txtright', mDataProp: 'state_transitions', bSortable: false},
@@ -75,7 +75,7 @@
       <th width="9%">Name</th>
       <th width="10%">Management Server</th>
       <th width="10%">Metadata Server</th>
-      <th width="9%"><abbr title="Object Storage Targets">OSTs</abbr></th>
+      <th width="5%">Connected Clients</th>
       <th width="5%">Size</th>
       <th width="5%">Free</th>
       <th width="1%"></th>
