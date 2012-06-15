@@ -451,15 +451,16 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
                         _t2s(rra_end_time), _t2s(real_end), real_step))
 
     rra_pointer = 0
+    chosen_pointers = db.rra_pointers[chosen_rra.pk]
     if real_start <= rra_end_time and real_end >= (rra_start_time - real_step):
-        rra_pointer = db.rra_pointers[chosen_rra.pk]['slot']
+        rra_pointer = chosen_pointers['slot']
 
         if r3d.DEBUG:
             debug_print("  current_row: %d / %d" %
                         (rra_pointer, chosen_rra.rows))
 
         if start_offset > 0:
-            rra_pointer = db.rra_pointers[chosen_rra.pk]['slot'] + start_offset
+            rra_pointer += start_offset
 
             if r3d.DEBUG:
                 debug_print("  %d = current_row + start_offset" % rra_pointer)
@@ -470,10 +471,7 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
             debug_print("  set pointer to %d / %d" %
                         (rra_pointer, chosen_rra.rows))
 
-    if db.rra_pointers[chosen_rra.pk]['wrapped']:
-        db_start_offset = 0
-    else:
-        db_start_offset = chosen_rra.rows - db.rra_pointers[chosen_rra.pk]['slot']
+    db_start_offset = 0 if chosen_pointers['wrapped'] else chosen_rra.rows - chosen_pointers['slot']
 
     if r3d.DEBUG:
         if db_start_offset == 0:
@@ -490,21 +488,13 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
         ds_list = [ds for ds in db.ds_list if ds.name in fetch_metrics]
 
     from r3d.models import ArchiveRow
-    if rra_pointer + rows >= chosen_rra.rows:
-        window_start = rra_pointer
-        window_end = chosen_rra.rows
-
-        if db.rra_pointers[rra.pk]['wrapped']:
+    window_start = rra_pointer
+    wrapped_end = window_end = rra_pointer + rows
+    if window_end >= chosen_rra.rows:
+        wrapped_end = window_end = chosen_rra.rows
+        if chosen_pointers['wrapped']:
             wrapped_end = (rra_pointer + rows) - window_end
-        else:
-            wrapped_end = window_end
-
-        if wrapped_end >= window_start:
-            wrapped_end = window_start
-    else:
-        window_start = rra_pointer
-        window_end = rra_pointer + rows
-        wrapped_end = window_end
+        wrapped_end = min(wrapped_end, window_start)
 
     if r3d.DEBUG:
         row_count = ArchiveRow.objects.filter(archive_id=chosen_rra.pk).count()
@@ -515,11 +505,10 @@ def fetch_best_rra_rows(db, archive_type, start_time, end_time, step, fetch_metr
         else:
             debug_print("  window_end: %d" % window_end)
 
-    if wrapped_end == window_end:
-        window_rows = list(ArchiveRow.objects.filter(archive_id=chosen_rra.pk).order_by('slot')[window_start:window_end])
-    else:
-        window_rows = list(ArchiveRow.objects.filter(archive_id=chosen_rra.pk).order_by('slot')[window_start:window_end])
-        window_rows.extend(list(ArchiveRow.objects.filter(archive_id=chosen_rra.pk).order_by('slot')[0:wrapped_end]))
+    query = ArchiveRow.objects.filter(archive_id=chosen_rra.pk).order_by('slot')
+    window_rows = list(query[window_start:window_end])
+    if wrapped_end != window_end:
+        window_rows += query[:wrapped_end]
 
     if r3d.DEBUG:
         debug_print("  window_rows: %d" % len(window_rows))
