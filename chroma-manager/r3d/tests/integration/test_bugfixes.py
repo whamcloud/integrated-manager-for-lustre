@@ -301,25 +301,28 @@ class BugUnwrappedRra(TestCase):
 
     def test_unwrapped_rras_return_sane_results(self):
         update_value = 0
-        self.nowish = self.start_time + (self.audit_freq * self.sample_count)
-        for i in range(self.start_time, self.nowish, self.audit_freq):
+        nowish = self.start_time + (self.audit_freq * self.sample_count)
+        for i in range(self.start_time, nowish, self.audit_freq):
             update_value += i % self.start_time
             self.rrd.update({i: {'ds_counter': update_value}})
-            fetched_rows = self.rrd.fetch('Average',
-                                          start_time=self.start_time,
-                                          end_time=(i + self.audit_freq))
-            step = ((i - self.start_time) / self.audit_freq)
+            fetched_rows = self.rrd.fetch('Average', start_time=self.start_time, end_time=(i + self.audit_freq))
+            counters = [data['ds_counter'] for ts, data in fetched_rows]
+            step = (i - self.start_time) / self.audit_freq
             # Test that we slide smoothly from the hires to the lower-res rra, and that the
             # values are sane.
             if step < 17:
                 if step > 0:
-                    self.assertEqual(round(step), round(fetched_rows[step - 1][1]['ds_counter']))
+                    self.assertEqual(round(step), round(counters[step - 1]))
+            elif step == 17:
+                fetched_rows = self.rrd.fetch('Average', start_time=self.start_time + 5 * self.audit_freq, end_time=i)
+                counters = [data['ds_counter'] for ts, data in fetched_rows]
+                self.assertNotIn(None, counters)
             elif step in range(21, 28):
-                self.assertSequenceEqual([5.5, 15.5], [r[1]['ds_counter'] for r in fetched_rows])
+                self.assertSequenceEqual([5.5, 15.5], counters)
             elif step in range(30, 38):
-                self.assertSequenceEqual([5.5, 15.5, 25.5], [r[1]['ds_counter'] for r in fetched_rows])
+                self.assertSequenceEqual([5.5, 15.5, 25.5], counters)
             if step == 109:
-                self.assertSequenceEqual([None, None, None, None, 45.5, 55.5, 65.5, 75.5, 85.5, 95.5, None], [r[1]['ds_counter'] for r in fetched_rows])
+                self.assertSequenceEqual([None, None, None, None, 45.5, 55.5, 65.5, 75.5, 85.5, 95.5, None], counters)
 
     def tearDown(self):
         self.rrd.delete()

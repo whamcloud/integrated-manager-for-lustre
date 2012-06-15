@@ -97,7 +97,7 @@ var ChromaRouter = Backbone.Router.extend({
   {
     this.object_detail(id, StorageResource, StorageResourceDetail, 'class_name');
   },
-  job_detail: function(id) 
+  job_detail: function(id)
   {
     this.object_detail(id, Job, JobDetail, 'description');
   },
@@ -120,9 +120,18 @@ var ChromaRouter = Backbone.Router.extend({
   about:function () {
     this.toplevel('about');
   },
+  failed_filesystem_admin_check: function() {
+    if ( Login.userHasGroup('filesystem_administrator') )
+      return false;
+    this.navigate('dashboard/',{replace: true});
+    this.dashboard();
+    return true;
+  },
   configureIndex: function()
   {
-    this.filesystemList()
+    if ( this.failed_filesystem_admin_check() )
+      return;
+    this.filesystemList();
   },
   toplevel: function(name)
   {
@@ -151,6 +160,8 @@ var ChromaRouter = Backbone.Router.extend({
     $("#tabs").tabs('select', '#' + tab + "-tab");
   },
   configure: function(tab) {
+    if ( this.failed_filesystem_admin_check() )
+      return;
     this.configureTab(tab);
     if (tab == 'filesystem') {
       this.filesystemList();
@@ -174,14 +185,20 @@ var ChromaRouter = Backbone.Router.extend({
     $('#filesystem-tab-' + page).show();
   },
   filesystemList: function() {
+    if ( this.failed_filesystem_admin_check() )
+      return;
     this.filesystemPage('list');
     FilesystemListView.draw()
   },
   filesystemDetail: function(id) {
+    if ( this.failed_filesystem_admin_check() )
+      return;
     this.filesystemPage('detail');
     FilesystemDetailView.draw(id)
   },
   filesystemCreate: function() {
+    if ( this.failed_filesystem_admin_check() )
+      return;
     this.filesystemPage('create');
     FilesystemCreateView.draw()
   },

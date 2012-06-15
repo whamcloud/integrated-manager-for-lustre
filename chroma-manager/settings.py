@@ -281,6 +281,12 @@ def setup_log(log_name, filename = None):
         logger.setLevel(LOG_LEVEL)
     return logger
 
+# Only users in these groups will be notified via email on alerts.
+EMAIL_ALERT_GROUPS = ["superusers", "filesystem_administrators"]
+# If a user has not defined alert preferences, fall back to emailing on all
+# alerts except those in the excludes list.
+EMAIL_ALERT_EXCLUDES = ["HostContactAlert"]
+
 EMAIL_HOST = None
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
 EMAIL_SENDER = "noreply@%s" % socket.getfqdn()
