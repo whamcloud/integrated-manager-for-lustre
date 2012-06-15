@@ -167,7 +167,6 @@ fi
 %files cli
 %defattr(-,root,root)
 %{_bindir}/chroma
-%{_bindir}/chroma-api
 /usr/share/chroma-manager/chroma_cli/*
 
 %files integration-tests
