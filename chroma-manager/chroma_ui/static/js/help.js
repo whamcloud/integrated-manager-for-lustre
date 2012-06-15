@@ -9,7 +9,7 @@ var ContextualHelp = function(){
   var loaded_snippets = {}; //container for loaded snippets as some are reused
   var compiled_snippet_template = _.template("<div class='ui-helper-clearfix ui-state-<%= state%> ui-corner-all'><div class='contextual_help_icon'><span class='ui-icon ui-icon-<%= icon %>'></span></div><div class='contextual_help'><%= content %></div></div>");
 
-  function contexual_help_link(topic) {
+  function contextual_help_link(topic) {
     return STATIC_URL + "contextual/" + topic + ".html";
   }
 
@@ -35,7 +35,7 @@ var ContextualHelp = function(){
     }
 
     //otherwise we have to get it
-    $.get(contexual_help_link(topic), data = undefined, success = function(topic_html) {
+    $.get(contextual_help_link(topic), data = undefined, success = function(topic_html) {
       loaded_snippets[topic] = topic_html;
       $(container).removeClass('help_loader')
         .addClass('help_loaded')
