@@ -475,12 +475,18 @@ EOF
                 " on /mtn/%s " % filesystem_name
             )
 
-    def exercise_filesystem(self, client, filesystem_name):
+    def exercise_filesystem(self, client, filesystem):
         # TODO: Expand on this. Perhaps use existing lustre client tests.
-        # TODO: read back the size of the filesystem first and don't exceed its size
+        if not filesystem.get('bytes_free'):
+            # Wait for filesystem stats to start coming in
+            time.sleep(20)
+
         self.remote_command(
             client,
-            "dd if=/dev/zero of=/mnt/%s/test.dat bs=1K count=100K" % filesystem_name
+            "dd if=/dev/zero of=/mnt/%s/exercisetest.dat bs=1000 count=%s" % (
+                filesystem['name'],
+                min((filesystem.get('bytes_free') * 0.4), 512000)
+            )
         )
 
     def _check_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts, assert_true):
@@ -750,3 +756,83 @@ EOF
         for host in config['lustre_servers']:
             if host['nodename'] == nodename:
                 return host
+
+    def check_stats(self, filesystem_id):
+        filesystem = self.get_filesystem(filesystem_id)
+        client = config['lustre_clients'].keys()[0]
+
+        # Make sure client cache is flushed and stats up to date
+        self.unmount_filesystem(client, filesystem['name'])
+        self.mount_filesystem(client, filesystem['name'], filesystem['mount_command'])
+        time.sleep(20)
+
+        # Check bytes free
+        filesystem = self.get_filesystem(filesystem_id)
+        bytes_total = filesystem['bytes_total']
+        starting_bytes_free = filesystem['bytes_free']
+        starting_files_free = filesystem['files_free']
+        self.assertLessEqual(starting_bytes_free, bytes_total)
+
+        # check value from metrics api matches
+        response = self.chroma_manager.get(
+            '/api/target/metric/',
+            params = {
+                'metrics': 'kbytesfree,kbytestotal,filesfree,filestotal',
+                'latest': 'true',
+                'reduce_fn': 'sum',
+                'kind': 'OST',
+                'group_by': 'filesystem',
+            }
+        )
+        self.assertEqual(response.successful, True, response.text)
+        metrics = [x['data'] for x in response.json.values()[0]][0]
+        self.assertEqual(bytes_total / 1024, metrics['kbytestotal'])
+        self.assertEqual(starting_bytes_free / 1024, metrics['kbytesfree'])
+        response = self.chroma_manager.get(
+            '/api/target/metric/',
+            params = {
+                'metrics': 'filesfree,filestotal',
+                'latest': 'true',
+                'reduce_fn': 'sum',
+                'kind': 'MDT',
+                'group_by': 'filesystem',
+            }
+        )
+        self.assertEqual(response.successful, True, response.text)
+        metrics = [x['data'] for x in response.json.values()[0]][0]
+        self.assertEqual(filesystem['files_total'], metrics['filestotal'])
+        self.assertEqual(starting_files_free, metrics['filesfree'])
+
+        # Check bytes free decremented properly after writing to fs
+        expected_bytes_written = min(int(starting_bytes_free * 0.9), 102400)
+        self.remote_command(
+            client,
+            "dd if=/dev/zero of=/mnt/%s/stattest.dat bs=1000 count=%s" % (
+                filesystem['name'],
+                (expected_bytes_written / 1000)
+            )
+        )
+
+        # Make sure client cache is flushed and check client count while we are at it
+        starting_client_count = filesystem['client_count']
+        self.unmount_filesystem(client, filesystem['name'])
+        time.sleep(10)
+        filesystem = self.get_filesystem(filesystem_id)
+        self.assertEqual(starting_client_count - 1, filesystem['client_count'])
+        self.mount_filesystem(client, filesystem['name'], filesystem['mount_command'])
+        time.sleep(10)
+        filesystem = self.get_filesystem(filesystem_id)
+        self.assertEqual(starting_client_count, filesystem['client_count'])
+
+        # Check bytes free and files free are what we expect after writing
+        bytes_free_after_write = filesystem['bytes_free']
+        self.assertEqual(
+            expected_bytes_written,
+            (starting_bytes_free - bytes_free_after_write),
+            "Bytes free after write: %s" % bytes_free_after_write
+        )
+        self.assertEqual(starting_files_free - 1, filesystem['files_free'])
+        self.assertEqual(bytes_total, filesystem['bytes_total'])
+
+    def get_filesystem(self, filesystem_id):
+        return self.get_by_uri("/api/filesystem/%s/" % filesystem_id)

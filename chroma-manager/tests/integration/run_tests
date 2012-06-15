@@ -1,14 +1,19 @@
 #!/bin/bash
 
 FORCED=false
+SKIP_RESET=false
 CONFIG_FILE=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
 XML_REPORT=''
 num_opts=0
-while getopts "c:x:f" opt
+while getopts "c:x:fr" opt
 do
     case $opt in
         f)
             export FORCED=true
+            num_opts=`expr $num_opts + 1`
+            ;;
+        r)
+            export SKIP_RESET=true
             num_opts=`expr $num_opts + 1`
             ;;
         c)
@@ -66,7 +71,10 @@ if ! $FORCED
         fi
 fi
 
-nosetests --verbosity=2 tests/integration/utils/full_cluster_reset.py --tc-format=json --tc-file=$CONFIG_FILE
+if ! $SKIP_RESET
+    then
+        nosetests --verbosity=2 tests/integration/utils/full_cluster_reset.py --tc-format=json --tc-file=$CONFIG_FILE
+fi
 
 echo "----------------------------------------------------------------------"
 echo "Running tests in $TEST_DIR"
