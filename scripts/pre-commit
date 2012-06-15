@@ -77,6 +77,7 @@ CHECKS = [
             '.*/chroma-director/.*',
             '.*/chroma-manager/docs/.*/conf.py$',
             '.*/features/steps/.*\.py',
+            '.*/BUILD/.*',
             ],
         'print_filename': False,
     },
@@ -84,7 +85,12 @@ CHECKS = [
         'output': 'Running pep8...',
         'command': 'pep8 -r --ignore=E501,E251 %s',
         'match_files': ['.*\.py$', '.*setup.py.in'],
-        'ignore_files': ['.*migrations.*', '.*manage.py', '.*/chroma-director/.*'],
+        'ignore_files': [
+            '.*migrations.*',
+            '.*manage.py',
+            '.*/BUILD/.*',
+            '.*/chroma-director/.*',
+            ],
         'print_filename': False
     },
     {
@@ -104,6 +110,7 @@ CHECKS = [
             '.*/chroma-manager/.*migrations.*',
             '.*/tests/.*.py',
             '.*/manage.py',
+            '.*/BUILD/.*',
             '.*/chroma-director/.*'],
         'print_filename': True
     }
