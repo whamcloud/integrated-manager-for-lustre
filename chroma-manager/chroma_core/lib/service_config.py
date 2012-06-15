@@ -240,7 +240,13 @@ class ServiceConfig:
         log.info("Chroma will now create an initial administrative user using the " +
                  "credentials which you provide.")
 
-        username = self.get_input(msg = "Username:", empty_allowed = False)
+        valid_username = False
+        while not valid_username:
+            username = self.get_input(msg = "Username:", empty_allowed = False)
+            if username.find(" ") > -1:
+                print "Username cannot contain spaces"
+                continue
+            valid_username = True
         email = self.get_input(msg = "Email:")
         password = self.get_pass(msg = "Password:", empty_allowed = False,
                                      confirm_msg = "Confirm password:")
