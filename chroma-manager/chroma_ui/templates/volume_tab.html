@@ -107,7 +107,7 @@
           topic = 'volume_status_' + volume.status,
           content = UIHelper.fugue_icon(
                       volume_status_map[volume.status]['icon'],
-                      { style: 'padding-left: 5px;', 'data-status': volume.status }
+                      { 'data-status': volume.status } 
                     ) //+ volume_status_map[volume.status]['label']
         );
 
