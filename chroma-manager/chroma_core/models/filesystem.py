@@ -155,7 +155,7 @@ class RemoveFilesystemJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Removing file system %s from configuration" % self.filesystem.name
+        return "Remove file system %s from configuration" % self.filesystem.name
 
     def get_deps(self):
         return DependOn(self.filesystem.mgs, "unmounted")
@@ -261,7 +261,7 @@ class ForgetFilesystemJob(StateChangeJob):
     requires_confirmation = True
 
     def description(self):
-        return "Removing unmanaged file system %s" % (self.filesystem.name)
+        return "Remove unmanaged file system %s" % (self.filesystem.name)
 
     def get_steps(self):
         return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]

@@ -425,7 +425,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Removing target %s from configuration" % (self.target.downcast())
+        return "Remove target %s from configuration" % (self.target.downcast())
 
     def get_deps(self):
         deps = []
@@ -453,7 +453,7 @@ class RemoveTargetJob(StateChangeJob):
     target = models.ForeignKey(ManagedTarget)
 
     def description(self):
-        return "Removing target %s from configuration" % (self.target.downcast())
+        return "Remove target %s from configuration" % (self.target.downcast())
 
     def get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
@@ -476,7 +476,7 @@ class ForgetTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Removing unmanaged target %s" % (self.target.downcast())
+        return "Remove unmanaged target %s" % (self.target.downcast())
 
     def get_steps(self):
         return [(DeleteTargetStep, {'target_id': self.target.id})]
@@ -569,7 +569,7 @@ class ConfigureTargetJob(StateChangeJob):
 
     def description(self):
         target = self.target.downcast()
-        return "Configuring %s mount points" % target
+        return "Configure %s mount points" % target
 
     def get_steps(self):
         steps = []
@@ -678,7 +678,7 @@ class StartTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Starting target %s" % self.target.downcast()
+        return "Start target %s" % self.target.downcast()
 
     def get_deps(self):
         lnet_deps = []
@@ -718,7 +718,7 @@ class StopTargetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Stopping target %s" % self.target.downcast()
+        return "Stop target %s" % self.target.downcast()
 
     def get_steps(self):
         return [(UnmountStep, {"target_id": self.target.id})]
@@ -821,11 +821,11 @@ class FormatTargetJob(StateChangeJob):
     def description(self):
         target = self.target.downcast()
         if isinstance(target, ManagedMgs):
-            return "Formatting MGS"
+            return "Format MGS"
         elif isinstance(target, ManagedMdt):
-            return "Formatting MDT for filesystem %s" % target.filesystem.name
+            return "Format MDT for filesystem %s" % target.filesystem.name
         elif isinstance(target, ManagedOst):
-            return "Formatting OST for filesystem %s" % target.filesystem.name
+            return "Format OST for filesystem %s" % target.filesystem.name
         else:
             raise NotImplementedError()
 

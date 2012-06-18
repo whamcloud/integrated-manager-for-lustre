@@ -479,7 +479,7 @@ class ConfigureLNetJob(StateChangeJob):
     state_verb = 'Configure LNet'
 
     def description(self):
-        return "Configuring LNet on %s" % self.lnet_configuration.host
+        return "Configure LNet on %s" % self.lnet_configuration.host
 
     def get_steps(self):
         return [(LearnNidsStep, {'host_id': self.lnet_configuration.host_id})]
@@ -676,7 +676,7 @@ class SetupHostJob(StateChangeJob):
     state_verb = 'Set up server'
 
     def description(self):
-        return "Setting up server %s" % self.managed_host
+        return "Set up server %s" % self.managed_host
 
     def get_steps(self):
         return [(GetHostProperties, {'host_id': self.managed_host.pk}),
@@ -697,7 +697,7 @@ class EnableLNetJob(StateChangeJob):
     state_verb = None
 
     def description(self):
-        return "Enabling LNet on %s" % self.managed_host
+        return "Enable LNet on %s" % self.managed_host
 
     def get_steps(self):
         return []
@@ -735,7 +735,7 @@ class DetectTargetsJob(Job):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Scanning for Lustre targets"
+        return "Scan for Lustre targets"
 
     def get_steps(self):
         return [(DetectTargetsStep, {})]
@@ -794,7 +794,7 @@ class LoadLNetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Loading LNet module on %s" % self.host
+        return "Load LNet module on %s" % self.host
 
     def get_steps(self):
         return [(LoadLNetStep, {'host_id': self.host.id})]
@@ -810,7 +810,7 @@ class UnloadLNetJob(StateChangeJob):
         app_label = 'chroma_core'
 
     def description(self):
-        return "Unloading LNet module on %s" % self.host
+        return "Unload LNet module on %s" % self.host
 
     def get_steps(self):
         return [(UnloadLNetStep, {'host_id': self.host.id})]
@@ -1000,7 +1000,7 @@ class RelearnNidsJob(Job):
     host = models.ForeignKey('ManagedHost')
 
     def description(self):
-        return "Relearning NIDS on host %s" % self.host
+        return "Relearn NIDS on host %s" % self.host
 
     def get_deps(self):
         return DependAll([
@@ -1059,9 +1059,9 @@ class UpdateNidsJob(Job):
 
     def description(self):
         if self.hosts.count() > 1:
-            return "Updating NIDs on %d hosts" % self.hosts.count()
+            return "Update NIDs on %d hosts" % self.hosts.count()
         else:
-            return "Updating NIDS on host %s" % self.hosts.all()[0]
+            return "Update NIDS on host %s" % self.hosts.all()[0]
 
     def _targets_on_hosts(self):
         from chroma_core.models.target import ManagedMgs, ManagedTarget, FilesystemMember
