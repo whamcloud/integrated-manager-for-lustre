@@ -77,9 +77,8 @@ var ContextualHelp = function(){
             data: {}
           }
         },
-        show: {
-          event: event
-        }
+        position: { viewport: $(window) },
+        show: { event: event }
       });
     }
 
