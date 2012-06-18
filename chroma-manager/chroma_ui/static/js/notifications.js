@@ -23,8 +23,19 @@ function loadObjectSelection(kind, select_el)
   });
 }
 
+
+
 var LiveObject = function()
 {
+
+  var server_status_map = {
+    lnet_up       : { icon: 'plug-connect',       label: 'LNet up' },
+    lnet_down     : { icon: 'plug-disconnect',    label: 'LNet down' },
+    lnet_unloaded : { icon: 'plug-disconnect',    label: 'LNet unloaded' },
+    configured    : { icon: 'plug--arrow',        label: 'Configured' },
+    unconfigured  : { icon: 'plug--exclamation',  label: 'Unconfigured' }
+  };
+
   function jobClicked()
   {
     var job_class = $(this).data('job_class');
@@ -115,6 +126,20 @@ var LiveObject = function()
       });
   }
 
+  function renderState(obj) {
+    // host status is the Lnet Status which we convert into an icon
+    if ( obj.resource_uri.match(/^\/api\/host\//) ) {
+      return UIHelper.help_hover(
+        "server_status_" + obj.state,
+        UIHelper.fugue_icon(
+          server_status_map[obj.state]['icon'],
+          { style: 'padding-right: 5px;', 'data-state': obj.state }
+        ) + server_status_map[obj.state]['label']
+      );
+    }
+    return obj.state;
+  }
+
   function spanMarkup(obj, classes, content) {
     if (!content) {
       content = "";
@@ -150,7 +175,7 @@ var LiveObject = function()
   }
 
   function state(obj) {
-    return spanMarkup(obj, ['object_state'], obj.state)
+    return spanMarkup(obj, ['object_state'], renderState(obj))
   }
 
   function actions(stateful_object)
@@ -185,6 +210,7 @@ var LiveObject = function()
     icons: icons,
     label: label,
     state: state,
+    renderState: renderState,
     actions: actions,
     transitionClicked: transitionClicked,
     jobClicked: jobClicked
@@ -293,13 +319,13 @@ var Tooltip = function()
 				ready: true, // Show it when ready (rendered)
 				effect: function() { $(this).stop(0,1).fadeIn(400); }, // Matches the hide effect
 				delay: 0, // Needed to prevent positioning issues
-				
+
 				// Custom option for use with the .get()/.set() API, awesome!
 				persistent: persistent
 			},
 			hide: {
 				event: false, // Don't hide it on a regular event
-				effect: function(api) { 
+				effect: function(api) {
 					// Do a regular fadeOut, but add some spice!
 					$(this).stop(0,1).fadeOut(400).queue(function() {
 						// Destroy this tooltip after fading out
@@ -340,7 +366,7 @@ var Tooltip = function()
 	function timer(event) {
 		var api = $(this).data('qtip'),
 			lifespan = 5000; // 5 second lifespan
-		
+
 		// If persistent is set to true, don't do anything.
 		if(api.get('show.persistent') === true) { return; }
 
@@ -359,7 +385,7 @@ var Tooltip = function()
 	// Utilise delegate so we don't have to rebind for every qTip!
 	$(document).delegate('.qtip.jgrowl', 'mouseover mouseout', timer);
 	$(document).delegate('.qtip.jgrowl', 'click', hide);
-  
+
   return {
     sidebarMessage: sidebarMessage,
     detailList: detailList,
@@ -595,7 +621,7 @@ var CommandNotification = function() {
           $(this).html(obj.label);
         });
         $(".object_state[data-resource_uri='" + uri + "']").each(function () {
-          $(this).html(obj.state);
+          $(this).html(LiveObject.renderState(obj));
         });
 
         $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
@@ -669,7 +695,7 @@ var AlertNotification = function() {
   var active_alerts    = {};
   var alert_effects    = {};
   var initialized      = false;
-  
+
   function init()
   {
     if (initialized) {
@@ -707,7 +733,7 @@ var AlertNotification = function() {
   {
     Api.get("/api/alert/", {active: true, limit: 0}, success_callback = function(data) {
       var seen_alerts = {}
-      
+
       var new_alerts = []
       var resolved_alerts = []
 
@@ -823,7 +849,7 @@ var AlertNotification = function() {
         }
         element.addClass('alert_indicator_active');
         element.removeClass('alert_indicator_inactive');
-        
+
         var alerts = {};
         $.each(effects, function(alert_id, x) {
           alerts[alert_id] = active_alerts[alert_id]
@@ -864,4 +890,3 @@ objectLength = function(obj) {
   }
   return count;
 }
-

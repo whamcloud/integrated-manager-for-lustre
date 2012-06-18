@@ -91,3 +91,8 @@ span.notification_icons {
   white-space: nowrap;
 }
 
+img.fugue_icon {
+  height: 16px;
+  width: 16px;
+  vertical-align: middle;
+}

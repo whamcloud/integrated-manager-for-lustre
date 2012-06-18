@@ -2,6 +2,12 @@
 <script type="text/javascript">
   var VolumeView = function() {
     var initialized = false;
+    var volume_status_map = {
+      'configured-ha'   : { icon: 'status',       label: 'Configured (HA)' },
+      'configured-noha' : { icon: 'status-away',  label: 'Configured (No HA)' },
+      'unconfigured'    : { icon: 'status-busy',  label: 'Unconfigured' },
+    };
+
     function draw() {
       if (!initialized) {
         init();
@@ -97,6 +103,14 @@
         volume.original_ids = volume.id + "_" + primary_node_id + "_" + secondary_node_id;
         volume.dirty_ids = volume.original_ids;
 
+        volume.status_icon = UIHelper.help_hover(
+          topic = 'volume_status_' + volume.status,
+          content = UIHelper.fugue_icon(
+                      volume_status_map[volume.status]['icon'],
+                      { style: 'padding-left: 5px;', 'data-status': volume.status }
+                    ) //+ volume_status_map[volume.status]['label']
+        );
+
         if (volume.volume_nodes.length > 0) {
           var tooltip = "";
           $.each(volume.volume_nodes, function(i, node) {
@@ -132,7 +146,7 @@
           { "sClass": 'txtleft', mDataProp: 'primary_select', bSortable: false},
           { "sClass": 'txtleft', mDataProp: 'secondary_select', bSortable: false},
           { "sClass": 'txtright', mDataProp: 'size'},
-          { "sClass": 'txtright', mDataProp: 'status', bSortable: false},
+          { "sClass": 'txtcenter', mDataProp: 'status_icon', bSortable: false},
           { "bVisible": false, mDataProp: 'original_ids'},
           { "bVisible": false, mDataProp: 'dirty_ids'},
         ]

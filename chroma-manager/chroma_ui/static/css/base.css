@@ -840,6 +840,10 @@ table#global_filesystem_table th {
 	margin: .75em 0.25em .75em .75em;
 }
 
+a.help_hover {
+  cursor: default;
+}
+
 div.dataTables_wrapper th {
     white-space: nowrap;
 }
