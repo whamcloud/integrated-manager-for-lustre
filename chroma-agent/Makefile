@@ -1,6 +1,6 @@
 
 # The build number, for dev/test/support
-BUILD := $(shell echo 0.4.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
+BUILD := $(shell echo 1.0.0.0.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
 # The A.B.C.D release number for releases, or a build number for test/dev builds
 VERSION := $(BUILD)
 # Flag for whether this is a release build
