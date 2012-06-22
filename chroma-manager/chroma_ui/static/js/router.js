@@ -121,7 +121,7 @@ var ChromaRouter = Backbone.Router.extend({
     this.toplevel('about');
   },
   failed_filesystem_admin_check: function() {
-    if ( Login.userHasGroup('filesystem_administrator') )
+    if ( Login.userHasGroup('filesystem_administrators') )
       return false;
     this.navigate('dashboard/',{replace: true});
     this.dashboard();
