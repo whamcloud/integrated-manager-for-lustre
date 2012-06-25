@@ -12,7 +12,7 @@ else
   PACKAGE_VERSION := $(BUILD)
 endif
 
-PACKAGE_RELEASE := 2
+PACKAGE_RELEASE := 3
 
 cleandist:
 	rm -rf  dist
