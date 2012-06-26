@@ -24,55 +24,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
             )
 
     def test_filesystem_detection(self):
-        # HACKAROUND FOR HYD-1112. Replace with call in this comment when fixed.
-        # hosts = self.add_hosts([l['address'] for l in config['lustre_servers']])
-        addresses = [l['address'] for l in config['lustre_servers']]
-        host_create_command_ids = []
-        for host_address in addresses:
-            response = self.chroma_manager.post(
-                '/api/host/',
-                body = {'address': host_address}
-            )
-            self.assertEqual(response.successful, True, response.text)
-            host_id = response.json['host']['id']
-            host_create_command_ids.append(response.json['command']['id'])
-            self.assertTrue(host_id)
-
-            response = self.chroma_manager.get(
-                '/api/host/%s/' % host_id,
-            )
-            self.assertEqual(response.successful, True, response.text)
-            host = response.json
-            self.assertEqual(host['address'], host_address)
-
-        # Wait for the host setup and device discovery to complete
-        self.wait_for_commands(self.chroma_manager, host_create_command_ids, verify_successful = False)
-
-        # Verify there are now n hosts in the database.
-        response = self.chroma_manager.get(
-            '/api/host/',
-        )
-        self.assertEqual(response.successful, True, response.text)
-        hosts = response.json['objects']
-        self.assertEqual(len(addresses), len(hosts))
-
-        # Wait for all hosts to migrate to lnet_up status. (Lnet is really up before
-        # this test even starts, but this is part of the hackaround.)
-        lnet_up = False
-        running_time = 0
-        while not lnet_up and running_time < TEST_TIMEOUT:
-            lnet_up = True
-            for host in hosts:
-                try:
-                    self.set_state(
-                        '/api/host/%s/' % host['id'],
-                        'lnet_up'
-                    )
-                except AssertionError:
-                    lnet_up = False
-            running_time += 1
-            time.sleep(1)
-        # END Hackaround
+        hosts = self.add_hosts([l['address'] for l in config['lustre_servers']])
 
         # Verify hosts are immutable
         response = self.chroma_manager.get(
