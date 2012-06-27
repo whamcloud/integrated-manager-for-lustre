@@ -477,9 +477,13 @@ EOF
 
     def exercise_filesystem(self, client, filesystem):
         # TODO: Expand on this. Perhaps use existing lustre client tests.
-        if not filesystem.get('bytes_free'):
+        running_time = 0
+        while not filesystem.get('bytes_free') and running_time < TEST_TIMEOUT:
             # Wait for filesystem stats to start coming in
-            time.sleep(20)
+            time.sleep(1)
+            filesystem = self.get_filesystem(filesystem['id'])
+
+        self.assertIsNotNone(filesystem.get('bytes_free'), filesystem)
 
         self.remote_command(
             client,
