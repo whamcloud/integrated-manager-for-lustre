@@ -461,19 +461,20 @@ EOF
             'mount'
         )
         if re.search(" on /mnt/%s " % filesystem_name, stdout.read()):
+            logger.debug("Unmounting %s" % filesystem_name)
             self.remote_command(
                 client,
                 "umount /mnt/%s" % filesystem_name,
                 expected_return_code = None
             )
-            stdin, stdout, stderr = self.remote_command(
-                client,
-                'mount'
-            )
-            self.assertNotRegexpMatches(
-                stdout.read(),
-                " on /mtn/%s " % filesystem_name
-            )
+        stdin, stdout, stderr = self.remote_command(
+            client,
+            'mount'
+        )
+        self.assertNotRegexpMatches(
+            stdout.read(),
+            " on /mtn/%s " % filesystem_name
+        )
 
     def exercise_filesystem(self, client, filesystem):
         # TODO: Expand on this. Perhaps use existing lustre client tests.
