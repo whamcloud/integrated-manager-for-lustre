@@ -118,6 +118,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         self.mount_filesystem(client, config['filesystem']['name'], mount_command)
         try:
             self.exercise_filesystem(client, filesystem)
+            self.check_stats(filesystem['id'])
         finally:
             self.unmount_filesystem(client, config['filesystem']['name'])
 
