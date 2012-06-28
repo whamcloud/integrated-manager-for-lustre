@@ -464,15 +464,16 @@ EOF
             logger.debug("Unmounting %s" % filesystem_name)
             self.remote_command(
                 client,
-                "umount /mnt/%s" % filesystem_name,
-                expected_return_code = None
+                "umount /mnt/%s" % filesystem_name
             )
         stdin, stdout, stderr = self.remote_command(
             client,
             'mount'
         )
+        mount_output = stdout.read()
+        logger.debug("`Mount`: %s" % mount_output)
         self.assertNotRegexpMatches(
-            stdout.read(),
+            mount_output,
             " on /mtn/%s " % filesystem_name
         )
 
