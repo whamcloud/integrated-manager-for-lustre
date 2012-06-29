@@ -491,7 +491,7 @@ EOF
             client,
             "dd if=/dev/zero of=/mnt/%s/exercisetest.dat bs=1000 count=%s" % (
                 filesystem['name'],
-                min((filesystem.get('bytes_free') * 0.4), 512000)
+                min((filesystem.get('bytes_free') * 0.4), 512000) / 1000
             )
         )
 
@@ -839,6 +839,86 @@ EOF
         )
         self.assertEqual(starting_files_free - 1, filesystem['files_free'])
         self.assertEqual(bytes_total, filesystem['bytes_total'])
+
+        # Assert we can at least request each different stat without triggering
+        # an exception. This is a smoke test and many of these should have more
+        # specific testing.
+        mdt_stats = [
+            'stats_close',
+            'stats_link',
+            'stats_ldlm_ibits_enqueue',
+            'stats_mkdir',
+            'stats_mknod',
+            'stats_mds_connect',
+            'stats_mds_getattr',
+            'stats_mds_getxattr',
+            'stats_mds_getstatus',
+            'stats_mds_statfs',
+            'stats_mds_sync',
+            'stats_obd_ping',
+            'stats_open',
+            'stats_getxattr',
+            'stats_req_active',
+            'stats_req_qdepth',
+            'stats_req_timeout',
+            'stats_req_waittime',
+            'stats_reqbuf_avail',
+            'stats_rename',
+            'stats_rmdir',
+            'stats_unlink'
+        ]
+        response = self.chroma_manager.get(
+            '/api/target/metric/',
+            params = {
+                'metrics': ','.join(mdt_stats),
+                'latest': 'true',
+                'reduce_fn': 'sum',
+                'kind': 'MDT',
+                'group_by': 'filesystem',
+            }
+        )
+        self.assertEqual(response.successful, True, response.text)
+        self.assertEqual(len(mdt_stats), len(response.json.values()[0][0].get('data')), response.json)
+
+        ost_stats = [
+            'filesfree',
+            'filestotal',
+            'kbytesavail',
+            'kbytesfree',
+            'kbytestotal',
+            'num_exports',
+            'stats_commitrw',
+            'stats_connect',
+            'stats_create',
+            'stats_destroy',
+            'stats_disconnect',
+            'stats_get_info',
+            'stats_get_page',
+            'stats_llog_init',
+            'stats_ping',
+            'stats_punch',
+            'stats_preprw',
+            'stats_set_info_async',
+            'stats_statfs',
+            'stats_sync',
+            'stats_read_bytes',
+            'stats_write_bytes',
+            'tot_dirty',
+            'tot_granted',
+            'tot_pending'
+        ]
+        response = self.chroma_manager.get(
+            '/api/target/metric/',
+            params = {
+                'metrics': ','.join(ost_stats),
+                'latest': 'true',
+                'reduce_fn': 'sum',
+                'kind': 'OST',
+                'group_by': 'filesystem',
+            }
+        )
+        self.assertEqual(response.successful, True, response.text)
+        self.assertEqual(len(ost_stats), len(response.json.values()[0][0].get('data')), response.json)
 
     def get_filesystem(self, filesystem_id):
         return self.get_by_uri("/api/filesystem/%s/" % filesystem_id)
