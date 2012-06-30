@@ -168,11 +168,15 @@ var VolumeChooserStore = function ()
       throw "'store' attribute required"
     }
 
+    // A unique ID for the outer element so that tests
+    // can identify it for clicking
+    var wrapper_id = element.attr('id') + "_outer";
+
     element.wrap("<div class='volume_chooser_background'/>");
     element.hide();
     var background_div = element.parent('.volume_chooser_background');
 
-    element.wrap("<div class='volume_chooser_header'/>");
+    element.wrap("<div id='" + wrapper_id + "' class='volume_chooser_header'/>");
     var header_div = element.parent('.volume_chooser_header');
 
     element.after("<span class='volume_chooser_selected'/>");

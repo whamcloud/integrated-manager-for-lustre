@@ -21,21 +21,34 @@ from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 from chroma_api import api_log
+from chroma_core.lib import conf_param
 
 
 class FilesystemValidation(Validation):
-    def is_valid(self, bundle, request=None):
+
+    def _validate_put(self, bundle, request):
         errors = defaultdict(list)
 
-        if request.method != "POST":
-            # TODO: validate PUTs
-            return errors
+        if 'conf_params' in bundle.data and bundle.data['conf_params'] != None:
+            try:
+                fs = ManagedFilesystem.objects.get(pk = bundle.data['id'])
+            except ManagedFilesystem.DoesNotExist:
+                errors['id'] = "Filesystem with id %s not found" % bundle.data['id']
+            except KeyError:
+                errors['id'] = "Field is mandatory"
+            else:
+                if fs.immutable_state:
+                    if not conf_param.compare(bundle.data['conf_params'], conf_param.get_conf_params(fs)):
+                        errors['conf_params'].append("Cannot modify conf_params on immutable_state objects")
+                else:
+                    conf_param_errors = conf_param.validate_conf_params(ManagedFilesystem, bundle.data['conf_params'])
+                    if conf_param_errors:
+                        errors['conf_params'] = conf_param_errors
 
-        try:
-            # Merge errors found during other phases (e.g. hydration)
-            errors.update(bundle.data_errors)
-        except AttributeError:
-            pass
+        return errors
+
+    def _validate_post(self, bundle, request):
+        errors = defaultdict(list)
 
         targets = defaultdict(list)
         # Check 'mgt', 'mdt', 'osts' are present and compose
@@ -149,6 +162,22 @@ class FilesystemValidation(Validation):
                 if 'inode_count' in target and 'bytes_per_inode' in target:
                     errors[attr].append("inode_count and bytes_per_inode are mutually exclusive")
 
+                if 'conf_params' in target:
+                    if attr == 'mdt':
+                        klass = ManagedMdt
+                    elif attr == 'osts':
+                        klass = ManagedOst
+                    elif attr == 'mgt':
+                        klass = ManagedMgs
+                    else:
+                        raise NotImplementedError(attr)
+
+                    conf_param_errors = conf_param.validate_conf_params(klass, target['conf_params'])
+                    if conf_param_errors:
+                        # FIXME: not really representing target-specific validations cleanly,
+                        # will sort out while fixing HYD-1077.
+                        errors[attr] = {'conf_params': conf_param_errors}
+
                 # If they specify and inode size and a bytes_per_inode, check the inode fits
                 # within the ratio
                 try:
@@ -173,27 +202,19 @@ class FilesystemValidation(Validation):
                 except KeyError:
                     pass
 
-        # Validate conf params
-        # TODO: put this somewhere it can be used by conf param updates too
-        for key, val in bundle.data['conf_params'].items():
-            try:
-                from chroma_core.lib import conf_param
-                conf_param_info = conf_param.all_params[key]
-                conf_param_class = conf_param_info[0]
-                if not (issubclass(conf_param_class, conf_param.FilesystemGlobalConfParam) or issubclass(conf_param_class, conf_param.FilesystemClientConfParam)):
-                    api_log.error("bad conf param %s %s" % (key, conf_param_class))
-                    errors['conf_params'].append("conf_param %s is not settable for file systems" % key)
-                conf_param_attribute_class = conf_param_info[1]
-
-                try:
-                    conf_param_attribute_class.validate(val)
-                except ValueError, e:
-                    errors['conf_params'].append("Invalid value for %s: %s" % (key, e.message))
-
-            except KeyError:
-                errors['conf_params'].append("Unknown conf_param %s" % key)
+        conf_param_errors = conf_param.validate_conf_params(ManagedFilesystem, bundle.data['conf_params'])
+        if conf_param_errors:
+            errors['conf_params'] = conf_param_errors
 
         return errors
+
+    def is_valid(self, bundle, request=None):
+        if request.method == "POST":
+            return self._validate_post(bundle, request)
+        elif request.method == "PUT":
+            return self._validate_put(bundle, request)
+        else:
+            return {}
 
 
 class FilesystemResource(MetricResource, ConfParamResource):
@@ -299,7 +320,6 @@ class FilesystemResource(MetricResource, ConfParamResource):
     def obj_create(self, bundle, request = None, **kwargs):
         # Set up an errors dict in the bundle to allow us to carry
         # hydration errors through to validation.
-        setattr(bundle, 'data_errors', defaultdict(list))
         mgt_data = bundle.data['mgt']
         if 'volume_id' in mgt_data:
             mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], name="MGS", **self._format_attrs(mgt_data))

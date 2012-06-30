@@ -4,26 +4,23 @@
 # ========================================================
 
 
-from utils.constants import wait_time
-from base import wait_for_element
-from base import wait_for_transition
+from tests.selenium.base_view import  DatatableView
+from tests.selenium.base import wait_for_element
+from tests.selenium.base import wait_for_transition
 
 
-class Filesystem:
+class Filesystem(DatatableView):
     """
     Page Object for file system operations
     """
     def __init__(self, driver):
-        self.driver = driver
-
-        self.medium_wait = wait_time['medium']
-        self.standard_wait = wait_time['standard']
+        super(Filesystem, self).__init__(driver)
 
         self.filesystem_name_td = 0
-        self.filesystem_datatable = 'fs_list'
+        self.datatable_id = 'fs_list'
 
     def locate_filesystem(self, filesystem_name):
-        filesystem_list = self.driver.find_elements_by_xpath("id('" + self.filesystem_datatable + "')/tbody/tr")
+        filesystem_list = self.driver.find_elements_by_xpath("id('" + self.datatable_id + "')/tbody/tr")
         for tr in filesystem_list:
             tds = tr.find_elements_by_tag_name("td")
             if tds[self.filesystem_name_td].text == filesystem_name:
@@ -59,9 +56,9 @@ class Filesystem:
 
     def edit(self, fs_name):
         """Click filesystem name to be edited"""
-
         target_filesystem_row = self.locate_filesystem(fs_name)
         target_filesystem_row.find_element_by_xpath("td[1]/a").click()
+        self.quiesce()
 
     def get_filesystem_list(self):
         """Returns file system name list"""

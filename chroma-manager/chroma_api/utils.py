@@ -216,8 +216,18 @@ class ConfParamResource(StatefulModelResource):
             # validate the presence of this field
             pass
         else:
-            # TODO: validate all the conf_params before trying to set any of them
+            # Belt-and-braces: child classes should have validated first, but let's
+            # make sure (bad conf params can be very harmful)
+            errors = chroma_core.lib.conf_param.validate_conf_params(obj.__class__, conf_params)
+            if errors:
+                raise custom_response(self, request, http.HttpBadRequest,
+                        {'conf_params': errors})
+
+            # Store the conf params
             mgs_id = chroma_core.lib.conf_param.set_conf_params(obj, conf_params)
+
+            # If we were returned an MGS, then something has changed, and we will
+            # kick off a command to apply the changes to the filesystem
             if mgs_id:
                 async_result = command_run_jobs.delay([{'class_name': 'ApplyConfParams', 'args': {
                     'mgs_id': mgs_id

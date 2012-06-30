@@ -4,14 +4,12 @@
 # ========================================================
 
 
-import django.utils.unittest
-from views.servers import Servers
-from base import SeleniumBaseTestCase
-from utils.constants import static_text
-from utils.constants import wait_time
+from tests.selenium.views.servers import Servers
+from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.utils.constants import static_text
+from tests.selenium.utils.constants import wait_time
 from utils.sample_data import Testdata
-from views.volumes import Volumes
-from base import wait_for_datatable
+from tests.selenium.views.volumes import Volumes
 
 
 class TestServer(SeleniumBaseTestCase):
@@ -19,9 +17,6 @@ class TestServer(SeleniumBaseTestCase):
     def setUp(self):
         super(TestServer, self).setUp()
 
-        self.navigation.go('Configure', 'Servers')
-
-        self.server_page = Servers(self.driver)
         self.long_wait = wait_time['long']
         self.medium_wait = wait_time['medium']
 
@@ -29,17 +24,16 @@ class TestServer(SeleniumBaseTestCase):
         self.test_data = Testdata()
         self.host_list = self.test_data.get_test_data_for_server_configuration()
 
-        wait_for_datatable(self.driver, '#server_configuration')
+        self.navigation.go('Configure', 'Servers')
         self.server_page = Servers(self.driver)
 
     def test_create_server(self):
-        #Test server creation
         self.server_page.add_servers(self.host_list)
         self.navigation.go('Volumes', 'Servers')
         for host in self.host_list:
             host_name = host["address"]
             # Check LNet state
-            self.assertEqual('lnet_up', self.server_page.get_lnet_state(host_name), 'Incorrect LNet state for host ' + host_name)
+            self.assertEqual('LNet up', self.server_page.get_lnet_state(host_name))
 
     def test_volume_config_for_added_server(self):
         """Test for verifying that volumes appear for newly added server"""
@@ -103,10 +97,3 @@ class TestServer(SeleniumBaseTestCase):
 
             # Check LNet state
             self.assertEqual('lnet_down', self.server_page.get_lnet_state(host_name), 'LNet not loaded')
-
-    def tearDown(self):
-        self.server_page.remove_servers(self.host_list)
-        super(TestServer, self).tearDown()
-
-if __name__ == '__main__':
-    django.utils.unittest.main()

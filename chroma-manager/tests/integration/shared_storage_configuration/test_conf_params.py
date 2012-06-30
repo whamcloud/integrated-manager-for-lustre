@@ -142,8 +142,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         mgt_volume = ha_volumes[0]
         mdt_volume = ha_volumes[1]
         ost_volumes = [ha_volumes[2]]
-        filesystem_id = self.create_filesystem(
-                {
+        filesystem_id = self.create_filesystem({
                 'name': 'testfs',
                 'mgt': {'volume_id': mgt_volume['id']},
                 'mdt': {
@@ -176,7 +175,10 @@ class TestConfParams(ChromaIntegrationTestCase):
         finally:
             self.unmount_filesystem(client_hostname, 'testfs')
 
-        response = self.chroma_manager.put("/api/filesystem/" + filesystem_id + "/", {'conf_params': new_conf_params})
+        filesystem = self.chroma_manager.get("/api/filesystem/" + filesystem_id + "/").json
+        for k, v in new_conf_params.items():
+            filesystem['conf_params'][k] = v
+        response = self.chroma_manager.put(filesystem['resource_uri'], filesystem)
         self.assertEqual(response.status_code, 202, response.content)
         command = response.json['command']
         filesystem = response.json['filesystem']

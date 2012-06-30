@@ -4,12 +4,12 @@
 # ========================================================
 
 
-from base import enter_text_for_element
-from base import select_element_option
-from base import wait_for_element
-from utils.constants import wait_time
-from utils.constants import static_text
-from base import login
+from tests.selenium.base import enter_text_for_element
+from tests.selenium.base import select_element_option
+from tests.selenium.base import wait_for_element
+from tests.selenium.utils.constants import wait_time
+from tests.selenium.utils.constants import static_text
+from tests.selenium.base import login
 from testconfig import config
 
 

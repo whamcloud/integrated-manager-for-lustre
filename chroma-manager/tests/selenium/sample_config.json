@@ -1,27 +1,41 @@
 {
+    "headless": false,
+    "screenshots": false,
     "chroma_managers":
         {
             "server_http_url": "http://localhost:8000/ui/",
             "browser": "Chrome",
             "users": [
                {"username": "debug", "is_superuser": true, "password": "chr0m4_d3bug"}
-            ],
-            "headless": false
+            ]
         },
+    "volumes": [
+        {
+         "label": "/dev/sdc", /* e.g. unshared device on example01 */
+         "servers": {
+             "example01": {"path": "/dev/sdc"}
+         }
+        },
+        {
+            "label": "/dev/sdc", /* e.g. unshared device on example02 */
+            "servers": {
+                "example02": {"path": "/dev/sdc"}
+            }
+        },
+        {
+         "label": "VolGroup00-volume0" /* e.g. shared device */
+         "servers": {
+             "example01": {"path": "/dev/mapper/VolGroup00-volume0"},
+             "example02": {"path": "/dev/mapper/VolGroup00-volume0"}
+         }
+        }
+    ],
     "hosts": [
         {
-        	"address": "example01",
-        	"device_node" : [
-        		"/dev/sda",
-        		"/dev/sdb"
-        	]
+        	"address": "example01"
         },
         {
-        	"address": "example02",
-        	"device_node" : [
-        		"/dev/sda",
-        		"/dev/sdb"
-        	]
+        	"address": "example02"
         }
     ]
 }

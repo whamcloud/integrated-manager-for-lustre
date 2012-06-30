@@ -42,7 +42,7 @@ var TargetDetail = Backbone.View.extend({
   },
   conf_param_apply: function() {
     apply_config_params(
-      this.model.get('resource_uri'),
+      this.model.toJSON(),
       $(this.el).find(".conf_param_table").dataTable());
   },
   conf_param_reset: function() {

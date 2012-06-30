@@ -1,4 +1,4 @@
-from utils.constants import static_text
+from tests.selenium.utils.constants import static_text
 from selenium.webdriver.support.ui import Select
 
 

@@ -24,6 +24,37 @@ class ChromaApiTestCase(JobTestCaseWithHost, ResourceTestCase):
             ResourceTestCase.tearDown(self)
             JobTestCaseWithHost.tearDown(self)
 
+    def api_set_state_full(self, uri, state):
+        original_object = self.api_get(uri)
+        original_object['state'] = state
+        response = self.api_client.put(uri, data = original_object)
+        try:
+            self.assertHttpAccepted(response)
+        except AssertionError:
+            raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
+        self.assertHttpAccepted(response)
+
+        modified_object = self.api_get(uri)
+        self.assertEqual(modified_object['state'], state)
+
+    def api_set_state_partial(self, uri, state):
+        response = self.api_client.put(uri, data = {'state': state})
+        try:
+            self.assertHttpAccepted(response)
+        except AssertionError:
+            raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
+
+        modified_object = self.api_get(uri)
+        self.assertEqual(modified_object['state'], state)
+
+    def api_get(self, uri):
+        response = self.api_client.get(uri)
+        try:
+            self.assertHttpOK(response)
+        except AssertionError:
+            raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
+        return self.deserialize(response)
+
     def spider_api(self):
         from chroma_api.urls import api
         for name, resource in api._registry.items():

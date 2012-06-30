@@ -4,23 +4,18 @@
 # ========================================================
 
 
-from base import wait_for_transition
-from utils.constants import wait_time
-from utils.constants import static_text
-from base import enter_text_for_element
-from base import wait_for_element
-from selenium.webdriver.support.ui import WebDriverWait
+from tests.selenium.base import wait_for_transition
+from tests.selenium.base_view import DatatableView
+from tests.selenium.utils.constants import static_text
+from tests.selenium.base import enter_text_for_element
 
 
-class Servers:
+class Servers(DatatableView):
     """
     Page Object for server operations
     """
     def __init__(self, driver):
-        self.driver = driver
-
-        self.medium_wait = wait_time['medium']
-        self.long_wait = wait_time['long']
+        super(Servers, self).__init__(driver)
 
         # Initialise elements on this page
         self.new_add_server_button = self.driver.find_element_by_css_selector('#btnAddNewHost')
@@ -35,55 +30,38 @@ class Servers:
         self.complete_dialog_div = 'div.add_host_complete'
         self.error_dialog_div = '#add_host_error'
         self.host_address_text = 'input.add_host_address'
-        self.server_list_datatable = 'server_configuration_content'
+        self.datatable_id = 'server_configuration'
         self.host_name_td = 0
         self.lnet_state_td = 1
 
     def verify_added_server(self, host_name):
         """Returns whether newly added server is listed or not"""
-        self.locate_host(host_name)
+        self.get_host_row(host_name)
         return True
 
     def get_server_list(self):
         """Returns server list"""
-        server_list = self.driver.find_elements_by_xpath("id('" + self.server_list_datatable + "')/tr")
-
         # Get actual display text from list of webelement objects, append the names to a new list and sort the new list
         filtered_server_list = []
-        for tr in server_list:
+        for tr in self.rows:
             tds = tr.find_elements_by_tag_name("td")
             filtered_server_list.append(tds[self.host_name_td].text)
         filtered_server_list.sort()
         return filtered_server_list
 
-    def locate_host(self, host_name):
+    def get_host_row(self, host_name):
         """Locate host by name from host list and return the complete row"""
-
-        server_list = self.driver.find_elements_by_xpath("id('" + self.server_list_datatable + "')/tr")
-        for tr in server_list:
-            tds = tr.find_elements_by_tag_name("td")
-            if tds[self.host_name_td].text == host_name:
-                return tr
-
-        raise RuntimeError("Host: " + host_name + " not found in host list")
+        return self.find_row_by_column_text(self.datatable, {self.host_name_td: host_name})
 
     def transition(self, host_name, transition_name):
         """Perform given transition on target host"""
-
-        target_host_row = self.locate_host(host_name)
-        buttons = target_host_row.find_elements_by_tag_name("button")
-        for button in buttons:
-            if button.text == transition_name:
-                button.click()
-                wait_for_transition(self.driver, self.long_wait)
-                return
-
-        raise RuntimeError("Cannot perform transition " + transition_name + " for host " + host_name)
+        target_host_row = self.get_host_row(host_name)
+        self.click_command_button(target_host_row, transition_name)
 
     def get_lnet_state(self, host_name):
         """Returns LNet state of given host"""
 
-        target_host_row = self.locate_host(host_name)
+        target_host_row = self.get_host_row(host_name)
         tds = target_host_row.find_elements_by_tag_name("td")
         lnet_state = tds[self.lnet_state_td]
         return lnet_state.text
@@ -95,13 +73,11 @@ class Servers:
             self.new_add_server_button.click()
             enter_text_for_element(self.driver, self.host_address_text, host_name)
             self.driver.find_element_by_css_selector(self.host_continue_button).click()
+            self.quiesce()
 
-            WebDriverWait(self.driver, self.medium_wait).until(lambda driver: self.driver.find_element_by_css_selector(self.loading_dialog_div).is_displayed())
-
-            wait_for_element(self.driver, self.confirm_dialog_div, self.medium_wait)
             self.driver.find_element_by_css_selector(self.add_host_confirm_button).click()
+            self.quiesce()
 
-            wait_for_element(self.driver, self.complete_dialog_div, self.medium_wait)
             self.driver.find_element_by_css_selector(self.add_host_close_button).click()
 
             wait_for_transition(self.driver, self.long_wait)
