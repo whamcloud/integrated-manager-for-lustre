@@ -4,7 +4,9 @@
 # ========================================================
 
 
+from collections import defaultdict
 from django.contrib.contenttypes.models import ContentType
+from tastypie.validation import Validation
 from chroma_core.lib.storage_plugin.api import attributes, statistics
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
@@ -24,6 +26,19 @@ from django.core.exceptions import ObjectDoesNotExist
 from chroma_api.storage_resource_class import filter_class_ids
 
 from chroma_core.lib.storage_plugin.daemon import ScanDaemonRpc
+
+
+class StorageResourceValidation(Validation):
+    def is_valid(self, bundle, request = None):
+        errors = defaultdict(list)
+        if 'alias' in bundle.data and bundle.data['alias'] is not None:
+            alias = bundle.data['alias']
+            if alias.strip() == "":
+                errors['alias'].append("May not be blank")
+            elif alias != alias.strip():
+                errors['alias'].append("No trailing whitespace allowed")
+
+        return errors
 
 
 class StorageResourceResource(MetricResource, ModelResource):
@@ -214,11 +229,11 @@ class StorageResourceResource(MetricResource, ModelResource):
     class Meta:
         queryset = StorageResourceRecord.objects.filter(resource_class__id__in = filter_class_ids())
         resource_name = 'storage_resource'
-        #filtering = {'storage_plugin__module_name': ['exact'], 'class_name': ['exact']}
         filtering = {'class_name': ['exact'], 'plugin_name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         always_return_data = True
+        validation = StorageResourceValidation()
 
     def obj_delete(self, request = None, **kwargs):
         try:

@@ -170,6 +170,11 @@ var UserDialog = function() {
 }();
 
 var ValidatedForm = function() {
+  function add_error(input, message) {
+    input.before("<span class='error'>" + message + "</span>");
+    input.addClass('error');
+  }
+
   function save(element, api_fn, url, obj, success, error) {
     element.find('input').each(function() {
       obj[$(this).attr('name')] = $(this).val()
@@ -190,8 +195,8 @@ var ValidatedForm = function() {
           element.find('input').removeClass('error');
           $.each(errors, function(attr_name, error_list) {
             $.each(error_list, function(i, error) {
-              element.find('input[name=' + attr_name + ']').before("<span class='error'>" + error + "</span>")
-              element.find('input[name=' + attr_name + ']').addClass('error');
+              add_error(element.find('input[name=' + attr_name + ']'), error);
+
             });
           });
         }
@@ -199,13 +204,20 @@ var ValidatedForm = function() {
     );
   }
 
-  function clear(element) {
+  function clear_errors(element) {
     element.find('span.error').remove();
     element.find('input').removeClass('error');
+  }
+
+  function clear(element) {
     element.find('input').val("");
+    clear_errors(element);
   }
 
   return {
+    add_error: add_error,
     save: save,
-    clear: clear}
+    clear: clear,
+    clear_errors: clear_errors
+  }
 }();

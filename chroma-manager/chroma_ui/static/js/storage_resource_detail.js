@@ -142,15 +142,34 @@ var StorageResourceDetail = Backbone.View.extend({
     var reset_button = $(this.el).find('a.save_alias');
     save_button.hide();
     reset_button.hide();
-
+    ValidatedForm.clear_errors($(this.el));
     var alias_entry = $(this.el).find('.alias');
-    var new_name = alias_entry.attr('value');
     alias_entry.attr('disabled', 'disabled');
-    this.model.save({'alias': new_name}, {success: function () {
-      save_button.show();
-      reset_button.show();
-      alias_entry.removeAttr('disabled');
-    }});
+
+    var new_name = alias_entry.attr('value');
+    if (new_name == this.model.get('default_alias')) {
+      new_name = null;
+    }
+
+    this.model.save({'alias': new_name}, {
+      success: function () {
+        save_button.show();
+        reset_button.show();
+        alias_entry.removeAttr('disabled');
+      },
+      error: function (model, responseText){
+        var errors = JSON.parse(responseText);
+        if (errors.alias) {
+          _.each(errors.alias, function(message) {
+            ValidatedForm.add_error(alias_entry, message);
+          });
+        }
+
+        save_button.show();
+        reset_button.show();
+        alias_entry.removeAttr('disabled');
+      }
+    });
   },
   render_histogram: function(element_id, chart_info, stat_infos) {
     $('#' + element_id).css("width", "300px");

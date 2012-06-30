@@ -88,6 +88,8 @@ class FilesystemValidation(Validation):
             errors['name'].append("Name '%s' too long (max 8 characters)" % bundle.data['name'])
         if len(bundle.data['name']) < 1:
             errors['name'].append("Name '%s' too short (min 1 character)" % bundle.data['name'])
+        if bundle.data['name'].find(" ") != -1:
+            errors['name'].append("Name may not contain spaces")
 
         # Check volume IDs are present and correct
         used_volume_ids = set()
