@@ -50,6 +50,8 @@ class MockAgent(object):
         if cmdline == "lnet-scan":
             return self.mock_servers[self.host.address]['nids']
         elif cmdline == 'host-properties':
+            logging.getLogger('job').info(self.mock_servers)
+            logging.getLogger('job').info(len(self.mock_servers))
             return {
                 'time': datetime.datetime.utcnow().isoformat() + "Z",
                 'fqdn': self.mock_servers[self.host.address]['fqdn'],
@@ -58,7 +60,18 @@ class MockAgent(object):
             }
         elif cmdline.startswith("format-target"):
             import uuid
-            return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': 777}
+            import re
+            inode_size = None
+            if 'mkfsoptions' in args:
+                inode_arg = re.search("-I (\d+)", args['mkfsoptions'])
+                if inode_arg:
+                    inode_size = int(inode_arg.group(1).__str__())
+
+            if inode_size is None:
+                # A 'foo' value
+                inode_size = 777
+
+            return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': inode_size}
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
@@ -89,6 +102,11 @@ class MockAgent(object):
                 'lnet_up': True,
                 'lnet_loaded': True
             }}
+        elif cmdline.startswith("device-plugin"):
+            try:
+                return self.mock_servers[self.host.address]['device-plugin']
+            except KeyError:
+                return {}
 
 
 class MockDaemonRpc():

@@ -6,9 +6,9 @@ from test_logs import TestLogs
 from test_servers import TestServer
 from test_mgt import TestMgt
 from test_bread_crumb import TestBreadCrumb
-from test_create_filesystem import TestCreateFileSystem
+from test_create_filesystem import TestCreateFilesystem
 from test_filesystem import TestFilesystem
-from test_edit_filesystem import TestEditFileSystem
+from test_edit_filesystem import TestEditFilesystem
 
 
 def suite():
@@ -22,9 +22,9 @@ def suite():
     test_server = unittest.TestLoader().loadTestsFromTestCase(TestServer)
     test_mgt = unittest.TestLoader().loadTestsFromTestCase(TestMgt)
 
-    test_create_filesystem = unittest.TestLoader().loadTestsFromTestCase(TestCreateFileSystem)
+    test_create_filesystem = unittest.TestLoader().loadTestsFromTestCase(TestCreateFilesystem)
     test_filesystem = unittest.TestLoader().loadTestsFromTestCase(TestFilesystem)
-    test_edit_filesystem = unittest.TestLoader().loadTestsFromTestCase(TestEditFileSystem)
+    test_edit_filesystem = unittest.TestLoader().loadTestsFromTestCase(TestEditFilesystem)
 
     alltests = unittest.TestSuite([
                             ui_layout,

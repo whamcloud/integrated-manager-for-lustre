@@ -44,3 +44,19 @@ class TestFilesystemResource(ChromaApiTestCase):
         errors = self.deserialize(response)
         self.assertIn('mgt', errors)
         self.assertEqual(len(errors), 1)
+
+    def test_start_stop_partial(self):
+        """Test operations using partial PUT containing only the state attribute, as used in Chroma 1.0.0.0 GUI"""
+        self.create_simple_filesystem()
+        fs_uri = "/api/filesystem/%s/" % self.fs.id
+        self.api_set_state_partial(fs_uri, 'stopped')
+        self.api_set_state_partial(fs_uri, 'available')
+        self.api_set_state_partial(fs_uri, 'stopped')
+
+    def test_start_stop_full(self):
+        """Test operations using fully populated PUTs"""
+        self.create_simple_filesystem()
+        fs_uri = "/api/filesystem/%s/" % self.fs.id
+        self.api_set_state_full(fs_uri, 'stopped')
+        self.api_set_state_full(fs_uri, 'available')
+        self.api_set_state_full(fs_uri, 'stopped')

@@ -1,10 +1,10 @@
-from base import SeleniumBaseTestCase
-from views.bread_crumb import Breadcrumb
-from views.filesystem import Filesystem
-from views.servers import Servers
-from base import select_element_option
-from base import wait_for_element
-from base import get_selected_option_text
+from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.views.bread_crumb import Breadcrumb
+from tests.selenium.views.filesystem import Filesystem
+from tests.selenium.views.servers import Servers
+from tests.selenium.base import select_element_option
+from tests.selenium.base import wait_for_element
+from tests.selenium.base import get_selected_option_text
 
 
 class TestBreadCrumb(SeleniumBaseTestCase):
@@ -66,7 +66,3 @@ class TestBreadCrumb(SeleniumBaseTestCase):
         expected_unit_list = self.breadcrumb_page.get_expected_unit_list(get_selected_option_text(self.driver, self.breadcrumb_page.intervalSelect))
         units_list_length = self.breadcrumb_page.get_units_list()
         self.assertListEqual(expected_unit_list, units_list_length, 'Units for "Week" time interval do not match')
-
-import unittest
-if __name__ == '__main__':
-    unittest.main()

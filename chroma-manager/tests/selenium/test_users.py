@@ -4,17 +4,15 @@
 # ========================================================
 
 
-import django.utils.unittest
-from views.users import Users
-from base import SeleniumBaseTestCase
+from tests.selenium.views.users import Users
+from tests.selenium.base import SeleniumBaseTestCase
 from utils.sample_data import Testdata
-from base import wait_for_datatable
-from utils.navigation import Navigation
+from tests.selenium.utils.navigation import Navigation
 from utils.messages_text import validation_messages
-from base import enter_text_for_element
-from base import select_element_option
-from base import wait_for_element
-from utils.constants import wait_time
+from tests.selenium.base import enter_text_for_element
+from tests.selenium.base import select_element_option
+from tests.selenium.base import wait_for_element
+from tests.selenium.utils.constants import wait_time
 
 
 class TestUsers(SeleniumBaseTestCase):
@@ -22,7 +20,6 @@ class TestUsers(SeleniumBaseTestCase):
     def setUp(self):
         super(TestUsers, self).setUp()
 
-        self.navigation.go('Configure', 'Users')
         self.medium_wait = wait_time['medium']
 
         # Getting test data for servers
@@ -54,8 +51,8 @@ class TestUsers(SeleniumBaseTestCase):
         self.admin_new_password = self.user_data[2]['new_password']
         self.admin_new_confirm_password = self.user_data[2]['new_confirm_password']
 
+        self.navigation.go('Configure', 'Users')
         self.user_page = Users(self.driver)
-        wait_for_datatable(self.driver, '#user_list')
 
     def test_add_super_user(self):
         # Test to add new user
@@ -142,6 +139,3 @@ class TestUsers(SeleniumBaseTestCase):
     def delete_user(self, username):
         # Delete user
         self.user_page.delete(username)
-
-if __name__ == '__main__':
-    django.utils.unittest.main()

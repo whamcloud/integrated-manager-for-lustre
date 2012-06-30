@@ -5,8 +5,8 @@
 
 
 var ConfParamDialog = function(options) {
-  var el = $("<div><div class='help_loader' style='padding: 0 6px 6px 6px;' data-topic='_advanced_settings' /><table width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
-  var _options = $.extend({}, options)
+  var el = $("<div><div class='help_loader' style='padding: 0 6px 6px 6px;' data-topic='_advanced_settings' /><table class='validated_form' width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
+  var _options = $.extend({}, options);
 
   el.find('table').dataTable( {
     "iDisplayLength":30,
@@ -35,7 +35,6 @@ var ConfParamDialog = function(options) {
     populate_conf_param_table(blank_data, el.find('table'), _options.help)
   }
 
-
   // initialize (but don't open) settings dialog
   el.dialog
     ({
@@ -52,14 +51,20 @@ var ConfParamDialog = function(options) {
           class: "conf_param_apply_button",
           click: function(){
             var datatable = $(this).find('table').dataTable();
-            if (_options.url) {
-              apply_config_params(_options.url, datatable);
+            var dialog = $(this);
+            if (_options.object) {
+              apply_config_params(_options.object, datatable, function() {dialog.dialog('close')});
+            } else {
+              dialog.dialog('close');
             }
-            $(this).dialog('close')
           }
         },
-        "Close": function() {
-          $(this).dialog("close");
+        "Close": {
+            text: "Close",
+            class: "conf_param_close_button",
+            click: function(){
+                $(this).dialog('close')
+            }
         }
       }
     });
@@ -68,6 +73,8 @@ var ConfParamDialog = function(options) {
   ContextualHelp.load_snippets(el.find('div').first());
 
   function open() {
+    el.find('span.error').remove();
+    el.find('input').removeClass('error');
     el.dialog('open');
   }
 
@@ -96,12 +103,17 @@ var ConfParamDialog = function(options) {
     }
   }
 
+  function get_datatable() {
+    return el.find('table').dataTable();
+  }
+
   return {
     open: open,
     get: get,
+    get_datatable: get_datatable,
     clear: clear
   }
-}
+};
 
 
 function _populate_conf_param_table(data, table, help)
@@ -165,35 +177,74 @@ function reset_config_params(datatable)
   }
 }
 
+function conf_param_errors(datatable, errors)
+{
+  $.each(errors, function(k, v){
+    var input = datatable.find("input[id='conf_param_" + k + "']");
+    input.addClass('error');
+    input.before("<span class='error'>" + v + "</span>")
+  });
+}
+
+function conf_param_clear_errors(datatable)
+{
+  datatable.find('span.error').remove();
+  datatable.find('.error').removeClass('error');
+}
+
 /* Read modified conf params out of datatable, PUT them to url */
-function apply_config_params(url, datatable)
+function apply_config_params(object, datatable, callback)
 {
   var oSetting = datatable.fnSettings();
   var changed_conf_params = {};
   var dirty = false;
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
     var conf_param_name = oSetting.aoData[i]._aData[3];
-    var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
+    var input_val = datatable.find("input[id='conf_param_" + conf_param_name + "']").val();
 
     if(oSetting.aoData[i]._aData[2] != input_val)
     {
       dirty = true;
+
+      /* Convert UI empty strings to nulls for API */
+      if (input_val == "") {
+        input_val = null;
+      }
+
       changed_conf_params[conf_param_name] = input_val;
     }
   }
 
-  if(dirty)
-  {
-    Api.put(url, {"conf_params": changed_conf_params},
-      success_callback = function(data)
-      {
-        // Set the 'original' value to what we just posted
-        for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-          var conf_param_name = oSetting.aoData[i]._aData[3];
-          var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
-          oSetting.aoData[i]._aData[2] = input_val
-        }
-      }
-    );
+  conf_param_clear_errors(datatable);
+
+  if(dirty) {
+      Api.get(object.resource_uri, {}, function(update_object) {
+          update_object.conf_params = $.extend(update_object.conf_params, changed_conf_params);
+          Api.put(update_object.resource_uri, update_object,
+              success_callback = function()
+              {
+                  // Set the 'original' value to what we just posted
+                  for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+                      var conf_param_name = oSetting.aoData[i]._aData[3];
+                      oSetting.aoData[i]._aData[2] = datatable.find("input[id='conf_param_" + conf_param_name + "']").val();
+                  }
+
+                  if(callback) {
+                    callback();
+                  }
+              },
+              {
+                400: function(jqxhr) {
+                  var errors = JSON.parse(jqxhr.responseText);
+                  if (errors.conf_params) {
+                    conf_param_errors(datatable, errors.conf_params);
+                    return true;
+                  } else {
+                    return false;
+                  }
+                }
+              }
+          );
+      });
   }
 }

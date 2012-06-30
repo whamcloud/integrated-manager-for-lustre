@@ -1,10 +1,8 @@
 """ Test Base Layout """
 
-import django.utils.unittest
-
-from views.base_layout import Baselayout
-from base import SeleniumBaseTestCase
-from base import wait_for_element
+from tests.selenium.views.base_layout import Baselayout
+from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.base import wait_for_element
 
 
 class TestBaseLayout(SeleniumBaseTestCase):
@@ -26,7 +24,6 @@ class TestBaseLayout(SeleniumBaseTestCase):
             self.check_base_page_layout(page)
 
     def check_base_page_layout(self, page):
-        self.test_logger.info('Testing Page:' + page)
         self.navigation.go(page)
         for menu_selector in self.base_page_layout.menu_element_ids:
             self.assertTrue(wait_for_element(self.driver, menu_selector, 10), 'Menu with element id:' + menu_selector + ' is missing on page: ' + page)
@@ -40,6 +37,3 @@ class TestBaseLayout(SeleniumBaseTestCase):
         self.vertical_side_bar.click()
         self.assertTrue(wait_for_element(self.driver, self.base_page_layout.sidebar_id, 10), 'Unable to open Notification side bar with id:' + self.base_page_layout.sidebar_id + ' on page:' + page)
         self.sidebar_close.click()
-
-if __name__ == '__main__':
-    django.utils.unittest.main()

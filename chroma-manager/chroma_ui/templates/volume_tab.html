@@ -49,14 +49,20 @@
           var dialog = $("<div style='overflow-y: auto; max-height: 700px;' class='volume_confirmation_dialog'></div>");
           dialog.html(confirmation_markup);
           dialog.dialog({'buttons': {
-           'Cancel': function() {$(this).dialog('close');},
+           'Cancel': function() {
+               $(this).dialog('close');
+               $(this).remove();
+           },
            'Confirm':
            {
                text: "Confirm",
                id: "transition_confirm_button",
                click: function(){
                  var dialog = $(this);
-                 sendUpdates(volumes, function() {dialog.dialog('close')});
+                 sendUpdates(volumes, function() {
+                     dialog.dialog('close');
+                     dialog.remove();
+                 });
                }
            }
          }});

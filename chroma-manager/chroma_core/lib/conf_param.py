@@ -6,12 +6,12 @@
 
 
 import re
+from collections import defaultdict
 from chroma_core.models.conf_param import ConfParam
 
 
 class ParamType(object):
     def validate(self, val):
-        """Opportunity for subclasses to validate and/or transform"""
         raise NotImplementedError
 
     def test_vals(self):
@@ -27,30 +27,29 @@ class IntegerParam(ParamType):
         self.max_val = max_val
 
     def validate(self, val):
-        if self.min_val != None and val < self.min_val:
-            raise ValueError("%s lower than minimum %s" % (val, self.min_val))
-        if self.max_val != None and val > self.min_val:
-            raise ValueError("%s higher than maximum %s" % (val, self.max_val))
+        try:
+            val = int(val)
+        except ValueError:
+            raise ValueError("Must be an integer")
+
+        if self.min_val is not None and val < self.min_val:
+            raise ValueError("Must be greater than %s" % self.min_val)
+        if self.max_val is not None and val > self.max_val:
+            raise ValueError("Must be less than %s" % self.max_val)
 
     def test_vals(self):
         vals = []
-        if self.min_val != None:
+        if self.min_val is not None:
             vals.append(self.min_val)
-        if self.max_val != None:
+        if self.max_val is not None:
             vals.append(self.max_val)
-        if self.min_val == None and self.max_val == None:
+        if self.min_val is None and self.max_val is None:
             vals.append(20)
 
-        if self.max_val != None and self.min_val != None and (self.max_val - self.min_val > 1):
+        if self.max_val is not None and self.min_val is not None and (self.max_val - self.min_val > 1):
             vals.append(self.min_val + (self.max_val - self.min_val) / 2)
 
         return vals
-
-
-class BooleanParam(IntegerParam):
-    """Value is 0 or 1"""
-    def __init__(self):
-        super(BooleanParam, self).__init__(min_val = 0, max_val = 1)
 
 
 class EnumParam(ParamType):
@@ -60,10 +59,16 @@ class EnumParam(ParamType):
 
     def validate(self, val):
         if not val in self.options:
-            raise ValueError("%s not one of %s" % (val, self.options))
+            raise ValueError("Must be one of %s" % self.options)
 
     def test_vals(self):
         return self.options
+
+
+class BooleanParam(EnumParam):
+    """Value is 0 or 1"""
+    def __init__(self):
+        super(BooleanParam, self).__init__(options = ['0', '1'])
 
 
 class BytesParam(ParamType):
@@ -79,11 +84,11 @@ class BytesParam(ParamType):
         self.max_val = max_val
 
         # Check we don't have a lower bound bigger than the upper
-        if self.min_val != None and self.max_val != None:
+        if self.min_val is not None and self.max_val is not None:
             assert(self._str_to_bytes(self.min_val) <= self._str_to_bytes(self.max_val))
 
         # Check that units is something like 'm' or 'G'
-        if units != None:
+        if units is not None:
             if not len(units) == 1:
                 raise RuntimeError()
             if not units in "ptgmkPTGMK":
@@ -97,7 +102,7 @@ class BytesParam(ParamType):
         if self.max_val:
             vals.append(self.max_val)
 
-        if self.max_val == None and self.min_val == None:
+        if self.max_val is None and self.min_val is None:
             if self.units:
                 vals.append("20%s" % self.units)
             else:
@@ -123,22 +128,29 @@ class BytesParam(ParamType):
     def validate(self, val):
         if self.units:
             if not re.match("^\d+$", val):
-                raise ValueError("Invalid size string '%s' (no units allowed)" % val)
+                raise ValueError("Invalid size string (must be integer number of %s)" % self.units)
             bytes_val = self._str_to_bytes(val + self.units)
         else:
             if not re.match("^\d+(\.\d+)?[ptgmkPTGMK]?$", val):
-                raise ValueError("Invalid size string '%s'" % val)
+                raise ValueError("Invalid size string" % val)
             bytes_val = self._str_to_bytes(val)
 
         if self.min_val and bytes_val < self._str_to_bytes(self.min_val):
-            raise ValueError("%s lower than minimum %s" % (val, self.min_val))
+            raise ValueError("Must be at least %s bytes" % self.min_val)
         if self.max_val and bytes_val > self._str_to_bytes(self.max_val):
-            raise ValueError("%s higher than maximum %s" % (val, self.max_val))
+            raise ValueError("Must be at most %s bytes" % self.max_val)
 
 
 class PercentageParam(IntegerParam):
     def __init__(self):
         super(PercentageParam, self).__init__(min_val = 0, max_val = 100)
+
+    def validate(self, val):
+        try:
+            super(PercentageParam, self).validate(val)
+        except ValueError:
+            raise ValueError("Must be an integer between 0 and 100")
+
 
 from chroma_core.models import FilesystemClientConfParam, FilesystemGlobalConfParam, MdtConfParam, OstConfParam
 all_params = {
@@ -299,6 +311,34 @@ def get_conf_params(obj):
     return result
 
 
+def validate_conf_params(klass, params):
+    """Return a dict of parameter name to list of human readable error strings"""
+    from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem
+    errors = defaultdict(list)
+    for key, val in params.items():
+        if val is None:
+            continue
+
+        try:
+            model_klass, param_value_obj, help_text = all_params[key]
+        except KeyError:
+            errors[key].append('Unknown parameter')
+        else:
+            if model_klass == OstConfParam and klass != ManagedOst:
+                errors[key].append("Only valid for OST")
+            elif model_klass in [FilesystemClientConfParam, FilesystemGlobalConfParam] and klass != ManagedFilesystem:
+                errors[key].append("Only valid for Filesystem")
+            elif model_klass == MdtConfParam and klass != ManagedMdt:
+                errors[key].append("Only valid for MDT")
+
+            try:
+                param_value_obj.validate(val)
+            except (ValueError, TypeError), e:
+                errors[key].append(e.__str__())
+
+    return errors
+
+
 def set_conf_params(obj, params, new = True):
     from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst, FilesystemMember
 
@@ -328,7 +368,7 @@ def set_conf_params(obj, params, new = True):
         model_klass, param_value_obj, help_text = all_params[key]
         existing_params = ConfParam.get_latest_params(model_klass.objects.filter(key = key, **kwargs))
         # Store if the new value is
-        if (len(existing_params) > 0 and existing_params[0].value != value) or (len(existing_params) == 0 and value != None):
+        if (len(existing_params) > 0 and existing_params[0].value != value) or (len(existing_params) == 0 and value is not None):
             p = model_klass(key = key,
                 value = value,
                 **kwargs)
@@ -342,3 +382,14 @@ def set_conf_params(obj, params, new = True):
         return mgs.id
     else:
         return None
+
+
+def compare(a, b):
+    if set(a.keys()) != set(b.keys()):
+        return False
+    else:
+        for k, v in a.items():
+            if b[k] != v:
+                return False
+
+    return True

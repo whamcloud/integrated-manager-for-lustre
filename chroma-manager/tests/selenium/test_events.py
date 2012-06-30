@@ -1,9 +1,8 @@
-from views.events import Events
-from utils.constants import static_text
-from base import SeleniumBaseTestCase
-from base import select_element_option
-from base import get_selected_option_text
-from base import wait_for_datatable
+from tests.selenium.views.events import Events
+from tests.selenium.utils.constants import static_text
+from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.base import select_element_option
+from tests.selenium.base import get_selected_option_text
 
 
 class TestEvents(SeleniumBaseTestCase):
@@ -14,8 +13,6 @@ class TestEvents(SeleniumBaseTestCase):
 
         self.navigation.go('Events')
         self.events_page = Events(self.driver)
-
-        wait_for_datatable(self.driver, '#events_table')
 
     def test_events_filter(self):
         """Test events filter for particular host"""
@@ -35,7 +32,3 @@ class TestEvents(SeleniumBaseTestCase):
         self.events_page.filter_btn.click()
         self.events_page.check_table_data()
         self.assertEqual(self.events_page.get_severity_value(), static_text['warning'])
-
-import django.utils.unittest
-if __name__ == '__main__':
-    django.utils.unittest.main()

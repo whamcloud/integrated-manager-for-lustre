@@ -145,6 +145,10 @@
         $('#filesystem_create_form').find('span.error').remove();
         $('#filesystem_create_form').find('.error').removeClass('error');
 
+        if (conf_param_dialog) {
+          conf_param_clear_errors(conf_param_dialog.get_datatable());
+        }
+
         var fs_name = $('#txtfsnameid').val();
         var mgt_lun_id = $('#mgt_chooser').volumeChooser('val');
         var mgt_id = $('#mgt_existing_dropdown').val()
@@ -217,9 +221,21 @@
         Api.post("filesystem/", filesystem,
           function(data) {
             Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
+          },
+          {400: function (jqXHR) {
+              var errors = JSON.parse(jqXHR.responseText);
+              if (errors.conf_params) {
+                conf_param_dialog.open();
+                conf_param_errors(conf_param_dialog.get_datatable(), errors.conf_params);
+                return true;
+              } else {
+                return false;
+              }
+            }
           }
         );
       });
+
       //Advance Settings button click handler.
       $('div#filesystem_create_form button.advanced').click(function()
       {
@@ -227,11 +243,11 @@
         if(!conf_param_dialog) {
           Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
             advanced_tab_clicked = true;
-            conf_param_dialog = ConfParamDialog({help: help_dict})
+            conf_param_dialog = ConfParamDialog({help: help_dict});
             conf_param_dialog.open();
           })
         } else {
-            conf_param_dialog.open()
+          conf_param_dialog.open()
         }
       });
 

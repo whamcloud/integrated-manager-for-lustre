@@ -1,5 +1,5 @@
-from utils.constants import wait_time
-from utils.constants import static_text
+from tests.selenium.utils.constants import wait_time
+from tests.selenium.utils.constants import static_text
 
 
 class Alerts:

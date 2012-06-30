@@ -1,7 +1,6 @@
-from views.alerts import Alerts
-from base import SeleniumBaseTestCase
-from base import enter_text_for_element
-from base import wait_for_datatable
+from tests.selenium.views.alerts import Alerts
+from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.base import enter_text_for_element
 
 
 class TestAlerts(SeleniumBaseTestCase):
@@ -12,9 +11,6 @@ class TestAlerts(SeleniumBaseTestCase):
 
         self.navigation.go('Alerts')
         self.alerts_page = Alerts(self.driver)
-
-        wait_for_datatable(self.driver, '#active_AlertContent')
-        wait_for_datatable(self.driver, '#all_AlertContent')
 
     def test_active_alerts_search(self):
         """Test active alert search"""
@@ -33,7 +29,3 @@ class TestAlerts(SeleniumBaseTestCase):
 
         filtered_entity_data = self.alerts_page.get_alert_history_entity_data()
         self.assertEqual(history_table_data, filtered_entity_data, "Searched data in alert history not matching")
-
-import django.utils.unittest
-if __name__ == '__main__':
-    django.utils.unittest.main()

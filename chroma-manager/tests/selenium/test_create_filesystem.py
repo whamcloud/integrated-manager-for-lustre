@@ -4,177 +4,171 @@
 # ========================================================
 
 
-import django.utils.unittest
-from views.mgt import Mgt
-from views.servers import Servers
-from views.create_filesystem import CreateFilesystem
-from utils.constants import wait_time
-from utils.constants import static_text
-from base import SeleniumBaseTestCase
-from utils.messages_text import validation_messages
+from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.views.edit_filesystem import EditFilesystem
+from tests.selenium.views.mgt import Mgt
+from tests.selenium.views.servers import Servers
+from tests.selenium.views.create_filesystem import CreateFilesystem
+from tests.selenium.views.volumes import Volumes
+from tests.selenium.views.conf_param_dialog import ConfParamDialog
 from utils.sample_data import Testdata
-from base import enter_text_for_element
-from base import wait_for_element
-from base import element_visible
-from base import wait_for_datatable
 
 
-class TestCreateFileSystem(SeleniumBaseTestCase):
+class TestCreateFilesystem(SeleniumBaseTestCase):
     """Test cases for file system creation and validations"""
 
     def setUp(self):
-        super(TestCreateFileSystem, self).setUp()
+        super(TestCreateFilesystem, self).setUp()
 
-        self.medium_wait = wait_time['medium']
-        self.test_data = Testdata()
-
-        # Test data for servers
-        self.host_list = self.test_data.get_test_data_for_server_configuration()
-
-        # Test data for MGT
-        self.mgt_host_name = self.host_list[0]['address']
-        self.mgt_device_node = self.host_list[0]['device_node'][0]
+        test_data = Testdata()
 
         # Test data for file system
-        self.fs_test_data = self.test_data.get_test_data_for_filesystem_configuration()
-        self.filesystem_name = self.fs_test_data['name']
-        self.mgt_name = self.host_list[0]['address']
-        self.mdt_host_name = self.host_list[1]["address"]
-        self.mdt_device_node = self.host_list[1]["device_node"][0]
-        self.ost_host_name = self.host_list[1]["address"]
-        self.ost_device_node = self.host_list[1]["device_node"][1]
-        self.conf_param_test_data = self.test_data.get_test_data_for_conf_params()
-        self.conf_params = self.conf_param_test_data['filesystem_conf_params']
+        self.filesystem_name = test_data.cluster_data['filesystems']['name']
 
+        # Base filesystem
+        self.mgt_volume_name, self.mgt_server_address = self.volume_and_server(0)
+        self.mdt_volume_name, self.mdt_server_address = self.volume_and_server(1)
+        self.ost_volume_name, self.ost_server_address = self.volume_and_server(2)
+
+        # Test data for servers
+        self.host_list = test_data.get_test_data_for_server_configuration()
+
+        # Pick some volumes
+        self.mgt_volume_name, self.mgt_server_address = self.volume_and_server(0)
+        self.mdt_volume_name, self.mdt_server_address = self.volume_and_server(1)
+        self.ost_volume_name, self.ost_server_address = self.volume_and_server(2)
+
+        # Add the test servers
+        self.navigation.go('Configure', 'Servers')
+        self.server_page = Servers(self.driver)
+        self.server_page.add_servers(self.host_list)
+
+        # Set our server preferences on the test volumes
+        self.navigation.go('Configure', 'Volumes')
+        volume_page = Volumes(self.driver)
+        for primary_server, volume_name in [
+            (self.mgt_server_address, self.mgt_volume_name),
+            (self.mdt_server_address, self.mdt_volume_name),
+            (self.ost_server_address, self.ost_volume_name)]:
+            volume_page.set_primary_server(volume_name, primary_server)
+
+        self.conf_params = test_data.get_test_data_for_conf_params()['filesystem_conf_params']
+
+        self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
+
+    def _check_filesystem_creation(self):
+        # Inspect the name and choice of volumes to check they match input
+        detail_page = EditFilesystem(self.driver)
+        self.assertTrue(detail_page.visible)
+        self.assertEqual(detail_page.filesystem_name, self.filesystem_name)
+        self.assertEqual(detail_page.mgt_volumes, [[self.mgt_volume_name, self.mgt_server_address]])
+        self.assertEqual(detail_page.mdt_volumes, [[self.mdt_volume_name, self.mdt_server_address]])
+        self.assertEqual(detail_page.ost_volumes, [[self.ost_volume_name, self.ost_server_address]])
+
+    def test_create_filesystem_mgt_separate(self):
+        """Create an MGT then filesystem using valid params, check that it
+        is created and we are redirected to detail view."""
+
+        # Create MGT
+        self.navigation.go('Configure', 'MGTs')
+        self.mgt_page = Mgt(self.driver)
+        self.mgt_page.create_mgt(self.mgt_server_address, self.mgt_volume_name)
+
+        # >>> HYD-1141 workaround for created MGTs not appearing in FS creation form
+        self.navigation.refresh()
+        # <<< HYD-1141 workaround
+
+        # Create filesystem
         self.navigation.go('Configure', 'Create_new_filesystem')
-        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
+        create_filesystem_page = CreateFilesystem(self.driver)
+        create_filesystem_page.enter_name(self.filesystem_name)
+        create_filesystem_page.select_mgt(self.mgt_server_address)
+        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
+        create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
 
-    def test_create_filesystem(self):
-        """Test case for creating file system"""
+        self._check_filesystem_creation()
+
+    def test_create_filesystem_mgt_inline(self):
+        """Create a filesystem and MGT in one operation"""
 
         create_filesystem_page = CreateFilesystem(self.driver)
-        create_filesystem_page.create_filesystem_with_server_and_mgt(self.host_list, self.mgt_host_name, self.mgt_device_node, self.filesystem_name, self.mgt_name, self.mdt_host_name, self.mdt_device_node, self.ost_host_name, self.ost_device_node, self.conf_params)
-        filesystem_create_message = create_filesystem_page.verify_created_filesystem(self.filesystem_name, self.mgt_name, self.mdt_host_name, self.mdt_device_node, self.ost_host_name, self.ost_device_node)
-        self.assertEqual('', filesystem_create_message, filesystem_create_message)
-        create_filesystem_page.remove_filesystem_with_server_and_mgt(self.filesystem_name, self.mgt_host_name, self.mgt_device_node, self.host_list)
+        create_filesystem_page.enter_name(self.filesystem_name)
+        create_filesystem_page.select_mgt_volume(self.mgt_server_address, self.mgt_volume_name)
+        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
+        create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
+
+        self._check_filesystem_creation()
 
     def test_blank_filesystem_name(self):
-        """Test create file system by giving blank filesystem name"""
+        """Test that filesystem is validated as non-blank"""
 
-        self.driver.refresh()
-        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
         create_filesystem_page = CreateFilesystem(self.driver)
+        create_filesystem_page.select_mgt_volume(self.mgt_server_address, self.mgt_volume_name)
+        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
         create_filesystem_page.create_filesystem_button.click()
-        wait_for_element(self.driver, create_filesystem_page.error_span, self.medium_wait)
-        actual_message = create_filesystem_page.validation_error_message(0)
-        self.assertEqual(validation_messages['blank_filesystem_name'], actual_message, 'Error message for blank filesystem name is not displayed')
+        create_filesystem_page.quiesce()
+        self.assertEqual(create_filesystem_page.name_error, "File system name is mandatory")
 
     def test_mgt_not_selected(self):
-        """Test create file system without selecting MGT"""
+        """Test that MGT is validated as present"""
 
-        self.driver.refresh()
-        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
         create_filesystem_page = CreateFilesystem(self.driver)
-        enter_text_for_element(self.driver, create_filesystem_page.filesystem_text, self.filesystem_name)
+        create_filesystem_page.enter_name(self.filesystem_name)
+        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
         create_filesystem_page.create_filesystem_button.click()
-        wait_for_element(self.driver, create_filesystem_page.error_span, self.medium_wait)
-        actual_message = create_filesystem_page.validation_error_message(0)
-        self.assertEqual(validation_messages['mgt_not_selected'], actual_message, 'Error message for not selecting MGT is not displayed')
+        create_filesystem_page.quiesce()
+        self.assertEqual(create_filesystem_page.mgt_volume_error, "An MGT must be selected")
 
     def test_mdt_not_selected(self):
-        """Test create file system without selecting MDT"""
+        """Test that MDT is validated as present"""
 
-        self.driver.refresh()
-        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
         create_filesystem_page = CreateFilesystem(self.driver)
-        enter_text_for_element(self.driver, create_filesystem_page.filesystem_text, self.filesystem_name)
+        create_filesystem_page.enter_name(self.filesystem_name)
+        create_filesystem_page.select_mgt_volume(self.mgt_server_address, self.mgt_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
         create_filesystem_page.create_filesystem_button.click()
-        wait_for_element(self.driver, create_filesystem_page.error_span, self.medium_wait)
-        actual_message = create_filesystem_page.validation_error_message(1)
-        self.assertEqual(validation_messages['mdt_not_selected'], actual_message, 'Error message for not selecting MDT is not displayed')
-
-    def test_conf_params(self):
-        """Test to check whether configuration params are set correctly"""
-
-        self.driver.refresh()
-        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
-        create_filesystem_page = CreateFilesystem(self.driver)
-
-        # Click advanced button
-        create_filesystem_page.advanced_button.click()
-        wait_for_element(self.driver, create_filesystem_page.conf_param_apply_button, self.medium_wait)
-
-        # Set values for conf params
-        for param in self.conf_params:
-            self.test_logger.info('Setting value for param name:' + param + " value:" + self.conf_params[param])
-            param_element_id = 'conf_param_' + param
-            enter_text_for_element(self.driver, "input[id='" + param_element_id + "']", self.conf_params[param])
-
-        # Click Apply button
-        self.driver.find_element_by_css_selector(create_filesystem_page.conf_param_apply_button).click()
-
-        # Check whether conf param dialog is closed
-        self.assertFalse(element_visible(self.driver, create_filesystem_page.conf_param_apply_button), "Configuration dialog not closed")
-
-        # Reopen the conf param dialog and check whether new conf param values are displayed correctly
-        create_filesystem_page.advanced_button.click()
-        for param in self.conf_params:
-            self.test_logger.info('Check whether value: ' + self.conf_params[param] + ' for param name:' + param + ' is set correctly')
-            param_element_id = 'conf_param_' + param
-            self.assertEqual(self.driver.find_element_by_css_selector("input[id='" + param_element_id + "']").get_attribute("value"), self.conf_params[param], "New conf param values not displayed correctly")
+        create_filesystem_page.quiesce()
+        self.assertEqual(create_filesystem_page.mdt_volume_error, "An MDT must be selected")
 
     def test_invalid_conf_params(self):
         """Test to check whether invalid configuration params are validated"""
 
-        self.navigation.go('Configure', 'Servers')
-        wait_for_datatable(self.driver, '#server_configuration')
-        self.server_page = Servers(self.driver)
-        self.server_page.add_servers(self.host_list)
-
-        self.navigation.go('Configure', 'MGTs')
-        self.driver.refresh()
-        wait_for_element(self.driver, 'span.volume_chooser_selected', self.medium_wait)
-        self.mgt_page = Mgt(self.driver)
-        self.mgt_page.create_mgt(self.mgt_host_name, self.mgt_device_node)
-
-        self.navigation.go('Configure', 'Create_new_filesystem')
-        wait_for_element(self.driver, "#btnCreateFS", self.medium_wait)
         create_filesystem_page = CreateFilesystem(self.driver)
+        create_filesystem_page.enter_name(self.filesystem_name)
+        create_filesystem_page.select_mgt_volume(self.mgt_server_address, self.mgt_volume_name)
+        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
 
-        enter_text_for_element(self.driver, create_filesystem_page.filesystem_text, self.filesystem_name)
-        create_filesystem_page.select_mgt(self.mgt_host_name)
-        create_filesystem_page.select_mdt(self.mdt_host_name, self.mdt_device_node)
-        create_filesystem_page.select_ost(self.ost_host_name, self.ost_device_node)
+        create_filesystem_page.open_conf_params()
+        conf_params = ConfParamDialog(self.driver)
+        conf_params.enter_conf_params({
+            'llite.max_cached_mb': 'rhubarb'
+        })
+        create_filesystem_page.close_conf_params()
 
-        # Click advanced button
-        create_filesystem_page.advanced_button.click()
-        wait_for_element(self.driver, create_filesystem_page.conf_param_apply_button, self.medium_wait)
-
-        # Set values for conf params
-        for param in self.conf_params:
-            self.test_logger.info('Setting value for param name:' + param + " value:" + "non_numeric_value")
-            param_element_id = 'conf_param_' + param
-            self.driver.find_element_by_css_selector("input[id='" + param_element_id + "']").send_keys("non_numeric_value")
-
-        # Click Apply button
-        self.driver.find_element_by_css_selector(create_filesystem_page.conf_param_apply_button).click()
         create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
 
-        wait_for_element(self.driver, create_filesystem_page.error_dialog, self.medium_wait)
-        self.assertTrue(self.driver.find_element_by_css_selector(create_filesystem_page.error_dialog).text.__contains__(param), "No validation message for conf param " + param)
+        self.assertEqual(create_filesystem_page.conf_params_open, True)
+        self.assertEqual(conf_params.get_conf_param_error('llite.max_cached_mb'), "Invalid size string (must be integer number of m)")
 
-        self.driver.find_element_by_css_selector(create_filesystem_page.error_dialog_dismiss).click()
+        # Check that if we try again with a different error then the
+        # old error goes away and the new one appears
+        conf_params.enter_conf_params({
+            'llite.max_cached_mb': "",
+            'llite.max_read_ahead_mb': "rhubarb"
+        })
+        create_filesystem_page.close_conf_params()
 
-        self.navigation.go('Configure', 'MGTs')
-        self.driver.refresh()
-        wait_for_element(self.driver, 'span.volume_chooser_selected', self.medium_wait)
-        mgt_page = Mgt(self.driver)
-        mgt_page.transition(self.mgt_host_name, self.mgt_device_node, static_text['remove_mgt'])
+        create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
 
-        self.navigation.go('Configure', 'Servers')
-        server_page = Servers(self.driver)
-        wait_for_datatable(self.driver, '#server_configuration')
-        server_page.remove_servers(self.host_list)
-
-if __name__ == '__main__':
-    django.utils.unittest.main()
+        self.assertEqual(create_filesystem_page.conf_params_open, True)
+        self.assertEqual(conf_params.get_conf_param_error('llite.max_cached_mb'), None)
+        self.assertEqual(conf_params.get_conf_param_error('llite.max_read_ahead_mb'), "Invalid size string (must be integer number of m)")

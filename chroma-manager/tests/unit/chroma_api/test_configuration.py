@@ -28,8 +28,11 @@ class TestConfigurationDumpLoad(ChromaApiTestCase):
         return data
 
     def test_load(self):
-        new_conf_params = {'llite.max_cached_mb': '16'}
-        response = self.api_client.put("/api/filesystem/%s/" % self.fs.id, data = {'conf_params': new_conf_params})
+        fs_uri = "/api/filesystem/%s/" % self.fs.id
+        filesystem = self.api_get(fs_uri)
+        filesystem['conf_params']['llite.max_cached_mb'] = '16'
+        response = self.api_client.put(fs_uri, data = filesystem)
+
         self.assertHttpAccepted(response)
 
         data = self.test_dump()

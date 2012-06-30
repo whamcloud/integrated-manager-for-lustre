@@ -107,7 +107,10 @@ var LiveObject = function()
         if (requires_confirmation) {
           var markup = "<div style='overflow-y: auto; max-height: 700px;' id='transition_confirmation_dialog'>" + confirmation_markup + "</div>";
           $(markup).dialog({'buttons': {
-            'Cancel': function() {$(this).dialog('close');},
+            'Cancel': function() {
+                $(this).dialog('close');
+                $(this).remove();
+            },
             'Confirm':
             {
               text: "Confirm",
@@ -116,6 +119,7 @@ var LiveObject = function()
                 var dialog = $(this);
                 Api.put(url, {state: state}, success_callback = function() {
                   dialog.dialog('close');
+                  dialog.remove();
                 })
               }
             }
@@ -436,10 +440,36 @@ var CommandNotification = function() {
   {
     if (command.complete) {
       // If something finished before it started, no need to track
-      // its state
+      // its state, but we do need to refresh any objects its jobs
+      // held a writelock on.
       notify(command);
+      var query_jobs = [];
+      $.each(command.jobs, function(i, job_uri) {
+        var tokens = job_uri.split("/");
+        var job_id = tokens[tokens.length - 2];
+        query_jobs.push(job_id);
+      });
+
+      if (query_jobs.length == 0) {
+          return;
+      }
+
+      Api.get("/api/job/", {id__in: query_jobs, limit: 0}, success_callback = function(data) {
+          var jobs = data['objects'];
+          $.each(jobs, function(i, job) {
+              $.each(job.write_locks, function(i, lock) {
+
+                  var uri = lock.locked_item_uri;
+                  if (objectLength(read_locks[uri]) == 0 && objectLength(write_locks[uri]) == 0) {
+                      updateObject(uri);
+                  }
+              });
+          });
+      }, undefined, false);
+
       return;
     }
+
     if (incomplete_commands[command.id]) {
       // If something gets double inserted (e.g. if init is slow and
       // picks up a user action)

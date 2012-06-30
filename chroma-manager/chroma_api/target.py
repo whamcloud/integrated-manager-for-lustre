@@ -6,6 +6,7 @@
 
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.target import FilesystemMember
+import chroma_core.lib.conf_param
 
 import settings
 from collections import defaultdict
@@ -34,12 +35,8 @@ KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.ite
 
 
 class TargetValidation(Validation):
-    def is_valid(self, bundle, request=None):
+    def _validate_post(self, bundle, request):
         errors = defaultdict(list)
-
-        if request.method != "POST":
-            # TODO: validate PUTs
-            return errors
 
         for mandatory_field in ['kind', 'volume_id']:
             if mandatory_field not in bundle.data or bundle.data[mandatory_field] == None:
@@ -86,12 +83,52 @@ class TargetValidation(Validation):
             if KIND_TO_KLASS[kind] == ManagedMdt:
                 bundle.data_errors['kind'].append("Cannot create MDTs independently of filesystems")
 
+            if 'conf_params' in bundle.data:
+                conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(KIND_TO_KLASS[kind], bundle.data['conf_params'])
+                if conf_param_errors:
+                    errors['conf_params'] = conf_param_errors
+
         try:
             errors.update(bundle.data_errors)
         except AttributeError:
             pass
 
         return errors
+
+    def _validate_put(self, bundle, request):
+        errors = defaultdict(list)
+        if 'conf_params' in bundle.data and bundle.data['conf_params'] is not None:
+            try:
+                target_klass = KIND_TO_KLASS[bundle.data['kind']]
+            except KeyError:
+                errors['kind'].append('Must be one of %s' % KIND_TO_KLASS.keys())
+            else:
+                try:
+                    target = target_klass.objects.get(pk = bundle.data['id'])
+                except KeyError:
+                    errors['id'].append('Field is mandatory')
+                except target_klass.DoesNotExist:
+                    errors['id'].append('No %s with ID %s found' % (target_klass.__name__, bundle.data['id']))
+                else:
+
+                    if target.immutable_state:
+                        # Check that the conf params are unmodified
+                        existing_conf_params = chroma_core.lib.conf_param.get_conf_params(target)
+                        if not chroma_core.lib.conf_param.compare(existing_conf_params, bundle.data['conf_params']):
+                            errors['conf_params'].append("Cannot modify conf_params on immutable_state objects")
+                    else:
+                        conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(target_klass, bundle.data['conf_params'])
+                        if conf_param_errors:
+                            errors['conf_params'] = conf_param_errors
+        return errors
+
+    def is_valid(self, bundle, request=None):
+        if request.method == "POST":
+            return self._validate_post(bundle, request)
+        elif request.method == "PUT":
+            return self._validate_put(bundle, request)
+        else:
+            return {}
 
 
 class TargetResource(MetricResource, ConfParamResource):
