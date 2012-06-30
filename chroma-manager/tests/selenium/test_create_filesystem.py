@@ -114,6 +114,16 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         create_filesystem_page.quiesce()
         self.assertEqual(create_filesystem_page.name_error, "File system name is mandatory")
 
+        create_filesystem_page.enter_name(" ")
+        create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
+        self.assertEqual(create_filesystem_page.name_error, "Name may not contain spaces")
+
+        create_filesystem_page.enter_name(" foo")
+        create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
+        self.assertEqual(create_filesystem_page.name_error, "Name may not contain spaces")
+
     def test_mgt_not_selected(self):
         """Test that MGT is validated as present"""
 

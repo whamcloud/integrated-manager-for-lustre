@@ -14,9 +14,7 @@ Backbone.base_sync = Backbone.sync
 Backbone.sync = function(method, model, options) {
   var outer_success = options.success;
   var outer_this = this;
-  options.success = function() {
-    var data = arguments[0];
-
+  options.success = function(data) {
     // If we got data, and it looks like a tastypie meta/objects body
     // then just extract the .objects to give Backbone the list it
     // expects
@@ -24,6 +22,11 @@ Backbone.sync = function(method, model, options) {
       arguments[0] = data.objects;
     }
     outer_success.apply(outer_this, arguments);
+  };
+
+  var outer_error = options.error;
+  options.error = function(jqXHR) {
+    outer_error.apply(outer_this, [jqXHR]);
   };
 
   var getValue = function(object, prop) {
@@ -44,7 +47,7 @@ Backbone.sync = function(method, model, options) {
     url = url + "/";
   }
 
-  Api.call(type, url, data, success_callback = options.success);
+  Api.call(type, url, data, options.success, options.error);
 };
 
 /* The Api module wraps the global state used for
