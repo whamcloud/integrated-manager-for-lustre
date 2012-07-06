@@ -23,6 +23,8 @@ from tastypie import fields
 from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
 from chroma_core.lib.metrics import R3dMetricStore
+from chroma_api import api_log
+from r3d.exceptions import BadSearchTime
 
 from collections import defaultdict
 
@@ -324,8 +326,11 @@ class MetricResource:
 
         if 'pk' in kwargs:
             return self.get_metric_detail(request, metrics, begin, end, **kwargs)
-        else:
+        try:
             return self.get_metric_list(request, metrics, begin, end, **kwargs)
+        except BadSearchTime:
+            api_log.warn("BadSearchTime from client.  begin: %s, end: %s, update: %s" % (begin, end, update))
+        return self.create_response(request, ())
 
     def _format_timestamp(self, ts):
         return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
