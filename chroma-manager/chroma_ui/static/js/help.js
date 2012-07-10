@@ -82,13 +82,15 @@ var ContextualHelp = function(){
       });
     }
 
-    $('a.help_hover').each(function() {
+    // tooltip on a link/button - hover activated
+    $('a.help_hover, button.help_hover').each(function() {
       var el = $(this);
       if (!el.data('qtip')) {
         help_qtip(el, false);
       }
     });
 
+    // a button with text and the ? icon - click activated
     $('a.help_button').each(function() {
       var el = $(this);
       if (!el.data('qtip')) {
@@ -97,6 +99,7 @@ var ContextualHelp = function(){
       }
     });
 
+    // a button with only ? - click activated
     $('a.help_button_small').each(function() {
       var el = $(this);
       if (!el.data('qtip')) {
@@ -108,6 +111,9 @@ var ContextualHelp = function(){
     });
   }
 
+  // populate all tooltip based help and set a trigger to re-scan for
+  // new help items after every ajax request (as they may have been
+  // loaded dynamically by said request)
   function init() {
     help_elements();
     $(document).ajaxComplete(help_elements);
@@ -123,6 +129,7 @@ var ContextualHelp = function(){
 
 /*
  * Examples:
+<button class='help_hover' data-topic='test'>Button Text</a>
 <a class='help_hover' data-topic='test'>My help</a>
 <a class='help_button' data-topic='test'>My help</a>
 <a class='help_button_small' data-topic='test'></a>

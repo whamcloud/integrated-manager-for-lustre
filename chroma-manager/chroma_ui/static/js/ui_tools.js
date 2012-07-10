@@ -18,7 +18,7 @@ var UIHelper = function() {
   //    - close_tag : bool; whether to close the tag or not (default false);
   // NOTE: properties are assumed to have keys that are html safe and the values pre-escaped
   // It is unsafe to pass in properties from external sources
-  function _build_tag(tag, options) {
+  function build_tag(tag, options) {
 
     var _options = _.defaults({ close_tag: false }, options || {} );
 
@@ -48,7 +48,7 @@ var UIHelper = function() {
   function fugue_icon(name, properties) {
     var _properties = _.defaults({ 'class': '' }, properties || {}, { src: STATIC_URL + "images/fugue/" + name + ".png" } );
     _properties['class'] =  'fugue_icon' + _properties['class']; // prepend class with fugue_icon
-    return _build_tag('img', { properties: _properties } );
+    return build_tag('img', { properties: _properties } );
   }
 
   // build a help link (help.js)
@@ -58,7 +58,7 @@ var UIHelper = function() {
   function _help_link(link_type, topic, content, properties) {
     var _properties = _.defaults({ 'class': '' }, properties || {}, { 'data-topic': topic })
     _properties['class'] = link_type + ' ' + _properties['class'];
-    return _build_tag('a', { content: content, properties: _properties } );
+    return build_tag('a', { content: content, properties: _properties } );
   }
 
   // dispatchers to _help_link
@@ -77,6 +77,7 @@ var UIHelper = function() {
   }
 
   return {
+    build_tag: build_tag,
     fugue_icon: fugue_icon,
     help_hover: help_hover,
     help_button: help_button,

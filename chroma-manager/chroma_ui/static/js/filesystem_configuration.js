@@ -145,7 +145,7 @@ var VolumeChooserStore = function ()
       opts.store.select(element, opts.selected_lun_id);
       element.parents('.volume_chooser_background').find('.volume_chooser_selected').html("Select storage...")
     }
-    
+
     if (changed && opts.change) {
       opts.change.apply(element);
     }
@@ -201,15 +201,15 @@ var VolumeChooserStore = function ()
     var table_id = element.attr('id') + "_table";
 
     expander_div.html(
-        "<table class='display tight_lines' id='" + table_id + "'>" + 
+        "<table class='display tight_lines' id='" + table_id + "'>" +
           "<thead>" +
           "  <tr>" +
           "    <th></th>" +
           "    <th></th>" +
           "    <th>Name</th>" +
           "    <th>Capacity</th>" +
-          "    <th>Type</th>" +
-          "    <th>Status</th>" +
+          "    <th><a data-topic='_type' class='help_hover'>Type</a></th>" +
+          "    <th><a data-topic='_status' class='help_hover'>Status</a></th>" +
           "    <th>Primary server</th>" +
           "    <th>Failover server</th>" +
          "   </tr>" +
@@ -324,7 +324,7 @@ var VolumeChooserStore = function ()
     header_div.click(function() {
       header_div.hide();
       table_element.width("100%");
-      
+
       expander_div.slideDown(null, function() {});
     });
 
@@ -373,5 +373,3 @@ var VolumeChooserStore = function ()
 })( jQuery );
 
 /* volumeChooser: Filesystem Volume Chooser */
-
-
