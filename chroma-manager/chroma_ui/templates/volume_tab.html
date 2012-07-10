@@ -113,7 +113,7 @@
           topic = 'volume_status_' + volume.status,
           content = UIHelper.fugue_icon(
                       volume_status_map[volume.status]['icon'],
-                      { 'data-status': volume.status } 
+                      { 'data-status': volume.status }
                     ) //+ volume_status_map[volume.status]['label']
         );
 
@@ -283,11 +283,14 @@
           }
         }
       });
+      ContextualHelp.load_snippets("#volume-tab");
     }
     return {draw:draw}
   }();
 </script>
 <h2 class='section_header'>Volume Configuration</h2>
+<div class='help_loader' style='padding-bottom: 10px;' data-topic="_volume_long"></div>
+
 <table class="display tight_lines" id="volume_configuration" width="100%">
   <thead>
     <tr>
@@ -295,7 +298,7 @@
       <th width="25%">Primary Server</th>
       <th width="25%">Failover Server</th>
       <th width="10%">Size</th>
-      <th width="20%">Status</th>
+      <th width="20%"><a class='help_hover' data-topic='_status'>Status</a></th>
       <th></th>
       <th></th>
     </tr>
