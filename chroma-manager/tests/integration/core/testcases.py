@@ -1,3 +1,4 @@
+import inspect
 import logging
 import paramiko
 import re
@@ -298,7 +299,14 @@ EOF
         for command_id in command_ids:
             self.wait_for_command(chroma_manager, command_id, timeout, verify_successful)
 
-    def remote_command(self, server, command, expected_return_code=0):
+    def wait_until_true(self, lambda_expression, timeout=TEST_TIMEOUT):
+        running_time = 0
+        while not lambda_expression() and running_time < timeout:
+            time.sleep(1)
+            running_time += 1
+        self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
+
+    def remote_command(self, server, command, expected_return_code=0, timeout=TEST_TIMEOUT):
         logger.debug("remote_command[%s]: %s" % (server, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -306,7 +314,7 @@ EOF
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
-        channel.settimeout(TEST_TIMEOUT)
+        channel.settimeout(timeout)
         channel.exec_command(command)
         stdin = channel.makefile('wb')
         stdout = channel.makefile('rb')
@@ -479,13 +487,9 @@ EOF
 
     def exercise_filesystem(self, client, filesystem):
         # TODO: Expand on this. Perhaps use existing lustre client tests.
-        running_time = 0
-        while not filesystem.get('bytes_free') and running_time < TEST_TIMEOUT:
-            # Wait for filesystem stats to start coming in
-            time.sleep(1)
+        if filesystem.get('bytes_free') == None:
+            self.wait_until_true(lambda: self.get_filesystem(filesystem['id']).get('bytes_free') != None)
             filesystem = self.get_filesystem(filesystem['id'])
-
-        self.assertIsNotNone(filesystem.get('bytes_free'), filesystem)
 
         self.remote_command(
             client,
@@ -674,7 +678,7 @@ EOF
 
     def failover(self, primary_host, secondary_host, filesystem_id, volumes_expected_hosts_in_normal_state, volumes_expected_hosts_in_failover_state):
         # Attach configurations to primary host so we can retreive information
-        # about its vmhost and hwo to destroy it.
+        # about its vmhost and how to destroy it.
         primary_host['config'] = self.get_host_config(primary_host['nodename'])
 
         # "Pull the plug" on the primary lustre server
@@ -684,12 +688,7 @@ EOF
         )
 
         # Wait for failover to occur
-        running_time = 0
-        while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state):
-            time.sleep(1)
-            running_time += 1
-
-        self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for failover")
+        self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
         self.wait_for_host_to_boot(
@@ -718,12 +717,7 @@ EOF
             )
 
         # Wait for the targets to move back to their original server.
-        running_time = 0
-        while running_time < TEST_TIMEOUT and not self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state):
-            time.sleep(1)
-            running_time += 1
-        self.assertLess(running_time, TEST_TIMEOUT, 'Timed out waiting for failback.')
-
+        self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state))
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
 
     def wait_for_host_to_boot(self, booting_host, available_host):
@@ -922,3 +916,11 @@ EOF
 
     def get_filesystem(self, filesystem_id):
         return self.get_by_uri("/api/filesystem/%s/" % filesystem_id)
+
+    def get_unfinished_commands(self, chroma_manager):
+        response = chroma_manager.get(
+            '/api/command/',
+            params = {'complete': False}
+        )
+        self.assertEqual(response.successful, True, response.text)
+        return response.json['objects']
