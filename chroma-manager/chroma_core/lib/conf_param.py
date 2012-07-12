@@ -319,6 +319,14 @@ def validate_conf_params(klass, params):
         if val is None:
             continue
 
+        if not (isinstance(val, str) or isinstance(val, unicode)):
+            errors[key].append("Must be a string")
+            continue
+
+        if val.strip() != val:
+            errors[key].append("May not contain leading or trailing spaces")
+            continue
+
         try:
             model_klass, param_value_obj, help_text = all_params[key]
         except KeyError:
