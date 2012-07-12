@@ -12,15 +12,11 @@ class TestWriteconf(ChromaIntegrationTestCase):
         self.reset_cluster(self.chroma_manager)
 
     def _exercise_simple(self, fs_id):
-        response = self.chroma_manager.get(
-            '/api/filesystem/%s/' % fs_id,
-        )
-        self.assertEqual(response.successful, True, response.text)
-        filesystem = response.json
+        filesystem = self.get_filesystem(fs_id)
         client = config['lustre_clients'].keys()[0]
         self.mount_filesystem(client, "testfs", filesystem['mount_command'])
         try:
-            self.exercise_filesystem(client, "testfs")
+            self.exercise_filesystem(client, filesystem)
         finally:
             self.unmount_filesystem(client, 'testfs')
 

@@ -122,17 +122,14 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
 
         # Mount the filesystem
-        response = self.chroma_manager.get(
-            '/api/filesystem/%s/' % filesystem_id,
-        )
-        self.assertEqual(response.successful, True, response.text)
-        mount_command = response.json['mount_command']
-        self.assertTrue(mount_command)
+        filesystem = self.get_filesystem(filesystem_id)
+        self.assertTrue(filesystem['mount_command'])
 
         client = config['lustre_clients'].keys()[0]
-        self.mount_filesystem(client, "testfs", mount_command)
+        self.mount_filesystem(client, "testfs", filesystem['mount_command'])
         try:
-            self.exercise_filesystem(client, "testfs")
+            self.exercise_filesystem(client, filesystem)
+            self.check_stats(filesystem_id)
         finally:
             self.unmount_filesystem(client, 'testfs')
 

@@ -117,7 +117,12 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         client = config['lustre_clients'].keys()[0]
         self.mount_filesystem(client, config['filesystem']['name'], mount_command)
         try:
-            self.exercise_filesystem(client, config['filesystem']['name'])
+            self.remote_command(
+                client,
+                "rm -rf /mnt/%s/*" % filesystem['name']
+            )
+            self.exercise_filesystem(client, filesystem)
+            self.check_stats(filesystem['id'])
         finally:
             self.unmount_filesystem(client, config['filesystem']['name'])
 
