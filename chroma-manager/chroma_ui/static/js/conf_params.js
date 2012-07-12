@@ -84,10 +84,14 @@ var ConfParamDialog = function(options) {
 
     for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
       var conf_param_name = oSetting.aoData[i]._aData[3];
-      var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
-      if(oSetting.aoData[i]._aData[2] != input_val)
-      {
-        result[oSetting.aoData[i]._aData[3]] = input_val;
+      // If conf_param_name is null, this is one of the title rows not
+      // a data row.
+      if (conf_param_name) {
+        var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
+        if(oSetting.aoData[i]._aData[2] != input_val)
+        {
+          result[conf_param_name] = $.trim(input_val);
+        }
       }
     }
 
@@ -173,7 +177,7 @@ function reset_config_params(datatable)
   var oSetting = datatable.fnSettings();
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
     var conf_param_name = oSetting.aoData[i]._aData[3];
-    $("input[id='conf_param_" + conf_param_name + "']").val(oSetting.aoData[i]._aData[2]);
+    datatable.find("input[id='conf_param_" + conf_param_name + "']").val(oSetting.aoData[i]._aData[2]);
   }
 }
 
@@ -200,7 +204,7 @@ function apply_config_params(object, datatable, callback)
   var dirty = false;
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
     var conf_param_name = oSetting.aoData[i]._aData[3];
-    var input_val = datatable.find("input[id='conf_param_" + conf_param_name + "']").val();
+    var input_val = $.trim(datatable.find("input[id='conf_param_" + conf_param_name + "']").val());
 
     if(oSetting.aoData[i]._aData[2] != input_val)
     {
@@ -223,10 +227,21 @@ function apply_config_params(object, datatable, callback)
           Api.put(update_object.resource_uri, update_object,
               success_callback = function()
               {
-                  // Set the 'original' value to what we just posted
+                  // Set the 'original' value to what we just sent
                   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
+
                       var conf_param_name = oSetting.aoData[i]._aData[3];
-                      oSetting.aoData[i]._aData[2] = datatable.find("input[id='conf_param_" + conf_param_name + "']").val();
+
+                      // Update the table with the now-applied changes
+                      if (_.include(_.keys(changed_conf_params), conf_param_name)) {
+                        var val = changed_conf_params[conf_param_name];
+                        if (val == null) {
+                          val = "";
+                        }
+
+                        oSetting.aoData[i]._aData[2] = val;
+                        datatable.find("input[id='conf_param_" + conf_param_name + "']").val(val);
+                      }
                   }
 
                   if(callback) {

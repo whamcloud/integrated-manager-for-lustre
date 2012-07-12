@@ -105,6 +105,17 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         self.assertEqual(None, dialog.get_conf_param_error('llite.max_cached_mb'))
         self.assertEqual(None, dialog.get_conf_param_error('llite.max_read_ahead_mb'))
 
+        # Set something with whitespace and check it is trimmed
+        dialog.set_conf_params({
+            'llite.max_read_ahead_mb': " 10 "
+        })
+        self.edit_filesystem_page.apply_conf_params()
+        self.assertFalse(self.edit_filesystem_page.conf_param_dialog_visible())
+        self.edit_filesystem_page.open_fs_conf_param_dialog()
+        dialog.check_conf_params({
+            'llite.max_read_ahead_mb': "10"
+        })
+
     def test_target_conf_param_validation(self):
         # Click advanced button
         self.edit_filesystem_page.open_target_conf_params('testfs-MDT0000')
@@ -122,7 +133,6 @@ class TestEditFilesystem(SeleniumBaseTestCase):
 
     def _test_conf_params_for_target(self, target_name, conf_params):
         # Click target element to open and set conf params
-        self.log.info("one %s" % self.driver.execute_script('return window.location.href;'))
         self.edit_filesystem_page.open_target_conf_params(target_name)
         dialog = ConfParamDialog(self.driver)
         dialog.set_conf_params(conf_params)

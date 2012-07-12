@@ -39,10 +39,17 @@ class TestTargetPostValidation(ChromaApiTestCase):
 
     def test_unknown_key(self):
         """Test validation of an invalid conf param key"""
-        response = self._new_ost_with_params({'ost.this_is_invalid': 0})
+        response = self._new_ost_with_params({'ost.this_is_invalid': '0'})
         self.assertHttpBadRequest(response)
         errors = self.deserialize(response)
         self.assertEqual(errors['conf_params']['ost.this_is_invalid'], ["Unknown parameter"])
+
+    def test_non_string(self):
+        """Test validation of an invalid conf param key"""
+        response = self._new_ost_with_params({'ost.max_pages_per_rpc': 0})
+        self.assertHttpBadRequest(response)
+        errors = self.deserialize(response)
+        self.assertEqual(errors['conf_params']['ost.max_pages_per_rpc'], ["Must be a string"])
 
     def test_bad_int(self):
         """Test validation of an invalid integer conf param value"""
@@ -213,3 +220,12 @@ class TestFilesystemConfParamValidation(ChromaApiTestCase):
 
         filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))['objects'][0]
         self.assertEqual(filesystem['conf_params']['sys.at_history'], None)
+
+    def test_put_spaces(self):
+        """Check that values with trailing or leading spaces are rejected"""
+        self.create_simple_filesystem()
+        filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))['objects'][0]
+        filesystem['conf_params']['sys.at_history'] = ' 10'
+        response = self.api_client.put(filesystem['resource_uri'], data = filesystem)
+        self.assertHttpBadRequest(response)
+        self.assertEqual(self.deserialize(response)['conf_params']['sys.at_history'], ["May not contain leading or trailing spaces"])
