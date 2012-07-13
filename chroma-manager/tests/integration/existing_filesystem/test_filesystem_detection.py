@@ -4,7 +4,6 @@ import time
 from testconfig import config
 
 from tests.utils.http_requests import AuthorizedHttpRequests
-from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.testcases import ChromaIntegrationTestCase
 
 
@@ -71,26 +70,13 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         self.assertNotIn('removed', available_states)
 
         # Wait for active_host_name to get set on all of the targets
-        targets = []
-        targets_active = False
-        running_time = 0
-        while not targets_active and running_time < TEST_TIMEOUT:
-            response = self.chroma_manager.get('/api/target/')
-            self.assertEqual(response.successful, True, response.text)
-            targets = response.json['objects']
-            self.assertEqual(len(config['filesystem']['targets']), len(targets))
-
-            targets_active = True
-            for target in targets:
-                if target['active_host_name'] == '---':
-                    targets_active = False
-                    break
-            time.sleep(1)
-            running_time += 1
-
-        self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for actibe_host_name to be set on all targets.")
+        self.wait_until_true(lambda: (
+            len([t for t in self.get_list('/api/target/') if not t['active_host_name'] == '---']) ==
+            len(config['filesystem']['targets'])
+        ))
 
         # Verify target attributes
+        targets = self.get_list('/api/target/')
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
             target_host_config = self.get_host_config(target_config['primary_server'])
