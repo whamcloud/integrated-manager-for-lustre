@@ -6,10 +6,10 @@ from tests.utils.http_requests import AuthorizedHttpRequests
 
 class TestConfParams(ChromaIntegrationTestCase):
     def setUp(self):
+        self.reset_cluster()
         user = config['chroma_managers'][0]['users'][0]
         self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
             server_http_url = config['chroma_managers'][0]['server_http_url'])
-        self.reset_cluster(self.chroma_manager)
 
     def _create_with_params(self):
         self.hosts = self.add_hosts([
@@ -76,7 +76,7 @@ class TestConfParams(ChromaIntegrationTestCase):
     def test_creation_conf_params(self):
         self._create_with_params()
         self._test_params()
-        self.reset_cluster(self.chroma_manager)
+        self.graceful_teardown(self.chroma_manager)
 
     def test_dumpload_conf_params(self):
         self._create_with_params()
@@ -105,7 +105,7 @@ class TestConfParams(ChromaIntegrationTestCase):
 
         self._test_params()
 
-        self.reset_cluster(self.chroma_manager)
+        self.graceful_teardown(self.chroma_manager)
 
     def test_writeconf_conf_params(self):
         self._create_with_params()
@@ -131,7 +131,7 @@ class TestConfParams(ChromaIntegrationTestCase):
 
         self._test_params()
 
-        self.reset_cluster(self.chroma_manager)
+        self.graceful_teardown(self.chroma_manager)
 
     def test_update_conf_params(self):
         self.add_hosts([config['lustre_servers'][0]['address']])
@@ -194,4 +194,4 @@ class TestConfParams(ChromaIntegrationTestCase):
         finally:
             self.unmount_filesystem(client_hostname, 'testfs')
 
-        self.reset_cluster(self.chroma_manager)
+        self.graceful_teardown(self.chroma_manager)

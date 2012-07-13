@@ -34,41 +34,13 @@ class ChromaIntegrationTestCase(TestCase):
             for device in server['device_paths']:
                 self.remote_command(server['address'], "dd if=/dev/zero of=%s bs=4M count=1" % device)
 
-    def reset_cluster(self, chroma_manager):
-        response = chroma_manager.get(
-            '/api/filesystem/',
-            params = {'limit': 0}
-        )
-        self.assertEqual(response.status_code, 200)
-        filesystems = response.json['objects']
+    def reset_cluster(self):
+        self.reset_chroma_manager_db()
+        self.remove_all_targets_from_pacemaker()
 
-        if len(filesystems) > 0:
-            # Unmount filesystems
-            for client in config['lustre_clients'].keys():
-                for filesystem in filesystems:
-                    self.unmount_filesystem(client, filesystem['name'])
-
-        try:
-            self.graceful_teardown(chroma_manager)
-        except Exception:
-            # Attempt to wait for existing running commands to finish executing to avoid
-            # a race between an already running command and a force remove command.
-            unfinished_commands = []
-            running_time = 0
-            while (unfinished_commands or running_time == 0) and running_time < TEST_TIMEOUT:
-                response = chroma_manager.get(
-                    '/api/command/',
-                    params = {'complete': False}
-                )
-                self.assertEqual(response.successful, True, response.text)
-                unfinished_commands = response.json['objects']
-                running_time += 1
-                time.sleep(1)
-
-            self.force_teardown(chroma_manager)
-
-    def reset_chroma_manager_db(self, user):
+    def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:
+            superuser = [u for u in chroma_manager['users'] if u['super']][0]
             self.remote_command(
                 chroma_manager['address'],
                 'chroma-config stop'
@@ -87,7 +59,7 @@ nobody@whamcloud.com
 %s
 %s
 EOF
-                """ % (user['username'], user['password'], user['password'])
+                """ % (superuser['username'], superuser['password'], superuser['password'])
             )
             self.remote_command(
                 chroma_manager['address'],
@@ -98,35 +70,45 @@ EOF
                 "chroma-config validate"
             )
 
-    def force_teardown(self, chroma_manager):
-        response = chroma_manager.get(
-            '/api/host/',
-            params = {'limit': 0}
+    def has_pacemaker(self, server):
+        stdin, stdout, stderr = self.remote_command(
+            server['address'],
+            'which crm',
+            expected_return_code = None
         )
-        self.assertTrue(response.successful, response.text)
-        hosts = response.json['objects']
+        return stdout and not stderr.read()
 
-        if len(hosts) > 0:
-            remove_host_command_ids = []
-            for host in hosts:
-                response = chroma_manager.post("/api/command/", body = {
-                    'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host['id']}}],
-                    'message': "Test force remove hosts"
-                })
-                self.assertEqual(response.successful, True, response.text)
-                command = response.json
-                remove_host_command_ids.append(command['id'])
+    def get_pacemaker_targets(self, server):
+        _, stdout, _ = self.remote_command(
+            server['address'],
+            'crm resource list'
+        )
+        crm_resources = stdout.read().split('\n')
+        return [r.split()[0] for r in crm_resources if re.search('chroma:Target', r)]
 
-            self.wait_for_commands(chroma_manager, remove_host_command_ids)
+    def is_pacemaker_target_running(self, server, target):
+        _, stdout, _ = self.remote_command(
+            server['address'],
+            "crm resource status %s" % target
+        )
+        return re.search('is running', stdout.read())
 
+    def remove_all_targets_from_pacemaker(self):
         for server in config['lustre_servers']:
-            address = server['address']
-            _, stdout, _ = self.remote_command(address, "chroma-agent -h")
-            available_commands = stdout.read()
-            if re.search('clear-targets', available_commands):
-                self.remote_command(address, "chroma-agent clear-targets --force")
+            if self.has_pacemaker(server):
+                crm_targets = self.get_pacemaker_targets(server)
 
-        self.verify_cluster_has_no_managed_targets(chroma_manager)
+                # Stop targets and delete targets
+                for target in crm_targets:
+                    self.remote_command(server['address'], 'crm resource stop %s' % target)
+                for target in crm_targets:
+                    self.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
+                    self.remote_command(server['address'], 'crm configure delete %s' % target)
+
+                # Verify no more targets
+                self.wait_until_true(lambda: not self.get_pacemaker_targets(server))
+            else:
+                logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
 
     def graceful_teardown(self, chroma_manager):
         """Remove all Filesystems, MGTs, and Hosts"""
@@ -134,7 +116,14 @@ EOF
             '/api/filesystem/',
             params = {'limit': 0}
         )
+        self.assertEqual(response.status_code, 200)
         filesystems = response.json['objects']
+
+        if len(filesystems) > 0:
+            # Unmount filesystems
+            for client in config['lustre_clients'].keys():
+                for filesystem in filesystems:
+                    self.unmount_filesystem(client, filesystem['name'])
 
         if len(filesystems) > 0:
             # Remove filesystems
@@ -232,24 +221,6 @@ EOF
         #self.assertTrue(response.successful, response.text)
         #volumes = response.json['objects']
         #self.assertEqual(0, len(volumes))
-
-        for host in config['lustre_servers']:
-            # Verify mgs and fs targets not in pacemaker config for hosts
-            stdin, stdout, stderr = self.remote_command(
-                host['address'],
-                'which crm',
-                expected_return_code = None
-            )
-            if not stderr:
-                stdin, stdout, stderr = self.remote_command(
-                    host['address'],
-                    'crm configure show'
-                )
-                configuration = stdout.read()
-                self.assertNotRegexpMatches(
-                    configuration,
-                    "location [^\n]* %s\n" % host['nodename']
-                )
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         logger.debug("wait_for_command %s" % command_id)
