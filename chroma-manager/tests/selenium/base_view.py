@@ -131,8 +131,12 @@ class BaseView(object):
     def get_input_error(self, input_element):
         """Given an input element, get the validation error text attached to it, or
         raise an exception if it does not have a validation error"""
+
         parent = input_element.find_element_by_xpath("..")
-        return parent.find_element_by_css_selector("span.error").text
+        try:
+            return parent.find_element_by_css_selector("span.error").text
+        except NoSuchElementException:
+            return None
 
 
 class DatatableView(BaseView):

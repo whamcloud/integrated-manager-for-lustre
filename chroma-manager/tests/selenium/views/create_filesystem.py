@@ -5,7 +5,7 @@
 
 
 from selenium.webdriver.support.ui import Select
-from tests.selenium.base import enter_text_for_element, find_visible_element_by_css_selector
+from tests.selenium.base import enter_text_for_element, find_visible_element_by_css_selector, element_visible
 from tests.selenium.base_view import BaseView
 
 
@@ -65,15 +65,41 @@ class CreateFilesystem(BaseView):
 
     @property
     def name_error(self):
-        """Validation error text for filesystem name entry if present, else raise exception"""
+        """Validation error text for filesystem name entry if present"""
         return self.get_input_error(self.driver.find_element_by_css_selector('#txtfsnameid'))
 
     @property
     def mgt_volume_error(self):
-        """Validation error text for MGT volume chooser if present, else raise exception"""
+        """Validation error text for MGT volume chooser if present"""
         return self.get_input_error(self.driver.find_element_by_css_selector('button#mgt_chooser'))
 
     @property
     def mdt_volume_error(self):
-        """Validation error text for MDT volume chooser if present, else raise exception"""
+        """Validation error text for MDT volume chooser if present"""
         return self.get_input_error(self.driver.find_element_by_css_selector('button#mdt_chooser'))
+
+    @property
+    def mdt_inode_size_error(self):
+        return self.get_input_error(self.driver.find_element_by_css_selector('#inode_size'))
+
+    @property
+    def mdt_bytes_per_inode_error(self):
+        return self.get_input_error(self.driver.find_element_by_css_selector('#bytes_per_inode'))
+
+    def expand_mdt_advanced(self):
+        if not self.mdt_advanced_visible:
+            self.driver.find_element_by_css_selector("label[for='mdt_advanced_button']").click()
+
+    def enter_mdt_inode_size(self, text):
+        enter_text_for_element(self.driver, "#inode_size", text)
+
+    def enter_mdt_bytes_per_inode(self, text):
+        enter_text_for_element(self.driver, "#bytes_per_inode", text)
+
+    def collapse_mdt_advanced(self):
+        if self.mdt_advanced_visible:
+            self.driver.find_element_by_css_selector("label[for='mdt_advanced_button']").click()
+
+    @property
+    def mdt_advanced_visible(self):
+        return bool(element_visible(self.driver, '.mdt_advanced'))

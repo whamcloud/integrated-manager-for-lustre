@@ -404,7 +404,9 @@ var Api = function() {
         if(typeof(error_callback) == "function") {
           /* Caller has provided a generic error handler */
           var rc = error_callback(jqXHR.responseText);
-          if (rc == false) {
+          if (rc instanceof Object && _.size(rc) > 0) {
+            validationError(rc);
+          } else if (rc == false) {
             unexpectedError(jqXHR);
           }
         } else if(typeof(error_callback) == "object") {
@@ -412,7 +414,9 @@ var Api = function() {
           if(error_callback[status_code] != undefined) {
             /* Caller has provided handler for this status */
             var rc = error_callback[status_code](jqXHR);
-            if (rc == false) {
+            if (rc instanceof Object && _.size(rc) > 0) {
+              validationError(rc);
+            } else if (rc == false) {
               unexpectedError(jqXHR);
             }
           } else {

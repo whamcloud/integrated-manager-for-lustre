@@ -42,8 +42,11 @@ class TestFilesystemResource(ChromaApiTestCase):
         self.assertHttpBadRequest(response)
 
         errors = self.deserialize(response)
-        self.assertIn('mgt', errors)
-        self.assertEqual(len(errors), 1)
+        self.assertDictEqual(errors, {
+            'mgt': {'id': ['MGT is unmanaged']},
+            'mdt': {},
+            'osts': [{}],
+        })
 
     def test_start_stop_partial(self):
         """Test operations using partial PUT containing only the state attribute, as used in Chroma 1.0.0.0 GUI"""
