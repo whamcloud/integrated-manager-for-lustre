@@ -27,6 +27,17 @@
       }
     }
 
+    function set_mdt_advanced_visible(show)
+    {
+      if (show) {
+          $('.mdt_advanced').show();
+          $('#mdt_advanced_button').parent().css('background-color', '#eee')
+      } else {
+          $('.mdt_advanced').hide();
+          $('#mdt_advanced_button').parent().css('background-color', '')
+      }
+    }
+
     function init()
     {
       function updateMdtEstimate() {
@@ -81,13 +92,7 @@
 
       $('#mdt_advanced_button').button();
       $('#mdt_advanced_button').change(function() {
-        if ($(this).attr('checked')) {
-          $('.mdt_advanced').show();
-          $(this).parent().css('background-color', '#eee')
-        } else {
-          $('.mdt_advanced').hide();
-          $(this).parent().css('background-color', '')
-        }
+        set_mdt_advanced_visible($(this).attr('checked'));
       });
 
       volume_chooser_store = VolumeChooserStore();
@@ -172,6 +177,15 @@
           errors.push({element: $('#ost_chooser'), message: "At least one OST must be selected"})
         }
 
+        if (isNaN(parseInt($('input#inode_size').val()))) {
+          errors.push({element: $('input#inode_size'), message: "Must be an integer"});
+          set_mdt_advanced_visible(true);
+        }
+        if (isNaN(parseInt($('input#bytes_per_inode').val()))) {
+          errors.push({element: $('input#bytes_per_inode'), message: "Must be an integer"});
+          set_mdt_advanced_visible(true);
+        }
+
         if (_.size(errors) > 0) {
           _.each(errors, function(error) {
             error.element.before("<span class='error'>" + error.message + "</span>");
@@ -195,13 +209,14 @@
             volume_id: mdt_lun_id,
             conf_params: {}
         };
+
         var inode_size = $('input#inode_size').val();
         if (inode_size) {
-          filesystem.mdt.inode_size = inode_size
+          filesystem.mdt.inode_size = parseInt(inode_size);
         }
         var bytes_per_inode = $('input#bytes_per_inode').val();
         if (bytes_per_inode) {
-          filesystem.mdt.bytes_per_inode = bytes_per_inode
+          filesystem.mdt.bytes_per_inode = parseInt(bytes_per_inode);
         }
 
         // Compose OST list
@@ -225,11 +240,45 @@
           {400: function (jqXHR) {
               var errors = JSON.parse(jqXHR.responseText);
 
+              if (_.size(errors.mgt) == 0) {
+                delete errors.mgt;
+              }
+
+              var mdt_advanced_errors = false;
+              if (errors.mdt.inode_size) {
+                mdt_advanced_errors = true;
+                _.each(errors.mdt.inode_size, function(message) {
+                  ValidatedForm.add_error($('input#inode_size'), message);
+                });
+                delete errors.mdt.inode_size;
+              }
+              if (errors.mdt.bytes_per_inode) {
+                mdt_advanced_errors = true;
+                _.each(errors.mdt.bytes_per_inode, function(message) {
+                    ValidatedForm.add_error($('input#bytes_per_inode'), message);
+                });
+                delete errors.mdt.bytes_per_inode;
+              }
+
+              if (mdt_advanced_errors) {
+                set_mdt_advanced_visible(true);
+              }
+
+              if (_.size(errors.mdt) == 0) {
+                delete errors.mdt;
+              }
+
+              errors.osts = _.reject(errors.osts, function(ost_errors){return _.size(ost_errors) == 0;});
+
+              if (errors.osts.length == 0) {
+                delete errors.osts;
+              }
+
               if (errors.name){
-                  _.each(errors.name, function(message) {
-                    ValidatedForm.add_error($('#txtfsnameid'), message);
-                  });
-                  delete errors.name;
+                _.each(errors.name, function(message) {
+                  ValidatedForm.add_error($('#txtfsnameid'), message);
+                });
+                delete errors.name;
               }
 
               if (errors.conf_params) {
@@ -238,8 +287,7 @@
                 delete errors.conf_params;
               }
 
-              var unhandled_errors = (_.keys(errors).length != 0);
-              return !unhandled_errors;
+              return errors;
             }
           }
         );

@@ -83,6 +83,10 @@ class FilesystemValidation(Validation):
         if len(errors):
             return errors
 
+        errors['mgt'] = defaultdict(list)
+        errors['mdt'] = defaultdict(list)
+        errors['osts'] = []
+
         # Validate filesystem name
         if len(bundle.data['name']) > 8:
             errors['name'].append("Name '%s' too long (max 8 characters)" % bundle.data['name'])
@@ -97,7 +101,7 @@ class FilesystemValidation(Validation):
         def check_volume(field, volume_id):
             # Check we haven't tried to use the same volume twice
             if volume_id in used_volume_ids:
-                errors[field].append("Volume ID %s specified for multiple targets!" % volume_id)
+                return "Volume ID %s specified for multiple targets!" % volume_id
 
             try:
                 # Check the volume exists
@@ -105,40 +109,42 @@ class FilesystemValidation(Validation):
                 try:
                     # Check the volume isn't in use
                     target = ManagedTarget.objects.get(volume = volume)
-                    errors[field].append("Volume with ID %s is already in use by target %s" % (volume_id, target))
+                    return "Volume with ID %s is already in use by target %s" % (volume_id, target)
                 except ManagedTarget.DoesNotExist:
                     pass
             except Volume.DoesNotExist:
-                errors[field].append("Volume with ID %s not found" % volume_id)
+                return "Volume with ID %s not found" % volume_id
 
             used_volume_ids.add(volume_id)
 
         try:
             mgt_volume_id = bundle.data['mgt']['volume_id']
-            check_volume('mgt', mgt_volume_id)
+            error = check_volume('mgt', mgt_volume_id)
+            if error:
+                errors['mgt']['volume_id'].append(error)
         except KeyError:
             mgt_volume_id = None
 
             try:
                 mgt = ManagedMgs.objects.get(id = bundle.data['mgt']['id'])
                 if mgt.immutable_state:
-                    errors['mgt'].append("MGT with ID %s is unmanaged" % mgt.id)
+                    errors['mgt']['id'].append("MGT is unmanaged")
 
                 try:
                     ManagedFilesystem.objects.get(name = bundle.data['name'], mgs = mgt)
-                    errors['name'].append("A file system with name '%s' already exists for this MGT" % bundle.data['name'])
+                    errors['mgt']['name'].append("A file system with name '%s' already exists for this MGT" % bundle.data['name'])
                 except ManagedFilesystem.DoesNotExist:
                     pass
             except KeyError:
-                errors['mgt'].append("One of id or volume_id must be set")
+                errors['mgt']['id'].append("One of id or volume_id must be set")
         except ManagedMgs.DoesNotExist:
-            errors['mgt'].append("MGT with ID %s not found" % (bundle.data['mgt']['id']))
+            errors['mgt']['id'].append("MGT with ID %s not found" % (bundle.data['mgt']['id']))
 
         try:
             mdt_volume_id = bundle.data['mdt']['volume_id']
             check_volume('mdt', mdt_volume_id)
         except KeyError:
-            errors['mdt'].append("volume_id attribute is mandatory")
+            errors['mdt']['volume_id'].append("volume_id attribute is mandatory")
 
         for ost in bundle.data['osts']:
             try:
@@ -157,56 +163,94 @@ class FilesystemValidation(Validation):
             if conflicting_mgs_count > 0:
                 errors['mgt'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)
 
+        def validate_target(klass, target):
+            target_errors = defaultdict(list)
+
+            volume = Volume.objects.get(id = target['volume_id'])
+            if 'inode_count' in target and 'bytes_per_inode' in target:
+                target_errors['inode_count'].append("inode_count and bytes_per_inode are mutually exclusive")
+
+            if 'conf_params' in target:
+                conf_param_errors = conf_param.validate_conf_params(klass, target['conf_params'])
+                if conf_param_errors:
+                    # FIXME: not really representing target-specific validations cleanly,
+                    # will sort out while fixing HYD-1077.
+                    target_errors['conf_params'] = conf_param_errors
+
+            for setting in ['inode_count', 'inode_size', 'bytes_per_inode']:
+                if setting in target:
+                    if target[setting] is not None and not isinstance(target[setting], int):
+                        target_errors[setting].append("Must be an integer")
+
+            # If they specify and inode size and a bytes_per_inode, check the inode fits
+            # within the ratio
+            try:
+                inode_size = target['inode_size']
+                bytes_per_inode = target['bytes_per_inode']
+                if inode_size >= bytes_per_inode:
+                    target_errors['inode_size'].append("inode_size must be less than bytes_per_inode")
+            except KeyError:
+                pass
+
+            # If they specify an inode count, check it will fit on the device
+            try:
+                inode_count = target['inode_count']
+            except KeyError:
+                # If no inode_count is specified, no need to check it against inode_size
+                pass
+            else:
+                try:
+                    inode_size = target['inode_size']
+                except KeyError:
+                    inode_size = {ManagedMgs: 128, ManagedMdt: 512, ManagedOst: 256}[klass]
+
+                if inode_size is not None and inode_count is not None:
+                    if inode_count * inode_size > volume.size:
+                        target_errors['inode_count'].append("%d %d-byte inodes too large for %s-byte device" % (
+                            inode_count, inode_size, volume.size))
+
+            return target_errors
+
         # Validate generic target settings
         for attr, targets in targets.items():
             for target in targets:
-                volume = Volume.objects.get(id = target['volume_id'])
-                if 'inode_count' in target and 'bytes_per_inode' in target:
-                    errors[attr].append("inode_count and bytes_per_inode are mutually exclusive")
+                if attr == 'mdt':
+                    klass = ManagedMdt
+                elif attr == 'osts':
+                    klass = ManagedOst
+                elif attr == 'mgt':
+                    klass = ManagedMgs
+                else:
+                    raise NotImplementedError(attr)
 
-                if 'conf_params' in target:
-                    if attr == 'mdt':
-                        klass = ManagedMdt
-                    elif attr == 'osts':
-                        klass = ManagedOst
-                    elif attr == 'mgt':
-                        klass = ManagedMgs
-                    else:
-                        raise NotImplementedError(attr)
+                target_errors = validate_target(klass, target)
 
-                    conf_param_errors = conf_param.validate_conf_params(klass, target['conf_params'])
-                    if conf_param_errors:
-                        # FIXME: not really representing target-specific validations cleanly,
-                        # will sort out while fixing HYD-1077.
-                        errors[attr] = {'conf_params': conf_param_errors}
-
-                # If they specify and inode size and a bytes_per_inode, check the inode fits
-                # within the ratio
-                try:
-                    inode_size = int(target['inode_size'])
-                    bytes_per_inode = int(target['bytes_per_inode'])
-                    if inode_size >= bytes_per_inode:
-                        errors['inode_size'].append("inode_size must be less than bytes_per_inode")
-                except KeyError:
-                    pass
-
-                # If they specify an inode count, check it will fit on the device
-                try:
-                    inode_count = int(target['inode_count'])
-                    try:
-                        inode_size = int(target['inode_size'])
-                    except KeyError:
-                        inode_size = {'mgs': 128, 'mdt': 512, 'osts': 256}[attr]
-
-                    if inode_count * inode_size > volume.size:
-                        errors['inode_count'].append("%d %d-byte inodes too large for %s-byte device" % (
-                            inode_count, inode_size, volume.size))
-                except KeyError:
-                    pass
+                if attr == 'osts':
+                    errors[attr].append(target_errors)
+                else:
+                    errors[attr] = target_errors
 
         conf_param_errors = conf_param.validate_conf_params(ManagedFilesystem, bundle.data['conf_params'])
         if conf_param_errors:
             errors['conf_params'] = conf_param_errors
+
+        def recursive_count(o):
+            """Count the number of non-empty dicts/lists or other objects"""
+            if isinstance(o, dict):
+                c = 0
+                for v in o.values():
+                    c += recursive_count(v)
+                return c
+            elif isinstance(o, list):
+                c = 0
+                for v in o:
+                    c += recursive_count(v)
+                return c
+            else:
+                return 1
+
+        if not recursive_count(errors):
+            errors = {}
 
         return errors
 

@@ -162,7 +162,7 @@ class TestFilesystemConfParamValidation(ChromaApiTestCase):
         """Check that a filesystem POST is rejected with bad params for ost"""
         response = self._post_filesystem({}, {}, {}, {'lov.qos_prio_free': '50'})
         self.assertHttpBadRequest(response)
-        self.assertEqual(self.deserialize(response)['osts']['conf_params']['lov.qos_prio_free'], ["Only valid for MDT"])
+        self.assertEqual(self.deserialize(response)['osts'][0]['conf_params']['lov.qos_prio_free'], ["Only valid for MDT"])
 
     def test_post_invalid_mdt(self):
         """Check that a filesystem POST is rejected with bad params for mdt"""
