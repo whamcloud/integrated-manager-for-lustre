@@ -534,8 +534,11 @@ EOF
                 body = {'address': host_address}
             )
             self.assertEqual(response.successful, True, response.text)
-            # FIXME: check the body of the response to test_host to see
-            # if it actually reported contactability correctly
+            self.assertTrue(response.json['agent'])
+            self.assertTrue(response.json['ping'])
+            self.assertTrue(response.json['resolve'])
+            self.assertTrue(response.json['reverse_ping'])
+            self.assertTrue(response.json['reverse_resolve'])
 
             response = self.chroma_manager.post(
                 '/api/host/',
