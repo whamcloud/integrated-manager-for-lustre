@@ -523,17 +523,14 @@ def _stop_target(ha_label):
         raise RuntimeError("failed to stop target %s" % ha_label)
 
 
-# fail a target back to it's primary node
-def failback_target(args):
+# common plumbing for failover/failback
+def _move_target(target_label, dest_node):
     from time import sleep
-    stdout = shell.try_run(shlex.split("crm configure show %s-primary" %
-                                       args.ha_label))
-    primary = stdout[stdout.rfind(' ') + 1:-1]
     stdout = shell.try_run("crm_resource --resource %s --move --node %s 2>&1" % \
-                           (args.ha_label, primary), shell = True)
+                           (target_label, dest_node), shell = True)
 
     if stdout.find("%s is already active on %s\n" % \
-                   (args.ha_label, primary)) > -1:
+                   (target_label, dest_node)) > -1:
         return
 
     # now wait for it to complete its move
@@ -541,7 +538,7 @@ def failback_target(args):
     n = 0
     migrated = False
     while n < timeout:
-        if get_resource_location(args.ha_label) == primary:
+        if get_resource_location(target_label) == dest_node:
             migrated = True
             break
         sleep(1)
@@ -549,9 +546,29 @@ def failback_target(args):
 
     # now delete the constraint that crm resource move created
     shell.try_run(shlex.split("crm configure delete cli-prefer-%s" % \
-                              args.ha_label))
+                              target_label))
     if not migrated:
-        raise RuntimeError("failed to fail back target %s" % args.ha_label)
+        raise RuntimeError("failed to fail back target %s" % target_label)
+
+
+def failover_target(args):
+    """
+    Fail a target over to its secondary node
+    """
+    stdout = shell.try_run(shlex.split("crm configure show %s-secondary" %
+                                       args.ha_label))
+    secondary = stdout[stdout.rfind(' ') + 1:-1]
+    return _move_target(args.ha_label, secondary)
+
+
+def failback_target(args):
+    """
+    Fail a target back to its primary node
+    """
+    stdout = shell.try_run(shlex.split("crm configure show %s-primary" %
+                                       args.ha_label))
+    primary = stdout[stdout.rfind(' ') + 1:-1]
+    return _move_target(args.ha_label, primary)
 
 
 def migrate_target(args):
@@ -710,10 +727,16 @@ class TargetsPlugin(ActionPlugin):
         p.set_defaults(func=migrate_target)
 
         p = parser.add_parser('failback-target',
-                              help='fail a target back to it\'s primary node')
+                              help='fail a target back to its primary node')
         p.add_argument('--ha_label', required=True,
                        help='label of target to migrate')
         p.set_defaults(func=failback_target)
+
+        p = parser.add_parser('failover-target',
+                              help='fail a target over to its secondary node')
+        p.add_argument('--ha_label', required=True,
+                       help='label of target to migrate')
+        p.set_defaults(func=failover_target)
 
         p = parser.add_parser('unmigrate-target',
                               help='cancel prevous target migrate')

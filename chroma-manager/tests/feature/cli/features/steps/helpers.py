@@ -32,9 +32,15 @@ def step(context, entity, field, subject, value):
     from chroma_cli.api import ApiHandle
     ah = ApiHandle()
     try:
-        resource = ah.endpoints[entity_map[entity]].show(subject)
+        endpoint = entity_map[entity]
     except KeyError:
-        resource = ah.endpoints[entity].show(subject)
+        endpoint = entity
+    resource = ah.endpoints[endpoint].show(subject)
+
+    import re
+    match = re.match('^the same as (\w+)$', value)
+    if match:
+        value = resource.all_attributes[match.group(1)]
 
     eq_(resource.all_attributes[field], value)
 

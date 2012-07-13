@@ -710,11 +710,18 @@ EOF
         targets_with_matching_primary_host = [t for t in response.json['objects']
             if t['primary_server_name'] == primary_host['config']['fqdn']]
 
+        failback_target_command_ids = []
         for target in targets_with_matching_primary_host:
-                _, stdout, _ = self.remote_command(
-                primary_host['address'],
-                'chroma-agent failback-target --ha_label %s' % target['ha_label']
-            )
+            response = self.chroma_manager.post("/api/command/", body = {
+                'jobs': [{'class_name': 'FailbackTargetJob',
+                          'args': {'target_id': target['id']}}],
+                'message': "Failing %s back to primary" % target['label']
+            })
+            self.assertEqual(response.successful, True, response.text)
+            command = response.json
+            failback_target_command_ids.append(command['id'])
+
+        self.wait_for_commands(self.chroma_manager, failback_target_command_ids)
 
         # Wait for the targets to move back to their original server.
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state))
