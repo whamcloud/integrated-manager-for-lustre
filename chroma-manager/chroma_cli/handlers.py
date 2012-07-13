@@ -346,11 +346,29 @@ class FilesystemHandler(Handler):
 
 class TargetHandler(Handler):
     nouns = ["target", "tgt", "mgt", "mdt", "ost"]
-    verbs = ["list", "show", "add", "remove", "start", "stop"]
+    verbs = ["list", "show", "add", "remove", "start", "stop", "failover", "failback"]
 
     def __init__(self, *args, **kwargs):
         super(TargetHandler, self).__init__(*args, **kwargs)
         self.api_endpoint = self.api.endpoints['target']
+
+    def failover(self, ns):
+        target = self.api.endpoints['target'].show(ns.subject)
+        kwargs = {
+            'jobs': [{'class_name': "FailoverTargetJob",
+                      'args': {'target_id': target.id}}],
+            'message': "Failing %s over to secondary" % target.label
+        }
+        self.output(self.api.endpoints['command'].create(**kwargs))
+
+    def failback(self, ns):
+        target = self.api.endpoints['target'].show(ns.subject)
+        kwargs = {
+            'jobs': [{'class_name': "FailbackTargetJob",
+                      'args': {'target_id': target.id}}],
+            'message': "Failing %s back to primary" % target.label
+        }
+        self.output(self.api.endpoints['command'].create(**kwargs))
 
     def stop(self, ns):
         kwargs = {'state': "unmounted"}

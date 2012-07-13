@@ -107,6 +107,33 @@ class MockAgent(object):
                 return self.mock_servers[self.host.address]['device-plugin']
             except KeyError:
                 return {}
+        elif cmdline.startswith("failover-target"):
+            import re
+            from chroma_core.models import ManagedTarget, ManagedTargetMount
+            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
+            target = ManagedTarget.objects.get(ha_label = ha_label)
+
+            # fudge a failover event
+            failover_host = target.failover_hosts[0]
+            failover_tm = ManagedTargetMount.objects.get(target = target,
+                                                         host = failover_host)
+            target.set_active_mount(failover_tm)
+            logging.getLogger('mock_agent').debug("mocked failover of %s to %s" % (target.label, failover_host.address))
+            return {'result': None, 'success': True}
+        elif cmdline.startswith("failback-target"):
+            import re
+            from chroma_core.models import ManagedTarget, ManagedTargetMount
+            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
+            target = ManagedTarget.objects.get(ha_label = ha_label)
+            # fudge a failback event
+            primary_host = target.primary_host
+            primary_tm = ManagedTargetMount.objects.get(target = target,
+                                                        host = primary_host)
+            target.set_active_mount(primary_tm)
+            logging.getLogger('mock_agent').debug("mocked failback of %s to %s" % (target.label, primary_host.address))
+            return {'result': None, 'success': True}
+        else:
+            logging.getLogger('mock_agent').debug("cmdline didn't match any mocks: %s" % (cmdline))
 
 
 class MockDaemonRpc():

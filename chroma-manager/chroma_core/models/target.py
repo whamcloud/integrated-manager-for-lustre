@@ -14,7 +14,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
-from chroma_core.models.jobs import StateChangeJob
+from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
 from chroma_core.models.host import ManagedHost, LNetConfiguration
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
@@ -861,6 +861,110 @@ class FormatTargetJob(StateChangeJob):
 
     def get_steps(self):
         return [(MkfsStep, {'target_id': self.target.id})]
+
+
+class MigrateTargetJob(AdvertisedJob):
+    target = models.ForeignKey(ManagedTarget)
+
+    requires_confirmation = False
+
+    classes = ['ManagedTarget']
+
+    class Meta:
+        abstract = True
+        app_label = 'chroma_core'
+
+    @classmethod
+    def get_args(cls, target):
+        return {'target_id': target.id}
+
+    @classmethod
+    def can_run(cls, instance):
+        return False
+
+    def create_locks(self):
+        locks = super(MigrateTargetJob, self).create_locks()
+
+        locks.append(StateLock(
+            job = self,
+            locked_item = self.target,
+            begin_state = 'mounted',
+            end_state = 'mounted',
+            write = True
+        ))
+
+        return locks
+
+
+class FailbackTargetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        target = kwargs['target']
+        primary = target.primary_host
+        self.invoke_agent(primary, "failback-target --ha_label %s" % target.ha_label)
+
+
+class FailbackTargetJob(MigrateTargetJob):
+    verb = "Failback"
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    @classmethod
+    def can_run(cls, instance):
+        return len(instance.failover_hosts) > 0 and \
+                instance.active_host is not None and \
+                instance.primary_host.is_available() and \
+                instance.primary_host != instance.active_host
+
+    def description(self):
+        return "Migrate failed-over target back to primary host"
+
+    def get_deps(self):
+        return DependAll(
+            [DependOn(self.target, 'mounted')] +
+            [DependOn(self.target.active_host, 'lnet_up')] +
+            [DependOn(self.target.primary_host, 'lnet_up')]
+        )
+
+    def get_steps(self):
+        return [(FailbackTargetStep, {'target': self.target})]
+
+
+class FailoverTargetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        target = kwargs['target']
+        secondary = target.failover_hosts[0]
+        self.invoke_agent(secondary, "failover-target --ha_label %s" % target.ha_label)
+
+
+class FailoverTargetJob(MigrateTargetJob):
+    verb = "Failover"
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    @classmethod
+    def can_run(cls, instance):
+        return len(instance.failover_hosts) > 0 and \
+                instance.failover_hosts[0].is_available() and \
+                instance.primary_host == instance.active_host
+
+    def description(self):
+        return "Migrate target to secondary host"
+
+    def get_deps(self):
+        return DependAll(
+            [DependOn(self.target, 'mounted')] +
+            [DependOn(self.target.primary_host, 'lnet_up')] +
+            [DependOn(self.target.failover_hosts[0], 'lnet_up')]
+        )
+
+    def get_steps(self):
+        return [(FailoverTargetStep, {'target': self.target})]
 
 
 class ManagedTargetMount(models.Model):
