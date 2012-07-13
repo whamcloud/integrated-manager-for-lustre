@@ -7,10 +7,10 @@ from tests.utils.http_requests import AuthorizedHttpRequests
 
 class TestAlerting(ChromaIntegrationTestCase):
     def setUp(self):
+        self.reset_cluster()
         user = config['chroma_managers'][0]['users'][0]
         self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
             server_http_url = config['chroma_managers'][0]['server_http_url'])
-        self.reset_cluster(self.chroma_manager)
 
     def test_alerts(self):
         fs_id = self.create_filesystem_simple()
@@ -70,7 +70,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.assertEqual(len(self.get_list('/api/alert', {'active': True})), 4)
 
         # Remove everything
-        self.reset_cluster(self.chroma_manager)
+        self.graceful_teardown(self.chroma_manager)
 
         # Check that all the alerts are gone too
         self.assertListEqual(self.get_list('/api/alert/', {'active': True}), [])

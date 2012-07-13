@@ -6,10 +6,10 @@ from tests.utils.http_requests import AuthorizedHttpRequests
 
 class TestAutodetection(ChromaIntegrationTestCase):
     def setUp(self):
+        self.reset_cluster()
         user = config['chroma_managers'][0]['users'][0]
         self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
             server_http_url = config['chroma_managers'][0]['server_http_url'])
-        self.reset_cluster(self.chroma_manager)
         self.erase_volumes()
 
     def test_simple_detection(self):

@@ -6,10 +6,10 @@ from tests.integration.core.testcases import ChromaIntegrationTestCase
 
 class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
     def setUp(self):
+        self.reset_cluster()
         user = config['chroma_managers'][0]['users'][0]
         self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
                 server_http_url = config['chroma_managers'][0]['server_http_url'])
-        self.reset_cluster(self.chroma_manager)
 
     def test_create_filesystem_with_failover(self):
         # Add hosts as managed hosts
