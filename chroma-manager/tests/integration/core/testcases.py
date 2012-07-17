@@ -35,6 +35,7 @@ class ChromaIntegrationTestCase(TestCase):
                 self.remote_command(server['address'], "dd if=/dev/zero of=%s bs=4M count=1" % device)
 
     def reset_cluster(self):
+        self.unmount_filesystems_from_clients()
         self.reset_chroma_manager_db()
         self.remove_all_targets_from_pacemaker()
 
@@ -109,6 +110,21 @@ EOF
                 self.wait_until_true(lambda: not self.get_pacemaker_targets(server))
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
+
+    def unmount_filesystems_from_clients(self):
+        for client in config['lustre_clients'].keys():
+            self.remote_command(
+                client,
+                'umount -t lustre -a'
+            )
+            stdout, _, _ = self.remote_command(
+                client,
+                'mount'
+            )
+            self.assertNotRegexpMatches(
+                stdout.read(),
+                " type lustre"
+            )
 
     def graceful_teardown(self, chroma_manager):
         """Remove all Filesystems, MGTs, and Hosts"""
