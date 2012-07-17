@@ -71,15 +71,15 @@ EOF
             )
 
     def has_pacemaker(self, server):
-        stdin, stdout, stderr = self.remote_command(
+        _, _, exit_status = self.remote_command(
             server['address'],
             'which crm',
             expected_return_code = None
         )
-        return stdout and not stderr.read()
+        return exit_status == 0
 
     def get_pacemaker_targets(self, server):
-        _, stdout, _ = self.remote_command(
+        stdout, _, _ = self.remote_command(
             server['address'],
             'crm resource list'
         )
@@ -87,7 +87,7 @@ EOF
         return [r.split()[0] for r in crm_resources if re.search('chroma:Target', r)]
 
     def is_pacemaker_target_running(self, server, target):
-        _, stdout, _ = self.remote_command(
+        stdout, _, _ = self.remote_command(
             server['address'],
             "crm resource status %s" % target
         )
@@ -287,13 +287,13 @@ EOF
         channel = transport.open_session()
         channel.settimeout(timeout)
         channel.exec_command(command)
-        stdin = channel.makefile('wb')
         stdout = channel.makefile('rb')
         stderr = channel.makefile_stderr()
+        exit_status = channel.recv_exit_status()
+        logger.debug("Remote command exited with status %s." % exit_status)
         if expected_return_code is not None:
-            exit_status = channel.recv_exit_status()
             self.assertEqual(exit_status, expected_return_code, stderr.read())
-        return stdin, stdout, stderr
+        return stdout, stderr, exit_status
 
     def verify_usable_luns_valid(self, usable_luns, num_luns_needed):
 
@@ -393,7 +393,7 @@ EOF
 
         # Verify mgs and fs targets in pacemaker config for hosts
         for host in hosts:
-            stdin, stdout, stderr = self.remote_command(
+            stdout, _, _ = self.remote_command(
                 host['address'],
                 'crm configure show'
             )
@@ -425,7 +425,7 @@ EOF
             mount_command
         )
 
-        stdin, stdout, stderr = self.remote_command(
+        stdout, _, _ = self.remote_command(
             client,
             'mount'
         )
@@ -435,7 +435,7 @@ EOF
         )
 
     def unmount_filesystem(self, client, filesystem_name):
-        stdin, stdout, stderr = self.remote_command(
+        stdout, _, _ = self.remote_command(
             client,
             'mount'
         )
@@ -445,7 +445,7 @@ EOF
                 client,
                 "umount /mnt/%s" % filesystem_name
             )
-        stdin, stdout, stderr = self.remote_command(
+        stdout, _, _ = self.remote_command(
             client,
             'mount'
         )
@@ -685,7 +685,7 @@ EOF
             if t['primary_server_name'] == primary_host['config']['fqdn']]
 
         for target in targets_with_matching_primary_host:
-                _, stdout, _ = self.remote_command(
+                stdout, _, _ = self.remote_command(
                 primary_host['address'],
                 'chroma-agent failback-target --ha_label %s' % target['ha_label']
             )
@@ -700,7 +700,7 @@ EOF
         while running_time < TEST_TIMEOUT:
             try:
                 #TODO: Better way to check this?
-                _, stdout, _ = self.remote_command(
+                stdout, _, _ = self.remote_command(
                     booting_host['address'],
                     "echo 'Checking if node is ready to receive commands.'"
                 )
@@ -711,7 +711,7 @@ EOF
                 running_time += 3
 
             # Verify other host knows it is no longer offline
-            _, stdout, _ = self.remote_command(
+            stdout, _, _ = self.remote_command(
                 available_host['address'],
                 "crm node show %s" % booting_host['nodename']
             )
@@ -720,7 +720,7 @@ EOF
                 break
 
         self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to come back online.")
-        _, stdout, _ = self.remote_command(
+        stdout, _, _ = self.remote_command(
             available_host['address'],
             "crm node show %s" % booting_host['nodename']
         )
