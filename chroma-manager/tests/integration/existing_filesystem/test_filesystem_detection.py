@@ -116,7 +116,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
             target_host_config = self.get_host_config(target_config['primary_server'])
-            stdin, stdout, stderr = self.remote_command(
+            stdout, _, _ = self.remote_command(
                 target_host_config['address'],
                 'mount'
             )
@@ -125,7 +125,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
                     target_host_config['address'],
                     "umount %s" % target_config['mount_path'],
                 )
-                stdin, stdout, stderr = self.remote_command(
+                stdout, _, _ = self.remote_command(
                     target_host_config['address'],
                     'mount'
                 )
