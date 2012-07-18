@@ -1,8 +1,8 @@
-
 from testconfig import config
 
 from tests.utils.http_requests import HttpRequests, AuthorizedHttpRequests
-from tests.integration.core.testcases import ChromaIntegrationTestCase
+
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
 class TestAuthentication(ChromaIntegrationTestCase):

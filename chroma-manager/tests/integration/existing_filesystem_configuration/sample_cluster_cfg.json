@@ -86,6 +86,7 @@
         },
         {
             "address": "hydra-2-lustre-1-8-oss4",
+            "nodename": "hydra-2-lustre-1-8-oss4",
             "fqdn": "hydra-2-lustre-1-8-oss4.lab.whamcloud.com
         }
     ],
