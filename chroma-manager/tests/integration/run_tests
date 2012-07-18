@@ -1,19 +1,22 @@
 #!/bin/bash
+#
+# This script is a simple wrapper around our integration tests. It performs
+# the following steps.
+#
+# (1) Run any existing checks against a cluster to ensure it is configured
+#     properly to be used for the tests. (checks still minimal)
+# (2) Warns the developer it will wipe all data on their cluster.
+# (3) Runs the tests, with an xml report if requested.
 
 FORCED=false
-SKIP_RESET=false
 CONFIG_FILE=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
 XML_REPORT=''
 num_opts=0
-while getopts "c:x:fr" opt
+while getopts "c:x:f" opt
 do
     case $opt in
         f)
             export FORCED=true
-            num_opts=`expr $num_opts + 1`
-            ;;
-        r)
-            export SKIP_RESET=true
             num_opts=`expr $num_opts + 1`
             ;;
         c)
@@ -63,17 +66,12 @@ if ! $FORCED
         echo "----------------------------------------------------------------------"
         echo "Checking that cluster is not already configured..."
         echo "----------------------------------------------------------------------"
-        nosetests tests/integration/core/verify_cluster_not_configured.py --tc-format=json --tc-file="$CONFIG_FILE" #2> /dev/null
+        nosetests tests/integration/utils/verify_cluster_not_configured.py --tc-format=json --tc-file="$CONFIG_FILE" #2> /dev/null
         if [ "$?" -ne "0" ]
         then
             echo ""
             read -p "*****YOUR CLUSTER IS NOT EMPTY! Running integration tests may wipe all hosts and/or targets for the chroma-manager specified in your config file for this cluster. Press [Enter] to continue on with the tests..."
         fi
-fi
-
-if ! $SKIP_RESET
-    then
-        nosetests --verbosity=2 tests/integration/utils/full_cluster_reset.py --tc-format=json --tc-file=$CONFIG_FILE
 fi
 
 echo "----------------------------------------------------------------------"

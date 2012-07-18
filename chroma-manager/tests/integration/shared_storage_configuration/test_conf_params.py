@@ -1,7 +1,8 @@
-
 from testconfig import config
-from tests.integration.core.testcases import ChromaIntegrationTestCase
+
 from tests.utils.http_requests import AuthorizedHttpRequests
+
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
 class TestConfParams(ChromaIntegrationTestCase):
@@ -61,15 +62,15 @@ class TestConfParams(ChromaIntegrationTestCase):
 
         try:
             client_hostname = config['lustre_clients'].keys()[0]
-            stdout, _, _ = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
-            self.assertEqual(stdout.read().strip(), "16")
+            result = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
+            self.assertEqual(result.stdout.read().strip(), "16")
 
             server_hostname = self.hosts[0]['address']
-            stdout, _, _ = self.remote_command(server_hostname, "cat /proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize")
-            self.assertEqual(stdout.read().strip(), "2097152")
+            result = self.remote_command(server_hostname, "cat /proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize")
+            self.assertEqual(result.stdout.read().strip(), "2097152")
 
-            stdout, _, _ = self.remote_command(server_hostname, "cat /proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable")
-            self.assertEqual(stdout.read().strip(), "0")
+            result = self.remote_command(server_hostname, "cat /proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable")
+            self.assertEqual(result.stdout.read().strip(), "0")
         finally:
             self.unmount_filesystem(client, 'testfs')
 
@@ -170,8 +171,8 @@ class TestConfParams(ChromaIntegrationTestCase):
 
         new_conf_params = {'llite.max_cached_mb': '16'}
         try:
-            stdout, _, _ = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
-            self.assertNotEqual(stdout.read().strip(), new_conf_params['llite.max_cached_mb'])
+            result = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
+            self.assertNotEqual(result.stdout.read().strip(), new_conf_params['llite.max_cached_mb'])
         finally:
             self.unmount_filesystem(client_hostname, 'testfs')
 
@@ -189,8 +190,8 @@ class TestConfParams(ChromaIntegrationTestCase):
 
         try:
             client_hostname = config['lustre_clients'].keys()[0]
-            stdout, _, _ = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
-            self.assertEqual(stdout.read().strip(), new_conf_params['llite.max_cached_mb'])
+            result = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
+            self.assertEqual(result.stdout.read().strip(), new_conf_params['llite.max_cached_mb'])
         finally:
             self.unmount_filesystem(client_hostname, 'testfs')
 

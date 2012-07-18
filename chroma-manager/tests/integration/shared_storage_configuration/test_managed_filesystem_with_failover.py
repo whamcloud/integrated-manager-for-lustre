@@ -1,10 +1,13 @@
 from testconfig import config
 
 from tests.utils.http_requests import AuthorizedHttpRequests
-from tests.integration.core.testcases import ChromaIntegrationTestCase
+
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.failover_testcase_mixin import FailoverTestCaseMixin
+from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
-class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
+class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase, FailoverTestCaseMixin, StatsTestCaseMixin):
     def setUp(self):
         self.reset_cluster()
         user = config['chroma_managers'][0]['users'][0]
@@ -107,7 +110,6 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase):
                 'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [ost_volume_1, ost_volume_2]],
                 'conf_params': {}
             }
-
         )
 
         # Define where we expect targets for volumes to be started on depending on our failover state.

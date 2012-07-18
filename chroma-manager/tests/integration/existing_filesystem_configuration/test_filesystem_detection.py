@@ -4,10 +4,12 @@ import time
 from testconfig import config
 
 from tests.utils.http_requests import AuthorizedHttpRequests
-from tests.integration.core.testcases import ChromaIntegrationTestCase
+
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
-class TestFilesystemDetection(ChromaIntegrationTestCase):
+class TestFilesystemDetection(ChromaIntegrationTestCase, StatsTestCaseMixin):
     def setUp(self):
         self.reset_cluster()
         user = config['chroma_managers'][0]['users'][0]
@@ -116,21 +118,21 @@ class TestFilesystemDetection(ChromaIntegrationTestCase):
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
             target_host_config = self.get_host_config(target_config['primary_server'])
-            stdout, _, _ = self.remote_command(
+            result = self.remote_command(
                 target_host_config['address'],
                 'mount'
             )
-            if re.search("on %s" % target_config['mount_path'], stdout.read()):
+            if re.search("on %s" % target_config['mount_path'], result.stdout.read()):
                 self.remote_command(
                     target_host_config['address'],
                     "umount %s" % target_config['mount_path'],
                 )
-                stdout, _, _ = self.remote_command(
+                result = self.remote_command(
                     target_host_config['address'],
                     'mount'
                 )
                 self.assertNotRegexpMatches(
-                    stdout.read(),
+                    result.stdout.read(),
                     "on %s" % target_config['mount_path']
                 )
 

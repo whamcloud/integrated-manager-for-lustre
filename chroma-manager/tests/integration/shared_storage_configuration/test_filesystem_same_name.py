@@ -1,7 +1,8 @@
-
-from tests.integration.core.testcases import ChromaIntegrationTestCase
 from testconfig import config
+
 from tests.utils.http_requests import AuthorizedHttpRequests
+
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
 class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):

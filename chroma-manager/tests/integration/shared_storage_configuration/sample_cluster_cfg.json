@@ -18,7 +18,8 @@
                 "/dev/disk/by-id/scsi-1IET_00010001",
                 "/dev/disk/by-id/scsi-1IET_00020001",
                 "/dev/disk/by-id/scsi-1IET_00030001",
-                "/dev/disk/by-id/scsi-1IET_00040001"
+                "/dev/disk/by-id/scsi-1IET_00040001",
+                "/dev/disk/by-id/scsi-1IET_00050001"
             ],
 
             "host": "hydra-2",
@@ -32,7 +33,8 @@
                 "/dev/disk/by-id/scsi-1IET_00010001",
                 "/dev/disk/by-id/scsi-1IET_00020001",
                 "/dev/disk/by-id/scsi-1IET_00030001",
-                "/dev/disk/by-id/scsi-1IET_00040001"
+                "/dev/disk/by-id/scsi-1IET_00040001",
+                "/dev/disk/by-id/scsi-1IET_00050001"
             ],
 
             "host": "hydra-2",
@@ -46,7 +48,8 @@
                 "/dev/disk/by-id/scsi-1IET_00010001",
                 "/dev/disk/by-id/scsi-1IET_00020001",
                 "/dev/disk/by-id/scsi-1IET_00030001",
-                "/dev/disk/by-id/scsi-1IET_00040001"
+                "/dev/disk/by-id/scsi-1IET_00040001",
+                "/dev/disk/by-id/scsi-1IET_00050001"
             ],
 
             "host": "hydra-2",
@@ -60,7 +63,8 @@
                 "/dev/disk/by-id/scsi-1IET_00010001",
                 "/dev/disk/by-id/scsi-1IET_00020001",
                 "/dev/disk/by-id/scsi-1IET_00030001",
-                "/dev/disk/by-id/scsi-1IET_00040001"
+                "/dev/disk/by-id/scsi-1IET_00040001",
+                "/dev/disk/by-id/scsi-1IET_00050001"
             ],
 
             "host": "hydra-2",

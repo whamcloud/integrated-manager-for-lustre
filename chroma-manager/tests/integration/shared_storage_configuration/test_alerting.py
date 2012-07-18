@@ -1,8 +1,10 @@
+import time
 
 from testconfig import config
-import time
-from tests.integration.core.testcases import ChromaIntegrationTestCase
+
 from tests.utils.http_requests import AuthorizedHttpRequests
+
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
 class TestAlerting(ChromaIntegrationTestCase):
