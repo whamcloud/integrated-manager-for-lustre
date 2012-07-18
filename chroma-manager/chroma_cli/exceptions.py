@@ -11,6 +11,7 @@ class ApiException(Exception):
 class InvalidApiResource(ApiException):
     def __init__(self, name):
         self.error_str = "Invalid API Resource: %s" % name
+        super(InvalidApiResource, self).__init__()
 
     def __str__(self):
         return self.error_str
@@ -26,6 +27,7 @@ class TooManyMatches(ApiException):
     """
     def __init__(self, msg=None):
         self.msg = msg
+        super(TooManyMatches, self).__init__()
 
     def __str__(self):
         if not self.msg:
@@ -37,6 +39,7 @@ class TooManyMatches(ApiException):
 class InvalidVolumeNode(ApiException):
     def __init__(self, input):
         self.input = input
+        super(InvalidVolumeNode, self).__init__()
 
     def __str__(self):
         return "Invalid VolumeNode spec: %s (malformed or bad path?)" % self.input
@@ -99,11 +102,14 @@ class AuthenticationFailure(ApiException):
     """
     HTTP 401 after trying to authenticate.
     """
+    def __str__(self):
+        return "Authentication failed.  Check username/password."
 
 
 class ApiConnectionError(ApiException):
     def __init__(self, api_url):
         self.api_url = api_url
+        super(ApiConnectionError, self).__init__()
 
     def __str__(self):
         return "Failed to connect to %s (is --api_url correct?)" % self.api_url
