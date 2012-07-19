@@ -62,7 +62,10 @@ class UtilityTestCase(TestCase):
         Evaluates lambda_expression once/1s until True or hits timeout.
         """
         running_time = 0
-        while not lambda_expression() and running_time < timeout:
+        lambda_result = None
+        while not lambda_result and running_time < timeout:
+            lambda_result = lambda_expression()
+            logger.debug("%s evaluated to %s" % (inspect.getsource(lambda_expression), lambda_result))
             time.sleep(1)
             running_time += 1
         self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
@@ -123,3 +126,14 @@ class UtilityTestCase(TestCase):
         for host in config['lustre_servers']:
             if host['nodename'] == nodename:
                 return host
+
+    def get_available_lustre_server(self):
+        for host in config['lustre_servers']:
+            try:
+                self.remote_command(
+                    host['address'],
+                    'echo "ping!"'
+                )
+            except Exception:
+                continue
+            return host
