@@ -156,11 +156,32 @@ class FailoverTestCaseMixin(ApiTestCase):
 
         for target in targets:
             if target['volume']['id'] in volumes_to_expected_hosts:
+
                 expected_host = volumes_to_expected_hosts[target['volume']['id']]
+
+                # Check chroma manager thinks it's running on the right host.
                 if assert_true:
                     self.assertEqual(expected_host, target['active_host_name'])
                 else:
                     if not expected_host == target['active_host_name']:
+                        return False
+
+                # Check pacemaker thinks it's running on the right host.
+                available_lustre_server = self.get_available_lustre_server()
+                self.assertTrue(available_lustre_server)
+                result = self.remote_command(
+                    available_lustre_server['address'],
+                    'crm resource status %s' % target['ha_label'],
+                    timeout = 60  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
+                )
+                expected_status = "%s is running on: %s" % (target['ha_label'], expected_host)
+                if assert_true:
+                    self.assertRegexpMatches(
+                        result.stdout.read(),
+                        expected_status
+                    )
+                else:
+                    if not re.search(expected_status, result.stdout.read()):
                         return False
 
         return True
