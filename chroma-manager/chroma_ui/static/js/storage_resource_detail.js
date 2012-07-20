@@ -32,7 +32,7 @@ var StorageResourceDetail = Backbone.View.extend({
 
       var element_id = "stat_chart_" + i;
       chart_element_id[i] = element_id;
-      chart_markup += "<td><div id='" + element_id + "'></div></td>";
+      chart_markup += "<td><div class='relative'><div id='" + element_id + "'></div></div></td>";
       col += 1;
       if (col == row_width) {
         chart_markup += "</tr>";
