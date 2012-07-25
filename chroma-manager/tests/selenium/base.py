@@ -90,7 +90,7 @@ def wait_for_transition(driver, timeout):
             quiesce_api(driver, timeout)
             return
 
-    raise RuntimeError('Timeout after %s seconds waiting for transition to complete %s' % timeout)
+    raise RuntimeError('Timeout after %s seconds waiting for transition to complete' % timeout)
 
 
 def enter_text_for_element(driver, selector_or_element, text_value):
