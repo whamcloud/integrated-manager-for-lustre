@@ -67,6 +67,9 @@ class CommandError(Exception):
 
 
 class ServiceConfig:
+    def __init__(self):
+        self.verbose = False
+
     def try_shell(self, cmdline, mystdout = subprocess.PIPE,
                   mystderr = subprocess.PIPE):
         rc, out, err = self.shell(cmdline, mystdout, mystderr)
@@ -267,7 +270,10 @@ class ServiceConfig:
 
         if not self._db_current():
             log.info("Creating database tables...")
-            ManagementUtility(['', 'syncdb', '--noinput', '--migrate']).execute()
+            args = ['', 'syncdb', '--noinput', '--migrate']
+            if not self.verbose:
+                args = args + ["--verbosity", "0"]
+            ManagementUtility(args).execute()
         else:
             log.info("Database tables already OK")
 
@@ -286,7 +292,10 @@ class ServiceConfig:
         # but that shouldn't be so (ideally the /static/ dir would be built into the RPM)
         # (Django ticket #17656)
         log.info("Building static directory...")
-        ManagementUtility(['', 'collectstatic', '--noinput']).execute()
+        args = ['', 'collectstatic', '--noinput']
+        if not self.verbose:
+            args = args + ["--verbosity", "0"]
+        ManagementUtility(args).execute()
 
     def setup(self, username = None, password = None):
         self._setup_database(username, password)
