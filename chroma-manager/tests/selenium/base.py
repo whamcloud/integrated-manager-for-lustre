@@ -257,10 +257,6 @@ class SeleniumBaseTestCase(TestCase):
         self.mgt_page = Mgt(self.driver)
         self.mgt_page.create_mgt(mgt_host_name, mgt_device_node)
 
-        # >>> HYD-1141 workaround for created MGTs not appearing in FS creation form
-        self.navigation.refresh()
-        # <<< HYD-1141 workaround
-
         self.navigation.go('Configure', 'Create_new_filesystem')
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.enter_name(filesystem_name)
