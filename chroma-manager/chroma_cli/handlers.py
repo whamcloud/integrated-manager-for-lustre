@@ -393,7 +393,7 @@ class TargetHandler(Handler):
         self.output(self.api_endpoint.create(**kwargs))
 
     def list(self, ns):
-        kwargs = {}
+        kwargs = {'limit': '0'}  # api defaults to 20
         if ns.noun in ["mgt", "mdt", "ost"]:
             kwargs['kind'] = ns.noun
         self.output(self.api_endpoint.list(**kwargs))
