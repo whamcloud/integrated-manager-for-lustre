@@ -8,23 +8,30 @@
     var conf_param_dialog;
     var volume_chooser_store;
 
-    function draw() {
-      if (!initialized) {
-        init();
-        initialized = true;
-      } else {
-        volume_chooser_store.reload();
-
-        $('#mgt_chooser').volumeChooser('clear');
-        $('#mdt_chooser').volumeChooser('clear');
-        $('#ost_chooser').volumeChooser('clear');
-        conf_param_dialog = undefined;
-        advanced_tab_clicked = false;
-
-        $('#filesystem_create_form').find('span.error').remove();
-        $('#filesystem_create_form').find('.error').removeClass('error');
-        $('#txtfsnameid').val("");
-      }
+    function populate_existing_mgts()
+    {
+      /* Populate existing MGT list */
+      Api.get("target/", {
+                kind: "MGT",
+                immutable_state: false,
+                limit: 0
+            },
+            success_callback = function(data) {
+                var targets = data.objects;
+                var options_markup = "<option value=''></option>";
+                var count = 0;
+                $.each(targets, function(i, target_info) {
+                    options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
+                    count += 1;
+                });
+                if (count == 0) {
+                    $('#existing_or_new_mgt_options').hide();
+                } else {
+                    $('#existing_or_new_mgt_options').show();
+                    $('#mgt_existing_dropdown').html(options_markup);
+                }
+            }
+      );
     }
 
     function set_mdt_advanced_visible(show)
@@ -35,6 +42,26 @@
       } else {
           $('.mdt_advanced').hide();
           $('#mdt_advanced_button').parent().css('background-color', '')
+      }
+    }
+
+    function draw() {
+      if (!initialized) {
+          init();
+          initialized = true;
+      } else {
+        volume_chooser_store.reload();
+        populate_existing_mgts();
+
+        $('#mgt_chooser').volumeChooser('clear');
+        $('#mdt_chooser').volumeChooser('clear');
+        $('#ost_chooser').volumeChooser('clear');
+        conf_param_dialog = undefined;
+        advanced_tab_clicked = false;
+
+        $('#filesystem_create_form').find('span.error').remove();
+        $('#filesystem_create_form').find('.error').removeClass('error');
+        $('#txtfsnameid').val("");
       }
     }
 
@@ -117,27 +144,7 @@
         });
       });
 
-      /* Populate existing MGT list */
-      Api.get("target/", {
-          kind: "MGT",
-          immutable_state: false,
-          limit: 0
-        },
-        success_callback = function(data) {
-          var targets = data.objects;
-          var options_markup = "<option value=''></option>";
-          var count = 0;
-          $.each(targets, function(i, target_info) {
-            options_markup += "<option value='" + target_info.id + "'>" + target_info.primary_server_name + "</option>"
-            count += 1;
-          });
-          if (count == 0) {
-            $('#existing_or_new_mgt_options').hide();
-          } else {
-            $('#mgt_existing_dropdown').html(options_markup);
-          }
-        }
-      );
+      populate_existing_mgts();
 
       $('#mgt_existing_dropdown').change(function() {
         if ($('#mgt_existing_dropdown option:selected').val()) {
