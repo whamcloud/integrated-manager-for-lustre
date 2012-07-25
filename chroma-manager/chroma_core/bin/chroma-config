@@ -41,13 +41,24 @@ if __name__ == '__main__':
             log.info("OK.")
 
     if command == 'setup':
-        if len(sys.argv) == 2:
-            args = []
-        elif len(sys.argv) == 4:
-            args = [sys.argv[2], sys.argv[3]]
-        else:
-            log.error("Usage: setup [username] [password]")
+        
+        def usage():
+            log.error("Usage: setup [-v] [username password]")
             sys.exit(-1)
+
+        verbose = False
+        args = []
+        if len(sys.argv) > 2:
+            if sys.argv[2] == "-v":
+                cc.verbose = True
+                if len(sys.argv) == 5:
+                    args = [sys.argv[3], sys.argv[4]]
+                elif len(sys.argv) != 3:
+                    usage()
+            elif len(sys.argv) == 4:
+                args = [sys.argv[2], sys.argv[3]]
+            else:
+                usage()
 
         errors = cc.setup(*args)
         print_errors(errors)
