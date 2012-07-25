@@ -16,7 +16,7 @@ from chroma_api.target import TargetResource
 import settings
 
 
-def _build_cache():
+def _build_cache(request):
     cache = {}
     resources = [
         FilesystemResource,
@@ -24,9 +24,11 @@ def _build_cache():
         HostResource
     ]
     for resource in resources:
-        r = resource()
-        l = [r.full_dehydrate(r.build_bundle(obj = m)).data for m in resource.Meta.queryset._clone()]
-        cache[resource.Meta.resource_name] = l
+        if settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated():
+            resource_instance = resource()
+            cache[resource.Meta.resource_name] = [resource_instance.full_dehydrate(resource_instance.build_bundle(obj = m)).data for m in resource.Meta.queryset._clone()]
+        else:
+            cache[resource.Meta.resource_name] = []
 
     from tastypie.serializers import Serializer
     serializer = Serializer()
@@ -46,7 +48,7 @@ def index(request):
         from django.core.serializers import json as django_json
         return render_to_response("base.html",
                 RequestContext(request,
-                        {'cache': json.dumps(_build_cache(), cls = django_json.DjangoJSONEncoder),
+                        {'cache': json.dumps(_build_cache(request), cls = django_json.DjangoJSONEncoder),
                          'server_time': datetime.datetime.utcnow(),
                          'BUILD': settings.BUILD,
                          'VERSION': settings.VERSION,
