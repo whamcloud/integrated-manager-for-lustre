@@ -46,8 +46,6 @@ def configure_rsyslog(args):
     if rc != 0:
         shell.try_run(['service', 'rsyslog', 'restart'])
 
-    f.close()
-
 
 class RsyslogPlugin(ActionPlugin):
     def register_commands(self, parser):
