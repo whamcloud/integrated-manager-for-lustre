@@ -210,7 +210,15 @@ class ServiceConfig:
             log.info("Creating database '%s'...\n" % database['NAME'])
             self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
 
-    def get_input(self, msg = "", empty_allowed = True, password = False):
+    def get_input(self, msg, empty_allowed = True, password = False, default = ""):
+        if msg == "":
+            raise RuntimeError("Calling get_input, msg must not be empty")
+
+        if default != "":
+            msg = "%s [%s]" % (msg, default)
+
+        msg = "%s: " % msg
+
         answer = ""
         while answer == "":
             if password:
@@ -218,9 +226,12 @@ class ServiceConfig:
             else:
                 answer = raw_input(msg)
 
-            if not empty_allowed and answer == "":
-                print "A value is required"
-            else:
+            if answer == "":
+                if not empty_allowed:
+                    print "A value is required"
+                    continue
+                if default != "":
+                    answer = default
                 break
 
         return answer
@@ -245,14 +256,14 @@ class ServiceConfig:
 
         valid_username = False
         while not valid_username:
-            username = self.get_input(msg = "Username:", empty_allowed = False)
+            username = self.get_input(msg = "Username", empty_allowed = False)
             if username.find(" ") > -1:
                 print "Username cannot contain spaces"
                 continue
             valid_username = True
-        email = self.get_input(msg = "Email:")
-        password = self.get_pass(msg = "Password:", empty_allowed = False,
-                                     confirm_msg = "Confirm password:")
+        email = self.get_input(msg = "Email")
+        password = self.get_pass(msg = "Password", empty_allowed = False,
+                                     confirm_msg = "Confirm password")
 
         return username, email, password
 
