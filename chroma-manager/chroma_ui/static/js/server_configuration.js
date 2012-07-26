@@ -112,7 +112,8 @@ function add_host_dialog() {
   });
 
   element.find('.add_host_back_button').click(function(ev) {
-      select_page('add_host_prompt')
+      ValidatedForm.clear_errors(element);
+      select_page('add_host_prompt');
       ev.preventDefault();
   });
 }

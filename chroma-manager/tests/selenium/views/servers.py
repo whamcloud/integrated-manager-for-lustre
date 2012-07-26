@@ -4,7 +4,7 @@
 # ========================================================
 
 
-from tests.selenium.base import wait_for_transition
+from tests.selenium.base import wait_for_transition, find_visible_element_by_css_selector
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
 from tests.selenium.base import enter_text_for_element
@@ -22,6 +22,7 @@ class Servers(DatatableView):
         self.host_continue_button = 'a.add_host_submit_button'
         self.add_host_confirm_button = 'a.add_host_confirm_button'
         self.add_host_close_button = 'a.add_host_close_button'
+        self.add_host_add_another_button = 'a.add_host_back_button'
 
         self.add_dialog_div = '#add_host_dialog'
         self.prompt_dialog_div = '#add_host_prompt'
@@ -66,21 +67,41 @@ class Servers(DatatableView):
         lnet_state = tds[self.lnet_state_td]
         return lnet_state.text
 
+    def add_server_open(self):
+        self.new_add_server_button.click()
+
+    def add_server_enter_address(self, host_name):
+        enter_text_for_element(self.driver, self.host_address_text, host_name)
+
+    def add_server_submit_address(self):
+        self.driver.find_element_by_css_selector(self.host_continue_button).click()
+        self.quiesce()
+
+    def add_server_confirm(self):
+        self.driver.find_element_by_css_selector(self.add_host_confirm_button).click()
+        self.quiesce()
+
+    def add_server_close(self):
+        self.driver.find_element_by_css_selector(self.add_host_close_button).click()
+
+    def add_server_add_another(self):
+        find_visible_element_by_css_selector(self.driver, self.add_host_add_another_button).click()
+
+    @property
+    def add_server_error(self):
+        return self.get_input_error(self.driver.find_element_by_css_selector("input.add_host_address"))
+
     def add_servers(self, host_list):
         for host in host_list:
             host_name = host["address"]
 
-            self.new_add_server_button.click()
-            enter_text_for_element(self.driver, self.host_address_text, host_name)
-            self.driver.find_element_by_css_selector(self.host_continue_button).click()
-            self.quiesce()
+            self.add_server_open()
+            self.add_server_enter_address(host_name)
+            self.add_server_submit_address()
+            self.add_server_confirm()
+            self.add_server_close()
 
-            self.driver.find_element_by_css_selector(self.add_host_confirm_button).click()
-            self.quiesce()
-
-            self.driver.find_element_by_css_selector(self.add_host_close_button).click()
-
-            wait_for_transition(self.driver, self.long_wait)
+        wait_for_transition(self.driver, self.long_wait)
 
     def remove_servers(self, host_list):
         for host in host_list:
