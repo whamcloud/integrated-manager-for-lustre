@@ -312,6 +312,10 @@ SERVER_HTTP_URL = None
 # LOG_SERVER_HOSTNAME = "mylogserver.mydoman"
 LOG_SERVER_HOSTNAME = None
 
+# If you really want to point the Lustre servers at a specific NTP server
+# NTP_SERVER_HOSTNAME = "myntpserver.mydoman"
+NTP_SERVER_HOSTNAME = None
+
 # Maximum latency between server and agent: used to
 # check if clocks are 'reasonably' in sync
 AGENT_CLOCK_TOLERANCE = 20
