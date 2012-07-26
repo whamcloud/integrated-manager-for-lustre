@@ -507,13 +507,40 @@ class ConfigureRsyslogStep(Step):
             self.invoke_agent(host, "configure-rsyslog --node %s" % fqdn)
 
 
+class ConfigureNTPStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        if settings.NTP_SERVER_HOSTNAME:
+            fqdn = settings.NTP_SERVER_HOSTNAME
+        else:
+            import socket
+            fqdn = socket.getfqdn()
+
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, "configure-ntp --node %s" % fqdn)
+
+
 class UnconfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "unconfigure-rsyslog")
+        if not host.immutable_state:
+            self.invoke_agent(host, "unconfigure-rsyslog")
+
+
+class UnconfigureNTPStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, "unconfigure-ntp")
 
 
 class GetLNetStateStep(Step):
@@ -679,7 +706,8 @@ class SetupHostJob(StateChangeJob):
         return "Setting up server %s" % self.managed_host
 
     def get_steps(self):
-        return [(GetHostProperties, {'host_id': self.managed_host.pk}),
+        return [(ConfigureNTPStep, {'host_id': self.managed_host.pk}),
+                (GetHostProperties, {'host_id': self.managed_host.pk}),
                 (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
                 (LearnDevicesStep, {'host_id': self.managed_host.pk}),
                 (SetServerConfStep, {'host_id': self.managed_host.pk})]
@@ -884,6 +912,8 @@ class RemoveHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(RemoveServerConfStep, {'host_id': self.host.id}),
+                (UnconfigureNTPStep, {'host_id': self.host.id}),
+                (UnconfigureRsyslogStep, {'host_id': self.host.id}),
             (DeleteHostStep, {'host_id': self.host.id, 'force': False})]
 
 
