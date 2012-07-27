@@ -50,11 +50,17 @@ class ChromaLogCollector(object):
         if which_crm_exit_code == 0:
             crm_status = subprocess.check_output(['ssh', lustre_server, 'crm status'])
             f = open('%s/%s-crm-status.log' % (self.destination_path, lustre_server), 'w')
-            f.write(crm_status)
+            try:
+                f.write(crm_status)
+            finally:
+                f.close()
 
             crm_configuration = subprocess.check_output(['ssh', lustre_server, 'crm configure show'])
             f = open('%s/%s-crm-configuration.log' % (self.destination_path, lustre_server), 'w')
-            f.write(crm_configuration)
+            try:
+                f.write(crm_configuration)
+            finally:
+                f.close()
 
 
 if __name__ == '__main__':

@@ -14,6 +14,10 @@ logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.FileHandler('test.log'))
 
+# paramiko.transport logger spams nose log collection so we're quieting it down
+paramiko_logger = logging.getLogger('paramiko.transport')
+paramiko_logger.setLevel(logging.WARN)
+
 
 class RemoteCommandResult(object):
     """
@@ -52,7 +56,6 @@ class UtilityTestCase(TestCase):
         stdout = channel.makefile('rb')
         stderr = channel.makefile_stderr()
         exit_status = channel.recv_exit_status()
-        logger.debug("Remote command exited with status %s." % exit_status)
         if expected_return_code is not None:
             self.assertEqual(exit_status, expected_return_code, stderr.read())
         return RemoteCommandResult(exit_status, stdout, stderr)

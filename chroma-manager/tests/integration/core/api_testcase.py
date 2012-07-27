@@ -6,7 +6,6 @@ from tests.integration.core.utility_testcase import UtilityTestCase
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.FileHandler('test.log'))
 
 
 class ApiTestCase(UtilityTestCase):
@@ -15,16 +14,12 @@ class ApiTestCase(UtilityTestCase):
     """
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
-        logger.debug("wait_for_command %s" % command_id)
+        logger.debug("wait_for_command: %s" % self.get_by_uri('/api/command/%s/' % command_id))
         # TODO: More elegant timeout?
         running_time = 0
         command_complete = False
         while running_time < timeout and not command_complete:
-            response = chroma_manager.get(
-                '/api/command/%s/' % command_id,
-            )
-            self.assertTrue(response.successful, response.text)
-            command = response.json
+            command = self.get_by_uri('/api/command/%s/' % command_id)
             command_complete = command['complete']
             if not command_complete:
                 time.sleep(1)

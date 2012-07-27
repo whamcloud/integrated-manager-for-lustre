@@ -8,7 +8,6 @@ from tests.integration.core.constants import TEST_TIMEOUT
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.FileHandler('test.log'))
 
 
 class FailoverTestCaseMixin(ApiTestCase):
