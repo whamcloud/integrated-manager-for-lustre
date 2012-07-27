@@ -7,7 +7,6 @@ from tests.integration.core.api_testcase import ApiTestCase
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.FileHandler('test.log'))
 
 
 class CleanClusterApiTestCase(ApiTestCase):

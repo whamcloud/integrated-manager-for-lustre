@@ -6,7 +6,6 @@ from tests.integration.core.clean_cluster_testcase import CleanClusterApiTestCas
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.FileHandler('test.log'))
 
 
 class ChromaIntegrationTestCase(CleanClusterApiTestCase):
