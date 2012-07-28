@@ -72,9 +72,10 @@ class ChromaIntegrationTestCase(CleanClusterApiTestCase):
         for host in new_hosts:
             self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'])
 
-        # Start lnet on each new host
         for host in new_hosts:
-            self.set_state(host['resource_uri'], 'lnet_up')
+            if self.has_pacemaker(host):
+                # Start lnet on each new host
+                self.set_state(host['resource_uri'], 'lnet_up')
 
         response = self.chroma_manager.get(
             '/api/host/',

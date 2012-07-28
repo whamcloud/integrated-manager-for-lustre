@@ -25,9 +25,7 @@ class CleanClusterApiTestCase(ApiTestCase):
         self.unmount_filesystems_from_clients()
         self.reset_chroma_manager_db()
         self.remove_all_targets_from_pacemaker()
-        if not config.get('filesystem'):
-            # Erase the volumes on non-monitor-only clusters.
-            self.erase_volumes()
+        self.erase_volumes()
 
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:
@@ -241,9 +239,11 @@ EOF
         #self.assertEqual(0, len(volumes))
 
     def erase_volumes(self):
+        """Erase the volumes on non-monitor-only lustre servers"""
         for server in config['lustre_servers']:
-            for device in server['device_paths']:
-                self.remote_command(server['address'], "dd if=/dev/zero of=%s bs=4M count=1" % device)
+            if not config.get('filesystem'):
+                for device in server['device_paths']:
+                    self.remote_command(server['address'], "dd if=/dev/zero of=%s bs=4M count=1" % device)
 
     def reset_accounts(self, chroma_manager):
         """Remove any user accounts which are not in the config (such as

@@ -107,7 +107,8 @@ class TestFilesystemDetection(ChromaIntegrationTestCase, StatsTestCaseMixin):
         try:
             self.remote_command(
                 client,
-                "rm -rf /mnt/%s/*" % filesystem['name']
+                "rm -rf /mnt/%s/*" % filesystem['name'],
+                expected_return_code = None  # may not exist - dont care, move along.
             )
             self.exercise_filesystem(client, filesystem)
             self.check_stats(filesystem['id'])
