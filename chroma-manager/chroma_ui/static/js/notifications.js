@@ -28,14 +28,6 @@ function loadObjectSelection(kind, select_el)
 var LiveObject = function()
 {
 
-  var server_status_map = {
-    lnet_up       : { icon: 'plug-connect',       label: 'LNet up' },
-    lnet_down     : { icon: 'plug-disconnect',    label: 'LNet down' },
-    lnet_unloaded : { icon: 'plug-disconnect',    label: 'LNet unloaded' },
-    configured    : { icon: 'plug--arrow',        label: 'Configured' },
-    unconfigured  : { icon: 'plug--exclamation',  label: 'Unconfigured' }
-  };
-
   function jobClicked()
   {
     var job_class = $(this).data('job_class');
@@ -130,9 +122,38 @@ var LiveObject = function()
       });
   }
 
+  // helper function to determine object type via resource_uri
+  // TODO: make real models so this isn't necessry
+  function resourceType(obj) {
+    // all api objects should have a resource_uri
+    if ( ! _.isString(obj.resource_uri) ) {
+      throw "Object does not have a resource_uri";
+    }
+    var matches = obj.resource_uri.match(/^\/api\/([^\/]+)\//);
+    if ( !_.isArray(matches) || matches.length < 2 ) {
+      throw "Could not determine resourceType (invalid resource_uri): "
+        + obj.resource_uri;
+    }
+    var resource_type = matches[1];
+
+    // provide subtypes of targets appended as '-MGT, -OST, -MDT'
+    if ( resource_type === 'target' && _.isString(obj.kind) ) {
+        resource_type += '-' + obj.kind.toUpperCase();
+    }
+    return resource_type;
+  }
+
   function renderState(obj) {
+    var server_status_map = {
+      lnet_up       : { icon: 'plug-connect',       label: 'LNet up' },
+      lnet_down     : { icon: 'plug-disconnect',    label: 'LNet down' },
+      lnet_unloaded : { icon: 'plug-disconnect',    label: 'LNet unloaded' },
+      configured    : { icon: 'plug--arrow',        label: 'Configured' },
+      unconfigured  : { icon: 'plug--exclamation',  label: 'Unconfigured' }
+    };
+
     // host status is the Lnet Status which we convert into an icon
-    if ( obj.resource_uri.match(/^\/api\/host\//) ) {
+    if ( resourceType(obj) === 'host' ) {
       return UIHelper.help_hover(
         "server_status_" + obj.state,
         UIHelper.fugue_icon(
@@ -182,24 +203,56 @@ var LiveObject = function()
     return spanMarkup(obj, ['object_state'], renderState(obj))
   }
 
-  function actions(stateful_object)
-  {
-    var markup="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
+  function actions(stateful_object) {
 
-    _.each(stateful_object.available_transitions, function(transition)
-    {
-      markup += "<button " + "data-resource_uri='" + stateful_object.resource_uri + "' data-state='" + transition.state + "' onclick='LiveObject.transitionClicked.apply(this)'>" + transition.verb + "</button>&nbsp;";
+    // resource type + state mapping to contextual help
+    var help_transition_map = {
+      'filesystem': { 'stopped': '_stop_file_system', 'removed': '_remove_file_system', 'available': '_start_file_system' },
+      'host': { 'lnet_up': '_start_lnet', 'lnet_down': '_stop_lnet', 'removed': '_remove_server', 'lnet_unloaded':'_unload_lnet' },
+      'target-MGT': { 'unmounted': '_stop_mgt', 'mounted': '_start_mgt', 'removed': '_remove_mgt' },
+      'target-MDT': { 'unmounted': '_stop_mdt', 'mounted': '_start_mdt' },
+      'target-OST': { 'unmounted': '_stop_ost', 'mounted': '_start_ost', 'removed': '_remove_ost' }
+    };
+
+    // resource type + job class name mapping to contextual help
+    var help_job_map = { 'host' : { 'ForceRemoveHostJob' : '_force_remove' } };
+
+    var markup="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
+    var resource_type = resourceType(stateful_object);
+
+    // Transition buttons
+    _.each(stateful_object.available_transitions, function(transition) {
+      var properties = {
+        'data-resource_uri' : stateful_object.resource_uri,
+        'data-state' : transition.state,
+        'onclick' : 'LiveObject.transitionClicked.apply(this)'
+      };
+      // contextual help mappings
+      if ( _.has(help_transition_map, resource_type) && _.has(help_transition_map[resource_type], transition.state) ) {
+        properties['data-topic'] = help_transition_map[resource_type][transition.state];
+        properties['class'] = 'help_hover';
+      }
+
+      markup += UIHelper.build_tag('button',{content: transition.verb, properties: properties })
+        + '&nbsp;';
     });
 
+    // Job buttons
     _.each(stateful_object.available_jobs, function(job)
     {
-      var message = job.verb + "(" + stateful_object.label + ")";
-      markup += "<button " +
-        "data-job_confirmation='" + JSON.stringify(job.confirmation) + "' " +
-        "data-job_class='" + job.class_name + "' " +
-        "data-job_message='" + message + "' " +
-        "data-job_args='" + JSON.stringify(job.args) + "' " +
-        "onclick='LiveObject.jobClicked.apply(this)'>" + job.verb + "</button>&nbsp;";
+      var properties = {
+        'data-job_confirmation' : JSON.stringify(job.confirmation),
+        'data-job_class'        : job.class_name,
+        'data-job_message'      : job.verb + "(" + stateful_object.label + ")",
+        'data-job_args'         : JSON.stringify(job.args),
+        'onclick'               : "LiveObject.jobClicked.apply(this)"
+      };
+      // contextual help mappings for jobs
+      if (_.has(help_job_map, resource_type) && _.has(help_job_map[resource_type], job.class_name) ) {
+        properties['data-topic'] = help_job_map[resource_type][job.class_name];
+        properties['class'] = 'help_hover';
+      }
+      markup += UIHelper.build_tag('button', { content: job.verb, properties: properties }) + '&nbsp;';
     });
 
     markup += "</span>";
