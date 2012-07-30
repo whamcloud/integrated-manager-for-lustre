@@ -242,6 +242,13 @@
 
         Api.post("filesystem/", filesystem,
           function(data) {
+
+            //revert form values to default
+            $('#inode_size').val('512');
+            $('#bytes_per_inode').val('2048');
+            $('#mgt_existing_dropdown').val('');
+            set_mdt_advanced_visible(false);
+
             Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
           },
           {400: function (jqXHR) {
