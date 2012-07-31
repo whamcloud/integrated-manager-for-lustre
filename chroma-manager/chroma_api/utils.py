@@ -10,6 +10,7 @@ import dateutil.parser
 import bisect
 
 from django.contrib.contenttypes.models import ContentType
+from django.http import Http404
 from chroma_core.lib.state_manager import StateManagerClient
 from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
@@ -460,7 +461,10 @@ class MetricResource:
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
-        objs = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
+        try:
+            objs = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
+        except Http404 as exc:
+            raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
 
         result = {}
         try:
