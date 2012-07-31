@@ -423,7 +423,12 @@ var ChartManager = function(options) {
 
           chart.instance.redraw();
         },
-        null,
+        error_callback = {404: function(status, jqXHR) {
+          var markup = "<div style='overflow-y: auto; max-height: 700px;'>This resource has gone away.  Return to front page.</div>";
+          $(markup).dialog({'buttons': {
+            'Return': function() {$(this).dialog('close'); window.location.href = Api.UI_ROOT;}
+          }});
+        }},
         false
       );
     }
