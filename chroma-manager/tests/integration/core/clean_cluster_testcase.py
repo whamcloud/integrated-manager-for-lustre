@@ -103,6 +103,18 @@ EOF
 
                 # Verify no more targets
                 self.wait_until_true(lambda: not self.get_pacemaker_targets(server))
+
+                # Remove chroma-agent's records of the targets
+                self.remote_command(
+                    server['address'],
+                    'rm -rf /var/lib/chroma/*',
+                    expected_return_code = None  # Keep going if it failed - may be none there.
+                )
+                self.remote_command(
+                    server['address'],
+                    'service chroma-agent restart'
+                )
+
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
 
