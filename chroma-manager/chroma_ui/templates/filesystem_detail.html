@@ -77,7 +77,10 @@
 
             click: function(){
               var ost_lun_ids = $('#new_ost_chooser').volumeChooser('val');
-              var dialog = $(this);
+
+              // HYD-987 - Prevent multiple submissions
+              // just close the dialog right away and let the OST run
+              $(this).dialog("close");
 
               function chain_creation(i) {
                 if (i == undefined) {
@@ -94,7 +97,6 @@
                       $('#mgt_configuration_view').dataTable().fnClearTable();
                       volume_chooser_store.reload();
                       loadFilesystemTargets(filesystem.id);
-                      dialog.dialog("close");
                     } else {
                       // POST the next OST creation
                       chain_creation(i + 1);
