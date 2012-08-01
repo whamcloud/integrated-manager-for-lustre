@@ -101,6 +101,7 @@ EOF
                 for target in crm_targets:
                     self.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
                     self.remote_command(server['address'], 'crm configure delete %s' % target)
+                    self.remote_command(server['address'], 'crm resource cleanup %s' % target)
 
                 # Verify no more targets
                 self.wait_until_true(lambda: not self.get_pacemaker_targets(server))
