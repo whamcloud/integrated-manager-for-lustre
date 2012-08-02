@@ -6,6 +6,7 @@
 
 import datetime
 from exceptions import Exception
+import json
 import logging
 import dateutil.parser
 
@@ -15,6 +16,7 @@ from django.db import IntegrityError
 import itertools
 from django.db.models.aggregates import Max, Count
 from django.db.models.query_utils import Q
+import time
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
 from chroma_core.models.alert import AlertState
@@ -29,6 +31,26 @@ from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetacl
 from chroma_core.lib.job import job_log
 
 import settings
+
+
+# FIXME: HYD-1367: Chroma 1.0 Job objects aren't amenable to using m2m
+# attributes for this because:
+# * constructor in command_run_jobs doesn't know how to deal with them
+# * assigning them requires model to be saved first, which means
+#   we can't e.g. check deps before saving job
+class HostListMixin(models.Model):
+    class Meta:
+        abstract = True
+        app_label = 'chroma_core'
+
+    host_ids = models.CharField(max_length = 512)
+
+    @property
+    def hosts(self):
+        if not self.host_ids:
+            return ManagedHost.objects
+        else:
+            return ManagedHost.objects.filter(id__in = json.loads(self.host_ids))
 
 
 class DeletableStatefulObject(StatefulObject):
@@ -456,7 +478,7 @@ class LearnNidsStep(Step):
         host = ManagedHost.objects.get(pk = kwargs['host_id'])
         result = self.invoke_agent(host, "lnet-scan")
 
-        job_log.debug("LearnNidsStep(%s): %s" % (host, result))
+        self.log("Scanning NIDs on host %s..." % host)
 
         nids = []
         for nid_string in result:
@@ -464,11 +486,11 @@ class LearnNidsStep(Step):
                     lnet_configuration = host.lnetconfiguration,
                     nid_string = normalize_nid(nid_string))
             if created:
-                job_log.debug("LearnNidsStep(%s): learned new nid %s" % (host, nid.nid_string))
+                self.log("Learned new nid %s:%s" % (host, nid.nid_string))
             nids.append(nid)
 
         for old_nid in Nid.objects.filter(~Q(id__in = [n.id for n in nids]), lnet_configuration = host.lnetconfiguration):
-            job_log.debug("LearnNidsStep(%s): removed old nid %s" % (host, old_nid.nid_string))
+            self.log("Removed old nid %s:%s" % (host, old_nid.nid_string))
             old_nid.delete()
 
 
@@ -595,8 +617,6 @@ class GetHostProperties(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.lib.job import job_log
-
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         host_properties = self.invoke_agent(host, "host-properties")
@@ -757,19 +777,17 @@ class DetectTargetsStep(Step):
         # FIXME: HYD-1120: should do this part in parallel
         host_data = {}
         for host in ManagedHost.objects.all():
+            with transaction.commit_on_success():
+                self.log("Scanning server %s..." % host)
+            time.sleep(10)
             data = self.invoke_agent(host, 'detect-scan')
             host_data[host] = data
 
         with transaction.commit_on_success():
-            DetectScan().run(host_data)
+            DetectScan(self).run(host_data)
 
 
-class DetectTargetsJob(Job):
-    # FIXME: HYD-XYZ this should take a list of hosts
-    @property
-    def hosts(self):
-        return ManagedHost.objects
-
+class DetectTargetsJob(Job, HostListMixin):
     class Meta:
         app_label = 'chroma_core'
 
@@ -954,7 +972,6 @@ class DeleteHostDependents(Step):
         host = ManagedHost.objects.get(pk = kwargs['host_id'])
         targets, filesystems = _get_host_dependents(host)
 
-        from chroma_core.lib.job import job_log
         job_log.info("DeleteHostDependents(%s): targets: %s, filesystems: %s" % (host, targets, filesystems))
 
         for object in itertools.chain(targets, filesystems):
@@ -1037,20 +1054,21 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
         return [(DeleteHostStep, {'host_id': self.host.id, 'force': False})]
 
 
-class RelearnNidsJob(Job):
-    host = models.ForeignKey('ManagedHost')
-
+class RelearnNidsJob(Job, HostListMixin):
     def description(self):
-        return "Relearning NIDS on host %s" % self.host
+        return "Relearning NIDS on hosts %s" % ",".join([h.fqdn for h in self.hosts.all()])
 
     def get_deps(self):
-        return DependAll([
-            DependOn(self.host, "lnet_up"),
-            DependOn(self.host.lnetconfiguration, 'nids_known')
-            ])
+        deps = []
+        for host in self.hosts.all():
+            deps.append(DependOn(host, "lnet_up"))
+            deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
+        return DependAll(deps)
 
     def get_steps(self):
-        return [(LearnNidsStep, {'host_id': self.host.id})]
+        return [
+            (LearnNidsStep, {'host_id': host.id})
+            for host in self.hosts.all()]
 
     class Meta:
         app_label = 'chroma_core'
@@ -1087,17 +1105,7 @@ class ResetConfParamsStep(Step):
         ManagedMgs.objects.filter(pk = args['mgt_id']).update(conf_param_version_applied = 0)
 
 
-class UpdateNidsJob(Job):
-    # FIXME: HYD-XYZ this should take a list of hosts
-    # as an argument: doing m2m attributes of Jobs
-    # is painful atm because:
-    # * constructor in command_run_jobs doesn't know how to deal with them
-    # * assigning them requires model to be saved first, which means
-    #   we can't e.g. check deps before saving job
-    @property
-    def hosts(self):
-        return ManagedHost.objects
-
+class UpdateNidsJob(Job, HostListMixin):
     def description(self):
         if self.hosts.count() > 1:
             return "Updating NIDs on %d hosts" % self.hosts.count()

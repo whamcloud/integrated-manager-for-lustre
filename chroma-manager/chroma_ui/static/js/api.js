@@ -47,7 +47,7 @@ Backbone.sync = function(method, model, options) {
     url = url + "/";
   }
 
-  Api.call(type, url, data, options.success, options.error);
+  Api.call(type, url, data, options.success, options.error, false);
 };
 
 /* The Api module wraps the global state used for

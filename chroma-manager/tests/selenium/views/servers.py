@@ -4,7 +4,7 @@
 # ========================================================
 from selenium.common.exceptions import NoSuchElementException
 
-from tests.selenium.base import wait_for_transition, find_visible_element_by_css_selector
+from tests.selenium.base import wait_for_transition, find_visible_element_by_css_selector, element_visible
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
 from tests.selenium.base import enter_text_for_element
@@ -34,6 +34,36 @@ class Servers(DatatableView):
         self.datatable_id = 'server_configuration'
         self.host_name_td = 0
         self.lnet_state_td = 1
+
+    def open_detect_prompt(self):
+        self.driver.find_element_by_css_selector('#server_list button.detect_button').click()
+        self.quiesce()
+
+    @property
+    def host_selection_list_visible(self):
+        return element_visible(self.driver, 'div.host_selection_list')
+
+    @property
+    def host_selection_list_selected(self):
+        """Return a dict of fqdn to bool"""
+        result = {}
+        for item in self.driver.find_elements_by_css_selector("ul.host_selection_list li"):
+            result[item.text] = item.find_element_by_css_selector('input').is_selected()
+        return result
+
+    @property
+    def host_selection_run_sensitive(self):
+        return self.driver.find_element_by_css_selector('button.host_selection_run').is_enabled()
+
+    def host_selection_run(self):
+        self.driver.find_element_by_css_selector('button.host_selection_run').click()
+        self.quiesce()
+
+    def host_selection_list_all(self):
+        self.driver.find_element_by_css_selector('a.select_all').click()
+
+    def host_selection_list_none(self):
+        self.driver.find_element_by_css_selector('a.select_none').click()
 
     def verify_added_server(self, host_name):
         """Returns whether newly added server is listed or not"""

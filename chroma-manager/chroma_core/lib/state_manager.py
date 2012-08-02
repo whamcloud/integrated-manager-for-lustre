@@ -751,40 +751,19 @@ class StateManager(object):
 
     def command_run_jobs(self, job_dicts, message):
         assert(len(job_dicts) > 0)
+
         with transaction.commit_on_success():
             jobs = []
             for job in job_dicts:
                 job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
-
-                m2m_attrs = {}
-                for field in job_klass._meta.local_many_to_many:
-                    m2m_attrs[field.attname] = field.rel.to
-
-                args = job['args']
-                m2m_values = {}
-                for k, v in args.items():
-                    if k in m2m_attrs:
-                        m2m_values[k] = v
-                        del args[k]
-
-                # FIXME: I have to save the job to add its m2m
-                # fields, but I can't save it until after I've created its
-                # precursor jobs (the job ID influences order of run)
-                job_instance = job_klass(**args)
-                #job_instance.save()
+                job_instance = job_klass(**job['args'])
                 jobs.append(job_instance)
-                #for attr in m2m_attrs.keys():
-                ##    m2m_attr = getattr(job_instance, attr)
-                #    for id in m2m_values[attr]:
-                #        instance = m2m_attrs[attr].objects.get(pk = id)
-                #        m2m_attr.add(instance)
 
             command = Command.objects.create(message = message)
             job_log.debug("command_run_jobs: command %s" % command.id)
             for job in jobs:
                 job_log.debug("command_run_jobs:  job %s" % job.id)
             self.add_jobs(jobs, command)
-            command.save()
 
         return command.id
 

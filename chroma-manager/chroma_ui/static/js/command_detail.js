@@ -145,7 +145,7 @@ var Command = Backbone.Model.extend({
           }
         }})
       }
-    }
+    };
 
     Backbone.Model.prototype.fetch.apply(this, [options])
   },
@@ -155,10 +155,34 @@ var Command = Backbone.Model.extend({
 var CommandDetail = Backbone.View.extend({
   className: 'command_dialog',
   template: _.template($('#command_detail_template').html()),
+  initialize: function() {
+    _.bindAll(this, 'render');
+    this.model.bind('change', this.render);
+  },
   render: function() {
     var command_detail_view = this;
     var rendered = this.template(this.model.toJSON());
+    $(this.el).addClass('command_detail')
     $(this.el).find('.ui-dialog-content').html(rendered);
+
+    var update_period = 1000;
+    var command_model = this.model;
+    var view = this;
+    function update() {
+      if (view.el.parentNode != null) {
+        command_model.fetch({
+          success: function() {
+            if (!command_model.get('complete')){
+              setTimeout(update, update_period);
+            }
+          }
+        });
+      }
+    }
+    if (!command_model.get('complete')) {
+      setTimeout(update, update_period);
+    }
+
     $(this.el).find('.job_state_transition').each(function() {
       var link = $(this);
       link.button();

@@ -689,6 +689,8 @@ class StepResult(models.Model):
             a job.  If a step is retried, then two steps can have the same index for the same job.")
     step_count = models.IntegerField(help_text = "Number of steps in this job")
 
+    log = models.TextField(help_text = "For user display: human readable summary of progress during execution.")
+
     console = models.TextField(help_text = "For debugging: combined standard out and standard error from all\
             subprocesses run while completing this step.  This includes output from successful\
             as well as unsuccessful commands, and may be very verbose.")

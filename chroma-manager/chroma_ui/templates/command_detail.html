@@ -75,21 +75,25 @@
 
 <script type="text/template" id="command_detail_template">
   <div style='font-size: 10pt;'>
-      <h2>Summary</h2>
-      <table class='properties'>
-          <tbody>
-          <tr>
-            <th>Description:</th><td><%= message %></td>
-          </tr>
-          <tr>
-            <th>Created at:</th><td><%= shortLocalTime(created_at) %></td>
-          </tr>
-          <tr>
-              <th>Status:</th><td><%= complete ? (errored ? "Error" : (cancelled ? "Cancelled" : "Successful")) : "Incomplete" %></td>
-          </tr>
-          </tbody>
-      </table>
-    <h2>Detail</h2>
+    <h2>Command detail</h2>
+    <table class='properties'>
+        <tbody>
+        <tr>
+          <th>Description:</th><td><%= message %></td>
+        </tr>
+        <tr>
+          <th>Created at:</th><td><%= shortLocalTime(created_at) %></td>
+        </tr>
+        <tr>
+            <th>Status:</th><td><%= complete ? (errored ? "Error" : (cancelled ? "Cancelled" : "Successful")) : "Incomplete" %></td>
+        </tr>
+        </tbody>
+    </table>
+    <h2>Messages</h2>
+    <div class='command_logs'>
+        <textarea rows="10" cols="70"><%= logs %></textarea>
+    </div>
+    <h2>Operations</h2>
     <div class='command_job_list'>
       <%= _.template($('#job_list_template').html(), {jobs: jobs_tree}) %>
     </div>

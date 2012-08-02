@@ -864,3 +864,24 @@ div.chart_tooltip {
     padding: 5px;
     font-size: 9pt;
 }
+
+span.small_links {
+    font-size: 90%;
+}
+
+span.small_links a {
+    color: blue;
+}
+
+p.host_selection_prompt {
+    margin-bottom: 3px;
+}
+
+div.host_selection_list {
+    max-height: 300px;
+}
+
+ul.host_selection_list {
+    overflow-y: auto;
+    list-style-type: none;
+}

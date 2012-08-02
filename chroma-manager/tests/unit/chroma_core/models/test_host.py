@@ -67,7 +67,8 @@ class TestNidChange(NidTestCase):
         self.assertNidsCorrect(host)
         self.mock_servers['myaddress']['nids'] = new_nids
         from chroma_core.tasks import command_run_jobs
-        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'host_id': host.id}}], "Test relearn nids")
+        from chroma_api.urls import api
+        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(host)]}}], "Test relearn nids")
         self.assertNidsCorrect(host)
 
     def test_relearn_change(self):
@@ -113,10 +114,11 @@ class TestUpdateNids(NidTestCase):
 
         self.mock_servers['mgs']['nids'] = ['192.168.0.99@tcp0']
         from chroma_core.tasks import command_run_jobs
-        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'host_id': mgs.id}}], "Test relearn nids")
+        from chroma_api.urls import api
+        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test relearn nids")
         self.assertNidsCorrect(mgs)
 
-        command_run_jobs.delay([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [mgs.id]}}], "Test update nids")
+        command_run_jobs.delay([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test update nids")
         # The -3 looks past the start/stop that happens after writeconf
         self.assertEqual(MockAgent.host_calls[mgs][-3][0], "writeconf-target")
         self.assertEqual(MockAgent.host_calls[mds][-3][0], "writeconf-target")

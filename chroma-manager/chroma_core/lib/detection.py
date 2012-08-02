@@ -15,8 +15,13 @@ from chroma_core.models.target import ManagedMgs, ManagedTargetMount, ManagedTar
 
 
 class DetectScan(object):
-    def __init__(self):
+    def __init__(self, step):
         self.created_filesystems = []
+        self.created_mgts = []
+        self.step = step
+
+    def log(self, message):
+        self.step.log(message)
 
     def run(self, all_hosts_data):
         """:param all_hosts_data: Dict of ManagedHost to detect-scan output"""
@@ -48,22 +53,33 @@ class DetectScan(object):
         for klass in [ManagedMdt, ManagedOst]:
             for t in klass.objects.all():
                 if not t.managedtargetmount_set.filter(primary = True).count():
-                    audit_log.warning("Found no primary mount point for target %s" % t)
+                    self.log("Found no primary mount point for target %s" % t)
                     ManagedTarget.delete(t.id)
 
-        #  Remove any Filesystems with zero MDTs or zero OSTs
-        for fs in ManagedFilesystem.objects.all():
-            if not ManagedMdt.objects.filter(filesystem = fs).count():
-                audit_log.warning("Found no MDTs for filesystem %s" % fs.name)
-                ManagedFilesystem.delete(fs.id)
-            elif not ManagedOst.objects.filter(filesystem = fs).count():
-                audit_log.warning("Found no OSTs for filesystem %s" % fs.name)
-                ManagedFilesystem.delete(fs.id)
+        for mgt in self.created_mgts:
+            self.log("Discovered MGT on server %s" % (mgt.primary_server()))
 
+        # Remove any Filesystems with zero MDTs or zero OSTs, or set state
+        # of a valid filesystem
         for fs in self.created_filesystems:
-            if set([t.state for t in fs.get_targets()]) == set(['mounted']):
-                fs.state = 'available'
+            mdt_count = ManagedMdt.objects.filter(filesystem = fs).count()
+            ost_count = ManagedOst.objects.filter(filesystem = fs).count()
+            if not mdt_count:
+                self.log("Found no MDTs for filesystem %s" % fs.name)
+                ManagedFilesystem.delete(fs.id)
+            elif not ost_count:
+                self.log("Found no OSTs for filesystem %s" % fs.name)
+                ManagedFilesystem.delete(fs.id)
+            else:
+                self.log("Discovered filesystem %s with %s MDTs and %s OSTs" % (
+                  fs.name, mdt_count, ost_count))
+
+                if set([t.state for t in fs.get_targets()]) == set(['mounted']):
+                    fs.state = 'available'
                 fs.save()
+
+        if not self.created_filesystems:
+            self.log("Discovered no new filesystems")
 
     def _nids_to_mgs(self, host, nid_strings):
         """nid_strings: nids of a target.  host: host on which the target was seen.
@@ -235,6 +251,7 @@ class DetectScan(object):
         for host, host_data in self.all_hosts_data.items():
             for local_info in host_data['local_targets']:
                 if not local_info['mounted']:
+                    audit_log.warning("Ignoring unmounted target %s on host %s" % (local_info['name'], host))
                     continue
 
                 name = local_info['name']
@@ -253,7 +270,7 @@ class DetectScan(object):
                 try:
                     mgs = self._target_find_mgs(host, local_info)
                 except ManagedMgs.DoesNotExist:
-                    audit_log.warning("Can't find MGS for target %s on %s" % (name, host))
+                    self.log("Can't find MGS for target %s on %s" % (name, host))
                     continue
 
                 import re
@@ -261,7 +278,7 @@ class DetectScan(object):
                 try:
                     filesystem = ManagedFilesystem.objects.get(name = fsname, mgs = mgs)
                 except ManagedFilesystem.DoesNotExist:
-                    audit_log.warning("Encountered target (%s) for unknown filesystem %s on mgs %s" % (name, fsname, mgs.primary_server()))
+                    self.log("Encountered target (%s) for unknown filesystem %s on mgs %s" % (name, fsname, mgs.primary_server()))
                     return None
 
                 try:
@@ -307,6 +324,7 @@ class DetectScan(object):
                     state = "mounted", volume = volumenode.volume,
                     name = "MGS", immutable_state = True)
                 mgs.save()
+                self.created_mgts.append(mgs)
 
             # Create Filesystem objects from the MGS config logs
             for fs_name, targets in host_data['mgs_targets'].items():
