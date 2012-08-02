@@ -18,11 +18,11 @@ class ChromaApiTestCase(JobTestCaseWithHost, ResourceTestCase):
         self.api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
 
     def tearDown(self):
-            from chroma_api.authentication import CsrfAuthentication
-            CsrfAuthentication.is_authenticated = self.old_is_authenticated
+        from chroma_api.authentication import CsrfAuthentication
+        CsrfAuthentication.is_authenticated = self.old_is_authenticated
 
-            ResourceTestCase.tearDown(self)
-            JobTestCaseWithHost.tearDown(self)
+        ResourceTestCase.tearDown(self)
+        JobTestCaseWithHost.tearDown(self)
 
     def api_set_state_full(self, uri, state):
         original_object = self.api_get(uri)

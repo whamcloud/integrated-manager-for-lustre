@@ -64,7 +64,7 @@ class TestWriteconf(ChromaIntegrationTestCase):
 
         for host in self.hosts:
             response = self.chroma_manager.post("/api/command/", body = {
-                'jobs': [{'class_name': 'RelearnNidsJob', 'args': {'host_id': host['id']}}],
+                'jobs': [{'class_name': 'RelearnNidsJob', 'args': {'hosts': [host['resource_uri']]}}],
                 'message': "Test relearn nids"
             })
             self.assertEqual(response.status_code, 201)

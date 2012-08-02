@@ -10,13 +10,15 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response
+from chroma_api.host import HostResource
 
 from chroma_core.models import Command
 from tastypie.resources import ModelResource
 from tastypie import fields, http
-from chroma_core.models.jobs import SchedulingError
+from chroma_core.models.jobs import SchedulingError, StepResult
 from chroma_core.models.utils import await_async_result
 from chroma_core.tasks import command_run_jobs
+import json
 
 
 class CommandValidation(Validation):
@@ -60,6 +62,12 @@ class CommandResource(ModelResource):
     jobs = fields.ToManyField("chroma_api.job.JobResource", 'jobs',
             help_text = "Jobs belonging to this command")
 
+    logs = fields.CharField()
+
+    def dehydrate_logs(self, bundle):
+        command = bundle.obj
+        return "\n".join([stepresult.log for stepresult in StepResult.objects.filter(job__command = command).order_by('modified_at')])
+
     class Meta:
         queryset = Command.objects.all()
         list_allowed_methods = ['get', 'post']
@@ -72,6 +80,17 @@ class CommandResource(ModelResource):
         always_return_data = True
 
     def obj_create(self, bundle, request = None):
+        for job in bundle.data['jobs']:
+            # FIXME: HYD-1367: This is a hack to work around the inability of
+            # the Job class to handle m2m references properly, serializing hosts
+            # to a list of IDs understood by the HostListMixin class
+            if 'hosts' in job['args']:
+                job_ids = []
+                for uri in job['args']['hosts']:
+                    job_ids.append(HostResource().get_via_uri(uri).id)
+                del job['args']['hosts']
+                job['args']['host_ids'] = json.dumps(job_ids)
+
         async_result = command_run_jobs.delay(bundle.data['jobs'], bundle.data['message'])
         try:
             command_id = await_async_result(async_result)

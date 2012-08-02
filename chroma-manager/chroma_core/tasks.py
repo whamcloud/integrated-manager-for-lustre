@@ -306,6 +306,8 @@ def run_job(job_id):
             job_log.error("Job %d step %d encountered an agent error" % (job.id, step_index))
             job.complete(errored = True)
 
+            step.log(e.agent_backtrace)
+
             result.exception = e
             # Don't bother storing the backtrace to invoke_agent, the interesting part
             # is the backtrace inside the AgentException
@@ -321,6 +323,7 @@ def run_job(job_id):
             exc_info = sys.exc_info()
             backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
             job_log.error(backtrace)
+            step.log(backtrace)
             job.complete(errored = True)
 
             # Exceptions raised locally are not guaranteed to be picklable,

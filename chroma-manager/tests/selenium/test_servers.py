@@ -2,7 +2,7 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
-
+from tests.selenium.views.command_detail import CommandDetail
 
 from tests.selenium.views.servers import Servers
 from tests.selenium.base import SeleniumBaseTestCase
@@ -21,6 +21,38 @@ class TestServer(SeleniumBaseTestCase):
 
         self.navigation.go('Configure', 'Servers')
         self.server_page = Servers(self.driver)
+
+    def test_multi_server_operations(self):
+        self.server_page.add_servers(self.host_list)
+
+        # Check that the prompt dialog opens
+        self.server_page.open_detect_prompt()
+        self.assertTrue(self.server_page.host_selection_list_visible)
+
+        # Check that all hosts are listed
+        self.assertSetEqual(set(self.server_page.host_selection_list_selected.keys()), set(self.server_page.get_server_list()))
+
+        # Check that all are selected by default
+        self.assertSetEqual(set(self.server_page.host_selection_list_selected.values()), set([True]))
+        self.assertTrue(self.server_page.host_selection_run_sensitive)
+
+        # Check that select none clears all
+        self.server_page.host_selection_list_none()
+        self.assertSetEqual(set(self.server_page.host_selection_list_selected.values()), set([False]))
+
+        # ...and that when none are selected the run button is disabled
+        self.assertFalse(self.server_page.host_selection_run_sensitive)
+
+        # Check that select all works
+        self.server_page.host_selection_list_all()
+        self.assertSetEqual(set(self.server_page.host_selection_list_selected.values()), set([True]))
+        self.assertTrue(self.server_page.host_selection_run_sensitive)
+
+        # Check that on run we go to a command detail view
+        self.server_page.host_selection_run()
+
+        command_detail = CommandDetail(self.driver)
+        self.assertTrue(command_detail.visible)
 
     def test_create_server(self):
         self.server_page.add_servers(self.host_list)

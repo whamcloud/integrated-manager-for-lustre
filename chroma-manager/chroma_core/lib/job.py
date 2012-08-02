@@ -145,9 +145,14 @@ class Step(object):
         #steps = self.get_steps()
         # Which one failed?
 
+    def log(self, message):
+        job_log.info("Job %s %s: %s" % (self.job_id, self.__class__.__name__, message))
+        self.result.log += "%s\n" % message
+        self.result.save()
+
     def invoke_agent(self, host, command, args = None):
         def console_callback(chunk):
-            self.result.console = self.result.console + chunk
+            self.result.console += chunk
             self.result.save()
 
         from chroma_core.lib.agent import Agent

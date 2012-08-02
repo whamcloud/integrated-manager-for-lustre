@@ -1,4 +1,20 @@
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/server_configuration.css"/>
+
+<script type="text/template" id="server_command_template">
+    <p class='host_selection_prompt'>Select hosts on which to run this operation:</p>
+    <div class='host_selection_list'>
+        <ul class='host_selection_list'>
+            <% _.each(hosts, function(host) { %>
+                <li><input type='checkbox' data-host_uri="<%= host.resource_uri %>"></input><%= host.fqdn %></li>
+            <% }); %>
+        </ul>
+    </div>
+    <span class='small_links'>[
+            <a href="#" class="select_all">Select all</a>&nbsp;|&nbsp;
+            <a href="#" class="select_none">Select none</a>
+    </span>]
+</script>
+
 <script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"></script>
 <script type='text/javascript'>
   var ServerView = function() {
@@ -35,6 +51,9 @@
               }
               row['fqdn'] = RouteUtils.object_properties_link(server, row['fqdn']);
             });
+
+            $('.multi_server_button').attr('disabled', data.aaData.length == 0);
+
             callback(data);
           }, settings);
         },
@@ -53,15 +72,111 @@
       {
         add_host_dialog();
       });
+
+      function ServerCommandPrompt(options) {
+          /* Prompt for a subset of hosts to run a job against */
+          Api.get('host/', {limit: 0}, function(data) {
+              var hosts = data['objects'];
+              var mydiv = $("<div class='server-command-selection'></div>");
+
+              mydiv.dialog({
+                  buttons: [
+                      {text: "Cancel", class: "host_selection_cancel", click: function() {}},
+                      {text: "Run", class: 'host_selection_run', click: function() {}}
+                  ],
+                  modal: true
+              });
+              var cd = new ServerCommandView({
+                  message: options.message,
+                  job_class: options.job_class,
+                  hosts: hosts,
+                  el: mydiv.parent()});
+              cd.render();
+          });
+      }
+
+      $('div#server_list button.detect_button').click(function() {
+        ServerCommandPrompt({
+            message: "Detecting filesystems",
+            job_class: 'DetectTargetsJob'
+        });
+      });
+
+      $('div#server_list button.rescan_nids_button').click(function() {
+        ServerCommandPrompt({
+            message: "Re-scanning NIDs",
+            job_class: 'RelearnNidsJob'
+        });
+      });
+
+      $('div#server_list button.writeconf_button').click(function() {
+        ServerCommandPrompt({
+            message: "Updating filesystem NIDs",
+            job_class: 'UpdateNidsJob'
+        });
+      });
     }
+
     return {draw:draw}
   }();
+
+  var ServerCommandView = Backbone.View.extend({
+     className: "server-command-selection",
+     template: _.template($('#server_command_template').html()),
+     events: {
+         "click .select_all": 'select_all',
+         "click .select_none": 'select_none',
+         "click .host_selection_run": 'run',
+         "click .host_selection_cancel": 'cancel',
+         "change input[type=checkbox]": 'changed'
+     },
+     render: function() {
+         $(this.el).find('.ui-dialog-content').html(this.template({hosts: this.options.hosts}));
+         this.select_all();
+     },
+     select_all: function() {
+       $(this.el).find("input[type=checkbox]").prop('checked', true);
+       this.changed();
+     },
+     select_none: function() {
+       $(this.el).find("input[type=checkbox]").prop('checked', false);
+       this.changed();
+     },
+     changed: function(e) {
+        var selected_count = $(this.el).find(":checked").length;
+        $(this.el).find(".host_selection_run").attr('disabled', selected_count == 0);
+     },
+     run: function() {
+         var dialog = $(this.el);
+         var host_uris = [];
+         _.each($(this.el).find(":checked"), function(checkbox) {
+            host_uris.push($(checkbox).data('host_uri'));
+         });
+
+         Api.post("command/",
+             {
+                 'message': this.options.message,
+                 'jobs': [{'class_name': this.options.job_class, 'args': {'hosts': host_uris}}]
+             },
+             function(command){
+                 dialog.remove();
+                 CommandNotification.begin(command);
+                 Backbone.history.navigate("command/" + command.id + "/", {trigger: true});
+             }
+         );
+     },
+     cancel: function() {
+       $(this.el).remove();
+     }
+  });
 </script>
 
+
+
+<div id='server_list'>
 <h2 class='section_header'>Server Configuration</h2>
-<div class="buttonspacer"><span class="first-child">
+<div class="buttonspacer">
   <button class='add' type="button" id="btnAddNewHost">Add server</button>
-  </span>
 </div>
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="server_configuration" width="100%">
   <thead>
@@ -76,6 +191,12 @@
     <tr><td></td><td></td><td></td><td></td></tr>
   </tbody>
 </table>
+
+<h2 class='section_header'>Server Actions</h2>
+
+<button class='detect_button multi_server_button'>Detect filesystems...</button>
+<button class='rescan_nids_button multi_server_button'>Re-scan NIDs...</button>
+<button class='writeconf_button multi_server_button'>Re-write target configuration...</button>
 
 <script type="text/template" id="add_host_dialog_template">
     <div class="add_host_dialog">
@@ -114,3 +235,4 @@
         </div>
     </div>
 </script>
+</div>
