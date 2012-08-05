@@ -43,6 +43,7 @@ class CleanClusterApiTestCase(ApiTestCase):
                 chroma_manager['address'],
                 """
 chroma-config setup >config_setup.log <<EOF
+
 %s
 nobody@whamcloud.com
 %s
