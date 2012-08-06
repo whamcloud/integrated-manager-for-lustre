@@ -166,21 +166,38 @@ class FailoverTestCaseMixin(ApiTestCase):
                         return False
 
                 # Check pacemaker thinks it's running on the right host.
-                available_lustre_server = self.get_available_lustre_server()
-                self.assertTrue(available_lustre_server)
-                result = self.remote_command(
-                    available_lustre_server['address'],
-                    'crm resource status %s' % target['ha_label'],
-                    timeout = 60  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
-                )
-                expected_status = "%s is running on: %s" % (target['ha_label'], expected_host)
+                expected_resource_status = "%s is running on: %s" % (target['ha_label'], expected_host)
+                actual_resource_status = self.get_crm_resource_status(target['ha_label'])
                 if assert_true:
                     self.assertRegexpMatches(
-                        result.stdout.read(),
-                        expected_status
+                        actual_resource_status,
+                        expected_resource_status
                     )
                 else:
-                    if not re.search(expected_status, result.stdout.read()):
+                    if not re.search(expected_resource_status, actual_resource_status):
                         return False
 
         return True
+
+    def get_crm_resource_status(self, ha_label):
+        available_lustre_server = self.get_available_lustre_server()
+        self.assertTrue(available_lustre_server)
+        result = self.remote_command(
+            available_lustre_server['address'],
+            'crm resource status %s' % ha_label,
+            timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
+        )
+        resource_status = result.stdout.read()
+
+        # Check for failed actions - sometimes you get a false positive when a resource is trying
+        # to be started on a host over and over.
+        result = self.remote_command(
+            available_lustre_server['address'],
+            'crm status'
+        )
+        self.assertNotRegexpMatches(
+            result.stdout.read(),
+            'Failed actions'
+        )
+
+        return resource_status
