@@ -9,9 +9,6 @@
       if (!initialized) {
         init();
         initialized = true;
-      } else {
-          volume_chooser_store.reload();
-          $('#new_ost_chooser').volumeChooser('clear');
       }
 
       $('#ost').dataTable().fnClearTable();
@@ -56,9 +53,9 @@
       $('#btnNewOST').click(function() {
         $('#new_ost_dialog').dialog('open');
         $('#new_ost_dialog').find('table').width("100%");
-
-          $('#new_ost_chooser').volumeChooser('clear');
-          $('#ost_ok_button').button('option', 'disabled', true)
+        volume_chooser_store.reload(); // HYD-1309 reload available targets on display
+        $('#new_ost_chooser').volumeChooser('clear');
+        $('#ost_ok_button').button('option', 'disabled', true)
       });
 
       $('#new_ost_dialog').dialog({
