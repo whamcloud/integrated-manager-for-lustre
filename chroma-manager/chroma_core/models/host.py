@@ -612,21 +612,6 @@ class GetHostProperties(Step):
         fqdn = host_properties['fqdn']
         nodename = host_properties['nodename']
 
-        # Get agent time and check it against server time
-        agent_time_str = host_properties['time']
-        agent_time = dateutil.parser.parse(agent_time_str)
-        server_time = datetime.datetime.utcnow()
-        from dateutil import tz
-        server_time = server_time.replace(tzinfo=tz.tzutc())
-
-        if agent_time > server_time:
-            if (agent_time - server_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
-                raise RuntimeError("Host %s clock is fast.  agent time %s, server time %s" % (host, agent_time, server_time))
-
-        if server_time > agent_time:
-            if (server_time - agent_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
-                raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
-
         assert fqdn != None
         assert nodename != None
 
@@ -641,6 +626,31 @@ class GetHostProperties(Step):
             host.fqdn = None
             job_log.error("Cannot complete setup of host %s, it is reporting an already-used FQDN %s" % (host, fqdn))
             raise
+
+
+class GetHostClock(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host_properties = self.invoke_agent(host, "host-properties")
+
+        # Get agent time and check it against server time
+        agent_time_str = host_properties['time']
+        agent_time = dateutil.parser.parse(agent_time_str)
+        server_time = datetime.datetime.utcnow()
+        from dateutil import tz
+        server_time = server_time.replace(tzinfo=tz.tzutc())
+
+        if agent_time > server_time:
+            if (agent_time - server_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is fast.  agent time %s, server time %s" % (host, agent_time, server_time))
+
+        if server_time > agent_time:
+            if (server_time - agent_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
+                raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
 
 
 class SetServerConfStep(Step):
@@ -706,8 +716,9 @@ class SetupHostJob(StateChangeJob):
         return "Setting up server %s" % self.managed_host
 
     def get_steps(self):
-        return [(ConfigureNTPStep, {'host_id': self.managed_host.pk}),
-                (GetHostProperties, {'host_id': self.managed_host.pk}),
+        return [(GetHostProperties, {'host_id': self.managed_host.pk}),
+                (ConfigureNTPStep, {'host_id': self.managed_host.pk}),
+                (GetHostClock, {'host_id': self.managed_host.pk}),
                 (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
                 (LearnDevicesStep, {'host_id': self.managed_host.pk}),
                 (SetServerConfStep, {'host_id': self.managed_host.pk})]
