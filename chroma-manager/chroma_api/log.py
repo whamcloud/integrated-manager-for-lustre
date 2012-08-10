@@ -12,6 +12,20 @@ from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 
+class LogAuthorization(DjangoAuthorization):
+    """
+    custom authorization class for log retrieval
+
+    Only users in the superusers and filesystem_admins groups are
+    allowed to retrieve non-Lustre messages
+    """
+    def apply_limits(self, request, object_list):
+        if ( request.user.is_authenticated() and
+            request.user.groups.filter(name__in=['filesystem_admins','superusers']).exists()):
+            return object_list
+        else:
+            # Lustre messages have a leading space
+            return object_list.filter(message__startswith=u' Lustre')
 
 class LogResource(ModelResource):
     """
@@ -38,7 +52,7 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
                 'devicereportedtime': ['gte', 'lte'],
                 'message': ['icontains', 'startswith', 'contains'],
                 }
-        authorization = DjangoAuthorization()
+        authorization = LogAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['devicereportedtime', 'fromhost']
         list_allowed_methods = ['get']
