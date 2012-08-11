@@ -204,6 +204,28 @@ class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase, FailoverTestC
                 volumes_expected_hosts_in_normal_state
             )
 
+            # Test failing over an OSS using chroma to do a controlled failover
+            volumes_expected_hosts_in_failover_state = {
+                mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
+                mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
+                ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
+                ost_volume_2['id']: target_hosts['ost2']['failover']['fqdn'],
+            }
+
+            self.chroma_controlled_failover(
+                target_hosts['ost2']['primary'],
+                target_hosts['ost2']['failover'],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state,
+                volumes_expected_hosts_in_failover_state
+            )
+
+            self.failback(
+                target_hosts['ost2']['primary'],
+                filesystem_id,
+                volumes_expected_hosts_in_normal_state
+            )
+
     def test_lnet_operational_after_failover(self):
         if config['failover_is_configured']:
             # "Pull the plug" on host
