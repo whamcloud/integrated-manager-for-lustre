@@ -88,14 +88,12 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
             except ManagedHost.MultipleObjectsReturned:
                 api_log.warn("Multiple hosts have NID %s" % nid)
                 continue
-            else:
+            if host.state != 'removed':
                 substitute(host, match, 0)
 
         for match in target_regex.finditer(message):
             target_name = match.group(1)
-            targets = ManagedTarget.objects.filter(name=target_name)
-            if targets.count() > 0:
-                target = targets[0]
+            for target in ManagedTarget.objects.filter(name=target_name)[:1]:
                 substitute(target, match)
 
-        return sorted(substitutions, lambda x, y: cmp(x['start'], y['start']))
+        return sorted(substitutions, key=lambda sub: sub['start'])
