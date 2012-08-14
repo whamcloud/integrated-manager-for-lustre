@@ -146,8 +146,8 @@
         $('#inodes_used').html(formatBigNumber(filesystem.files_total - filesystem.files_free));
         $('#inodes_total').html(formatBigNumber(filesystem.files_total));
         $('#ost_count').html(filesystem.osts.length);
-        $('#mgs_name').html(uri_properties_link(filesystem.mgt.primary_server, filesystem.mgt.primary_server_name));
-        $('#mds_name').html(uri_properties_link(filesystem.mdts[0].primary_server, filesystem.mdts[0].primary_server_name));
+        $('#mgs_name').html(RouteUtils.uri_properties_link(filesystem.mgt.primary_server, filesystem.mgt.primary_server_name));
+        $('#mds_name').html(RouteUtils.uri_properties_link(filesystem.mdts[0].primary_server, filesystem.mdts[0].primary_server_name));
         $('#fs_alerts').html(LiveObject.alertLabel(filesystem));
         $('#fs_actions').html(LiveObject.actions(filesystem) + LiveObject.busyIcon(filesystem));
         $('#fs_name').html(filesystem.name);
@@ -181,10 +181,10 @@
           });
           var volume_markup = "<span title='" + $.trim(tooltip) + "'>" + target.volume.label + "</span>"
           var row = [
-                  object_properties_link(target),
+                  RouteUtils.object_properties_link(target),
                   volume_markup,
-                  uri_properties_link(target.primary_server, target.primary_server_name),
-                  uri_properties_link(target.failover_servers[0], target.failover_server_name),
+                  RouteUtils.uri_properties_link(target.primary_server, target.primary_server_name),
+                  RouteUtils.uri_properties_link(target.failover_servers[0], target.failover_server_name),
                   target.active_host_name,
                   LiveObject.actions(target),
                   LiveObject.icons(target)
