@@ -15,9 +15,9 @@
                   <% if (target.filesystem_name) { %>
                     <tr class=''><th>File system:</th><td><%= target.filesystem_name %></td></tr>
                   <% } %>
-                  <tr><th>Primary server:</th><td><%= uri_properties_link(target.primary_server, target.primary_server_name) %></td></tr>
-                  <tr><th>Failover server:</th><td><%= uri_properties_link(target.failover_servers[0], target.failover_server_name) %></td></tr>
-                  <tr><th>Started on:</th><td><%= uri_properties_link(target.active_host, target.active_host_name) %></td></tr>
+                  <tr><th>Primary server:</th><td><%= RouteUtils.uri_properties_link(target.primary_server, target.primary_server_name) %></td></tr>
+                  <tr><th>Failover server:</th><td><%= RouteUtils.uri_properties_link(target.failover_servers[0], target.failover_server_name) %></td></tr>
+                  <tr><th>Started on:</th><td><%= RouteUtils.uri_properties_link(target.active_host, target.active_host_name) %></td></tr>
                   <tr><th>Alerts:</th><td><%= LiveObject.alertLabel(target) %></td></tr>
                   <tr><th>Actions:</th><td><%= LiveObject.actions(target) %><%= LiveObject.busyIcon(target) %></td></tr>
               </table>
@@ -52,7 +52,7 @@
     <table>
         <% _.each(storage_resources, function(resource) { %>
         <tr>
-            <td><%= uri_properties_link(resource.resource_uri, resource.alias) %></td>
+            <td><%= RouteUtils.uri_properties_link(resource.resource_uri, resource.alias) %></td>
             <td><%= LiveObject.alertIcon(resource) %> </td>
         </tr>
         <% }); %>

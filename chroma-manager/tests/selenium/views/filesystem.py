@@ -5,7 +5,7 @@
 
 
 from tests.selenium.base_view import  DatatableView
-from tests.selenium.base import wait_for_element
+from tests.selenium.base import wait_for_element, element_visible
 from tests.selenium.base import wait_for_transition
 
 
@@ -18,6 +18,10 @@ class Filesystem(DatatableView):
 
         self.filesystem_name_td = 0
         self.datatable_id = 'fs_list'
+
+    @property
+    def visible(self):
+        return element_visible(self.driver, 'div#filesystem-tab-list')
 
     def locate_filesystem(self, filesystem_name):
         filesystem_list = self.driver.find_elements_by_xpath("id('" + self.datatable_id + "')/tbody/tr")

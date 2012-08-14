@@ -109,7 +109,7 @@
         if (attr['class'] == 'ResourceReference') {
             if (attr.raw) {
                 /* For ResourceReference fields, 'raw' is a URI */
-                return uri_properties_link(attr.raw, attr.markup);
+                return RouteUtils.uri_properties_link(attr.raw, attr.markup);
             } else {
                 return "";
             }
@@ -164,7 +164,7 @@
                       $.each(row.attributes, function(attr_name, attr_val) {
                         row["attr_" + attr_name] = storage_attribute_markup(attr_val);
                       });
-                      row.alias = uri_properties_link(row.resource_uri, row.alias);
+                      row.alias = RouteUtils.uri_properties_link(row.resource_uri, row.alias);
                       row['0'] = ""
                     });
                     callback(data);

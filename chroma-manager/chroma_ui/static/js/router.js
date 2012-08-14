@@ -4,24 +4,74 @@
 // ========================================================
 
 
+var RouteUtils = function() {
+  function api_path_to_ui_path(resource_uri)
+  {
+    /* Given an API resource URI for an object,
+     return the UI URI for the detail view */
+    var resource = resource_uri.split('/')[2];
+    var id = resource_uri.split('/')[3];
 
-function uri_properties_link(resource_uri, label)
-{
-  if (resource_uri) {
-    var url = resource_uri.replace("/api/", "/");
-    return "<a class='navigation' href='" + url + "'>" + label + "</a>"
-  } else {
-    return ""
+    if (resource == 'filesystem') {
+      return "/configure/filesystem/detail/" + id + "/"
+    } else {
+      return "/" + resource + "/" + id + "/";
+    }
   }
-}
 
-function object_properties_link(object, label)
-{
-  if (!label) {
-    label = LiveObject.label(object);
+  function detail_path_to_list_path(detail_uri)
+  {
+    /* Given a detail URI for an object, return the
+     list URI for that object type */
+    var resource = detail_uri.split('/')[2];
+
+    var resource_to_list_uri = {
+      "filesystem": "/configure/filesystem/list/",
+      "host": "/configure/server/",
+      "volume": "/configure/volume/",
+      "user": "/configure/user",
+      "storage_resource": "/configure/storage/"
+    };
+
+    /* FIXME: can't do the mapping for a /target/ URI because
+     the list view of targets is either the MGT list or the detail
+     view of a filesystem depending on the target type */
+
+    return resource_to_list_uri[resource];
   }
-  return uri_properties_link(object.resource_uri, label);
-}
+
+  function current_path() {
+    /* Use this instead of window.location.href to get a path in the
+       form that our routing uses (no leading /ui/) */
+    return "/" + window.location.pathname.substr(UI_ROOT.length);
+  }
+
+  function uri_properties_link(resource_uri, label)
+  {
+    if (resource_uri) {
+      var url = api_path_to_ui_path(resource_uri);
+      return "<a class='navigation' href='" + url + "'>" + label + "</a>"
+    } else {
+      return ""
+    }
+  }
+
+  function object_properties_link(object, label)
+  {
+    if (!label) {
+      label = LiveObject.label(object);
+    }
+    return uri_properties_link(object.resource_uri, label);
+  }
+
+  return {
+    'api_path_to_ui_path': api_path_to_ui_path,
+    'detail_path_to_list_path': detail_path_to_list_path,
+    'uri_properties_link': uri_properties_link,
+    'object_properties_link': object_properties_link,
+    'current_path': current_path
+  }
+}();
 
 /* FIXME: if router callbacks throw an exception when called
  * as a result of Backbone.history.navigate({trigger:true}),

@@ -663,32 +663,37 @@ var CommandNotification = function() {
         ApiCache.put(resource, obj);
       },
       {404:function () {
-        // Refresh any datatables containing this object
-        $(".notification_object_icon[data-resource_uri='" + uri + "']").each(function () {
-          var dt_wrapper = $(this).closest("div.dataTables_wrapper");
-          if (dt_wrapper.length == 1) {
-            // We are inside a datatable, call its refresh method
-            var table_el = dt_wrapper.find('table')[0];
-            $(table_el).dataTable().fnDraw();
-          }
-        });
+        if (RouteUtils.api_path_to_ui_path(uri) == RouteUtils.current_path()) {
+          // If we are currently on the detail view of this object, then navigate away
+          Backbone.history.navigate(RouteUtils.detail_path_to_list_path(RouteUtils.current_path()), {trigger: true})
+        } else {
+          // Remove the object from the cache
+          var resource = uri.split('/')[2];
+          var id = uri.split('/')[3];
+          ApiCache.purge(resource, id);
 
-        // Blank out any other views of the object
-        $(".object_label[data-resource_uri='" + uri + "']").each(function () {
-          $(this).html("");
-        });
-        $(".object_state[data-resource_uri='" + uri + "']").each(function () {
-          $(this).html("");
-        });
+          // Refresh any datatables containing this object
+          $(".notification_object_icon[data-resource_uri='" + uri + "']").each(function () {
+            var dt_wrapper = $(this).closest("div.dataTables_wrapper");
+            if (dt_wrapper.length == 1) {
+              // We are inside a datatable, call its refresh method
+              var table_el = dt_wrapper.find('table')[0];
+              $(table_el).dataTable().fnDraw();
+            }
+          });
 
-        $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
-          $(this).html("");
-        });
+          // Blank out any other views of the object
+          $(".object_label[data-resource_uri='" + uri + "']").each(function () {
+            $(this).html("");
+          });
+          $(".object_state[data-resource_uri='" + uri + "']").each(function () {
+            $(this).html("");
+          });
 
-        // Remove the object from the cache
-        var resource = uri.split('/')[2];
-        var id = uri.split('/')[3];
-        ApiCache.purge(resource, id);
+          $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
+            $(this).html("");
+          });
+        }
       }},
       false);
   }

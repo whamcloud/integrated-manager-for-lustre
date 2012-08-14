@@ -33,7 +33,7 @@
               if (!server['fqdn']) {
                 row['fqdn'] = server['address'];
               }
-              row['fqdn'] = object_properties_link(server, row['fqdn']);
+              row['fqdn'] = RouteUtils.object_properties_link(server, row['fqdn']);
             });
             callback(data);
           }, settings);

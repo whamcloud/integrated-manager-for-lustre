@@ -82,7 +82,7 @@
                 _.each(row.substitutions, function(substitution) {
                     // get all text before our substitution
                     substituted += _.escape(row.message.substr(cursor, substitution.start - cursor));
-                    substituted += uri_properties_link(substitution.resource_uri, _.escape(substitution.label));
+                    substituted += RouteUtils.uri_properties_link(substitution.resource_uri, _.escape(substitution.label));
                     cursor = substitution.end;
                 });
                 // catch the end bit (or the whole message if there are no substitutions)

@@ -35,6 +35,10 @@ class EditFilesystem(BaseView):
 
         self.config_param_tab = ""
 
+    def set_state(self, state):
+        button_box = self.driver.find_element_by_css_selector('td#fs_actions')
+        self.click_command_button(button_box, state)
+
     def open_target_conf_params(self, target_name):
         link = WebDriverWait(self.driver, self.standard_wait).until(lambda driver: driver.find_element_by_link_text(target_name))
         link.click()
