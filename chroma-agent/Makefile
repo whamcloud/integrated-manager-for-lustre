@@ -37,6 +37,7 @@ rpms: production cleandist tarball
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-agent-*.tar.gz _topdir/SOURCES
 	cp chroma-agent-init.sh _topdir/SOURCES
+	cp lustre-modules-init.sh _topdir/SOURCES
 	cp chroma-agent.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(PACKAGE_VERSION)" \
