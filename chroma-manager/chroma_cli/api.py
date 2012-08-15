@@ -215,6 +215,9 @@ class ApiHandle(object):
         >>> ah = ApiHandle(api_uri="some.server")
         >>> ah.base_url
         'http://some.server/api/'
+        >>> ah = ApiHandle(api_uri="http://localhost:8000/api/")
+        >>> ah.base_url
+        'http://localhost:8000/api/'
         """
         if not base_uri:
             return None
@@ -224,7 +227,9 @@ class ApiHandle(object):
             base_uri = "http://" + base_uri
         if not re.search(r"/api(/?)$", base_uri):
             from urlparse import urljoin
-            return urljoin(base_uri, "/api/")
+            base_uri = urljoin(base_uri, "/api/")
+
+        return base_uri
 
     @property
     def schema(self):
