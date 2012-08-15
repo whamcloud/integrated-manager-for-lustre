@@ -1,6 +1,6 @@
 {
     "filesystems": {
-        "name": "testfs"
+        "name": "stestfs"
     },
     "conf_params": {
         "filesystem_conf_params": {
