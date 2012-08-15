@@ -118,7 +118,7 @@ class TestEditFilesystem(SeleniumBaseTestCase):
 
     def test_target_conf_param_validation(self):
         # Click advanced button
-        self.edit_filesystem_page.open_target_conf_params('testfs-MDT0000')
+        self.edit_filesystem_page.open_target_conf_params('%s-MDT0000' % self.filesystem_name)
         dialog = ConfParamDialog(self.driver)
 
         # Set new values for conf params
