@@ -4,7 +4,7 @@
 # ========================================================
 import datetime
 from testconfig import config
-from tests.selenium.base import wait_for_element
+from tests.selenium.base import wait_for_element, wait_for_any_element, element_visible
 from tests.selenium.base_view import BaseView
 
 from time import sleep
@@ -38,18 +38,46 @@ class Navigation(BaseView):
             'Create_new_filesystem': "#create_new_fs",
         }
 
+        self._patch_api()
+
+    def _patch_api(self):
+        """Modify the JS behaviour to be more cooperative for
+           testing -- call this after any non-ajax navigation"""
+        self.quiesce()
+        self.log.debug("Calling testMode")
         self.driver.execute_script('return Api.testMode(true);')
+        # The fade-out of the blocking animation can still be in progress, wait for it to hide
+        self.wait_for_removal("div.blockUI")
+
+    def login(self, username, password):
+        """Login with given username and password"""
+        self.log.debug("Logging in %s" % username)
+        from tests.selenium.views.login import Login
+        wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
+        login_view = Login(self.driver)
+        if not element_visible(self.driver, '#login_dialog'):
+            login_view.open_login_dialog()
+        login_view.login_user(username, password)
+        wait_for_element(self.driver, '#username', 10)
+        self.quiesce()
+        self._patch_api()
+
+    def logout(self):
+        self.log.debug("Logging out")
+        self.driver.find_element_by_css_selector("#logout").click()
+        wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
+        self._patch_api()
 
     def refresh(self):
         self.log.info("Navigation.refresh %s" % self.driver.execute_script('return window.location.href;'))
         self.driver.refresh()
-        self.driver.execute_script('return Api.testMode(true);')
+        self._patch_api()
         self.quiesce()
 
     def reset(self):
         self.driver.get(config['chroma_managers']['server_http_url'])
         wait_for_element(self.driver, '#dashboard_menu', 10)
-        self.driver.execute_script('return Api.testMode(true);')
+        self._patch_api()
         self.quiesce()
 
     def go(self, *args):

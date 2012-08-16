@@ -4,23 +4,19 @@
 # ========================================================
 
 
-from tests.selenium.base import enter_text_for_element
+from tests.selenium.base import enter_text_for_element, element_visible
 from tests.selenium.base import select_element_option
 from tests.selenium.base import wait_for_element
-from tests.selenium.utils.constants import wait_time
+from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
-from tests.selenium.base import login
-from testconfig import config
 
 
-class Users:
-    """
-    Page Object for user operations
-    """
+class Users(DatatableView):
+    datatable_id = "user_list"
+    label_column = 0
+
     def __init__(self, driver):
-        self.driver = driver
-
-        self.medium_wait = wait_time['medium']
+        super(Users, self).__init__(driver)
 
         # Initialise elements on this page
         self.create_new_user_button = self.driver.find_element_by_css_selector("#create_user")
@@ -48,11 +44,6 @@ class Users:
         self.username_td = 0
         self.user_group_td = 3
 
-        for user in config['chroma_managers']['users']:
-            if user['is_superuser']:
-                self.superuser_username = user['username']
-                self.superuser_password = user['password']
-
     def add(self, user_group, username, first_name, last_name, email, password, confirm_password):
         # Enter data for adding new user
 
@@ -66,6 +57,7 @@ class Users:
 
         # Click create button
         self.driver.find_element_by_css_selector(self.create_user_button).click()
+        self.quiesce()
 
     def edit(self, username, new_password, new_confirm_password):
         # Edit user data
@@ -79,12 +71,13 @@ class Users:
                 enter_text_for_element(self.driver, self.edit_password2, new_confirm_password)
                 # Click save button
                 self.driver.find_element_by_css_selector(self.edit_save_button).click()
+                self.quiesce()
                 return
 
         raise RuntimeError("Cannot edit user with username " + username)
 
     def delete(self, username):
-        # Delete userv
+        # Delete user
         target_host_row = self.locate_user(username)
         buttons = target_host_row.find_elements_by_tag_name("button")
         for button in buttons:
@@ -95,40 +88,42 @@ class Users:
                 self.driver.find_element_by_css_selector(self.delete_button).click()
                 return
 
-        raise RuntimeError("Cannot delete user with username " + username)
+        raise RuntimeError("Failed to find delete button for user %s" % username)
+
+    def delete_all_except(self, protect_username):
+        usernames = [row[0] for row in self.get_table_text(self.datatable, [self.username_td])]
+        for username in [u for u in usernames if u != protect_username]:
+            self.log.debug("Removing user %s" % username)
+            self.delete(username)
 
     def locate_user(self, username):
-        """Locate user by username and group from users list and return the complete row"""
-        users_list = self.driver.find_elements_by_xpath("id('" + self.user_list_datatable + "')/tbody/tr")
-        for tr in users_list:
-            tds = tr.find_elements_by_tag_name("td")
-            if tds[self.username_td].text == username:
-                return tr
+        return self.find_row_by_column_text(self.datatable, {self.username_td: username})
 
-        raise RuntimeError("User with username: " + username + " not found in list")
-
-    def verify_user(self, username, password):
-        self.driver.find_element_by_css_selector("#logout").click()
-        login(self.driver, username, password)
-        wait_for_element(self.driver, '#configure_menu', 10)
-        self.driver.find_element_by_css_selector("#logout").click()
-        login(self.driver, self.superuser_username, self.superuser_password)
-
-    def edit_user_password(self, username, password, new_password):
-        self.driver.find_element_by_css_selector("#logout").click()
-        login(self.driver, username, password)
-        wait_for_element(self.driver, '#username', 10)
-        self.driver.find_element_by_css_selector("#username").click()
-        wait_for_element(self.driver, self.edit_user_dialog, 10)
+    def edit_own_password(self, password, new_password):
+        self.driver.find_element_by_css_selector("#account").click()
+        self.quiesce()
         enter_text_for_element(self.driver, self.old_password, password)
         enter_text_for_element(self.driver, self.edit_password1, new_password)
         enter_text_for_element(self.driver, self.edit_password2, new_password)
-        # Click save button
         self.driver.find_element_by_css_selector(self.edit_save_button).click()
-        wait_for_element(self.driver, '#username', 10)
-        self.driver.find_element_by_css_selector("#logout").click()
-        login(self.driver, username, new_password)
-        wait_for_element(self.driver, '#username', 10)
-        self.driver.refresh()
-        self.driver.find_element_by_css_selector("#logout").click()
-        login(self.driver, self.superuser_username, self.superuser_password)
+        self.quiesce()
+
+    @property
+    def edit_dialog_visible(self):
+        return self.driver.find_element_by_css_selector(self.edit_user_dialog).is_displayed()
+
+    @property
+    def username_error(self):
+        return self.get_input_error(self.driver.find_element_by_css_selector(self.username))
+
+    @property
+    def password_error(self):
+        return self.get_input_error(self.driver.find_element_by_css_selector(self.password1))
+
+    @property
+    def password2_error(self):
+        return self.get_input_error(self.driver.find_element_by_css_selector(self.password2))
+
+    def creation_dialog_close(self):
+        self.get_visible_element_by_css_selector(".cancel_button").click()
+        assert not element_visible(self.driver, self.create_user_dialog)
