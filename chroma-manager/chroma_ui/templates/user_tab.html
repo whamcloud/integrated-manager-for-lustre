@@ -62,7 +62,11 @@
         modal: true,
         title: 'Create user',
         buttons: {
-          "Cancel": function(){$(this).dialog('close');},
+          "Cancel":{
+            'text': "Cancel",
+            'class': "cancel_button",
+            'click': function(){$(this).dialog('close');}
+          },
           "Create":{
             "text":"Create",
             "class":"create_button",

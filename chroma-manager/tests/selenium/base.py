@@ -51,6 +51,7 @@ def element_visible(driver, selector):
 
 
 def wait_for_element(driver, selector, timeout):
+    """Set invert=True to wait for an element to be invisible"""
     for i in xrange(timeout):
         element = element_visible(driver, selector)
         if element:
@@ -130,16 +131,6 @@ def quiesce_api(driver, timeout):
     raise RuntimeError('Timeout')
 
 
-def login(driver, username, password):
-    """Login with given username and password"""
-    from tests.selenium.views.login import Login
-    wait_for_any_element(driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
-    login_view = Login(driver)
-    if not element_visible(driver, '#login_dialog'):
-        login_view.open_login_dialog()
-    login_view.login_user(username, password)
-
-
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
@@ -172,10 +163,13 @@ class SeleniumBaseTestCase(TestCase):
             raise RuntimeError("Please set server_http_url in config file")
         self.driver.get(config['chroma_managers']['server_http_url'])
 
+        from tests.selenium.utils.navigation import Navigation
+        self.navigation = Navigation(self.driver)
+
         superuser_present = False
         for user in config['chroma_managers']['users']:
             if user['is_superuser']:
-                login(self.driver, user['username'], user['password'])
+                self.navigation.login(user['username'], user['password'])
                 superuser_present = True
 
         if not superuser_present:
@@ -183,9 +177,6 @@ class SeleniumBaseTestCase(TestCase):
 
         wait_for_element(self.driver, '#user_info #authenticated', 10)
         wait_for_element(self.driver, '#dashboard_menu', 10)
-
-        from tests.selenium.utils.navigation import Navigation
-        self.navigation = Navigation(self.driver)
 
         self.clear_all()
 
@@ -207,6 +198,7 @@ class SeleniumBaseTestCase(TestCase):
         from tests.selenium.views.filesystem import Filesystem
         from tests.selenium.views.mgt import Mgt
         from tests.selenium.views.servers import Servers
+        from tests.selenium.views.users import Users
 
         self.log.info("Clearing all objects")
         self.navigation.go('Configure', 'Filesystems')
@@ -215,6 +207,16 @@ class SeleniumBaseTestCase(TestCase):
         Mgt(self.driver).remove_all()
         self.navigation.go('Configure', 'Servers')
         Servers(self.driver).remove_all()
+
+        superuser_username = None
+        for user in config['chroma_managers']['users']:
+            if user['is_superuser']:
+                superuser_username = user['username']
+        if not superuser_username:
+            raise RuntimeError("Test config does not define a superuser")
+        else:
+            self.navigation.go('Configure', 'Users')
+            Users(self.driver).delete_all_except(superuser_username)
 
     def volume_and_server(self, index):
         volume = config['volumes'][index]

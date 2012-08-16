@@ -34,7 +34,16 @@ class BaseView(object):
         raise RuntimeError("Timed out waiting for API operations to complete after %s seconds" % self.standard_wait)
 
     def wait_for_element(self, selector):
+        """Wait for an element to be visible"""
         wait_for_element(self.driver, selector, self.standard_wait)
+
+    def wait_for_removal(self, selector):
+        """Wait for all elements matching selector to be removed from the DOM"""
+        for i in xrange(self.standard_wait):
+            if not len(self.driver.find_elements_by_css_selector(selector)):
+                return
+
+        raise RuntimeError("Timed out after %s waiting for %s to be removed" % (self.standard_wait, selector))
 
     def get_visible_element_by_css_selector(self, selector):
         """Return an element matching the selector which is visible, or raise
@@ -158,8 +167,7 @@ class DatatableView(BaseView):
         return self.driver.find_elements_by_xpath("id('" + self.datatable_id + "')/tbody/tr")
 
     def transition_by_column_values(self, column_values, state):
-        table = self.driver.find_element_by_css_selector("#%s" % self.datatable_id)
-        row = self.find_row_by_column_text(table, column_values)
+        row = self.find_row_by_column_text(self.datatable, column_values)
         self.click_command_button(row, state)
 
     def remove_all(self):
