@@ -76,7 +76,7 @@ def _device_node(device_name, major_minor, path, size, parent):
     # syntax to new (RHEL6) version.  Tell them apart with --version
     # (old one doesn't have --version, new one does)
     SCSI_ID_PATH = "/sbin/scsi_id"
-    if old_udev == None:
+    if not old_udev:
         rc, out, err = shell.run([SCSI_ID_PATH, '--version'])
         old_udev = (rc != 0)
 
@@ -91,7 +91,7 @@ def _device_node(device_name, major_minor, path, size, parent):
 
     def scsi_id_command(cmd):
         rc, out, err = shell.run(cmd)
-        if rc != 0:
+        if rc:
             return None
         else:
             return out.strip()
@@ -149,7 +149,7 @@ def _parse_sys_block():
         size = int(open(os.path.join(dev_dir, "size")).read().strip()) * 512
 
         # Exclude zero-sized devices
-        if size == 0:
+        if not size:
             return
 
         # Exclude ramdisks, floppy drives, obvious cdroms
@@ -209,6 +209,178 @@ def _get_md():
         return []
 
 
+def _parse_multipath_params(tokens):
+    """
+    Parse a multipath line from 'dmsetup table', starting after 'multipath'
+    """
+    # We will modify this, take a copy
+    tokens = list(tokens)
+
+    # integer count arguments, followed by list of strings
+    n_feature_args = int(tokens[0])
+    #feature_args = tokens[1:1 + n_feature_args]
+    tokens = tokens[n_feature_args + 1:]
+
+    # integer count arguments, followed by list of strings
+    n_handler_args = int(tokens[0])
+    #handler_args = tokens[1:1 + n_handler_args]
+    tokens = tokens[n_handler_args + 1:]
+
+    #num_groups, init_group_number = int(tokens[0]), int(tokens[1])
+    tokens = tokens[2:]
+
+    devices = []
+
+    while len(tokens):
+        path_selector, status, path_count, path_arg_count = tokens[0:4]
+
+        # Sanity check of parsing, is the path selector one of those in 2.6.x linux kernel
+        assert path_selector in ['round-robin', 'queue-length', 'service-time']
+        path_arg_count = int(path_arg_count)
+        path_count = int(path_count)
+
+        # status is a call to ps.type->status with path=NULL, which for all linux 2.6 path selectors is always "0"
+        # path_count is the number of paths in this priority group
+        # path_arg_count is the number of args that each path will have after the block device identifier (a constant
+        # for each path_selector)
+
+        tokens = tokens[4:]
+        for i in range(0, path_count):
+            major_minor = tokens[0]
+            # path_status_args = tokens[1:1 + path_arg_count]
+            # The meaning of path_status_args depends on path_selector:
+            #  for round-robin, and queue-length it is repeat_count (1 integer)
+            #  for service-time it is repeat_count then relative_throughput (2 integers)
+            tokens = tokens[1 + path_arg_count:]
+            devices.append(major_minor)
+
+    return devices
+
+
+def _parse_dm_table(stdout, node_block_devices, block_device_nodes, vgs, lvs, mpaths):
+    if stdout.strip() == "No devices found":
+        dm_lines = []
+    else:
+        dm_lines = [i for i in stdout.split("\n") if len(i) > 0]
+
+    # Compose a lookup of names of multipath devices, for use
+    # in parsing other lines
+    multipath_names = set()
+    for line in dm_lines:
+        tokens = line.split()
+        name = tokens[0].strip(":")
+        dm_type = tokens[3]
+        if dm_type == 'multipath':
+            multipath_names.add(name)
+
+    def _read_lv(block_device, lv_name, vg_name, devices):
+        lvs[vg_name][lv_name]['block_device'] = block_device
+
+        devices = [block_device_nodes[i]['major_minor'] for i in devices]
+        vgs[vg_name]['pvs_major_minor'] = list(set(vgs[vg_name]['pvs_major_minor']) | set(devices))
+
+    def _read_lv_partition(block_device, parent_lv_name, vg_name):
+        # HYD-744: FIXME: compose path in a way that copes with hyphens
+        parent_block_device = node_block_devices["/dev/mapper/%s-%s" % (vg_name, parent_lv_name)]
+        block_device_nodes[block_device]['parent'] = parent_block_device
+
+    def _read_mpath_partition(block_device, parent_mpath_name):
+        # A non-LV partition
+        parent_block_device = node_block_devices["/dev/mapper/%s" % parent_mpath_name]
+        block_device_nodes[block_device]['parent'] = parent_block_device
+
+    for line in dm_lines:
+        tokens = line.split()
+        name = tokens[0].strip(":")
+        dm_type = tokens[3]
+
+        node_path = os.path.join("/dev/mapper", name)
+        block_device = node_block_devices[node_path]
+
+        if dm_type in ['linear', 'striped']:
+            # This is either an LV or a partition.
+            # Try to resolve its name to a known LV, if not found then it
+            # is a partition.
+            # This is an LVM LV
+            if dm_type == 'striped':
+                # List of striped devices
+                dev_indices = range(6, len(tokens), 2)
+                devices = [tokens[i] for i in dev_indices]
+            elif dm_type == 'linear':
+                # Single device linear range
+                devices = [tokens[4]]
+            else:
+                agent_log.error("Failed to parse line '%s'" % line)
+                continue
+
+            # To be an LV:
+            #  Got to have a hyphen
+            #  Got to appear in lvs dict
+
+            # To be a partition:
+            #  Got to have a (.*)p\d+$
+            #  Part preceeding that pattern must be an LV or a mpath
+
+            # Potentially confusing scenarios:
+            #  A multipath device named foo-bar where there exists a VG called 'foo'
+            #  An LV whose name ends "p1" like foo-lvp1
+            #  NB some scenarios may be as confusing for devicemapper as they are for us, e.g.
+            #  if someone creates an LV "bar" in a VG "foo", and also an mpath called "foo-bar"
+
+            # First, let's see if it's an LV or an LV partition
+            match = re.search("(.*[^-])-([^-].*)", name)
+            if match:
+                vg_name, lv_name = match.groups()
+                # When a name has a "-" in it, DM prints a double hyphen in the output
+                # So for an LV called "my-lv" you get VolGroup00-my--lv
+                vg_name = vg_name.replace("--", "-")
+                lv_name = lv_name.replace("--", "-")
+                try:
+                    vg_lv_info = lvs[vg_name]
+                except KeyError:
+                    # Part before the hyphen is not a VG, so this can't be an LV
+                    pass
+                else:
+                    if lv_name in vg_lv_info:
+                        _read_lv(block_device, lv_name, vg_name, devices)
+                        continue
+                    else:
+                        # It's not an LV, but it matched a VG, could it be an LV partition?
+                        result = re.search("(.*)p\d+", lv_name)
+                        if result:
+                            lv_name = result.groups()[0]
+                            if lv_name in vg_lv_info:
+                                # This could be an LV partition.
+                                _read_lv_partition(block_device, lv_name, vg_name)
+                                continue
+            else:
+                # If it isn't an LV or an LV partition, see if it looks like an mpath partition
+                result = re.search("(.*)p\d+", name)
+                if result:
+                    mpath_name = result.groups()[0]
+                    if mpath_name in multipath_names:
+                        _read_mpath_partition(block_device, mpath_name)
+                    else:
+                        # Part before p\d+ is not an mpath, therefore not a multipath partition
+                        pass
+                else:
+                    # No trailing p\d+, therefore not a partition
+                    agent_log.error("Cannot handle devicemapper device %s: it doesn't look like an LV or a partition" % name)
+        elif dm_type == 'multipath':
+            major_minors = _parse_multipath_params(tokens[4:])
+            devices = [block_device_nodes[i] for i in major_minors]
+            if name in mpaths:
+                raise RuntimeError("Duplicated mpath device %s" % name)
+
+            mpaths[name] = {
+                "name": name,
+                "block_device": block_device,
+                "nodes": devices
+            }
+        else:
+            continue
+
+
 def device_scan(args = None):
     # Map of block devices major:minors to /dev/ path.
     block_device_nodes, node_block_devices = _parse_sys_block()
@@ -232,80 +404,7 @@ def device_scan(args = None):
     mpaths = {}
 
     stdout = shell.try_run(['dmsetup', 'table'])
-    if stdout.strip() == "No devices found":
-        dm_lines = []
-    else:
-        dm_lines = [i for i in stdout.split("\n") if len(i) > 0]
-    for line in dm_lines:
-        tokens = line.split()
-        name = tokens[0].strip(":")
-        dm_type = tokens[3]
-
-        node_path = os.path.join("/dev/mapper", name)
-        block_device = node_block_devices[node_path]
-
-        if dm_type in ['linear', 'striped']:
-            # This is an LVM LV
-            if dm_type == 'striped':
-                # List of striped devices
-                dev_indices = range(6, len(tokens), 2)
-                devices = [tokens[i] for i in dev_indices]
-            elif dm_type == 'linear':
-                # Single device linear range
-                devices = [tokens[4]]
-
-            # When a name has a "-" in it, DM prints a double hyphen in the output
-            # So for an LV called "my-lv" you get VolGroup00-my--lv
-            vg_name, lv_name = re.search("(.*[^-])-([^-].*)", name).groups()
-            vg_name = vg_name.replace("--", "-")
-            lv_name = lv_name.replace("--", "-")
-
-            # Try to get information about LVs from this VG which we queried
-            # earlier with _get_vg/_get_lv.  This can fail if the system is in an in-between
-            # state where it still has device nodes for some LVs which are
-            # no longer really there
-            try:
-                vg_lv_info = lvs[vg_name]
-            except KeyError:
-                continue
-
-            if not lv_name in vg_lv_info:
-                # This isn't something we saw as a named LV, so its
-                # a partition.  Assign its parent and don't store it
-                # as an LV.
-                result = re.search("(.*)p\d+", lv_name)
-                if not result:
-                    agent_log.error("Cannot parse LVM device name %s" % name)
-                    continue
-                parent_lv_name = result.groups()[0]
-                if not parent_lv_name in lvs[vg_name]:
-                    agent_log.error("Cannot parse LVM device name %s" % name)
-                else:
-                    # HYD-744: FIXME: compose path in a way that copes with hyphens
-                    parent_block_device = node_block_devices["/dev/mapper/%s-%s" % (vg_name, parent_lv_name)]
-                    block_device_nodes[block_device]['parent'] = parent_block_device
-
-                continue
-            lvs[vg_name][lv_name]['block_device'] = block_device
-
-            devices = [block_device_nodes[i]['major_minor'] for i in devices]
-            vgs[vg_name]['pvs_major_minor'] = list(set(vgs[vg_name]['pvs_major_minor']) | set(devices))
-        elif dm_type == 'multipath':
-            # This is a multipath device, there will be a list of devices like this:
-            # "round-robin 0 1 1 8:80 1000"
-            dev_indices = range(12, len(tokens), 6)
-            devices = [tokens[i] for i in dev_indices]
-            devices = [block_device_nodes[i] for i in devices]
-            if name in mpaths:
-                raise RuntimeError("Duplicated mpath device %s" % name)
-
-            mpaths[name] = {
-                    "name": name,
-                    "block_device": block_device,
-                    "nodes": devices
-                    }
-        else:
-            continue
+    _parse_dm_table(stdout, node_block_devices, block_device_nodes, vgs, lvs, mpaths)
 
     mds = {}
     for md in _get_md():

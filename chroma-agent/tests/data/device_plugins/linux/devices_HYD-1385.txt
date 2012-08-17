@@ -1,0 +1,45 @@
+{
+  "node_block_devices": {
+    "/dev/mapper/350014ee2b0a45fec": "253:0",
+    "/dev/mapper/350014ee2b0a45fecp1": "666:2",
+    "/dev/mapper/350014ee2b0a45fecp2": "666:3"
+  },
+  "block_device_nodes": {
+    "8:0": {
+                 "major_minor": "8:0",
+                 "parent": null,
+                 "serial_83": "0QEMU    QEMU HARDDISK   drive-scsi0-0-3",
+                 "serial_80": "SQEMU    QEMU HARDDISK  WD-6f237d215a",
+                 "path": "/dev/devBpath0",
+                 "size": 1073741824
+               },
+    "253:0": {
+                 "major_minor": "666:1",
+                 "parent": null,
+                 "serial_83": "0QEMU    QEMU HARDDISK   drive-scsi0-0-3",
+                 "serial_80": "SQEMU    QEMU HARDDISK  WD-6f237d215a",
+                 "path": "/dev/mapper/350014ee2b0a45fec",
+                 "size": 1073741824
+               },
+   "666:2": {
+                "major_minor": "666:1",
+                "parent": null,
+                "serial_83": null,
+                "serial_80": null,
+                "path": "/dev/mapper/350014ee2b0a45fecp1",
+                "size": 1073741824
+              },
+  "666:3": {
+               "major_minor": "666:1",
+               "parent": null,
+               "serial_83": null,
+               "serial_80": null,
+               "path": "/dev/mapper/350014ee2b0a45fecp2",
+               "size": 1073741824
+             }
+  }, 
+  "lvs": {
+  }, 
+  "vgs": {
+  }
+}
