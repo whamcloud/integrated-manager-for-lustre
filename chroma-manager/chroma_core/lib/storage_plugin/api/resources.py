@@ -26,6 +26,13 @@ class PathWeight(BaseStorageResource):
     weight = attributes.Integer()
 
 
+class LogicalDriveOccupier(BaseStorageResource):
+    """When a subclass of this is the descendent of a LogicalDrive, that LogicalDrive
+    is considered unavailable.  This is used for marking LUNs/partitions/LVs which are
+    in use, for example those which are mounted in existing filesystems."""
+    pass
+
+
 class VirtualMachine(BaseStorageResource):
     """A linux host provided by a plugin.  This resource has a special behaviour when
     created: Chroma will add this (by the ``address`` attribute) as a Lustre server and

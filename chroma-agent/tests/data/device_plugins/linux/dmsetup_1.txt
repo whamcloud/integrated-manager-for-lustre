@@ -1,0 +1,16 @@
+VolGroup00-scratch1: 0 524288 linear 3:2 19136896
+VolGroup00-scratch0: 0 524288 linear 3:2 18612608
+whamvg-OST4: 0 1892352 linear 8:0 6291840
+whamvg-OST4: 1892352 204800 linear 8:16 6291840
+whamvg-OST3: 0 2097152 linear 8:16 4194688
+whamvg-OST2: 0 2097152 linear 8:16 2097536
+whamvg-OST1: 0 2097152 linear 8:16 384
+whamvg-OST0: 0 2097152 linear 8:0 4194688
+whamvg-MDT: 0 2097152 linear 8:0 2097536
+VolGroup00-LogVol01: 0 2097152 linear 3:2 16515456
+whamvg-MGT: 0 2097152 linear 8:0 384
+mpath11: 0 2097152 multipath 0 0 2 1 round-robin 0 1 1 8:96 1000 round-robin 0 1 1 8:112 1000 
+VolGroup00-LogVol00: 0 16515072 linear 3:2 384
+VolGroup00-scratch3: 0 524288 linear 3:2 20185472
+mpath10: 0 2097152 multipath 0 0 2 1 round-robin 0 1 1 8:64 1000 round-robin 0 1 1 8:80 1000 
+VolGroup00-scratch2: 0 524288 linear 3:2 19661184

@@ -1,0 +1,17 @@
+{
+  "350014ee2b0a45fec": {
+    "block_device": "253:0",
+    "nodes": [
+            {
+                     "major_minor": "8:0",
+                     "parent": null,
+                     "serial_83": "0QEMU    QEMU HARDDISK   drive-scsi0-0-3",
+                     "serial_80": "SQEMU    QEMU HARDDISK  WD-6f237d215a",
+                     "path": "/dev/devBpath0",
+                     "size": 1073741824
+                   }
+
+    ],
+    "name": "350014ee2b0a45fec"
+  }
+}

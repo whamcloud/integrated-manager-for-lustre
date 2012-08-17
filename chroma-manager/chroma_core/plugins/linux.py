@@ -91,7 +91,7 @@ class MdRaid(resources.LogicalDrive):
     uuid = attributes.String()
 
 
-class LocalMount(resources.Resource):
+class LocalMount(resources.LogicalDriveOccupier):
     """Used for marking devices which are already in use, so that
     we don't offer them for use as Lustre targets."""
     class Meta:
@@ -195,14 +195,16 @@ class Linux(Plugin):
                 if serial != None and not serial in res_by_serial:
                     # NB it's okay to have multiple block devices with the same
                     # serial (multipath): we just store the serial+size once
-                    res, created = self.update_or_create(ScsiDevice,
+                    node, created = self.update_or_create(ScsiDevice,
                             serial_80 = bdev['serial_80'],
                             serial_83 = bdev['serial_83'],
                             size = bdev['size'])
-                    res_by_serial[serial] = res
+                    res_by_serial[serial] = node
+
+        # Map major:minor string to LinuxDeviceNode
+        major_minor_to_node_resource = {}
 
         # Create DeviceNodes for ScsiDevices and UnsharedDevices
-        bdev_to_resource = {}
         for bdev in devices['devs'].values():
             # Partitions: we will do these in a second pass once their
             # parents are in bdev_to_resource
@@ -215,43 +217,46 @@ class Linux(Plugin):
 
             serial = preferred_serial(bdev)
             if serial != None:
+                # Serial is set, so look up the ScsiDevice
                 lun_resource = res_by_serial[serial]
-                res, created = self.update_or_create(LinuxDeviceNode,
+                node, created = self.update_or_create(LinuxDeviceNode,
                                     parents = [lun_resource],
                                     logical_drive = lun_resource,
                                     host_id = host_id,
                                     path = bdev['path'])
+                major_minor_to_node_resource[bdev['major_minor']] = node
             else:
-                res, created = self.update_or_create(UnsharedDevice,
+                # Serial is not set, so create an UnsharedDevice
+                device, created = self.update_or_create(UnsharedDevice,
                         path = bdev['path'],
                         size = bdev['size'])
-                res, created = self.update_or_create(LinuxDeviceNode,
-                        parents = [res],
-                        logical_drive = res,
+                node, created = self.update_or_create(LinuxDeviceNode,
+                        parents = [device],
+                        logical_drive = device,
                         host_id = host_id,
                         path = bdev['path'])
-            bdev_to_resource[bdev['major_minor']] = res
+                major_minor_to_node_resource[bdev['major_minor']] = node
 
         # Okay, now we've got ScsiDeviceNodes, time to build the devicemapper ones
         # on top of them.  These can come in any order and be nested to any depth.
         # So we have to build a graph and then traverse it to populate our resources.
         for bdev in devices['devs'].values():
             if bdev['major_minor'] in lv_block_devices:
-                res, created = self.update_or_create(LinuxDeviceNode,
+                node, created = self.update_or_create(LinuxDeviceNode,
                                     host_id = host_id,
                                     path = bdev['path'])
             elif bdev['major_minor'] in mpath_block_devices:
-                res, created = self.update_or_create(LinuxDeviceNode,
+                node, created = self.update_or_create(LinuxDeviceNode,
                                     host_id = host_id,
                                     path = bdev['path'])
             elif bdev['parent']:
-                res, created = self.update_or_create(LinuxDeviceNode,
+                node, created = self.update_or_create(LinuxDeviceNode,
                         host_id = host_id,
                         path = bdev['path'])
             else:
                 continue
 
-            bdev_to_resource[bdev['major_minor']] = res
+            major_minor_to_node_resource[bdev['major_minor']] = node
 
         # Now all the LUNs and device nodes are in, create the links between
         # the DM block devices and their parent entities.
@@ -266,8 +271,8 @@ class Linux(Plugin):
 
             # Add PV block devices as parents of VG
             for pv_bdev in vg['pvs_major_minor']:
-                if pv_bdev in bdev_to_resource:
-                    vg_resource.add_parent(bdev_to_resource[pv_bdev])
+                if pv_bdev in major_minor_to_node_resource:
+                    vg_resource.add_parent(major_minor_to_node_resource[pv_bdev])
 
         for vg, lv_list in devices['lvs'].items():
             for lv_name, lv in lv_list.items():
@@ -283,17 +288,22 @@ class Linux(Plugin):
                         size = lv['size'])
 
                 try:
-                    lv_bdev = bdev_to_resource[lv['block_device']]
-                    lv_bdev.add_parent(lv_resource)
+                    lv_node = major_minor_to_node_resource[lv['block_device']]
+                    lv_node.logical_drive = lv_resource
+                    lv_node.add_parent(lv_resource)
                 except KeyError:
                     # Inactive LVs have no block device
                     pass
 
         for mpath_alias, mpath in devices['mpath'].items():
-            mpath_bdev = bdev_to_resource[mpath['block_device']]
-            mpath_parents = [bdev_to_resource[n['major_minor']] for n in mpath['nodes']]
+            # Devices contributing to the multipath
+            mpath_parents = [major_minor_to_node_resource[n['major_minor']] for n in mpath['nodes']]
+            # The multipath device node
+            mpath_node = major_minor_to_node_resource[mpath['block_device']]
             for p in mpath_parents:
-                mpath_bdev.add_parent(p)
+                # All the mpath_parents should have the same logical_drive
+                mpath_node.logical_drive = mpath_parents[0].logical_drive
+                mpath_node.add_parent(p)
 
         for uuid, md_info in devices['mds'].items():
             md_res, created = self.update_or_create(MdRaid,
@@ -305,26 +315,26 @@ class Linux(Plugin):
                     host_id = host_id,
                     path = md_info['path'])
             for drive_bd in md_info['drives']:
-                drive_res = bdev_to_resource[drive_bd]
+                drive_res = major_minor_to_node_resource[drive_bd]
                 md_res.add_parent(drive_res)
-            bdev_to_resource[md_info['block_device']] = node_res
+            major_minor_to_node_resource[md_info['block_device']] = node_res
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
-            bdev_resource = bdev_to_resource[bdev]
+            bdev_resource = major_minor_to_node_resource[bdev]
             self.update_or_create(LocalMount,
                     parents=[bdev_resource],
                     mount_point = mntpnt,
                     fstype = fstype)
 
-        for bdev in devices['devs'].values():
-            if bdev['parent'] == None:
-                continue
-
-            this_node = bdev_to_resource[bdev['major_minor']]
-            parent_resource = bdev_to_resource[bdev['parent']]
+        # Create Partitions (devices that have 'parent' set)
+        for bdev in [x for x in devices['devs'].values() if x['parent']]:
+            this_node = major_minor_to_node_resource[bdev['major_minor']]
+            parent_resource = major_minor_to_node_resource[bdev['parent']]
             number = int(re.search("(\d+)$", bdev['path']).group(1))
 
-            assert(parent_resource.logical_drive)
+            if not parent_resource.logical_drive:
+                raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
+
             partition, created = self.update_or_create(Partition,
                     parents = [parent_resource],
                     container = parent_resource.logical_drive,
