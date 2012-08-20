@@ -15,6 +15,11 @@
       var STATIC_URL = '{{STATIC_URL}}';
       var CACHE_INITIAL_DATA = {{cache|safe}};
       var UI_ROOT = "/ui/";
+
+      // Note: these limits do not control the window size, they limit
+      // the max size to which we will scale up our content
+      var MAX_WIDTH = 800;
+      var MAX_HEIGHT = 600;
     </script>
 
     <link rel="stylesheet" href="{{STATIC_URL}}css/base.css" type="text/css" />
@@ -79,8 +84,8 @@
 
   <script type='text/javascript'>
         function updateSizes() {
-          $('div.rightpanel').width($(window).width() - $('div.leftpanel').width())
-          $('div.rightpanel').height($(window).height() - $('div.logohead').height())
+          $('div.rightpanel').width(Math.max(MAX_WIDTH, $(window).width()) - $('div.leftpanel').width());
+          $('div.rightpanel').height(Math.max(MAX_HEIGHT, $(window).height()) - $('div.logohead').height());
           $('div.toplevel').css('min-height', $('div.rightpanel').height());
           updateChartSizes();
         }
