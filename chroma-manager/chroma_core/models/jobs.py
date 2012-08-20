@@ -350,6 +350,7 @@ class Job(models.Model):
 
     __metaclass__ = DowncastMetaclass
 
+    # FIXME: HYD-1384: The 'paused' state is unused
     states = ('pending', 'tasked', 'complete', 'completing', 'cancelling', 'paused')
     state = models.CharField(max_length = 16, default = 'pending',
                              help_text = "One of %s" % (states,))
