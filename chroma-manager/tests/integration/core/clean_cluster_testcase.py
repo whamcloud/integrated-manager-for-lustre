@@ -43,6 +43,7 @@ class CleanClusterApiTestCase(ApiTestCase):
                 chroma_manager['address'],
                 """
 chroma-config setup >config_setup.log <<EOF
+
 %s
 nobody@whamcloud.com
 %s
@@ -100,9 +101,22 @@ EOF
                 for target in crm_targets:
                     self.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
                     self.remote_command(server['address'], 'crm configure delete %s' % target)
+                    self.remote_command(server['address'], 'crm resource cleanup %s' % target)
 
                 # Verify no more targets
                 self.wait_until_true(lambda: not self.get_pacemaker_targets(server))
+
+                # Remove chroma-agent's records of the targets
+                self.remote_command(
+                    server['address'],
+                    'rm -rf /var/lib/chroma/*',
+                    expected_return_code = None  # Keep going if it failed - may be none there.
+                )
+                self.remote_command(
+                    server['address'],
+                    'service chroma-agent restart'
+                )
+
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
 

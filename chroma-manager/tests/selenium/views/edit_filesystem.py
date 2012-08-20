@@ -3,6 +3,7 @@
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 
+from selenium.webdriver.support.ui import WebDriverWait
 
 from tests.selenium.base import  wait_for_any_element, find_visible_element_by_css_selector, element_visible
 from tests.selenium.base import wait_for_transition
@@ -35,7 +36,7 @@ class EditFilesystem(BaseView):
         self.config_param_tab = ""
 
     def open_target_conf_params(self, target_name):
-        link = self.driver.find_element_by_link_text(target_name)
+        link = WebDriverWait(self.driver, self.standard_wait).until(lambda driver: driver.find_element_by_link_text(target_name))
         link.click()
         self.quiesce()
         self.config_param_tab = self.driver.find_element_by_css_selector('div.target_detail a[href="#target_dialog_config_param_tab"]')

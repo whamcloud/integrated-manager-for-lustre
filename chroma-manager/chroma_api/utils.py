@@ -10,6 +10,7 @@ import dateutil.parser
 import bisect
 
 from django.contrib.contenttypes.models import ContentType
+from django.http import Http404
 from chroma_core.lib.state_manager import StateManagerClient
 from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
@@ -23,6 +24,8 @@ from tastypie import fields
 from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
 from chroma_core.lib.metrics import R3dMetricStore
+from chroma_api import api_log
+from r3d.exceptions import BadSearchTime
 
 from collections import defaultdict
 
@@ -324,8 +327,11 @@ class MetricResource:
 
         if 'pk' in kwargs:
             return self.get_metric_detail(request, metrics, begin, end, **kwargs)
-        else:
+        try:
             return self.get_metric_list(request, metrics, begin, end, **kwargs)
+        except BadSearchTime:
+            api_log.warn("BadSearchTime from client.  begin: %s, end: %s, update: %s" % (begin, end, update))
+        return self.create_response(request, ())
 
     def _format_timestamp(self, ts):
         return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
@@ -455,7 +461,10 @@ class MetricResource:
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
-        objs = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
+        try:
+            objs = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
+        except Http404 as exc:
+            raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
 
         result = {}
         try:

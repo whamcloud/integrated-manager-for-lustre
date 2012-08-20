@@ -20,6 +20,9 @@ def stop_lnet(args):
 
 def load_lnet(args):
     try_run(["modprobe", "lnet"])
+    # hack for HYD-1263 - Fix or work around LU-1279 - failure trying to mount two targets at the same time after boot
+    # should be removed when LU-1279 is fixed
+    try_run(["modprobe", "lustre"])
 
 
 def unload_lnet(args):

@@ -9,6 +9,7 @@ Version: %{version}
 Release: %{release}
 Source0: %{name}-%{version}.tar.gz
 Source1: chroma-agent-init.sh
+Source2: lustre-modules-init.sh
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -45,6 +46,7 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --install-scripts=%{_bindir} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
+cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 
 touch management.files
 cat <<EndOfList>>management.files
@@ -70,6 +72,7 @@ rm -rf %{buildroot}
 
 %post
 chkconfig chroma-agent on
+chkconfig lustre-modules on
 # disable SELinux -- it prevents both lustre and pacemaker from working
 sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
 # the above only disables on the next boot.  disable it currently, also
@@ -82,6 +85,7 @@ chkconfig corosync on
 %files -f base.files
 %defattr(-,root,root)
 %attr(0755,root,root)/etc/init.d/chroma-agent
+%attr(0755,root,root)/etc/init.d/lustre-modules
 %{_bindir}/chroma-agent*
 %{python_sitelib}/chroma_agent-*.egg-info/*
 

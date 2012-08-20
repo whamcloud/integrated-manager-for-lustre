@@ -62,11 +62,72 @@ class RsyslogConfig:
         rsyslog.writelines(config_lines)
 
 
+class NTPConfig:
+    CONFIG_FILE = "/etc/ntp.conf"
+    SENTINEL = "# Added by chroma-manager\n"
+    COMMENTED = "# Commented by chroma-manager: "
+
+    def __init__(self, config_file = None):
+        self.config_file = config_file or self.CONFIG_FILE
+
+    def open_conf_for_edit(self):
+        from tempfile import mkstemp
+        tmp_f, tmp_name = mkstemp(dir = '/etc')
+        f = open('/etc/ntp.conf', 'r')
+        return tmp_f, tmp_name, f
+
+    def close_conf(self, tmp_f, tmp_name, f):
+        import os
+        f.close()
+        os.close(tmp_f)
+        if not os.path.exists("/etc/ntp.conf.pre-chroma"):
+            os.rename("/etc/ntp.conf", "/etc/ntp.conf.pre-chroma")
+        os.chmod(tmp_name, 0644)
+        os.rename(tmp_name, "/etc/ntp.conf")
+
+    def remove(self):
+        import os
+        """Remove our config section from the ntp config file, or do
+        nothing if our section is not there"""
+        tmp_f, tmp_name, f = self.open_conf_for_edit()
+        skip = False
+        for line in f.readlines():
+            if skip:
+                if line == self.SENTINEL:
+                    skip = False
+                continue
+            if line == self.SENTINEL:
+                skip = True
+                continue
+            if line.startswith(self.COMMENTED):
+                line = line[len(self.COMMENTED):]
+            os.write(tmp_f, line)
+        self.close_conf(tmp_f, tmp_name, f)
+
+    def add(self, server):
+        import os
+        tmp_f, tmp_name, f = self.open_conf_for_edit()
+        added_server = False
+        for line in f.readlines():
+            if line.startswith("server "):
+                line = "%s%s" % (self.COMMENTED, line)
+                if server != "localhost" and not added_server:
+                    line = "%sserver %s\n%s%s" % (self.SENTINEL, server, self.SENTINEL, line)
+                    added_server = True
+            if server == "localhost" and line.startswith("#fudge"):
+                line = "%s%sserver  127.127.1.0     # local clock\nfudge   127.127.1.0 stratum 10\n%s" % (line, self.SENTINEL, self.SENTINEL)
+            os.write(tmp_f, line)
+        self.close_conf(tmp_f, tmp_name, f)
+
+
 class CommandError(Exception):
     pass
 
 
 class ServiceConfig:
+    def __init__(self):
+        self.verbose = False
+
     def try_shell(self, cmdline, mystdout = subprocess.PIPE,
                   mystderr = subprocess.PIPE):
         rc, out, err = self.shell(cmdline, mystdout, mystderr)
@@ -153,6 +214,17 @@ class ServiceConfig:
         self.try_shell(["chkconfig", "rsyslog", "on"])
         self.try_shell(['service', 'rsyslog', 'restart'])
 
+    def _setup_ntp(self, server):
+        log.info("Writing ntp configuration")
+        ntp = NTPConfig()
+        ntp.remove()
+        ntp.add(server)
+
+    def _start_ntp(self):
+        log.info("Restarting ntp")
+        self.try_shell(["chkconfig", "ntpd", "on"])
+        self.try_shell(['service', 'ntpd', 'restart'])
+
     def _setup_rabbitmq(self):
         RABBITMQ_USER = "chroma"
         RABBITMQ_PASSWORD = "chroma123"
@@ -207,7 +279,15 @@ class ServiceConfig:
             log.info("Creating database '%s'...\n" % database['NAME'])
             self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
 
-    def get_input(self, msg = "", empty_allowed = True, password = False):
+    def get_input(self, msg, empty_allowed = True, password = False, default = ""):
+        if msg == "":
+            raise RuntimeError("Calling get_input, msg must not be empty")
+
+        if default != "":
+            msg = "%s [%s]" % (msg, default)
+
+        msg = "%s: " % msg
+
         answer = ""
         while answer == "":
             if password:
@@ -215,9 +295,12 @@ class ServiceConfig:
             else:
                 answer = raw_input(msg)
 
-            if not empty_allowed and answer == "":
-                print "A value is required"
-            else:
+            if answer == "":
+                if not empty_allowed:
+                    print "A value is required"
+                    continue
+                if default != "":
+                    answer = default
                 break
 
         return answer
@@ -242,14 +325,14 @@ class ServiceConfig:
 
         valid_username = False
         while not valid_username:
-            username = self.get_input(msg = "Username:", empty_allowed = False)
+            username = self.get_input(msg = "Username", empty_allowed = False)
             if username.find(" ") > -1:
                 print "Username cannot contain spaces"
                 continue
             valid_username = True
-        email = self.get_input(msg = "Email:")
-        password = self.get_pass(msg = "Password:", empty_allowed = False,
-                                     confirm_msg = "Confirm password:")
+        email = self.get_input(msg = "Email")
+        password = self.get_pass(msg = "Password", empty_allowed = False,
+                                     confirm_msg = "Confirm password")
 
         return username, email, password
 
@@ -263,11 +346,18 @@ class ServiceConfig:
         else:
             log.info("MySQL already accessible")
 
+        ntp_server = self.get_input(msg = "NTP Server", default = "localhost")
+        self._setup_ntp(ntp_server)
+
         self._start_rsyslog()
+        self._start_ntp()
 
         if not self._db_current():
             log.info("Creating database tables...")
-            ManagementUtility(['', 'syncdb', '--noinput', '--migrate']).execute()
+            args = ['', 'syncdb', '--noinput', '--migrate']
+            if not self.verbose:
+                args = args + ["--verbosity", "0"]
+            ManagementUtility(args).execute()
         else:
             log.info("Database tables already OK")
 
@@ -286,7 +376,10 @@ class ServiceConfig:
         # but that shouldn't be so (ideally the /static/ dir would be built into the RPM)
         # (Django ticket #17656)
         log.info("Building static directory...")
-        ManagementUtility(['', 'collectstatic', '--noinput']).execute()
+        args = ['', 'collectstatic', '--noinput']
+        if not self.verbose:
+            args = args + ["--verbosity", "0"]
+        ManagementUtility(args).execute()
 
     def setup(self, username = None, password = None):
         self._setup_database(username, password)

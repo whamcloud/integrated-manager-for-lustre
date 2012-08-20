@@ -11,7 +11,7 @@ import chroma_core.lib.conf_param
 import settings
 from collections import defaultdict
 
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, Http404
 from django.db import transaction
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
@@ -279,6 +279,8 @@ class TargetResource(MetricResource, ConfParamResource):
         try:
             fs = get_object_or_404(ManagedFilesystem, pk = request.GET['filesystem_id'])
             objects = objects.filter((Q(managedmdt__filesystem = fs) | Q(managedost__filesystem = fs)) | Q(id = fs.mgs.id))
+        except Http404 as exc:
+            raise custom_response(self, request, http.HttpNotFound, {'filesystem': exc})
         except KeyError:
             # Not filtering on filesystem_id
             pass
