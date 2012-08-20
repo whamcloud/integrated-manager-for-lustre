@@ -60,7 +60,7 @@ class JobValidation(Validation):
             except KeyError:
                 errors['state'] = "Attribute mandatory"
             else:
-                valid_states = ['pause', 'cancel', 'resume', job.state]
+                valid_states = ['cancel', job.state]
                 if not new_state in valid_states:
                     errors['state'] = "Must be one of %s" % valid_states
 
@@ -148,12 +148,9 @@ class JobResource(ModelResource):
         job = bundle.obj.downcast()
         if job.state in ['complete', 'completing', 'cancelling']:
             return []
-        elif job.state == 'paused':
-            return [{'state': 'resume', 'label': "Resume"}]
         elif job.state in ['pending', 'tasked', 'tasking']:
             if job.cancellable:
-                return [{'state': 'pause', 'label': 'Pause'},
-                        {'state': 'cancel', 'label': 'Cancel'}]
+                return [{'state': 'cancel', 'label': 'Cancel'}]
             else:
                 return []
         else:
@@ -177,20 +174,14 @@ class JobResource(ModelResource):
         validation = JobValidation()
 
     def obj_update(self, bundle, request, **kwargs):
-        """Modify a Job (setting 'state' field to 'pause', 'cancel', or 'resume' is the
-        only allowed input e.g. {'state': 'pause'}"""
-        # FIXME: 'cancel' and 'resume' aren't actually a state that job will ever have,
-        # it causes a paused job to bounce back into a state like 'pending' or 'tasked'
+        """Modify a Job (setting 'state' field to 'cancel')"""
+        # FIXME: 'cancel' isn't actually a state that a job ever has
         # - there should be a better way of representing this operation
         job = Job.objects.get(pk = kwargs['pk'])
         new_state = bundle.data['state']
 
-        if new_state == 'pause':
-            job.pause()
-        elif new_state == 'cancel':
+        if new_state == 'cancel':
             job.cancel()
-        else:
-            job.unpause()
 
         bundle.obj = job
         return bundle
