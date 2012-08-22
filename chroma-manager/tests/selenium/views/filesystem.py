@@ -34,9 +34,9 @@ class Filesystem(DatatableView):
 
     def transition(self, filesystem_name, transition_name, transition_confirm = True):
         """Perform given transition on target filesystem"""
-
         target_filesystem_row = self.locate_filesystem(filesystem_name)
         buttons = target_filesystem_row.find_elements_by_tag_name("button")
+
         for button in buttons:
             if button.text == transition_name:
                 button.click()
@@ -48,7 +48,7 @@ class Filesystem(DatatableView):
 
         raise RuntimeError("Cannot perform transition " + transition_name + " on filesystem " + filesystem_name)
 
-    def check_action_available(self, fs_name, action_name):
+    def check_action_unavailable(self, fs_name, action_name):
         """Check whether the given transition(action) is present in all possible transitions available for the filesystem"""
         target_filesystem_row = self.locate_filesystem(fs_name)
         buttons = target_filesystem_row.find_elements_by_tag_name("button")

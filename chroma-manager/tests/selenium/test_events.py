@@ -1,8 +1,11 @@
-from tests.selenium.views.events import Events
-from tests.selenium.utils.constants import static_text
 from tests.selenium.base import SeleniumBaseTestCase
 from tests.selenium.base import select_element_option
 from tests.selenium.base import get_selected_option_text
+from tests.selenium.views.events import Events
+from tests.selenium.views.servers import Servers
+from tests.selenium.utils.constants import static_text
+
+from utils.sample_data import Testdata
 
 
 class TestEvents(SeleniumBaseTestCase):
@@ -10,6 +13,13 @@ class TestEvents(SeleniumBaseTestCase):
 
     def setUp(self):
         super(TestEvents, self).setUp()
+
+        test_data = Testdata()
+        host_list = test_data.get_test_data_for_server_configuration()
+
+        self.navigation.go('Configure', 'Servers')
+        server_page = Servers(self.driver)
+        server_page.add_servers(host_list)
 
         self.navigation.go('Events')
         self.events_page = Events(self.driver)

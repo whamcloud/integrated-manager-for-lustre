@@ -1,7 +1,10 @@
-from tests.selenium.views.logs import Logs
 from tests.selenium.base import SeleniumBaseTestCase
 from tests.selenium.base import select_element_option
 from tests.selenium.base import get_selected_option_text
+from tests.selenium.views.logs import Logs
+from tests.selenium.views.servers import Servers
+
+from utils.sample_data import Testdata
 
 
 class TestLogs(SeleniumBaseTestCase):
@@ -9,6 +12,14 @@ class TestLogs(SeleniumBaseTestCase):
 
     def setUp(self):
         super(TestLogs, self).setUp()
+
+        # Test data for servers
+        test_data = Testdata()
+        host_list = test_data.get_test_data_for_server_configuration()
+
+        self.navigation.go('Configure', 'Servers')
+        servers_page = Servers(self.driver)
+        servers_page.add_servers(host_list)
 
         self.navigation.go('Logs')
         self.logs_page = Logs(self.driver)
