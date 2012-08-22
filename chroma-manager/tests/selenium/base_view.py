@@ -1,8 +1,9 @@
+
 import logging
 import time
 
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
 from tests.selenium.base import find_visible_element_by_css_selector, element_visible, wait_for_transition, wait_for_element
 from tests.selenium.utils.constants import wait_time
@@ -86,7 +87,10 @@ class BaseView(object):
         try:
             self._find_state_button(container, state)
             raise RuntimeError("Transition to %s in %s failed (button still visible)" % (state, container))
-        except NoSuchElementException:
+        except (NoSuchElementException, StaleElementReferenceException):
+            # NoSuchElement is if the container is still there but the button is gone
+            # StaleElementException is if the container is no longer there (also ok
+            # because implies the button is definitely gone too)
             pass
 
     def get_table_text(self, table_element, columns):
@@ -125,7 +129,7 @@ class BaseView(object):
             if match:
                 return tr
 
-        raise RuntimeError("No match for %s in %s rows of table %s: %s" % (
+        raise NoSuchElementException("No match for %s in %s rows of table %s: %s" % (
             col_id_to_text, len(rows), table, self.get_table_text(table, col_id_to_text.keys())))
 
     def volume_chooser_open_and_select(self, chooser_id, server_address, volume_name, multi = False):
@@ -162,9 +166,37 @@ class DatatableView(BaseView):
     def datatable(self):
         return self.driver.find_element_by_css_selector("table#%s" % self.datatable_id)
 
+    def _is_datatables_empty_row(self, tr):
+        tds = tr.find_elements_by_tag_name("td")
+        if len(tds) == 1 and 'dataTables_empty' in tds[0].get_attribute('class').split():
+            return True
+        else:
+            return False
+
     @property
     def rows(self):
-        return self.driver.find_elements_by_xpath("id('" + self.datatable_id + "')/tbody/tr")
+        rows = self.driver.find_elements_by_xpath("id('" + self.datatable_id + "')/tbody/tr")
+
+        # datatables uses one 'row' to represent an empty table, catch that and return an
+        # empty list instead
+        if len(rows) == 1:
+            if self._is_datatables_empty_row(rows[0]):
+                return []
+
+        return rows
+
+    @property
+    def first_row(self):
+        """Return one tr element or None"""
+        try:
+            tr = self.driver.find_element_by_css_selector("#%s" % self.datatable_id).find_element_by_css_selector("tbody tr:first-child")
+        except NoSuchElementException:
+            return None
+
+        if self._is_datatables_empty_row(tr):
+            return None
+        else:
+            return tr
 
     def transition_by_column_values(self, column_values, state):
         row = self.find_row_by_column_text(self.datatable, column_values)
@@ -172,21 +204,12 @@ class DatatableView(BaseView):
 
     def remove_all(self):
         self.log.info("Removing %s rows in table #%s" % (len(self.rows), self.datatable_id))
-        for tr in self.rows:
-            tds = tr.find_elements_by_tag_name("td")
-            if len(tds) == 1 and 'dataTables_empty' in tds[0].get_attribute('class').split():
-                self.log.info("Table is empty")
-                break
-
-            label = tr.find_elements_by_tag_name("td")[self.label_column].text
+        # Can't iterate over rows because rows get deleted as objects
+        # get deleted: have to do a while loop and delete rows[0] until
+        # none are left.
+        row = self.first_row
+        while row:
+            label = row.find_elements_by_tag_name("td")[self.label_column].text
             self.log.info("Removing object %s" % label)
-
-            for button in tr.find_elements_by_tag_name("button"):
-                if button.get_attribute('data-state') == 'removed':
-                    button.click()
-                    self.quiesce()
-                    if element_visible(self.driver, '#transition_confirm_button'):
-                        self.driver.find_element_by_css_selector('#transition_confirm_button').click()
-                        self.quiesce()
-                    wait_for_transition(self.driver, self.standard_wait)
-                    break
+            self.click_command_button(row, 'removed')
+            row = self.first_row

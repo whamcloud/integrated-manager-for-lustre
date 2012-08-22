@@ -73,6 +73,18 @@ class TestServer(SeleniumBaseTestCase):
         self.server_page.transition(address, 'lnet_down')
         self.assertEqual(self.server_page.get_lnet_state(address), "LNet down")
 
+    def test_remove_server(self):
+        victim = self.host_list[0]['address']
+
+        # Add N servers
+        self.server_page.add_servers(self.host_list)
+        self.assertTrue(self.server_page.server_visible(victim))
+        self.assertEqual(len(self.server_page.get_server_list()), len(self.host_list))
+        # Remove one of the servers
+        self.server_page.transition(victim, 'removed')
+        self.assertFalse(self.server_page.server_visible(victim))
+        self.assertEqual(len(self.server_page.get_server_list()), len(self.host_list) - 1)
+
     def check_volume_config_for_added_server(self):
         self.navigation.go('Volumes')
         volumes_page = Volumes(self.driver)
