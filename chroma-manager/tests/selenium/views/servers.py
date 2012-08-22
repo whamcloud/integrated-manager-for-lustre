@@ -2,7 +2,7 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
-
+from selenium.common.exceptions import NoSuchElementException
 
 from tests.selenium.base import wait_for_transition, find_visible_element_by_css_selector
 from tests.selenium.base_view import DatatableView
@@ -39,6 +39,13 @@ class Servers(DatatableView):
         """Returns whether newly added server is listed or not"""
         self.get_host_row(host_name)
         return True
+
+    def server_visible(self, hostname):
+        try:
+            self.get_host_row(hostname)
+            return True
+        except NoSuchElementException:
+            return False
 
     def get_server_list(self):
         """Returns server list"""

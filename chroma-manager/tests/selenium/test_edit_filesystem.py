@@ -195,6 +195,8 @@ class TestEditFilesystem(SeleniumBaseTestCase):
 
     def test_remove_ost(self):
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "removed")
+        with self.assertRaises(NoSuchElementException):
+            self.driver.find_element_by_link_text("%s-OST0000" % self.filesystem_name)
 
     def test_stop_start_mdt(self):
         self.edit_filesystem_page.mdt_set_state("%s-MDT0000" % self.filesystem_name, "unmounted")

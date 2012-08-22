@@ -663,8 +663,17 @@ var CommandNotification = function() {
         ApiCache.put(resource, obj);
       },
       {404:function () {
-        // The object has gone away
-        // TODO: handle removing it from its container (e.g. row from table)
+        // Refresh any datatables containing this object
+        $(".notification_object_icon[data-resource_uri='" + uri + "']").each(function () {
+          var dt_wrapper = $(this).closest("div.dataTables_wrapper");
+          if (dt_wrapper.length == 1) {
+            // We are inside a datatable, call its refresh method
+            var table_el = dt_wrapper.find('table')[0];
+            $(table_el).dataTable().fnDraw();
+          }
+        });
+
+        // Blank out any other views of the object
         $(".object_label[data-resource_uri='" + uri + "']").each(function () {
           $(this).html("");
         });
@@ -676,6 +685,7 @@ var CommandNotification = function() {
           $(this).html("");
         });
 
+        // Remove the object from the cache
         var resource = uri.split('/')[2];
         var id = uri.split('/')[3];
         ApiCache.purge(resource, id);
