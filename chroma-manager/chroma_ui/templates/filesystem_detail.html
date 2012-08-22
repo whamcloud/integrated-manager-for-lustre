@@ -96,7 +96,7 @@
                       $('#mdt').dataTable().fnClearTable();
                       $('#mgt_configuration_view').dataTable().fnClearTable();
                       volume_chooser_store.reload();
-                      loadFilesystemTargets(filesystem.id);
+                      loadFilesystem(filesystem.id);
                     } else {
                       // POST the next OST creation
                       chain_creation(i + 1);
