@@ -5,7 +5,7 @@
 
 
 from tests.selenium.views.filesystem import Filesystem
-from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.base import SeleniumBaseTestCase, wait_for_transition
 from utils.sample_data import Testdata
 from tests.selenium.utils.constants import static_text
 
@@ -31,7 +31,9 @@ class TestFilesystem(SeleniumBaseTestCase):
         fs_page = Filesystem(self.driver)
 
         fs_page.transition(self.filesystem_name, static_text['stop_fs'])
-        fs_page.check_action_available(self.filesystem_name, static_text['stop_fs'])
+        fs_page.check_action_unavailable(self.filesystem_name, static_text['stop_fs'])
+
+        wait_for_transition(self.driver, self.standard_wait)
 
         fs_page.transition(self.filesystem_name, static_text['start_fs'], False)
-        fs_page.check_action_available(self.filesystem_name, static_text['start_fs'])
+        fs_page.check_action_unavailable(self.filesystem_name, static_text['start_fs'])

@@ -147,6 +147,9 @@ class SeleniumBaseTestCase(TestCase):
         self.log = log
 
         self.driver = None
+        self.standard_wait = wait_time['standard']
+        self.medium_wait = wait_time['medium']
+        self.long_wait = wait_time['long']
 
     def setUp(self):
         if config['headless']:
@@ -157,8 +160,6 @@ class SeleniumBaseTestCase(TestCase):
         if not self.driver:
             self.driver = getattr(webdriver, config['chroma_managers']['browser'])()
 
-        self.wait_time = wait_time['standard']
-        self.long_wait_time = wait_time['long']
         if not config['chroma_managers']['server_http_url']:
             raise RuntimeError("Please set server_http_url in config file")
         self.driver.get(config['chroma_managers']['server_http_url'])

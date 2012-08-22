@@ -20,7 +20,7 @@ class Mgt(DatatableView):
         # Initialise elements on this page
         self.create_mgt_button = self.driver.find_element_by_css_selector('#btnNewMGT')
         self.mgt_configuration_list = '#mgt_configuration'
-        self.datatable_id = 'mgt_configuration_content'
+        self.datatable_id = 'mgt_configuration'
 
     def select_mgt(self, server_address, volume_name):
         self.volume_chooser_open_and_select('new_mgt_chooser', server_address, volume_name)

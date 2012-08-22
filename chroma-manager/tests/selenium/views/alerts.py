@@ -1,4 +1,3 @@
-from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.constants import static_text
 
 
@@ -9,7 +8,6 @@ class Alerts:
     def __init__(self, driver):
         self.driver = driver
 
-        self.WAIT_TIME = wait_time['standard']
         self.NO_DATATABLE_DATA = static_text['no_data_for_datable']
 
         # Initialise elements on this page
