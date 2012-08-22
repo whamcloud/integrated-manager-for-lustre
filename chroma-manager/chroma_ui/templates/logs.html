@@ -3,18 +3,16 @@
   var LogView = function() {
     var initialized = false;
     function draw() {
+      loadObjectSelection('host', $('#logs_hostList'));
       if (!initialized) {
         init();
         initialized = true;
       } else {
         $('#all_log_content').dataTable().fnDraw();
-        // TODO: reload loadHostList
       }
     }
     function init()
     {
-      loadObjectSelection('host', $('#logs_hostList'));
-
       //validation for start an end time
       $('#datetime_from').datetimepicker(
       {

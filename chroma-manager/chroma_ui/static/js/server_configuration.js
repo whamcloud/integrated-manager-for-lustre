@@ -91,6 +91,7 @@ function add_host_dialog() {
         select_page('add_host_complete');
         $('.add_host_back_button').focus();
         $('#server_configuration').dataTable().fnDraw();
+        ApiCache.put('host', data.host);
       });
   }
 
