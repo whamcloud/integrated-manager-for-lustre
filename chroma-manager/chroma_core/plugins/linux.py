@@ -13,7 +13,7 @@ from chroma_core.lib.storage_plugin.api.plugin import Plugin
 # in a way that third party plugins can't/shouldn't/mustn't
 from chroma_core.models import ManagedHost
 from chroma_core.lib.storage_plugin.base_resource import HostsideResource
-
+from settings import SERIAL_PREFERENCE
 import re
 
 
@@ -38,16 +38,9 @@ class ScsiDevice(resources.LogicalDrive):
     serial_83 = attributes.String()
 
     def get_label(self):
-        if self.serial_80:
-            QEMU_PREFIX = "SQEMU    QEMU HARDDISK  "
-            if self.serial_80.find(QEMU_PREFIX) == 0:
-                return self.serial_80[len(QEMU_PREFIX):]
-            elif self.serial_80[0] == 'S':
-                return self.serial_80[1:]
-            else:
-                return self.serial_80
-        elif self.serial_83:
-            return self.serial_83
+        for attr in SERIAL_PREFERENCE:
+            if getattr(self, attr):
+                return getattr(self, attr)
 
 
 class UnsharedDevice(resources.LogicalDrive):
@@ -165,12 +158,10 @@ class Linux(Plugin):
             special_block_devices.add(md_info['block_device'])
 
         def preferred_serial(bdev):
-            if bdev['serial_80']:
-                return bdev['serial_80']
-            elif bdev['serial_83']:
-                return bdev['serial_83']
-            else:
-                return None
+            for attr in SERIAL_PREFERENCE:
+                if bdev[attr]:
+                    return bdev[attr]
+            return None
 
         # Scrub dodgy QEMU SCSI IDs
         for bdev in devices['devs'].values():
@@ -184,6 +175,8 @@ class Linux(Plugin):
                 trailing_id = bdev['serial_80'].split(qemu_pattern)[1].strip()
                 if len(trailing_id) < 4:
                     bdev['serial_80'] = None
+                else:
+                    bdev['serial_80'] = trailing_id
             if bdev['serial_83'] and bdev['serial_83'].find(qemu_pattern) != -1:
                 bdev['serial_83'] = None
 

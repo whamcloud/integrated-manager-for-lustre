@@ -301,6 +301,9 @@ STORAGE_PLUGIN_DEBUG_PLUGINS = []
 
 STORAGE_PLUGIN_ENABLE_STATS = True
 
+# Order of preference of ScsiDevice attributes in linux plugin, favourite first.
+SERIAL_PREFERENCE = ['serial_83', 'serial_80']
+
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
 
