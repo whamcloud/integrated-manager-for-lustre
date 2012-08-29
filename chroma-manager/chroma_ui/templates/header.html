@@ -9,10 +9,8 @@
       <li><a id="alert_menu" class="navigation" href="alert/">Alerts</a></li>
       <li><a id="event_menu" class="navigation" href="event/">History</a></li>
       <li><a id="log_menu" class="navigation" href="log/">Logs</a></li>
+      <li class='fsadmin_only'><a id="help_menu" class="navigation skip_router" href="{{STATIC_URL}}webhelp/help_wrapper.html">Help</a></li>
     </ul>
-    <span class='fsadmin_only header_help_link'>
-      <a href='{{STATIC_URL}}webhelp/help_wrapper.html'><img src='{{STATIC_URL}}images/fugue/question-frame.png'></a>
-    </span>
 
     <span id="user_info">
       <span id="authenticated">
@@ -36,8 +34,13 @@
 </div>
 
 <script type='text/javascript'>
+  /* the class skip_router is a function only class that intends to allow
+    static links to exist in the nav without the backbone router taking over
+    and having the URL rewritten to be prefixed with /ui/
+    i.e. help_wrapper link
+  */
   $(document).ajaxComplete(function() {
-      $("a.navigation").each(function() {
+      $("a.navigation:not(a.skip_router)").each(function() {
          var el = $(this);
          var href = el.attr('href');
          if (href.indexOf(UI_ROOT) != 0) {
@@ -46,7 +49,7 @@
       });
   });
   $(document).ready(function() {
-    $("a.navigation").live('click', function(ev) {
+    $("a.navigation:not(a.skip_router)").live('click', function(ev) {
       var url = $(this).attr('href').substr(UI_ROOT.length);
       Backbone.history.navigate(url, {trigger: true});
       ev.preventDefault();

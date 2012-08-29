@@ -653,14 +653,14 @@ html {
 }
 
 ul.navigation li {
-  border-right: 2px solid #ddd;
+  border-left: 2px solid #ddd;
   float:left;
   margin: 0px;
   padding: 0px 3px 0px 3px;
 }
 
-ul.navigation li:last-child {
-  border-right: none;
+ul.navigation li:first-child {
+  border-left: none;
 }
 
 ul.navigation {
