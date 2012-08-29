@@ -37,11 +37,6 @@ span#user_info{
     margin-right: 12px;
 }
 
-span.header_help_link {
-    float: right;
-    margin-right: 12px;
-}
-
 span#authenticated{
     float:left;
 }
