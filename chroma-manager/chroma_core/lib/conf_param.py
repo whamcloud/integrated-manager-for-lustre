@@ -154,62 +154,52 @@ class PercentageParam(IntegerParam):
 
 from chroma_core.models import FilesystemClientConfParam, FilesystemGlobalConfParam, MdtConfParam, OstConfParam
 all_params = {
-    'lov.stripesize': (MdtConfParam, BytesParam(), "Default stripe size"),
-    'lov.stripecount': (MdtConfParam, IntegerParam(), "Default stripe count"),
-    'osc.active': (OstConfParam, IntegerParam(min_val = 0, max_val = 1), ""),
+    'lov.stripesize': (MdtConfParam, BytesParam(), "Default stripe size for the file system (specified as a value followed by a one-letter unit). Default is 4M. In the \"Lustre Operations Manual\", see Section 36.14: mkfs.lustre."),
+    'lov.stripecount': (MdtConfParam, IntegerParam(), "Default stripe count for the file system. Default is 1. In the \"Lustre Operations Manual\", see Section 36.14: mkfs.lustre."),
+    'osc.active': (OstConfParam, IntegerParam(min_val = 0, max_val = 1), "Controls whether an OST is in or out of service. Setting Active to 0 causes the OST to be deactivated. Setting Active to 1, restores the OST to service. In the \"Lustre Operations Manual\", see Section 14.1.6.1: Removing an OST from the File System and Section 14.1.6.4: Returning a Deactivated OST to Service."),
 
     # "Free Space Distribution"
     # =========================
 
-    'lov.qos_prio_free': (MdtConfParam, PercentageParam(), """Free-space stripe weighting, as set, gives a priority of "0" to free space (versus trying to place the stripes "widely" -- nicely distributed across OSSs and OSTs to maximize network balancing). To adjust this priority (as a percentage), use the qos_prio_free proc tunable:
-* Currently, the default is 90%.
-* Setting the priority to 100% means that OSS distribution does not count in the weighting, but the stripe assignment is still done via weighting. If OST 2 has twice as much free space as OST 1, it is twice as likely to be used, but it is NOT guaranteed to be used.
-* Also note that free-space stripe weighting does not activate until two OSTs are imbalanced by more than 20%. Until then, a faster round-robin stripe allocator is used. (The new round-robin order also maximizes network balancing.)"""),
+    'lov.qos_prio_free': (MdtConfParam, PercentageParam(), "Priority (value of 0 to 100) of free-space striping vs. distributing stripes across OSTs to maximize network balancing. A higher value gives more weight to free-space striping and a lower value gives more weight to balancing across OSTs. Default is 90. In the \"Lustre Operations Manual\", see Section 18.5.3: Adjusting the Weighting Between Free Space and Location and Section 31.1.5: Free Space Distribution."),
 
     # "Managing Stripe Allocation"
     # ============================
-    'lov.qos_threshold_rr': (MdtConfParam, IntegerParam(min_val = 0, max_val = 100), """Whether QOS or RR is used depends on the setting of the qos_threshold_rr proc tunable. The qos_threshold_rr variable specifies a percentage threshold where the use of QOS or RR becomes more/less likely. The qos_threshold_rr tunable can be set as an integer, from 0 to 100, and results in this stripe allocation behavior:
- * If qos_threshold_rr is set to 0, then QOS is always used
- * If qos_threshold_rr is set to 100, then RR is always used
- * The larger the qos_threshold_rr setting, the greater the possibility that RR is used instead of QOS"""),
+    'lov.qos_threshold_rr': (MdtConfParam, IntegerParam(min_val = 0, max_val = 100), "Priority (value of 0 to 100) of round robin (RR) stripe allocation vs. quality of service (QOS). A higher value gives more weight to RR, and a lower value gives more weight to QOS. Default is 16. In the \"Lustre Operations Manual\", see Section 31.1.5.1: Managing Stripe Allocation."),
 
     # "Lustre I/O Tunables"
     # =====================
-    'llite.max_cached_mb': (FilesystemClientConfParam, BytesParam(units='m'), "This tunable is the maximum amount of inactive data cached by the client (default is 3/4 of RAM)."),
+    'llite.max_cached_mb': (FilesystemClientConfParam, BytesParam(units='m'), "Maximum amount of inactive data (in MB) cached by the client. Default is 75% of available RAM in MB. In the \"Lustre Operations Manual\", see Section 31.2: Lustre I/O Tunables."),
 
     # "Client I/O RPC Stream Tunables"
     # ================================
-    'osc.max_dirty_mb': (OstConfParam, BytesParam(units = 'm', min_val = '0m', max_val = '512m'), "This tunable controls how many MBs of dirty data can be written and queued up in the OSC. POSIX file writes that are cached contribute to this count. When the limit is reached, additional writes stall until previously-cached writes are written to the server. This may be changed by writing a single ASCII integer to the file. Only values between 0 and 512 are allowable. If 0 is given, no writes are cached. Performance suffers noticeably unless you use large writes (1 MB or more)."),
+    'osc.max_dirty_mb': (OstConfParam, BytesParam(units = 'm', min_val = '0m', max_val = '512m'), "Amount of dirty data (0 to 512 in MBs) that can be written to and queued in the object storage client (OSC) including cached POSIX file writes. Default is 32. In the \"Lustre Operations Manual\", see Section 31.2.1: Client I/O RPC Stream Tunables."),
     # FIXME: this max_val is actually architecture dependent
-    'osc.max_pages_per_rpc': (OstConfParam, IntegerParam(min_val = 1, max_val = 256), "This tunable is the maximum number of pages that will undergo I/O in a single RPC to the OST. The minimum is a single page and the maximum for this setting is platform dependent (256 for i386/x86_64, possibly less for ia64/PPC with larger PAGE_SIZE), though generally amounts to a total of 1 MB in the RPC."),
-    'osc.max_rpcs_in_flight': (OstConfParam, IntegerParam(min_val = 1, max_val = 32), "This tunable is the maximum number of concurrent RPCs in flight from an OSC to its OST. If the OSC tries to initiate an RPC but finds that it already has the same number of RPCs outstanding, it will wait to issue further RPCs until some complete. The minimum setting is 1 and maximum setting is 32. If you are looking to improve small file I/O performance, increase the max_rpcs_in_flight value."),
+    'osc.max_pages_per_rpc': (OstConfParam, IntegerParam(min_val = 1, max_val = 256), "Maximum number of pages included in a single RPC I/O to the OST. Default minimum is a single page and default maximum is platform dependent (typically the equivalent of about 1 MB). In the \"Lustre Operations Manual\", see Section 31.2.1: Client I/O RPC Stream Tunables."),
+    'osc.max_rpcs_in_flight': (OstConfParam, IntegerParam(min_val = 1, max_val = 32), "Maximum number (from 1 to 256) of RPCs being sent concurrently from an OSC to an OST. Default is 8. In the \"Lustre Operations Manual\", see Section 31.2.1: Client I/O RPC Stream Tunables."),
 
     # "Tuning file Readahead"
     # =======================
-    'llite.max_read_ahead_mb': (FilesystemClientConfParam, BytesParam(units = 'm'), "This tunable controls the maximum amount of data readahead on a file. Files are read ahead in RPC-sized chunks (1 MB or the size of read() call, if larger) after the second sequential read on a file descriptor. Random reads are done at the size of the read() call only (no readahead). Reads to non-contiguous regions of the file reset the readahead algorithm, and readahead is not triggered again until there are sequential reads again. To disable readahead, set this tunable to 0. The default value is 40 MB."),
-    'llite.max_read_ahead_whole_mb': (FilesystemClientConfParam, BytesParam(units = 'm'), "This tunable controls the maximum size of a file that is read in its entirety, regardless of the size of the read()."),
+    'llite.max_read_ahead_mb': (FilesystemClientConfParam, BytesParam(units = 'm'), "Maximum amount of data (in MB) that is read into memory when the readahead conditions are met. Default is 40. In the \"Lustre Operations Manual\", see Section 31.2.7: Using File Readahead and Directory Statahead."),
+    'llite.max_read_ahead_whole_mb': (FilesystemClientConfParam, BytesParam(units = 'm'), "Maximum size (in MB) of a file that is read in its entirety, when the read ahead algorithm is triggered. Default is 2 MB. In the \"Lustre Operations Manual\", see Section 31.2.7.1: Tuning File Readahead."),
 
 
     # "Tuning directory statahead"
     # ============================
-    'llite.statahead_max': (FilesystemClientConfParam, IntegerParam(min_val = 0, max_val = 8192), "This tunable controls whether directory statahead is enabled and the maximum statahead count. By default, statahead is active."),
+    'llite.statahead_max': (FilesystemClientConfParam, IntegerParam(min_val = 0, max_val = 8192), "Maximum number of files that can be pre-fetched by the statahead thread. Default is 32. Set to 0 to disable. In the \"Lustre Operations Manual\", see Section 31.2.7.2: Tuning Directory Statahead."),
 
     # "Using OSS Read Cache"
     # ======================
     # NB these ost.* names correspond to obdfilter.* set_param names
-    'ost.read_cache_enable': (OstConfParam, BooleanParam(), "read_cache_enable controls whether data read from disk during a read request is kept in memory and available for later read requests for the same data, without having to re-read it from disk. By default, read cache is enabled (read_cache_enable = 1)."),
-    'ost.writethrough_cache_enable': (OstConfParam, BooleanParam(), "writethrough_cache_enable controls whether data sent to the OSS as a write request is kept in the read cache and available for later reads, or if it is discarded from cache when the write is completed. By default, writethrough cache is enabled (writethrough_cache_enable = 1)."),
-    'ost.readcache_max_filesize': (OstConfParam, BytesParam(), "readcache_max_filesize controls the maximum size of a file that both the read cache and writethrough cache will try to keep in memory. Files larger than readcache_max_filesize will not be kept in cache for either reads or writes."),
+    'ost.read_cache_enable': (OstConfParam, BooleanParam(), "Controls whether data read from disk during a read request is kept in memory and available for later read requests for the same data. Default is 1 (read cache enabled). In the \"Lustre Operations Manual\", see Section: 31.2.8.1. Using OSS Read Cache."),
+    'ost.writethrough_cache_enable': (OstConfParam, BooleanParam(), "Controls whether data sent to the OSS as a write request is kept in the read cache for later reads or is discarded from the cache when the write is completed. Default is 1 (writethrough cache enabled). In the \"Lustre Operations Manual\", see Section 31.2.8.1: Using OSS Read Cache."),
+    'ost.readcache_max_filesize': (OstConfParam, BytesParam(), "Maximum size of a file (specified as value followed by a one-letter unit) that will be kept in memory for reads or writes by either the read cache or writethrough cache. Default is \"unlimited\". In the \"Lustre Operations Manual\", see Section 31.2.8.1: Using OSS Read Cache."),
 
     # OSS Asynchronous Journal Commit
     # ===============================
 
-    'ost.sync_journal': (OstConfParam, BooleanParam(), "To enable asynchronous journal commit, set the sync_journal parameter to zero (sync_journal=0)"),
-    'ost.sync_on_lock_cancel': (OstConfParam, EnumParam(['always', 'blocking', 'never']), """When asynchronous journal commit is used, clients keep a page reference until the journal transaction commits. This can cause problems when a client receives a blocking callback, because pages need to be removed from the page cache, but they cannot be removed because of the extra page reference.
-This problem is solved by forcing a journal flush on lock cancellation. When this happens, the client is granted the metadata blocks that have hit the disk, and it can safely release the page reference before processing the blocking callback. The parameter which controls this action is sync_on_lock_cancel, which can be set to the following values:
-• always: Always force a journal flush on lock cancellation
-• blocking: Force a journal flush only when the local cancellation is due to a blocking callback
-• never: Do not force any journal flush"""),
+    'ost.sync_journal': (OstConfParam, BooleanParam(), "Controls whether a journal flush is forced after a bulk write or not. Default is 1, which enables the asynchronous journal commit feature to synchronously write data to disk without forcing a journal flush. In the \"Lustre Operations Manual\", see Section 31.2.9: OSS Asynchronous Journal Commit."),
+    'ost.sync_on_lock_cancel': (OstConfParam, EnumParam(['always', 'blocking', 'never']), "Controls if a journal is flushed or not when a lock is cancelled. Values are \"always\", \"blocking\", or \"never\". Default is \"never\". In the \"Lustre Operations Manual\", see Section 31.2.9: OSS Asynchronous Journal Commit."),
 
 
     # mballoc3 Tunables
@@ -226,38 +216,35 @@ This problem is solved by forcing a journal flush on lock cancellation. When thi
     # "Configuring adapative timeouts"
     # ================================
 
-'sys.at_min': (FilesystemGlobalConfParam, IntegerParam(), "Sets the minimum adaptive timeout (in seconds). Default value is 0. The at_min parameter is the minimum processing time that a server will report. Clients base their timeouts on this value, but they do not use this value directly. If you experience cases in which, for unknown reasons, the adaptive timeout value is too short and clients time out their RPCs (usually due to temporary network outages), then you can increase the at_min value to compensate for this. Ideally, users should leave at_min set to its default."),
-'sys.at_max': (FilesystemGlobalConfParam, IntegerParam(), """Sets the maximum adaptive timeout (in seconds). The at_max  parameter is an upper-limit on the service time estimate, and is used as a 'failsafe' in case of rogue/bad/buggy code that would lead to never-ending estimate increases. If at_max is reached, an RPC request is considered 'broken' and should time out.
-
-Setting at_max to 0 causes adaptive timeouts to be disabled and the old fixed-timeout method (obd_timeout) to be used. This is the default value in Lustre 1.6.5.
-
-Note: It is possible that slow hardware might validly cause the service estimate to increase beyond the default value of at_max. In this case, you should increase at_max to the maximum time you are willing to wait for an RPC completion."""),
-'sys.at_history': (FilesystemGlobalConfParam, IntegerParam(), "Sets a time period (in seconds) within which adaptive timeouts remember the slowest event that occurred. Default value is 600."),
-'sys.at_early_margin': (FilesystemGlobalConfParam, IntegerParam(), "Sets how far before the deadline Lustre sends an early reply. Default value is 5."),
-'sys.at_extra': (FilesystemGlobalConfParam, IntegerParam(), """Sets the incremental amount of time that a server asks for, with each early reply. The server does not know how much time the RPC will take, so it asks for a fixed value. Default value is 30. When a server finds a queued request about to time out (and needs to send an early reply out), the server adds the at_extra value. If the time expires, the Lustre client enters recovery status and reconnects to restore it to normal status.
-
-If you see multiple early replies for the same RPC asking for multiple 30-second increases, change the at_extra value to a larger number to cut down on early replies sent and, therefore, network load."""),
+'sys.at_min': (FilesystemGlobalConfParam, IntegerParam(), "Adaptive timeout lower-limit or minimum processing time reported by a server (in seconds). Default is 0. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
+'sys.at_max': (FilesystemGlobalConfParam, IntegerParam(), "Adaptive timeout upper-limit (in seconds). Default is 600. Set to 0 to disable adaptive timeouts. In the \"Lustre Operations Manual\", see Section 31.1.3.1. Configuring Adaptive Timeouts."),
+'sys.at_history': (FilesystemGlobalConfParam, IntegerParam(), "Time period (in seconds) within which adaptive timeouts remember the slowest event that occurred. Default is 600. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
+'sys.at_early_margin': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) in advance of a queued request timeout at which the server sends a request to the client to extend the timeout time. Default is 5. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
+'sys.at_extra': (FilesystemGlobalConfParam, IntegerParam(), "Incremental time (in seconds) that a server requests the client to add to the timeout time when the server determines that a queued request is about to time out. Default is 30. In the \"Lustre Operations Manual\", see Section 31.1.3.1: Configuring Adaptive Timeouts."),
 # ldlm_enqueue_min does not appear to be conf_param'able
 #'sys.ldlm_enqueue_min': (FilesystemGlobalConfParam, IntegerParam(), "Sets the minimum lock enqueue time. Default value is 100. The ldlm_enqueue  time is the maximum of the measured enqueue estimate (influenced by at_min and at_max parameters), multiplied by a weighting factor, and the ldlm_enqueue_min setting. LDLM lock enqueues were based on the obd_timeout  value; now they have a dedicated minimum value. Lock enqueues increase as the measured enqueue times increase (similar to adaptive timeouts)."),
 
 # "Lustre Timeouts"
 # =================
-'sys.timeout': (FilesystemGlobalConfParam, IntegerParam(), "This is the time period that a client waits for a server to complete an RPC (default is 100s). Servers wait half of this time for a normal client RPC to complete and a quarter of this time for a single bulk request (read or write of up to 1 MB) to complete. The client pings recoverable targets (MDS and OSTs) at one quarter of the timeout, and the server waits one and a half times the timeout before evicting a client for being \"stale.\""),
-'sys.ldlm_timeout': (FilesystemGlobalConfParam, IntegerParam(), "This is the time period for which a server will wait for a client to reply to an initial AST (lock cancellation request) where default is 20s for an OST and 6s for an MDS. If the client replies to the AST, the server will give it a normal timeout (half of the client timeout) to flush any dirty data and release the lock."),
-}
+'sys.timeout': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) that a client waits for a server to complete an RPC. Default is 100. In the \"Lustre Operations Manual\", see Section 31.1.2: Lustre Timeouts and Section 31.1.3: Adaptive Timeouts."),
+'sys.ldlm_timeout': (FilesystemGlobalConfParam, IntegerParam(), "Time (in seconds) that a server will wait for a client to reply to an initial AST (lock cancellation request). Default is 20 for an OST and 6 for an MDT. In the \"Lustre Operations Manual\", see Section 31.1.2: Lustre Timeouts."),
 
 # "Setting MDS and OSS Thread Counts"
 # ===================================
-for service in ['mdt.MDS.mds', 'mdt.MDS.mds_readpage', 'mdt.MDS.mds_setattr']:
-    # NB: there is also a 'thread_started' param here which is read only
-    for param in ['thread_min', 'thread_max']:
-        all_params[service + "." + param] = (MdtConfParam, IntegerParam(), "")
-
-for service in ['ost.OSS.ost', 'ost.OSS.ost_io', 'ost.OSS.ost_create']:
-    # NB: there is also a 'thread_started' param here which is read only
-    for param in ['thread_min', 'thread_max']:
-        all_params[service + "." + param] = (OstConfParam, IntegerParam(), "")
-
+# NB: there is also a 'thread_started' param here which is read only
+'mdt.MDS.mds.thread_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'mdt.MDS.mds.thread_max': (MdtConfParam, IntegerParam(), "Maximum thread count on a metadata server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'mdt.MDS.mds_readpage.thread_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server for readdir() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'mdt.MDS.mds_readpage.thread_max': (MdtConfParam, IntegerParam(), "Maximum thread count on metadata server for readdir() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'mdt.MDS.mds_setattr.thread_min': (MdtConfParam, IntegerParam(), "Minimum thread count on metadata server for setattr() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'mdt.MDS.mds_setattr.thread_max': (MdtConfParam, IntegerParam(), "Maximum thread count on metadata server for setattr() operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'ost.OSS.ost.thread_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'ost.OSS.ost.thread_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'ost.OSS.ost_io.thread_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server for bulk data I/O. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'ost.OSS.ost_io.thread_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for bulk data I/O. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'ost.OSS.ost_create.thread_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+'ost.OSS.ost_create.thread_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+}
 
 _conf_param_klasses = [FilesystemClientConfParam, FilesystemGlobalConfParam, MdtConfParam, OstConfParam]
 _possible_conf_params = {}
