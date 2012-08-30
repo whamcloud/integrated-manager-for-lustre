@@ -217,6 +217,9 @@ var Api = function() {
   var put = function() {
     return call.apply(null, ["PUT"].concat([].slice.apply(arguments)))
   };
+  var patch = function() {
+    return call.apply(null, ["PATCH"].concat([].slice.apply(arguments)))
+  };
   var del = function() {
     return call.apply(null, ["DELETE"].concat([].slice.apply(arguments)))
   };
@@ -459,6 +462,7 @@ var Api = function() {
     get: get,
     post: post,
     put: put,
+    patch: patch,
     busy: busy,
     testMode: testMode,
     'delete': del,

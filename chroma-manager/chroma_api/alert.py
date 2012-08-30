@@ -4,14 +4,116 @@
 # ========================================================
 
 
-from django.contrib.contenttypes.models import ContentType
-from chroma_core.models.alert import AlertState
+from collections import defaultdict
 
-from tastypie.resources import ModelResource
+from django.contrib.contenttypes.models import ContentType
+from chroma_core.models.alert import AlertState, AlertSubscription
+
+from tastypie.resources import Resource, ModelResource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
+from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models.target import ManagedTargetMount
+
+
+class AlertSubscriptionValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        errors = defaultdict(list)
+
+        # Invalid alert_types and nonexistent user_ids will result in 404s,
+        # but we should probably protect against non-superusers changing
+        # other users' subscriptions. That's a dirty prank.
+        import re
+        try:
+            match = re.search(r'/(\d+)/?$', bundle.data['user'])
+            bundle_user_id = match.group(1)
+            if not "superusers" in [g.name for g in request.user.groups.all()]:
+                if "%s" % bundle_user_id != "%s" % request.user.id:
+                    errors['user'].append("Only superusers may change other users' subscriptions.")
+        except (KeyError, AttributeError):
+            errors['user'].append("Missing or malformed user parameter")
+
+        return errors
+
+
+class AlertSubscriptionAuthorization(DjangoAuthorization):
+    def apply_limits(self, request, object_list):
+        if request.method is None:
+            # Internal request, it's all good.
+            return object_list
+        elif not request.user.is_authenticated():
+            # Nothing for Anonymous
+            return object_list.none()
+        elif "superusers" in [g.name for g in request.user.groups.all()]:
+            # Superusers can manage other users' subscriptions
+            return object_list
+        else:
+            # Users should only see their own subscriptions
+            return object_list.filter(user = request.user)
+
+
+class AlertSubscriptionResource(ModelResource):
+    user = fields.ToOneField("chroma_api.user.UserResource", 'user', help_text="User to which this subscription belongs")
+    alert_type = fields.ToOneField("chroma_api.alert.AlertTypeResource", 'alert_type', help_text="Content-type id for this subscription's alert class", full=True)
+
+    class Meta:
+        resource_name = "alert_subscription"
+        queryset = AlertSubscription.objects.all()
+        authorization = AlertSubscriptionAuthorization()
+        authentication = AnonymousAuthentication()
+        list_allowed_methods = ['get', 'post', 'patch']
+        detail_allowed_methods = ['get', 'delete', 'put']
+        validation = AlertSubscriptionValidation()
+
+
+class AlertTypeResource(Resource):
+    id = fields.CharField()
+    description = fields.CharField()
+
+    def dehydrate_id(self, bundle):
+        return str(bundle.obj.id)
+
+    def dehydrate_description(self, bundle):
+        def _fixup_alert_name(alert):
+            import re
+            capitalized = str(alert).capitalize()
+            ret = re.sub(r'L net', 'LNet', capitalized)
+            return ret
+
+        return _fixup_alert_name(bundle.obj)
+
+    def get_resource_uri(self, bundle_or_obj):
+        from tastypie.bundle import Bundle
+
+        kwargs = {
+            'resource_name': self._meta.resource_name,
+            'api_name': self._meta.api_name
+        }
+
+        if isinstance(bundle_or_obj, Bundle):
+            kwargs['pk'] = bundle_or_obj.obj.id
+        else:
+            kwargs['pk'] = bundle_or_obj.id
+
+        return self._build_reverse_url("api_dispatch_detail", kwargs=kwargs)
+
+    def get_object_list(self, request):
+        return [ContentType.objects.get_for_model(cls)
+                for cls in AlertState.subclasses()]
+
+    def obj_get_list(self, request=None, **kwargs):
+        return self.get_object_list(request)
+
+    def obj_get(self, request=None, **kwargs):
+        return ContentType.objects.get(pk=kwargs['pk'])
+
+    class Meta:
+        resource_name = 'alert_type'
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
+        list_allowed_methods = ['get']
+        detail_allowed_methods = ['get']
 
 
 class AlertResource(ModelResource):

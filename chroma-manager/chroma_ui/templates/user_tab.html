@@ -38,7 +38,7 @@
             }))
           }
           buttons.push($("<button>Edit</button>").click(function() {
-            UserDialog.edit(row.user, function() {reloadTable();});
+            Backbone.history.navigate("/user/" + row.user.id + "/", true);
           }));
           $.each(buttons, function(i, button) {
             $('td:eq(4)', nRow).prepend(button);
@@ -144,19 +144,6 @@
       refresh: reloadTable
     }
   }();
-</script>
-
-<script type="text/template" id="user_detail_dialog_template">
-    <div class='edit_user_dialog'>
-        <table class='validated_form'>
-            <tr><th>Username:</th><td><input name='username' type='text' readonly='readonly' value='<%= user.username %>'/></td></tr>
-            <% if ((!Login.userHasGroup('superusers')) || user.id == Login.getUser().id) { %>
-            <tr><th>Old password:</th><td><input name='old_password' type='password'/></td></tr>
-            <% } %>
-            <tr><th>New password:</th><td><input name='password1' type='password'/></td></tr>
-            <tr><th>Confirm new password:</th><td><input name='password2' type='password'/></td></tr>
-        </table>
-    </div>
 </script>
 
 <h2 class='section_header'>User Administration</h2>

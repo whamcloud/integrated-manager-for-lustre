@@ -95,6 +95,7 @@ var ChromaRouter = Backbone.Router.extend({
     "command/:id/": 'command_detail',
     "target/:id/": 'target_detail',
     "host/:id/": 'server_detail',
+    "user/:id/": 'user_detail',
     "storage_resource/:id/": 'storage_resource_detail',
     "job/:id/": 'job_detail',
     "": "dashboard",
@@ -154,6 +155,10 @@ var ChromaRouter = Backbone.Router.extend({
   server_detail: function(id)
   {
     this.object_detail(id, Server, ServerDetail, 'label');
+  },
+  user_detail: function(id)
+  {
+    this.object_detail(id, User, UserDetail, 'username');
   },
   alert: function()
   {

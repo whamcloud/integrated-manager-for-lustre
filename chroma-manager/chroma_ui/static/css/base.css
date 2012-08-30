@@ -885,3 +885,7 @@ ul.host_selection_list {
     overflow-y: auto;
     list-style-type: none;
 }
+
+ul.alert_selection_list {
+    list-style-type: none;
+}
