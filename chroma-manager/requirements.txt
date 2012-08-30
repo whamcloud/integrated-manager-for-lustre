@@ -27,3 +27,4 @@ behave>=1.1.0
 prettytable
 -e hg+https://bitbucket.org/jcspray/dse2-django1.3#egg=dse
 selenium
+log4tailer
