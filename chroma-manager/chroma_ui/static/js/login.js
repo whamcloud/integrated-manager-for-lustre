@@ -4,6 +4,10 @@
 // ========================================================
 
 
+/* FIXME HYD-1381: this should be done on renders rather than on
+   all ajax completions */
+$(document).ajaxComplete(function(){Login.updateVisibility();});
+
 var Login = function() {
   var user = null;
 
@@ -95,6 +99,11 @@ var Login = function() {
     })
   }
 
+  function updateVisibility() {
+    $('.fsadmin_only').toggle(userHasGroup('filesystem_administrators'));
+    $('.superuser_only').toggle(userHasGroup('superusers'));
+  }
+
   function init() {
     initUi();
 
@@ -119,9 +128,6 @@ var Login = function() {
           $('#user_info #anonymous').hide();
         }
 
-        $('.fsadmin_only').toggle(userHasGroup('filesystem_administrators'));
-        $('.superuser_only').toggle(userHasGroup(user, 'superusers'));
-
         Api.enable();
       }
     }, undefined, false, true);
@@ -134,7 +140,8 @@ var Login = function() {
   return {
     init: init,
     getUser: getUser,
-    userHasGroup: userHasGroup
+    userHasGroup: userHasGroup,
+    updateVisibility: updateVisibility
   }
 }();
 
