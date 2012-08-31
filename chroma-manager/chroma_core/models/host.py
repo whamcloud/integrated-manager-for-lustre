@@ -9,6 +9,7 @@ from exceptions import Exception
 import json
 import logging
 import dateutil.parser
+import re
 
 from django.db import models
 from django.db import transaction
@@ -620,10 +621,16 @@ class GetHostProperties(Step):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         host_properties = self.invoke_agent(host, "host-properties")
+        versions = settings.VERSION, host_properties.get('agent_version')
+        manager, agent = (map(int, re.findall('(\d+)\.', version or '')) for version in versions)
+        # only check production version compatibility: A.B.
+        # agent should match major version and not exceed minor version
+        if manager and agent and not (agent[0] == manager[0] and agent[:2] <= manager):
+            raise ValueError("Version incompatibility between manager ({0}) and agent ({1})".format(*versions))
 
         # Get agent capabilities
         capabilities = host_properties['capabilities']
-        immutable_state = len([c for c in capabilities if "manage_" in c]) == 0
+        immutable_state = not any("manage_" in c for c in capabilities)
         if host.immutable_state != immutable_state:
             host.immutable_state = immutable_state
             host.save()
