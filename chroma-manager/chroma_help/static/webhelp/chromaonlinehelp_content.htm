@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-   <title>Chroma User Guide</title>
+   <title>Chroma Enterprise User Guide</title>
    <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
@@ -21,13 +21,13 @@
 
 /* Tabbed Browsing */
 
-a {outline: 0 none;} 
- 
+a {outline: 0 none;}
+
   body {
-    padding: 0; 
+    padding: 0;
     margin: 0;
     font: 11px/1.5em Verdana,Tahoma,Arial,Helvetica,Sans-Serif;
-    background-color: #f3f3f2; 
+    background-color: #f3f3f2;
     background-image: url("lines.gif");
     background-attachment: fixed;
     }
@@ -61,7 +61,7 @@ a {outline: 0 none;}
     padding: 0 2px 0 4px;
     margin-bottom: 5px;
     }
-    
+
   a.tablink {
     display:block;
     background:url("tabright.gif")
@@ -80,7 +80,7 @@ a {outline: 0 none;}
   #header #current a {
     background-position: 100% -42px;
     padding-bottom: 3px;}
-    
+
   #header #current a:hover {
     color: #000;
     }
@@ -88,11 +88,11 @@ a {outline: 0 none;}
   #header li.noncurrent a {
   color: #636363
   }
-   
+
   #header li.noncurrent:hover {
     background-position: 0% -42px;
     margin: -2px 0 0 0;
-    } 
+    }
 
   #header li.noncurrent:hover a {
     background-position: 100% -42px;
@@ -104,7 +104,7 @@ a {outline: 0 none;}
    margin: 0;
    padding: 88px 0 0 0;
    }
-   
+
     #body-wrap {
       position: relative;
       padding: 8px 5px 5px 8px;
@@ -112,23 +112,23 @@ a {outline: 0 none;}
       clear:left;
       height: 100%;
       width: 100%;
-      } 
+      }
 
-/* End Tabbed Browsing */  
+/* End Tabbed Browsing */
 
 /* Suppress TOC underlines in non-IE browsers */
 
 	a { color: black; text-decoration: none }
 	a:visited {color: black}
 	a:hover { text-decoration: underline }
-   
+
 /* Styles for TOC components (you can edit these) */
-   
+
        .navtitle { font-size: 12pt; font-weight: bold; margin: 12px 0 0 10px; color: #000; }
-       .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; } 
-             
+       .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; }
+
        .navbar   { font-size: 10pt; }
-       .copyright { color: #636363; font-size: 8pt; text-align: center;  margin: 0; margin-top: 7px; 
+       .copyright { color: #636363; font-size: 8pt; text-align: center;  margin: 0; margin-top: 7px;
 		    border-top: 1px solid #000; padding-top: 2px; padding-bottom: 8px;}
        .heading1 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000;  }
        .heading2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 9pt; color: #000000;  }
@@ -159,7 +159,7 @@ a {outline: 0 none;}
   #header li.noncurrent:hover a  {
     padding-bottom: 6px;  }
 </style>
-<![endif]--> 
+<![endif]-->
 <!--[if lte IE 6]>
 <style type="text/css">
 body { width: 99%; }
@@ -167,7 +167,7 @@ body { width: 99%; }
 #body-wrap { height: auto; }
 #body-shift { margin: 0; padding:0; }
 </style>
-<![endif]--> 
+<![endif]-->
 
 <!-- Static page display when JavaScript is off -->
 <noscript>
@@ -181,14 +181,14 @@ body { width: 99%; }
 </noscript>
 
 <script type="text/javascript" src="navinith.js"></script>
-<script type="text/javascript"> 
+<script type="text/javascript">
 // Initialize the page
 var IE6 = /msie 6|MSIE 6/.test(navigator.userAgent);
 if (!IE6) {
     addEvent(window, "load", headResizeTOC);
-    addEvent(window, "resize", headResizeTOC); 
-    }  
-</script> 
+    addEvent(window, "resize", headResizeTOC);
+    }
+</script>
    <script type="text/javascript" src="jquery.js"></script>
    <script type="text/javascript" src="helpman_settings.js"></script>
    <script type="text/javascript">
@@ -218,8 +218,8 @@ if (!IE6) {
 <body>
   <div id="ns-header">
   <div id="header">
-  <p class="navtitle">Chroma User Guide</p>
-  
+  <p class="navtitle">Chroma Enterprise User Guide</p>
+
     <ul>
       <li id="current"><a href="#" class="tablink" title="Table of Contents">Contents</a></li>
       <li class="noncurrent"><a href="chromaonlinehelp_kwindex.htm" class="tablink" title="Keyword Index">Index</a></li>
@@ -238,7 +238,7 @@ if (!IE6) {
 </li>
 <li class="heading1" id="i3" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a3" href="enterprise_lustre_overview.htm" target="hmcontent"><span class="heading1" id="s3">Enterprise Lustre Overview</span></a>
 </li>
-<li class="heading1" id="i4" data-bg="toc_closedbook.gif;toc_openbook.gif" style="background:url(toc_openbook.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a4" href="getting_started.htm" target="hmcontent"><span class="heading1" id="s4" ondblclick="return dblclicked(this)">Getting Started</span></a>
+<li class="heading1" id="i4" data-bg="toc_closedbook.gif;toc_openbook.gif" style="background:url(toc_openbook.gif) no-repeat;cursor:pointer;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a4" href="getting_started.htm" target="hmcontent"><span class="heading1" id="s4" ondblclick="return dblclicked(this)">Getting Started</span></a>
 <ul id="ul4" style="list-style-type:none">
 <li class="heading2" id="i4.1" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading2" id="a4.1" href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="heading2" id="s4.1">Configuring Chroma Manager</span></a>
 </li>
@@ -258,7 +258,7 @@ if (!IE6) {
 </li>
 </ul>
 <script type="text/javascript">loadicons('toc_topic.gif','toc_openbook.gif','toc_closedbook.gif');</script>
-<p class="copyright">© 2012 Whamcloud, Inc.. All rights Reserved.</p>
+<p class="copyright">Copyright © 2012 Intel Corporation. All rights Reserved.</p>
 </td></tr></table><!--  body-wrap -->
 </div>
 </body>
@@ -266,5 +266,5 @@ if (!IE6) {
 <script type="text/javascript">
 headResizeTOC();
 </script>
-<![endif]--> 
+<![endif]-->
 </html>

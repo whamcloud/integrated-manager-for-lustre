@@ -519,10 +519,10 @@ function ZoomInitSearch()
 		searchWords.sort(sw_compare);
 
 	NumSearchWords = searchWords.length;
-	
+
 	if (searchWords[0].length == 0)
-		NumSearchWords = 0;		
-		
+		NumSearchWords = 0;
+
 	kw_ptr = 0;
 	outputline = 0;
 	ipage = 0;
@@ -575,7 +575,7 @@ function ZoomInitSearch()
 		if (Highlighting == 1 && UseWildCards[sw] == 0)
 			RegExpSearchWords[sw] = searchWords[sw];
 	}
-	
+
 	// Join splitted up arrays if necessary
 	if (DictArrayCount > 0)
 	{
@@ -736,7 +736,7 @@ function ZoomInitSearch()
 						else if (metafields[fieldnum][METAFIELD_TYPE] == METAFIELD_TYPE_TEXT)
 						{
 							if (metafields[fieldnum][METAFIELD_METHOD] == METAFIELD_METHOD_SUBSTRING)
-							{															
+							{
 								if (GetMetaValues(i, fieldnum).toLowerCase().indexOf(meta_query[fieldnum].toLowerCase()) == -1)
 									IsFiltered = true;
 							}
@@ -745,7 +745,7 @@ function ZoomInitSearch()
 								if (wordcasecmp(GetMetaValues(i, fieldnum).toLowerCase(), meta_query[fieldnum].toLowerCase()) == -1)
 									IsFiltered = true;
 							}
-						}						
+						}
 						else if (metafields[fieldnum][METAFIELD_TYPE] == METAFIELD_TYPE_DROPDOWN)
 						{
 							if (GetMetaValues(i, fieldnum) != meta_query[fieldnum])
@@ -817,7 +817,7 @@ function ZoomInitSearch()
 				if (res_table[i][2] < full_numwords && andq == 1)
 					IsFiltered = true;
 			}
-			
+
 			if (UseCats && cat[0] != -1 && IsFiltered == false) {
 				// using cats and not doing an "all cats" search
 				if (SearchMultiCats) {
@@ -842,12 +842,12 @@ function ZoomInitSearch()
 					}
 				}
 			}
-			
+
 			if (IsFiltered == false) {
-				
+
 				if (res_table[i][2] >= full_numwords)
 					fullmatches++;
-					
+
 				// copy if not filtered out
 				output[oline] = new Array(3);
 				output[oline][0] = i;
@@ -1414,7 +1414,7 @@ function ZoomShowCatSummary()
 			{
 				if (ShowCatSummaryHeading == true)
 				{
-					document.writeln("<div class=\"cat_summary\"><br />" + STR_CAT_SUMMARY + "<ul>");				
+					document.writeln("<div class=\"cat_summary\"><br />" + STR_CAT_SUMMARY + "<ul>");
 					ShowCatSummaryHeading = false;
 				}
 				document.writeln("<li><a href=\"" + SelfURL + "?zoom_query=" + queryForURL + metaParams + "&amp;zoom_cat%5B%5D=" + catit + "&amp;zoom_per_page=" + per_page + "&amp;zoom_and=" + andq + "&amp;zoom_sort=" + sort + "\">" + catnames[catit]);

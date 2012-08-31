@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-   <title>Chroma User Guide</title>
+   <title>Chroma Enterprise User Guide</title>
    <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
@@ -15,13 +15,13 @@
 
 /* Tabbed Browsing */
 
-a {outline: 0 none;} 
- 
+a {outline: 0 none;}
+
   body {
-    padding: 0; 
+    padding: 0;
     margin: 0;
     font: 11px/1.5em Verdana,Tahoma,Arial,Helvetica,Sans-Serif;
-    background-color: #e4e4e4; 
+    background-color: #e4e4e4;
     background-image: url("lines.gif");
     background-attachment: fixed;
     }
@@ -55,7 +55,7 @@ a {outline: 0 none;}
     padding: 0 2px 0 4px;
     margin-bottom: 5px;
     }
-    
+
   a.tablink {
     display:block;
     background:url("tabright.gif")
@@ -74,7 +74,7 @@ a {outline: 0 none;}
   #header #current a {
     background-position: 100% -42px;
     padding-bottom: 3px;}
-    
+
   #header #current a:hover {
     color: #000;
     }
@@ -82,11 +82,11 @@ a {outline: 0 none;}
   #header li.noncurrent a {
   color: #636363
   }
-   
+
   #header li.noncurrent:hover {
     background-position: 0% -42px;
     margin: -2px 0 0 0;
-    } 
+    }
 
   #header li.noncurrent:hover a {
     background-position: 100% -42px;
@@ -99,7 +99,7 @@ a {outline: 0 none;}
    margin: 0;
    padding: 88px 0 0 0;
    }
-   
+
     #body-wrap {
       position: relative;
       padding: 0 5px 5px 10px;
@@ -107,14 +107,14 @@ a {outline: 0 none;}
       clear:left;
       height: 100%;
       width: 100%;
-      } 
+      }
 
    #callout-wrap {
      display: none;
      position: relative;
      width: auto;
      }
-   
+
    #callout {
     position: absolute;
     top: 5px;
@@ -123,38 +123,38 @@ a {outline: 0 none;}
     background: #fbf8a9;
     border: 1px solid #757575;
     padding: 3px;
-    } 
+    }
 
    #scrollPadder {
      margin: 0;
      padding: 0;
      float: left;
-   }  
-   
-   #indexRefs, #indexRefsNoJS { 
+   }
+
+   #indexRefs, #indexRefsNoJS {
       width: 100%;
-      background-color: #fff; 
-      padding: 3px 5px 0px 15px; 
-      float: left; 
+      background-color: #fff;
+      padding: 3px 5px 0px 15px;
+      float: left;
    }
    a.idxrefs {
      font-weight: bold;
-   }    
+   }
 
 
-/* End Tabbed Browsing */     
-   
+/* End Tabbed Browsing */
+
 /* Suppress Index underlines in non-IE browsers */
 
 	a { color: black; text-decoration: none }
 	a:visited {color: black}
 	a:hover { text-decoration: underline }
-   
-/* Styles for Index components (you can edit these) */   
-   
+
+/* Styles for Index components (you can edit these) */
+
        .navtitle    { font-size: 12pt; font-weight: bold; margin: 12px 0 0 10px; color: #000; }
-       .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; } 
-       
+       .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; }
+
        .navbar      { font-size: 10pt; }
        .idxsection  { font-family: Arial,Helvetica; font-weight: bold; font-size: 11pt; color: #000000; text-decoration: none;
                       margin-top: 8px; margin-bottom: 3px; white-space: nowrap;}
@@ -178,28 +178,28 @@ a {outline: 0 none;}
     }
   #header li.noncurrent:hover a  {
     padding-bottom: 6px; }
-  
+
   TABLE.idxtable { filter: progid:DXImageTransform.Microsoft.Shadow(color=B0B0B0, Direction=135, Strength=4); }
 
 </style>
-<![endif]--> 
+<![endif]-->
 <!--[if lte IE 6]>
 <style type="text/css">
-   #indexRefs, #indexRefsNoJS { 
+   #indexRefs, #indexRefsNoJS {
       width: auto;
-      float: none; 
+      float: none;
    }
    #callout-wrap, #callout { z-index: 1000; }
    #body-wrap { height: auto; }
    #body-shift { margin: 0; padding:0; }
 </style>
-<![endif]-->     
+<![endif]-->
 
 <!-- Static page display when JavaScript is off -->
 <noscript>
 <style type="text/css">
 #ns-header {
-position: static;  
+position: static;
 min-width: 0; }
 #indexRefs {
 display: none;
@@ -219,8 +219,8 @@ display: none;
 <body>
   <div id="ns-header">
   <div id="header">
-  <p class="navtitle">Chroma User Guide</p>
-  
+  <p class="navtitle">Chroma Enterprise User Guide</p>
+
     <ul>
       <li class="noncurrent"><a href="chromaonlinehelp_content.htm" class="tablink" title="Table of Contents">Contents</a></li>
       <li id="current"><a href="#" class="tablink" title="Keyword Index">Index</a></li>
@@ -276,7 +276,7 @@ if (parent.hmIndexArg != "") {
     }
   } catch(err) {}
   },100);
-} } // Index args checker 
+} } // Index args checker
 </script>
 </div>
 <!-- Noscript version of the index links -->
@@ -387,6 +387,7 @@ if (parent.hmIndexArg != "") {
 <p class="idxkeyword2" style="margin:0 0 0 20px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword2">Storage</span></a></p>
 <p class="idxkeyword2" style="margin:0 0 0 20px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword2">Volumes</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">configuring failover servers</span></a></p>
+<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">configuring roles</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">configuring users</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">configuring volumes</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">creating a new file system</span></a></p>
@@ -408,8 +409,8 @@ if (parent.hmIndexArg != "") {
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">History page</span></a></p>
 <a name="L" id="L"></a><p class="idxsection">- L -</p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Logs page</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k29')"><span class="idxkeyword">Lustre client</span></a></p>
-<div id="k29" style="position:relative;margin:0 0 0 20px;top:-3px">
+<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k30')"><span class="idxkeyword">Lustre client</span></a></p>
+<div id="k30" style="position:relative;margin:0 0 0 20px;top:-3px">
 <table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxlink">What Is Lustre?</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="mounting_file_system_clients.htm" target="hmcontent"><span class="idxlink">Mounting File System Clients</span></a></td></tr></table></td></tr></table>
 </div>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="introducing_chroma.htm" target="hmcontent"><span class="idxkeyword">Lustre file system</span></a></p>
@@ -417,8 +418,8 @@ if (parent.hmIndexArg != "") {
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">management target</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">management target (MGT)</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxkeyword">metadata operations</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k34')"><span class="idxkeyword">metadata server</span></a></p>
-<div id="k34" style="position:relative;margin:0 0 0 20px;top:-3px">
+<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k35')"><span class="idxkeyword">metadata server</span></a></p>
+<div id="k35" style="position:relative;margin:0 0 0 20px;top:-3px">
 <table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="introducing_chroma.htm" target="hmcontent"><span class="idxlink">Introducing Chroma Enterprise</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxlink">Configuring Chroma Manager</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxlink">Creating a Lustre File System</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="configuring_an_existing_lustr2.htm" target="hmcontent"><span class="idxlink">Adding Existing Lustre Storage Servers</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxlink">Monitoring a Lustre File System</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxlink">Managing Chroma Storage</span></a></td></tr></table></td></tr></table>
 </div>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">metadata target</span></a></p>
@@ -429,6 +430,8 @@ if (parent.hmIndexArg != "") {
 <a name="O" id="O"></a><p class="idxsection">- O -</p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="introducing_chroma.htm" target="hmcontent"><span class="idxkeyword">object storage server</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">object storage target</span></a></p>
+<a name="R" id="R"></a><p class="idxsection">- R -</p>
+<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">roles</span></a></p>
 <a name="S" id="S"></a><p class="idxsection">- S -</p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Servers page</span></a></p>
 <p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">starting a file system</span></a></p>
@@ -457,5 +460,5 @@ if (parent.hmIndexArg != "") {
 <script type="text/javascript">
 headResizeIDX();
 </script>
-<![endif]--> 
+<![endif]-->
 </html>
