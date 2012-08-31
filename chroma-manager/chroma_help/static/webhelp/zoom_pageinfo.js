@@ -11,7 +11,7 @@ pageinfo = [[0,0,0,0,null],
 	[0,0,0,0,null],
 	[0,0,0,0,null]];
 pagedata = [ ["a_quick_tour.htm","A Quick Tour","A Quick Tour",""],
-["chromaonlinehelp_ftsearch.htm","Chroma User Guide","Chroma User Guide Contents Index Search Enter one or more keywords to search (&#39;*&#39; and &#39;?&#39; wildcards are supported): JavaScript is required for the...",""],
+["chromaonlinehelp_ftsearch.htm","Chroma Enterprise User Guide","Chroma Enterprise User Guide Contents Index Search Enter one or more keywords to search (&#39;*&#39; and &#39;?&#39; wildcards are supported): JavaScript is requi...",""],
 ["configuring_an_existing_lustr2.htm","Adding Existing Lustre Storage Servers","Adding Existing Lustre Storage Servers",""],
 ["configuring_the_chroma_manage2.htm","Configuring Chroma Manager","Configuring Chroma Manager",""],
 ["creating_a_file_system.htm","Creating a Lustre File System","Creating a Lustre File System",""],

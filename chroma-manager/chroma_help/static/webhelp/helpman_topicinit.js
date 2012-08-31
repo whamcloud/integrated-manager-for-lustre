@@ -1,5 +1,5 @@
 ﻿/* --------------- Script (c) 2006-2011 EC Software ---------------
-This script was created by Help & Manual. It is designed for use 
+This script was created by Help & Manual. It is designed for use
 in combination with the output of Help & Manual and must not
 be used outside this context.     http://www.helpandmanual.com
 
@@ -20,11 +20,11 @@ var HMSyncTOC = function(indexPageUrl, selfUrl) {
      else if ((hmForceRedirect) && (parent.location) && (parent.location.href)) { parent.location.href = indexPageUrl+'?'+selfUrl; }
    }
 }
-	
+
 var HMToggleExpandAll = function(value) {
-  if (HMToggles.length != null){ 
-    for (i=0; i<HMToggles.length; i++){ 
-      HMToggleExpand(HMToggles[i], value, (value && hmAnimate)); 
+  if (HMToggles.length != null){
+    for (i=0; i<HMToggles.length; i++){
+      HMToggleExpand(HMToggles[i], value, (value && hmAnimate));
 	}
   }
   HMTogglesAllExpanded = value;
@@ -32,24 +32,24 @@ var HMToggleExpandAll = function(value) {
 
 var HMAnyToggleOpen = function() {
   var anyOpen = false;
-  if (HMToggles.length != null){ 
-    for (i=0; i<HMToggles.length; i++){ 
-  	  if (HMToggles[i].getAttribute("hm.state")=='1') anyOpen = true; 
+  if (HMToggles.length != null){
+    for (i=0; i<HMToggles.length; i++){
+  	  if (HMToggles[i].getAttribute("hm.state")=='1') anyOpen = true;
 	}
   }
   if (!anyOpen) HMTogglesAllExpanded = false;
   return anyOpen;
 }
 
-var HMToggle = function() { 
+var HMToggle = function() {
 	var op = HMToggle.arguments[0];
 	for (i=1; i<HMToggle.arguments.length; i++) {
-	  var objID = HMToggle.arguments[i]; 
+	  var objID = HMToggle.arguments[i];
        	  var obj = document.getElementById(objID);
  	  switch (op) {
-		case "toggle": 
+		case "toggle":
 		  var state = obj.getAttribute("hm.state");
-		  if (state == null) { state = "0" }; 
+		  if (state == null) { state = "0" };
 		  HMToggleExpand(obj, (state != "1"), hmAnimate);
 		  break;
 
@@ -86,7 +86,7 @@ var HMToggleExpandText = function(obj, value, animate) {
 
 var HMToggleExpandDropdown = function(obj, value, animate) {
   if (animate) {
-	/* $(obj).stop(); don't stop here */ 
+	/* $(obj).stop(); don't stop here */
     if (value) {
       $(obj).slideDown('fast');
     }
@@ -97,9 +97,9 @@ var HMToggleExpandDropdown = function(obj, value, animate) {
 	  	  if ($(dummy).outerHeight!=0) dummy = $('<div style="height:1px"></div>').insertBefore(obj);
 	  	  else $(dummy).css('display', 'block');
           $(dummy).css('display', 'none');
-        } 
+        }
   	  });
-    } 
+    }
   }
   else {
     obj.style.display = (value ? "block" : "none");
@@ -111,8 +111,8 @@ var HMToggleExpandPicture = function(obj, value, animate) {
   var isToggleIcon = (obj.getAttribute("hm.type")=="dropdown");
 
   if ((!isToggleIcon) && (animate)) {
-	$(obj).stop(); 
-	
+	$(obj).stop();
+
 	var newImg = new Image();
     newImg.onload = function() {
 	  var newWidth  = newImg.width;
@@ -133,7 +133,7 @@ var HMToggleExpandPicture = function(obj, value, animate) {
     };
 	newImg.src = newSrc;
   }
-  else { 
+  else {
     obj.src = newSrc;
  	$(obj).css('width', 'auto');
     $(obj).css('height', 'auto');
@@ -151,7 +151,7 @@ var HMShowPictureLightbox = function(objID) {
   var startT = $(obj).offset().top;
   var startW = $(obj).outerWidth();
   var startH = $(obj).outerHeight();
-	
+
   var newSrc = obj.getAttribute("hm.src1");
   var newTitle = obj.getAttribute("hm.title1");
   var newCaption = obj.getAttribute("hm.caption1");
@@ -159,7 +159,7 @@ var HMShowPictureLightbox = function(objID) {
   var htmlCode = '<img id="hmlightboximage" src="' + newSrc + '" alt="' + newTitle + '"/>';
   var imgPreloader = new Image();
   imgPreloader.onload = function() {
-  	HMShowLightbox(htmlCode, startL, startT, startW, startH, imgPreloader.width, imgPreloader.height, newCaption, true, false); 
+  	HMShowLightbox(htmlCode, startL, startT, startW, startH, imgPreloader.width, imgPreloader.height, newCaption, true, false);
   };
   imgPreloader.src = newSrc;
 
@@ -177,10 +177,10 @@ var HMShowVideoLightbox = function(event, obj, htmlcode, vWidth, vHeight) {
 }
 
 var HMShowLightbox = function(htmlCode, startL, startT, startW, startH, endW, endH, newCaption, doAnimate, isVideo) {
-  /* Find our scope: 
+  /* Find our scope:
    * 1) Is this an orphan window or part of a webhelp frame?
    * 2) If it is a webhelp frame, is it an iframe or classic <frame>?
-   * 3) Can we do cross-frame scripting? (not possible in Chrome locally) 
+   * 3) Can we do cross-frame scripting? (not possible in Chrome locally)
    */
   var parentScope = ((parent.hmNavigationFrame) && (parent.document.getElementById('hmnavigation')) && (parent.document.getElementById('hmnavigation').nodeName.toLowerCase()=='iframe'));
   var lightboxWindow = $(window);
@@ -193,38 +193,47 @@ var HMShowLightbox = function(htmlCode, startL, startT, startW, startH, endW, en
     lightboxWindow = parent.window;
   }
 
-  $(lightboxBody).append('<div id="hmlightboxbackground" style="z-index:99997;border:none;padding:0;margin:0;position:absolute;left:0;top:0;background-color:#7F7F7F"></div>');  
-  var lightboxBackground = parentScope ? parent.$('#hmlightboxbackground') : $('#hmlightboxbackground'); 
+  $(lightboxBody).append('<div id="hmlightboxbackground" style="z-index:99997;border:none;padding:0;margin:0;position:absolute;left:0;top:0;background-color:#7F7F7F"></div>');
+  var lightboxBackground = parentScope ? parent.$('#hmlightboxbackground') : $('#hmlightboxbackground');
   lightboxBackground.css('opacity', '0.5');
 
   if (parentScope) {
   	$(lightboxBody).append('<div id="hmlightboxscrolllayer" style="z-index:99998;border:none;padding:0;margin:0;position:absolute;left:0;top:0;background:none;overflow:auto"></div>');
   	lighboxScrollLayer = parent.$('#hmlightboxscrolllayer');
-  	lightboxBody = lighboxScrollLayer;  
-  } 
+  	lightboxBody = lighboxScrollLayer;
+  }
 
   $(lightboxBody).append('<div id="hmlightbox" style="z-index:99999;position:absolute;display:none"></div>');
-  var lightbox = parentScope ? parent.$('#hmlightbox') : $('#hmlightbox');  
+  var lightbox = parentScope ? parent.$('#hmlightbox') : $('#hmlightbox');
   var lightboxObject = $(htmlCode).appendTo(lightbox);
   var lightboxCaption = null;
   if (newCaption != null) {
   	$(lightbox).append('<p id="hmlightboxcaption">' +newCaption+ '</p>');
   	lightboxCaption = parentScope ? parent.$('#hmlightboxcaption') : $('#hmlightboxcaption');
-  }  	
+  }
 
   var lightboxSpeed = 300;
-  var sizeStart; /* keep initial size for hide animation */ 
+  var sizeStart; /* keep initial size for hide animation */
+  var maxW = endW;
+  var maxH = endH;
+  if (hmLightboxConstrained) {
+    if (endW > ($(lightboxWindow).width()-40)) {
+	  endW = $(lightboxWindow).width()-40;
+	  if (endW < (maxW/2)) endW = maxW/2;
+	  endH = maxH * endW / maxW;
+    }
+  }
 
   lightboxObject.css({'width': endW+'px', 'height': endH+'px'});
   if (lightboxCaption!=null) lightboxCaption.css('width', endW+'px');
-  	
+
   if (hmAnimate&&doAnimate) {
     var sizeEnd = lightboxGetsize();
   	if (lightboxCaption!=null) lightboxCaption.css('display', 'none'); /* hide caption during animation */
     lightboxObject.css({'width': startW + 'px', 'height': startH + 'px'});
   	sizeStart = lightboxGetsize();
 	lightboxResize();
-    	
+
     sizeStart[0] = startL;
     sizeStart[1] = startT;
     if (parentScope) {
@@ -233,21 +242,21 @@ var HMShowLightbox = function(htmlCode, startL, startT, startW, startH, endW, en
     }
     lightbox.css({'left': sizeStart[0]+'px', 'top': sizeStart[1]+'px'});
     lightbox.show();
-    	
-    lightbox.animate({ left: sizeEnd[0]-lightboxObject.position().left, top: sizeEnd[1]-lightboxObject.position().top }, 
-                       lightboxSpeed, 
-                       function() { 
+
+    lightbox.animate({ left: sizeEnd[0]-lightboxObject.position().left, top: sizeEnd[1]-lightboxObject.position().top },
+                       lightboxSpeed,
+                       function() {
                          if (lightboxCaption!=null) lightboxCaption.css('display', 'block');
                        }
                      );
-                         
-    lightboxObject.animate({ width: endW, height: endH }, lightboxSpeed); 
+
+    lightboxObject.animate({ width: endW, height: endH }, lightboxSpeed);
   }
   else {
     var sizeEnd = lightboxGetsize();
     lightboxResize();
-	lightbox.show();  	
-  }  
+	lightbox.show();
+  }
 
   $(lightboxWindow).bind('resize.hmlightbox', lightboxResize);
   $(lightboxWindow).bind('scroll.hmlightbox', lightboxScroll);
@@ -259,12 +268,24 @@ var HMShowLightbox = function(htmlCode, startL, startT, startW, startH, endW, en
     lightboxBackground.css('width', (($(lightboxDocument).scrollLeft() > 0) ? $(lightboxDocument).width() : $(lightboxWindow).width()) +'px');
     lightboxBackground.css('height', (($(lightboxDocument).scrollTop() > 0) ? $(lightboxDocument).height() : $(lightboxWindow).height()) +'px');
   }
-  	
+
   function lightboxResize() {
+    if (hmLightboxConstrained) {
+	  var tmpW = endW;
+	  endW = $(lightboxWindow).width()-40;
+	  if (endW > maxW) endW = maxW;
+	  else if (endW < (maxW/2)) endW = maxW/2;
+      if (tmpW != endW) {
+        endH = maxH * endW / maxW;
+        lightboxObject.css({'width': endW+'px', 'height': endH+'px'});
+  	    if (lightboxCaption!=null) lightboxCaption.css('width', endW+'px');
+  	  }
+  	}
+
   	var size = lightboxGetsize();
     lightbox.css({left: size[0]+'px', top:size[1]+'px'});
-    
-    if (lighboxScrollLayer!=null) { 
+
+    if (lighboxScrollLayer!=null) {
       lighboxScrollLayer.css({'width': $(lightboxWindow).width()+'px', 'height': $(lightboxWindow).height()+'px'});
     }
     lightboxScroll();
@@ -274,6 +295,10 @@ var HMShowLightbox = function(htmlCode, startL, startT, startW, startH, endW, en
   	var lbW  = lightbox.width();
   	var lbH  = lightbox.height();
 
+  	if (isVideo) {
+  	  lbW = endW;
+  	  lbH = endH;
+    }
   	var newW = hmmax(lbW + 40, lightboxDocument.width());
   	var newH = hmmax(lbH + 40, lightboxDocument.height());
 
@@ -284,39 +309,39 @@ var HMShowLightbox = function(htmlCode, startL, startT, startW, startH, endW, en
 	return size;
   }
 
-  function lightboxKeydown(e) { 
-  	if (e.keyCode == 27) lightboxClose(); 
+  function lightboxKeydown(e) {
+  	if (e.keyCode == 27) lightboxClose();
   }
 
-  function lightboxClick(e) { 
+  function lightboxClick(e) {
     var	canClose = (!isVideo) ||
                    (e.pageX < lightbox.position().left) || (e.pageY < lightbox.position().top) ||
-                   (e.pageX > lightbox.position().left+lightbox.width()) || (e.pageY > lightbox.position().top+lightbox.height());  	 
-    if (canClose) lightboxClose(); 
+                   (e.pageX > lightbox.position().left+lightbox.width()) || (e.pageY > lightbox.position().top+lightbox.height());
+    if (canClose) lightboxClose();
   }
 
   function lightboxClose() {
   	if (hmAnimate&&doAnimate) {
       if (lightboxCaption!=null) lightboxCaption.css('display', 'none'); /* hide caption during animation */
-      lightboxObject.animate({ width: startW, height: startH }, lightboxSpeed); 
-      lightbox.animate({ left: sizeStart[0]-lightboxObject.position().left, top: sizeStart[1]-lightboxObject.position().top }, 
-      	               lightboxSpeed, 
-      	               function() { 
-      	               	 lightbox.remove(); 
-      	               	 if (lighboxScrollLayer!=null) lighboxScrollLayer.remove(); 
+      lightboxObject.animate({ width: startW, height: startH }, lightboxSpeed);
+      lightbox.animate({ left: sizeStart[0]-lightboxObject.position().left, top: sizeStart[1]-lightboxObject.position().top },
+      	               lightboxSpeed,
+      	               function() {
+      	               	 lightbox.remove();
+      	               	 if (lighboxScrollLayer!=null) lighboxScrollLayer.remove();
   	                     lightboxBackground.remove();
                        }
                       );
   	}
   	else {
       lightbox.remove();
-      if (lighboxScrollLayer!=null) lighboxScrollLayer.remove(); 
+      if (lighboxScrollLayer!=null) lighboxScrollLayer.remove();
   	  lightboxBackground.remove();
   	}
     $(lightboxWindow).unbind('.hmlightbox');
     $(lightboxBody).unbind('.hmlightbox');
   }
-  
+
 }
 
 
@@ -331,25 +356,25 @@ var HMSearchCheck = function(obj) {
         hStyle = fontTags[cCheck].style.cssText;
         if (hStyle.indexOf("BACKGROUND-COLOR") == 0) {
           foundHilite = true;
-          break; 
+          break;
         }
       }
     }
   }
-  return foundHilite;     
+  return foundHilite;
 }
 
 var HMInitToggle = function() {
   if (document.getElementById) {
 	var node = document.getElementById(HMInitToggle.arguments[0]);
 	var isPicture = false;
-	for (i=1; i<HMInitToggle.arguments.length-1; i=i+2) { 
+	for (i=1; i<HMInitToggle.arguments.length-1; i=i+2) {
 		if (HMInitToggle.arguments[i] == "onclick") {
-		  node.onclick = Function(HMInitToggle.arguments[i+1]); 
+		  node.onclick = Function(HMInitToggle.arguments[i+1]);
 		}
-		else { 
+		else {
 		  node.setAttribute(HMInitToggle.arguments[i], decodeURI(HMInitToggle.arguments[i+1]));
-		  if ((HMInitToggle.arguments[i] == "hm.type") && (HMInitToggle.arguments[i+1] == "picture")) { isPicture = true; } 
+		  if ((HMInitToggle.arguments[i] == "hm.type") && (HMInitToggle.arguments[i+1] == "picture")) { isPicture = true; }
 		}
 		if (HMInitToggle.arguments[i].substring(0,6) == "hm.src") {
 			var img = new Image();
@@ -370,10 +395,10 @@ var HMInitToggle = function() {
 	   }
 	}
 	else {
-	  var mustExpand = HMSearchCheck(node); 
+	  var mustExpand = HMSearchCheck(node);
 	  HMToggles[HMToggles.length] = node;
-      if (mustExpand) { 
-        node.setAttribute("hm.state", "1"); 
+      if (mustExpand) {
+        node.setAttribute("hm.state", "1");
         var nodeImg = document.getElementById(node.getAttribute("id")+'_ICON');
         if (nodeImg) { HMToggleExpand(nodeImg, true); }
       }
@@ -389,14 +414,14 @@ var HMTrackTopiclink = function(obj) {
 }
 
 var hmshowPopup = function(event, txt, trigger) {
-	
+
 	$('#hmpopupdiv').stop().remove();
-		 
+
 	var pop = $('<div id="hmpopupdiv"></div>').appendTo('body');
-	if (hmPopupSticky) { 
+	if (hmPopupSticky) {
       $('body').bind('mouseup.hmpopup', hmhidePopup);
-      $('body').bind('keydown.hmpopup', function(e) { if (e.keyCode == 27) hmhidePopup(); } ); 
-    }	      
+      $('body').bind('keydown.hmpopup', function(e) { if (e.keyCode == 27) hmhidePopup(); } );
+    }
 	pop.html(txt);
     var posLeft = event.clientX+$(document).scrollLeft();
     var posTop =  event.clientY+$(document).scrollTop();
@@ -404,19 +429,21 @@ var hmshowPopup = function(event, txt, trigger) {
 	var maxW = $(window).width()/1.5;
 	var w = pop.width();
 	if (w > maxW) pop.width(maxW);
-	var t = 20 + posTop;           
-	var l = (posLeft + $(trigger).width()/2 - w/2);
+	var t = 20 + posTop;
+	var l = (posLeft - w/2);
 	if (l < 10) l = 10;
+	if ((l + pop.outerWidth()) > $(window).width()) l = $(window).width() - pop.outerWidth();
+	if (l < 0) l = 0;
 	pop.css( { left: l+'px', top: t+'px'} );
 	if (hmAnimate) pop.show('fast');
 	else pop.show();
 }
 
-var hmhidePopup = function() { 
+var hmhidePopup = function() {
     if (hmPopupSticky) $("body").unbind(".hmpopup");
     var pop = $('#hmpopupdiv');
     if (pop.length>0) {  //hide, don't remove
       if (hmAnimate) pop.hide('fast');
       else $(hmpopupdiv).hide();
-    } 
+    }
 }
