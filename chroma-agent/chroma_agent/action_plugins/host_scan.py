@@ -10,6 +10,7 @@ import socket
 
 from chroma_agent.plugins import ActionPlugin
 from chroma_agent.utils import list_capabilities
+from chroma_agent import version
 
 
 def host_properties(args = None):
@@ -17,7 +18,8 @@ def host_properties(args = None):
         'time': datetime.datetime.utcnow().isoformat() + "Z",
         'nodename': os.uname()[1],
         'fqdn': socket.getfqdn(),
-        'capabilities': list_capabilities()
+        'capabilities': list_capabilities(),
+        'agent_version': version(),
     }
 
 
