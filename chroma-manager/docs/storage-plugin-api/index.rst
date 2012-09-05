@@ -400,7 +400,7 @@ plugin developers:
 
     service chroma-storage stop
     cd /usr/share/chroma-manager
-    chroma_core/bin/storage_daemon -f
+    ./manage.py chroma_service --verbose plugin_runner
 
 Correlating controller resources with Linux devices using relations
 ---------------------------------------------------------------------

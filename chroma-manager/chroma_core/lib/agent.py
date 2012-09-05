@@ -10,7 +10,7 @@ import pickle
 
 
 class AgentException(Exception):
-    def __init__(self, host_id = None, cmdline = None, agent_exception = None, agent_backtrace = None):
+    def __init__(self, host_id = None, cmdline = None, agent_exception = None, agent_backtrace = ""):
         # NB we accept construction without arguments in order to be picklable
         self.host_id = host_id
         self.cmdline = cmdline

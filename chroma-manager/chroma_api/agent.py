@@ -6,6 +6,7 @@
 
 import datetime
 import traceback
+from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonQueue
 import dateutil.parser
 from dateutil import tz
 import sys
@@ -23,8 +24,6 @@ from chroma_core.models import ManagedHost, AgentSession
 from chroma_core.lib.lustre_audit import UpdateScan
 from chroma_api.utils import custom_response
 from django.http import HttpResponse
-
-from chroma_core.lib.storage_plugin import messaging
 
 
 class AgentResponse(object):
@@ -120,8 +119,10 @@ class AgentResource(Resource):
 
                         raise
 
-                messaging.simple_send("agent", {
+                AgentDaemonQueue().put({
                     "session_id": session.session_id,
+                    "started_at": started_at.isoformat(),
+                    "counter": session.counter,
                     "host_id": host.id,
                     "updates": updates
                     })

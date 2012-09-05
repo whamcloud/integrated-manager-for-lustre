@@ -22,50 +22,6 @@ from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job, Sch
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
 
 
-class StateManagerClient(object):
-    @classmethod
-    def command_run_jobs(cls, job_dicts, message):
-        from chroma_core.tasks import command_run_jobs
-        return command_run_jobs.delay(job_dicts, message)
-
-    @classmethod
-    def command_set_state(cls, object_ids, message, run = True):
-        from chroma_core.tasks import command_set_state
-        return command_set_state.delay(object_ids, message, run)
-
-    @classmethod
-    def notify_state(cls, instance, time, new_state, from_states):
-        """from_states: list of states it's valid to transition from.  This lets
-           the audit code safely update the state of e.g. a mount it doesn't find
-           to 'unmounted' without risking incorrectly transitioning from 'unconfigured'"""
-        if instance.state in from_states and instance.state != new_state:
-            job_log.info("Enqueuing notify_state %s %s->%s at %s" % (instance, instance.state, new_state, time))
-            from chroma_core.tasks import notify_state
-            return notify_state.delay(
-                instance.content_type.natural_key(),
-                instance.id,
-                time,
-                new_state,
-                from_states)
-
-    @classmethod
-    def complete_job(cls, job_id):
-        from chroma_core.tasks import complete_job
-        return complete_job.delay(job_id)
-
-    @classmethod
-    def available_transitions(cls, stateful_object):
-        return StateManager().available_transitions(stateful_object)
-
-    @classmethod
-    def available_jobs(cls, stateful_object):
-        return StateManager().available_jobs(stateful_object)
-
-    @classmethod
-    def get_transition_consequences(cls, stateful_object, new_state):
-        return StateManager().get_transition_consequences(stateful_object, new_state)
-
-
 class LockCache(object):
     instance = None
     enable = True

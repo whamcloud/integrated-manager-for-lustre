@@ -1,6 +1,6 @@
 from chroma_core.models.jobs import SchedulingError
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
-from chroma_core.lib.state_manager import StateManagerClient
 import datetime
 from dateutil import tz
 
@@ -88,7 +88,7 @@ class TestStateManager(JobTestCaseWithHost):
         """Test that state notifications cause the state of an object to change"""
         self.assertState(self.host, 'lnet_up')
         now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
-        StateManagerClient.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
+        JobSchedulerClient.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_down')
 
     def test_late_notification(self):
@@ -96,7 +96,7 @@ class TestStateManager(JobTestCaseWithHost):
         the last change to an objects state"""
         self.assertState(self.host, 'lnet_up')
         awhile_ago = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc()) - datetime.timedelta(seconds = 120)
-        StateManagerClient.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
+        JobSchedulerClient.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_up')
 
     def test_2steps(self):

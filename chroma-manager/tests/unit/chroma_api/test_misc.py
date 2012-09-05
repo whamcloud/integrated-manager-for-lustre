@@ -53,7 +53,7 @@ class TestMisc(ChromaApiTestCase):
             response = self.api_client.put(host['resource_uri'], data = host)
             self.assertHttpAccepted(response)
             # Check we created an exception
-            self.assertNotEqual(StepResult.objects.latest('id').exception, None)
+            self.assertNotEqual(StepResult.objects.latest('id').backtrace, "")
         finally:
             MockAgent.succeed = True
 

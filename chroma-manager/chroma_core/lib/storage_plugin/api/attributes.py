@@ -13,7 +13,7 @@ String as much as possible.
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
-from chroma_core.models import StorageResourceAttributeReference
+from chroma_core.models.storage_plugin import StorageResourceAttributeReference
 
 
 class String(BaseResourceAttribute):

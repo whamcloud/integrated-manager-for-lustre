@@ -11,11 +11,9 @@ import bisect
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
-from chroma_core.lib.state_manager import StateManagerClient
 from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
-from chroma_core.models.utils import await_async_result
-from chroma_core.tasks import command_run_jobs
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import settings
 import chroma_core.lib.conf_param
 
@@ -128,10 +126,10 @@ class StatefulModelResource(CustomModelResource):
         readonly = ['id', 'immutable_state', 'state', 'content_type_id', 'available_transitions', 'available_jobs', 'label', 'state_modified_at']
 
     def dehydrate_available_transitions(self, bundle):
-        return StateManagerClient.available_transitions(bundle.obj)
+        return JobSchedulerClient.available_transitions(bundle.obj)
 
     def dehydrate_available_jobs(self, bundle):
-        return StateManagerClient.available_jobs(bundle.obj)
+        return JobSchedulerClient.available_jobs(bundle.obj)
 
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, 'content_type'):
@@ -161,7 +159,7 @@ class StatefulModelResource(CustomModelResource):
                 if stateful_object.state == new_state:
                     report = []
                 else:
-                    report = StateManagerClient.get_transition_consequences(stateful_object, new_state)
+                    report = JobSchedulerClient.get_transition_consequences(stateful_object, new_state)
                 raise custom_response(self, request, http.HttpResponse, report)
             else:
                 try:
@@ -232,10 +230,9 @@ class ConfParamResource(StatefulModelResource):
             # If we were returned an MGS, then something has changed, and we will
             # kick off a command to apply the changes to the filesystem
             if mgs_id:
-                async_result = command_run_jobs.delay([{'class_name': 'ApplyConfParams', 'args': {
+                command_id = JobSchedulerClient.command_run_jobs([{'class_name': 'ApplyConfParams', 'args': {
                     'mgs_id': mgs_id
                 }}], "Updating configuration parameters")
-                command_id = await_async_result(async_result)
 
                 raise custom_response(self, request, http.HttpAccepted,
                         {'command': dehydrate_command(Command.objects.get(pk = command_id)),

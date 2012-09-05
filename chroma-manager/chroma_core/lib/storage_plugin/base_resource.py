@@ -145,8 +145,8 @@ class BaseStorageResource(object):
 
     @classmethod
     def get_charts(cls):
-        if hasattr(cls, 'charts'):
-            return cls.charts
+        if hasattr(cls._meta, 'charts'):
+            return cls._meta.charts
         else:
             charts = []
             for name, stat_props in cls._meta.storage_statistics.items():

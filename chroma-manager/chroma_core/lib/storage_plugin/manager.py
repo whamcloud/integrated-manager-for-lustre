@@ -7,6 +7,7 @@
 """This module defines StoragePluginManager which loads and provides
 access to StoragePlugins and their StorageResources"""
 import sys
+import traceback
 from chroma_core.lib.storage_plugin.api import relations
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, BaseScannableResource, ResourceProgrammingError
 
@@ -93,7 +94,7 @@ class StoragePluginManager(object):
             try:
                 self.load_plugin(plugin)
             except (ImportError, SyntaxError, ResourceProgrammingError, PluginProgrammingError):
-                storage_plugin_log.error("Failed to load plugin '%s'" % plugin)
+                storage_plugin_log.error("Failed to load plugin '%s': %s" % (plugin, traceback.format_exc()))
                 self.errored_plugins.append(plugin)
 
         for id, klass in self.resource_class_id_to_class.items():
@@ -276,11 +277,10 @@ class StoragePluginManager(object):
         # Hook in a logger to the BaseStoragePlugin subclass
         if not plugin_klass.log:
             import logging
-            import chroma_core.lib.chroma_logging
             import os
             import settings
             log = logging.getLogger("storage_plugin_log_%s" % module)
-            handler = chroma_core.lib.chroma_logging.WatchedFileHandlerWithOwner(os.path.join(settings.LOG_PATH, 'storage_plugin.log'), owner = "apache")
+            handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
             handler.setFormatter(logging.Formatter("[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
             log.addHandler(handler)
             if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS or settings.STORAGE_PLUGIN_DEBUG:

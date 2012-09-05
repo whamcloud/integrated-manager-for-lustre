@@ -4,14 +4,15 @@
 # ========================================================
 
 
+from chroma_core.services import log_register
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.storage_plugin import StorageResourceStatistic
 from r3d.models import Average, Database
 from r3d.exceptions import BadUpdateTime
 from chroma_core.lib.storage_plugin.api import statistics
-
 import settings
-metrics_log = settings.setup_log('metrics')
+
+metrics_log = log_register('metrics')
 
 
 class MetricStore(object):

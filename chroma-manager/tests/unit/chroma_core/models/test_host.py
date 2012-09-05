@@ -1,9 +1,9 @@
 from copy import deepcopy
 import datetime
 from dateutil import tz
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 from tests.unit.chroma_core.helper import JobTestCase, MockAgent
-from chroma_core.lib.state_manager import StateManagerClient
 from chroma_core.models.host import NoLNetInfo
 from tests.unit.chroma_core.helper import freshen
 from django.db.utils import IntegrityError
@@ -32,7 +32,7 @@ class TestSetup(JobTestCase):
         now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
         with self.assertRaises(NoLNetInfo):
             freshen(host).lnetconfiguration.get_nids()
-        StateManagerClient.notify_state(freshen(host), now, 'lnet_up', ['configured'])
+        JobSchedulerClient.notify_state(freshen(host), now, 'lnet_up', ['configured'])
         self.assertState(host.lnetconfiguration, 'nids_known')
         freshen(host).lnetconfiguration.get_nids()
 
@@ -66,9 +66,8 @@ class TestNidChange(NidTestCase):
         self.set_state(host.lnetconfiguration, 'nids_known')
         self.assertNidsCorrect(host)
         self.mock_servers['myaddress']['nids'] = new_nids
-        from chroma_core.tasks import command_run_jobs
         from chroma_api.urls import api
-        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(host)]}}], "Test relearn nids")
+        JobSchedulerClient.command_run_jobs([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(host)]}}], "Test relearn nids")
         self.assertNidsCorrect(host)
 
     def test_relearn_change(self):
@@ -113,12 +112,11 @@ class TestUpdateNids(NidTestCase):
         self.set_state(self.fs, 'available')
 
         self.mock_servers['mgs']['nids'] = ['192.168.0.99@tcp0']
-        from chroma_core.tasks import command_run_jobs
         from chroma_api.urls import api
-        command_run_jobs.delay([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test relearn nids")
+        JobSchedulerClient.command_run_jobs([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test relearn nids")
         self.assertNidsCorrect(mgs)
 
-        command_run_jobs.delay([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test update nids")
+        JobSchedulerClient.command_run_jobs([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test update nids")
         # The -3 looks past the start/stop that happens after writeconf
         self.assertEqual(MockAgent.host_calls[mgs][-3][0], "writeconf-target")
         self.assertEqual(MockAgent.host_calls[mds][-3][0], "writeconf-target")
@@ -171,8 +169,7 @@ class TestHostAddRemove(JobTestCase):
         # The host disappears, never to be seen again
         MockAgent.succeed = False
         try:
-            from chroma_core.tasks import command_run_jobs
-            command_run_jobs.delay([{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host.id}}], "Test host force remove")
+            JobSchedulerClient.command_run_jobs([{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host.id}}], "Test host force remove")
         finally:
             MockAgent.succeed = True
 
@@ -202,8 +199,7 @@ class TestHostAddRemove(JobTestCase):
         # The host disappears, never to be seen again
         MockAgent.succeed = False
         try:
-            from chroma_core.tasks import command_run_jobs
-            command_run_jobs.delay([{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host.id}}], "Test host force remove")
+            JobSchedulerClient.command_run_jobs([{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host.id}}], "Test host force remove")
         finally:
             MockAgent.succeed = True
 

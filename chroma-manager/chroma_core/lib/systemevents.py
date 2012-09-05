@@ -5,14 +5,13 @@
 
 
 import settings
-
+from chroma_core.services import log_register
 from chroma_core.models import SyslogEvent, ClientConnectEvent, Systemevents
 from django.db import transaction
-
 import logging
 import re
 
-syslog_events_log = settings.setup_log('syslog_events')
+syslog_events_log = log_register('syslog_events')
 
 _re_cache = {}
 

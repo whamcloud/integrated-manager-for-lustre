@@ -9,16 +9,16 @@ import functools
 
 # HYD-646: Use django 1.4 db exceptions
 import MySQLdb as Database
+from chroma_core.services import log_register
 from django.db import transaction
 
 from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
 from chroma_core.models.host import ManagedHost, HostContactAlert, LNetNidsChangedAlert, NoLNetInfo
-from chroma_core.lib.state_manager import StateManagerClient
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount
 
-import settings
 
-audit_log = settings.setup_log('audit')
+audit_log = log_register('audit')
 
 
 def normalize_nid(string):
@@ -112,7 +112,7 @@ class UpdateScan(object):
                 (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
                                           self.host_data['lnet_up'])]
 
-        StateManagerClient.notify_state(self.host.downcast(),
+        JobSchedulerClient.notify_state(self.host.downcast(),
                                   self.started_at,
                                   lnet_state,
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up', 'configured'])
@@ -150,10 +150,10 @@ class UpdateScan(object):
                 target = target_mount.target
                 if mounted_locally:
                     target.set_active_mount(target_mount)
-                    StateManagerClient.notify_state(target, self.started_at, 'mounted', ['mounted', 'unmounted'])
+                    JobSchedulerClient.notify_state(target, self.started_at, 'mounted', ['mounted', 'unmounted'])
                 elif not mounted_locally and target.active_mount == target_mount:
                     target.set_active_mount(None)
-                    StateManagerClient.notify_state(target, self.started_at, 'unmounted', ['mounted', 'unmounted'])
+                    JobSchedulerClient.notify_state(target, self.started_at, 'unmounted', ['mounted', 'unmounted'])
 
             if target_mount.target.active_mount == None:
                 TargetRecoveryInfo.update(target_mount.target, {})
@@ -199,8 +199,7 @@ class UpdateScan(object):
                 target.set_active_mount(active_mount)
 
                 state = ['unmounted', 'mounted'][active_mount != None]
-                from chroma_core.lib.state_manager import StateManagerClient
-                StateManagerClient.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
+                JobSchedulerClient.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
 
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.

@@ -4,6 +4,7 @@ import os
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode
 from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from tests.unit.chroma_core.helper import JobTestCase
 
 
@@ -48,8 +49,7 @@ class TestDetection(JobTestCase):
                         for host in host_data.keys():
                             VolumeNode.objects.create(volume = volume, path = d, host = host)
 
-        from chroma_core.tasks import command_run_jobs
-        command_run_jobs.delay([{'class_name': 'DetectTargetsJob', 'args': {}}], "Test detect targets")
+        JobSchedulerClient.command_run_jobs([{'class_name': 'DetectTargetsJob', 'args': {}}], "Test detect targets")
 
         self.assertEqual(ManagedFilesystem.objects.count(), 1)
         self.assertEqual(ManagedFilesystem.objects.get().name, "test18fs")

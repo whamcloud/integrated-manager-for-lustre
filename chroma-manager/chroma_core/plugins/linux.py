@@ -11,8 +11,8 @@ from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
 # This plugin is special, it uses chroma-manager internals
 # in a way that third party plugins can't/shouldn't/mustn't
-from chroma_core.models import ManagedHost
 from chroma_core.lib.storage_plugin.base_resource import HostsideResource
+from chroma_core.models import ManagedHost
 from settings import SERIAL_PREFERENCE
 import re
 

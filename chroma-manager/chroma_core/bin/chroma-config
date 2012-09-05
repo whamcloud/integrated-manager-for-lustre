@@ -106,7 +106,7 @@ if __name__ == '__main__':
     if command == 'setup':
         hostname_res()
         def usage():
-            log.error("Usage: setup [-v] [username password]")
+            log.error("Usage: setup [-v] [username password ntpserver]")
             sys.exit(-1)
 
         verbose = False
@@ -114,12 +114,12 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             if sys.argv[2] == "-v":
                 cc.verbose = True
-                if len(sys.argv) == 5:
-                    args = [sys.argv[3], sys.argv[4]]
+                if len(sys.argv) == 6:
+                    args = sys.argv[3:6]
                 elif len(sys.argv) != 3:
                     usage()
-            elif len(sys.argv) == 4:
-                args = [sys.argv[2], sys.argv[3]]
+            elif len(sys.argv) == 5:
+                args = sys.argv[2:5]
             else:
                 usage()
 

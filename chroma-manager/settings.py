@@ -8,7 +8,6 @@ import sys
 import os
 import socket
 import logging
-import chroma_core.lib.chroma_logging
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -218,12 +217,8 @@ LOGGING = {
 
 # Periods given in seconds
 AUDIT_PERIOD = 10
-JANITOR_PERIOD = 60
 PLUGIN_DEFAULT_UPDATE_PERIOD = 5
 EMAIL_ALERTS_PERIOD = 300
-
-JOB_MAX_AGE = 3600 * 24 * 7
-AUDIT_MAX_AGE = 3600 * 24
 
 SQL_RETRY_PERIOD = 10
 
@@ -263,23 +258,6 @@ else:
     LOG_PATH = "/var/log/chroma"
 
 LOG_LEVEL = logging.INFO
-
-
-def setup_log(log_name, filename = None):
-    if not filename:
-        filename = "%s.log" % log_name
-
-    logger = logging.getLogger(log_name)
-    logger.setLevel(logging.DEBUG)
-    path = os.path.join(LOG_PATH, filename)
-    handler = chroma_core.lib.chroma_logging.WatchedFileHandlerWithOwner(path, owner = "apache")
-    handler.setFormatter(logging.Formatter('[%(asctime)s: %(levelname)s/%(name)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-    logger.addHandler(handler)
-    if DEBUG:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(LOG_LEVEL)
-    return logger
 
 EMAIL_HOST = None
 EMAIL_SUBJECT_PREFIX = "[Chroma Server]"
