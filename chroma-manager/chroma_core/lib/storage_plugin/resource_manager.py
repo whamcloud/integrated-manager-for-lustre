@@ -396,7 +396,7 @@ class ResourceManager(object):
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
-        from chroma_core.lib.storage_plugin.api.resources import PathWeight, DeviceNode, LogicalDrive
+        from chroma_core.lib.storage_plugin.api.resources import PathWeight, DeviceNode, LogicalDrive, LogicalDriveOccupier
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 
@@ -499,6 +499,16 @@ class ResourceManager(object):
                     except KeyError:
                         label = StorageResourceRecord.objects.get(pk = logicaldrive_id).to_resource().get_label()
 
+                    # Check if there are any descendent LocalMount resources (i.e. LUN in use, do
+                    # not advertise for use with Lustre).
+                    if self._record_find_descendent(logicaldrive_id, LogicalDriveOccupier, LogicalDrive):
+                        log.debug("LogicalDrive %s is occupied, not creating Volume" % logicaldrive_id)
+                        logicaldrive_id_handled.add(logicaldrive_id)
+                        for nr in [node_record for (node_record, ld_id) in node_to_logicaldrive_id.items() if ld_id == logicaldrive_id]:
+                            unassigned_node_resources.remove(nr)
+                            del node_to_logicaldrive_id[nr]
+                        continue
+
                     volumes.insert(dict(
                         size = size,
                         storage_resource_id = logicaldrive_id,
@@ -519,6 +529,49 @@ class ResourceManager(object):
         path_to_volumenode = dict([(
             vn.path, vn
         ) for vn in existing_volume_nodes])
+
+        # Find any nodes which refer to the same logicaldrive
+        # on the same host: we will want to create only one
+        # VolumeNode per host per Volume if possible.
+        logicaldrive_id_to_nodes = defaultdict(list)
+        for node_record in unassigned_node_resources:
+            logicaldrive_id_to_nodes[node_to_logicaldrive_id[node_record]].append(node_record)
+
+        for ld_id, nr_list in logicaldrive_id_to_nodes.items():
+            if ld_id in logicaldrive_id_to_volume:
+                volume_nodes = VolumeNode.objects.filter(volume = logicaldrive_id_to_volume[ld_id])
+                for vn in volume_nodes:
+                    if vn.storage_resource_id:
+                        nr_list.append(StorageResourceRecord.objects.get(pk = vn.storage_resource_id))
+
+        for ld_id, nr_list in [(ld_id, nr) for ld_id, nr in logicaldrive_id_to_nodes.items() if len(nr) > 1]:
+            # If one and only one of the nodes is a devicemapper node, prefer it over the others.
+            dm_node_ids = []
+            node_id_to_path = {}
+            for attr in StorageResourceAttributeSerialized.objects.filter(resource__in = nr_list, key = "path"):
+                path = attr.decode(attr.value)
+                node_id_to_path[attr.resource_id] = path
+                if path.startswith("/dev/mapper/"):
+                    dm_node_ids.append(attr.resource_id)
+            if len(dm_node_ids) == 1:
+                log.debug("Found one devicemapper node %s" % node_id_to_path[dm_node_ids[0]])
+                preferred_node_id = dm_node_ids[0]
+                for nr in nr_list:
+                    if nr.id != preferred_node_id:
+                        try:
+                            unassigned_node_resources.remove(nr)
+                        except ValueError:
+                            # Doesn't have to be in unassigned_node_resources, could be a pre-existing one
+                            pass
+
+                        try:
+                            volume_node = VolumeNode.objects.get(storage_resource = nr)
+                            if not ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node).exists():
+                                VolumeNode.delete(volume_node.id)
+                        except VolumeNode.DoesNotExist:
+                            pass
+            else:
+                log.debug("Cannot resolve %d nodes %s into one (logicaldrive id %s)" % (len(nr_list), [node_id_to_path.items()], ld_id))
 
         with VolumeNode.delayed as volume_nodes:
             for node_record in unassigned_node_resources:
@@ -982,6 +1035,23 @@ class ResourceManager(object):
 
         return None
 
+    def _record_find_descendent(self, record_id, descendent_klass, stop_at, depth = 0):
+        """Find a descendent of class dependent_klass, where the trace
+        between the origin and the descendent contains no resources of
+        class stop_at"""
+        record_class = self._class_index.get(record_id)
+        if issubclass(record_class, descendent_klass):
+            return record_id
+        if depth != 0 and issubclass(record_class, stop_at):
+            return None
+
+        for c in self._edges.get_children(record_id):
+            found = self._record_find_descendent(c, descendent_klass, stop_at, depth + 1)
+            if found:
+                return found
+
+        return None
+
     def _record_find_ancestors(self, record_id, parent_klass):
         """Find all ancestors of type parent_klass"""
         result = []
@@ -1028,14 +1098,13 @@ class ResourceManager(object):
                         referenced_resource = value
                         if not referenced_resource._handle_global:
                             if not referenced_resource._handle in session.local_id_to_global_id:
-                                ordered_for_creation.append(referenced_resource)
+                                order_by_references(referenced_resource)
 
-            return True
+            ordered_for_creation.append(resource)
 
         for resource in resources:
             if not resource in ordered_for_creation:
-                if order_by_references(resource):
-                    ordered_for_creation.append(resource)
+                order_by_references(resource)
 
         creations = {}
         for resource in ordered_for_creation:

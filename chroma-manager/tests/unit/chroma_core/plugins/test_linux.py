@@ -81,6 +81,7 @@ class LinuxPluginTestCase(JobTestCase):
         self._start_session_with_data(host, "HYD_1269_noerror.json")
         # Multiple partitioned devices, sda->sde, 2 partitions each
         # sda1 is boot, sda2 is a PV
+
         self.assertEqual(Volume.objects.count(), 8)
         self.assertEqual(VolumeNode.objects.count(), 8)
 
@@ -105,3 +106,46 @@ class LinuxPluginTestCase(JobTestCase):
 
         self.assertEqual(Volume.objects.count(), 2)
         self.assertEqual(VolumeNode.objects.count(), 8)
+
+    def test_multipath_partitions_HYD_1385(self):
+        """A single host, which sees a two-path multipath device that has partitions on it"""
+        host1, command = ManagedHost.create_from_string('myaddress')
+        self._start_session_with_data(host1, "HYD-1385.json")
+
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-1")).count(), 1)
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-2")).count(), 1)
+
+        # And now try it again to make sure that the un-wanted VolumeNodes don't get created on the second pass
+        self._start_session_with_data(host1, "HYD-1385.json")
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-1")).count(), 1)
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-2")).count(), 1)
+
+    def test_multipath_partitions_HYD_1385_mpath_creation(self):
+        """First load a view where there are two nodes that haven't been multipathed together, then
+        update with the multipath device in place"""
+        host1, command = ManagedHost.create_from_string('myaddress')
+
+        # There is no multipath
+        self._start_session_with_data(host1, "HYD-1385_nompath.json")
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-1")).count(), 2)
+
+        # ... now there is, the VolumeNodes should change to reflect that
+        self._start_session_with_data(host1, "HYD-1385.json")
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-1")).count(), 1)
+
+        # ... and now it's gone again, the VolumeNodes should change back
+        self._start_session_with_data(host1, "HYD-1385_nompath.json")
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-1")).count(), 2)
+
+    def test_multipath_partitions_HYD_1385_mounted(self):
+        """A single host, which sees a two-path multipath device that has partitions on it, one of
+        the partitions is mounted via its /dev/mapper/*p1 device node"""
+        host1, command = ManagedHost.create_from_string('myaddress')
+        self._start_session_with_data(host1, "HYD-1385_mounted.json")
+
+        # The mounted partition should not be reported as an available volume
+        with self.assertRaises(Volume.DoesNotExist):
+            Volume.objects.get(label = "MPATH-testdev00-1")
+
+        # The other partition should still be shown
+        self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-2")).count(), 1)

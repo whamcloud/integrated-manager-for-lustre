@@ -1,0 +1,1 @@
+mpathb: 0 524288000 multipath 1 queue_if_no_path 1 rdac 2 1 round-robin 0 2 1 8:32 6 8:48 6 round-robin 0 2 1 8:16 1 8:64 1
