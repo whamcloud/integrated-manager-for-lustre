@@ -14,10 +14,22 @@ class Configuration(object):
     """
     Simple key/val config store.  Acts mostly like a dict, encapsulates
     functionality for reading stored config from disk.
+
+    For each configuration key, checks to see if a corresponding
+    environment variable has been set, in which case the value of the
+    environment variable supercedes the default value and config
+    file value.
+
+    Configuration values in order of precedence:
+    default < ~/.chroma < os.getenv < argparse
     """
     def __init__(self, defaults=defaults):
         for key, val in self.read_user_config(defaults):
-            setattr(self, key, val)
+            env_val = os.getenv("CHROMA_%s" % key.upper())
+            if env_val:
+                setattr(self, key, env_val)
+            else:
+                setattr(self, key, val)
 
     def read_user_config(self, defaults=None, path=None):
         """

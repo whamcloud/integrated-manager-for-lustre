@@ -4,6 +4,7 @@
 # ========================================================
 
 
+import os
 from behave import *
 from nose.tools import *
 
@@ -22,6 +23,10 @@ def step(context, args):
         if 'cli_config' in context and context.cli_config:
             standard_cli(args=args.split(), config=context.cli_config)
         else:
+            # Set env vars for username/password so that we don't need
+            # to pollute the features files with them.
+            os.environ['CHROMA_USERNAME'] = 'debug'
+            os.environ['CHROMA_PASSWORD'] = 'chr0m4_d3bug'
             standard_cli(args.split())
     except SystemExit, e:
         if e.code != 0:

@@ -8,30 +8,30 @@ Background: Set up test environment
 
 Scenario: Add a server
   Given the server count should be 0
-  When I run chroma --username debug --password chr0m4_d3bug server-add setup-mgs
+  When I run chroma server-add setup-mgs
   Then the server count should be 1
 
 Scenario: Stop LNet on a server
   Given the server state on setup-mgs should be lnet_up
-  When I run chroma --username debug --password chr0m4_d3bug server setup-mgs lnet-stop
+  When I run chroma server setup-mgs lnet-stop
   Then the server state on setup-mgs should be lnet_down
 
 Scenario: Unload LNet on a server
   Given the server state on setup-mgs should be lnet_down
-  When I run chroma --username debug --password chr0m4_d3bug server setup-mgs lnet-unload
+  When I run chroma server setup-mgs lnet-unload
   Then the server state on setup-mgs should be lnet_unloaded
 
 Scenario: Load LNet on a server
   Given the server state on setup-mgs should be lnet_unloaded
-  When I run chroma --username debug --password chr0m4_d3bug server setup-mgs lnet-load
+  When I run chroma server setup-mgs lnet-load
   Then the server state on setup-mgs should be lnet_down
 
 Scenario: Start LNet on a server
   Given the server state on setup-mgs should be lnet_down
-  When I run chroma --username debug --password chr0m4_d3bug server setup-mgs lnet-start
+  When I run chroma server setup-mgs lnet-start
   Then the server state on setup-mgs should be lnet_up
 
 Scenario: Remove a server
   Given the server count should be 1
-  When I run chroma --username debug --password chr0m4_d3bug server-remove setup-mgs.lab.whamcloud.com
+  When I run chroma server-remove setup-mgs.lab.whamcloud.com
   Then the server count should be 0
