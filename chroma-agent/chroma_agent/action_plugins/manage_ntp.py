@@ -43,10 +43,10 @@ def configure_ntp(args):
     os.rename(tmp_name, "/etc/ntp.conf")
 
     # make sure the time is very close before letting ntpd take over
-    shell.run(['service', 'ntpd', 'stop'])
-    shell.run(['service', 'ntpdate', 'restart'])
+    shell.try_run(['service', 'ntpd', 'stop'])
+    shell.try_run(['service', 'ntpdate', 'restart'])
     # signal the process
-    rc, stdout, stderr = shell.run(['service', 'ntpd', 'start'])
+    shell.try_run(['service', 'ntpd', 'start'])
 
 
 class RsyslogPlugin(ActionPlugin):
