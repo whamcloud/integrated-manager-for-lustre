@@ -67,7 +67,7 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
             del filters['host_id']
             from chroma_core.models import ManagedHost
             host = ManagedHost.objects.get(id=host_id)
-            filters['fromhost__startswith'] = host.pretty_name()
+            filters['fromhost'] = host.fqdn
 
         return super(LogResource, self).build_filters(filters)
 
