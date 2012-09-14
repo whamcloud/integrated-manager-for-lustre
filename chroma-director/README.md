@@ -2,6 +2,8 @@
 
 **This is a prototype intended for experimentation and testing!**
 
+**The SSH package we're using current, fabric, does not support SOCKS proxies.  Currently you need to drop off the VPN to get this to work.**
+
 ## Prepare environment ##
 
 First, create a local_settings.py with your AWS info:
@@ -15,17 +17,21 @@ make sure you have the required two security groups in your AWS account:
 chroma-manager (ports 22, 80, 514)
 chroma-appliance  (port 22, 988)
 
-create a virtualenv and do a pip install -r requirements.txt
+create a virtualenv and do a 
 
-run .rm fo	/manage.py syncdb --migrate --noinput
+    pip install -r requirements.txt
+
+Setup the database:
+ 
+    ./manage.py syncdb --migrate --noinput
 
 ## Create Base Images (AMIs) ##
 
 Create AMIs from the manager and storage instances.  Each of these
 will take several minutes.
 
- ./manage.py create_image --type manager
- ./manage.py create_image --type storage
+    ./manage.py create_image --type manager
+    ./manage.py create_image --type storage
 
 Both of these commands are unusual in that they don't save their local
 state in the database. They each append he appropriate config statement to
