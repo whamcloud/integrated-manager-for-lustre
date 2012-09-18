@@ -4,8 +4,12 @@
 # ========================================================
 
 
-"""This module defines BaseResourceAttribute subclasses, which represent
-the datatypes that BaseStorageResource objects may store as attributes"""
+"""The following classes allow plugin authors to specify type and bound information
+for the attributes of their resources.  Plugin authors are encouraged to be specific
+as possible in their choice of attribute class, and avoid using generic types like
+String as much as possible.
+
+"""
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
@@ -126,7 +130,7 @@ class PosixPath(BaseResourceAttribute):
 
 
 class Hostname(BaseResourceAttribute):
-    """A DNS hostname, e.g. whamcloud.com"""
+    """A DNS hostname or an IP address, e.g. mycompany.com, 192.168.0.67"""
     pass
 
 
