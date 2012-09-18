@@ -138,7 +138,7 @@ $(document).ready(function() {
    <td id="mail-feedback" align="center" width="20" class="idnav" valign="bottom">
    <span id="mailsubject" style="display:none;">Feedback on: Chroma Enterprise User Guide - Managing Chroma Storage</span>
    <span id="mailid" style="display:none;">Managing_Chroma_Storage</span>
-   <span id="mailpath" style="display:none;">Managing Chroma Storage /</span>
+   <span id="mailpath" style="display:none;">Monitoring a Lustre File System &gt; Managing Chroma Storage /</span>
    <span id="mailbody" style="display:none;">&lt;Describe the issue or enhancement you would like to tell us about related to this topic. If you need help with Chroma Enterprise, please contact your storage solution provider.&gt;</span>
    <script type="text/javascript">
    var recipient = 'chroma-docs@intel.com';
@@ -233,9 +233,25 @@ $(document).ready(function() {
 </tr>
 </table>
 </div>
+<div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; padding:0px;"><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="border:none;border-spacing:0px;padding:0px;line-height: normal;"><tr style="vertical-align:baseline"><td style="border:none;padding:0;width:18px"><img id="TOGGLE0186A6_ICON" src="hmtoggle_plus1.gif" width="9" height="9" alt="hmtoggle_plus1" style="border:none" /></td><td style="border:none;padding:0"><span class="f_BodyText" style="font-weight: bold;"><a class="dropdown-toggle" style="font-size: 11pt; font-family: Arial; font-style: normal; font-weight: bold; color: #000000; background-color: transparent; text-decoration: none;" href="javascript:HMToggle('toggle','TOGGLE0186A6','TOGGLE0186A6_ICON')">Handling network address changes</a></span></td></tr></table></div><div id="TOGGLE0186A6" style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; padding:0px;"><p class="p_BodyText" style="margin: 0px 0px 6px 24px;"><span class="f_BodyText">File system targets use a network address or network ID (NID) to refer to the server they are associated with. A Chroma Storage server NID may change if the network connecting the Chroma Storage servers and clients is modified. If a &nbsp;server NID changes, the server NID record in Chroma Manager must be updated.</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 6px 24px;"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Note:</span><span class="f_BodyText"> Chroma Manager detects and displays an alert “</span><span class="f_BodyText" style="font-style: italic;">NIDs changed on server %s</span><span class="f_BodyText">” for each server on which the NID has changed. </span></p>
+<p class="p_BodyText" style="margin: 0px 0px 6px 24px;"><span class="f_BodyText">To prompt Chroma Manager to detect new NIDs and update file system targets, complete these steps:</span></p>
+<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">On the </span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Configuration &gt; Servers</span><span class="f_BodyText"> page, click </span><span class="f_BodyText" style="font-weight: bold;">Re-scan NIDs</span><span class="f_BodyText">. &nbsp;Chroma Manager queries the network interfaces on the Chroma Storage servers to update the record of NIDs.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Re-write target configuration</span><span class="f_BodyText">. Each target is updated with the current NID for the server with which it is associated. </span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">3.</span><span class="f_BodyText">To check that Chroma Manager has detected the correct NID for a server, go to </span><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Configuration &gt; Servers</span><span class="f_BodyText"> and click the </span><span class="f_BodyText" style="font-style: italic;">Hostname</span><span class="f_BodyText"> of the server to display a detailed view of the server.</span></p><p class="p_BodyText" style="margin: 0px 0px 6px 24px;"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Note:</span><span class="f_BodyText"> Clicking </span><span class="f_BodyText" style="font-weight: bold;">Re-write target configuration</span><span class="f_BodyText"> stops the file system and erases the configuration logs so that they will be regenerated when the servers are restarted.</span></p>
+</td>
+</tr>
+</table>
+</div>
 <div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="background-color:#fbfd9b; border:none; border-spacing:0px;">
 <tr style="text-align:left;vertical-align:top;">
 <td style="vertical-align:top; padding:0px;"><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">To manage a Lustre file system that has been created in Chroma from the command line, you must use the Chroma Manager command line interface (CLI).</span><span class="f_BodyText"> Modifying the Lustre file system manually from a shell on a Chroma Storage server will interfere with the ability of Chroma Manager to manage and monitor the file system.</span></p>
+</td>
+</tr>
+</table>
+</div>
 </td>
 </tr>
 </table>
@@ -256,6 +272,8 @@ HMInitToggle('TOGGLE0186A4_ICON','hm.type','dropdown','hm.state','0','hm.src0','
 HMInitToggle('TOGGLE0186A4','hm.type','dropdown','hm.state','0');
 HMInitToggle('TOGGLE0186A5_ICON','hm.type','dropdown','hm.state','0','hm.src0','hmtoggle_plus0.gif','hm.src1','hmtoggle_plus1.gif','onclick','HMToggle(\'toggle\',\'TOGGLE0186A5\',\'TOGGLE0186A5_ICON\')');
 HMInitToggle('TOGGLE0186A5','hm.type','dropdown','hm.state','0');
+HMInitToggle('TOGGLE0186A6_ICON','hm.type','dropdown','hm.state','0','hm.src0','hmtoggle_plus0.gif','hm.src1','hmtoggle_plus1.gif','onclick','HMToggle(\'toggle\',\'TOGGLE0186A6\',\'TOGGLE0186A6_ICON\')');
+HMInitToggle('TOGGLE0186A6','hm.type','dropdown','hm.state','0');
 </script>
 </body>
 <!--[if IE]>
