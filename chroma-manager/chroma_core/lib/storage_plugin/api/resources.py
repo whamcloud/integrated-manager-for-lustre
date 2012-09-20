@@ -4,6 +4,11 @@
 # ========================================================
 
 
+"""Plugin authors are encouraged to inherit from these classes when there is
+a clear analogy between an object in their plugin and one of those provided here.
+
+"""
+
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, BaseScannableResource
 from chroma_core.lib.storage_plugin.api import attributes
 

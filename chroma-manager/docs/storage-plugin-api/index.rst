@@ -444,11 +444,23 @@ Reference
 
 .. _storage_plugin_attribute_classes:
 
-Attribute classes
-----------------------------
+Resource attributes
+-------------------
+
+Common options
+~~~~~~~~~~~~~~
+
+.. automethod:: chroma_core.lib.storage_plugin.base_resource_attribute.BaseResourceAttribute.__init__
+
+
+Available attribute classes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: chroma_core.lib.storage_plugin.api.attributes
    :members:
+   :exclude-members: ResourceReference
+
+.. autoclass:: chroma_core.lib.storage_plugin.api.attributes.ResourceReference
 
 .. _storage_plugin_statistic_classes:
 
@@ -473,7 +485,6 @@ Alert conditions
 
 .. automodule:: chroma_core.lib.storage_plugin.api.alert_conditions
     :members:
-
 
 
 Advanced: using custom block device identifiers
