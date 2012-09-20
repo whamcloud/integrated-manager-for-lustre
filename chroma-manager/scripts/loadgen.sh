@@ -50,7 +50,10 @@ while true; do
     lfs setstripe -c $STRIPE_COUNT $name
     dd if=/dev/zero of=$name bs=128k count=10k
     umount $LUSTRE
-    mount -tlustre $MGSPATH $LUSTRE
+    while ! mount -tlustre $MGSPATH $LUSTRE; do
+        echo "failed to mount.  trying again in a sec..."
+        sleep 1
+    done
     dd of=/dev/zero if=$name bs=128k count=10k
     rm -f $name
     sleep $((RANDOM % 100 / 4))
