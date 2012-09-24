@@ -464,23 +464,15 @@ def mail_alerts():
 @task()
 def send_alerts_email(id):
     from chroma_core.models.alert import AlertState, AlertEmail
-    from django.contrib.contenttypes.models import ContentType
     from django.contrib.auth.models import User
     from django.core.mail import send_mail
-
-    def _user_or_global_alerts(user):
-        subs = [s.alert_type for s in user.alert_subscriptions.all()]
-        if len(subs) > 0:
-            return subs
-        global_alerts = AlertState.subclasses(exclude=settings.EMAIL_ALERT_EXCLUDES)
-        return [ContentType.objects.get_for_model(cls) for cls in global_alerts]
+    from django.db.models import Count
 
     alert_email = AlertEmail.objects.get(pk = id)
 
-    # HYD-107: Restrict email receipients to admin-ish groups
-    for user in User.objects.filter(groups__name__in=settings.EMAIL_ALERT_GROUPS):
+    for user in User.objects.annotate(num_subscriptions = Count('alert_subscriptions')).filter(num_subscriptions__gt = 0):
         alert_messages = []
-        subscriptions = _user_or_global_alerts(user)
+        subscriptions = [s.alert_type for s in user.alert_subscriptions.all()]
         for alert in AlertState.objects.filter(id__in = alert_email.alerts.all(), content_type__in = subscriptions):
             alert_message = "%s %s" % (alert.begin, alert.message())
             if alert.active:
