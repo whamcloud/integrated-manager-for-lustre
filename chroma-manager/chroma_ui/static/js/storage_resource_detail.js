@@ -47,6 +47,7 @@ var StorageResourceDetail = Backbone.View.extend({
     var chart_manager = ChartManager({chart_group: 'storage_resource_detail'});
     var stats = this.model.get('stats');
     var resource_uri = this.model.get('resource_uri');
+    var view = this;
 
     $.each(this.model.get('charts'), function(i, chart_info) {
       $('#' + chart_element_id[i]).css("width", "300px");
@@ -77,7 +78,7 @@ var StorageResourceDetail = Backbone.View.extend({
 
       if (is_histogram) {
         // For histogram charts, we generate our own static graph
-        this.render_histogram(chart_element_id[i], chart_info, stat_infos);
+        view.render_histogram(chart_element_id[i], chart_info, stat_infos);
       } else {
         // For time series charts, we use ChartManager
         var yAxes = [];
