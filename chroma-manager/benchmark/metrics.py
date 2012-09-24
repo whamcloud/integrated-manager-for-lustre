@@ -177,10 +177,10 @@ class Benchmark(GenericBenchmark):
 
         if options.use_r3d_myisam:
             cursor = connection.cursor()
-            for table in "archive cdp cdpprep database datasource pdpprep".split():
+            for table in "archive archiverow database datasource".split():
                 drop_constraints(cursor, "r3d_%s" % table)
 
-            for table in "archive cdp cdpprep database datasource pdpprep".split():
+            for table in "archive archiverow database datasource".split():
                 cursor.execute("ALTER TABLE r3d_%s ENGINE = MYISAM" % table)
 
     def precreate_stats(self):
@@ -232,6 +232,14 @@ class Benchmark(GenericBenchmark):
         self.precreate_stats()
         sys.stderr.write(" Done.\n")
 
+    def get_stats_size(self):
+        stats_size = LazyStruct()
+        from django.db import connection
+        cursor = connection.cursor()
+        cursor.execute("select data_length, index_length from information_schema.tables where table_name = 'r3d_archiverow' and table_schema = 'test_chroma'")
+        stats_size.data, stats_size.index = cursor.fetchone()
+        return stats_size
+
     def server_list(self):
         return self.mds_list + self.oss_list
 
@@ -241,6 +249,8 @@ class Benchmark(GenericBenchmark):
     def run(self):
         def t2s(t):
             return time.strftime("%H:%M:%S", time.localtime(t))
+
+        stats_size_start = self.get_stats_size()
 
         scan = UpdateScan()
         run_start = time.time()
@@ -278,6 +288,8 @@ class Benchmark(GenericBenchmark):
         run_end = time.time()
         end_la = os.getloadavg()
 
+        stats_size_end = self.get_stats_size()
+
         run_info = LazyStruct()
         run_info.run_count = run_count
         run_info.run_interval = run_end - run_start - create_interval
@@ -286,6 +298,8 @@ class Benchmark(GenericBenchmark):
         run_info.create_count = create_count
         run_info.start_load_avg = start_la
         run_info.end_load_avg = end_la
+        run_info.stats_data_used = stats_size_end.data - stats_size_start.data
+        run_info.stats_index_used = stats_size_end.index - stats_size_start.index
 
         self.print_report(run_info)
 
@@ -341,11 +355,20 @@ class Benchmark(GenericBenchmark):
 
     # TODO: Customizable output formats (csv, tsv, etc.)
     def print_report(self, run_info):
-        profile = self.profile_system()
-        print "CPUs: %d @ %.2f GHz, Mem: %d MB real (%.2f%% used) / %d MB swap (%.2f%% used)" % (profile.cpu_count, (profile.cpu_speed / 1000), (profile.mem_total / 1000), profile.mem_pct_used, (profile.swap_total / 1000), profile.swap_pct_used)
+        print "\n"
+        try:
+            profile = self.profile_system()
+            print "CPUs: %d @ %.2f GHz, Mem: %d MB real (%.2f%% used) / %d MB swap (%.2f%% used)" % (profile.cpu_count, (profile.cpu_speed / 1000), (profile.mem_total / 1000), profile.mem_pct_used, (profile.swap_total / 1000), profile.swap_pct_used)
+        except IOError:
+            print "No system profile available (on a mac?)"
         print "Load averages (1/5/15): start: %.2f/%.2f/%.2f, end: %.2f/%.2f/%.2f" % (run_info.start_load_avg + run_info.end_load_avg)
         print "counts: OSS: %d, OSTs/OSS: %d (%d total); stats-per: OSS: %d, MDS: %d" % (options.oss, options.ost, (options.oss * options.ost), ((options.ost * options.ost_stats) + options.server_stats), (options.mdt_stats + options.server_stats))
         print "run count (%d stats) / run time (%.2f sec) = run rate (%.2f stats/sec)" % (run_info.run_count, run_info.run_interval, run_info.run_rate)
+
+        def _to_mb(in_bytes):
+            return in_bytes * 1.0 / (1024 * 1024)
+
+        print "stats space used: %.2f MB (%.2f MB data, %.2f MB index)" % (_to_mb(run_info.stats_data_used + run_info.stats_index_used), _to_mb(run_info.stats_data_used), _to_mb(run_info.stats_index_used))
 
     def cleanup(self):
         self.test_runner.teardown_databases(self.old_db_config)
