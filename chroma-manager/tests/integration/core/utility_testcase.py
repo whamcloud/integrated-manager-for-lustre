@@ -12,7 +12,11 @@ from tests.integration.core.constants import TEST_TIMEOUT
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.FileHandler('test.log'))
+handler = logging.FileHandler('/var/log/chroma_test.log')
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 # paramiko.transport logger spams nose log collection so we're quieting it down
 paramiko_logger = logging.getLogger('paramiko.transport')
