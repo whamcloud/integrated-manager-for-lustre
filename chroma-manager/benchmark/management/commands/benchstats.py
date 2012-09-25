@@ -31,6 +31,8 @@ class Command(BaseCommand):
                 help="how many seconds' worth of stats to generate (default: 300)"),
             make_option("--frequency", type=int, default=settings.AUDIT_PERIOD,
                 help="audit frequency for generated metrics (default: 10)"),
+            make_option("--samples", type=str,
+                help="custom archive layout (e.g. 1, 6, 30, 360)"),
             make_option("--no_precreate", action='store_true', default=False,
                 help="don't precreate stats (could skew DB perf numbers)"),
             make_option("--use_r3d_myisam", action='store_true', default=False,
