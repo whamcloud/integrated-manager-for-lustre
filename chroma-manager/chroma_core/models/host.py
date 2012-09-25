@@ -17,7 +17,6 @@ from django.db import IntegrityError
 import itertools
 from django.db.models.aggregates import Max, Count
 from django.db.models.query_utils import Q
-import time
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
 from chroma_core.models.alert import AlertState
