@@ -183,26 +183,35 @@ class Benchmark(GenericBenchmark):
             for table in "archive archiverow database datasource".split():
                 cursor.execute("ALTER TABLE r3d_%s ENGINE = MYISAM" % table)
 
+    def step_server_stats(self):
+        """Generate stats for all servers in a single step"""
+        update_servers = []
+        for server in self.server_list():
+            stats = {'node': {},
+                    'lustre': {'target': {}}}
+            for node_stat in server.stats.keys():
+                stats['node'][node_stat] = server.stats[node_stat]
+
+            # make this match up with what comes in from an update scan
+            stats['lustre']['lnet'] = stats['node']['lnet']
+
+            for target in server.target_list:
+                stats['lustre']['target'][target.name] = {}
+                for target_stat in target.stats.keys():
+                    stats['lustre']['target'][target.name][target_stat] = target.stats[target_stat]
+            update_servers.append([server.entity, stats])
+
+        return update_servers
+
     def precreate_stats(self):
         self.stats_list = []
-        for i in range(0, options.duration, options.frequency):
-            update_servers = []
-            for server in self.server_list():
-                stats = {'node': {},
-                        'lustre': {'target': {}}}
-                for node_stat in server.stats.keys():
-                    stats['node'][node_stat] = server.stats[node_stat]
 
-                # make this match up with what comes in from an update scan
-                stats['lustre']['lnet'] = stats['node']['lnet']
+        steps = range(0, options.duration, options.frequency)
+        for idx, v in enumerate(steps):
+            sys.stderr.write("\rPrecreating stats... (%d/%d)" % (idx, len(steps)))
+            self.stats_list.append(self.step_server_stats())
 
-                for target in server.target_list:
-                    stats['lustre']['target'][target.name] = {}
-                    for target_stat in target.stats.keys():
-                        stats['lustre']['target'][target.name][target_stat] = target.stats[target_stat]
-                update_servers.append([server.entity, stats])
-
-            self.stats_list.append(update_servers)
+        sys.stderr.write("\rPrecreating stats... Done.\n")
 
     def prepare(self):
         from south.management.commands import patch_for_test_db_setup
@@ -228,9 +237,8 @@ class Benchmark(GenericBenchmark):
         self.oss_list = self.prepare_oss_list()
         self.mds_list = self.prepare_mds_list()
 
-        sys.stderr.write("Precreating stats... ")
-        self.precreate_stats()
-        sys.stderr.write(" Done.\n")
+        if not options.no_precreate:
+            self.precreate_stats()
 
     def get_stats_size(self):
         stats_size = LazyStruct()
@@ -250,6 +258,14 @@ class Benchmark(GenericBenchmark):
         def t2s(t):
             return time.strftime("%H:%M:%S", time.localtime(t))
 
+        def s2s(s):
+            if s > 600:
+                from datetime import timedelta, datetime
+                d = timedelta(seconds=int(s)) + datetime(1, 1, 1)
+                return "%.2d:%.2d:%.2d:%.2d" % (d.day - 1, d.hour, d.minute, d.second)
+            else:
+                return "%d" % s
+
         stats_size_start = self.get_stats_size()
 
         scan = UpdateScan()
@@ -258,17 +274,24 @@ class Benchmark(GenericBenchmark):
         create_interval = 0
         create_count = 0
         start_la = os.getloadavg()
-        print "start: %s, stop: %s" % (t2s(run_start),
+        last_width = 0
+        print "window start: %s, window stop: %s" % (t2s(run_start),
                                        t2s(run_start + options.duration))
-        for update_time in range(int(run_start),
-                                 int(run_start + options.duration),
-                                 options.frequency):
-            sys.stderr.write(t2s(update_time))
+        update_times = range(int(run_start),
+                             int(run_start + options.duration),
+                             options.frequency)
+        for stats_idx, update_time in enumerate(update_times):
+            new_timing_line = "\r%s" % t2s(update_time)
+            sys.stderr.write(new_timing_line)
             store_start = time.time()
             count = 0
 
-            stats_idx = ((update_time - int(run_start)) / options.frequency)
-            for server_stats in self.stats_list[stats_idx]:
+            if options.no_precreate:
+                server_stats_list = self.step_server_stats()
+            else:
+                server_stats_list = self.stats_list[stats_idx]
+
+            for server_stats in server_stats_list:
                 scan.host = server_stats[0]
                 scan.host_data = {'metrics': {'raw': server_stats[1]}}
                 scan.update_time = update_time
@@ -279,7 +302,14 @@ class Benchmark(GenericBenchmark):
             interval = store_end - store_start
             rate = count / interval
             meter = "+" if interval < options.frequency else "-"
-            sys.stderr.write(": inserted %d stats (rate: %lf stats/sec) %s\r" % (count, rate, meter))
+            seconds_left = (len(update_times) - stats_idx) * interval
+            timing_stats = ": inserted %d stats (rate: %lf stats/sec, complete in: %s) %s" % (count, rate, s2s(seconds_left), meter)
+            current_line_width = len(new_timing_line + timing_stats)
+            if current_line_width < last_width:
+                sys.stderr.write(new_timing_line + timing_stats + " " * (last_width - current_line_width))
+            else:
+                sys.stderr.write(timing_stats)
+            last_width = current_line_width
 
             if not options.include_create and update_time == int(run_start):
                 create_interval = interval
