@@ -783,10 +783,9 @@ class DetectTargetsStep(Step):
         # Get all the host data
         # FIXME: HYD-1120: should do this part in parallel
         host_data = {}
-        for host in ManagedHost.objects.all():
+        for host in ManagedHost.objects.filter(id__in = kwargs['host_ids']):
             with transaction.commit_on_success():
                 self.log("Scanning server %s..." % host)
-            time.sleep(10)
             data = self.invoke_agent(host, 'detect-scan')
             host_data[host] = data
 
@@ -802,7 +801,7 @@ class DetectTargetsJob(Job, HostListMixin):
         return "Scanning for Lustre targets"
 
     def get_steps(self):
-        return [(DetectTargetsStep, {})]
+        return [(DetectTargetsStep, {'host_ids': [h.id for h in self.hosts.all()]})]
 
     def get_deps(self):
         deps = []
