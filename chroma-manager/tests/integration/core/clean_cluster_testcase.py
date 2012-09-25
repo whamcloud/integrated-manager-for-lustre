@@ -254,10 +254,19 @@ EOF
 
     def erase_volumes(self):
         """Erase the volumes on non-monitor-only lustre servers"""
-        for server in config['lustre_servers']:
-            if not config.get('filesystem'):
+        # Don't erase is a pre-existing filesystem exists (aka monitor only)
+        if not config.get('filesystem'):
+            erased_volumes = []
+            for server in config['lustre_servers']:
                 for device in server['device_paths']:
-                    self.remote_command(server['address'], "dd if=/dev/zero of=%s bs=4M count=1" % device)
+                    # Don't bother erasing if already erased, unless a /dev/s*
+                    # path since those don't contain a unique and consistent id
+                    if not device in erased_volumes or re.search('/dev/s', device):
+                        self.remote_command(
+                            server['address'],
+                            "dd if=/dev/zero of=%s bs=4M count=1" % device
+                        )
+                        erased_volumes.append(device)
 
     def reset_accounts(self, chroma_manager):
         """Remove any user accounts which are not in the config (such as
