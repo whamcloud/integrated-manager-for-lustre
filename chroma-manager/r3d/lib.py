@@ -319,10 +319,15 @@ def consolidate_all_pdps(db, interval, elapsed_steps, pre_step_interval,
                     rra.nan_cdps = 0
                     rra_row.ds_pickle[ds.pk] = cdp_prep.primary
 
-            rra_row.save()
-            if r3d.DEBUG:
-                debug_print("  saved @ %d: %s" %
-                            (rra_row.slot, rra_row.__dict__))
+            if len(rra_row.ds_pickle) > 0:
+                # Kind of a weird corner-case, since it's highly unlikely that
+                # we'll ever create Archives without corresponding Datasources.
+                # In the event that we do, however, don't waste time/space
+                # on saving empty pickles.
+                rra_row.save()
+                if r3d.DEBUG:
+                    debug_print("  saved @ %d: %s" %
+                                (rra_row.slot, rra_row.__dict__))
 
             db.rra_pointers[rra.id]['slot'] += 1
             if db.rra_pointers[rra.id]['slot'] >= rra.rows:
