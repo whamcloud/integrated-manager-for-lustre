@@ -19,6 +19,7 @@ def unconfigure_ntp(args):
 
 def configure_ntp(args):
     from tempfile import mkstemp
+    from time import sleep
     tmp_f, tmp_name = mkstemp(dir = '/etc')
     f = open('/etc/ntp.conf', 'r')
     added_server = False
@@ -44,7 +45,21 @@ def configure_ntp(args):
 
     # make sure the time is very close before letting ntpd take over
     shell.try_run(['service', 'ntpd', 'stop'])
-    shell.try_run(['service', 'ntpdate', 'restart'])
+
+    timeout = 300
+    sleep_time = 5
+    while timeout > 0:
+        rc, stdout, stderr = shell.run(['service', 'ntpdate', 'restart'])
+        if rc == 0:
+            break
+        else:
+            sleep(sleep_time)
+            timeout = timeout - sleep_time
+
+    # did we time out?
+    if timeout < 1:
+        raise RuntimeError("Timed out waiting for time sync from the Chroma Manager.  You could try waiting a few minutes and clicking \"Set up server\" for this server")
+
     # signal the process
     shell.try_run(['service', 'ntpd', 'start'])
 
