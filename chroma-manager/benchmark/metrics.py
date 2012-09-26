@@ -64,11 +64,6 @@ class ServerGenerator(Generator):
             self.stats['lnet'][lnet_stat] = 0
         for cpu_stat in "iowait idle total user system".split():
             self.stats['cpustats'][cpu_stat] = 0
-        # Since we've hard-coded the server stats, we need to record
-        # the actual number to make the reporting accurate.
-        options.server_stats = 0
-        for key in ['meminfo', 'lnet', 'cpustats']:
-            options.server_stats += len(self.stats[key])
 
     def create_entity(self, fs):
         self.entity = ManagedHost.objects.create(address=self.name)
@@ -196,7 +191,7 @@ class Benchmark(GenericBenchmark):
             for table in "archive archiverow database datasource".split():
                 cursor.execute("ALTER TABLE r3d_%s ENGINE = MYISAM" % table)
 
-    def step_server_stats(self):
+    def step_stats(self):
         """Generate stats for all servers in a single step"""
         update_servers = []
         for server in self.server_list():
@@ -222,9 +217,9 @@ class Benchmark(GenericBenchmark):
         steps = range(0, options.duration, options.frequency)
         for idx, v in enumerate(steps):
             sys.stderr.write("\rPrecreating stats... (%d/%d)" % (idx, len(steps)))
-            self.stats_list.append(self.step_server_stats())
+            self.stats_list.append(self.step_stats())
 
-        sys.stderr.write("\rPrecreating stats... Done.\n")
+        sys.stderr.write("\rPrecreating stats... Done.        \n")
 
     def prepare(self):
         from south.management.commands import patch_for_test_db_setup
@@ -308,15 +303,25 @@ class Benchmark(GenericBenchmark):
             count = 0
 
             if options.no_precreate:
-                server_stats_list = self.step_server_stats()
+                step_stats_list = self.step_stats()
             else:
-                server_stats_list = self.stats_list[stats_idx]
+                step_stats_list = self.stats_list[stats_idx]
 
-            for server_stats in server_stats_list:
-                scan.host = server_stats[0]
-                scan.host_data = {'metrics': {'raw': server_stats[1]}}
+            server_stats_count = 0
+            for step_stats in step_stats_list:
+                scan.host = step_stats[0]
+                scan.host_data = {'metrics': {'raw': step_stats[1]}}
                 scan.update_time = update_time
                 count += self.store_metrics(scan)
+                # Since we've hard-coded the server stats, we need to record
+                # the actual number to make the reporting accurate.
+                if options.server_stats == 0:
+                    for key in ['meminfo', 'lnet', 'cpustats']:
+                        server_stats_count += len(step_stats[1]['node'][key])
+
+            # Terrible hack to make reporting accurate.
+            if options.server_stats == 0:
+                options.server_stats = server_stats_count
 
             run_count += count
             store_end = time.time()
@@ -422,7 +427,8 @@ class Benchmark(GenericBenchmark):
         def _to_mb(in_bytes):
             return in_bytes * 1.0 / (1024 * 1024)
 
-        print "stats rows: %d, space used: %.2f MB (%.2f MB data, %.2f MB index)" % (run_info.stats_rows_used, _to_mb(run_info.stats_data_used + run_info.stats_index_used), _to_mb(run_info.stats_data_used), _to_mb(run_info.stats_index_used))
+        stats_total_used = run_info.stats_data_used + run_info.stats_index_used
+        print "stats rows: %d, space used: %.2f MB (%.2f MB data, %.2f MB index)" % (run_info.stats_rows_used, _to_mb(stats_total_used), _to_mb(run_info.stats_data_used), _to_mb(run_info.stats_index_used))
 
     def cleanup(self):
         self.test_runner.teardown_databases(self.old_db_config)
