@@ -7,14 +7,15 @@
 import logging
 import time
 import sys
-from tests.selenium.utils.constants import wait_time
-from testconfig import config
-from selenium import webdriver
-from django.utils.unittest import TestCase
 
+from django.utils.unittest import TestCase
+from selenium import webdriver
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
+from testconfig import config
+
+from tests.selenium.utils.constants import wait_time
 
 
 def find_visible_element_by_css_selector(driver, selector):
@@ -182,17 +183,19 @@ class SeleniumBaseTestCase(TestCase):
         self.clear_all()
 
     def tearDown(self):
-        # On successful tests, clean up (attribute errors cleaning up to the test
-        # that got the system into a state rather than to the next test that runs)
-        # On failing tests, do not clean up -- leave the system in a state for
-        # human investigation.  If another test runs, it will clean up then.
-        if sys.exc_info() == (None, None, None):
+        # It can be handy not to clean up after a failed test when a developer
+        # is actively working on a test or troubleshooting a test failure and
+        # to leave the browser window open. To provide for this, there is an
+        # option in the config, clean_up_on_failure, that controls clean up on
+        # failed tests. Cleanup will always occur for successful tests.
+        # Beware that the un-cleaned-up tests will leave resources and processes
+        # on your system that will not automatically be cleaned up.
+        test_failed = False if sys.exc_info() == (None, None, None) else True
+        if config.get('clean_up_on_failure'):
+            self.log.info("Cleaning up after %s" % 'failure' if test_failed else 'success')
+            self.driver.quit()
+        elif not test_failed:
             self.log.info("Cleaning up after success")
-            # Return to base URI to get away from any dialogs that
-            # might block navigation during clear_all
-            self.navigation.reset()
-
-            self.clear_all()
             self.driver.close()
 
     def clear_all(self):
