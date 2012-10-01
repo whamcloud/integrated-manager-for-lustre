@@ -214,11 +214,14 @@ class ServiceConfig:
         self.try_shell(["chkconfig", "rsyslog", "on"])
         self.try_shell(['service', 'rsyslog', 'restart'])
 
-    def _setup_ntp(self, server):
+    def _setup_ntp(self, server = None):
+        if not server:
+            server = self.get_input(msg = "NTP Server", default = "localhost")
         log.info("Writing ntp configuration")
         ntp = NTPConfig()
         ntp.remove()
         ntp.add(server)
+        self._start_ntp()
 
     def _start_ntp(self):
         log.info("Restarting ntp")
@@ -346,11 +349,7 @@ class ServiceConfig:
         else:
             log.info("MySQL already accessible")
 
-        ntp_server = self.get_input(msg = "NTP Server", default = "localhost")
-        self._setup_ntp(ntp_server)
-
         self._start_rsyslog()
-        self._start_ntp()
 
         if not self._db_current():
             log.info("Creating database tables...")
@@ -381,8 +380,9 @@ class ServiceConfig:
             args = args + ["--verbosity", "0"]
         ManagementUtility(args).execute()
 
-    def setup(self, username = None, password = None):
+    def setup(self, username = None, password = None, ntp_server = None):
         self._setup_database(username, password)
+        self._setup_ntp(ntp_server)
         self._setup_rabbitmq()
         self._enable_services()
 

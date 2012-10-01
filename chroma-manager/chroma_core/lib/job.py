@@ -4,8 +4,9 @@
 # ========================================================
 
 
-import settings
-job_log = settings.setup_log('job')
+from chroma_core.services import log_register
+
+job_log = log_register('job')
 
 
 class Dependable(object):

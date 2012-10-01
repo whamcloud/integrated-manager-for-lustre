@@ -19,16 +19,16 @@ from django.db.models.aggregates import Max, Count
 from django.db.models.query_utils import Q
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
+from chroma_core.models.agent_session import AgentSession
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 
-from chroma_core.lib.storage_plugin import messaging
 from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
-from chroma_core.lib.job import  DependOn, DependAll, Step
-from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
-
 from chroma_core.lib.job import job_log
+from chroma_core.lib.job import  DependOn, DependAll, Step
+
+from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
 import settings
 
@@ -709,8 +709,8 @@ class LearnDevicesStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonQueue, AgentDaemonRpcInterface
         # Get the device-scan output
-        from chroma_core.models import ManagedHost, AgentSession
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         updates = self.invoke_agent(host, "device-plugin")
         try:
@@ -722,14 +722,15 @@ class LearnDevicesStep(Step):
         with transaction.commit_on_success():
             session, created = AgentSession.objects.get_or_create(host = host)
 
-        messaging.simple_send('agent', {
+        AgentDaemonQueue().put({
                     "session_id": session.session_id,
+                    "counter": 1,
+                    "started_at": datetime.datetime.utcnow().isoformat() + "Z",
                     "host_id": host.id,
                     "updates": updates
             })
 
-        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
-        AgentDaemonRpc().await_session(kwargs['host_id'])
+        AgentDaemonRpcInterface().await_session(kwargs['host_id'])
 
 
 class SetupHostJob(StateChangeJob):
@@ -915,9 +916,9 @@ class DeleteHostStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import StorageResourceRecord
-        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
+        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
         try:
-            AgentDaemonRpc().remove_host_resources(kwargs['host_id'])
+            AgentDaemonRpcInterface().remove_host_resources(kwargs['host_id'])
         except StorageResourceRecord.DoesNotExist:
             # This is allowed, to account for the case where we submit the request_remove_resource,
             # then crash, then get restarted.

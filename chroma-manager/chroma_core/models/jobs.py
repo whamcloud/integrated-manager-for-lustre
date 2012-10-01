@@ -8,6 +8,7 @@ import datetime
 from collections import defaultdict
 import json
 import traceback
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 from django.db import models
 from django.db import transaction
@@ -18,7 +19,7 @@ from picklefield.fields import PickledObjectField
 import sys
 from polymorphic.models import DowncastMetaclass
 
-from chroma_core.models.utils import WorkaroundDateTimeField, await_async_result
+from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
 
@@ -89,13 +90,10 @@ class Command(models.Model):
             message = job.description()
 
         object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
+        command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
 
-        from chroma_core.lib.state_manager import StateManagerClient
-        async_result = StateManagerClient.command_set_state(
-                object_ids,
-                message, **kwargs)
-
-        command_id = await_async_result(async_result)
+        with transaction.commit_manually():
+            transaction.commit()
 
         return Command.objects.get(pk = command_id)
 
@@ -472,19 +470,6 @@ class Job(models.Model):
 
         return result
 
-    @classmethod
-    def run_next(cls):
-        from chroma_core.lib.job import job_log
-        runnable_jobs = cls.get_ready_jobs()
-
-        job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-            len(runnable_jobs),
-            Job.objects.filter(state = 'pending').count(),
-            Job.objects.filter(state = 'tasked').count()))
-
-        for job in runnable_jobs:
-            job.run()
-
     def get_deps(self):
         return DependAll()
 
@@ -663,8 +648,7 @@ class Job(models.Model):
             self.cancelled = cancelled
             self.save()
 
-        from chroma_core.lib.state_manager import StateManagerClient
-        StateManagerClient.complete_job(self.pk)
+        JobSchedulerClient.complete_job(self.pk)
 
     def description(self):
         raise NotImplementedError

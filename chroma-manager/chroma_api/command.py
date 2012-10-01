@@ -16,8 +16,6 @@ from chroma_core.models import Command
 from tastypie.resources import ModelResource
 from tastypie import fields, http
 from chroma_core.models.jobs import SchedulingError, StepResult
-from chroma_core.models.utils import await_async_result
-from chroma_core.tasks import command_run_jobs
 import json
 
 
@@ -91,9 +89,9 @@ class CommandResource(ModelResource):
                 del job['args']['hosts']
                 job['args']['host_ids'] = json.dumps(job_ids)
 
-        async_result = command_run_jobs.delay(bundle.data['jobs'], bundle.data['message'])
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
         try:
-            command_id = await_async_result(async_result)
+            command_id = JobSchedulerClient.command_run_jobs(bundle.data['jobs'], bundle.data['message'])
         except SchedulingError, e:
             raise custom_response(self, request, http.HttpBadRequest,
                     {'state': e.message})

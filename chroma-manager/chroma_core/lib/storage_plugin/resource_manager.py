@@ -4,18 +4,7 @@
 # ========================================================
 
 
-"""The resource manager is the home of the global view of the resources populated from
-all plugins.  BaseStoragePlugin instances have their own local caches of resources, which
-they use to periodically update this central store.
-
-Concurrency:
-    This code is written for multi-threaded use within a single process.
-    It is not safe to have multiple processes running plugins at this stage.
-    We serialize operations from different plugins using a big lock, and
-    we use the autocommit decorator on persistence functions because
-    otherwise we would have to explicitly commit at the start of
-    each one to see changes from other threads.
-
+"""
 WARNING:
     There is a global instance of ResourceManager initialized in this module, and
     its initialization does a significant amount of DB activity.  Don't import
@@ -232,6 +221,35 @@ class SubscriberIndex(object):
 
 
 class ResourceManager(object):
+    """The resource manager is the home of the global view of the resources populated from
+    all plugins.  BaseStoragePlugin instances have their own local caches of resources, which
+    they use to periodically update this central store.
+
+    Acts as a pseudo-database layer on top of the underlying (StorageResourceRecord et al)
+    models.  Tracks which resources are reported by which ScannableResources, acts on relationship
+    rules to hook resources with matching IDs together, creates Volumes and VolumeNodes for reported
+    LUNs, creates ManagedHost objects for reported VMs.
+
+    BaseStoragePlugin subclass instances maintain local copies of the resources that their callbacks
+    create with update_or_create, and then report those copies within their ResourceManager session.
+    ResourceManager resolves identical resources reported by more than one plugin instance (e.g. LUNs
+    seen from more than one location) and creates a globally unique record corresponding to the local
+    instance that the BaseStoragePlugin has in memory.  Sessions have a local_id_to_global_id map
+    which records that relation: entry points to ResourceManager map the BaseStoragePlugin (local) ID
+    to the ResourceManager (global) ID.
+
+    This class is a performance hot-spot because it is contended by multiple hosts and controllers and
+    potentially acts on large numbers of objects (e.g. thousands of hard drives), so be careful to phrase
+    your database queries efficiently.
+
+    This code is written for multi-threaded use within a single process.
+    It is not safe to have multiple processes running plugins at this stage.
+    We serialize operations from different plugins using a big lock, and
+    we use the autocommit decorator on persistence functions because
+    otherwise we would have to explicitly commit at the start of
+    each one to see changes from other threads.
+
+    """
     def __init__(self):
         self._sessions = {}
         self._instance_lock = threading.Lock()

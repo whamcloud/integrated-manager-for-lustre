@@ -25,7 +25,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from chroma_api.storage_resource_class import filter_class_ids
 
-from chroma_core.lib.storage_plugin.daemon import ScanDaemonRpc
+from chroma_core.services.plugin_runner.scan_daemon_interface import ScanDaemonRpcInterface
 
 
 class StorageResourceValidation(Validation):
@@ -241,7 +241,7 @@ class StorageResourceResource(MetricResource, ModelResource):
         except ObjectDoesNotExist:
             raise NotFound("A model instance matching the provided arguments could not be found.")
 
-        ScanDaemonRpc().remove_resource(obj.id)
+        ScanDaemonRpcInterface().remove_resource(obj.id)
         raise ImmediateHttpResponse(http.HttpAccepted())
 
     def obj_create(self, bundle, request = None, **kwargs):
@@ -294,7 +294,7 @@ class StorageResourceResource(MetricResource, ModelResource):
             # NB this operation is done inside the storage daemon, because it is
             # necessary to tear down any running session (e.g. consider modifying the IP
             # address of a controller)
-            ScanDaemonRpc().modify_resource(record.id, attrs)
+            ScanDaemonRpcInterface().modify_resource(record.id, attrs)
 
         # Require that something was set
         if not 'alias' in bundle.data or len(attrs):

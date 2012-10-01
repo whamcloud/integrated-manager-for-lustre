@@ -1,6 +1,10 @@
 
-Chroma internals
-=======================================
+Top level modules
+=================
+
+Chroma is split into the *agent* and the *manager*.  The manager is the central
+monitoring service, while an instance of the agent runs on each Lustre server 
+(aka Chroma Storage Server) reporting back to the central manager.
 
 .. contents::
 
@@ -10,16 +14,19 @@ chroma-manager
 chroma_core
 ___________
 
-The data store and business logic.
+The main database models and backend services.  This is where the code that defines our
+schema for servers, filesystems etc lives, along with the code for communicating with
+chroma-agent to drive those objects in real life.
 
-This contains the database models used by Chroma Manager -- none of the other apps have their
-own models.
+The database schema is defined in chroma_core.models.
 
-In addition to the models, the core defines the logic for manipulating and monitoring the state
-of the system.
+The backend services are defined in chroma_core.services.
 
-To get an idea of the code involved in changing the state of a filesystem, take a look at
-StatefulObject, StateChangeJob and StateManager.
+Backend operations are exposed to HTTP request handlers (i.e. :ref:`chroma_api`) via RPC: for example,
+when a user clicks the button to start a filesystem in the web interface, this leads to an HTTP request,
+the handler of that request invokes an RPC to the relevant backend service, which really performs the
+operation.
+
 
 chroma_ui
 _________
@@ -30,9 +37,13 @@ The UI code is mainly Javascript.  There is a minimal amount of Python for servi
 There is no interaction between this and other apps at the Python level, the UI only accesses
 the database indirectly via the HTTP API.
 
-Rather than Django templates, the UI is built by the Javascript code, accessing the API.
+Rather than Django templates, the UI is built by the Javascript code, accessing the API.  A mixture
+of ad-hoc page generation and underscore.js templates are used -- the trend is towards underscore.js
+templates for all new code.
 
 Various libraries are used, the most important are jQuery and Backbone.js.
+
+.. _chroma_api:
 
 chroma_api
 __________
@@ -56,12 +67,19 @@ The command line interface.
 
 The CLI code is a peer of the UI, also consuming the API over HTTP.
 
-This is an entirely standalone python module (it is not a Django app).
+This is a vanilla Python module, not a Django app.
 
 r3d
 ____
 
-A database-backed time series store, used for storing statistics.  This is only used by chroma_core.
+A database-backed time series store, used for storing statistics.  This is used by chroma_core in addition
+to its own models.
+
+plugins
+_______
+
+This contains builtin plugins, principally used for generic Linux storage device
+detection (in chroma_core.plugins.linux)
 
 chroma-agent
 ------------
@@ -72,6 +90,8 @@ reports back to the manager via HTTP.
 
 chroma_agent/device_plugins
 ___________________________
+
+*Device plugins* are python modules which provide monitoring of 
 
 These are modules which follow the interface in chroma_agent.plugins.DevicePlugin.
 

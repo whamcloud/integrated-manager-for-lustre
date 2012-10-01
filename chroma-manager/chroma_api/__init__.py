@@ -4,5 +4,6 @@
 # ========================================================
 
 
-import settings
-api_log = settings.setup_log('django.request.tastypie', "api.log")
+from chroma_core.services import log_register
+
+api_log = log_register('django.request.tastypie')

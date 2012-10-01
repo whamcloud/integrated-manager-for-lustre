@@ -4,7 +4,7 @@
 # ========================================================
 
 
-from chroma_core.models import StorageResourceAttributeSerialized
+from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized
 
 
 class BaseResourceAttribute(object):

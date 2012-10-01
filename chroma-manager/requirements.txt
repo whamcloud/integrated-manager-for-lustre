@@ -25,6 +25,11 @@ fudge
 simplejson
 behave>=1.1.0
 prettytable
--e hg+https://bitbucket.org/jcspray/dse2-django1.3#egg=dse
+dse
 selenium
 log4tailer
+cherrypy
+jsonschema
+supervisor
+gevent
+django-supervisor

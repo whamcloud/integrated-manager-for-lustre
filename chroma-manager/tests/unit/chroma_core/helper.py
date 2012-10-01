@@ -1,11 +1,18 @@
 from collections import defaultdict
 import datetime
-import logging
+from chroma_core.services.job_scheduler.job_scheduler import SerializedCalls
+from chroma_core.services.log import log_register
+from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface, AgentDaemonQueue
 from django.test import TestCase
 import mock
 from chroma_core.lib.agent import AgentException
 from chroma_core.models.jobs import Command
 from chroma_core.models import Volume, VolumeNode
+from chroma_core.services.queue import ServiceQueue
+from chroma_core.services.rpc import ServiceRpcInterface
+
+
+log = log_register('test_helper')
 
 
 def freshen(obj):
@@ -33,7 +40,8 @@ class MockAgent(object):
         self.host = host
 
     def _fail(self):
-        raise AgentException(self.host.id)
+        log.error("Synthetic agent error on host %s" % self.host)
+        raise AgentException(self.host.id, agent_exception = RuntimeError("Fake exception"), agent_backtrace = "Fake backtrace")
 
     def invoke(self, cmdline, args = None):
         self.calls.append((cmdline, args))
@@ -45,13 +53,10 @@ class MockAgent(object):
         if cmdline in self.fail_globs:
             self._fail()
 
-        logging.getLogger('mock_agent').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
-        logging.getLogger('job').info("invoke_agent %s %s %s" % (self.host, cmdline, args))
+        log.info("invoke_agent %s %s %s" % (self.host, cmdline, args))
         if cmdline == "lnet-scan":
             return self.mock_servers[self.host.address]['nids']
         elif cmdline == 'host-properties':
-            logging.getLogger('job').info(self.mock_servers)
-            logging.getLogger('job').info(len(self.mock_servers))
             return {
                 'time': datetime.datetime.utcnow().isoformat() + "Z",
                 'fqdn': self.mock_servers[self.host.address]['fqdn'],
@@ -60,18 +65,7 @@ class MockAgent(object):
             }
         elif cmdline.startswith("format-target"):
             import uuid
-            import re
-            inode_size = None
-            if 'mkfsoptions' in args:
-                inode_arg = re.search("-I (\d+)", args['mkfsoptions'])
-                if inode_arg:
-                    inode_size = int(inode_arg.group(1).__str__())
-
-            if inode_size is None:
-                # A 'foo' value
-                inode_size = 777
-
-            return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': inode_size}
+            return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': 777}
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
@@ -97,78 +91,88 @@ class MockAgent(object):
             return {'label': "foofs-TTT%04d" % self.label_counter}
         elif cmdline.startswith('detect-scan'):
             return self.mock_servers[self.host.address]['detect-scan']
+        elif cmdline == "device-plugin":
+            return {
+
+            }
         elif cmdline == "device-plugin --plugin=lustre":
             return {'lustre': {
                 'lnet_up': True,
                 'lnet_loaded': True
             }}
-        elif cmdline.startswith("device-plugin"):
-            try:
-                return self.mock_servers[self.host.address]['device-plugin']
-            except KeyError:
-                return {}
-        elif cmdline.startswith("failover-target"):
-            import re
-            from chroma_core.models import ManagedTarget, ManagedTargetMount
-            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
-            target = ManagedTarget.objects.get(ha_label = ha_label)
-
-            # fudge a failover event
-            failover_host = target.failover_hosts[0]
-            failover_tm = ManagedTargetMount.objects.get(target = target,
-                                                         host = failover_host)
-            target.set_active_mount(failover_tm)
-            logging.getLogger('mock_agent').debug("mocked failover of %s to %s" % (target.label, failover_host.address))
-            return {'result': None, 'success': True}
-        elif cmdline.startswith("failback-target"):
-            import re
-            from chroma_core.models import ManagedTarget, ManagedTargetMount
-            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
-            target = ManagedTarget.objects.get(ha_label = ha_label)
-            # fudge a failback event
-            primary_host = target.primary_host
-            primary_tm = ManagedTargetMount.objects.get(target = target,
-                                                        host = primary_host)
-            target.set_active_mount(primary_tm)
-            logging.getLogger('mock_agent').debug("mocked failback of %s to %s" % (target.label, primary_host.address))
-            return {'result': None, 'success': True}
-        else:
-            logging.getLogger('mock_agent').debug("cmdline didn't match any mocks: %s" % (cmdline))
-
-
-class MockDaemonRpc():
-    def start_session(self, resource_id):
-        return
-
-    def remove_resource(self, resource_id):
-        return
 
 
 def run_next():
-    from chroma_core.lib.util import dbperf
     from chroma_core.models.jobs import Job
-    from chroma_core.lib.state_manager import LockCache, DepCache
-    from chroma_core.lib.cache import ObjectCache
 
-    # Detect recursion
-    import inspect
-    count = 0
-    for frame in inspect.stack():
-        if frame[0].f_code.co_name == 'run_next':
-            count += 1
-    if count > 1:
+    while True:
+        runnable_jobs = Job.get_ready_jobs()
+        if not runnable_jobs:
+            break
+
+        log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
+            len(runnable_jobs),
+            Job.objects.filter(state = 'pending').count(),
+            Job.objects.filter(state = 'tasked').count()))
+
+        for job in runnable_jobs:
+            start_job(job)
+
+
+def complete_job(job, errored = False, cancelled = False):
+    from chroma_core.models.jobs import StateChangeJob
+    from chroma_core.lib.job import job_log
+    success = not (errored or cancelled)
+    if success and isinstance(job, StateChangeJob):
+        new_state = job.state_transition[2]
+        obj = job.get_stateful_object()
+        obj.set_state(new_state, intentional = True)
+        job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (job.pk, new_state, obj))
+
+    job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
+                 (job.id, errored, cancelled))
+    job.state = 'completing'
+    job.errored = errored
+    job.cancelled = cancelled
+    job.save()
+
+    SerializedCalls.call('complete_job', job.pk)
+
+
+def start_job(job):
+    from chroma_core.services.job_scheduler.job_scheduler import RunJobThread
+    import sys
+    import traceback
+
+    log.info("Job %d: Job.run %s" % (job.id, job.description()))
+    # Important: multiple connections are allowed to call run() on a job
+    # that they see as pending, but only one is allowed to proceed past this
+    # point and spawn tasks.
+
+    # All the complexity of StateManager's dependency calculation doesn't
+    # matter here: we've reached our point in the queue, all I need to check now
+    # is - are this Job's immediate dependencies satisfied?  And are any deps
+    # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
+
+    try:
+        deps_satisfied = job._deps_satisfied()
+    except Exception:
+        # Catchall exception handler to ensure progression even if Job
+        # subclasses have bugs in their get_deps etc.
+        log.error("Job %s: exception in dependency check: %s" % (job.id,
+                                                                     '\n'.join(traceback.format_exception(*(sys.exc_info())))))
+        complete_job(job, cancelled = True)
         return
 
-    ran = -1
-    while ran:
-        ran = 0
-        for job in Job.objects.filter(state = 'pending'):
-            ran += 1
-            with dbperf('job.run'):
-                job.run()
-            DepCache.clear()
-            LockCache.clear()
-            ObjectCache.clear()
+    if not deps_satisfied:
+        log.warning("Job %d: cancelling because of failed dependency" % job.id)
+        complete_job(job, cancelled = True)
+        # TODO: tell someone WHICH dependency
+        return
+
+    job.state = 'tasked'
+    job.save()
+    RunJobThread(job.id).run()
 
 
 class JobTestCase(TestCase):
@@ -220,28 +224,45 @@ class JobTestCase(TestCase):
         MockAgent.mock_servers = self.mock_servers
         chroma_core.lib.agent.Agent = MockAgent
 
-        # A custom version of run_next to avoid overflowing the stack
-        # when recursing
-        import chroma_core.models.jobs
-        chroma_core.models.jobs.Job.run_next = mock.Mock(side_effect = run_next)
+        # Any RPCs that are going to get called need explicitly overriding to
+        # turn into local calls -- this is a catch-all to prevent any RPC classes
+        # from trying to do network comms during unit tests
+        ServiceRpcInterface._call = mock.Mock(side_effect = NotImplementedError)
+        ServiceQueue.put = mock.Mock(side_effect = NotImplementedError)
 
-        # Override DaemonRPC
-        import chroma_core.lib.storage_plugin.daemon
-        self.old_daemon_rpc = chroma_core.lib.storage_plugin.daemon.DaemonRpc
-        chroma_core.lib.storage_plugin.daemon.DaemonRpc = MockDaemonRpc
+        # Create an instance for the purposes of the test
+        from chroma_core.services.plugin_runner.agent_daemon import AgentDaemon
+        agent_daemon = AgentDaemon()
 
-        # Override PluginRequest/PluginResponse
-        import chroma_core.lib.storage_plugin.messaging
-        self.old_plugin_request = chroma_core.lib.storage_plugin.messaging.PluginRequest
-        self.old_plugin_response = chroma_core.lib.storage_plugin.messaging.PluginResponse
-        chroma_core.lib.storage_plugin.messaging.PluginRequest = mock.Mock()
-        chroma_core.lib.storage_plugin.messaging.PluginResponse = mock.Mock()
+        def patch_daemon_rpc(rpc_class, test_daemon):
+            # Patch AgentDaemonRpc to call our instance instead of trying to do an RPC
+            def rpc_local(fn_name, *args, **kwargs):
+                retval = getattr(test_daemon, fn_name)(*args, **kwargs)
+                log.info("patch_daemon_rpc: %s(%s %s) -> %s" % (fn_name, args, kwargs, retval))
+                return retval
 
-        # Override LearnDevicesStep.run so that we don't require storage plugin RPC
-        from chroma_core.models.host import LearnDevicesStep
-        LearnDevicesStep.run = mock.Mock()
-        from chroma_core.lib.storage_plugin.daemon import AgentDaemonRpc
+            rpc_class._call = mock.Mock(side_effect = rpc_local)
 
+        patch_daemon_rpc(AgentDaemonRpcInterface, agent_daemon)
+
+        # When someone pushes something to 'agent' queue, call back AgentDaemon
+        def queue_immediate(body):
+            log.info("patch_daemon_queue: %s" % body)
+            agent_daemon.on_message(body)
+        AgentDaemonQueue.put = mock.Mock(side_effect = queue_immediate)
+
+        from chroma_core.services.job_scheduler import JobScheduler
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpcInterface
+        patch_daemon_rpc(JobSchedulerRpcInterface, JobScheduler())
+
+        import chroma_core.services.job_scheduler.job_scheduler
+        chroma_core.services.job_scheduler.job_scheduler.start_job = mock.Mock(side_effect=start_job)
+        chroma_core.services.job_scheduler.job_scheduler.complete_job = mock.Mock(side_effect=complete_job)
+        chroma_core.services.job_scheduler.job_scheduler.run_next = mock.Mock(side_effect=run_next)
+
+        # Patch host removal because we use a _test_lun function that generates Volumes
+        # with no corresponding StorageResourceRecords, so the real implementation wouldn't
+        # remove them
         def fake_remove_host_resources(host_id):
             from chroma_core.models.host import Volume, VolumeNode
             for vn in VolumeNode.objects.filter(host__id = host_id):
@@ -250,7 +271,7 @@ class JobTestCase(TestCase):
                 if volume.volumenode_set.count() == 0:
                     Volume.delete(volume.id)
 
-        AgentDaemonRpc.remove_host_resources = mock.Mock(side_effect = fake_remove_host_resources)
+        AgentDaemonRpcInterface.remove_host_resources = mock.Mock(side_effect = fake_remove_host_resources)
 
     def tearDown(self):
         import chroma_core.lib.agent
@@ -259,13 +280,6 @@ class JobTestCase(TestCase):
         from celery.app import app_or_default
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_eager_propagates_exceptions
-
-        import chroma_core.lib.storage_plugin.daemon
-        chroma_core.lib.storage_plugin.daemon.DaemonRpc = self.old_daemon_rpc
-
-        import chroma_core.lib.storage_plugin.messaging
-        chroma_core.lib.storage_plugin.messaging.PluginRequest = self.old_plugin_request
-        chroma_core.lib.storage_plugin.messaging.PluginResponse = self.old_plugin_response
 
 
 class JobTestCaseWithHost(JobTestCase):

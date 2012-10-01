@@ -1,7 +1,7 @@
 from chroma_core.lib.util import dbperf
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost
-from chroma_core.models.jobs import Command, Job
+from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestCase
 from django.db import connection
@@ -33,7 +33,8 @@ class TestOneHost(JobTestCase):
             with dbperf("set_state"):
                 Command.set_state([(host, 'lnet_up'), (host.lnetconfiguration, 'nids_known')], "Setting up host", run = False)
             with dbperf("run_next"):
-                Job.run_next()
+                from chroma_core.services.job_scheduler.job_scheduler import run_next
+                run_next()
             self.assertState(host, 'lnet_up')
         finally:
             dbperf.enabled = False
@@ -96,7 +97,8 @@ class TestBigFilesystem(JobTestCase):
                 cProfile.runctx("Command.set_state([(self.fs, 'available')], 'Unit test transition', run = False)", globals(), locals(), 'set_state.prof')
 
             with dbperf('run_next'):
-                Job.run_next()
+                from chroma_core.services.job_scheduler.job_scheduler import run_next
+                run_next()
         finally:
             dbperf.enabled = False
 

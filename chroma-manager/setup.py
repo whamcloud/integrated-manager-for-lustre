@@ -41,7 +41,7 @@ setup(
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
     },
-    scripts = ["chroma_core/bin/storage_daemon", "chroma_core/bin/chroma-config", "chroma-host-discover"],
+    scripts = ["chroma_core/bin/chroma-config", "chroma-host-discover"],
     entry_points = {
         'console_scripts': [
             'chroma = chroma_cli.main:standard_cli',
