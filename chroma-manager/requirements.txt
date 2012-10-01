@@ -31,5 +31,4 @@ log4tailer
 cherrypy
 jsonschema
 supervisor
-gevent
 django-supervisor
