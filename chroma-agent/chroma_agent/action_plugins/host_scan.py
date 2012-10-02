@@ -13,6 +13,12 @@ from chroma_agent.utils import list_capabilities
 from chroma_agent import version
 
 
+def _selinux_enabled():
+    """Returns true if SELinux is enabled."""
+    from chroma_agent.shell import run
+    return run("/usr/sbin/selinuxenabled")[0] == 0
+
+
 def host_properties(args = None):
     return {
         'time': datetime.datetime.utcnow().isoformat() + "Z",
@@ -20,6 +26,7 @@ def host_properties(args = None):
         'fqdn': socket.getfqdn(),
         'capabilities': list_capabilities(),
         'agent_version': version(),
+        'selinux_enabled': _selinux_enabled()
     }
 
 

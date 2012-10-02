@@ -36,6 +36,8 @@ class MockAgent(object):
 
     succeed = True
     fail_globs = []
+    selinux_enabled = False
+    capabilities = ['manage_targets']
 
     def __init__(self, host, log = None, console_callback = None, timeout = None):
         self.host = host
@@ -62,7 +64,8 @@ class MockAgent(object):
                 'time': datetime.datetime.utcnow().isoformat() + "Z",
                 'fqdn': self.mock_servers[self.host.address]['fqdn'],
                 'nodename': self.mock_servers[self.host.address]['nodename'],
-                'capabilities': ['manage_targets']
+                'capabilities': self.capabilities,
+                'selinux_enabled': self.selinux_enabled
             }
         elif cmdline.startswith("format-target"):
             import uuid

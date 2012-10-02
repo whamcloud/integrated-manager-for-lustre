@@ -653,6 +653,10 @@ class GetHostProperties(Step):
             job_log.error("Cannot complete setup of host %s, it is reporting an already-used FQDN %s" % (host, fqdn))
             raise
 
+        if host_properties['selinux_enabled']:
+            job_log.error("Cannot complete setup of host %s, SELinux is not disabled" % host)
+            raise RuntimeError("SELinux must be disabled on %s" % host)
+
 
 class GetHostClock(Step):
     idempotent = True

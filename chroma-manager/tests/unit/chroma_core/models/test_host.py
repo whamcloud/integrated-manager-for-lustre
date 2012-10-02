@@ -36,6 +36,19 @@ class TestSetup(JobTestCase):
         self.assertState(host.lnetconfiguration, 'nids_known')
         freshen(host).lnetconfiguration.get_nids()
 
+    def test_selinux_detection(self):
+        """Test that a host with SELinux enabled fails setup."""
+        MockAgent.selinux_enabled = True
+        try:
+            import time
+            host, command = ManagedHost.create_from_string('myaddress')
+            while not command.complete:
+                time.sleep(1)
+            self.assertTrue(command.errored)
+            self.assertState(host, 'unconfigured')
+        finally:
+            MockAgent.selinux_enabled = False
+
 
 class NidTestCase(JobTestCase):
     def setUp(self):
