@@ -7,7 +7,7 @@
 from django.db import models
 from chroma_core.lib.job import  DependOn, DependAll, Step
 from chroma_core.models.host import NoLNetInfo
-from chroma_core.models.jobs import StatefulObject, StateChangeJob
+from chroma_core.models.jobs import StatefulObject, StateChangeJob, StateLock
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
 
@@ -137,9 +137,18 @@ class PurgeFilesystemStep(Step):
         fs = ManagedFilesystem.objects.get(pk = kwargs['filesystem_id'])
         mgs = fs.mgs
         mgs_primary_mount = mgs.managedtargetmount_set.get(primary = True)
+
+        initial_mgs_state = mgs.state
+
+        # Whether the MGS was officially up or not, try stopping it (idempotent so will
+        # succeed either way
+        self.invoke_agent(mgs_primary_mount.host, "stop-target --ha_label %s" % mgs.ha_label)
         self.invoke_agent(mgs_primary_mount.host, "purge-configuration --device=%s --fsname=%s" % (
           mgs_primary_mount.volume_node.path, fs.name
         ))
+
+        if initial_mgs_state == 'mounted':
+            self.invoke_agent(mgs_primary_mount.host, "start-target --ha_label %s" % mgs.ha_label)
 
 
 class RemoveFilesystemJob(StateChangeJob):
@@ -157,8 +166,15 @@ class RemoveFilesystemJob(StateChangeJob):
     def description(self):
         return "Remove file system %s from configuration" % self.filesystem.name
 
-    def get_deps(self):
-        return DependOn(self.filesystem.mgs, "unmounted")
+    def create_locks(self):
+        locks = super(RemoveFilesystemJob, self).create_locks()
+        locks.append(StateLock(
+            job = self,
+            locked_item = self.filesystem.mgs,
+            begin_state = None,
+            end_state = None,
+            write = True))
+        return locks
 
     def get_steps(self):
         steps = []

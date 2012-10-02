@@ -145,6 +145,24 @@ class TestFSTransitions(JobTestCaseWithHost):
         with self.assertRaises(ManagedFilesystem.DoesNotExist):
             ManagedFilesystem.objects.get(pk = self.fs.pk)
 
+    def test_fs_removal_mgt_offline(self):
+        """Test that removing a filesystem whose MGT is offline leaves the MGT offline at completion"""
+        self.set_state(self.mgt, 'unmounted')
+        self.set_state(self.fs, 'removed')
+        self.assertState(self.mgt, 'unmounted')
+        with self.assertRaises(ManagedFilesystem.DoesNotExist):
+            ManagedFilesystem.objects.get(pk = self.fs.pk)
+
+    def test_fs_removal_mgt_online(self):
+        """Test that removing a filesystem whose MGT is online leaves the MGT online at completion, but
+        stops it in the course of the removal (for the debugfs-ing)"""
+        self.set_state(self.mgt, 'mounted')
+        with self.assertInvokes('stop-target --ha_label %s' % freshen(self.mgt).ha_label):
+            self.set_state(self.fs, 'removed')
+        self.assertState(self.mgt, 'mounted')
+        with self.assertRaises(ManagedFilesystem.DoesNotExist):
+            ManagedFilesystem.objects.get(pk = self.fs.pk)
+
     def test_target_stop(self):
         from chroma_core.models import ManagedMdt, ManagedFilesystem
         self.set_state(self.mdt, 'unmounted')

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from contextlib import contextmanager
 import datetime
 from chroma_core.services.job_scheduler.job_scheduler import SerializedCalls
 from chroma_core.services.log import log_register
@@ -178,6 +179,17 @@ def start_job(job):
 class JobTestCase(TestCase):
     mock_servers = None
     hosts = None
+
+    @contextmanager
+    def assertInvokes(self, agent_command):
+        initial_call_count = len(MockAgent.calls)
+        yield
+        wrapped_calls = MockAgent.calls[initial_call_count:]
+        for call in wrapped_calls:
+            call_cmd = call[0]
+            if call_cmd == agent_command:
+                return
+        raise self.failureException("Command '%s' was not invoked (calls were: %s)" % (agent_command, wrapped_calls))
 
     def _test_lun(self, primary_host, *args):
         volume = Volume.objects.create()
