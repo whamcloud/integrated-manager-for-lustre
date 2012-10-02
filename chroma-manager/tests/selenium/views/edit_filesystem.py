@@ -38,6 +38,7 @@ class EditFilesystem(BaseView):
     def set_state(self, state):
         button_box = self.driver.find_element_by_css_selector('td#fs_actions')
         self.click_command_button(button_box, state)
+        self.quiesce()
 
     def open_target_conf_params(self, target_name):
         link = WebDriverWait(self.driver, self.standard_wait).until(lambda driver: driver.find_element_by_link_text(target_name))
@@ -82,6 +83,7 @@ class EditFilesystem(BaseView):
             if tr.find_element_by_xpath("td[6]").text == primary_server_address and tr.find_element_by_xpath("td[2]").text == volume_name:
                 tr.click()
                 self.driver.find_element_by_css_selector('#ost_ok_button').click()
+                self.quiesce()
                 wait_for_transition(self.driver, self.long_wait)
                 return
 

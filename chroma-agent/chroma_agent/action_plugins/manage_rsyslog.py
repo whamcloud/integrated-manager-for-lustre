@@ -35,6 +35,7 @@ def configure_rsyslog(args):
     f.close()
     if args.node != "":
         os.write(tmp_f, "# added by chroma-agent\n" \
+                        "$PreserveFQDN on\n" \
                         "*.* @@%s;RSYSLOG_ForwardFormat\n" \
                         "# added by chroma-agent\n" % args.node)
     os.close(tmp_f)

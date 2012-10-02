@@ -23,7 +23,7 @@ class Systemevents(models.Model):
                                    blank=True)
     priority = models.IntegerField(null=True, db_column='Priority',
                                    blank=True)
-    fromhost = models.CharField(max_length=60, db_column='FromHost',
+    fromhost = models.CharField(max_length=255, db_column='FromHost',
                                 blank=True)
     message = models.TextField(db_column='Message', blank=True)
     ntseverity = models.IntegerField(null=True, db_column='NTSeverity',

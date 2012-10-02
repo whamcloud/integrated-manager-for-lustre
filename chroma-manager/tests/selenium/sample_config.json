@@ -1,6 +1,8 @@
 {
     "headless": false,
     "screenshots": false,
+    "_comment": "Set clean_up_on_failure to false if you want the browser to stay open when a test fails to troubleshoot.",
+    "clean_up_on_failure": true,
     "chroma_managers":
         {
             "server_http_url": "http://localhost:8000/ui/",
