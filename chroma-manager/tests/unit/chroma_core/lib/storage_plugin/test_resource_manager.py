@@ -480,6 +480,94 @@ class TestVolumeBalancing(ResourceManagerTestCase):
         self.assertDictEqual(expected, actual)
 
 
+class TestVolumeNaming(ResourceManagerTestCase):
+    mock_servers = {
+        'myaddress': {
+            'fqdn': 'myaddress.mycompany.com',
+            'nodename': 'test01.myaddress.mycompany.com',
+            'nids': ["192.168.0.1@tcp"]
+        }
+    }
+
+    PLUGIN_LUN_NAME = 'mylun123'
+    SERIAL = "123abc456"
+    VG = 'foovg'
+    LV = 'foolv'
+
+    def _start_plugin_session(self):
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+
+        couplet_record, couplet_resource = self._make_global_resource('example_plugin', 'Couplet', {
+            'address_1': 'foo',
+            'address_2': 'bar'
+        })
+        lun_resource = self._make_local_resource('example_plugin', 'Lun',
+            local_id = 1,
+            name = self.PLUGIN_LUN_NAME,
+            serial_83 = self.SERIAL,
+            size = 4096
+        )
+
+        resource_manager.session_open(couplet_record.pk, [couplet_resource, lun_resource], 60)
+
+    def _start_host_session(self, lvm = False):
+        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
+
+        self.host, command = ManagedHost.create_from_string('myaddress')
+
+        host_record, host_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
+
+        dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80 = None, serial_83 = self.SERIAL, size = 4096)
+        node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo", parents = [dev_resource], host_id = self.host.id)
+        resources = [host_resource, dev_resource, node_resource]
+        if lvm:
+            vg_resource = self._make_local_resource('linux', 'LvmGroup', parents = [node_resource], name = self.VG, uuid = 'b44f7d8e-a40d-4b96-b241-2ab462b4c1c1', size = 4096)
+            lv_resource = self._make_local_resource('linux', 'LvmVolume', parents = [vg_resource], name = self.LV, vg = vg_resource, uuid = 'b44f7d8e-a40d-4b96-b241-2ab462b4c1c1', size = 4096)
+            lv_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', parents = [lv_resource], path = "/dev/mapper/%s-%s" % (self.VG, self.LV), host_id = self.host.id)
+            resources.extend([vg_resource, lv_resource, lv_node_resource])
+
+        resource_manager.session_open(host_record.pk, resources, 60)
+
+    def assertVolumeName(self, name):
+        """For simple single-volume tests, check the name of the volume"""
+        self.assertEqual(Volume.objects.count(), 1)
+        self.assertEqual(VolumeNode.objects.count(), 1)
+        self.assertEqual(Volume.objects.get().label, name)
+
+    def test_name_from_scsi(self):
+        """In the absence of a plugin-supplied LUN, name should come from SCSI ID"""
+        self._start_host_session()
+        self.assertVolumeName(self.SERIAL)
+
+    def test_name_from_plugin_host_first(self):
+        """When a plugin supplies a LUN which hooks up via SCSI ID, name should come from the LUN,
+        in the harder case where the Volume has been created first and must be updated
+        when the plugin resources are added.
+
+        """
+
+        self._start_host_session()
+        self._start_plugin_session()
+        self.assertVolumeName(self.PLUGIN_LUN_NAME)
+
+    def test_name_from_plugin_host_second(self):
+        """When a plugin supplies a LUN which hooks up via SCSI ID, name should come from the LUN,
+        in the easier case where the plugin LUN already exists at Volume creation.
+
+        """
+
+        self._start_plugin_session()
+        self._start_host_session()
+        self.assertVolumeName(self.PLUGIN_LUN_NAME)
+
+    def test_name_from_lvm(self):
+        """When a volume corresponds to an LV, the name should come from LVM (not plugin-supplied
+        LUN name, even if it's present."""
+        self._start_plugin_session()
+        self._start_host_session(lvm = True)
+        self.assertVolumeName("%s-%s" % (self.VG, self.LV))
+
+
 class TestAlerts(ResourceManagerTestCase):
     def _update_alerts(self, scannable_pk, resource, alert_klass):
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager

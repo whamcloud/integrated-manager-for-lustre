@@ -11,9 +11,11 @@ WARNING:
     this module unless you're really going to use it.
 """
 import logging
+from chroma_core.lib.storage_plugin.api.resources import LogicalDrive
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
 from chroma_core.lib.storage_plugin.api import attributes, relations
+
 from chroma_core.lib.storage_plugin.base_resource import BaseGlobalId, BaseScopedId, HostsideResource, BaseScannableResource
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
@@ -411,10 +413,16 @@ class ResourceManager(object):
                             'primary': False
                         })
 
+    def get_label(self, record_id):
+        try:
+            return self._label_cache[record_id]
+        except KeyError:
+            return StorageResourceRecord.objects.get(pk = record_id).to_resource().get_label()
+
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
-        from chroma_core.lib.storage_plugin.api.resources import PathWeight, DeviceNode, LogicalDrive, LogicalDriveOccupier
+        from chroma_core.lib.storage_plugin.api.resources import PathWeight, DeviceNode, LogicalDriveOccupier
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 
@@ -426,7 +434,7 @@ class ResourceManager(object):
             log.debug("_persist_lun_updates for scope record %s" % scannable_id)
             host = ManagedHost.objects.get(pk = scannable_resource.host_id)
 
-        # Get all DeviceNodes within this scope
+        # Get all DeviceNodes on this host
         node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
                 for klass in all_subclasses(DeviceNode)]
 
@@ -508,14 +516,20 @@ class ResourceManager(object):
         existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
         logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
         logicaldrive_id_handled = set()
+
         with Volume.delayed as volumes:
             for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
                 if logicaldrive_id not in logicaldrive_id_to_volume and logicaldrive_id not in logicaldrive_id_handled:
                     size = logicaldrive_id_to_size[logicaldrive_id]
-                    try:
-                        label = self._label_cache[logicaldrive_id]
-                    except KeyError:
-                        label = StorageResourceRecord.objects.get(pk = logicaldrive_id).to_resource().get_label()
+
+                    # If this logicaldrive has one and only one ancestor which is
+                    # also a logicaldrive, then inherit the label from that ancestor
+                    ancestors = self._record_find_ancestors(logicaldrive_id, LogicalDrive)
+                    ancestors.remove(logicaldrive_id)
+                    if len(ancestors) == 1:
+                        label = self.get_label(ancestors[0])
+                    else:
+                        label = self.get_label(logicaldrive_id)
 
                     # Check if there are any descendent LocalMount resources (i.e. LUN in use, do
                     # not advertise for use with Lustre).
@@ -637,16 +651,6 @@ class ResourceManager(object):
                 if not removed:
                     volume_node.storage_resource = None
                     volume_node.save()
-
-        # TODO: Volume Stealing: there may be an existing Volume/VolumeNode setup for some ScsiDeviceNodes and ScsiVolumes
-        # detected by Chroma, and a storage plugin adds in extra links to the device nodes that follow back
-        # to a LogicalDrive provided by the plugin.  In this case there are two LogicalDrive ancestors of the
-        # device nodes and we would like to have the Volume refer to the plugin-provided one rather than
-        # the auto-generated one (to get the right name etc).
-        # LogicalDrives within this scope
-        #logical_drive_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
-        #        for klass in all_subclasses(resources.LogicalDrive)]
-        #logical_drive_resources = ResourceQuery().get_class_resources(logical_drive_klass_ids, storage_id_scope = scannable_id)
 
     def _try_removing_volume(self, volume):
         targets = ManagedTarget.objects.filter(volume = volume)
@@ -1053,14 +1057,14 @@ class ResourceManager(object):
 
         return None
 
-    def _record_find_descendent(self, record_id, descendent_klass, stop_at, depth = 0):
+    def _record_find_descendent(self, record_id, descendent_klass, stop_at = None, depth = 0):
         """Find a descendent of class dependent_klass, where the trace
         between the origin and the descendent contains no resources of
         class stop_at"""
         record_class = self._class_index.get(record_id)
         if issubclass(record_class, descendent_klass):
             return record_id
-        if depth != 0 and issubclass(record_class, stop_at):
+        if depth != 0 and stop_at and issubclass(record_class, stop_at):
             return None
 
         for c in self._edges.get_children(record_id):
@@ -1088,6 +1092,9 @@ class ResourceManager(object):
     def _persist_new_resources(self, session, resources):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
+        # Sort the resources into an order based on ResourceReference
+        # attributes, such that the referenced resource is created
+        # before the referencing resource.
         ordered_for_creation = []
 
         def order_by_references(resource):
@@ -1124,6 +1131,9 @@ class ResourceManager(object):
             if not resource in ordered_for_creation:
                 order_by_references(resource)
 
+        # Create StorageResourceRecords for any resources which
+        # do not already have one, and update the local_id_to_global_id
+        # map with the DB ID for each resource.
         creations = {}
         for resource in ordered_for_creation:
             if isinstance(resource._meta.identifier, BaseScopedId):
@@ -1168,6 +1178,7 @@ class ResourceManager(object):
 
             self._class_index.add_record(record.pk, resource_class)
 
+        # Update or create attribute records
         attr_classes = set()
         for resource in ordered_for_creation:
             record, created = creations[resource]
@@ -1226,33 +1237,40 @@ class ResourceManager(object):
         for attr_model_class in attr_classes:
             attr_model_class.delayed.flush()
 
+        # Find out if new resources match anything in SubscriberIndex and create
+        # relationships if so.
+        logicaldrives_with_new_descendents = []
         for resource in ordered_for_creation:
             record, created = creations[resource]
             if created:
-                # IMPORTANT: THIS TOTALLY RELIES ON SERIALIZATION OF ALL CREATION OPERATIONS
-                # IN A SINGLE PROCESS INSTANCE OF THIS CLASS
-
                 # This is a new resource which provides a field, see if any existing
                 # resources would like to subscribe to it
                 subscribers = self._subscriber_index.what_subscribes(resource)
                 # Make myself a parent of anything that subscribes to me
                 for s in subscribers:
+                    if s == record.pk:
+                        continue
                     log.info("Linked up me %s as parent of %s" % (record.pk, s))
                     self._edges.add_parent(s, record.pk)
                     s_record = StorageResourceRecord.objects.get(pk = s)
                     s_record.parents.add(record.pk)
+                    if isinstance(resource, LogicalDrive):
+                        # A new LogicalDrive ancestor might affect the labelling
+                        # of another LogicalDrive's Volume.
+                        logicaldrives_with_new_descendents.append(record.id)
 
                 # This is a new resource which subscribes to a field, see if any existing
                 # resource can provide it
                 providers = self._subscriber_index.what_provides(resource)
                 # Make my providers my parents
                 for p in providers:
+                    if p == record.pk:
+                        continue
                     log.info("Linked up %s as parent of me, %s" % (p, record.pk))
                     self._edges.add_parent(record.pk, p)
                     record.parents.add(p)
 
-        # Do a separate pass for parents so that we will have already
-        # built the full local-to-global map
+        # Update EdgeIndex and StorageResourceRecord.parents
         for resource in resources:
             try:
                 record, created = creations[resource]
@@ -1267,5 +1285,15 @@ class ResourceManager(object):
             new_parent_pks = [session.local_id_to_global_id[p._handle] for p in resource._parents]
             record.parents.add(*new_parent_pks)
 
+        # For any LogicalDrives we created that have been hooked up via SubscriberIndex,
+        # see if their presence should change the name of a Volume
+        for ld_id in logicaldrives_with_new_descendents:
+            for c in self._edges.get_children(ld_id):
+                descendent_ld = self._record_find_descendent(c, LogicalDrive)
+                if descendent_ld:
+                    ancestors = self._record_find_ancestors(descendent_ld, LogicalDrive)
+                    ancestors.remove(descendent_ld)
+                    if len(ancestors) == 1:
+                        Volume.objects.filter(storage_resource = descendent_ld).update(label = self.get_label(ld_id))
 
 resource_manager = ResourceManager()

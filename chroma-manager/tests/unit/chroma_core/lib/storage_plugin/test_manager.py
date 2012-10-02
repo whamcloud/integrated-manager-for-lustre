@@ -30,7 +30,7 @@ class TestCornerCases(TestCase):
 class TestExample(TestCase):
     def test_load(self):
         """Test that the example plugin used in documentation loads"""
-        manager = load_plugins(['example_plugin'])
+        manager = load_plugins(['linux', 'example_plugin'])
         self.assertEquals(manager.get_errored_plugins(), [])
 
 

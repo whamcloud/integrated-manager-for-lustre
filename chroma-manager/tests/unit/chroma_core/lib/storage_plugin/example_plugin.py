@@ -46,7 +46,7 @@ class Lun(resources.LogicalDrive):
         identifier = ScopedId('local_id')
         relations = [
                 relations.Provide(
-                        provide_to = resources.DeviceNode,
+                        provide_to = ('linux', 'ScsiDevice'),
                         attributes = ['serial_83']
                     )
                 ]
