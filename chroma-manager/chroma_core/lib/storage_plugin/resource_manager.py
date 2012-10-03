@@ -1125,7 +1125,8 @@ class ResourceManager(object):
                             if not referenced_resource._handle in session.local_id_to_global_id:
                                 order_by_references(referenced_resource)
 
-            ordered_for_creation.append(resource)
+            if not resource in ordered_for_creation:
+                ordered_for_creation.append(resource)
 
         for resource in resources:
             if not resource in ordered_for_creation:
