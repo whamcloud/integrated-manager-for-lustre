@@ -7,16 +7,12 @@
 import datetime
 from collections import defaultdict
 import json
-import traceback
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 from django.db import models
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
 
 from picklefield.fields import PickledObjectField
-import sys
 from polymorphic.models import DowncastMetaclass
 
 from chroma_core.models.utils import WorkaroundDateTimeField
@@ -67,6 +63,9 @@ class Command(models.Model):
     def set_state(cls, objects, message = None, **kwargs):
         """The states argument must be a collection of 2-tuples
         of (<StatefulObject instance>, state)"""
+
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+
         dirty = False
         for object, state in objects:
             # Check if the state is modified
@@ -348,7 +347,6 @@ class Job(models.Model):
 
     __metaclass__ = DowncastMetaclass
 
-    # FIXME: HYD-1384: The 'paused' state is unused
     states = ('pending', 'tasked', 'complete', 'completing', 'cancelling', 'paused')
     state = models.CharField(max_length = 16, default = 'pending',
                              help_text = "One of %s" % (states,))
@@ -365,9 +363,6 @@ class Job(models.Model):
     created_at = WorkaroundDateTimeField(auto_now_add = True)
 
     wait_for_json = models.TextField()
-
-    task_id = models.CharField(max_length=36, blank = True, null = True)
-
     locks_json = models.TextField()
 
     # Set to a step index before that step starts running
@@ -388,59 +383,14 @@ class Job(models.Model):
     def get_confirmation_string(self):
         return None
 
-    #: Whether the job should be added to opportunistic Job queue if it doesn't run
-    #  successfully.
-    opportunistic_retry = False
-
     #: Whether the job can be safely cancelled
     cancellable = True
 
     class Meta:
         app_label = 'chroma_core'
 
-    def task_state(self):
-        from celery.result import AsyncResult
-        return AsyncResult(self.task_id).state
-
     def create_locks(self):
-        locks = []
-        from chroma_core.services.job_scheduler.state_manager import get_deps
-        # Take read lock on everything from self.get_deps
-        for dependency in get_deps(self).all():
-            locks.append(StateLock(
-                job = self,
-                locked_item = dependency.stateful_object,
-                write = False
-            ))
-
-        if isinstance(self, StateChangeJob):
-            stateful_object = self.get_stateful_object()
-            target_klass, origins, new_state = self.state_transition
-
-            # Take read lock on everything from get_stateful_object's get_deps if
-            # this is a StateChangeJob.  We do things depended on by both the old
-            # and the new state: e.g. if we are taking a mount from unmounted->mounted
-            # then we need to lock the new state's requirement of lnet_up, whereas
-            # if we're going from mounted->unmounted we need to lock the old state's
-            # requirement of lnet_up (to prevent someone stopping lnet while
-            # we're still running)
-            from itertools import chain
-            for d in chain(get_deps(stateful_object, self.old_state).all(), get_deps(stateful_object, new_state).all()):
-                locks.append(StateLock(
-                    job = self,
-                    locked_item = d.stateful_object,
-                    write = False
-                ))
-
-            # Take a write lock on get_stateful_object if this is a StateChangeJob
-            locks.append(StateLock(
-                    job = self,
-                    locked_item = stateful_object,
-                    begin_state = self.old_state,
-                    end_state = new_state,
-                    write = True))
-
-        return locks
+        return []
 
     @classmethod
     def get_ready_jobs(cls):
@@ -476,58 +426,7 @@ class Job(models.Model):
     def get_steps(self):
         raise NotImplementedError()
 
-    def cancel(self):
-        from chroma_core.lib.job import job_log
-        job_log.debug("Job %d: Job.cancel" % self.id)
-
-        # Important: multiple connections are allowed to call run() on a job
-        # that they see as pending, but only one is allowed to proceed past this
-        # point and spawn tasks.
-        with transaction.commit_on_success():
-            updated = Job.objects.filter(~Q(state = 'complete'), pk = self.id).update(state = 'cancelling')
-        if updated == 0:
-            # Someone else already started this job, bug out
-            job_log.debug("job %d already completed, not cancelling" % self.id)
-            return
-
-        if self.task_id:
-            job_log.debug("job %d: revoking task %s" % (self.id, self.task_id))
-            from celery.task.control import revoke
-            revoke(self.task_id, terminate = True)
-            self.task_id = None
-
-        self.complete(cancelled = True)
-
-    def pause(self):
-        from chroma_core.lib.job import job_log
-        job_log.debug("Job %d: Job.pause" % self.id)
-
-        # Important: multiple connections are allowed to call run() on a job
-        # that they see as pending, but only one is allowed to proceed past this
-        # point and spawn tasks.
-        @transaction.commit_on_success()
-        def mark_paused():
-            return Job.objects.filter(state = 'pending', pk = self.id).update(state = 'paused')
-
-        updated = mark_paused()
-        if updated != 1:
-            job_log.warning("Job %d: failed to pause, it had already left state 'pending'")
-
-    def unpause(self):
-        from chroma_core.lib.job import job_log
-        job_log.debug("Job %d: Job.unpause" % self.id)
-
-        jobs_updated = Job.objects.filter(state = 'paused', pk = self.id).update(state = 'pending')
-        if jobs_updated != 1:
-            job_log.warning("Job %d: failed to pause, it had already left state 'pending'" % self.id)
-        else:
-            job_log.warning("Job %d: unpaused, running any available jobs" % self.id)
-            from chroma_core.tasks import unpaused_job
-            unpaused_job.delay(self.id)
-
-    def all_deps(self):
-        from chroma_core.services.job_scheduler.state_manager import get_deps
-
+    def all_deps(self, dep_cache):
         # This is not necessarily 100% consistent with the dependencies used by StateManager
         # when the job was submitted (e.g. other models which get_deps queries may have
         # changed), but that is a *good thing* -- this is a last check before running
@@ -541,114 +440,29 @@ class Job(models.Model):
             dependent_deps = []
             dependents = stateful_object.get_dependent_objects()
             for dependent in dependents:
-                for dependent_dependency in get_deps(dependent).all():
+                for dependent_dependency in dep_cache.get(dependent).all():
                     if dependent_dependency.stateful_object == stateful_object \
                             and not new_state in dependent_dependency.acceptable_states:
                         dependent_deps.append(DependOn(dependent, dependent_dependency.fix_state))
 
             return DependAll(
                     DependAll(dependent_deps),
-                    get_deps(self),
-                    get_deps(stateful_object, new_state),
+                    dep_cache.get(self),
+                    dep_cache.get(stateful_object, new_state),
                     DependOn(stateful_object, self.old_state))
         else:
-            return get_deps(self)
+            return dep_cache.get(self)
 
-    def _deps_satisfied(self):
+    def _deps_satisfied(self, dep_cache):
         from chroma_core.lib.job import job_log
 
-        result = self.all_deps().satisfied()
+        result = self.all_deps(dep_cache).satisfied()
 
         job_log.debug("Job %s: deps satisfied=%s" % (self.id, result))
-        for d in self.all_deps().all():
+        for d in self.all_deps(dep_cache).all():
             satisfied = d.satisfied()
             job_log.debug("  %s %s (actual %s) %s" % (d.stateful_object, d.acceptable_states, d.stateful_object.state, satisfied))
         return result
-
-    def run(self):
-        from chroma_core.lib.job import job_log
-        job_log.info("Job %d: Job.run %s" % (self.id, self.description()))
-        # Important: multiple connections are allowed to call run() on a job
-        # that they see as pending, but only one is allowed to proceed past this
-        # point and spawn tasks.
-
-        # All the complexity of StateManager's dependency calculation doesn't
-        # matter here: we've reached our point in the queue, all I need to check now
-        # is - are this Job's immediate dependencies satisfied?  And are any deps
-        # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
-
-        try:
-            deps_satisfied = self._deps_satisfied()
-        except Exception:
-            # Catchall exception handler to ensure progression even if Job
-            # subclasses have bugs in their get_deps etc.
-            job_log.error("Job %s: exception in dependency check: %s" % (self.id,
-                '\n'.join(traceback.format_exception(*(sys.exc_info())))))
-            self.complete(cancelled = True)
-            return
-
-        if not deps_satisfied:
-            job_log.warning("Job %d: cancelling because of failed dependency" % (self.id))
-            self.complete(cancelled = True)
-            # TODO: tell someone WHICH dependency
-            return
-
-        # Set state to 'tasked'
-        # =====================
-        with transaction.commit_on_success():
-            updated = Job.objects.filter(pk = self.id, state = 'pending').update(state = 'tasking')
-
-        if updated == 0:
-            # Someone else already started this job, bug out
-            job_log.debug("Job %d already started running, backing off" % self.id)
-            return
-        else:
-            assert(updated == 1)
-            job_log.debug("Job %d pending->tasking" % self.id)
-            self.state = 'tasking'
-
-        # Generate a celery task
-        # ======================
-        from chroma_core.tasks import run_job
-        celery_job = run_job.delay(self.id)
-
-        # Save the celery task ID
-        # =======================
-        from celery.result import EagerResult
-        if isinstance(celery_job, EagerResult):
-            # Eager execution happens when under test
-            job_log.debug("Job %d ran eagerly" % (self.id))
-        else:
-            self.task_id = celery_job.task_id
-            self.state = 'tasked'
-            self.save()
-            job_log.debug("Job %d tasking->tasked (%s)" % (self.id, self.task_id))
-
-    @classmethod
-    def cancel_job(cls, job_id):
-        job = Job.objects.get(pk = job_id)
-        if job.state != 'tasked':
-            return None
-
-    def complete(self, errored = False, cancelled = False):
-        from chroma_core.lib.job import job_log
-        success = not (errored or cancelled)
-        if success and isinstance(self, StateChangeJob):
-            new_state = self.state_transition[2]
-            with transaction.commit_on_success():
-                obj = self.get_stateful_object()
-                obj.set_state(new_state, intentional = True)
-                job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
-
-        job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
-                (self.id, errored, cancelled))
-        with transaction.commit_on_success():
-            self.state = 'completing'
-            self.errored = errored
-            self.cancelled = cancelled
-            self.save()
-
-        JobSchedulerClient.complete_job(self.pk)
 
     def description(self):
         raise NotImplementedError

@@ -5,14 +5,14 @@
 
 
 from django.contrib.contenttypes.models import ContentType
-
 from tastypie.resources import ModelResource, Resource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
-from chroma_api.authentication import AnonymousAuthentication
 
+from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Job, StateLock
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 
 class StateLockResource(Resource):
@@ -181,7 +181,7 @@ class JobResource(ModelResource):
         new_state = bundle.data['state']
 
         if new_state == 'cancel':
-            job.cancel()
+            JobSchedulerClient.cancel_job(job.pk)
 
         bundle.obj = job
         return bundle

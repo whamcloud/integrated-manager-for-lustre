@@ -71,6 +71,19 @@ class ObjectCache(object):
         return [cls.getInstance().targets[i] for i in target_ids]
 
     @classmethod
+    def purge(cls, klass, filter):
+        cls.getInstance().objects[klass] = [o for o in cls.getInstance().objects[klass] if not filter(o)]
+
+    @classmethod
+    def update(cls, object):
+        class_collection = cls.getInstance().objects[object.__class__]
+        for instance in class_collection:
+            if instance.id == object.id:
+                class_collection.remove(instance)
+                class_collection.append(object.__class__.objects.get(pk = object.pk))
+                return
+
+    @classmethod
     def mtm_targets(cls, mtm_id):
         from chroma_core.models.target import ManagedTargetMount
         mtms = cls.get(ManagedTargetMount, lambda mtm: mtm.id == mtm_id)

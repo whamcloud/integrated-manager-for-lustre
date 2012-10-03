@@ -4,6 +4,7 @@
 # ========================================================
 
 
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
 from chroma_core.lib.util import all_subclasses
 from chroma_core.services.job_scheduler.lock_cache import LockCache
@@ -12,10 +13,14 @@ from django.contrib.contenttypes.models import ContentType
 
 
 class JobSchedulerRpcInterface(ServiceRpcInterface):
-    methods = ['set_state', 'notify_state', 'run_jobs']
+    methods = ['set_state', 'notify_state', 'run_jobs', 'cancel_job']
 
 
 class JobSchedulerClient(object):
+    """Expose the job_scheduler service's functionality to the rest of Chroma: some of
+    these calls are implemented as RPCs, and some run in the calling process.
+
+    """
     @classmethod
     def command_run_jobs(cls, job_dicts, message):
         return JobSchedulerRpcInterface().run_jobs(job_dicts, message)
@@ -63,7 +68,7 @@ class JobSchedulerClient(object):
                 job_log.warning("Object %s in state %s advertised an unreachable state %s" % (stateful_object, from_state, to_state))
             else:
                 # NB: a None verb means its an internal transition that shouldn't be advertised
-                if verb != None:
+                if verb:
                     transitions.append({"state": to_state, "verb": verb})
 
         return transitions
@@ -95,6 +100,14 @@ class JobSchedulerClient(object):
 
     @classmethod
     def get_transition_consequences(cls, stateful_object, new_state):
-        from chroma_core.services.job_scheduler.state_manager import StateManager
+        from chroma_core.services.job_scheduler.state_manager import ModificationOperation
 
-        return StateManager().get_transition_consequences(stateful_object, new_state)
+        # FIXME: deps calls use a global instance of ObjectCache, calling them from outside
+        # the JobScheduler service is a problem -- get rid of the singletons and pass refs around.
+        LockCache.clear()
+        ObjectCache.clear()
+        ModificationOperation().get_transition_consequences(stateful_object, new_state)
+
+    @classmethod
+    def cancel_job(cls, job_id):
+        JobSchedulerRpcInterface().cancel_job(job_id)

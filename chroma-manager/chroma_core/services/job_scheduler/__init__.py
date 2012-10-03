@@ -6,11 +6,11 @@
 
 from django.db.models.query_utils import Q
 from chroma_core.services import ChromaService
-from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 
 
 class Service(ChromaService):
     def start(self):
+        from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
         from chroma_core.models.jobs import Command, Job
         # Cancel anything that's left behind from a previous run
         Command.objects.filter(complete = False).update(complete = True, cancelled = True)

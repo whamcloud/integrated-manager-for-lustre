@@ -4,77 +4,16 @@
 # ========================================================
 
 
-import datetime
 import json
-import traceback
-import sys
-from dateutil import tz
+from chroma_core.services.job_scheduler.dep_cache import DepCache
 from collections import defaultdict
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models.query_utils import Q
 
 from chroma_core.services.job_scheduler.lock_cache import LockCache
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
-from chroma_core.models.conf_param import ApplyConfParams
-from chroma_core.models.host import ConfigureLNetJob, ManagedHost, GetLNetStateJob
-from chroma_core.models.jobs import StateChangeJob, Command, StateLock, SchedulingError
-from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
-
-
-class DepCache(object):
-    instance = None
-    enable = True
-
-    @classmethod
-    def getInstance(cls):
-        if not cls.instance:
-            cls.instance = DepCache()
-        return cls.instance
-
-    def __init__(self):
-        self.hits = 0
-        self.misses = 0
-        self.cache = {}
-
-    @classmethod
-    def clear(cls):
-        cls.instance = None
-
-    def _get(self, obj, state):
-        if state:
-            return obj.get_deps(state)
-        else:
-            return obj.get_deps()
-
-    def get(self, obj, state = None):
-        from chroma_core.models import StatefulObject
-        if state == None and isinstance(obj, StatefulObject):
-            state = obj.state
-
-        if not self.enable:
-            return self._get(obj, state)
-
-        if state:
-            key = (obj, state)
-        else:
-            key = obj
-
-        try:
-            v = self.cache[key]
-            self.hits += 1
-
-            return v
-        except KeyError:
-            self.cache[key] = self._get(obj, state)
-            self.misses += 1
-            return self.cache[key]
-
-
-def get_deps(obj, state = None):
-    return DepCache.getInstance().get(obj, state)
+from chroma_core.models.jobs import StateChangeJob, Command, SchedulingError, StateLock
 
 
 class Transition(object):
@@ -105,99 +44,7 @@ class Transition(object):
 
 class ModificationOperation(object):
     def __init__(self):
-        DepCache.clear()
-        LockCache.clear()
-        ObjectCache.clear()
-
-    def _completion_hooks(self, changed_item, command = None):
-        """
-        :param command: If set, any created jobs are added
-        to this command object.
-        """
-        if hasattr(changed_item, 'content_type'):
-            changed_item = changed_item.downcast()
-
-        job_log.debug("_completion_hooks command %s, %s (%s) state=%s" % (command, changed_item, changed_item.__class__, changed_item.state))
-
-        def running_or_failed(klass, **kwargs):
-            """Look for jobs of the same type with the same params, either incomplete (don't start the job because
-            one is already pending) or complete in the same command (don't start the job because we already tried and failed)"""
-            if command:
-                count = klass.objects.filter(~Q(state = 'complete') | Q(command = command), **kwargs).count()
-            else:
-                count = klass.objects.filter(~Q(state = 'complete'), **kwargs).count()
-
-            return bool(count)
-
-        if isinstance(changed_item, FilesystemMember):
-            fs = changed_item.filesystem
-            members = list(ManagedMdt.objects.filter(filesystem = fs)) + list(ManagedOst.objects.filter(filesystem = fs))
-            states = set([t.state for t in members])
-            now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
-            if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
-                self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
-            if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
-                self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
-            if changed_item.state == 'unmounted' and fs.state == 'available' and states != set(['mounted']):
-                self.notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'unavailable', ['available'])
-
-        if isinstance(changed_item, ManagedHost):
-            if changed_item.state == 'lnet_up' and changed_item.lnetconfiguration.state != 'nids_known':
-                if not running_or_failed(ConfigureLNetJob, lnet_configuration = changed_item.lnetconfiguration):
-                    job = ConfigureLNetJob(lnet_configuration = changed_item.lnetconfiguration, old_state = 'nids_unknown')
-                    if not command:
-                        command = Command.objects.create(message = "Configuring LNet on %s" % changed_item)
-                    self.add_jobs([job], command)
-
-            if changed_item.state == 'configured':
-                if not running_or_failed(GetLNetStateJob, host = changed_item):
-                    job = GetLNetStateJob(host = changed_item)
-                    if not command:
-                        command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
-                    self.add_jobs([job], command)
-
-        if isinstance(changed_item, ManagedTarget):
-            if isinstance(changed_item, FilesystemMember):
-                mgs = changed_item.filesystem.mgs
-            else:
-                mgs = changed_item
-
-            if mgs.conf_param_version != mgs.conf_param_version_applied:
-                if not running_or_failed(ApplyConfParams, mgs = mgs):
-                    job = ApplyConfParams(mgs = mgs)
-                    if get_deps(job).satisfied():
-                        if not command:
-                            command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
-                        self.add_jobs([job], command)
-
-    def notify_state(self, content_type, object_id, notification_time, new_state, from_states):
-        # Get the StatefulObject
-        from django.contrib.contenttypes.models import ContentType
-        model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
-        instance = model_klass.objects.get(pk = object_id).downcast()
-
-        # Assert its class
-        from chroma_core.models import StatefulObject
-        assert(isinstance(instance, StatefulObject))
-
-        # If a state update is needed/possible
-        if instance.state in from_states and instance.state != new_state:
-            # Check that no incomplete jobs hold a lock on this object
-            if not len(LockCache.get_by_locked_item(instance)):
-                modified_at = instance.state_modified_at
-                modified_at = modified_at.replace(tzinfo = tz.tzutc())
-
-                if notification_time > modified_at:
-                    # No jobs lock this object, go ahead and update its state
-                    job_log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
-                    instance.set_state(new_state)
-
-                    # FIXME: should check the new state against reverse dependencies
-                    # and apply any fix_states
-                    self._completion_hooks(instance)
-                else:
-                    job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
-                    pass
+        self._dep_cache = DepCache()
 
     def get_expected_state(self, stateful_object_instance):
         try:
@@ -205,43 +52,50 @@ class ModificationOperation(object):
         except KeyError:
             return stateful_object_instance.state
 
-    def complete_job(self, job_id):
-        from chroma_core.models import Job
+    def _create_locks(self, job):
+        """Create StateLock instances based on a Job's dependencies, and
+        add in any extras the job returns from Job.create_locks
 
-        job = Job.objects.get(pk = job_id)
-        if job.state == 'completing':
-            with transaction.commit_on_success():
-                job.state = 'complete'
-                job.save()
-        else:
-            assert job.state == 'complete'
+        """
+        locks = []
+        # Take read lock on everything from job.self._dep_cache.get
+        for dependency in self._dep_cache.get(job).all():
+            locks.append(StateLock(
+                job = job,
+                locked_item = dependency.stateful_object,
+                write = False
+            ))
 
-        # FIXME: we use cancelled to indicate a job which didn't run
-        # because its dependencies failed, and also to indicate a job
-        # that was deliberately cancelled by the user.  We should
-        # distinguish so that opportunistic retry doesn't happen when
-        # the user has explicitly cancelled something.
-        job = job.downcast()
+        if isinstance(job, StateChangeJob):
+            stateful_object = job.get_stateful_object()
+            target_klass, origins, new_state = job.state_transition
 
-        if job.locks_json:
-            try:
-                command = Command.objects.filter(jobs = job, complete = False)[0]
-            except IndexError:
-                job_log.warning("Job %s: No incomplete command while completing" % job_id)
-                command = None
-            for lock in json.loads(job.locks_json):
-                if lock['write']:
-                    lock = StateLock.from_dict(job, lock)
-                    job_log.debug("Job %s completing, held writelock on %s" % (job_id, lock.locked_item))
-                    try:
-                        self._completion_hooks(lock.locked_item, command)
-                    except Exception:
-                        job_log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
-        else:
-            job_log.debug("Job %s completing, held no locks" % job_id)
+            # Take read lock on everything from get_stateful_object's self._dep_cache.get if
+            # this is a StateChangeJob.  We do things depended on by both the old
+            # and the new state: e.g. if we are taking a mount from unmounted->mounted
+            # then we need to lock the new state's requirement of lnet_up, whereas
+            # if we're going from mounted->unmounted we need to lock the old state's
+            # requirement of lnet_up (to prevent someone stopping lnet while
+            # we're still running)
+            from itertools import chain
+            for d in chain(self._dep_cache.get(stateful_object, job.old_state).all(), self._dep_cache.get(stateful_object, new_state).all()):
+                locks.append(StateLock(
+                    job = job,
+                    locked_item = d.stateful_object,
+                    write = False
+                ))
 
-        for command in Command.objects.filter(jobs = job):
-            command.check_completion()
+            # Take a write lock on get_stateful_object if this is a StateChangeJob
+            locks.append(StateLock(
+                job = job,
+                locked_item = stateful_object,
+                begin_state = job.old_state,
+                end_state = new_state,
+                write = True))
+
+            locks.extend(job.create_locks())
+
+        return locks
 
     def add_jobs(self, jobs, command):
         """Add a job, and any others which are required in order to reach its prerequisite state"""
@@ -250,12 +104,12 @@ class ModificationOperation(object):
         assert transaction.is_managed()
 
         for job in jobs:
-            for dependency in get_deps(job).all():
+            for dependency in self._dep_cache.get(job).all():
                 if not dependency.satisfied():
                     job_log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
                     self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command)
             job_log.info("add_jobs: done checking dependencies")
-            locks = job.create_locks()
+            locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             for l in locks:
                 LockCache.add(l)
@@ -282,7 +136,7 @@ class ModificationOperation(object):
         self.expected_states = {}
         self.deps = set()
         self.edges = set()
-        self.emit_transition_deps(Transition(
+        self._emit_transition_deps(Transition(
             instance,
             self.get_expected_state(instance),
             new_state))
@@ -299,7 +153,6 @@ class ModificationOperation(object):
         for d in self.deps:
             job = d.to_job()
             if isinstance(job, StateChangeJob):
-                from django.contrib.contenttypes.models import ContentType
                 so = getattr(job, job.stateful_object)
                 stateful_object_id = so.pk
                 stateful_object_content_type_id = ContentType.objects.get_for_model(so).pk
@@ -403,10 +256,6 @@ class ModificationOperation(object):
 
         job_log.info("set_state: %s-%s to state %s" % (instance.__class__, instance.id, new_state))
 
-        DepCache.getInstance()
-        LockCache.getInstance()
-        ObjectCache.getInstance()
-
         from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
         if new_state not in instance.states:
@@ -430,7 +279,7 @@ class ModificationOperation(object):
 
         self.deps = set()
         self.edges = set()
-        self.emit_transition_deps(Transition(
+        self._emit_transition_deps(Transition(
             instance,
             self.get_expected_state(instance),
             new_state))
@@ -449,22 +298,21 @@ class ModificationOperation(object):
 
         # Important: the Job must not land in the database until all
         # its dependencies and locks are in.
-        with transaction.commit_on_success():
-            for d in self.deps:
-                job_log.debug("  dep %s" % d)
-                job = d.to_job()
-                locks = job.create_locks()
-                job.locks_json = json.dumps([l.to_dict() for l in locks])
-                for l in locks:
-                    LockCache.add(l)
-                self._create_dependencies(job)
-                job.save()
-                job_log.debug("  dep %s -> Job %s" % (d, job.pk))
-                command.jobs.add(job)
+        for d in self.deps:
+            job_log.debug("  dep %s" % d)
+            job = d.to_job()
+            locks = self._create_locks(job)
+            job.locks_json = json.dumps([l.to_dict() for l in locks])
+            for l in locks:
+                LockCache.add(l)
+            self._create_dependencies(job)
+            job.save()
+            job_log.debug("  dep %s -> Job %s" % (d, job.pk))
+            command.jobs.add(job)
 
-            command.save()
+        command.save()
 
-    def emit_transition_deps(self, transition, transition_stack = {}):
+    def _emit_transition_deps(self, transition, transition_stack = {}):
         if transition in self.deps:
             job_log.debug("emit_transition_deps: %s already scheduled" % (transition))
             return transition
@@ -488,14 +336,14 @@ class ModificationOperation(object):
         for i in range(0, len(route) - 1):
             dep_transition = Transition(transition.stateful_object, route[i], route[i + 1])
             self.deps.add(dep_transition)
-            self.collect_dependencies(dep_transition, transition_stack)
+            self._collect_dependencies(dep_transition, transition_stack)
             if prev:
                 self.edges.add((dep_transition, prev))
             prev = dep_transition
 
         return prev
 
-    def collect_dependencies(self, root_transition, transition_stack):
+    def _collect_dependencies(self, root_transition, transition_stack):
         if not hasattr(self, 'cdc'):
             self.cdc = defaultdict(list)
         if root_transition in self.cdc:
@@ -503,7 +351,7 @@ class ModificationOperation(object):
 
         job_log.debug("collect_dependencies: %s" % root_transition)
         # What is explicitly required for this state transition?
-        transition_deps = get_deps(root_transition.to_job())
+        transition_deps = self._dep_cache.get(root_transition.to_job())
         for dependency in transition_deps.all():
             from chroma_core.lib.job import DependOn
             assert(isinstance(dependency, DependOn))
@@ -511,7 +359,7 @@ class ModificationOperation(object):
             job_log.debug("cd %s/%s %s %s" % (dependency.stateful_object.__class__, dependency.stateful_object.id, old_state, dependency.acceptable_states))
 
             if not old_state in dependency.acceptable_states:
-                dep_transition = self.emit_transition_deps(Transition(
+                dep_transition = self._emit_transition_deps(Transition(
                         dependency.stateful_object,
                         old_state,
                         dependency.preferred_state), transition_stack)
@@ -524,7 +372,7 @@ class ModificationOperation(object):
                 return self.get_expected_state(object)
 
         # What will statically be required in our new state?
-        stateful_deps = get_deps(root_transition.stateful_object, root_transition.new_state)
+        stateful_deps = self._dep_cache.get(root_transition.stateful_object, root_transition.new_state)
         for dependency in stateful_deps.all():
             if dependency.stateful_object in transition_stack:
                 continue
@@ -535,7 +383,7 @@ class ModificationOperation(object):
             if old_state and not old_state in dependency.acceptable_states:
                 job_log.debug("new state static requires = %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
                 # Emit some transitions to get depended_on into depended_state
-                dep_transition = self.emit_transition_deps(Transition(
+                dep_transition = self._emit_transition_deps(Transition(
                         dependency.stateful_object,
                         old_state,
                         dependency.preferred_state), transition_stack)
@@ -549,7 +397,7 @@ class ModificationOperation(object):
                 continue
             # What state do we expect the dependent to be in?
             dependent_state = get_mid_transition_expected_state(dependent)
-            for dependency in get_deps(dependent, dependent_state).all():
+            for dependency in self._dep_cache.get(dependent, dependent_state).all():
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
@@ -563,7 +411,7 @@ class ModificationOperation(object):
                     else:
                         fix_state = dependency.fix_state
 
-                    dep_transition = self.emit_transition_deps(Transition(
+                    dep_transition = self._emit_transition_deps(Transition(
                             dependent,
                             dependent_state, fix_state), transition_stack)
                     self.edges.add((root_transition, dep_transition))
@@ -571,44 +419,27 @@ class ModificationOperation(object):
     def command_run_jobs(self, job_dicts, message):
         assert(len(job_dicts) > 0)
 
-        with transaction.commit_on_success():
-            jobs = []
-            for job in job_dicts:
-                job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
-                job_instance = job_klass(**job['args'])
-                jobs.append(job_instance)
+        jobs = []
+        for job in job_dicts:
+            job_klass = ContentType.objects.get_by_natural_key('chroma_core', job['class_name'].lower()).model_class()
+            job_instance = job_klass(**job['args'])
+            jobs.append(job_instance)
 
-            command = Command.objects.create(message = message)
-            job_log.debug("command_run_jobs: command %s" % command.id)
-            for job in jobs:
-                job_log.debug("command_run_jobs:  job %s" % job.id)
-            self.add_jobs(jobs, command)
+        command = Command.objects.create(message = message)
+        job_log.debug("command_run_jobs: command %s" % command.id)
+        for job in jobs:
+            job_log.debug("command_run_jobs:  job %s" % job.id)
+        self.add_jobs(jobs, command)
 
         return command.id
 
     def command_set_state(self, object_ids, message):
-        """object_ids must be a list of 3-tuples of CT natural key, object PK, state"""
-        # StateManager.set_state is invoked in an async task for two reasons:
-        #  1. At time of writing, StateManager.set_state's logic is not safe against
-        #     concurrent runs that might schedule multiple jobs for the same objects.
-        #     Submitting to a single-worker queue is a simpler and more efficient
-        #     way of serializing than locking the table in the database, as we don't
-        #     exclude workers from setting there completion and advancing the queue
-        #     while we're scheduling new jobs.
-        #  2. Calculating the dependencies of a new state is not trivial, because operation
-        #     may have thousands of dependencies (think stopping a filesystem with thousands
-        #     of OSTs).  We want views like those that create+format a target to return
-        #     snappily.
-        #
-        #  nb. there is an added bonus that StateManager uses some cached tables
-        #      built from introspecting StatefulObject and StateChangeJob classes,
-        #      and a long-lived worker process keeps those in memory for you.
+        command = Command.objects.create(message = message)
+        for ct_nk, o_pk, state in object_ids:
+            model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
+            instance = model_klass.objects.get(pk = o_pk)
+            self.set_state(instance, state, command)
 
-        with transaction.commit_on_success():
-            command = Command.objects.create(message = message)
-            for ct_nk, o_pk, state in object_ids:
-                model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
-                instance = model_klass.objects.get(pk = o_pk)
-                self.set_state(instance, state, command)
+        job_log.info("Created command %s (%s) with %s jobs" % (command.id, command.message, command.jobs.count()))
 
         return command.id
