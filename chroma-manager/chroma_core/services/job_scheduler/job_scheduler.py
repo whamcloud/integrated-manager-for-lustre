@@ -15,12 +15,12 @@ import dateutil.parser
 class SerializedCalls(object):
     @classmethod
     def call(cls, fn_name, *args, **kwargs):
-        from chroma_core.lib.state_manager import StateManager
+        from chroma_core.services.job_scheduler.state_manager import ModificationOperation
         with transaction.commit_manually():
             transaction.commit()
 
         with transaction.commit_on_success():
-            sm = StateManager()
+            sm = ModificationOperation()
             fn = getattr(sm, fn_name)
             return fn(*args, **kwargs)
 

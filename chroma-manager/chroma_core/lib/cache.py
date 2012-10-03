@@ -9,7 +9,6 @@ from collections import defaultdict
 
 class ObjectCache(object):
     instance = None
-    enable = True
 
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration

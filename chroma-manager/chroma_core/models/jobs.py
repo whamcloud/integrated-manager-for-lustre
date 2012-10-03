@@ -85,7 +85,7 @@ class Command(models.Model):
             old_state = object.state
             new_state = state
             route = object.get_route(old_state, new_state)
-            from chroma_core.lib.state_manager import Transition
+            from chroma_core.services.job_scheduler.state_manager import Transition
             job = Transition(object, route[-2], route[-1]).to_job()
             message = job.description()
 
@@ -404,7 +404,7 @@ class Job(models.Model):
 
     def create_locks(self):
         locks = []
-        from chroma_core.lib.state_manager import get_deps
+        from chroma_core.services.job_scheduler.state_manager import get_deps
         # Take read lock on everything from self.get_deps
         for dependency in get_deps(self).all():
             locks.append(StateLock(
@@ -526,7 +526,7 @@ class Job(models.Model):
             unpaused_job.delay(self.id)
 
     def all_deps(self):
-        from chroma_core.lib.state_manager import get_deps
+        from chroma_core.services.job_scheduler.state_manager import get_deps
 
         # This is not necessarily 100% consistent with the dependencies used by StateManager
         # when the job was submitted (e.g. other models which get_deps queries may have

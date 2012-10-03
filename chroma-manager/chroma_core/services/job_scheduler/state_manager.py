@@ -4,104 +4,24 @@
 # ========================================================
 
 
-from collections import defaultdict
 import datetime
 import json
 import traceback
+import sys
 from dateutil import tz
+from collections import defaultdict
+
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models.query_utils import Q
-import sys
+
+from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
-from chroma_core.lib.util import all_subclasses
 from chroma_core.models.conf_param import ApplyConfParams
 from chroma_core.models.host import ConfigureLNetJob, ManagedHost, GetLNetStateJob
-from chroma_core.models.jobs import StateChangeJob, Command, StateLock, Job, SchedulingError
+from chroma_core.models.jobs import StateChangeJob, Command, StateLock, SchedulingError
 from chroma_core.models.target import ManagedMdt, FilesystemMember, ManagedOst, ManagedTarget
-
-
-class LockCache(object):
-    instance = None
-    enable = True
-
-    def __init__(self):
-        self.write_locks = []
-        self.write_by_item = defaultdict(list)
-        self.read_locks = []
-        self.read_by_item = defaultdict(list)
-        self.all_by_job = defaultdict(list)
-        self.all_by_item = defaultdict(list)
-
-        for job in Job.objects.filter(~Q(state = 'complete')):
-            if job.locks_json:
-                locks = json.loads(job.locks_json)
-                for lock in locks:
-                    self._add(StateLock.from_dict(job, lock))
-
-    @classmethod
-    def clear(cls):
-        cls.instance = None
-
-    @classmethod
-    def add(cls, lock):
-        cls.getInstance()._add(lock)
-
-    def _add(self, lock):
-        if lock.write:
-            self.write_locks.append(lock)
-            self.write_by_item[lock.locked_item].append(lock)
-        else:
-            self.read_locks.append(lock)
-            self.read_by_item[lock.locked_item].append(lock)
-
-        self.all_by_job[lock.job].append(lock)
-        self.all_by_item[lock.locked_item].append(lock)
-
-    @classmethod
-    def getInstance(cls):
-        if not cls.instance:
-            cls.instance = LockCache()
-        return cls.instance
-
-    @classmethod
-    def get_by_job(cls, job):
-        return cls.getInstance().all_by_job[job]
-
-    @classmethod
-    def get_all(cls, locked_item):
-        return cls.getInstance().all_by_item[locked_item]
-
-    @classmethod
-    def get_latest_write(cls, locked_item, not_job = None):
-        try:
-            if not_job != None:
-                return sorted([l for l in cls.getInstance().write_by_item[locked_item] if l.job != not_job], lambda a, b: cmp(a.job.id, b.job.id))[-1]
-            else:
-                return sorted(cls.getInstance().write_by_item[locked_item], lambda a, b: cmp(a.job.id, b.job.id))[-1]
-        except IndexError:
-            return None
-
-    @classmethod
-    def get_read_locks(cls, locked_item, after, not_job):
-        return [x for x in cls.getInstance().read_by_item[locked_item] if after <= x.job.id and x.job != not_job]
-
-    @classmethod
-    def get_write(cls, locked_item):
-        return cls.getInstance().write_by_item[locked_item]
-
-    @classmethod
-    def get_by_locked_item(cls, item):
-        return cls.getInstance().all_by_item[item]
-
-    @classmethod
-    def get_write_by_locked_item(cls):
-        result = {}
-        for locked_item, locks in cls.getInstance().write_by_item.items():
-            if locks:
-                result[locked_item] = sorted(locks, lambda a, b: cmp(a.job.id, b.job.id))[-1]
-        return result
 
 
 class DepCache(object):
@@ -183,68 +103,11 @@ class Transition(object):
         return job_klass(**kwargs)
 
 
-class StateManager(object):
+class ModificationOperation(object):
     def __init__(self):
         DepCache.clear()
         LockCache.clear()
         ObjectCache.clear()
-
-    def available_jobs(self, instance):
-        # If the object is subject to an incomplete Job
-        # then don't offer any actions
-        if LockCache.get_latest_write(instance) > 0:
-            return []
-
-        from chroma_core.models import AdvertisedJob
-
-        available_jobs = []
-        for aj in all_subclasses(AdvertisedJob):
-            if not aj.plural:
-                for class_name in aj.classes:
-                    ct = ContentType.objects.get_by_natural_key('chroma_core', class_name)
-                    klass = ct.model_class()
-                    if isinstance(instance, klass):
-                        if aj.can_run(instance):
-                            available_jobs.append({
-                                'verb': aj.verb,
-                                'confirmation': aj.get_confirmation(instance),
-                                'class_name': aj.__name__,
-                                'args': aj.get_args(instance)})
-
-        return available_jobs
-
-    def available_transitions(self, stateful_object):
-        """Return a list states to which the object can be set from
-           its current state, or None if the object is currently
-           locked by a Job"""
-        if hasattr(stateful_object, 'content_type'):
-            stateful_object = stateful_object.downcast()
-
-        # We don't advertise transitions for anything which is currently
-        # locked by an incomplete job.  We could alternatively advertise
-        # which jobs would actually be legal to add by skipping this check and
-        # using get_expected_state in place of .state below.
-        if LockCache.get_latest_write(stateful_object):
-            return []
-
-        # XXX: could alternatively use expected_state here if you want to advertise
-        # what jobs can really be added (i.e. advertise transitions which will
-        # be available when current jobs are complete)
-        #from_state = self.get_expected_state(stateful_object)
-        from_state = stateful_object.state
-        available_states = stateful_object.get_available_states(from_state)
-        transitions = []
-        for to_state in available_states:
-            try:
-                verb = stateful_object.get_verb(from_state, to_state)
-            except KeyError:
-                job_log.warning("Object %s in state %s advertised an unreachable state %s" % (stateful_object, from_state, to_state))
-            else:
-                # NB: a None verb means its an internal transition that shouldn't be advertised
-                if verb != None:
-                    transitions.append({"state": to_state, "verb": verb})
-
-        return transitions
 
     def _completion_hooks(self, changed_item, command = None):
         """

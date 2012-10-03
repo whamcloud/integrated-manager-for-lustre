@@ -7,10 +7,10 @@
 import json
 import logging
 import uuid
+from chroma_core.lib.cache import ObjectCache
 from django.contrib.contenttypes.models import ContentType
 
 from django.db import models, transaction
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
@@ -143,10 +143,7 @@ class ManagedTarget(StatefulObject):
             # Depend on the active mount's host having LNet up, so that if
             # LNet is stopped on that host this target will be stopped first.
             target_mount = self.active_mount
-            if ObjectCache.enable:
-                host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == target_mount.host_id)
-            else:
-                host = target_mount.host.downcast()
+            host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == target_mount.host_id)
             deps.append(DependOn(host, 'lnet_up', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
@@ -160,19 +157,12 @@ class ManagedTarget(StatefulObject):
                 acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
-            if ObjectCache.enable:
-                target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
-                for tm in target_mounts:
-                    if self.immutable_state:
-                        deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
-                    else:
-                        deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
-            else:
-                for tm in self.managedtargetmount_set.all():
-                    if self.immutable_state:
-                        deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
-                    else:
-                        deps.append(DependOn(tm.host.downcast(), 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
+            target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
+            for tm in target_mounts:
+                if self.immutable_state:
+                    deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                else:
+                    deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
 
         return DependAll(deps)
 
@@ -581,12 +571,8 @@ class ConfigureTargetJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
-        from chroma_core.lib.state_manager import ObjectCache
-        if ObjectCache.enable:
-            prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary == True and mtm.target_id == self.target.id)
-            deps.append(DependOn(prim_mtm.host, 'lnet_up'))
-        else:
-            deps.append(DependOn(self.target.downcast().managedtargetmount_set.get(primary = True).host.downcast(), 'lnet_up'))
+        prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary == True and mtm.target_id == self.target.id)
+        deps.append(DependOn(prim_mtm.host, 'lnet_up'))
 
         return DependAll(deps)
 
@@ -626,7 +612,6 @@ class RegisterTargetJob(StateChangeJob):
         return steps
 
     def get_deps(self):
-        from chroma_core.lib.state_manager import ObjectCache
         deps = []
 
         ct = ContentType.objects.get_for_id(self.target.content_type_id)
@@ -682,7 +667,6 @@ class StartTargetJob(StateChangeJob):
     def get_deps(self):
         lnet_deps = []
         # Depend on at least one targetmount having lnet up
-
         mtms = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id)
         for tm in mtms:
             lnet_deps.append(DependOn(tm.host, 'lnet_up', fix_state = 'unmounted'))
@@ -829,14 +813,10 @@ class FormatTargetJob(StateChangeJob):
             raise NotImplementedError()
 
     def get_deps(self):
-        from chroma_core.lib.state_manager import ObjectCache
         from chroma_core.models import ManagedFilesystem
 
-        if ObjectCache.enable:
-            ct = ContentType.objects.get_for_id(self.target.content_type_id)
-            target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
-        else:
-            target = self.target.downcast()
+        ct = ContentType.objects.get_for_id(self.target.content_type_id)
+        target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
         deps = []
 
         hosts = set()
