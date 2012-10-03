@@ -310,11 +310,14 @@ class StateLock(object):
         self.begin_state = begin_state
         self.end_state = end_state
 
+    def __repr__(self):
+        return "<%s>" % self.__str__()
+
     def __str__(self):
         if not self.write:
-            return "readlock on %s" % (self.locked_item)
+            return "Job %s readlock on %s" % (self.job.id, self.locked_item)
         else:
-            return "writelock on %s %s->%s" % (self.locked_item, self.begin_state, self.end_state)
+            return "Job %s writelock on %s %s->%s" % (self.job.id, self.locked_item, self.begin_state, self.end_state)
 
     def to_dict(self):
         d = dict([(k, getattr(self, k)) for k in ['write', 'begin_state', 'end_state']])

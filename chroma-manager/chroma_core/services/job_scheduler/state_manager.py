@@ -11,7 +11,6 @@ from collections import defaultdict
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.lib.job import job_log
 from chroma_core.models.jobs import StateChangeJob, Command, SchedulingError, StateLock
 
@@ -43,8 +42,9 @@ class Transition(object):
 
 
 class ModificationOperation(object):
-    def __init__(self):
+    def __init__(self, lock_cache):
         self._dep_cache = DepCache()
+        self._lock_cache = lock_cache
 
     def get_expected_state(self, stateful_object_instance):
         try:
@@ -93,7 +93,7 @@ class ModificationOperation(object):
                 end_state = new_state,
                 write = True))
 
-            locks.extend(job.create_locks())
+        locks.extend(job.create_locks())
 
         return locks
 
@@ -111,10 +111,11 @@ class ModificationOperation(object):
             job_log.info("add_jobs: done checking dependencies")
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
-            for l in locks:
-                LockCache.add(l)
-            self._create_dependencies(job)
+            self._create_dependencies(job, locks)
             job.save()
+            for l in locks:
+                self._lock_cache.add(l)
+
             job_log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
             command.jobs.add(job)
 
@@ -176,24 +177,22 @@ class ModificationOperation(object):
 
         return {'transition_job': transition_job, 'dependency_jobs': depended_jobs}
 
-    def _create_dependencies(self, job):
-        """Examine overlaps between self's statelocks and those of
+    def _create_dependencies(self, job, locks):
+        """Examine overlaps between a job's locks and those of
            earlier jobs which are still pending, and generate wait_for
            dependencies when we have a write lock and they have a read lock
            or generate depend_on dependencies when we have a read or write lock and
            they have a write lock"""
         wait_fors = set()
-        for lock in LockCache.get_by_job(job):
-            job_log.debug("Job %s: %s" % (job, lock))
+        for lock in locks:
             if lock.write:
                 wl = lock
                 # Depend on the most recent pending write to this stateful object,
                 # trust that it will have depended on any before that.
-                prior_write_lock = LockCache.get_latest_write(wl.locked_item, not_job = job)
+                prior_write_lock = self._lock_cache.get_latest_write(wl.locked_item, not_job = job)
                 if prior_write_lock:
                     if wl.begin_state and prior_write_lock.end_state:
                         assert (wl.begin_state == prior_write_lock.end_state), ("%s locks %s in state %s but previous %s leaves it in state %s" % (job, wl.locked_item, wl.begin_state, prior_write_lock.job, prior_write_lock.end_state))
-                    job_log.debug("Job %s:   pwl %s" % (job, prior_write_lock))
                     wait_fors.add(prior_write_lock.job.id)
                     # We will only wait_for read locks after this write lock, as it
                     # will have wait_for'd any before it.
@@ -203,17 +202,15 @@ class ModificationOperation(object):
 
                 # Wait for any reads of the stateful object between the last write and
                 # our position.
-                prior_read_locks = LockCache.get_read_locks(wl.locked_item, after = read_barrier_id, not_job = job)
+                prior_read_locks = self._lock_cache.get_read_locks(wl.locked_item, after = read_barrier_id, not_job = job)
                 for i in prior_read_locks:
-                    job_log.debug("Job %s:   prl %s" % (job, i))
                     wait_fors.add(i.job.id)
             else:
                 rl = lock
-                prior_write_lock = LockCache.get_latest_write(rl.locked_item, not_job = job)
+                prior_write_lock = self._lock_cache.get_latest_write(rl.locked_item, not_job = job)
                 if prior_write_lock:
                     # See comment by locked_state in StateReadLock
                     wait_fors.add(prior_write_lock.job.id)
-                job_log.debug("Job %s:   pwl2 %s" % (job, prior_write_lock))
 
         wait_fors = list(wait_fors)
         if wait_fors:
@@ -263,13 +260,13 @@ class ModificationOperation(object):
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
-        item_to_lock = LockCache.get_write_by_locked_item()
+        item_to_lock = self._lock_cache.get_write_by_locked_item()
         self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
 
         if new_state == self.get_expected_state(instance):
             if instance.state != new_state:
                 # This is a no-op because of an in-progress Job:
-                job = LockCache.get_latest_write(instance).job
+                job = self._lock_cache.get_latest_write(instance).job
                 command.jobs.add(job)
 
             command.check_completion()
@@ -284,29 +281,21 @@ class ModificationOperation(object):
             self.get_expected_state(instance),
             new_state))
 
-        # XXX
-        # VERY IMPORTANT: this sort is what gives us the following rule:
+        # This sort is done to make the following true:
         #  The order of the rows in the Job table corresponds to the order in which
         #  the jobs would run (including accounting for dependencies) in the absence
         #  of parallelism.
-        # XXX
         self.deps = self._sort_graph(self.deps, self.edges)
 
-        #job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
-        #for e in self.edges:
-        #    job_log.debug("  edge [%s]->[%s]" % (e))
-
-        # Important: the Job must not land in the database until all
-        # its dependencies and locks are in.
         for d in self.deps:
             job_log.debug("  dep %s" % d)
             job = d.to_job()
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
-            for l in locks:
-                LockCache.add(l)
-            self._create_dependencies(job)
+            self._create_dependencies(job, locks)
             job.save()
+            for l in locks:
+                self._lock_cache.add(l)
             job_log.debug("  dep %s -> Job %s" % (d, job.pk))
             command.jobs.add(job)
 

@@ -51,7 +51,7 @@ class JobSchedulerClient(object):
         # locked by an incomplete job.  We could alternatively advertise
         # which jobs would actually be legal to add by skipping this check and
         # using get_expected_state in place of .state below.
-        if LockCache.get_latest_write(stateful_object):
+        if LockCache().get_latest_write(stateful_object):
             return []
 
         # XXX: could alternatively use expected_state here if you want to advertise
@@ -77,7 +77,7 @@ class JobSchedulerClient(object):
     def available_jobs(cls, instance):
         # If the object is subject to an incomplete Job
         # then don't offer any actions
-        if LockCache.get_latest_write(instance) > 0:
+        if LockCache().get_latest_write(instance) > 0:
             return []
 
         from chroma_core.models import AdvertisedJob
@@ -104,9 +104,8 @@ class JobSchedulerClient(object):
 
         # FIXME: deps calls use a global instance of ObjectCache, calling them from outside
         # the JobScheduler service is a problem -- get rid of the singletons and pass refs around.
-        LockCache.clear()
         ObjectCache.clear()
-        ModificationOperation().get_transition_consequences(stateful_object, new_state)
+        ModificationOperation(LockCache()).get_transition_consequences(stateful_object, new_state)
 
     @classmethod
     def cancel_job(cls, job_id):

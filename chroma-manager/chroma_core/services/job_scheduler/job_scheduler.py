@@ -120,6 +120,8 @@ class JobScheduler(object):
 
         """
 
+        self._lock_cache = LockCache()
+
     def _run_next(self):
         runnable_jobs = Job.get_ready_jobs()
 
@@ -187,24 +189,16 @@ class JobScheduler(object):
 
         job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
                      (job.id, errored, cancelled))
-        job.state = 'completing'
+        job.state = 'complete'
         job.errored = errored
         job.cancelled = cancelled
         job.save()
 
         job_id = job.pk
 
-        job = Job.objects.get(pk = job_id)
-        if job.state == 'completing':
-                job.state = 'complete'
-                job.save()
-        elif job.state != 'complete':
-            raise RuntimeError("_complete_job: Job %d has bad state '%s'" % job.state)
-
         job = job.downcast()
 
         if job.locks_json:
-            job_log.debug("Job %s completing, had some locks %s" % (job_id, job.locks_json))
             try:
                 command = Command.objects.filter(jobs = job, complete = False)[0]
             except IndexError:
@@ -221,6 +215,9 @@ class JobScheduler(object):
                         ObjectCache.purge(lock.locked_item.__class__, lambda o: o.id == lock.locked_item.id)
                     else:
                         ObjectCache.update(lock.locked_item.id)
+
+            # Update _lock_cache to remove the completed job's locks
+            self._lock_cache.remove_job(job)
 
             # Check for completion callbacks on anything this job held a writelock on
             for lock in locks:
@@ -262,7 +259,9 @@ class JobScheduler(object):
             members = list(ManagedMdt.objects.filter(filesystem = fs)) + list(ManagedOst.objects.filter(filesystem = fs))
             states = set([t.state for t in members])
             now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+
             if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
+                job_log.debug('branched')
                 self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
                 self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
@@ -275,14 +274,16 @@ class JobScheduler(object):
                     job = ConfigureLNetJob(lnet_configuration = changed_item.lnetconfiguration, old_state = 'nids_unknown')
                     if not command:
                         command = Command.objects.create(message = "Configuring LNet on %s" % changed_item)
-                    ModificationOperation().add_jobs([job], command)
+                    ModificationOperation(self._lock_cache).add_jobs([job], command)
+                else:
+                    job_log.debug('running_or_failed')
 
             if changed_item.state == 'configured':
                 if not running_or_failed(GetLNetStateJob, host = changed_item):
                     job = GetLNetStateJob(host = changed_item)
                     if not command:
                         command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
-                    ModificationOperation().add_jobs([job], command)
+                    ModificationOperation(self._lock_cache).add_jobs([job], command)
 
         if isinstance(changed_item, ManagedTarget):
             if isinstance(changed_item, FilesystemMember):
@@ -296,12 +297,11 @@ class JobScheduler(object):
                     if DepCache().get(job).satisfied():
                         if not command:
                             command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
-                        ModificationOperation().add_jobs([job], command)
+                        ModificationOperation(self._lock_cache).add_jobs([job], command)
 
     @transaction.commit_on_success
     def complete_job(self, job, errored = False, cancelled = False):
         with self._lock:
-            LockCache.clear()
             ObjectCache.clear()
 
             self._complete_job(job, errored, cancelled)
@@ -310,10 +310,9 @@ class JobScheduler(object):
     @transaction.commit_on_success
     def set_state(self, object_ids, message, run):
         with self._lock:
-            LockCache.clear()
             ObjectCache.clear()
 
-            rc = ModificationOperation().command_set_state(object_ids, message)
+            rc = ModificationOperation(self._lock_cache).command_set_state(object_ids, message)
             if run:
                 self._run_next()
         return rc
@@ -331,7 +330,7 @@ class JobScheduler(object):
         # If a state update is needed/possible
         if instance.state in from_states and instance.state != new_state:
             # Check that no incomplete jobs hold a lock on this object
-            if not len(LockCache.get_by_locked_item(instance)):
+            if not len(self._lock_cache.get_by_locked_item(instance)):
                 modified_at = instance.state_modified_at
                 modified_at = modified_at.replace(tzinfo = tz.tzutc())
 
@@ -339,6 +338,7 @@ class JobScheduler(object):
                     # No jobs lock this object, go ahead and update its state
                     job_log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
                     instance.set_state(new_state)
+                    ObjectCache.update(instance)
 
                     # FIXME: should check the new state against reverse dependencies
                     # and apply any fix_states
@@ -346,11 +346,16 @@ class JobScheduler(object):
                 else:
                     job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
                     pass
+            else:
+                job_log.info("notify_state: Dropping update to %s because of locks" % instance)
+                for lock in self._lock_cache.get_by_locked_item(instance):
+                    job_log.info("  %s" % lock)
+        else:
+            job_log.info("notify_state: Dropping update to %s because its state is %s" % (instance, instance.state))
 
     @transaction.commit_on_success
     def notify_state(self, content_type, object_id, time_serialized, new_state, from_states):
         with self._lock:
-            LockCache.clear()
             ObjectCache.clear()
 
             notification_time = dateutil.parser.parse(time_serialized)
@@ -361,10 +366,9 @@ class JobScheduler(object):
     @transaction.commit_on_success
     def run_jobs(self, job_dicts, message):
         with self._lock:
-            LockCache.clear()
             ObjectCache.clear()
 
-            result = ModificationOperation().command_run_jobs(job_dicts, message)
+            result = ModificationOperation(self._lock_cache).command_run_jobs(job_dicts, message)
             self._run_next()
         return result
 

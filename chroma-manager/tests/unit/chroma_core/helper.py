@@ -2,7 +2,6 @@ from collections import defaultdict
 from contextlib import contextmanager
 import datetime
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.log import log_register
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface, AgentDaemonQueue
 from django.test import TestCase
@@ -248,7 +247,6 @@ class JobTestCase(TestCase):
         JobScheduler._run_next = mock.Mock(side_effect=run_next)
 
         def complete_job(job, errored = False, cancelled = False):
-            LockCache.clear()
             ObjectCache.clear()
             self.job_scheduler._complete_job(job, errored, cancelled)
 

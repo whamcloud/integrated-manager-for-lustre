@@ -37,6 +37,7 @@ class TestCommandResource(ChromaApiTestCase):
         self.assertEqual(response.status_code, 201)
         command = self.deserialize(response)
         jobs = [JobResource().get_via_uri(uri) for uri in command['jobs']]
+
         self.assertSetEqual(set(jobs[0].hosts.all()), set(host_subset))
 
     def test_absent_host_list(self):
