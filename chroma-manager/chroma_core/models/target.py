@@ -507,7 +507,6 @@ class RegisterTargetStep(Step):
         label = result['label']
         target = target_mount.target
         target.name = label
-        target.ha_label = "%s_%s" % (target.name, uuid.uuid4().__str__()[0:6])
         target.save()
         job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (target.id, target.name, target.ha_label))
 
