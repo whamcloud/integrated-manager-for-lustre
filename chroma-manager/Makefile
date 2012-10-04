@@ -14,6 +14,16 @@ endif
 
 PACKAGE_RELEASE := 2
 
+# In development, we want to stop at first failure, but when running
+# in a Jenkins job we want all the gory details.
+ifdef JENKINS_URL
+	BEHAVE_ARGS ?= --junit --junit-directory $$WORKSPACE/test_reports --format plain
+	NOSE_ARGS ?= --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml
+else
+	BEHAVE_ARGS ?= -q --stop
+	NOSE_ARGS ?=
+endif
+
 cleandist:
 	rm -rf  dist
 	mkdir dist
@@ -26,6 +36,29 @@ version:
 
 develop: version
 	python setup.py develop
+
+unit_tests:
+	rm -f unit.log
+	@echo "Running standard unit tests..."
+	@./manage.py test tests/unit $(NOSE_ARGS) 2>&1 | tee unit.log; \
+	exit $${PIPESTATUS[0]}
+
+feature_tests:
+	@echo "Running behave features tests..."
+	@for feature in tests/feature/*; do \
+		logname=feature-$$(basename $$feature); \
+		stdout=$$logname.stdout; stderr=$$logname.stderr; \
+		rm -f $$stdout $$stderr; \
+		behave $(BEHAVE_ARGS) $${feature}/features 2>$$stderr | tee $$stdout; \
+		brc=$${PIPESTATUS[0]}; \
+		[ $$brc -eq 0 ] || { \
+			echo "$$feature failed, logs: $$stdout, $$stderr"; \
+	        break; \
+		} && true; \
+	done; \
+	exit $$brc
+
+test: unit_tests feature_tests
 
 tarball: version
 	rm -f MANIFEST
