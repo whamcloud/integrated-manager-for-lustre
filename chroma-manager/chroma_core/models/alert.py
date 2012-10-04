@@ -7,8 +7,9 @@
 from django.db import models
 from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.generic import GenericForeignKey
 
-from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField
+from chroma_core.models.utils import WorkaroundDateTimeField
 
 
 class AlertState(models.Model):
@@ -20,7 +21,7 @@ class AlertState(models.Model):
     alert_item_id = models.PositiveIntegerField()
     # FIXME: generic foreign key does not automatically set up deletion
     # of this when the alert_item is deleted -- do it manually
-    alert_item = WorkaroundGenericForeignKey('alert_item_type', 'alert_item_id')
+    alert_item = GenericForeignKey('alert_item_type', 'alert_item_id')
 
     alert_type = models.CharField(max_length = 128)
 

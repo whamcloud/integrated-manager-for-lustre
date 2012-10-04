@@ -8,7 +8,6 @@ import datetime
 import time
 
 from django.db import models, transaction
-from django.contrib.contenttypes.generic import GenericForeignKey
 
 from polymorphic.models import DowncastManager
 from polymorphic.models import PolymorphicMetaclass
@@ -75,36 +74,6 @@ class WorkaroundDateTimeField(models.DateTimeField):
                 value = datetime.datetime(*value.utctimetuple()[0:6])
 
         return connection.ops.value_to_db_datetime(value)
-
-
-class WorkaroundGenericForeignKey(GenericForeignKey):
-    """HYD-259 TEMPORARY workaround for django bug #16048 while we wait for
-       a fixed django to get released"""
-    def __get__(self, instance, instance_type=None):
-        if instance is None:
-            return self
-
-        try:
-            return getattr(instance, self.cache_attr)
-        except AttributeError:
-            rel_obj = None
-
-            # Make sure to use ContentType.objects.get_for_id() to ensure that
-            # lookups are cached (see ticket #5570). This takes more code than
-            # the naive ``getattr(instance, self.ct_field)``, but has better
-            # performance when dealing with GFKs in loops and such.
-            f = self.model._meta.get_field(self.ct_field)
-            ct_id = getattr(instance, f.get_attname(), None)
-            if ct_id:
-                ct = self.get_content_type(id=ct_id, using=instance._state.db)
-                from django.core.exceptions import ObjectDoesNotExist
-                try:
-                    rel_obj = ct.model_class()._base_manager.using(ct._state.db).get(pk=getattr(instance, self.fk_field))
-
-                except ObjectDoesNotExist:
-                    pass
-            setattr(instance, self.cache_attr, rel_obj)
-            return rel_obj
 
 
 class DeletableDowncastableManager(DowncastManager):

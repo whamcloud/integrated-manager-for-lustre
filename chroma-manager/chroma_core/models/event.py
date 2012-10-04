@@ -7,8 +7,9 @@
 from django.db import models
 from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.generic import GenericForeignKey
 
-from chroma_core.models.utils import WorkaroundGenericForeignKey, WorkaroundDateTimeField
+from chroma_core.models.utils import WorkaroundDateTimeField
 
 
 class Event(models.Model):
@@ -41,7 +42,7 @@ class LearnEvent(Event):
     # Every environment at some point reinvents void* :-)
     learned_item_type = models.ForeignKey(ContentType)
     learned_item_id = models.PositiveIntegerField()
-    learned_item = WorkaroundGenericForeignKey('learned_item_type', 'learned_item_id')
+    learned_item = GenericForeignKey('learned_item_type', 'learned_item_id')
 
     class Meta:
         app_label = 'chroma_core'
