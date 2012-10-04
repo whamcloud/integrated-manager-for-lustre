@@ -66,6 +66,15 @@ def after_feature(context, feature):
     context.runner.teardown_databases(context.old_db_config)
     context.runner.teardown_test_environment()
 
+    # As of Django 1.4, teardown_databases() no longer restores the
+    # original db name in the connection's settings dict.  The reasoning
+    # is documented in https://code.djangoproject.com/ticket/10868, and
+    # their concerns are understandable.  In our case, however, we're not
+    # going on to do anything here which might affect the production DB.
+    # Therefore, the following hack restores pre-1.4 behavior:
+    for connection, old_name, destroy in context.old_db_config[0]:
+        connection.settings_dict['NAME'] = old_name
+
     from chroma_cli.api import ApiHandle
     ApiHandle.ApiClient = context.old_api_client
 
