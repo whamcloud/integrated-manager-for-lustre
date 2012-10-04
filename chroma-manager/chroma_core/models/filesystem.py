@@ -178,7 +178,13 @@ class RemoveFilesystemJob(StateChangeJob):
 
     def get_steps(self):
         steps = []
-        if not self.filesystem.immutable_state:
+
+        # Only try to purge filesystem from MGT if the MGT has made it past
+        # being formatted (case where a filesystem was created but is being
+        # removed before it or its MGT got off the ground)
+        mgt_setup = self.filesystem.mgs.state not in ['unformatted', 'formatted']
+
+        if (not self.filesystem.immutable_state) and mgt_setup:
             steps.append((PurgeFilesystemStep, {'filesystem_id': self.filesystem.id}))
         steps.append((DeleteFilesystemStep, {'filesystem_id': self.filesystem.id}))
         return steps

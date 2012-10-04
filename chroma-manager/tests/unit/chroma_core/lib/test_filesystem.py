@@ -101,6 +101,29 @@ class TestBigFilesystem(JobTestCase):
         self.assertEqual(freshen(self.fs).state, 'available')
 
 
+class TestIncompleteSetup(JobTestCaseWithHost):
+    def setUp(self):
+        super(TestIncompleteSetup, self).setUp()
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+        self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+        self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        self.ost = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+
+    def test_fs_removal_mgt_unformatted(self):
+        """Test that removing a filesystem which was never formatted (and whose mgt was
+        never formatted) works (needs to be smart enough to avoid trying to purge
+        config logs from an unformatted mgs)
+
+        """
+
+        self.assertState(self.mgt, 'unformatted')
+        self.set_state(self.fs, 'removed')
+        self.assertState(self.mgt, 'unformatted')
+        with self.assertRaises(ManagedFilesystem.DoesNotExist):
+            ManagedFilesystem.objects.get(pk = self.fs.pk)
+
+
 class TestFSTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestFSTransitions, self).setUp()
@@ -111,9 +134,9 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.mdt = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
         self.ost = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
 
-        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
-        self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'unformatted')
-        self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'unformatted')
+        self.assertEqual(self.mgt.state, 'unformatted')
+        self.assertEqual(self.mdt.state, 'unformatted')
+        self.assertEqual(self.ost.state, 'unformatted')
 
         self.set_state(self.fs, 'available')
 

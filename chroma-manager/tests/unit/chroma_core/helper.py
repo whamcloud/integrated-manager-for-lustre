@@ -78,6 +78,12 @@ class MockAgent(object):
                 inode_size = 777
 
             return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': inode_size}
+        elif cmdline.startswith('stop-target'):
+            import re
+            from chroma_core.models import ManagedTarget
+            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
+            target = ManagedTarget.objects.get(ha_label = ha_label)
+            return
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
@@ -103,10 +109,6 @@ class MockAgent(object):
             return {'label': "foofs-TTT%04d" % self.label_counter}
         elif cmdline.startswith('detect-scan'):
             return self.mock_servers[self.host.address]['detect-scan']
-        elif cmdline == "device-plugin":
-            return {
-
-            }
         elif cmdline == "device-plugin --plugin=lustre":
             return {'lustre': {
                 'lnet_up': True,

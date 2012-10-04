@@ -176,7 +176,7 @@ class JobScheduler(object):
         self._spawn_job(job.id)
 
     def _spawn_job(self, job_id):
-        RunJobThread(job_id).start()
+        RunJobThread(self, job_id).start()
 
     def _complete_job(self, job, errored, cancelled):
         from chroma_core.models.jobs import StateChangeJob
