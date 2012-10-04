@@ -150,14 +150,13 @@ class JobTestCase(TestCase):
             except obj.__class__.DoesNotExist:
                 pass
 
-    def set_state_delayed(self, obj, state):
+    def set_state_delayed(self, obj_state_pairs):
         """Schedule some jobs without executing them"""
-        return self.set_state(obj, state, check = False, run = False)
+        Command.set_state(obj_state_pairs, "Unit test transition", run = False)
 
     def set_state_complete(self):
         """Run any outstanding jobs"""
-        from chroma_core.services.job_scheduler.job_scheduler import run_next
-        run_next()
+        self.job_scheduler._run_next()
 
     def assertState(self, obj, state):
         self.assertEqual(freshen(obj).state, state)

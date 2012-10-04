@@ -1,7 +1,6 @@
 from chroma_core.lib.util import dbperf
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost
-from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestCase
 from django.db import connection
@@ -31,9 +30,9 @@ class TestOneHost(JobTestCase):
             with dbperf("create_from_string"):
                 host, command = ManagedHost.create_from_string('myaddress')
             with dbperf("set_state"):
-                Command.set_state([(host, 'lnet_up'), (host.lnetconfiguration, 'nids_known')], "Setting up host", run = False)
+                self.set_state_delayed([(host, 'lnet_up'), (host.lnetconfiguration, 'nids_known')])
             with dbperf("run_next"):
-                self.job_scheduler._run_next()
+                self.set_state_complete()
             self.assertState(host, 'lnet_up')
         finally:
             dbperf.enabled = False
@@ -92,8 +91,7 @@ class TestBigFilesystem(JobTestCase):
             dbperf.enabled = True
             import cProfile
             with dbperf("set_state"):
-                #cProfile.runctx("Command.set_state([(self.osts[0], 'mounted')], 'Unit test transition', run = False)", globals(), locals(), 'set_state.prof')
-                cProfile.runctx("Command.set_state([(self.fs, 'available')], 'Unit test transition', run = False)", globals(), locals(), 'set_state.prof')
+                cProfile.runctx("self.set_state_delayed([(self.fs, 'available')])", globals(), locals(), 'set_state.prof')
 
             with dbperf('run_next'):
                 self.job_scheduler._run_next()
@@ -169,8 +167,8 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.set_state(self.fs, 'available')
         self.set_state(fs2, 'available')
 
-        self.set_state(self.fs, 'removed', check = False, run = False)
-        self.set_state(fs2, 'removed', check = False, run = False)
+        self.set_state_delayed([(self.fs, 'removed')])
+        self.set_state_delayed([(fs2, 'removed')])
 
         self.set_state_complete()
 
