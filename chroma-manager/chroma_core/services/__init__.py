@@ -5,10 +5,10 @@
 
 
 import threading
-import os
-
 from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange
+import os
+
 from chroma_core.services.log import log_register
 
 import settings

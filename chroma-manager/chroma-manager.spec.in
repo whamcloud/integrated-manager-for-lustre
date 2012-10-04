@@ -109,6 +109,11 @@ chown -R apache:apache /var/log/chroma
 # httpd and rabbitmq-server
 setsebool -P httpd_can_network_connect 1 2>/dev/null
 
+# This is required because of bad behaviour in python's 'uuid'
+# module (see HYD-1475)
+setsebool -P httpd_tmp_exec 1 2>/dev/null
+
+
 echo "Thank you for installing Chroma.  To complete your installation, please"
 echo "run chroma-config"
 
