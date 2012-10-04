@@ -5,7 +5,6 @@
 
 
 import threading
-from chroma_core.lib.agent import AgentException
 import sys
 import traceback
 from django.db import transaction
@@ -87,6 +86,7 @@ class RunJobThread(threading.Thread):
 
             step = klass(job, args, result)
 
+            from chroma_core.lib.agent import AgentException
             try:
                 job_log.debug("Job %d running step %d" % (job.id, step_index))
                 step.run(args)
