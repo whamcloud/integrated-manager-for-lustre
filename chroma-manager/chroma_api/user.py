@@ -19,6 +19,16 @@ from tastypie.http import HttpBadRequest
 
 
 class ChromaUserChangeForm(UserChangeForm):
+    """Custom form based on the Django Admin form."""
+
+    # This crept in with 1.4...  Apparently assumptions are made about
+    # how the form will be used.
+    def clean_password(self):
+        try:
+            return super(ChromaUserChangeForm, self).clean_password()
+        except KeyError:
+            return ""
+
     class Meta(UserChangeForm.Meta):
         fields = ('username', 'first_name', 'last_name', 'email',)
 
