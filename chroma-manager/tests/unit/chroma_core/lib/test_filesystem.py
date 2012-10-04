@@ -163,6 +163,25 @@ class TestFSTransitions(JobTestCaseWithHost):
         with self.assertRaises(ManagedFilesystem.DoesNotExist):
             ManagedFilesystem.objects.get(pk = self.fs.pk)
 
+    def test_two_concurrent_removes(self):
+        fs2 = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+        ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+
+        self.set_state(self.fs, 'available')
+        self.set_state(fs2, 'available')
+
+        self.set_state(self.fs, 'removed', check = False, run = False)
+        self.set_state(fs2, 'removed', check = False, run = False)
+
+        self.set_state_complete()
+
+        with self.assertRaises(ManagedFilesystem.DoesNotExist):
+            ManagedFilesystem.objects.get(pk = self.fs.pk)
+
+        with self.assertRaises(ManagedFilesystem.DoesNotExist):
+            ManagedFilesystem.objects.get(pk = fs2.pk)
+
     def test_target_stop(self):
         from chroma_core.models import ManagedMdt, ManagedFilesystem
         self.set_state(self.mdt, 'unmounted')

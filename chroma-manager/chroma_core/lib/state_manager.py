@@ -669,7 +669,7 @@ class StateManager(object):
             old_state = get_mid_transition_expected_state(dependency.stateful_object)
 
             # Is old_state not what we want?
-            if not old_state in dependency.acceptable_states:
+            if old_state and not old_state in dependency.acceptable_states:
                 job_log.debug("new state static requires = %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
                 # Emit some transitions to get depended_on into depended_state
                 dep_transition = self.emit_transition_deps(Transition(
