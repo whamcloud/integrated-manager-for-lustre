@@ -38,26 +38,9 @@ class CleanClusterApiTestCase(ApiTestCase):
                 chroma_manager['address'],
                 'echo "drop database chroma; create database chroma;" | mysql -u root'
             )
-
             self.remote_command(
                 chroma_manager['address'],
-                """
-chroma-config setup >config_setup.log <<EOF
-
-%s
-nobody@whamcloud.com
-%s
-%s
-EOF
-                """ % (superuser['username'], superuser['password'], superuser['password'])
-            )
-            self.remote_command(
-                chroma_manager['address'],
-                "chroma-config start"
-            )
-            self.remote_command(
-                chroma_manager['address'],
-                "chroma-config validate"
+                "chroma-config setup %s %s localhost >config_setup.log" % (superuser['username'], superuser['password'])
             )
 
     def has_pacemaker(self, server):
