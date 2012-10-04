@@ -6,6 +6,7 @@
 
 from collections import defaultdict
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication
@@ -95,6 +96,9 @@ class CommandResource(ModelResource):
         except SchedulingError, e:
             raise custom_response(self, request, http.HttpBadRequest,
                     {'state': e.message})
+
+        with transaction.commit_manually():
+            transaction.commit()
 
         bundle.obj = Command.objects.get(pk = command_id)
         return bundle
