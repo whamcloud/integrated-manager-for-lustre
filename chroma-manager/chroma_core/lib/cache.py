@@ -80,7 +80,12 @@ class ObjectCache(object):
         for instance in class_collection:
             if instance.id == object.id:
                 class_collection.remove(instance)
-                class_collection.append(object.__class__.objects.get(pk = object.pk))
+                try:
+                    fresh_instance = object.__class__.objects.get(pk = object.pk)
+                except object.__class__.DoesNotExist:
+                    pass
+                else:
+                    class_collection.append(fresh_instance)
                 return
 
     @classmethod

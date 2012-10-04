@@ -17,7 +17,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult
+from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult, StateChangeJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.state_manager import ModificationOperation
@@ -25,37 +25,26 @@ from chroma_core.lib.job import job_log
 
 
 class RunJobThread(threading.Thread):
-    def __init__(self, job_scheduler, job_id):
+    def __init__(self, job_scheduler, job):
         super(RunJobThread, self).__init__()
-        self.job_id = job_id
+        self.job = job
         self._job_scheduler = job_scheduler
 
     def run(self):
-        job_log.info("Job %d: %s.run" % (self.job_id, self.__class__.__name__))
+        job_log.info("Job %d: %s.run" % (self.job.id, self.__class__.__name__))
 
-        job = Job.objects.get(pk = self.job_id)
-
-        # This can happen if we lose power after calling .complete but before returning,
-        # celery will re-call our unfinished task.  Everything has already been done, so
-        # just return to let celery drop the task.
-        if job.state == 'complete':
-            return None
-
-        job = job.downcast()
         try:
-            steps = job.get_steps()
+            steps = self.job.get_steps()
         except Exception, e:
-            job_log.error("Job %d: exception in get_steps" % job.id)
+            job_log.error("Job %d: exception in get_steps" % self.job.id)
             exc_info = sys.exc_info()
             job_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
-            self._job_scheduler.complete_job(job, errored = True)
+            self._job_scheduler.complete_job(self.job, errored = True)
             return None
 
         step_index = 0
         finish_step = -1
         while step_index < len(steps):
-            job.started_step = step_index
-            job.save()
             klass, args = steps[step_index]
 
             result = StepResult(
@@ -63,21 +52,21 @@ class RunJobThread(threading.Thread):
                 args = args,
                 step_index = step_index,
                 step_count = len(steps),
-                job = job)
+                job = self.job)
             result.save()
 
-            step = klass(job, args, result)
+            step = klass(self.job, args, result)
 
             from chroma_core.lib.agent import AgentException
             try:
-                job_log.debug("Job %d running step %d" % (job.id, step_index))
+                job_log.debug("Job %d running step %d" % (self.job.id, step_index))
                 step.run(args)
-                job_log.debug("Job %d step %d successful" % (job.id, step_index))
+                job_log.debug("Job %d step %d successful" % (self.job.id, step_index))
 
                 result.state = 'success'
             except AgentException, e:
-                job_log.error("Job %d step %d encountered an agent error" % (job.id, step_index))
-                self._job_scheduler.complete_job(job, errored = True)
+                job_log.error("Job %d step %d encountered an agent error" % (self.job.id, step_index))
+                self._job_scheduler.complete_job(self.job, errored = True)
 
                 result.backtrace = e.agent_backtrace
                 # Don't bother storing the backtrace to invoke_agent, the interesting part
@@ -88,11 +77,11 @@ class RunJobThread(threading.Thread):
                 return None
 
             except Exception:
-                job_log.error("Job %d step %d encountered an error" % (job.id, step_index))
+                job_log.error("Job %d step %d encountered an error" % (self.job.id, step_index))
                 exc_info = sys.exc_info()
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
                 job_log.error(backtrace)
-                self._job_scheduler.complete_job(job, errored = True)
+                self._job_scheduler.complete_job(self.job, errored = True)
 
                 result.backtrace = backtrace
                 result.state = 'failed'
@@ -105,8 +94,30 @@ class RunJobThread(threading.Thread):
             finish_step = step_index
             step_index += 1
 
-        job_log.info("Job %d finished %d steps successfully" % (job.id, finish_step + 1))
-        self._job_scheduler.complete_job(job, errored = False)
+        # For StateChangeJobs, set update the state of the affected object
+        if isinstance(self.job, StateChangeJob):
+            obj = self.job.get_stateful_object()
+            obj = obj.__class__._base_manager.get(pk = obj.pk)
+            new_state = self.job.state_transition[2]
+            obj.set_state(new_state, intentional = True)
+            job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.job.pk, new_state, obj))
+
+        # Freshen cached information about anything that this job held a writelock on
+        locks = json.loads(self.job.locks_json)
+        for lock in locks:
+            if lock['write']:
+                lock = StateLock.from_dict(self.job, lock)
+                if isinstance(lock.locked_item, DeletableStatefulObject) and not lock.locked_item.not_deleted:
+                    ObjectCache.purge(lock.locked_item.__class__, lambda o: o.id == lock.locked_item.id)
+                else:
+                    ObjectCache.update(lock.locked_item)
+
+        job_log.info("Job %d finished %d steps successfully" % (self.job.id, finish_step + 1))
+
+        with transaction.commit_manually():
+            transaction.commit()
+
+        self._job_scheduler.complete_job(self.job, errored = False)
 
         return None
 
@@ -122,6 +133,7 @@ class JobScheduler(object):
 
         self._lock_cache = LockCache()
 
+    @transaction.commit_on_success
     def _run_next(self):
         runnable_jobs = Job.get_ready_jobs()
 
@@ -156,37 +168,15 @@ class JobScheduler(object):
             # TODO: tell someone WHICH dependency
             return
 
-        # Set state to 'tasked'
-        # =====================
-        updated = Job.objects.filter(pk = job.id, state = 'pending').update(state = 'tasking')
-
-        if not updated:
-            # Someone else already started this job, bug out
-            job_log.debug("Job %d already started running, backing off" % job.id)
-            return
-        else:
-            assert(updated == 1)
-            job_log.debug("Job %d pending->tasking" % job.id)
-            job.state = 'tasking'
-
         job.state = 'tasked'
         job.save()
-        job_log.debug("Job %d tasking->tasked" % (job.id))
 
-        self._spawn_job(job.id)
+        self._spawn_job(job)
 
-    def _spawn_job(self, job_id):
-        RunJobThread(self, job_id).start()
+    def _spawn_job(self, job):
+        RunJobThread(self, job).start()
 
     def _complete_job(self, job, errored, cancelled):
-        from chroma_core.models.jobs import StateChangeJob
-        success = not (errored or cancelled)
-        if success and isinstance(job, StateChangeJob):
-            new_state = job.state_transition[2]
-            obj = job.get_stateful_object()
-            obj.set_state(new_state, intentional = True)
-            job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (job.pk, new_state, obj))
-
         job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
                      (job.id, errored, cancelled))
         job.state = 'complete'
@@ -194,27 +184,16 @@ class JobScheduler(object):
         job.cancelled = cancelled
         job.save()
 
-        job_id = job.pk
-
         job = job.downcast()
 
         if job.locks_json:
             try:
                 command = Command.objects.filter(jobs = job, complete = False)[0]
             except IndexError:
-                job_log.warning("Job %s: No incomplete command while completing" % job_id)
+                job_log.warning("Job %s: No incomplete command while completing" % job.pk)
                 command = None
 
             locks = json.loads(job.locks_json)
-
-            # Freshen cached information about anything that this job held a writelock on
-            for lock in locks:
-                if lock['write']:
-                    lock = StateLock.from_dict(job, lock)
-                    if isinstance(lock.locked_item, DeletableStatefulObject) and not lock.locked_item.not_deleted:
-                        ObjectCache.purge(lock.locked_item.__class__, lambda o: o.id == lock.locked_item.id)
-                    else:
-                        ObjectCache.update(lock.locked_item.id)
 
             # Update _lock_cache to remove the completed job's locks
             self._lock_cache.remove_job(job)
@@ -223,13 +202,13 @@ class JobScheduler(object):
             for lock in locks:
                 if lock['write']:
                     lock = StateLock.from_dict(job, lock)
-                    job_log.debug("Job %s completing, held writelock on %s" % (job_id, lock.locked_item))
+                    job_log.debug("Job %s completing, held writelock on %s" % (job.pk, lock.locked_item))
                     try:
                         self._completion_hooks(lock.locked_item, command)
                     except Exception:
                         job_log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
         else:
-            job_log.debug("Job %s completing, held no locks" % job_id)
+            job_log.debug("Job %s completing, held no locks" % job.pk)
 
         for command in Command.objects.filter(jobs = job):
             command.check_completion()
@@ -307,12 +286,11 @@ class JobScheduler(object):
             self._complete_job(job, errored, cancelled)
             self._run_next()
 
-    @transaction.commit_on_success
     def set_state(self, object_ids, message, run):
         with self._lock:
             ObjectCache.clear()
-
-            rc = ModificationOperation(self._lock_cache).command_set_state(object_ids, message)
+            with transaction.commit_on_success():
+                rc = ModificationOperation(self._lock_cache).command_set_state(object_ids, message)
             if run:
                 self._run_next()
         return rc

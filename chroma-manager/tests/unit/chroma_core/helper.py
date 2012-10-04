@@ -222,8 +222,8 @@ class JobTestCase(TestCase):
         self.job_scheduler = JobScheduler()
         patch_daemon_rpc(JobSchedulerRpcInterface, self.job_scheduler)
 
-        def spawn_job(job_id):
-            RunJobThread(self.job_scheduler, job_id).run()
+        def spawn_job(job):
+            RunJobThread(self.job_scheduler, job).run()
 
         JobScheduler._spawn_job = mock.Mock(side_effect=spawn_job)
 

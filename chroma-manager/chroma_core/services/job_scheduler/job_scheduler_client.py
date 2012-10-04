@@ -105,7 +105,7 @@ class JobSchedulerClient(object):
         # FIXME: deps calls use a global instance of ObjectCache, calling them from outside
         # the JobScheduler service is a problem -- get rid of the singletons and pass refs around.
         ObjectCache.clear()
-        ModificationOperation(LockCache()).get_transition_consequences(stateful_object, new_state)
+        return ModificationOperation(LockCache()).get_transition_consequences(stateful_object, new_state)
 
     @classmethod
     def cancel_job(cls, job_id):
