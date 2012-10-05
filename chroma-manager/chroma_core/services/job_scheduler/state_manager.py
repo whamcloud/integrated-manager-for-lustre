@@ -417,7 +417,7 @@ class ModificationOperation(object):
         command = Command.objects.create(message = message)
         job_log.debug("command_run_jobs: command %s" % command.id)
         for job in jobs:
-            job_log.debug("command_run_jobs:  job %s" % job.id)
+            job_log.debug("command_run_jobs:  job %s" % job)
         self.add_jobs(jobs, command)
 
         return command.id

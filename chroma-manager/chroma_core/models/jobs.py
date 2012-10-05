@@ -9,7 +9,6 @@ from collections import defaultdict
 import json
 
 from django.db import models
-from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 
 from picklefield.fields import PickledObjectField
@@ -90,9 +89,6 @@ class Command(models.Model):
 
         object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
         command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
-
-        with transaction.commit_manually():
-            transaction.commit()
 
         return Command.objects.get(pk = command_id)
 

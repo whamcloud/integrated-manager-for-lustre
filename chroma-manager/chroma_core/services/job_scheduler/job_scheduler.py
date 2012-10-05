@@ -114,6 +114,8 @@ class RunJobThread(threading.Thread):
 
         job_log.info("Job %d finished %d steps successfully" % (self.job.id, finish_step + 1))
 
+        # Ensure that any changes made by this thread are visible to other threads before
+        # we ask job_scheduler to advance
         with transaction.commit_manually():
             transaction.commit()
 
@@ -361,4 +363,6 @@ class JobScheduler(object):
     def cancel_job(self, job_id):
         Job.objects.filter(pk = job_id).update(state = 'cancelled')
         # FIXME: implement
+        # FIXME: hook into service teardown so that one can ctrl-c without
+        # waiting for jobs to complete
         raise NotImplementedError()
