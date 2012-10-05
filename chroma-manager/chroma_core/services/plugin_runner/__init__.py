@@ -13,7 +13,7 @@ class Service(ChromaService):
     def __init__(self):
         super(Service, self).__init__()
         self.threads = []
-        self._stopper = threading.Semaphore(0)
+        self._complete = threading.Event()
 
     def start(self):
         from chroma_core.services.plugin_runner.agent_daemon import AgentDaemon
@@ -38,7 +38,7 @@ class Service(ChromaService):
         for thread in self.threads:
             thread.start()
 
-        self._stopper.acquire()
+        self._complete.wait()
         self.log.debug("Leaving main loop")
 
     def stop(self):
@@ -49,4 +49,4 @@ class Service(ChromaService):
         for thread in self.threads:
             thread.join()
         self.log.debug("Done.")
-        self._stopper.release()
+        self._complete.set()

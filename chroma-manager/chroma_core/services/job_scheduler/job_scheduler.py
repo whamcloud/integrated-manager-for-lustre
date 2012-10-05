@@ -123,6 +123,13 @@ class RunJobThread(threading.Thread):
 
 
 class JobScheduler(object):
+    """A single instance of this class is created within the `job_scheduler` service.
+
+    It is on the receiving end of RPCs (JobSchedulerRpcInterface) and also is called
+    by the handler for ModificationNotificationQueue
+
+
+    """
     def __init__(self):
         self._lock = threading.RLock()
         """Globally serialize all scheduling operations: within a given cluster, they all potentially

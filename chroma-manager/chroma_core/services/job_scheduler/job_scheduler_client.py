@@ -8,12 +8,17 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.job import job_log
 from chroma_core.lib.util import all_subclasses
 from chroma_core.services.job_scheduler.lock_cache import LockCache
+from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 from django.contrib.contenttypes.models import ContentType
 
 
+class ModificationNotificationQueue(ServiceQueue):
+    name = 'job_scheduler_notify'
+
+
 class JobSchedulerRpcInterface(ServiceRpcInterface):
-    methods = ['set_state', 'notify_state', 'run_jobs', 'cancel_job']
+    methods = ['set_state', 'run_jobs', 'cancel_job']
 
 
 class JobSchedulerClient(object):
@@ -37,7 +42,13 @@ class JobSchedulerClient(object):
         if instance.state in from_states and instance.state != new_state:
             job_log.info("Enqueuing notify_state %s %s->%s at %s" % (instance, instance.state, new_state, time))
             time_serialized = time.isoformat()
-            return JobSchedulerRpcInterface().notify_state(instance.content_type.natural_key(), instance.id, time_serialized, new_state, from_states)
+            ModificationNotificationQueue().put({
+                'instance_natural_key': instance.content_type.natural_key(),
+                'instance_id': instance.id,
+                'time': time_serialized,
+                'new_state': new_state,
+                'from_states': from_states
+            })
 
     @classmethod
     def available_transitions(cls, stateful_object):
