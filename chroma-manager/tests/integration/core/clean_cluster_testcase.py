@@ -4,6 +4,7 @@ import re
 from testconfig import config
 
 from tests.integration.core.api_testcase import ApiTestCase
+from tests.utils.http_requests import AuthorizedHttpRequests
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -22,10 +23,16 @@ class CleanClusterApiTestCase(ApiTestCase):
           - unconfiguring any chroma targets in pacemaker
           - erasing volumes in the config for chroma-managed lustre servers
         """
-        self.unmount_filesystems_from_clients()
-        self.reset_chroma_manager_db()
-        self.remove_all_targets_from_pacemaker()
-        self.erase_volumes()
+        if config.get('reset', True):
+            self.unmount_filesystems_from_clients()
+            self.reset_chroma_manager_db()
+            self.remove_all_targets_from_pacemaker()
+            self.erase_volumes()
+        else:
+            user = config['chroma_managers'][0]['users'][0]
+            chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
+                server_http_url = config['chroma_managers'][0]['server_http_url'])
+            self.graceful_teardown(chroma_manager)
 
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:
