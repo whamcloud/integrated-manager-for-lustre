@@ -5,31 +5,7 @@
 
 
 from django.conf.urls.defaults import patterns, include
-from tastypie import fields
 from tastypie.api import Api
-
-
-# HYD-646: Patch tastypie to assume timezone-naive datetimes are in UTC
-# to match our DB convention (see WorkaroundDateTimeField)
-from dateutil import tz
-import datetime
-
-
-def monkeypatch_method(cls):
-    """http://mail.python.org/pipermail/python-dev/2008-January/076194.html"""
-    def decorator(func):
-        setattr(cls, func.__name__, func)
-        return func
-    return decorator
-
-
-@monkeypatch_method(fields.DateTimeField)
-def convert(self, value):
-    if isinstance(value, datetime.datetime):
-        if value.tzinfo is None:
-            value = value.replace(tzinfo = tz.tzutc())
-
-    return value
 
 
 class ChromaApi(Api):

@@ -6,17 +6,15 @@
 
 from django.db import models
 
-from chroma_core.models.utils import WorkaroundDateTimeField
-
 
 class Systemevents(models.Model):
     """Django representation of record format emitted by MySQL"""
     id = models.AutoField(primary_key=True, db_column='ID')
     customerid = models.BigIntegerField(null=True, db_column='CustomerID',
                                         blank=True)
-    receivedat = WorkaroundDateTimeField(null=True, db_column='ReceivedAt',
+    receivedat = models.DateTimeField(null=True, db_column='ReceivedAt',
                                       blank=True)
-    devicereportedtime = WorkaroundDateTimeField(null=True,
+    devicereportedtime = models.DateTimeField(null=True,
                                               db_column='DeviceReportedTime',
                                               blank=True)
     facility = models.IntegerField(null=True, db_column='Facility',

@@ -4,76 +4,12 @@
 # ========================================================
 
 
-import datetime
 import time
 
 from django.db import models, transaction
 
 from polymorphic.models import DowncastManager
 from polymorphic.models import PolymorphicMetaclass
-
-from south.modelsinspector import add_introspection_rules
-
-add_introspection_rules([], ["^chroma_core\.models\.utils\.WorkaroundDateTimeField"])
-
-
-class WorkaroundDateTimeField(models.DateTimeField):
-    """HYD-646 + https://github.com/toastdriven/django-tastypie/issues/385
-       In Django <1.4, datetimes are always passed to mysql[1]
-       naively, i.e. in local time.  We can work with that by
-       using utcnow() instead of now() in our application, but
-       DateTimeField uses now() internally, so we have to
-       override it in order to store UTC dates.
-
-       1. Actually, all backends but PostGres
-       """
-    def pre_save(self, model_instance, add):
-        """Use datetime.utcnow() instead of datetime.now() when populating
-        auto_now and auto_now_add values"""
-        if self.auto_now or (self.auto_now_add and add):
-            value = datetime.datetime.utcnow()
-            setattr(model_instance, self.attname, value)
-            return value
-        else:
-            return super(WorkaroundDateTimeField, self).pre_save(model_instance, add)
-
-    def to_python(self, value):
-        """When we get a value out, set tzinfo so that downstream code
-        (like tastypie) can output an explicit timezoned value rather
-        than being unsure"""
-        from dateutil.tz import tzutc
-        from dateutil.parser import parser
-        from django.core import exceptions
-        try:
-            val = super(WorkaroundDateTimeField, self).to_python(value)
-        except exceptions.ValidationError, e:
-            # https://github.com/toastdriven/django-tastypie/issues/385
-            try:
-                val = parser().parse(value)
-            except ValueError:
-                raise e
-        if val and not val.tzinfo:
-            val = val.replace(tzinfo = tzutc())
-
-        return val
-
-    def get_db_prep_value(self, value, connection, prepared=False):
-        """If passed a timezone-aware datetime, drop the tzinfo attribute
-        before passing to django (otherwise django complains because it
-        doesn't have a timezone-aware backend).  When doing that, require
-        that the tzinfo is tzutc, else raise an exception."""
-        # Casts dates into the format expected by the backend
-        if not prepared:
-            value = self.get_prep_value(value)
-
-        from dateutil.tz import tzutc
-        if value:
-            if value.tzinfo and value.tzinfo.__class__ == tzutc:
-                value = value.replace(tzinfo = None)
-            elif value.tzinfo:
-                value = datetime.datetime(*value.utctimetuple()[0:6])
-
-        return connection.ops.value_to_db_datetime(value)
 
 
 class DeletableDowncastableManager(DowncastManager):

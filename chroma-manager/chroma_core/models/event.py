@@ -9,13 +9,11 @@ from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
 
-from chroma_core.models.utils import WorkaroundDateTimeField
-
 
 class Event(models.Model):
     __metaclass__ = DowncastMetaclass
 
-    created_at = WorkaroundDateTimeField(auto_now_add = True)
+    created_at = models.DateTimeField(auto_now_add = True)
     severity = models.IntegerField()
     host = models.ForeignKey('chroma_core.ManagedHost', blank = True, null = True)
 

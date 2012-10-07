@@ -17,13 +17,13 @@ from django.db import IntegrityError
 import itertools
 from django.db.models.aggregates import Max, Count
 from django.db.models.query_utils import Q
+from django.utils.timezone import now
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
 from chroma_core.models.agent_session import AgentSession
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 
-from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import  DependOn, DependAll, Step
@@ -82,7 +82,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     states = ['unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
 
-    last_contact = WorkaroundDateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
+    last_contact = models.DateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
 
     DEFAULT_USERNAME = 'root'
 
@@ -118,7 +118,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return False
         else:
             # Have we had contact within timeout?
-            time_since = datetime.datetime.utcnow() - self.last_contact
+            time_since = now() - self.last_contact
             return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     def get_available_states(self, begin_state):
@@ -666,7 +666,7 @@ class GetHostClock(Step):
         # Get agent time and check it against server time
         agent_time_str = host_properties['time']
         agent_time = dateutil.parser.parse(agent_time_str)
-        server_time = datetime.datetime.utcnow()
+        server_time = now()
         from dateutil import tz
         server_time = server_time.replace(tzinfo=tz.tzutc())
 
@@ -725,7 +725,7 @@ class LearnDevicesStep(Step):
         AgentDaemonQueue().put({
                     "session_id": session.session_id,
                     "counter": 1,
-                    "started_at": datetime.datetime.utcnow().isoformat() + "Z",
+                    "started_at": now().isoformat() + "Z",
                     "host_id": host.id,
                     "updates": updates
             })
