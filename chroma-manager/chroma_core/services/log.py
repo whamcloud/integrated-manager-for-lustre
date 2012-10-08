@@ -36,15 +36,24 @@ STDOUT_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
 
 
 def _add_file_handler(logger):
-    handler = WatchedFileHandler(_log_filename)
-    handler.setFormatter(logging.Formatter(FILE_FORMAT))
-    logger.addHandler(handler)
+    if not _has_handler(logger, WatchedFileHandler):
+        handler = WatchedFileHandler(_log_filename)
+        handler.setFormatter(logging.Formatter(FILE_FORMAT))
+        logger.addHandler(handler)
 
 
 def _add_stream_handler(logger):
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(STDOUT_FORMAT))
-    logger.addHandler(handler)
+    if not _has_handler(logger, logging.StreamHandler):
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(STDOUT_FORMAT))
+        logger.addHandler(handler)
+
+
+def _has_handler(logger, handler_class):
+    for handler in logger.handlers:
+        if isinstance(handler, handler_class):
+            return True
+    return False
 
 
 def log_set_filename(filename):
@@ -75,12 +84,7 @@ def log_enable_stdout():
     global _enable_stdout
     _enable_stdout = True
     for logger in _loggers:
-        has_stdout = False
-        for handler in logger.handlers:
-            if isinstance(handler, logging.StreamHandler):
-                has_stdout = True
-        if not has_stdout:
-            _add_stream_handler(logger)
+        _add_stream_handler(logger)
 
 
 def log_disable_stdout():
