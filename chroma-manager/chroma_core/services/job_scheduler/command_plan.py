@@ -41,7 +41,12 @@ class Transition(object):
         return job_klass(**kwargs)
 
 
-class ModificationOperation(object):
+class CommandPlan(object):
+    """This class is responsible for translating requests to run jobs or
+    to change the state of the system into Command objects with associated
+    Jobs.
+
+    """
     def __init__(self, lock_cache):
         self._dep_cache = DepCache()
         self._lock_cache = lock_cache

@@ -5,7 +5,7 @@
 
 
 import threading
-from chroma_core.services.job_scheduler.job_scheduler_client import ModificationNotificationQueue
+from chroma_core.services.job_scheduler.job_scheduler_client import NotificationQueue
 
 from django.db.models.query_utils import Q
 from chroma_core.services import ChromaService, ServiceThread
@@ -16,7 +16,7 @@ class QueueHandler(object):
 
     """
     def __init__(self, job_scheduler):
-        self._queue = ModificationNotificationQueue()
+        self._queue = NotificationQueue()
         self._job_scheduler = job_scheduler
 
     def stop(self):
@@ -50,14 +50,14 @@ class Service(ChromaService):
         Command.objects.filter(complete = False).update(complete = True, cancelled = True)
         Job.objects.filter(~Q(state = 'complete')).update(state = 'complete', cancelled = True)
 
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpcInterface
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc
 
         job_scheduler = JobScheduler()
 
         self._queue_thread = ServiceThread(QueueHandler(job_scheduler))
         self._queue_thread.start()
 
-        self._rpc_thread = ServiceThread(JobSchedulerRpcInterface(job_scheduler))
+        self._rpc_thread = ServiceThread(JobSchedulerRpc(job_scheduler))
         self._rpc_thread.start()
 
         self._complete.wait()

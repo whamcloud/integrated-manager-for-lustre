@@ -218,9 +218,9 @@ class JobTestCase(TestCase):
 
         from chroma_core.services.job_scheduler.dep_cache import DepCache
         from chroma_core.services.job_scheduler.job_scheduler import JobScheduler, RunJobThread
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpcInterface, ModificationNotificationQueue
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc, NotificationQueue
         self.job_scheduler = JobScheduler()
-        patch_daemon_rpc(JobSchedulerRpcInterface, self.job_scheduler)
+        patch_daemon_rpc(JobSchedulerRpc, self.job_scheduler)
 
         from chroma_core.services.job_scheduler import QueueHandler
         job_scheduler_queue_handler = QueueHandler(self.job_scheduler)
@@ -228,7 +228,7 @@ class JobTestCase(TestCase):
         def job_scheduler_queue_immediate(body):
             log.info("job_scheduler_queue_immediate: %s" % body)
             job_scheduler_queue_handler.on_message(body)
-        ModificationNotificationQueue.put = mock.Mock(side_effect = job_scheduler_queue_immediate)
+        NotificationQueue.put = mock.Mock(side_effect = job_scheduler_queue_immediate)
 
         def spawn_job(job):
             RunJobThread(self.job_scheduler, job).run()

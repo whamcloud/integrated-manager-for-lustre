@@ -83,7 +83,7 @@ class Command(models.Model):
             old_state = object.state
             new_state = state
             route = object.get_route(old_state, new_state)
-            from chroma_core.services.job_scheduler.state_manager import Transition
+            from chroma_core.services.job_scheduler.command_plan import Transition
             job = Transition(object, route[-2], route[-1]).to_job()
             message = job.description()
 

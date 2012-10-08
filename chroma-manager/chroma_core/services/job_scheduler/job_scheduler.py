@@ -20,7 +20,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult, StateChangeJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
-from chroma_core.services.job_scheduler.state_manager import ModificationOperation
+from chroma_core.services.job_scheduler.command_plan import CommandPlan
 from chroma_core.lib.job import job_log
 
 
@@ -127,8 +127,8 @@ class RunJobThread(threading.Thread):
 class JobScheduler(object):
     """A single instance of this class is created within the `job_scheduler` service.
 
-    It is on the receiving end of RPCs (JobSchedulerRpcInterface) and also is called
-    by the handler for ModificationNotificationQueue
+    It is on the receiving end of RPCs (JobSchedulerRpc) and also is called
+    by the handler for NotificationQueue
 
 
     """
@@ -262,7 +262,7 @@ class JobScheduler(object):
                     job = ConfigureLNetJob(lnet_configuration = changed_item.lnetconfiguration, old_state = 'nids_unknown')
                     if not command:
                         command = Command.objects.create(message = "Configuring LNet on %s" % changed_item)
-                    ModificationOperation(self._lock_cache).add_jobs([job], command)
+                    CommandPlan(self._lock_cache).add_jobs([job], command)
                 else:
                     job_log.debug('running_or_failed')
 
@@ -271,7 +271,7 @@ class JobScheduler(object):
                     job = GetLNetStateJob(host = changed_item)
                     if not command:
                         command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
-                    ModificationOperation(self._lock_cache).add_jobs([job], command)
+                    CommandPlan(self._lock_cache).add_jobs([job], command)
 
         if isinstance(changed_item, ManagedTarget):
             if isinstance(changed_item, FilesystemMember):
@@ -285,7 +285,7 @@ class JobScheduler(object):
                     if DepCache().get(job).satisfied():
                         if not command:
                             command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
-                        ModificationOperation(self._lock_cache).add_jobs([job], command)
+                        CommandPlan(self._lock_cache).add_jobs([job], command)
 
     @transaction.commit_on_success
     def complete_job(self, job, errored = False, cancelled = False):
@@ -299,7 +299,7 @@ class JobScheduler(object):
         with self._lock:
             ObjectCache.clear()
             with transaction.commit_on_success():
-                rc = ModificationOperation(self._lock_cache).command_set_state(object_ids, message)
+                rc = CommandPlan(self._lock_cache).command_set_state(object_ids, message)
             if run:
                 self._run_next()
         return rc
@@ -355,7 +355,7 @@ class JobScheduler(object):
         with self._lock:
             ObjectCache.clear()
 
-            result = ModificationOperation(self._lock_cache).command_run_jobs(job_dicts, message)
+            result = CommandPlan(self._lock_cache).command_run_jobs(job_dicts, message)
             self._run_next()
         return result
 
