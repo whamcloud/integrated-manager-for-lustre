@@ -40,7 +40,7 @@ develop: version
 unit_tests:
 	rm -f unit.log
 	@echo "Running standard unit tests..."
-	@./manage.py test tests/unit $(NOSE_ARGS) 2>&1 | tee unit.log; \
+	@./manage.py test $(NOSE_ARGS) 2>&1 | tee unit.log; \
 	exit $${PIPESTATUS[0]}
 
 feature_tests:
