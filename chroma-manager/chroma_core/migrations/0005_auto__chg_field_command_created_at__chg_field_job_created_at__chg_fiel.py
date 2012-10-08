@@ -3,6 +3,75 @@ import datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
+import django.utils.timezone
+
+
+# This class was removed as of c47414, but we need it available in
+# the migration to avoid ValueError exceptions due to unknown field
+# definitions.  Grumble.
+class WorkaroundDateTimeField(models.DateTimeField):
+    """HYD-646 + https://github.com/toastdriven/django-tastypie/issues/385
+       In Django <1.4, datetimes are always passed to mysql[1]
+       naively, i.e. in local time.  We can work with that by
+       using utcnow() instead of now() in our application, but
+       DateTimeField uses now() internally, so we have to
+       override it in order to store UTC dates.
+
+       1. Actually, all backends but PostGres
+       """
+    def pre_save(self, model_instance, add):
+        """Use datetime.utcnow() instead of datetime.now() when populating
+        auto_now and auto_now_add values"""
+        if self.auto_now or (self.auto_now_add and add):
+            value = datetime.datetime.utcnow()
+            setattr(model_instance, self.attname, value)
+            return value
+        else:
+            return super(WorkaroundDateTimeField, self).pre_save(model_instance, add)
+
+    def to_python(self, value):
+        """When we get a value out, set tzinfo so that downstream code
+        (like tastypie) can output an explicit timezoned value rather
+        than being unsure"""
+        from dateutil.tz import tzutc
+        from dateutil.parser import parser
+        from django.core import exceptions
+        try:
+            val = super(WorkaroundDateTimeField, self).to_python(value)
+        except exceptions.ValidationError, e:
+            # https://github.com/toastdriven/django-tastypie/issues/385
+            try:
+                val = parser().parse(value)
+            except ValueError:
+                raise e
+        if val and not val.tzinfo:
+            val = val.replace(tzinfo = tzutc())
+
+        return val
+
+    def get_db_prep_value(self, value, connection, prepared=False):
+        """If passed a timezone-aware datetime, drop the tzinfo attribute
+        before passing to django (otherwise django complains because it
+        doesn't have a timezone-aware backend).  When doing that, require
+        that the tzinfo is tzutc, else raise an exception."""
+        # Casts dates into the format expected by the backend
+        if not prepared:
+            value = self.get_prep_value(value)
+
+        from dateutil.tz import tzutc
+        if value:
+            if value.tzinfo and value.tzinfo.__class__ == tzutc:
+                value = value.replace(tzinfo = None)
+            elif value.tzinfo:
+                value = datetime.datetime(*value.utctimetuple()[0:6])
+
+        return connection.ops.value_to_db_datetime(value)
+
+
+import chroma_core.models.utils
+# temporarily monkey-patch this class into the module
+chroma_core.models.utils.WorkaroundDateTimeField = WorkaroundDateTimeField
+
 
 class Migration(SchemaMigration):
 
@@ -118,7 +187,7 @@ class Migration(SchemaMigration):
         },
         'auth.user': {
             'Meta': {'object_name': 'User'},
-            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'django.utils.timezone.now'}),
             'email': ('django.db.models.fields.EmailField', [], {'max_length': '75', 'blank': 'True'}),
             'first_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
             'groups': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Group']", 'symmetrical': 'False', 'blank': 'True'}),
@@ -126,7 +195,7 @@ class Migration(SchemaMigration):
             'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'is_staff': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'is_superuser': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
+            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'django.utils.timezone.now'}),
             'last_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
             'password': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'user_permissions': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'}),
