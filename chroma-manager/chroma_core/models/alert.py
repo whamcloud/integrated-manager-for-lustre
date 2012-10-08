@@ -8,8 +8,7 @@ from django.db import models
 from polymorphic.models import DowncastMetaclass
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
-
-from chroma_core.models.utils import WorkaroundDateTimeField
+from django.utils.timezone import now as django_now
 
 
 class AlertState(models.Model):
@@ -25,8 +24,8 @@ class AlertState(models.Model):
 
     alert_type = models.CharField(max_length = 128)
 
-    begin = WorkaroundDateTimeField(help_text = "Time at which the alert started")
-    end = WorkaroundDateTimeField(help_text = "Time at which the alert was resolved\
+    begin = models.DateTimeField(help_text = "Time at which the alert started")
+    end = models.DateTimeField(help_text = "Time at which the alert was resolved\
             if active is false, else time that the alert was last checked (e.g.\
             time when we last checked an offline target was still not offline)")
 
@@ -130,9 +129,8 @@ class AlertState(models.Model):
         if hasattr(alert_item, 'not_deleted') and alert_item.not_deleted != True:
             return None
 
-        import datetime
         from django.db import IntegrityError
-        now = datetime.datetime.utcnow()
+        now = django_now()
         try:
             alert_state = cls.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
@@ -163,8 +161,7 @@ class AlertState(models.Model):
 
     @classmethod
     def low(cls, alert_item, **kwargs):
-        import datetime
-        now = datetime.datetime.utcnow()
+        now = django_now()
         try:
             alert_state = cls.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now

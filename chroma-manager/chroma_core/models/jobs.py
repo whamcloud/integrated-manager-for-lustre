@@ -4,17 +4,16 @@
 # ========================================================
 
 
-import datetime
 from collections import defaultdict
 import json
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
+from django.utils.timezone import now
 
 from picklefield.fields import PickledObjectField
 from polymorphic.models import DowncastMetaclass
 
-from chroma_core.models.utils import WorkaroundDateTimeField
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
 
@@ -44,7 +43,7 @@ class Command(models.Model):
     message = models.CharField(max_length = 512,
             help_text = "Human readable string about one sentence long describing\
             the action being done by the command")
-    created_at = WorkaroundDateTimeField(auto_now_add = True)
+    created_at = models.DateTimeField(auto_now_add = True)
 
     def check_completion(self):
         jobs = self.jobs.all().values('state', 'errored', 'cancelled')
@@ -54,7 +53,7 @@ class Command(models.Model):
             elif True in [j['cancelled'] for j in jobs]:
                 self.cancelled = True
 
-            job_log.info("Command %s (%s) completed in %s" % (self.id, self.message, datetime.datetime.utcnow() - self.created_at))
+            job_log.info("Command %s (%s) completed in %s" % (self.id, self.message, now() - self.created_at))
             self.complete = True
             self.save()
 
@@ -102,7 +101,7 @@ class StatefulObject(models.Model):
         abstract = True
         app_label = 'chroma_core'
 
-    state_modified_at = WorkaroundDateTimeField()
+    state_modified_at = models.DateTimeField()
     state = models.CharField(max_length = MAX_STATE_STRING)
     immutable_state = models.BooleanField(default=False)
     states = None
@@ -117,12 +116,12 @@ class StatefulObject(models.Model):
             self.state = self.initial_state
 
         if not self.state_modified_at:
-            self.state_modified_at = datetime.datetime.utcnow()
+            self.state_modified_at = now()
 
     def set_state(self, state, intentional = False):
         job_log.info("StatefulObject.set_state %s %s->%s (intentional=%s)" % (self, self.state, state, intentional))
         self.state = state
-        self.state_modified_at = datetime.datetime.utcnow()
+        self.state_modified_at = now()
         self.save()
 
     def not_state(self, state):
@@ -354,8 +353,8 @@ class Job(models.Model):
             by a user cancelling it, or if it never started because of a failed\
             dependency")
 
-    modified_at = WorkaroundDateTimeField(auto_now = True)
-    created_at = WorkaroundDateTimeField(auto_now_add = True)
+    modified_at = models.DateTimeField(auto_now = True)
+    created_at = models.DateTimeField(auto_now_add = True)
 
     wait_for_json = models.TextField()
     locks_json = models.TextField()
@@ -484,8 +483,8 @@ class StepResult(models.Model):
     # FIXME: we should have a 'cancelled' state for when a step is running while its job is cancelled
     state = models.CharField(max_length = 32, default='incomplete', help_text = 'One of incomplete, failed, success')
 
-    modified_at = WorkaroundDateTimeField(auto_now = True)
-    created_at = WorkaroundDateTimeField(auto_now_add = True)
+    modified_at = models.DateTimeField(auto_now = True)
+    created_at = models.DateTimeField(auto_now_add = True)
 
     def step_number(self):
         """Template helper"""
