@@ -25,12 +25,31 @@ from chroma_core.lib.job import job_log
 
 
 class RunJobThread(threading.Thread):
+    CANCEL_TIMEOUT = 30
+
     def __init__(self, job_scheduler, job):
         super(RunJobThread, self).__init__()
         self.job = job
         self._job_scheduler = job_scheduler
+        self._cancel = threading.Event()
+        self._complete = threading.Event()
+
+    def cancel(self):
+        job_log.info("Job %s: cancelling" % self.job.id)
+        self._cancel.set()
+        job_log.info("Job %s: waiting %ss for run to complete" % (self.job.id, self.CANCEL_TIMEOUT))
+        self._complete.wait(self.CANCEL_TIMEOUT)
+        if self._complete.is_set():
+            job_log.info("Job %s: cancel completed" % self.job.id)
+        else:
+            # HYD-1485: Get a mechanism to interject when the thread is blocked on an agent call
+            job_log.error("Job %s: cancel timed out, will continue as zombie thread!" % self.job.id)
 
     def run(self):
+        self._run()
+        self._complete.set()
+
+    def _run(self):
         job_log.info("Job %d: %s.run" % (self.job.id, self.__class__.__name__))
 
         try:
@@ -39,12 +58,12 @@ class RunJobThread(threading.Thread):
             job_log.error("Job %d: exception in get_steps" % self.job.id)
             exc_info = sys.exc_info()
             job_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
-            self._job_scheduler.complete_job(self.job, errored = True)
-            return None
+            self._complete.set()
+            return
 
         step_index = 0
         finish_step = -1
-        while step_index < len(steps):
+        while step_index < len(steps) and not self._cancel.is_set():
             klass, args = steps[step_index]
 
             result = StepResult(
@@ -74,7 +93,7 @@ class RunJobThread(threading.Thread):
                 result.state = 'failed'
                 result.save()
 
-                return None
+                return
 
             except Exception:
                 job_log.error("Job %d step %d encountered an error" % (self.job.id, step_index))
@@ -87,12 +106,15 @@ class RunJobThread(threading.Thread):
                 result.state = 'failed'
                 result.save()
 
-                return None
+                return
             finally:
                 result.save()
 
             finish_step = step_index
             step_index += 1
+
+        if self._cancel.is_set():
+            return
 
         # For StateChangeJobs, set update the state of the affected object
         if isinstance(self.job, StateChangeJob):
@@ -121,7 +143,7 @@ class RunJobThread(threading.Thread):
 
         self._job_scheduler.complete_job(self.job, errored = False)
 
-        return None
+        return
 
 
 class JobScheduler(object):
@@ -141,6 +163,8 @@ class JobScheduler(object):
         """
 
         self._lock_cache = LockCache()
+
+        self._run_threads = {}  # Map of job ID to RunJobThread
 
     @transaction.commit_on_success
     def _run_next(self):
@@ -179,13 +203,18 @@ class JobScheduler(object):
 
         job.state = 'tasked'
         job.save()
-
         self._spawn_job(job)
 
     def _spawn_job(self, job):
-        RunJobThread(self, job).start()
+        thread = RunJobThread(self, job)
+        assert not job.id in self._run_threads
+        self._run_threads[job.id] = thread
+        thread.start()
 
     def _complete_job(self, job, errored, cancelled):
+        if job.state == 'tasked':
+            del self._run_threads[job.id]
+
         job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
                      (job.id, errored, cancelled))
         job.state = 'complete'
@@ -361,8 +390,23 @@ class JobScheduler(object):
 
     @transaction.commit_on_success
     def cancel_job(self, job_id):
-        Job.objects.filter(pk = job_id).update(state = 'cancelled')
-        # FIXME: implement
-        # FIXME: hook into service teardown so that one can ctrl-c without
-        # waiting for jobs to complete
-        raise NotImplementedError()
+        with self._lock:
+            job = Job.objects.get(pk = job_id)
+            job_log.info("cancel_job: Cancelling job %s (%s)" % (job.id, job.state))
+            if job.state == 'complete':
+                return
+            elif job.state == 'tasked':
+                try:
+                    thread = self._run_threads[job_id]
+                    thread.cancel()
+                except KeyError:
+                    pass
+                Job.objects.filter(pk = job_id, state = 'tasked').update(state = 'complete', cancelled = True)
+            elif job.state == 'pending':
+                Job.objects.filter(pk = job_id, state = 'pending').update(state = 'complete', cancelled = True)
+
+            for command in Command.objects.filter(jobs = job_id):
+                command.check_completion()
+
+            # So that anything waiting on this job can be cancelled too
+            self._run_next()

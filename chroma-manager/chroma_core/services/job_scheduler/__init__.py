@@ -5,9 +5,11 @@
 
 
 import threading
-from chroma_core.services.job_scheduler.job_scheduler_client import NotificationQueue
+from django.db import transaction
 
 from django.db.models.query_utils import Q
+
+from chroma_core.services.job_scheduler.job_scheduler_client import NotificationQueue
 from chroma_core.services import ChromaService, ServiceThread
 
 
@@ -52,17 +54,26 @@ class Service(ChromaService):
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc
 
-        job_scheduler = JobScheduler()
+        self.job_scheduler = JobScheduler()
 
-        self._queue_thread = ServiceThread(QueueHandler(job_scheduler))
+        self._queue_thread = ServiceThread(QueueHandler(self.job_scheduler))
         self._queue_thread.start()
 
-        self._rpc_thread = ServiceThread(JobSchedulerRpc(job_scheduler))
+        self._rpc_thread = ServiceThread(JobSchedulerRpc(self.job_scheduler))
         self._rpc_thread.start()
 
         self._complete.wait()
 
     def stop(self):
+        from chroma_core.models.jobs import Job
+        self.log.info("Cancelling outstanding jobs...")
+
+        # Get a fresh view of the job table
+        with transaction.commit_manually():
+            transaction.commit()
+        for job in Job.objects.filter(~Q(state = 'complete')).order_by('-id'):
+            self.job_scheduler.cancel_job(job.id)
+
         self.log.info("Stopping...")
         self._rpc_thread.stop()
         self._queue_thread.stop()

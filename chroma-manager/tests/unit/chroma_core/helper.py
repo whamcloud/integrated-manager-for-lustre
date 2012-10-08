@@ -231,7 +231,9 @@ class JobTestCase(TestCase):
         NotificationQueue.put = mock.Mock(side_effect = job_scheduler_queue_immediate)
 
         def spawn_job(job):
-            RunJobThread(self.job_scheduler, job).run()
+            thread = RunJobThread(self.job_scheduler, job)
+            self.job_scheduler._run_threads[job.id] = thread
+            thread.run()
 
         JobScheduler._spawn_job = mock.Mock(side_effect=spawn_job)
 

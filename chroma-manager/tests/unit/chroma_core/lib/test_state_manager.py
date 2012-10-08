@@ -1,5 +1,7 @@
-from chroma_core.models.jobs import SchedulingError
+from chroma_core.models.jobs import SchedulingError, Job
+from chroma_core.services.job_scheduler.job_scheduler import RunJobThread, JobScheduler
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+import mock
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
 import datetime
 from dateutil import tz
@@ -112,3 +114,81 @@ class TestStateManager(JobTestCaseWithHost):
         # This tests a state transition which requires two jobs acting on the same object
         self.set_state(self.host, 'lnet_unloaded')
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
+
+    def test_cancel_pending(self):
+        """Test cancelling a Job which is in state 'pending'"""
+
+        self.set_state_delayed([(self.host, 'lnet_unloaded')])
+        pending_jobs = Job.objects.filter(state = 'pending')
+
+        # stop lnet, unload lnet
+        self.assertEqual(pending_jobs.count(), 2)
+
+        # This is the one we cancelled explicitly
+        cancelled_job = pending_jobs[0]
+
+        # This one should be cancelled as a result of cancelling it's dependency
+        consequentially_cancelled_job = pending_jobs[1]
+
+        JobSchedulerClient.cancel_job(pending_jobs[0].id)
+        cancelled_job = freshen(cancelled_job)
+        consequentially_cancelled_job = freshen(consequentially_cancelled_job)
+
+        self.assertEqual(cancelled_job.state, 'complete')
+        self.assertEqual(cancelled_job.errored, False)
+        self.assertEqual(cancelled_job.cancelled, True)
+
+        self.assertEqual(consequentially_cancelled_job.state, 'complete')
+        self.assertEqual(consequentially_cancelled_job.errored, False)
+        self.assertEqual(consequentially_cancelled_job.cancelled, True)
+
+        pending_jobs = Job.objects.filter(state = 'pending')
+        self.assertEqual(pending_jobs.count(), 0)
+
+    def test_cancel_complete(self):
+        """Test cancelling a Job which is in state 'complete': should be
+        a no-op
+
+        """
+        self.set_state_delayed([(self.host, 'lnet_down')])
+        job = Job.objects.get(state = 'pending')
+
+        # Run, check that it goes to successful state
+        self.set_state_complete()
+        job = freshen(job)
+        self.assertEqual(job.state, 'complete')
+        self.assertEqual(job.cancelled, False)
+        self.assertEqual(job.errored, False)
+
+        # Try to cancel, check that it is not modified
+        JobSchedulerClient.cancel_job(job.id)
+        job = freshen(job)
+        self.assertEqual(job.state, 'complete')
+        self.assertEqual(job.cancelled, False)
+        self.assertEqual(job.errored, False)
+
+    def test_cancel_tasked(self):
+        """Test that cancelling a Job which is in state 'tasked' involves
+        calling the cancel method on RunJobThread"""
+
+        cancel_bak = RunJobThread.cancel
+        RunJobThread.cancel = mock.Mock()
+
+        def spawn_job(job):
+            thread = mock.Mock()
+            self.job_scheduler._run_threads[job.id] = thread
+
+        spawn_bak = JobScheduler._spawn_job
+        JobScheduler._spawn_job = mock.Mock(side_effect=spawn_job)
+
+        try:
+            self.set_state_delayed([(self.host, 'lnet_down')])
+            # Start our mock thread 'running'
+            self.set_state_complete()
+            job = Job.objects.get(state = 'tasked')
+            JobSchedulerClient.cancel_job(job.id)
+            # That call to cancel should have reached the thread
+            self.assertEqual(self.job_scheduler._run_threads[job.id].cancel.call_count, 1)
+        finally:
+            RunJobThread.cancel = cancel_bak
+            JobScheduler._spawn_job = spawn_bak

@@ -60,7 +60,7 @@ class JobValidation(Validation):
             except KeyError:
                 errors['state'] = "Attribute mandatory"
             else:
-                valid_states = ['cancel', job.state]
+                valid_states = ['cancelled', job.state]
                 if not new_state in valid_states:
                     errors['state'] = "Must be one of %s" % valid_states
 
