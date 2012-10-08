@@ -145,8 +145,10 @@ class JobTestCase(TestCase):
         return volume
 
     def set_state(self, obj, state, check = True, run = True):
-        Command.set_state([(obj, state)], "Unit test transition %s to %s" % (obj, state), run = run)
+        command = Command.set_state([(obj, state)], "Unit test transition %s to %s" % (obj, state), run = run)
         if check:
+            if command:
+                self.assertEqual(Command.objects.get(pk = command.id).complete, True)
             try:
                 self.assertState(obj, state)
             except obj.__class__.DoesNotExist:
@@ -159,6 +161,7 @@ class JobTestCase(TestCase):
     def set_state_complete(self):
         """Run any outstanding jobs"""
         self.job_scheduler._run_next()
+        self.assertEqual(Command.objects.filter(complete = False).count(), 0)
 
     def assertState(self, obj, state):
         self.assertEqual(freshen(obj).state, state)
@@ -238,22 +241,22 @@ class JobTestCase(TestCase):
         JobScheduler._spawn_job = mock.Mock(side_effect=spawn_job)
 
         def run_next():
-            from chroma_core.models.jobs import Job
-
             while True:
-                runnable_jobs = Job.get_ready_jobs()
+                runnable_jobs = self.job_scheduler._job_collection.ready_jobs
 
                 log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
                     len(runnable_jobs),
-                    Job.objects.filter(state = 'pending').count(),
-                    Job.objects.filter(state = 'tasked').count()))
+                    len(self.job_scheduler._job_collection.pending_jobs),
+                    len(self.job_scheduler._job_collection.tasked_jobs)))
 
                 if not runnable_jobs:
                     break
 
                 dep_cache = DepCache()
-                for job in runnable_jobs:
-                    self.job_scheduler._start_job(job, dep_cache)
+                ok_jobs = self.job_scheduler._check_jobs(runnable_jobs, dep_cache)
+                self.job_scheduler._job_collection.update_many(ok_jobs, 'tasked')
+                for job in ok_jobs:
+                    self.job_scheduler._spawn_job(job)
 
         JobScheduler._run_next = mock.Mock(side_effect=run_next)
 

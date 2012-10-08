@@ -50,8 +50,8 @@ class TestBigFilesystem(JobTestCase):
         connection.use_debug_cursor = False
 
     def test_big_filesystem(self):
-        OSS_COUNT = 4
-        OST_COUNT = 32
+        OSS_COUNT = 2
+        OST_COUNT = 16
 
         assert OST_COUNT % OSS_COUNT == 0
 
@@ -90,11 +90,12 @@ class TestBigFilesystem(JobTestCase):
         try:
             dbperf.enabled = True
             import cProfile
-            with dbperf("set_state"):
-                cProfile.runctx("self.set_state_delayed([(self.fs, 'available')])", globals(), locals(), 'set_state.prof')
-
-            with dbperf('run_next'):
-                self.job_scheduler._run_next()
+            total = dbperf('total')
+            with total:
+                with dbperf("set_state"):
+                    cProfile.runctx("self.set_state_delayed([(self.fs, 'available')])", globals(), locals(), 'set_state.prof')
+                with dbperf('run_next'):
+                    self.job_scheduler._run_next()
         finally:
             dbperf.enabled = False
 

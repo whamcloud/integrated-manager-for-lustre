@@ -5,14 +5,17 @@
 
 
 import json
-from chroma_core.services.job_scheduler.dep_cache import DepCache
 from collections import defaultdict
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from chroma_core.lib.job import job_log
+from chroma_core.services.log import log_register
+from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.models.jobs import StateChangeJob, Command, SchedulingError, StateLock
+
+
+log = log_register(__name__.split('.')[-1])
 
 
 class Transition(object):
@@ -47,9 +50,10 @@ class CommandPlan(object):
     Jobs.
 
     """
-    def __init__(self, lock_cache):
+    def __init__(self, lock_cache, job_collection):
         self._dep_cache = DepCache()
         self._lock_cache = lock_cache
+        self._job_collection = job_collection
 
     def get_expected_state(self, stateful_object_instance):
         try:
@@ -111,9 +115,9 @@ class CommandPlan(object):
         for job in jobs:
             for dependency in self._dep_cache.get(job).all():
                 if not dependency.satisfied():
-                    job_log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
+                    log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
                     self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command)
-            job_log.info("add_jobs: done checking dependencies")
+            log.info("add_jobs: done checking dependencies")
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks)
@@ -121,8 +125,11 @@ class CommandPlan(object):
             for l in locks:
                 self._lock_cache.add(l)
 
-            job_log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
+            log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
             command.jobs.add(job)
+
+        self._job_collection.add_many(jobs)
+        self._job_collection.add_command(command, jobs)
 
     def get_transition_consequences(self, instance, new_state):
         """For use in the UI, for warning the user when an
@@ -147,11 +154,11 @@ class CommandPlan(object):
             self.get_expected_state(instance),
             new_state))
 
-        #job_log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
+        #log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
         #for d in self.deps:
-        #    job_log.debug("  dep %s" % (d,))
+        #    log.debug("  dep %s" % (d,))
         #for e in self.edges:
-        #    job_log.debug("  edge [%s]->[%s]" % (e))
+        #    log.debug("  edge [%s]->[%s]" % (e))
         self.deps = self._sort_graph(self.deps, self.edges)
 
         depended_jobs = []
@@ -218,8 +225,7 @@ class CommandPlan(object):
                     wait_fors.add(prior_write_lock.job.id)
 
         wait_fors = list(wait_fors)
-        if wait_fors:
-            job.wait_for_json = json.dumps(wait_fors)
+        job.wait_for_json = json.dumps(wait_fors)
 
     def _sort_graph(self, objects, edges):
         """Sort items in a graph by their longest path from a leaf.  Items
@@ -256,7 +262,7 @@ class CommandPlan(object):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
 
-        job_log.info("set_state: %s-%s to state %s" % (instance.__class__, instance.id, new_state))
+        log.info("set_state: %s-%s to state %s" % (instance.__class__, instance.id, new_state))
 
         from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
@@ -273,6 +279,7 @@ class CommandPlan(object):
                 # This is a no-op because of an in-progress Job:
                 job = self._lock_cache.get_latest_write(instance).job
                 command.jobs.add(job)
+                self._job_collection.add_command(command, [job])
 
             command.check_completion()
 
@@ -292,38 +299,44 @@ class CommandPlan(object):
         #  of parallelism.
         self.deps = self._sort_graph(self.deps, self.edges)
 
+        jobs = []
         for d in self.deps:
-            job_log.debug("  dep %s" % d)
+            log.debug("  dep %s" % d)
+
+            # Create and save the Job instance
             job = d.to_job()
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks)
             job.save()
+            jobs.append(job)
             for l in locks:
                 self._lock_cache.add(l)
-            job_log.debug("  dep %s -> Job %s" % (d, job.pk))
+            log.debug("  dep %s -> Job %s" % (d, job.pk))
             command.jobs.add(job)
 
         command.save()
+        self._job_collection.add_many(jobs)
+        self._job_collection.add_command(command, jobs)
 
     def _emit_transition_deps(self, transition, transition_stack = {}):
         if transition in self.deps:
-            job_log.debug("emit_transition_deps: %s already scheduled" % (transition))
+            log.debug("emit_transition_deps: %s already scheduled" % (transition))
             return transition
         else:
-            job_log.debug("emit_transition_deps: %s" % (transition))
+            log.debug("emit_transition_deps: %s" % (transition))
             pass
 
         # Update our worldview to record that any subsequent dependencies may
         # assume that we are in our new state
         transition_stack = dict(transition_stack.items())
         transition_stack[transition.stateful_object] = transition.new_state
-        job_log.debug("Updating transition_stack[%s/%s] = %s" % (transition.stateful_object.__class__, transition.stateful_object.id, transition.new_state))
+        log.debug("Updating transition_stack[%s/%s] = %s" % (transition.stateful_object.__class__, transition.stateful_object.id, transition.new_state))
 
         # E.g. for 'unformatted'->'registered' for a ManagedTarget we
         # would get ['unformatted', 'formatted', 'registered']
         route = transition.stateful_object.get_route(transition.old_state, transition.new_state)
-        job_log.debug("emit_transition_deps: route %s" % (route,))
+        log.debug("emit_transition_deps: route %s" % (route,))
 
         # Add to self.deps and self.edges for each step in the route
         prev = None
@@ -343,14 +356,14 @@ class CommandPlan(object):
         if root_transition in self.cdc:
             return
 
-        job_log.debug("collect_dependencies: %s" % root_transition)
+        log.debug("collect_dependencies: %s" % root_transition)
         # What is explicitly required for this state transition?
         transition_deps = self._dep_cache.get(root_transition.to_job())
         for dependency in transition_deps.all():
             from chroma_core.lib.job import DependOn
             assert(isinstance(dependency, DependOn))
             old_state = self.get_expected_state(dependency.stateful_object)
-            job_log.debug("cd %s/%s %s %s" % (dependency.stateful_object.__class__, dependency.stateful_object.id, old_state, dependency.acceptable_states))
+            log.debug("cd %s/%s %s %s" % (dependency.stateful_object.__class__, dependency.stateful_object.id, old_state, dependency.acceptable_states))
 
             if not old_state in dependency.acceptable_states:
                 dep_transition = self._emit_transition_deps(Transition(
@@ -375,7 +388,7 @@ class CommandPlan(object):
 
             # Is old_state not what we want?
             if old_state and not old_state in dependency.acceptable_states:
-                job_log.debug("new state static requires = %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
+                log.debug("new state static requires = %s %s %s" % (dependency.stateful_object, old_state, dependency.acceptable_states))
                 # Emit some transitions to get depended_on into depended_state
                 dep_transition = self._emit_transition_deps(Transition(
                         dependency.stateful_object,
@@ -395,7 +408,7 @@ class CommandPlan(object):
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
                     assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
-                    job_log.debug("Reverse dependency: %s-%s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
+                    log.debug("Reverse dependency: %s-%s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
                         dependent, dependent_state, root_transition.stateful_object.__class__,
                         root_transition.stateful_object.id, dependency.acceptable_states, root_transition.new_state,
                         dependency.fix_state))
@@ -420,9 +433,9 @@ class CommandPlan(object):
             jobs.append(job_instance)
 
         command = Command.objects.create(message = message)
-        job_log.debug("command_run_jobs: command %s" % command.id)
+        log.debug("command_run_jobs: command %s" % command.id)
         for job in jobs:
-            job_log.debug("command_run_jobs:  job %s" % job)
+            log.debug("command_run_jobs:  job %s" % job)
         self.add_jobs(jobs, command)
 
         return command.id
@@ -434,6 +447,6 @@ class CommandPlan(object):
             instance = model_klass.objects.get(pk = o_pk)
             self.set_state(instance, state, command)
 
-        job_log.info("Created command %s (%s) with %s jobs" % (command.id, command.message, command.jobs.count()))
+        log.info("Created command %s (%s) with %s jobs" % (command.id, command.message, command.jobs.count()))
 
-        return command.id
+        return command

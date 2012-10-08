@@ -184,7 +184,7 @@ class TestStateManager(JobTestCaseWithHost):
         try:
             self.set_state_delayed([(self.host, 'lnet_down')])
             # Start our mock thread 'running'
-            self.set_state_complete()
+            self.job_scheduler._run_next()
             job = Job.objects.get(state = 'tasked')
             JobSchedulerClient.cancel_job(job.id)
             # That call to cancel should have reached the thread

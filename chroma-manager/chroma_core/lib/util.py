@@ -110,3 +110,4 @@ class dbperf(object):
         else:
             avg_t = 0
         self.logger.debug("%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t))
+        self.q = q

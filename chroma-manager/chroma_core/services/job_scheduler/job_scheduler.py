@@ -21,7 +21,10 @@ from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
-from chroma_core.lib.job import job_log
+from chroma_core.services.log import log_register
+
+
+log = log_register(__name__.split('.')[-1])
 
 
 class RunJobThread(threading.Thread):
@@ -35,29 +38,29 @@ class RunJobThread(threading.Thread):
         self._complete = threading.Event()
 
     def cancel(self):
-        job_log.info("Job %s: cancelling" % self.job.id)
+        log.info("Job %s: cancelling" % self.job.id)
         self._cancel.set()
-        job_log.info("Job %s: waiting %ss for run to complete" % (self.job.id, self.CANCEL_TIMEOUT))
+        log.info("Job %s: waiting %ss for run to complete" % (self.job.id, self.CANCEL_TIMEOUT))
         self._complete.wait(self.CANCEL_TIMEOUT)
         if self._complete.is_set():
-            job_log.info("Job %s: cancel completed" % self.job.id)
+            log.info("Job %s: cancel completed" % self.job.id)
         else:
             # HYD-1485: Get a mechanism to interject when the thread is blocked on an agent call
-            job_log.error("Job %s: cancel timed out, will continue as zombie thread!" % self.job.id)
+            log.error("Job %s: cancel timed out, will continue as zombie thread!" % self.job.id)
 
     def run(self):
         self._run()
         self._complete.set()
 
     def _run(self):
-        job_log.info("Job %d: %s.run" % (self.job.id, self.__class__.__name__))
+        log.info("Job %d: %s.run" % (self.job.id, self.__class__.__name__))
 
         try:
             steps = self.job.get_steps()
         except Exception, e:
-            job_log.error("Job %d: exception in get_steps" % self.job.id)
+            log.error("Job %d: exception in get_steps" % self.job.id)
             exc_info = sys.exc_info()
-            job_log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
+            log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
             self._complete.set()
             return
 
@@ -78,13 +81,13 @@ class RunJobThread(threading.Thread):
 
             from chroma_core.lib.agent import AgentException
             try:
-                job_log.debug("Job %d running step %d" % (self.job.id, step_index))
+                log.debug("Job %d running step %d" % (self.job.id, step_index))
                 step.run(args)
-                job_log.debug("Job %d step %d successful" % (self.job.id, step_index))
+                log.debug("Job %d step %d successful" % (self.job.id, step_index))
 
                 result.state = 'success'
             except AgentException, e:
-                job_log.error("Job %d step %d encountered an agent error" % (self.job.id, step_index))
+                log.error("Job %d step %d encountered an agent error" % (self.job.id, step_index))
                 self._job_scheduler.complete_job(self.job, errored = True)
 
                 result.backtrace = e.agent_backtrace
@@ -96,10 +99,10 @@ class RunJobThread(threading.Thread):
                 return
 
             except Exception:
-                job_log.error("Job %d step %d encountered an error" % (self.job.id, step_index))
+                log.error("Job %d step %d encountered an error" % (self.job.id, step_index))
                 exc_info = sys.exc_info()
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-                job_log.error(backtrace)
+                log.error(backtrace)
                 self._job_scheduler.complete_job(self.job, errored = True)
 
                 result.backtrace = backtrace
@@ -122,7 +125,7 @@ class RunJobThread(threading.Thread):
             obj = obj.__class__._base_manager.get(pk = obj.pk)
             new_state = self.job.state_transition[2]
             obj.set_state(new_state, intentional = True)
-            job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.job.pk, new_state, obj))
+            log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.job.pk, new_state, obj))
 
         # Freshen cached information about anything that this job held a writelock on
         locks = json.loads(self.job.locks_json)
@@ -134,7 +137,7 @@ class RunJobThread(threading.Thread):
                 else:
                     ObjectCache.update(lock.locked_item)
 
-        job_log.info("Job %d finished %d steps successfully" % (self.job.id, finish_step + 1))
+        log.info("Job %d finished %d steps successfully" % (self.job.id, finish_step + 1))
 
         # Ensure that any changes made by this thread are visible to other threads before
         # we ask job_scheduler to advance
@@ -144,6 +147,77 @@ class RunJobThread(threading.Thread):
         self._job_scheduler.complete_job(self.job, errored = False)
 
         return
+
+
+class JobCollection(object):
+    def __init__(self):
+        self.flush()
+
+    def flush(self):
+        self._state_jobs = {
+            'pending': {},
+            'tasked': {},
+            'complete': {}
+        }
+        self._jobs = {}
+
+    def add(self, job):
+        self._jobs[job.id] = job
+        self._state_jobs[job.state][job.id] = job
+
+    def add_many(self, jobs):
+        for job in jobs:
+            self.add(job)
+
+    def add_command(self, command, jobs):
+        """Add command if it doesn't already exist, and ensure that all
+        of `jobs` are associated with it
+
+        """
+
+    def get(self, job_id):
+        return self._jobs[job_id]
+
+    def update(self, job, new_state, **kwargs):
+        del self._state_jobs[job.state][job.id]
+
+        Job.objects.filter(id = job.id).update(state = new_state, **kwargs)
+        job.state = new_state
+
+        self._state_jobs[job.state][job.id] = job
+
+    def update_many(self, jobs, new_state):
+        for job in jobs:
+            del self._state_jobs[job.state][job.id]
+            job.state = new_state
+            self._state_jobs[job.state][job.id] = job
+
+        Job.objects.filter(id__in = [j.id for j in jobs]).update(state = new_state)
+
+    @property
+    def ready_jobs(self):
+        result = []
+        for job in self._state_jobs['pending'].values():
+            wait_for_ids = json.loads(job.wait_for_json)
+            complete_job_ids = [j.id for j in self._state_jobs['complete'].values()]
+            if not set(wait_for_ids) - set(complete_job_ids):
+                result.append(job)
+
+        if len(result) == 0 and len(self.pending_jobs) == 0 and len(self.tasked_jobs) == 0:
+            # A quiescent state, flush the collection (avoid building up an indefinitely
+            # large collection of complete jobs)
+            log.debug("%s.flush" % (self.__class__.__name__))
+            self.flush()
+
+        return result
+
+    @property
+    def pending_jobs(self):
+        return self._state_jobs['pending'].values()
+
+    @property
+    def tasked_jobs(self):
+        return self._state_jobs['tasked'].values()
 
 
 class JobScheduler(object):
@@ -163,47 +237,50 @@ class JobScheduler(object):
         """
 
         self._lock_cache = LockCache()
+        self._job_collection = JobCollection()
 
         self._run_threads = {}  # Map of job ID to RunJobThread
 
     @transaction.commit_on_success
     def _run_next(self):
-        runnable_jobs = Job.get_ready_jobs()
+        ready_jobs = self._job_collection.ready_jobs
 
-        job_log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-            len(runnable_jobs),
-            Job.objects.filter(state = 'pending').count(),
-            Job.objects.filter(state = 'tasked').count()))
+        log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
+            len(ready_jobs),
+            len(self._job_collection.pending_jobs),
+            len(self._job_collection.tasked_jobs)))
 
         dep_cache = DepCache()
-        for job in runnable_jobs:
-            self._start_job(job, dep_cache)
+        ok_jobs = self._check_jobs(ready_jobs, dep_cache)
+        self._job_collection.update_many(ok_jobs, 'tasked')
 
-    def _start_job(self, job, dep_cache):
-        job_log.info("Job %d: Job.run %s" % (job.id, job.description()))
-        # We've reached the head of the queue, all I need to check now
-        # is - are this Job's immediate dependencies satisfied?  And are any deps
-        # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
+        for job in ready_jobs:
+            self._spawn_job(job)
 
-        try:
-            deps_satisfied = job._deps_satisfied(dep_cache)
-        except Exception:
-            # Catchall exception handler to ensure progression even if Job
-            # subclasses have bugs in their get_deps etc.
-            job_log.error("Job %s: exception in dependency check: %s" % (job.id,
-                                                                         '\n'.join(traceback.format_exception(*(sys.exc_info())))))
-            self.complete_job(job, cancelled = True)
-            return
+    def _check_jobs(self, jobs, dep_cache):
+        """Return the list of jobs which pass their checks"""
+        ok_jobs = []
 
-        if not deps_satisfied:
-            job_log.warning("Job %d: cancelling because of failed dependency" % job.id)
-            self.complete_job(job, cancelled = True)
-            # TODO: tell someone WHICH dependency
-            return
+        for job in jobs:
+            try:
+                deps_satisfied = job._deps_satisfied(dep_cache)
+            except Exception:
+                # Catchall exception handler to ensure progression even if Job
+                # subclasses have bugs in their get_deps etc.
+                log.error("Job %s: exception in dependency check: %s" % (job.id,
+                                                                             '\n'.join(traceback.format_exception(*(sys.exc_info())))))
+                self.complete_job(job, cancelled = True)
+                continue
 
-        job.state = 'tasked'
-        job.save()
-        self._spawn_job(job)
+            if not deps_satisfied:
+                log.warning("Job %d: cancelling because of failed dependency" % job.id)
+                self.complete_job(job, cancelled = True)
+                # TODO: tell someone WHICH dependency
+                continue
+            else:
+                ok_jobs.append(job)
+
+        return ok_jobs
 
     def _spawn_job(self, job):
         thread = RunJobThread(self, job)
@@ -215,38 +292,30 @@ class JobScheduler(object):
         if job.state == 'tasked':
             del self._run_threads[job.id]
 
-        job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
+        log.info("Job %s completing (errored=%s, cancelled=%s)" %
                      (job.id, errored, cancelled))
-        job.state = 'complete'
-        job.errored = errored
-        job.cancelled = cancelled
-        job.save()
+        self._job_collection.update(job, 'complete', errored = errored, cancelled = cancelled)
 
-        job = job.downcast()
+        try:
+            command = Command.objects.filter(jobs = job, complete = False)[0]
+        except IndexError:
+            log.warning("Job %s: No incomplete command while completing" % job.pk)
+            command = None
 
-        if job.locks_json:
-            try:
-                command = Command.objects.filter(jobs = job, complete = False)[0]
-            except IndexError:
-                job_log.warning("Job %s: No incomplete command while completing" % job.pk)
-                command = None
+        locks = json.loads(job.locks_json)
 
-            locks = json.loads(job.locks_json)
+        # Update _lock_cache to remove the completed job's locks
+        self._lock_cache.remove_job(job)
 
-            # Update _lock_cache to remove the completed job's locks
-            self._lock_cache.remove_job(job)
-
-            # Check for completion callbacks on anything this job held a writelock on
-            for lock in locks:
-                if lock['write']:
-                    lock = StateLock.from_dict(job, lock)
-                    job_log.debug("Job %s completing, held writelock on %s" % (job.pk, lock.locked_item))
-                    try:
-                        self._completion_hooks(lock.locked_item, command)
-                    except Exception:
-                        job_log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
-        else:
-            job_log.debug("Job %s completing, held no locks" % job.pk)
+        # Check for completion callbacks on anything this job held a writelock on
+        for lock in locks:
+            if lock['write']:
+                lock = StateLock.from_dict(job, lock)
+                log.debug("Job %s completing, held writelock on %s" % (job.pk, lock.locked_item))
+                try:
+                    self._completion_hooks(lock.locked_item, command)
+                except Exception:
+                    log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
 
         for command in Command.objects.filter(jobs = job):
             command.check_completion()
@@ -259,7 +328,7 @@ class JobScheduler(object):
         if hasattr(changed_item, 'content_type'):
             changed_item = changed_item.downcast()
 
-        job_log.debug("_completion_hooks command %s, %s (%s) state=%s" % (command, changed_item, changed_item.__class__, changed_item.state))
+        log.debug("_completion_hooks command %s, %s (%s) state=%s" % (command, changed_item, changed_item.__class__, changed_item.state))
 
         def running_or_failed(klass, **kwargs):
             """Look for jobs of the same type with the same params, either incomplete (don't start the job because
@@ -278,7 +347,7 @@ class JobScheduler(object):
             now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
 
             if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
-                job_log.debug('branched')
+                log.debug('branched')
                 self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
                 self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
@@ -291,16 +360,16 @@ class JobScheduler(object):
                     job = ConfigureLNetJob(lnet_configuration = changed_item.lnetconfiguration, old_state = 'nids_unknown')
                     if not command:
                         command = Command.objects.create(message = "Configuring LNet on %s" % changed_item)
-                    CommandPlan(self._lock_cache).add_jobs([job], command)
+                    CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
                 else:
-                    job_log.debug('running_or_failed')
+                    log.debug('running_or_failed')
 
             if changed_item.state == 'configured':
                 if not running_or_failed(GetLNetStateJob, host = changed_item):
                     job = GetLNetStateJob(host = changed_item)
                     if not command:
                         command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
-                    CommandPlan(self._lock_cache).add_jobs([job], command)
+                    CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
 
         if isinstance(changed_item, ManagedTarget):
             if isinstance(changed_item, FilesystemMember):
@@ -314,11 +383,16 @@ class JobScheduler(object):
                     if DepCache().get(job).satisfied():
                         if not command:
                             command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
-                        CommandPlan(self._lock_cache).add_jobs([job], command)
+                        CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
 
     @transaction.commit_on_success
     def complete_job(self, job, errored = False, cancelled = False):
         with self._lock:
+            if job.state != 'tasked':
+                # This happens if a Job is cancelled while it's calling this
+                log.info("Job %s has state %s in complete_job" % (job.id, job.state))
+                return
+
             ObjectCache.clear()
 
             self._complete_job(job, errored, cancelled)
@@ -328,10 +402,11 @@ class JobScheduler(object):
         with self._lock:
             ObjectCache.clear()
             with transaction.commit_on_success():
-                rc = CommandPlan(self._lock_cache).command_set_state(object_ids, message)
+                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(object_ids, message)
+            self._job_collection.add_many(command.jobs.all())
             if run:
                 self._run_next()
-        return rc
+        return command.id
 
     def _notify_state(self, content_type, object_id, notification_time, new_state, from_states):
         # Get the StatefulObject
@@ -352,7 +427,7 @@ class JobScheduler(object):
 
                 if notification_time > modified_at:
                     # No jobs lock this object, go ahead and update its state
-                    job_log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
+                    log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
                     instance.set_state(new_state)
                     ObjectCache.update(instance)
 
@@ -360,14 +435,14 @@ class JobScheduler(object):
                     # and apply any fix_states
                     self._completion_hooks(instance)
                 else:
-                    job_log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
+                    log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
                     pass
             else:
-                job_log.info("notify_state: Dropping update to %s because of locks" % instance)
+                log.info("notify_state: Dropping update to %s because of locks" % instance)
                 for lock in self._lock_cache.get_by_locked_item(instance):
-                    job_log.info("  %s" % lock)
+                    log.info("  %s" % lock)
         else:
-            job_log.info("notify_state: Dropping update to %s because its state is %s" % (instance, instance.state))
+            log.info("notify_state: Dropping update to %s because its state is %s" % (instance, instance.state))
 
     @transaction.commit_on_success
     def notify_state(self, content_type, object_id, time_serialized, new_state, from_states):
@@ -384,15 +459,22 @@ class JobScheduler(object):
         with self._lock:
             ObjectCache.clear()
 
-            result = CommandPlan(self._lock_cache).command_run_jobs(job_dicts, message)
+            result = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs(job_dicts, message)
             self._run_next()
         return result
 
     @transaction.commit_on_success
     def cancel_job(self, job_id):
         with self._lock:
-            job = Job.objects.get(pk = job_id)
-            job_log.info("cancel_job: Cancelling job %s (%s)" % (job.id, job.state))
+            try:
+                job = self._job_collection.get(job_id)
+            except KeyError:
+                # Job has been cleaned out of collection, therefore is complete
+                # However, to avoid being too trusting, let's retrieve it and
+                # let the following check for completeness happen
+                job = Job.objects.get(pk = job_id)
+
+            log.info("cancel_job: Cancelling job %s (%s)" % (job.id, job.state))
             if job.state == 'complete':
                 return
             elif job.state == 'tasked':
@@ -401,9 +483,9 @@ class JobScheduler(object):
                     thread.cancel()
                 except KeyError:
                     pass
-                Job.objects.filter(pk = job_id, state = 'tasked').update(state = 'complete', cancelled = True)
+                self._job_collection.update(job, 'complete', cancelled = True)
             elif job.state == 'pending':
-                Job.objects.filter(pk = job_id, state = 'pending').update(state = 'complete', cancelled = True)
+                self._job_collection.update(job, 'complete', cancelled = True)
 
             for command in Command.objects.filter(jobs = job_id):
                 command.check_completion()

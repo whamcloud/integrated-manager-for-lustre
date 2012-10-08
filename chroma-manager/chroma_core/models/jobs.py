@@ -5,7 +5,6 @@
 
 
 from collections import defaultdict
-import json
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
@@ -90,6 +89,9 @@ class Command(models.Model):
         command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
 
         return Command.objects.get(pk = command_id)
+
+    def __repr__(self):
+        return "<Command %s: '%s'>" % (self.id, self.message)
 
     class Meta:
         app_label = 'chroma_core'
@@ -377,34 +379,6 @@ class Job(models.Model):
 
     def create_locks(self):
         return []
-
-    @classmethod
-    def get_ready_jobs(cls):
-        wait_fors = {}
-        all_wait_fors = []
-        for job in Job.objects.filter(state = 'pending'):
-            if job.wait_for_json:
-                job_wait_fors = json.loads(job.wait_for_json)
-            else:
-                job_wait_fors = []
-            wait_fors[job.id] = job_wait_fors
-            all_wait_fors.extend(job_wait_fors)
-
-        wait_for_states = {}
-        for job in Job.objects.filter(id__in = all_wait_fors).values('state', 'id'):
-            wait_for_states[job['id']] = job['state']
-
-        result = []
-        for job_id, wait_for_ids in wait_fors.items():
-            ready = True
-            for wfi in wait_for_ids:
-                if wait_for_states[wfi] != 'complete':
-                    ready = False
-
-            if ready:
-                result.append(Job.objects.get(pk = job_id).downcast())
-
-        return result
 
     def get_deps(self):
         return DependAll()
