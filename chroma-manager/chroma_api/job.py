@@ -146,15 +146,10 @@ class JobResource(ModelResource):
 
     def dehydrate_available_transitions(self, bundle):
         job = bundle.obj.downcast()
-        if job.state in ['complete', 'completing', 'cancelling']:
+        if job.state == 'complete' or not job.cancellable:
             return []
-        elif job.state in ['pending', 'tasked', 'tasking']:
-            if job.cancellable:
-                return [{'state': 'cancel', 'label': 'Cancel'}]
-            else:
-                return []
-        else:
-            raise NotImplementedError("Unknown job state %s" % job.state)
+        elif job.cancellable:
+            return [{'state': 'cancelled', 'label': 'Cancel'}]
 
     def dehydrate_description(self, bundle):
         return bundle.obj.downcast().description()
@@ -164,8 +159,7 @@ class JobResource(ModelResource):
         resource_name = 'job'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['wait_for_completions', 'wait_for_count', 'finished_step',
-                    'started_step', 'task_id', 'locks_json', 'wait_for_json']
+        excludes = ['task_id', 'locks_json', 'wait_for_json']
         ordering = ['created_at']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
@@ -174,14 +168,12 @@ class JobResource(ModelResource):
         validation = JobValidation()
 
     def obj_update(self, bundle, request, **kwargs):
-        """Modify a Job (setting 'state' field to 'cancel')"""
-        # FIXME: 'cancel' isn't actually a state that a job ever has
-        # - there should be a better way of representing this operation
         job = Job.objects.get(pk = kwargs['pk'])
         new_state = bundle.data['state']
 
-        if new_state == 'cancel':
+        if new_state == 'cancelled':
             JobSchedulerClient.cancel_job(job.pk)
+            Job.objects.get(pk = kwargs['pk'])
 
         bundle.obj = job
         return bundle

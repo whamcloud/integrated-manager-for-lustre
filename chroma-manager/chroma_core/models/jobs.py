@@ -332,9 +332,7 @@ class StateLock(object):
 
 
 class Job(models.Model):
-
-    # Hashing functions are specialized to how jobs are used/indexed
-    # inside StateManager
+    # Hashing functions are specialized to how jobs are used/indexed inside CommandPlan
     # - eq+hash operations are for operating on unsaved jobs
     # - which doesn't work properly by default (https://code.djangoproject.com/ticket/18250)
     # - and we also want the saved version of a job to compare equal to its unsaved version
@@ -346,14 +344,12 @@ class Job(models.Model):
 
     __metaclass__ = DowncastMetaclass
 
-    states = ('pending', 'tasked', 'complete', 'completing', 'cancelling', 'paused')
+    states = ('pending', 'tasked', 'complete')
     state = models.CharField(max_length = 16, default = 'pending',
                              help_text = "One of %s" % (states,))
 
     errored = models.BooleanField(default = False, help_text = "True if the job has completed\
             with an error")
-    paused = models.BooleanField(default = False, help_text = "True if the job is currently\
-            in a paused state")
     cancelled = models.BooleanField(default = False, help_text = "True if the job has completed\
             by a user cancelling it, or if it never started because of a failed\
             dependency")
@@ -363,14 +359,6 @@ class Job(models.Model):
 
     wait_for_json = models.TextField()
     locks_json = models.TextField()
-
-    # Set to a step index before that step starts running
-    started_step = models.PositiveIntegerField(default = None, blank = True, null = True,
-            help_text = "Step which has been started within the Job")
-    # Set to a step index when that step has finished and its result is committed
-    finished_step = models.PositiveIntegerField(default = None, blank = True, null = True,
-            help_text = "Step which has been finished within the job, if not equal\
-                    to started_step then a step is in progress.")
 
     # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)
@@ -491,13 +479,9 @@ class StepResult(models.Model):
     console = models.TextField(help_text = "For debugging: combined standard out and standard error from all\
             subprocesses run while completing this step.  This includes output from successful\
             as well as unsuccessful commands, and may be very verbose.")
-    exception = PickledObjectField(blank = True, null = True, default = None)
-    backtrace = models.TextField(help_text = "Backtrace of an exception, if the exception occurred\
-            locally on the server.  Exceptions which occur remotely include the backtrace in the\
-            ``exception`` field")
+    backtrace = models.TextField(help_text = "Backtrace of an exception, if one occurred")
 
-    # FIXME: we should have a 'cancelled' state for when a step
-    # is running while its job is cancelled
+    # FIXME: we should have a 'cancelled' state for when a step is running while its job is cancelled
     state = models.CharField(max_length = 32, default='incomplete', help_text = 'One of incomplete, failed, success')
 
     modified_at = WorkaroundDateTimeField(auto_now = True)

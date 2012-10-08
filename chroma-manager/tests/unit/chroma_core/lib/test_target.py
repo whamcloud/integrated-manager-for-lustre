@@ -1,4 +1,5 @@
 from chroma_core.models.target import ManagedTargetMount
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
 
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
@@ -77,6 +78,18 @@ class TestTargetTransitions(JobTestCaseWithHost):
         with self.assertRaises(ManagedMgs.DoesNotExist):
             ManagedMgs.objects.get(pk = self.mgt.pk)
         self.assertEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
+
+    def test_lnet_dependency(self):
+        """Test that if I try to stop LNet on a host where a target is running,
+        stopping the target calculated as a dependency of that"""
+
+        self.assertState(self.mgt, 'mounted')
+        self.assertState(self.host, 'lnet_up')
+        consequences = JobSchedulerClient.get_transition_consequences(freshen(self.host), 'lnet_down')
+        import json
+        print json.dumps(consequences, indent=4)
+        self.assertEqual(len(consequences['dependency_jobs']), 1)
+        self.assertEqual(consequences['dependency_jobs'][0]['class'], 'StopTargetJob')
 
 
 class TestSharedTarget(JobTestCaseWithHost):
