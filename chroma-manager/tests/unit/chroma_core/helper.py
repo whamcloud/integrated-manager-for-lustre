@@ -1,7 +1,7 @@
 from collections import defaultdict
 from contextlib import contextmanager
 import datetime
-from chroma_core.services.job_scheduler.job_scheduler import SerializedCalls
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.log import log_register
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface, AgentDaemonQueue
 from django.test import TestCase
@@ -78,6 +78,12 @@ class MockAgent(object):
                 inode_size = 777
 
             return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': inode_size}
+        elif cmdline.startswith('stop-target'):
+            import re
+            from chroma_core.models import ManagedTarget
+            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
+            target = ManagedTarget.objects.get(ha_label = ha_label)
+            return
         elif cmdline.startswith('start-target'):
             import re
             from chroma_core.models import ManagedTarget
@@ -103,10 +109,6 @@ class MockAgent(object):
             return {'label': "foofs-TTT%04d" % self.label_counter}
         elif cmdline.startswith('detect-scan'):
             return self.mock_servers[self.host.address]['detect-scan']
-        elif cmdline == "device-plugin":
-            return {
-
-            }
         elif cmdline == "device-plugin --plugin=lustre":
             return {'lustre': {
                 'lnet_up': True,
@@ -117,79 +119,6 @@ class MockAgent(object):
                 return self.mock_servers[self.host.address]['device-plugin']
             except KeyError:
                 return {}
-
-
-def run_next():
-    from chroma_core.models.jobs import Job
-
-    while True:
-        runnable_jobs = Job.get_ready_jobs()
-        if not runnable_jobs:
-            break
-
-        log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
-            len(runnable_jobs),
-            Job.objects.filter(state = 'pending').count(),
-            Job.objects.filter(state = 'tasked').count()))
-
-        for job in runnable_jobs:
-            start_job(job)
-
-
-def complete_job(job, errored = False, cancelled = False):
-    from chroma_core.models.jobs import StateChangeJob
-    from chroma_core.lib.job import job_log
-    success = not (errored or cancelled)
-    if success and isinstance(job, StateChangeJob):
-        new_state = job.state_transition[2]
-        obj = job.get_stateful_object()
-        obj.set_state(new_state, intentional = True)
-        job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (job.pk, new_state, obj))
-
-    job_log.info("Job %s completing (errored=%s, cancelled=%s)" %
-                 (job.id, errored, cancelled))
-    job.state = 'completing'
-    job.errored = errored
-    job.cancelled = cancelled
-    job.save()
-
-    SerializedCalls.call('complete_job', job.pk)
-
-
-def start_job(job):
-    from chroma_core.services.job_scheduler.job_scheduler import RunJobThread
-    import sys
-    import traceback
-
-    log.info("Job %d: Job.run %s" % (job.id, job.description()))
-    # Important: multiple connections are allowed to call run() on a job
-    # that they see as pending, but only one is allowed to proceed past this
-    # point and spawn tasks.
-
-    # All the complexity of StateManager's dependency calculation doesn't
-    # matter here: we've reached our point in the queue, all I need to check now
-    # is - are this Job's immediate dependencies satisfied?  And are any deps
-    # for a statefulobject's new state satisfied?  If so, continue.  If not, cancel.
-
-    try:
-        deps_satisfied = job._deps_satisfied()
-    except Exception:
-        # Catchall exception handler to ensure progression even if Job
-        # subclasses have bugs in their get_deps etc.
-        log.error("Job %s: exception in dependency check: %s" % (job.id,
-                                                                     '\n'.join(traceback.format_exception(*(sys.exc_info())))))
-        complete_job(job, cancelled = True)
-        return
-
-    if not deps_satisfied:
-        log.warning("Job %d: cancelling because of failed dependency" % job.id)
-        complete_job(job, cancelled = True)
-        # TODO: tell someone WHICH dependency
-        return
-
-    job.state = 'tasked'
-    job.save()
-    RunJobThread(job.id).run()
 
 
 class JobTestCase(TestCase):
@@ -223,31 +152,30 @@ class JobTestCase(TestCase):
             except obj.__class__.DoesNotExist:
                 pass
 
-    def set_state_delayed(self, obj, state):
+    def set_state_delayed(self, obj_state_pairs):
         """Schedule some jobs without executing them"""
-        return self.set_state(obj, state, check = False, run = False)
+        Command.set_state(obj_state_pairs, "Unit test transition", run = False)
 
     def set_state_complete(self):
         """Run any outstanding jobs"""
-        from chroma_core.services.job_scheduler.job_scheduler import run_next
-        run_next()
+        self.job_scheduler._run_next()
 
     def assertState(self, obj, state):
         self.assertEqual(freshen(obj).state, state)
 
     def setUp(self):
-        # FIXME: have to do this before every test because otherwise
+        # FIXME: have to do self before every test because otherwise
         # one test will get all the setup of StoragePluginClass records,
         # the in-memory instance of storage_plugin_manager will expect
         # them to still be there but they'll have been cleaned
-        # out of the database.  Setting up this stuff should be done
+        # out of the database.  Setting up self stuff should be done
         # as part of the initial DB setup before any test is started
         # so that it's part of the baseline that's rolled back to
         # after each test.
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
 
-        # NB by this stage celery has already read in its settings, so we have to update
+        # NB by self stage celery has already read in its settings, so we have to update
         # ALWAYS_EAGER inside celery instead of in settings.*
         from celery.app import app_or_default
         self.old_celery_always_eager = app_or_default().conf.CELERY_ALWAYS_EAGER
@@ -262,7 +190,7 @@ class JobTestCase(TestCase):
         chroma_core.lib.agent.Agent = MockAgent
 
         # Any RPCs that are going to get called need explicitly overriding to
-        # turn into local calls -- this is a catch-all to prevent any RPC classes
+        # turn into local calls -- self is a catch-all to prevent any RPC classes
         # from trying to do network comms during unit tests
         ServiceRpcInterface._call = mock.Mock(side_effect = NotImplementedError)
         ServiceQueue.put = mock.Mock(side_effect = NotImplementedError)
@@ -288,14 +216,50 @@ class JobTestCase(TestCase):
             agent_daemon.on_message(body)
         AgentDaemonQueue.put = mock.Mock(side_effect = queue_immediate)
 
-        from chroma_core.services.job_scheduler import JobScheduler
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpcInterface
-        patch_daemon_rpc(JobSchedulerRpcInterface, JobScheduler())
+        from chroma_core.services.job_scheduler.dep_cache import DepCache
+        from chroma_core.services.job_scheduler.job_scheduler import JobScheduler, RunJobThread
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc, NotificationQueue
+        self.job_scheduler = JobScheduler()
+        patch_daemon_rpc(JobSchedulerRpc, self.job_scheduler)
 
-        import chroma_core.services.job_scheduler.job_scheduler
-        chroma_core.services.job_scheduler.job_scheduler.start_job = mock.Mock(side_effect=start_job)
-        chroma_core.services.job_scheduler.job_scheduler.complete_job = mock.Mock(side_effect=complete_job)
-        chroma_core.services.job_scheduler.job_scheduler.run_next = mock.Mock(side_effect=run_next)
+        from chroma_core.services.job_scheduler import QueueHandler
+        job_scheduler_queue_handler = QueueHandler(self.job_scheduler)
+
+        def job_scheduler_queue_immediate(body):
+            log.info("job_scheduler_queue_immediate: %s" % body)
+            job_scheduler_queue_handler.on_message(body)
+        NotificationQueue.put = mock.Mock(side_effect = job_scheduler_queue_immediate)
+
+        def spawn_job(job):
+            RunJobThread(self.job_scheduler, job).run()
+
+        JobScheduler._spawn_job = mock.Mock(side_effect=spawn_job)
+
+        def run_next():
+            from chroma_core.models.jobs import Job
+
+            while True:
+                runnable_jobs = Job.get_ready_jobs()
+
+                log.info("run_next: %d runnable jobs of (%d pending, %d tasked)" % (
+                    len(runnable_jobs),
+                    Job.objects.filter(state = 'pending').count(),
+                    Job.objects.filter(state = 'tasked').count()))
+
+                if not runnable_jobs:
+                    break
+
+                dep_cache = DepCache()
+                for job in runnable_jobs:
+                    self.job_scheduler._start_job(job, dep_cache)
+
+        JobScheduler._run_next = mock.Mock(side_effect=run_next)
+
+        def complete_job(job, errored = False, cancelled = False):
+            ObjectCache.clear()
+            self.job_scheduler._complete_job(job, errored, cancelled)
+
+        JobScheduler.complete_job = mock.Mock(side_effect=complete_job)
 
         # Patch host removal because we use a _test_lun function that generates Volumes
         # with no corresponding StorageResourceRecords, so the real implementation wouldn't

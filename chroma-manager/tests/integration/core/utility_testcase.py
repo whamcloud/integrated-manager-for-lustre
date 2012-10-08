@@ -1,5 +1,6 @@
 import inspect
 import logging
+import os
 import paramiko
 import re
 import time
@@ -12,7 +13,7 @@ from tests.integration.core.constants import TEST_TIMEOUT
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler('/var/log/chroma_test.log')
+handler = logging.FileHandler(os.path.join(config.get('log_dir', '/var/log/'), 'chroma_test.log'))
 handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)

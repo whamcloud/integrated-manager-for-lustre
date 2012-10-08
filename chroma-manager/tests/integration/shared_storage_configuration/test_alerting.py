@@ -1,19 +1,9 @@
 import time
 
-from testconfig import config
-
-from tests.utils.http_requests import AuthorizedHttpRequests
-
-from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
 
 
-class TestAlerting(ChromaIntegrationTestCase):
-    def setUp(self):
-        self.reset_cluster()
-        user = config['chroma_managers'][0]['users'][0]
-        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
-            server_http_url = config['chroma_managers'][0]['server_http_url'])
-
+class TestAlerting(AuthorizedTestCase):
     def test_alerts(self):
         fs_id = self.create_filesystem_simple()
 

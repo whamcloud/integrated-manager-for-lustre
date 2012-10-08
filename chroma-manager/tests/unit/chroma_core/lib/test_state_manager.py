@@ -84,6 +84,12 @@ class TestStateManager(JobTestCaseWithHost):
         self.set_state(self.host, 'lnet_unloaded')
         self.assertState(self.host, 'lnet_unloaded')
 
+    def test_completion_hook(self):
+        from chroma_core.models import ManagedHost
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+        # This exercises the completion hooks (learning NIDs is a hook for lnet coming up)
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
+
     def test_notification(self):
         """Test that state notifications cause the state of an object to change"""
         self.assertState(self.host, 'lnet_up')

@@ -9,7 +9,6 @@ from collections import defaultdict
 
 class ObjectCache(object):
     instance = None
-    enable = True
 
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration
@@ -70,6 +69,24 @@ class ObjectCache(object):
         mtms = cls.get(ManagedTargetMount, lambda mtm: mtm.host_id == host_id)
         target_ids = set([mtm.target_id for mtm in mtms])
         return [cls.getInstance().targets[i] for i in target_ids]
+
+    @classmethod
+    def purge(cls, klass, filter):
+        cls.getInstance().objects[klass] = [o for o in cls.getInstance().objects[klass] if not filter(o)]
+
+    @classmethod
+    def update(cls, object):
+        class_collection = cls.getInstance().objects[object.__class__]
+        for instance in class_collection:
+            if instance.id == object.id:
+                class_collection.remove(instance)
+                try:
+                    fresh_instance = object.__class__.objects.get(pk = object.pk)
+                except object.__class__.DoesNotExist:
+                    pass
+                else:
+                    class_collection.append(fresh_instance)
+                return
 
     @classmethod
     def mtm_targets(cls, mtm_id):

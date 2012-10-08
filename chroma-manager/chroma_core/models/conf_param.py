@@ -41,8 +41,6 @@ class ConfParamVersionStep(Step):
 class ApplyConfParams(Job):
     mgs = models.ForeignKey(ManagedMgs)
 
-    opportunistic_retry = True
-
     class Meta:
         app_label = 'chroma_core'
 

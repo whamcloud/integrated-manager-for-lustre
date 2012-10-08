@@ -187,9 +187,8 @@ class PluginSession(threading.Thread):
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
                 log.warning("Backtrace: %s" % backtrace)
 
-                timeout = self.stopping.wait(timeout = retry_delay)
-                if not timeout:
-                    break
+                # Wait either retry_delay, or until stopping is set, whichever comes sooner
+                self.stopping.wait(timeout = retry_delay)
             else:
                 log.info("Session %s: out of scan loop cleanly" % self.root_resource_id)
 

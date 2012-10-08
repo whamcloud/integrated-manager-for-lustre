@@ -19,6 +19,7 @@ management command.
 import socket
 import threading
 import uuid
+from django.db import transaction
 import os
 import time
 
@@ -436,6 +437,12 @@ class ServiceRpcInterface(object):
     class for RPC.  In your subclass, define the `methods` class attribute with a list
     of RPC-callable attributes.
 
+    Note on database transactions: calling an RPC will commit any outstanding transaction, for two reasons:
+
+    - Anything set in the caller should be visible to the callee
+    - To prevent deadlocks, we must make sure the caller is not locking
+      anything that the callee may also lock.
+
 
     If you have a class `foo` and you want to expose some methods to the world:
 
@@ -475,15 +482,20 @@ class ServiceRpcInterface(object):
             raise AttributeError(name)
 
     def _call(self, fn_name, *args, **kwargs):
+        with transaction.commit_manually():
+            transaction.commit()
+
         request_id = uuid.uuid4().__str__()
-        log.debug("_call: %s %s %s %s" % (request_id, fn_name, args, kwargs))
         request = {
             'method': fn_name,
             'args': args,
             'kwargs': kwargs,
             'request_id': request_id}
 
+        log.debug("_call: %s %s %s %s" % (request_id, fn_name, args, kwargs))
+
         rpc_client = RpcClientFactory.get_client(self.__class__.__name__)
+
         result = rpc_client.call(request)
 
         if result['exception']:
