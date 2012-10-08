@@ -165,11 +165,6 @@ class IdempotentStep(Step):
     idempotent = True
 
 
-class NullStep(Step):
-    def run(self, kwargs):
-        pass
-
-
 class AnyTargetMountStep(Step):
     def _run_agent_command(self, target, command):
         # There is a set of hosts that we can try to contact to start the target: assume

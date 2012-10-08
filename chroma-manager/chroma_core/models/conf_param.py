@@ -65,8 +65,6 @@ class ApplyConfParams(Job):
         else:
             # If we have no new params, no-op
             job_log.warning("ApplyConfParams %d, mgs %d has no params newer than %d" % (self.id, self.mgs.id, self.mgs.conf_param_version_applied))
-            from chroma_core.lib.job import NullStep
-            steps.append((NullStep, {}))
 
         return steps
 

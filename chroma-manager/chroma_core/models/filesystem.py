@@ -197,8 +197,7 @@ class FilesystemJob():
         app_label = 'chroma_core'
 
     def get_steps(self):
-        from chroma_core.lib.job import NullStep
-        return [(NullStep, {})]
+        return []
 
 
 class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
