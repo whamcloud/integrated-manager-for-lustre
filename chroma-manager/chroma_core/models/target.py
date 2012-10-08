@@ -450,9 +450,6 @@ class RemoveTargetJob(StateChangeJob):
 
     def get_confirmation_string(self):
         if isinstance(self.target.downcast(), ManagedOst):
-            # FIXME: this isn't going to get shown for mounted/unmounted targets
-            # the mistake crept in because the mounted/unmountedness used to live on ManagedTargetMount
-            # rather than ManagedTarget
             if self.target.state == 'registered':
                 return "Remove the OST from the file system. It will no longer be seen in Chroma Manager. Before removing the OST, manually remove all data from the OST. When an OST is removed, files stored on the OST will no longer be accessible."
             else:
