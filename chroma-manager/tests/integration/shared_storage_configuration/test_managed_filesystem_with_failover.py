@@ -1,19 +1,11 @@
 from testconfig import config
 
-from tests.utils.http_requests import AuthorizedHttpRequests
-
-from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
 from tests.integration.core.failover_testcase_mixin import FailoverTestCaseMixin
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
-class TestManagedFilesystemWithFailover(ChromaIntegrationTestCase, FailoverTestCaseMixin, StatsTestCaseMixin):
-    def setUp(self):
-        self.reset_cluster()
-        user = config['chroma_managers'][0]['users'][0]
-        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
-                server_http_url = config['chroma_managers'][0]['server_http_url'])
-
+class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixin, StatsTestCaseMixin):
     def test_create_filesystem_with_failover(self):
         # Add hosts as managed hosts
         self.assertGreaterEqual(len(config['lustre_servers']), 4)

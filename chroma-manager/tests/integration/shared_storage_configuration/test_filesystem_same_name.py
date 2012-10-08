@@ -1,17 +1,8 @@
 from testconfig import config
-
-from tests.utils.http_requests import AuthorizedHttpRequests
-
-from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
 
 
-class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
-    def setUp(self):
-        self.reset_cluster()
-        user = config['chroma_managers'][0]['users'][0]
-        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
-            server_http_url = config['chroma_managers'][0]['server_http_url'])
-
+class TestFilesystemSameName_HYD832(AuthorizedTestCase):
     def test_same_name(self):
         """
         Test that creating a filesystem with the same name as a

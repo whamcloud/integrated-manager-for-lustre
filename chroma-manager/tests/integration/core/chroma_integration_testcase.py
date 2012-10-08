@@ -3,6 +3,7 @@ import logging
 from testconfig import config
 
 from tests.integration.core.clean_cluster_testcase import CleanClusterApiTestCase
+from tests.utils.http_requests import AuthorizedHttpRequests
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -300,3 +301,23 @@ class ChromaIntegrationTestCase(CleanClusterApiTestCase):
                 min((filesystem.get('bytes_free') * 0.4), 512000) / 1000
             )
         )
+
+
+class AuthorizedTestCase(ChromaIntegrationTestCase):
+    """Variant of ChromaIntegrationTestCase which creates an AuthorizedHttpRequests
+     during setup and resets the system depending on config['reset']
+
+    """
+    def setUp(self):
+        reset = config.get('reset', True)
+        if reset:
+            # Forcefully reset Chroma
+            self.reset_cluster()
+
+        user = config['chroma_managers'][0]['users'][0]
+        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
+            server_http_url = config['chroma_managers'][0]['server_http_url'])
+
+        if not reset:
+            # Clean up a running Chroma instance without wiping it
+            self.graceful_teardown(self.chroma_manager)
