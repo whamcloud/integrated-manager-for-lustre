@@ -3,10 +3,15 @@
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 
+from selenium.common.exceptions import (
+    NoSuchElementException, StaleElementReferenceException
+)
 from selenium.webdriver.support.ui import WebDriverWait
 
-from tests.selenium.base import  wait_for_any_element, find_visible_element_by_css_selector, element_visible
-from tests.selenium.base import wait_for_transition
+from tests.selenium.base import (
+    element_visible, find_visible_element_by_css_selector,
+    wait_for_any_element, wait_for_transition
+)
 from tests.selenium.base_view import BaseView
 
 
@@ -77,17 +82,22 @@ class EditFilesystem(BaseView):
 
     def add_ost(self, primary_server_address, volume_name):
         """Click button to add new OST and select an OST/s from ost chooser"""
+        # Open the ost chooser pop-up
         self.driver.find_element_by_css_selector('#btnNewOST').click()
-        ost_rows = self.driver.find_elements_by_xpath("id('new_ost_chooser_table')/tbody/tr")
-        for tr in ost_rows:
-            if tr.find_element_by_xpath("td[6]").text == primary_server_address and tr.find_element_by_xpath("td[2]").text == volume_name:
-                tr.click()
-                self.driver.find_element_by_css_selector('#ost_ok_button').click()
-                self.quiesce()
-                wait_for_transition(self.driver, self.long_wait)
-                return
+        self.wait_for_element('#new_ost_chooser_table')
 
-        raise RuntimeError("Cannot choose OST with hostname: " + primary_server_address + " and volume " + volume_name + " from list")
+        # Click on the row that has the given volume name and primary server address
+        try:
+            self.volume_chooser_select('new_ost_chooser', primary_server_address, volume_name, True)
+        except (StaleElementReferenceException, NoSuchElementException):
+            # Hate doing this, but volume chooser could be reloaded right in the middle of this action,
+            # and havent found a good way to detect this, so if it fails in a specific way, we try again.
+            self.volume_chooser_select('new_ost_chooser', primary_server_address, volume_name, True)
+
+        # Submit and wait for the add to complete
+        self.driver.find_element_by_css_selector('#ost_ok_button').click()
+        self.quiesce()
+        wait_for_transition(self.driver, self.long_wait)
 
     def ost_set_state(self, target_name, state):
         return self._target_set_state('ost', target_name, state)
