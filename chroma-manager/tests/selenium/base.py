@@ -52,7 +52,6 @@ def element_visible(driver, selector):
 
 
 def wait_for_element(driver, selector, timeout):
-    """Set invert=True to wait for an element to be invisible"""
     for i in xrange(timeout):
         element = element_visible(driver, selector)
         if element:
