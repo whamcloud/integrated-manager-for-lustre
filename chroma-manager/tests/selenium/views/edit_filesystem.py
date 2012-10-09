@@ -3,9 +3,6 @@
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 
-from selenium.common.exceptions import (
-    NoSuchElementException, StaleElementReferenceException
-)
 from selenium.webdriver.support.ui import WebDriverWait
 
 from tests.selenium.base import (
@@ -84,15 +81,10 @@ class EditFilesystem(BaseView):
         """Click button to add new OST and select an OST/s from ost chooser"""
         # Open the ost chooser pop-up
         self.driver.find_element_by_css_selector('#btnNewOST').click()
-        self.wait_for_element('#new_ost_chooser_table')
+        self.quiesce()
 
         # Click on the row that has the given volume name and primary server address
-        try:
-            self.volume_chooser_select('new_ost_chooser', primary_server_address, volume_name, True)
-        except (StaleElementReferenceException, NoSuchElementException):
-            # Hate doing this, but volume chooser could be reloaded right in the middle of this action,
-            # and havent found a good way to detect this, so if it fails in a specific way, we try again.
-            self.volume_chooser_select('new_ost_chooser', primary_server_address, volume_name, True)
+        self.volume_chooser_select('new_ost_chooser', primary_server_address, volume_name, True)
 
         # Submit and wait for the add to complete
         self.driver.find_element_by_css_selector('#ost_ok_button').click()
