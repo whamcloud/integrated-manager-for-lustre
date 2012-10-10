@@ -25,6 +25,7 @@ class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as
        MDT, OST or Client"""
     filesystem = models.ForeignKey('ManagedFilesystem')
+    index = models.IntegerField()
 
     # Use of abstract base classes to avoid django bug #12002
     class Meta:
@@ -71,6 +72,10 @@ class ManagedTarget(StatefulObject):
             assert(len(failhost_nids) != 0)
             fail_nids.extend(failhost_nids)
         return fail_nids
+
+    @property
+    def default_mount_point(self):
+        return "/mnt/%s" % self.name
 
     @property
     def primary_host(self):
@@ -173,7 +178,7 @@ class ManagedTarget(StatefulObject):
             }
 
     @classmethod
-    def create_for_volume(cls, volume_id, **kwargs):
+    def create_for_volume(cls, volume_id, create_target_mounts = True, **kwargs):
         # Local imports to avoid inter-model import dependencies
         from chroma_core.models.host import Volume, VolumeNode
 
@@ -181,6 +186,24 @@ class ManagedTarget(StatefulObject):
 
         target = cls(**kwargs)
         target.volume = volume
+
+        # Acquire a target index for FilesystemMember targets, and
+        # populate `name`
+        if issubclass(cls, ManagedMdt):
+            index = target.filesystem.mdt_next_index
+            target.name = "%s-MDT%04x" % (target.filesystem.name, index)
+            target.index = index
+            target.filesystem.mdt_next_index += 1
+            target.filesystem.save()
+        elif issubclass(cls, ManagedOst):
+            index = target.filesystem.ost_next_index
+            target.name = "%s-OST%04x" % (target.filesystem.name, index)
+            target.index = index
+            target.filesystem.ost_next_index += 1
+            target.filesystem.save()
+        else:
+            target.name = "MGS"
+
         target.save()
 
         def create_target_mount(volume_node):
@@ -188,20 +211,21 @@ class ManagedTarget(StatefulObject):
                 volume_node = volume_node,
                 target = target,
                 host = volume_node.host,
-                mount_point = target.default_mount_path(volume_node.host),
+                mount_point = target.default_mount_point,
                 primary = volume_node.primary)
             mount.save()
 
-        try:
-            primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
-            create_target_mount(primary_volume_node)
-        except VolumeNode.DoesNotExist:
-            raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
-        except VolumeNode.MultipleObjectsReturned:
-            raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
+        if create_target_mounts:
+            try:
+                primary_volume_node = volume.volumenode_set.get(primary = True, host__not_deleted = True)
+                create_target_mount(primary_volume_node)
+            except VolumeNode.DoesNotExist:
+                raise RuntimeError("No primary lun_node exists for volume %s, cannot create target" % volume.id)
+            except VolumeNode.MultipleObjectsReturned:
+                raise RuntimeError("Multiple primary lun_nodes exist for volume %s, internal error" % volume.id)
 
-        for secondary_volume_node in volume.volumenode_set.filter(use = True, primary = False, host__not_deleted = True):
-            create_target_mount(secondary_volume_node)
+            for secondary_volume_node in volume.volumenode_set.filter(use = True, primary = False, host__not_deleted = True):
+                create_target_mount(secondary_volume_node)
 
         return target
 
@@ -211,24 +235,10 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
         app_label = 'chroma_core'
 
     def __str__(self):
-        if not self.name:
-            return "Unregistered %s-OST" % (self.filesystem.name)
-        else:
-            return self.name
+        return self.name
 
     def role(self):
         return "OST"
-
-    def default_mount_path(self, host):
-        from chroma_core.models import ManagedTargetMount
-        counter = 0
-        while True:
-            candidate = "/mnt/%s/ost%d" % (self.filesystem.name, counter)
-            try:
-                ManagedTargetMount.objects.get(host = host, mount_point = candidate)
-                counter = counter + 1
-            except ManagedTargetMount.DoesNotExist:
-                return candidate
 
     def get_available_states(self, begin_state):
         # Exclude the transition to 'removed' in favour of being removed when our FS is
@@ -252,9 +262,6 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
 
     def role(self):
         return "MDT"
-
-    def default_mount_path(self, host):
-        return "/mnt/%s/mdt" % self.filesystem.name
 
     def get_available_states(self, begin_state):
         # Exclude the transition to 'removed' in favour of being removed when our FS is
@@ -300,9 +307,6 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
     class Meta:
         app_label = 'chroma_core'
-
-    def default_mount_path(self, host):
-        return "/mnt/mgs"
 
     def nids(self):
         """Return a list of NID strings"""
@@ -494,9 +498,12 @@ class RegisterTargetStep(Step):
             raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
         result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.volume_node.path, target_mount.mount_point))
-        label = result['label']
+
         target = target_mount.target
-        target.name = label
+        if not result['label'] == target.name:
+            # We synthesize a target name (e.g. testfs-OST0001) when creating targets, then
+            # pass --index to mkfs.lustre, so our name should match what is set after registration
+            raise RuntimeError("Registration returned unexpected target name '%s' (expected '%s')" % (result['label'], target.name))
         target.save()
         job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (target.id, target.name, target.ha_label))
 
@@ -733,6 +740,8 @@ class MkfsStep(Step):
             kwargs['failnode'] = fail_nids
 
         kwargs['device'] = primary_mount.volume_node.path
+        if isinstance(target, FilesystemMember):
+            kwargs['index'] = "%d" % target.index
 
         mkfsoptions = []
         if target.inode_size:

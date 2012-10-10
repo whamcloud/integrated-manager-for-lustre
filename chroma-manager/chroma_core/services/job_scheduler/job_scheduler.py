@@ -274,7 +274,7 @@ class JobScheduler(object):
 
             if not deps_satisfied:
                 log.warning("Job %d: cancelling because of failed dependency" % job.id)
-                self.complete_job(job, cancelled = True)
+                self._complete_job(job, errored = False, cancelled = True)
                 # TODO: tell someone WHICH dependency
                 continue
             else:

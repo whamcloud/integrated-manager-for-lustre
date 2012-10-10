@@ -325,7 +325,7 @@ class TargetResource(MetricResource, ConfParamResource):
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
             create_kwargs = {'filesystem': fs}
         elif kind == "MGT":
-            create_kwargs = {'name': 'MGS'}
+            create_kwargs = {}
 
         self.is_valid(bundle, request)
 

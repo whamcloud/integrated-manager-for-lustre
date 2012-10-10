@@ -274,7 +274,8 @@ class DetectScan(object):
                     continue
 
                 import re
-                fsname = re.search("([\w\-]+)-\w+", name).group(1)
+                fsname, index_str = re.search("([\w\-]+)-(\w)+", name).groups()
+                index = int(index_str, 16)
                 try:
                     filesystem = ManagedFilesystem.objects.get(name = fsname, mgs = mgs)
                 except ManagedFilesystem.DoesNotExist:
@@ -287,7 +288,7 @@ class DetectScan(object):
                     # Fall through, no targets with that name exist on this MGS
                     volumenode = self._get_volume_node(host, device_node_paths)
                     target = klass(uuid = uuid, name = name, filesystem = filesystem,
-                        state = "mounted", volume = volumenode.volume,
+                        state = "mounted", volume = volumenode.volume, index = index,
                         immutable_state = True)
                     target.save()
                     audit_log.debug("%s" % [mt.name for mt in ManagedTarget.objects.all()])
