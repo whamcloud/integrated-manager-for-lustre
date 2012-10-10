@@ -4,6 +4,7 @@ import re
 from testconfig import config
 
 from tests.integration.core.api_testcase import ApiTestCase
+from tests.integration.core.constants import TEST_TIMEOUT
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -30,14 +31,38 @@ class CleanClusterApiTestCase(ApiTestCase):
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:
             superuser = [u for u in chroma_manager['users'] if u['super']][0]
-            self.remote_command(
+
+            # Stop all chroma manager services
+            result = self.remote_command(
                 chroma_manager['address'],
-                'chroma-config stop'
+                'chroma-config stop',
+                expected_return_code = None
             )
+            if not result.exit_status == 0:
+                logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.exit_status, result.stdout.read(), result.stderr.read()))
+
+            # Wait for all of the chroma manager services to stop
+            running_time = 0
+            services = ['chroma-worker', 'chroma-storage', 'httpd']
+            while services and running_time < TEST_TIMEOUT:
+                for service in services:
+                    result = self.remote_command(
+                        chroma_manager['address'],
+                        'service %s status' % service,
+                        expected_return_code = None
+                    )
+                    if result.exit_status == 3:
+                        services.remove(service)
+                running_time += 1
+            self.assertEqual(services, [], "Not all services were stopped by chroma-config before timeout: %s" % services)
+
+            # Drop the database to start from a clean state.
             self.remote_command(
                 chroma_manager['address'],
                 'echo "drop database chroma; create database chroma;" | mysql -u root'
             )
+
+            # Run chroma-config setup to recreate the database and start the chroma manager.
             self.remote_command(
                 chroma_manager['address'],
                 "chroma-config setup %s %s localhost >config_setup.log" % (superuser['username'], superuser['password'])
