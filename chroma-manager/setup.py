@@ -41,9 +41,10 @@ setup(
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
     },
-    scripts = ["chroma_core/bin/chroma-config", "chroma-host-discover"],
+    scripts = ["chroma-host-discover"],
     entry_points = {
         'console_scripts': [
+            'chroma-config = chroma_core.lib.service_config:chroma_config',
             'chroma = chroma_cli.main:standard_cli',
             'qr3d = r3d.cli:main'
         ]
