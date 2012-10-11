@@ -4,14 +4,14 @@
 # ========================================================
 
 
-import time
-import datetime
 from exceptions import KeyError, Exception
 import threading
 from django.db import transaction
 from chroma_core.services.log import log_register
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonQueue
 from chroma_core.models import StorageResourceRecord, ManagedHost, AgentSession
+from chroma_core.lib.storage_plugin.query import ResourceQuery
+
 
 log = log_register(__name__.split('.')[-1])
 
@@ -52,6 +52,7 @@ class AgentDaemon(object):
 
         self._queue.serve(self.on_message)
 
+    @transaction.commit_on_success
     def remove_host_resources(self, host_id):
         log.info("Removing resources for host %s" % host_id)
 
@@ -63,7 +64,6 @@ class AgentDaemon(object):
                 log.warning("remove_host_resources: No sessions for host %s" % host_id)
             self._session_blacklist.add(host_id)
 
-        from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         for plugin_name in storage_plugin_manager.loaded_plugins.keys():
@@ -77,22 +77,35 @@ class AgentDaemon(object):
 
         log.info("AgentDaemon: finished removing resources for host %s" % host_id)
 
-    def await_session(self, host_id):
-        started = False
-        timeout = 30
-        start_time = datetime.datetime.now()
-        log.debug("AgentDaemon: starting await_session")
-        while not started:
-            started = host_id in self._session_state
-            if not started:
-                time.sleep(1)
+    @transaction.commit_on_success
+    def setup_host(self, host_id, updates):
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager, PluginNotFound
 
-            if datetime.datetime.now() - start_time > datetime.timedelta(seconds = timeout):
-                raise RuntimeError("Timed out after %s seconds waiting for session to start" % timeout)
-        log.debug("AgentDaemon: finished await_session")
+        with self._processing_lock:
+            host = ManagedHost.objects.get(id = host_id)
+
+            for plugin_name, plugin_data in updates.items():
+                try:
+                    klass = storage_plugin_manager.get_plugin_class(plugin_name)
+                except PluginNotFound:
+                    log.warning("Ignoring information from %s for plugin %s, no such plugin found." % (host, plugin_name))
+                    continue
+
+                try:
+                    record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
+                        plugin_name = plugin_name, host_id = host.id)
+                except StorageResourceRecord.DoesNotExist:
+                    log.info("Set up plugin %s on host %s" % (plugin_name, host))
+                    resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
+                    record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': plugin_name, 'host_id': host.id})
+
+                instance = klass(record.id)
+                instance.do_agent_session_start(plugin_data)
 
     @transaction.commit_on_success
     def on_message(self, message):
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager, PluginNotFound
+
         with self._processing_lock:
             try:
                 host_id = message['host_id']
@@ -142,44 +155,43 @@ class AgentDaemon(object):
                         host, session_id, counter))
                     return
 
-            # TODO: validate plugin_name
             for plugin_name, plugin_data in updates.items():
-                from chroma_core.lib.storage_plugin.manager import storage_plugin_manager, PluginNotFound
-                from chroma_core.lib.storage_plugin.query import ResourceQuery
-                try:
-                    record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
-                            plugin_name = plugin_name, host_id = host.id)
-                except StorageResourceRecord.DoesNotExist:
-                    resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
-                    record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': plugin_name, 'host_id': host.id})
-
                 try:
                     klass = storage_plugin_manager.get_plugin_class(plugin_name)
                 except PluginNotFound:
                     log.warning("Ignoring information from %s for plugin %s, no such plugin found." % (host, plugin_name))
+                    continue
+
+                try:
+                    record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
+                            plugin_name = plugin_name, host_id = host.id)
+                except StorageResourceRecord.DoesNotExist:
+                    log.info("Start receiving from new plugin '%s'" % plugin_name)
+                    resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
+                    record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': plugin_name, 'host_id': host.id})
+
+                if initial:
+                    instance = klass(record.id)
+                    session_state.plugin_instances[plugin_name] = instance
                 else:
+                    instance = session_state.plugin_instances[plugin_name]
+
+                try:
                     if initial:
-                        instance = klass(record.id)
-                        session_state.plugin_instances[plugin_name] = instance
+                        log.info("Started session for %s on %s" % (plugin_name, host))
+                        instance.do_agent_session_start(plugin_data)
                     else:
-                        instance = session_state.plugin_instances[plugin_name]
+                        instance.do_agent_session_continue(plugin_data)
+                except Exception:
+                    import sys
+                    import traceback
+                    exc_info = sys.exc_info()
+                    backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+                    log.error("Exception in agent session for %s from %s: %s" % (
+                        plugin_name, host, backtrace))
+                    log.error("Data: %s" % plugin_data)
 
-                    try:
-                        if initial:
-                            log.info("Started session for %s on %s" % (plugin_name, host))
-                            instance.do_agent_session_start(plugin_data)
-                        else:
-                            instance.do_agent_session_continue(plugin_data)
-                    except Exception:
-                        import sys
-                        import traceback
-                        exc_info = sys.exc_info()
-                        backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-                        log.error("Exception in agent session for %s from %s: %s" % (
-                            plugin_name, host, backtrace))
-                        log.error("Data: %s" % plugin_data)
-
-                        # Tear down the session
-                        del self._session_state[host.id]
-                        # TODO: signal http_agent service to restart session
-                        break
+                    # Tear down the session
+                    del self._session_state[host.id]
+                    # TODO: signal http_agent service to restart session
+                    break

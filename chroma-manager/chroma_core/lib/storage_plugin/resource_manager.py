@@ -1032,6 +1032,7 @@ class ResourceManager(object):
             for record_id in ordered_for_deletion:
                 deleter.delete(int(record_id))
 
+    @transaction.commit_on_success
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
             log.debug("global_remove_resource: %s" % resource_id)
