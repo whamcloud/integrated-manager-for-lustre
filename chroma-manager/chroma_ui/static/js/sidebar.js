@@ -22,15 +22,6 @@ var Sidebar = function(){
     return cssClassName;
   }
 
-  function eventIcon(e)
-  {
-    return "/static/images/" + {
-      INFO: 'fugue/information.png',
-      ERROR: 'fugue/exclamation-red.png',
-      WARNING: 'fugue/exclamation.png'
-    }[e.severity]
-  }
-
   var job_icon_template = _.template($('#job_icon_template').html());
 
   function commandIcon(command)
@@ -153,13 +144,13 @@ var Sidebar = function(){
     smallTable($('div.leftpanel table#events'), 'event/',
       {order_by: "-created_at"},
       function(e) {
-        e.icon = "<img src='" + eventIcon(e) + "'/>"
-        e.DT_RowClass = eventStyle(e)
-        e.text = ellipsize(e.message) + "<br>" + shortLocalTime(e.created_at)
+        e.icon = UIHelper.severity_icon(e.severity);
+        e.DT_RowClass = eventStyle(e);
+        e.text = ellipsize(e.message) + "<br>" + shortLocalTime(e.created_at);
       },
       [
         { "sClass": 'icon_column', "mDataProp": "icon", bSortable: false },
-        { "sClass": 'txtleft', "mDataProp": "text", bSortable: false },
+        { "sClass": 'txtleft', "mDataProp": "text", bSortable: false }
       ]
     );
 

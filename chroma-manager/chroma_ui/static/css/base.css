@@ -890,3 +890,13 @@ ul.host_selection_list {
 ul.alert_selection_list {
     list-style-type: none;
 }
+
+div.content {
+    padding-left: 0.5em;
+}
+
+table.layout {
+    width: 100%;
+    border-spacing: 0;
+    border-collapse: collapse;
+}

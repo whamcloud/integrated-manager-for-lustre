@@ -51,6 +51,16 @@ var UIHelper = function() {
     return build_tag('img', { properties: _properties } );
   }
 
+  // Build an <img> tag based on an INFO/ERROR/WARNING severity string
+  function severity_icon(severity) {
+    var name = {
+        INFO: 'information',
+        ERROR: 'exclamation-red',
+        WARNING: 'exclamation'
+      }[severity];
+    return fugue_icon(name, {alt: severity, title: severity});
+  }
+
   // build a help link (help.js)
   // topic: req'd ;html filename of contextual help (without the .html file ext)
   // content: req'd for link_type hover or button; link/button content
@@ -79,6 +89,7 @@ var UIHelper = function() {
   return {
     build_tag: build_tag,
     fugue_icon: fugue_icon,
+    severity_icon: severity_icon,
     help_hover: help_hover,
     help_button: help_button,
     help_button_small: help_button_small
