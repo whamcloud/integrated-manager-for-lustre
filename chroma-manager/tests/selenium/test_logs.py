@@ -9,6 +9,7 @@ from utils.sample_data import Testdata
 
 class TestLogs(SeleniumBaseTestCase):
     """Test cases for logs page"""
+    __test__ = False  # Disabled because these tests are worthless. Need a way to populate these behind the scenes.
 
     def setUp(self):
         super(TestLogs, self).setUp()
