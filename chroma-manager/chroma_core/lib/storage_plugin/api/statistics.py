@@ -44,5 +44,4 @@ class BytesHistogram(BaseStatistic):
 
     def validate(self, value):
         if len(value) != len(self.bins):
-            raise RuntimeError("Invalid histogram value, got %d bins, expected %d" %
-                    len(value), len(self.bins))
+            raise ValueError("Invalid histogram value, got %d bins, expected %d" % (len(value), len(self.bins)))

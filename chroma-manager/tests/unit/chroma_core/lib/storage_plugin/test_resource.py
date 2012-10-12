@@ -10,6 +10,7 @@ class TestDefaults1(BaseStorageResource):
         identifier = GlobalId('name')
 
     name = attributes.String()
+    bytes = statistics.BytesHistogram(bins=[(0, 100)])
 
 
 class TestDefaults2(BaseStorageResource):
@@ -40,6 +41,7 @@ class TestDisplayNames(TestCase):
     def test_defaults(self):
         td1 = TestDefaults1(name = "foo")
         self.assertEqual(td1.get_label(), "TestDefaults1 foo")
+        self.assertRaises(ValueError, setattr, td1, 'bytes', [])
 
         td2 = TestDefaults2(name = "foo", name_scope = "bar")
         self.assertEqual(td2.get_label(), "TestDefaults2 ('foo', 'bar')")
