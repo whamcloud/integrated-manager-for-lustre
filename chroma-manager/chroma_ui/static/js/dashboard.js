@@ -42,7 +42,7 @@ var Dashboard = (function() {
     var intervals = {
       minutes: { max: 60, default: 5, factor:   60          },
       hour:    { max: 24, default: 1, factor: 3600          },
-      day:     { max: 32, default: 1, factor: 3600 * 24     },
+      day:     { max: 31, default: 1, factor: 3600 * 24     },
       week:    { max:  4, default: 1, factor: 3600 * 24 * 7 }
     };
 
