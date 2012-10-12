@@ -54,7 +54,9 @@ class StorageImageOps(ImageOps):
         with self.open_session():
             self._setup_chroma_repo()
             self._update_whamos(use_master)
+            sudo('yum install -y ntp')
             if use_master:
+                sudo('rpm -ivh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm')
                 sudo('yum --enablerepo=coeus-master install -y lustre kernel-2.6.32*lustre.*')
             else:
                 sudo('yum install -y lustre')
@@ -80,6 +82,7 @@ class ManagerImageOps(ImageOps):
             #run('wget http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-6.noarch.rpm')
             #sudo('rpm -i --force epel-release-6-6.noarch.rpm')
             if use_master:
+                sudo('rpm -ivh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm')
                 sudo('yum install --enablerepo=chroma-master --enablerepo=coeus-master -y chroma-manager chroma-manager-cli')
             else:
                 sudo('yum install -y chroma-manager chroma-manager-cli')

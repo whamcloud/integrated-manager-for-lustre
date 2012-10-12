@@ -66,7 +66,7 @@ STATIC_URL = '/static/'
 # URL prefix for admin static files -- CSS, JavaScript and images.
 # Make sure to use a trailing slash.
 # Examples: "http://foo.com/static/admin/", "/static/admin/".
-ADMIN_MEDIA_PREFIX = '/static/admin/'
+# ADMIN_MEDIA_PREFIX = '/static/admin/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
@@ -171,6 +171,7 @@ BASE_IMAGE = {
 
 CHROMA_MANAGER_USER = 'cloud'
 CHROMA_MANAGER_PASSWORD = 'chr0m4_d3bug'
+CHROMA_MANAGER_NTP_SERVER = "3.pool.ntp.org"
 
 import os
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))

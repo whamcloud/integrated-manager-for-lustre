@@ -7,7 +7,7 @@ sslverify=0
 
 [coeus-master]
 name=coeusmaster
-baseurl=https://build.whamcloudlabs.com/MAGICKEY/job/coeus-updates/arch=x86_64%2Cdistro=el6-lab/lastSuccessfulBuild/artifact/artifacts/repo/
+baseurl=https://build.whamcloudlabs.com/MAGICKEY/job/coeus/arch=x86_64%2Cdistro=el6-lab/lastSuccessfulBuild/artifact/artifacts/repo-el6/
 enabled=0
 gpgcheck=0
 sslverify=0
