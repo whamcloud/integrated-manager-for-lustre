@@ -1297,5 +1297,3 @@ class ResourceManager(object):
                     ancestors.remove(descendent_ld)
                     if len(ancestors) == 1:
                         Volume.objects.filter(storage_resource = descendent_ld).update(label = self.get_label(ld_id))
-
-resource_manager = ResourceManager()

@@ -34,7 +34,8 @@ class AgentDaemon(object):
     Creates one plugin instance per plugin per host which sends messages for that plugin.
 
     """
-    def __init__(self):
+    def __init__(self, resource_manager):
+        self._resource_manager = resource_manager
         self._session_state = {}
         self._stopping = False
         self._processing_lock = threading.Lock()
@@ -64,7 +65,6 @@ class AgentDaemon(object):
                 log.warning("remove_host_resources: No sessions for host %s" % host_id)
             self._session_blacklist.add(host_id)
 
-        from chroma_core.lib.storage_plugin.resource_manager import resource_manager
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         for plugin_name in storage_plugin_manager.loaded_plugins.keys():
             try:
@@ -73,7 +73,7 @@ class AgentDaemon(object):
             except StorageResourceRecord.DoesNotExist:
                 pass
             else:
-                resource_manager.global_remove_resource(record.id)
+                self._resource_manager.global_remove_resource(record.id)
 
         log.info("AgentDaemon: finished removing resources for host %s" % host_id)
 
@@ -99,7 +99,7 @@ class AgentDaemon(object):
                     resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
                     record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': plugin_name, 'host_id': host.id})
 
-                instance = klass(record.id)
+                instance = klass(self._resource_manager, record.id)
                 instance.do_agent_session_start(plugin_data)
 
     @transaction.commit_on_success
@@ -171,7 +171,7 @@ class AgentDaemon(object):
                     record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': plugin_name, 'host_id': host.id})
 
                 if initial:
-                    instance = klass(record.id)
+                    instance = klass(self._resource_manager, record.id)
                     session_state.plugin_instances[plugin_name] = instance
                 else:
                     instance = session_state.plugin_instances[plugin_name]

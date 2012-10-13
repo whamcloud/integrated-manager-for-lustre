@@ -202,8 +202,10 @@ class JobTestCase(TestCase):
         ServiceQueue.put = mock.Mock(side_effect = NotImplementedError)
 
         # Create an instance for the purposes of the test
+        from chroma_core.services.plugin_runner.resource_manager import ResourceManager
+        resource_manager = ResourceManager()
         from chroma_core.services.plugin_runner.agent_daemon import AgentDaemon
-        agent_daemon = AgentDaemon()
+        agent_daemon = AgentDaemon(resource_manager)
 
         def patch_daemon_rpc(rpc_class, test_daemon):
             # Patch AgentDaemonRpc to call our instance instead of trying to do an RPC

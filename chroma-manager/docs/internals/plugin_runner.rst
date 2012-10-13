@@ -13,5 +13,5 @@ an instance of ResourceManager, which guards potentially overlapping modificatio
 of the collection of storage resource records.  In the future, ResourceManager should
 be remotely accessible, so that these guys can run in separate processes (HYD-227, HYD-1145
 
-.. autoclass:: chroma_core.lib.storage_plugin.resource_manager.ResourceManager
+.. autoclass:: chroma_core.services.plugin_runner.resource_manager.ResourceManager
 

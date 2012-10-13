@@ -7,6 +7,7 @@
 import threading
 from chroma_core.services import ChromaService, ServiceThread
 from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 
 
 class Service(ChromaService):
@@ -26,8 +27,9 @@ class Service(ChromaService):
             self.log.error("The following plugins could not be loaded: %s" % errors)
             raise RuntimeError("Some plugins could not be loaded: %s" % errors)
 
-        scan_daemon = ScanDaemon()
-        agent_daemon = AgentDaemon()
+        resource_manager = ResourceManager()
+        scan_daemon = ScanDaemon(resource_manager)
+        agent_daemon = AgentDaemon(resource_manager)
 
         scan_daemon_thread = ServiceThread(scan_daemon)
         scan_rpc_thread = ServiceThread(ScanDaemonRpcInterface(scan_daemon))

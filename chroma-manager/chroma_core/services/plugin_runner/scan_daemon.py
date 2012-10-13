@@ -29,9 +29,10 @@ class ScanDaemon(object):
     Creates a plugin instance for each ScannableResource.
 
     """
-    def __init__(self):
+    def __init__(self, resource_manager):
         self.stopping = False
 
+        self._resource_manager = resource_manager
         self._session_lock = threading.Lock()
         self._all_sessions = {}
         # Map of module name to map of root_resource_id to PluginSession
@@ -91,8 +92,7 @@ class ScanDaemon(object):
                     time.sleep(1)
                 log.info("stopped.")
 
-            from chroma_core.lib.storage_plugin.resource_manager import resource_manager
-            resource_manager.global_remove_resource(resource_id)
+            self._resource_manager.global_remove_resource(resource_id)
         log.info("finished removing %s" % resource_id)
 
     def root_resource_ids(self, plugin):
@@ -119,7 +119,7 @@ class ScanDaemon(object):
                     for rrid in self.root_resource_ids(plugin):
                         if not rrid in sessions:
                             log.info("new session for resource %s" % rrid)
-                            s = PluginSession(rrid)
+                            s = PluginSession(self._resource_manager, rrid)
                             sessions[rrid] = s
                             self._all_sessions[rrid] = s
                             s.start()
@@ -146,7 +146,8 @@ class ScanDaemon(object):
 
 
 class PluginSession(threading.Thread):
-    def __init__(self, root_resource_id, *args, **kwargs):
+    def __init__(self, resource_manager, root_resource_id, *args, **kwargs):
+        self._resource_manager = resource_manager
         self.stopped = False
         self.stopping = threading.Event()
         self.root_resource_id = root_resource_id
@@ -199,7 +200,7 @@ class PluginSession(threading.Thread):
         from chroma_core.models.storage_plugin import StorageResourceOffline
 
         log.debug("Session %s: starting scan loop" % self.root_resource_id)
-        instance = plugin_klass(self.root_resource_id)
+        instance = plugin_klass(self._resource_manager, self.root_resource_id)
         # TODO: impose timeouts on plugin calls (especially teardown)
         try:
             log.debug("Session %s: >>initial_scan" % self.root_resource_id)

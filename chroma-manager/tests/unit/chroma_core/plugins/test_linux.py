@@ -30,16 +30,16 @@ class LinuxPluginTestCase(JobTestCase):
         self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.manager
 
-        import chroma_core.lib.storage_plugin.resource_manager
-        self.old_resource_manager = chroma_core.lib.storage_plugin.resource_manager.resource_manager
-        chroma_core.lib.storage_plugin.resource_manager.resource_manager = chroma_core.lib.storage_plugin.resource_manager.ResourceManager()
+        import chroma_core.services.plugin_runner.resource_manager
+        self.old_resource_manager = chroma_core.services.plugin_runner.resource_manager.resource_manager
+        chroma_core.services.plugin_runner.resource_manager.resource_manager = chroma_core.services.plugin_runner.resource_manager.ResourceManager()
 
     def tearDown(self):
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.old_manager
 
-        import chroma_core.lib.storage_plugin.resource_manager
-        chroma_core.lib.storage_plugin.resource_manager.resource_manager = self.old_resource_manager
+        import chroma_core.services.plugin_runner.resource_manager
+        chroma_core.services.plugin_runner.resource_manager.resource_manager = self.old_resource_manager
 
         super(LinuxPluginTestCase, self).tearDown()
 
