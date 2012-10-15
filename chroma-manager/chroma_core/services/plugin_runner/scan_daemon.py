@@ -4,13 +4,18 @@
 # ========================================================
 
 
-from exceptions import KeyError, Exception
 import os
 import threading
 import datetime
 import time
+import sys
+import traceback
 from django.db import transaction
+
 from chroma_core.services.log import log_register
+from chroma_core.models.storage_plugin import StorageResourceRecord
+from chroma_core.models.storage_plugin import StorageResourceOffline
+
 
 log = log_register(__name__.split('.')[-1])
 
@@ -52,8 +57,6 @@ class ScanDaemon(object):
         log.info("Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
 
     def modify_resource(self, resource_id, attrs):
-        from chroma_core.models.storage_plugin import StorageResourceRecord
-
         log.info("modifying %s" % resource_id)
         with self._session_lock:
             try:
@@ -156,7 +159,6 @@ class PluginSession(threading.Thread):
         super(PluginSession, self).__init__(*args, **kwargs)
 
     def run(self):
-        from chroma_core.models.storage_plugin import StorageResourceRecord
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
         plugin_klass = storage_plugin_manager.get_plugin_class(
@@ -182,8 +184,6 @@ class PluginSession(threading.Thread):
                     retry_delay *= 2
 
                 log.warning("Exception in scan loop for resource %s, waiting %ss before restart" % (self.root_resource_id, retry_delay))
-                import sys
-                import traceback
                 exc_info = sys.exc_info()
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
                 log.warning("Backtrace: %s" % backtrace)
@@ -197,8 +197,6 @@ class PluginSession(threading.Thread):
         self.stopped = True
 
     def _scan_loop(self, plugin_klass, record):
-        from chroma_core.models.storage_plugin import StorageResourceOffline
-
         log.debug("Session %s: starting scan loop" % self.root_resource_id)
         instance = plugin_klass(self._resource_manager, self.root_resource_id)
         # TODO: impose timeouts on plugin calls (especially teardown)

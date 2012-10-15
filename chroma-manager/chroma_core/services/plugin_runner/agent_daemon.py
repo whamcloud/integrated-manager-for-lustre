@@ -4,8 +4,10 @@
 # ========================================================
 
 
-from exceptions import KeyError, Exception
+import sys
+import traceback
 import threading
+
 from django.db import transaction
 from chroma_core.services.log import log_register
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonQueue
@@ -183,8 +185,6 @@ class AgentDaemon(object):
                     else:
                         instance.do_agent_session_continue(plugin_data)
                 except Exception:
-                    import sys
-                    import traceback
                     exc_info = sys.exc_info()
                     backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
                     log.error("Exception in agent session for %s from %s: %s" % (
