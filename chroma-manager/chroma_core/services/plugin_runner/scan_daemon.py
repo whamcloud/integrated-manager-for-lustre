@@ -47,7 +47,7 @@ class ScanDaemon(object):
             # Create sessions for all root resources
             sessions = {}
             for srr_id in self.root_resource_ids(p):
-                session = PluginSession(srr_id)
+                session = PluginSession(self._resource_manager, srr_id)
                 sessions[srr_id] = session
                 self._all_sessions[srr_id] = session
 
