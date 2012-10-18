@@ -1,12 +1,11 @@
 from copy import deepcopy
-import datetime
-from dateutil import tz
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 from tests.unit.chroma_core.helper import JobTestCase, MockAgent
 from chroma_core.models.host import NoLNetInfo
 from tests.unit.chroma_core.helper import freshen
 from django.db.utils import IntegrityError
+import django.utils.timezone
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, Nid
 
 
@@ -29,7 +28,7 @@ class TestSetup(JobTestCase):
             MockAgent.fail_globs = []
         self.assertState(host, 'configured')
         self.assertState(host.lnetconfiguration, 'nids_unknown')
-        now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+        now = django.utils.timezone.now()
         with self.assertRaises(NoLNetInfo):
             freshen(host).lnetconfiguration.get_nids()
         JobSchedulerClient.notify_state(freshen(host), now, 'lnet_up', ['configured'])

@@ -8,7 +8,6 @@ import datetime
 import traceback
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonQueue
 import dateutil.parser
-from dateutil import tz
 import sys
 from django.db import transaction
 
@@ -92,7 +91,8 @@ class AgentResource(Resource):
                 started_at = dateutil.parser.parse(bundle.data['started_at'])
                 sent_at = dateutil.parser.parse(bundle.data['sent_at'])
 
-                now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+                import django.utils.timezone
+                now = django.utils.timezone.now()
                 if sent_at > now - latency_guess:
                     delta = sent_at - (now - latency_guess)
                     started_at -= delta

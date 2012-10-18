@@ -80,8 +80,8 @@ class UpdateScan(object):
         HostContactAlert.notify(self.host, not contact)
 
         if contact:
-            from datetime import datetime
-            ManagedHost.objects.filter(pk = self.host.pk).update(last_contact = datetime.utcnow())
+            from django.utils.timezone import now
+            ManagedHost.objects.filter(pk = self.host.pk).update(last_contact = now())
 
         return contact
 
