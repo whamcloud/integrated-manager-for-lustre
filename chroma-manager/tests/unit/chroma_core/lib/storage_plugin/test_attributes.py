@@ -63,6 +63,14 @@ class TestAttributes(TestCase):
         with self.assertRaises(ValueError):
             u.validate('deadbeef')
 
+    def test_hostname(self):
+        attr = attributes.Hostname()
+        for value in ('intel.com', '127.0.0.1', 'my-laptop'):
+            attr.validate(value)
+        for value in ('intel.-com', 'my_laptop', 'x.' * 128, 'x' * 64):
+            with self.assertRaises(ValueError):
+                attr.validate(value)
+
 
 class TestReferenceAttribute(TestCase):
     def setUp(self):
