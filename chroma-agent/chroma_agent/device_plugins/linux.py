@@ -188,7 +188,7 @@ def _parse_sys_block():
 
 def _get_md():
     try:
-        matches = re.finditer("^(md\d+) :", open('/proc/mdstat', 'r').read().strip(), flags = re.MULTILINE)
+        matches = re.finditer("^(md\d+) : active", open('/proc/mdstat').read().strip(), flags = re.MULTILINE)
         devs = []
         for match in matches:
             # e.g. md0
