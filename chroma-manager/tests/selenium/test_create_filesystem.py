@@ -120,6 +120,53 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         create_filesystem_page.quiesce()
         self.assertEqual(create_filesystem_page.name_error, "Name may not contain spaces")
 
+    def test_mdt_advanced_reset_defaults(self):
+        """
+        HYD-1401 - Create a filesystem with custome inode_size and bytes_per_inode,
+        then check that on returning to the filesystem create page that the default
+        advanced MDT config options values have been reset
+        """
+
+        # create the mgt seprately to ensure when we test the "reset", that the MGT is
+        # no longer selected in the dropdown
+        self.navigation.go('Configure', 'MGTs')
+        self.mgt_page = Mgt(self.driver)
+        self.mgt_page.create_mgt(self.mgt_server_address, self.mgt_volume_name)
+
+        # Create filesystem
+        self.navigation.go('Configure', 'Create_new_filesystem')
+        create_filesystem_page = CreateFilesystem(self.driver)
+        create_filesystem_page.enter_name(self.filesystem_name)
+        create_filesystem_page.select_mgt(self.mgt_server_address)
+        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
+
+        # stash the default values for inode_size and bytes_per_inode
+        create_filesystem_page.expand_mdt_advanced()
+        default_inode_size = create_filesystem_page.mdt_inode_size
+        default_bytes_per_inode = create_filesystem_page.mdt_bytes_per_inode
+
+        # now double the default values to create with non-standard sizes
+        create_filesystem_page.enter_mdt_inode_size(str(int(default_inode_size) * 2))
+        create_filesystem_page.enter_mdt_bytes_per_inode(str(int(default_bytes_per_inode) * 2))
+
+        create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
+        self._check_filesystem_creation()
+
+        # go back to filesystem create page and verify that the defaults are back in place
+        self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
+
+        # these assertions cover HYD-1502 where the mdt_advanced div show/hide functionality
+        # gets out of sync and ends up requiring multiple clicks to show the panel again
+        self.assertFalse(create_filesystem_page.mdt_advanced_visible)
+        create_filesystem_page.expand_mdt_advanced()
+        self.assertTrue(create_filesystem_page.mdt_advanced_visible)
+
+        self.assertEqual(create_filesystem_page.mdt_inode_size, default_inode_size)
+        self.assertEqual(create_filesystem_page.mdt_bytes_per_inode, default_bytes_per_inode)
+        self.assertEqual(create_filesystem_page.mgt_existing_dropdown_text, '')
+
     def test_mdt_advanced_validation(self):
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.enter_name(self.filesystem_name)

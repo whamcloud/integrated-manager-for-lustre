@@ -5,7 +5,7 @@
 
 
 from selenium.webdriver.support.ui import Select
-from tests.selenium.base import enter_text_for_element, find_visible_element_by_css_selector, element_visible
+from tests.selenium.base import enter_text_for_element, find_visible_element_by_css_selector, element_visible, get_selected_option_text
 from tests.selenium.base_view import BaseView
 
 
@@ -86,9 +86,21 @@ class CreateFilesystem(BaseView):
     def mdt_bytes_per_inode_error(self):
         return self.get_input_error(self.driver.find_element_by_css_selector('#bytes_per_inode'))
 
+    @property
+    def mdt_inode_size(self):
+        return self.driver.find_element_by_css_selector('#inode_size').get_attribute('value')
+
+    @property
+    def mdt_bytes_per_inode(self):
+        return self.driver.find_element_by_css_selector('#bytes_per_inode').get_attribute('value')
+
+    @property
+    def mgt_existing_dropdown_text(self):
+        return get_selected_option_text(self.driver, '#mgt_existing_dropdown')
+
     def expand_mdt_advanced(self):
         if not self.mdt_advanced_visible:
-            self.driver.find_element_by_css_selector("label[for='mdt_advanced_button']").click()
+            self.driver.find_element_by_css_selector("#mdt_advanced_button").click()
 
     def enter_mdt_inode_size(self, text):
         enter_text_for_element(self.driver, "#inode_size", text)
@@ -98,8 +110,8 @@ class CreateFilesystem(BaseView):
 
     def collapse_mdt_advanced(self):
         if self.mdt_advanced_visible:
-            self.driver.find_element_by_css_selector("label[for='mdt_advanced_button']").click()
+            self.driver.find_element_by_css_selector("#mdt_advanced_button").click()
 
     @property
     def mdt_advanced_visible(self):
-        return bool(element_visible(self.driver, '.mdt_advanced'))
+        return bool(element_visible(self.driver, '#mdt_advanced'))

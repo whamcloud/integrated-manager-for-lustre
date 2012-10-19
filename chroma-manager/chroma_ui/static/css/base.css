@@ -720,7 +720,7 @@ span.volume_chooser_selected {
 .volume_chooser_header {
 }
 
-div.mdt_advanced {
+#mdt_advanced {
     display: none;
 }
 
