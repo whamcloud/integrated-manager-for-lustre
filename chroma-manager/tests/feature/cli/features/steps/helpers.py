@@ -25,6 +25,16 @@ def step(context, entity, count):
     eq_(entity_map[entity].objects.count(), int(count))
 
 
+@given('there should be {count} lines of output')
+@then('there should be {count} lines of output')
+def step(context, count):
+    context.stdout.seek(0)
+    # NB: We're hard-coding -1 lines for the header -- this may not
+    # be robust enough for the future.
+    output_line_count = len(context.stdout.readlines()) - 1
+    eq_(output_line_count, int(count))
+
+
 @given('the {entity} {field} on {subject} should be {value}')
 @then('the {entity} {field} on {subject} should be {value}')
 def step(context, entity, field, subject, value):

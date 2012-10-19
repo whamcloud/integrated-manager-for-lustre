@@ -184,14 +184,21 @@ class Handler(object):
             vn_list.append(self._resolve_volume_node(spec))
         return vn_list
 
-    def list(self, ns):
-        self.output(self.api_endpoint.list())
+    def list(self, ns, endpoint=None, **kwargs):
+        kwargs['limit'] = '0'  # api defaults to 20
+        if not endpoint:
+            endpoint = self.api_endpoint
+        self.output(endpoint.list(**kwargs))
 
-    def show(self, ns):
-        self.output(self.api_endpoint.show(ns.subject))
+    def show(self, ns, endpoint=None):
+        if not endpoint:
+            endpoint = self.api_endpoint
+        self.output(endpoint.show(ns.subject))
 
-    def remove(self, ns):
-        self.output(self.api_endpoint.delete(ns.subject))
+    def remove(self, ns, endpoint=None):
+        if not endpoint:
+            endpoint = self.api_endpoint
+        self.output(endpoint.delete(ns.subject))
 
 
 class ServerHandler(Handler):
@@ -220,25 +227,26 @@ class ServerHandler(Handler):
         kwargs = {'state': lnet_state[ns.verb]}
         self.output(self.api_endpoint.update(ns.subject, **kwargs))
 
-    def list(self, ns):
+    def list(self, ns, endpoint=None, **kwargs):
         try:
             host = self.api_endpoint.show(ns.subject)
-            kwargs = {'host_id': host['id']}
+            kwargs['host_id'] = host['id']
             if 'primary' in ns and ns.primary:
                 kwargs['primary'] = True
 
             if ns.contextual_noun in ["ost", "mdt", "mgt"]:
                 kwargs['kind'] = ns.contextual_noun
-                self.output(self.api.endpoints['target'].list(**kwargs))
+                endpoint = self.api.endpoints['target']
             elif ns.contextual_noun in ["target", "tgt"]:
-                self.output(self.api.endpoints['target'].list(**kwargs))
+                endpoint = self.api.endpoints['target']
             elif ns.contextual_noun in ["volume", "vol"]:
-                self.output(self.api.endpoints['volume'].list(**kwargs))
+                endpoint = self.api.endpoints['volume']
         except AttributeError:
-            kwargs = {}
             if ns.noun in ["mgs", "mds", "oss"]:
                 kwargs['role'] = ns.noun
-            self.output(self.api_endpoint.list(**kwargs))
+            endpoint = self.api_endpoint
+
+        super(ServerHandler, self).list(ns, endpoint, **kwargs)
 
     def add(self, ns):
         kwargs = {'address': ns.subject}
@@ -269,25 +277,27 @@ class FilesystemHandler(Handler):
                   'jobs': [{'class_name': 'DetectTargetsJob', 'args': {}}]}
         self.output(self.api.endpoints['command'].create(**kwargs))
 
-    def list(self, ns):
+    def list(self, ns, endpoint=None, **kwargs):
         try:
             fs = self.api_endpoint.show(ns.subject)
-            kwargs = {'filesystem_id': fs['id']}
+            kwargs['filesystem_id'] = fs['id']
 
             if ns.contextual_noun in ["ost", "mdt", "mgt"]:
                 kwargs['kind'] = ns.contextual_noun
-                self.output(self.api.endpoints['target'].list(**kwargs))
+                endpoint = self.api.endpoints['target']
             elif ns.contextual_noun == "target":
-                self.output(self.api.endpoints['target'].list(**kwargs))
+                endpoint = self.api.endpoints['target']
             elif ns.contextual_noun == "server":
-                self.output(self.api.endpoints['host'].list(**kwargs))
+                endpoint = self.api.endpoints['host']
             elif ns.contextual_noun in ["oss", "mds", "mgs"]:
                 kwargs['role'] = ns.contextual_noun
-                self.output(self.api.endpoints['host'].list(**kwargs))
+                endpoint = self.api.endpoints['host']
             elif ns.contextual_noun == "volume":
-                self.output(self.api.endpoints['volume'].list(**kwargs))
+                endpoint = self.api.endpoints['volume']
         except AttributeError:
-            self.output(self.api_endpoint.list())
+            endpoint = self.api_endpoint
+
+        super(FilesystemHandler, self).list(ns, endpoint, **kwargs)
 
     def _resolve_mgt(self, ns):
         if ns.mgt is None:
@@ -392,11 +402,12 @@ class TargetHandler(Handler):
 
         self.output(self.api_endpoint.create(**kwargs))
 
-    def list(self, ns):
-        kwargs = {'limit': '0'}  # api defaults to 20
+    def list(self, ns, endpoint=None, **kwargs):
         if ns.noun in ["mgt", "mdt", "ost"]:
             kwargs['kind'] = ns.noun
-        self.output(self.api_endpoint.list(**kwargs))
+        endpoint = self.api_endpoint
+
+        super(TargetHandler, self).list(ns, endpoint, **kwargs)
 
 
 class VolumeHandler(Handler):

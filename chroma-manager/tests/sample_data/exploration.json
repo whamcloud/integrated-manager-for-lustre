@@ -195,6 +195,174 @@
                      "device_node": "/dev/disk/by-id/scsi-1IET_00080001"
                   }
                ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00c00001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00c00001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00100001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00100001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00200001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00200001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00300001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00300001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00400001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00400001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00500001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00500001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00600001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00600001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00700001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00700001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00800001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00800001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00900001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00900001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00a00001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00a00001"
+                  }
+               ]
+            },
+            {
+               "mounts": [
+                  {
+                     "host": "firstfs-oss0",
+                     "primary": true,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00b00001"
+                  },
+                  {
+                     "host": "firstfs-oss1",
+                     "primary": false,
+                     "device_node": "/dev/disk/by-id/scsi-1IET_00b00001"
+                  }
+               ]
             }
          ]
       },
