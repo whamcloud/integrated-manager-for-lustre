@@ -9,6 +9,34 @@ class TestFilesystemResource(ChromaApiTestCase):
         self.create_simple_filesystem()
         self.spider_api()
 
+    def test_HYD1483(self):
+        """Test that adding a second MGS to a host emits a useful error."""
+        mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        mgt.save()
+
+        new_mgt_volume = self._test_lun(self.host)
+        mdt_volume = self._test_lun(self.host)
+        ost_volume = self._test_lun(self.host)
+
+        response = self.api_client.post("/api/filesystem/",
+             data = {
+                'name': 'testfs',
+                'mgt': {'volume_id': new_mgt_volume.id},
+                'mdt': {
+                    'volume_id': mdt_volume.id,
+                    'conf_params': {}
+                },
+                'osts': [{
+                    'volume_id': ost_volume.id,
+                    'conf_params': {}
+                }],
+                'conf_params': {}
+            })
+        self.assertHttpBadRequest(response)
+
+        errors = self.deserialize(response)
+        self.assertIn('only one MGS is allowed per server', errors['mgt']['volume_id'])
+
     def test_HYD424(self):
         """Test that filesystems can't be created using unmanaged MGSs"""
         mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")

@@ -161,7 +161,7 @@ class FilesystemValidation(Validation):
             hosts = [vn.host for vn in VolumeNode.objects.filter(volume = mgt_volume, use = True)]
             conflicting_mgs_count = ManagedTarget.objects.filter(~Q(managedmgs = None), managedtargetmount__host__in = hosts).count()
             if conflicting_mgs_count > 0:
-                errors['mgt'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)
+                errors['mgt']['volume_id'].append("Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label)
 
         def validate_target(klass, target):
             target_errors = defaultdict(list)
@@ -228,7 +228,7 @@ class FilesystemValidation(Validation):
                 if attr == 'osts':
                     errors[attr].append(target_errors)
                 else:
-                    errors[attr] = target_errors
+                    errors[attr].update(target_errors)
 
         conf_param_errors = conf_param.validate_conf_params(ManagedFilesystem, bundle.data['conf_params'])
         if conf_param_errors:
