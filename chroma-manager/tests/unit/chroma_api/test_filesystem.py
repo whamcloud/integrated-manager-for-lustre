@@ -35,7 +35,7 @@ class TestFilesystemResource(ChromaApiTestCase):
         self.assertHttpBadRequest(response)
 
         errors = self.deserialize(response)
-        self.assertIn('only one MGS is allowed per server', errors['mgt']['volume_id'])
+        self.assertIn('only one MGS is allowed per server', errors['mgt']['volume_id'][0])
 
     def test_HYD424(self):
         """Test that filesystems can't be created using unmanaged MGSs"""
