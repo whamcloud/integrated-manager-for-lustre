@@ -130,6 +130,8 @@ Scenario: List all volumes
   When I run chroma volume-list
   Then I should see output containing "scsi-1IET_00010001"
   And I should see output containing "scsi-1IET_000f0001"
+  And I should see output containing "firstfs-mds.lab.whamcloud.com:/dev/disk/by-id/scsi-1IET_00020001"
+  And I should see output containing "firstfs-oss0.lab.whamcloud.com:/dev/disk/by-id/scsi-1IET_00020001"
   And there should be 27 lines of output
 
 Scenario: List all volumes for a given filesystem
