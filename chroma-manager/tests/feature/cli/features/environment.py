@@ -4,6 +4,41 @@
 # ========================================================
 
 
+class FakeTestHostContactTask(object):
+    def __init__(self, resolve=True, ping=True, agent=True,
+                 reverse_resolve=True, reverse_ping=True):
+        self.resolve = resolve
+        self.ping = ping
+        self.agent = agent
+        self.reverse_resolve = reverse_resolve
+        self.reverse_ping = reverse_ping
+
+    def delay(self, host):
+        result = {
+            'address': host.address,
+            'resolve': self.resolve,
+            'ping': self.ping,
+            'agent': self.agent,
+            'reverse_resolve': self.reverse_resolve,
+            'reverse_ping': self.reverse_ping,
+        }
+
+        from celery.states import SUCCESS
+        from celery.result import EagerResult
+        return EagerResult(42, result, SUCCESS)
+
+
+def patch_test_host_contact_task(context, fake_task=None):
+    if not fake_task:
+        fake_task = FakeTestHostContactTask()
+
+    import chroma_core.tasks
+    # Don't overwrite the original reference!
+    if not 'old_test_host_contact' in context:
+        context.old_test_host_contact = chroma_core.tasks.test_host_contact
+    chroma_core.tasks.test_host_contact = fake_task
+
+
 def before_all(context):
     from chroma_core.lib.chroma_settings import chroma_settings
     settings = chroma_settings()
@@ -27,6 +62,7 @@ def before_all(context):
 def before_feature(context, feature):
     context.runner.setup_test_environment()
     context.old_db_config = context.runner.setup_databases()
+    context.cli_failure_expected = False
 
     from tests.unit.chroma_core.helper import JobTestCase
 
@@ -39,6 +75,8 @@ def before_feature(context, feature):
     context.test_case = BehaveFeatureTest()
     context.test_case._pre_setup()
     context.test_case.setUp()
+
+    patch_test_host_contact_task(context)
 
     from chroma_cli.api import ApiHandle
     context.old_api_client = ApiHandle.ApiClient
@@ -72,6 +110,8 @@ def after_feature(context, feature):
     from chroma_api.authentication import CsrfAuthentication
     CsrfAuthentication.is_authenticated = context.old_is_authenticated
 
+    import chroma_core.tasks
+    chroma_core.tasks.test_host_contact = context.old_test_host_contact
 #--def before_scenario(context, scenario):
 #--    # Set up the scenario test environment
 #--    context.runner.setup_test_environment()

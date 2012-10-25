@@ -30,7 +30,9 @@ Scenario Outline: Boolean Options
 Examples: Long options
   | option   | config_key |
   | --nowait | nowait     |
+  | --force  | force      |
 
 Examples: Short options
   | option | config_key |
   | -n     | nowait     |
+  | -f     | force      |

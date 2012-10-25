@@ -24,11 +24,15 @@ def step(context, args):
         else:
             standard_cli(args.split())
     except SystemExit, e:
-        if e.code != 0:
-            context.stdout.seek(0)
-            context.stderr.seek(0)
+        context.stdout.seek(0)
+        context.stderr.seek(0)
+        forced = any([a in ['--force', '-f'] for a in args.split()])
+        if e.code != 0 and not context.cli_failure_expected:
             fail("code: %d stdout: %s stderr: %s" %
                  (e.code, context.stdout.readlines(), context.stderr.readlines()))
+        elif e.code == 0 and context.cli_failure_expected and not forced:
+            fail("Failure expected but didn't happen!\nstdout: %s, stderr: %s" %
+                 (context.stdout.readlines(), context.stderr.readlines()))
     except Exception, e:
         context.stdout.seek(0)
         context.stderr.seek(0)
