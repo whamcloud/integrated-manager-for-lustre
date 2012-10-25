@@ -35,3 +35,15 @@ Scenario: Remove a server
   Given the server count should be 1
   When I run chroma server-remove setup-mgs.lab.whamcloud.com
   Then the server count should be 0
+
+Scenario: Fail to add non-resolving server
+  Given the server count should be 0
+  And the resolve host contact test should fail
+  When I run chroma server-add setup-mgs
+  Then the server count should be 0
+
+Scenario: Force addition of a non-pingable server
+  Given the server count should be 0
+  And the ping host contact test should fail
+  When I run chroma --force server-add setup-mgs
+  Then the server count should be 1

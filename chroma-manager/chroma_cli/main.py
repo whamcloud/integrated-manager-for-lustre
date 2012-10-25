@@ -29,6 +29,8 @@ def standard_cli(args=None, config=None):
                         choices=StandardFormatter.formats())
     parser.add_argument("--nowait", "-n", help="Don't wait for jobs to complete",
                         action="store_true")
+    parser.add_argument("--force", "-f", help="Ignore validation errors and proceed anyway",
+                        action="store_true")
     parser.clear_resets()
 
     # fake-y help arg to allow it to pass through to the real one

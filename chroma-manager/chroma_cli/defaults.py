@@ -13,3 +13,4 @@ defaults['username'] = ""
 defaults['password'] = ""
 defaults['output'] = "human"
 defaults['nowait'] = False
+defaults['force'] = False
