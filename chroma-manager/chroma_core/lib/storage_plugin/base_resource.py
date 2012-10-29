@@ -145,22 +145,11 @@ class BaseStorageResource(object):
 
     @classmethod
     def get_charts(cls):
-        if hasattr(cls._meta, 'charts'):
-            return cls._meta.charts
-        else:
-            charts = []
-            for name, stat_props in cls._meta.storage_statistics.items():
-                if stat_props.label:
-                    label = stat_props.label
-                else:
-                    label = name
-
-                charts.append({
-                    'title': label,
-                    'series': [name]
-                    })
-
-            return charts
+        charts = [{
+            'title': stat_props.label or name,
+            'series': [name],
+        } for name, stat_props in cls._meta.storage_statistics.items()]
+        return cls._meta.charts or charts
 
     @classmethod
     def get_attribute_properties(cls, name):

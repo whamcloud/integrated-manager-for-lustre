@@ -30,15 +30,15 @@ Scenario: Start a MGT using target-start
   Then the target state on MGS should be mounted
 
 Scenario: Remove an OST
-  Given the ost count should be 12
+  Given the ost count should be 24
   When I run chroma ost-remove secondfs-OST0000
-  Then the ost count should be 11
+  Then the ost count should be 23
   And the filesystem state on secondfs should be available
 
 Scenario: Add an OST
-  Given the ost count should be 11
+  Given the ost count should be 23
   When I run chroma ost-add secondfs-oss0:/dev/disk/by-id/scsi-1IET_000c0001 --filesystem secondfs
-  Then the ost count should be 12
+  Then the ost count should be 24
   And the target state on secondfs-OST0004 should be mounted
 
 Scenario: Force a target failover

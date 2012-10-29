@@ -4,7 +4,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 import mock
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
 import datetime
-from dateutil import tz
+import django.utils.timezone
 
 
 class TestTransitionsWithCommands(JobTestCaseWithHost):
@@ -95,7 +95,7 @@ class TestStateManager(JobTestCaseWithHost):
     def test_notification(self):
         """Test that state notifications cause the state of an object to change"""
         self.assertState(self.host, 'lnet_up')
-        now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+        now = django.utils.timezone.now()
         JobSchedulerClient.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_down')
 
@@ -103,7 +103,7 @@ class TestStateManager(JobTestCaseWithHost):
         """Test that notifications are droppped when they are older than
         the last change to an objects state"""
         self.assertState(self.host, 'lnet_up')
-        awhile_ago = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc()) - datetime.timedelta(seconds = 120)
+        awhile_ago = django.utils.timezone.now() - datetime.timedelta(seconds = 120)
         JobSchedulerClient.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_up')
 

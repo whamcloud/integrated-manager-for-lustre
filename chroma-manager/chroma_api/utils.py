@@ -316,8 +316,9 @@ class MetricResource:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
         if update:
+            import django.utils.timezone
             begin = end
-            end = datetime.datetime.utcnow()
+            end = django.utils.timezone.now()
             # TODO: logic for dealing with incomplete values during update
         elif latest:
             begin = end = None

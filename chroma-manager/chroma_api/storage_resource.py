@@ -158,11 +158,10 @@ class StorageResourceResource(MetricResource, ModelResource):
                         transaction.commit()
                 type_name = 'histogram'
                 # Composite type
-                data = {'bin_labels': [], 'values': []}
-                for i in range(0, len(stat_props.bins)):
-                    bin_info = u"\u2264%s" % stat_props.bins[i][1]
-                    data['bin_labels'].append(bin_info)
-                    data['values'].append(bins[i].value)
+                data = {
+                    'bin_labels': [u'\u2264%s' % (bin[1:] or '') for bin in stat_props.bins],
+                    'values': [bin.value for bin in bins],
+                }
             else:
                 type_name = 'timeseries'
                 # Go get the data from <resource>/metrics/

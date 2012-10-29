@@ -63,10 +63,18 @@ class CleanClusterApiTestCase(ApiTestCase):
             )
 
             # Run chroma-config setup to recreate the database and start the chroma manager.
-            self.remote_command(
+            result = self.remote_command(
                 chroma_manager['address'],
-                "chroma-config setup %s %s localhost >config_setup.log" % (superuser['username'], superuser['password'])
+                "chroma-config setup %s %s localhost &> config_setup.log" % (superuser['username'], superuser['password']),
+                expected_return_code = None
             )
+            chroma_config_exit_status = result.exit_status
+            if not chroma_config_exit_status == 0:
+                result = self.remote_command(
+                    chroma_manager['address'],
+                    "cat config_setup.log"
+                )
+                self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout.read())
 
     def has_pacemaker(self, server):
         result = self.remote_command(

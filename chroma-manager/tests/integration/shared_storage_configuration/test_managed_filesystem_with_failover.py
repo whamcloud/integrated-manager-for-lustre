@@ -93,7 +93,6 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
         )
 
         # Create new filesystem
-        self.verify_usable_luns_valid(ha_volumes, 4)
         filesystem_id = self.create_filesystem(
             {
                 'name': 'testfs',
@@ -243,7 +242,6 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
             self.set_volume_mounts(ha_volumes[1], host_1['id'], host_2['id'])
             self.set_volume_mounts(ha_volumes[2], host_2['id'], host_1['id'])
             self.set_volume_mounts(ha_volumes[3], host_2['id'], host_1['id'])
-            self.verify_usable_luns_valid(ha_volumes, 4)
 
             # Create new filesystem such that the mgs/mdt is on the host we
             # failed over and the osts are not.

@@ -171,32 +171,71 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         ost_conf_params = self.conf_param_test_data['ost_conf_params']
         self._test_conf_params_for_target('%s-OST0000' % self.filesystem_name, ost_conf_params)
 
-    def test_add_ost(self):
+    def add_ost_and_verify(self, volume_name, server_address, ost_number):
+        """
+        Add an OST - may only be run when on the filesystem detail page already
+        Includes assertions to verify creation
+        """
+
+        # verify the ost label doesn't exist
+        link_text = "%s-OST%04d" % (self.filesystem_name, ost_number)
+        with self.assertRaises(NoSuchElementException):
+            self.driver.find_element_by_link_text(link_text)
+        self.edit_filesystem_page.add_ost(server_address, volume_name)
+        self.driver.find_element_by_link_text(link_text)
+
+    def remove_ost_and_verify(self, ost_number):
+        """
+        Remove an OST - may only be run when on the filesystem detail page already.
+        Also asserts the OST label is removed after completion of removal
+        """
+        link_text = "%s-OST%04d" % (self.filesystem_name, ost_number)
+        self.edit_filesystem_page.ost_set_state(link_text, "removed")
+        with self.assertRaises(NoSuchElementException):
+            self.driver.find_element_by_link_text(link_text)
+
+    def prepare_volume_for_use(self, volume_and_server_index):
+        """
+        Quickie helper to set the primary server for a volume prior to being
+        allocated as a target. Must be done before being used as the primary server
+        is selected at random at runtime
+        """
         # Go to the Volumes page and set up a volume
-        new_ost_volume_name, new_ost_server_address = self.volume_and_server(3)
+        volume_name, server_address = self.volume_and_server(volume_and_server_index)
         self.navigation.go('Configure', 'Volumes')
         volume_page = Volumes(self.driver)
-        volume_page.set_primary_server(new_ost_volume_name, new_ost_server_address)
+        volume_page.set_primary_server(volume_name, server_address)
 
         # Go back to the filesystem detail page
         self.navigation.go('Configure', 'Filesystems')
         fs_page = Filesystem(self.driver)
         fs_page.edit(self.filesystem_name)
+        return volume_name, server_address
+
+    def test_add_ost(self):
+        # prep a new volume
+        new_ost_volume_name, new_ost_server_address = self.prepare_volume_for_use(3)
 
         # Check that adding an OST causes the new OST to be shown in the filesystem details
-        with self.assertRaises(NoSuchElementException):
-            self.driver.find_element_by_link_text("%s-OST0001" % self.filesystem_name)
-        self.edit_filesystem_page.add_ost(new_ost_server_address, new_ost_volume_name)
-        self.driver.find_element_by_link_text("%s-OST0001" % self.filesystem_name)
+        self.add_ost_and_verify(new_ost_volume_name, new_ost_server_address, ost_number=1)
+
+    # HYD-1403 for testing HYD-1309 - removed OST not available to re-add
+    def test_adding_removed_ost(self):
+        # prep a new volume
+        # create server uses indices 0 through 2 for the base filesystem
+        new_ost_volume_name, new_ost_server_address = self.prepare_volume_for_use(3)
+
+        # do a cycle of add, remove, add without a page refresh
+        self.add_ost_and_verify(new_ost_volume_name, new_ost_server_address, ost_number=1)
+        self.remove_ost_and_verify(ost_number=1)
+        self.add_ost_and_verify(new_ost_volume_name, new_ost_server_address, ost_number=2)
 
     def test_stop_start_ost(self):
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "unmounted")
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "mounted")
 
     def test_remove_ost(self):
-        self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "removed")
-        with self.assertRaises(NoSuchElementException):
-            self.driver.find_element_by_link_text("%s-OST0000" % self.filesystem_name)
+        self.remove_ost_and_verify(ost_number=0)
 
     def test_remove_filesystem(self):
         """Test that when removing a filesystem from it's detail page, we are

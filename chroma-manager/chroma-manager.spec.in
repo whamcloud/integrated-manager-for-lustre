@@ -22,7 +22,31 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: Django >= 1.3 mod_wsgi httpd python-dateutil python-uuid python-multiprocessing python-paramiko python-kombu >= 1.5.1 django-celery rsyslog-mysql mysql-server MySQL-python >= 1.2.1p2 rabbitmq-server django-picklefield python-amqplib avahi-dnsconfd avahi-python python-daemon pygobject2 python-celery >= 2.4.5 django-tastypie Django-south >= 0.7.2 python-setuptools chroma-manager-libs = %{version} python-prettytable python-dse ntp ed
+Requires: mod_wsgi httpd ntp ed
+Requires: python-setuptools
+Requires: python-prettytable
+Requires: python-dse
+Requires: python-dateutil
+Requires: python-uuid
+Requires: python-multiprocessing
+Requires: python-paramiko
+Requires: python-kombu >= 2.4.7
+Requires: python-daemon
+Requires: python-celery >= 3.0.11
+Requires: python-amqplib
+Requires: pygobject2
+Requires: rsyslog-mysql
+Requires: mysql-server
+Requires: MySQL-python >= 1.2.1p2
+Requires: rabbitmq-server
+Requires: avahi-dnsconfd
+Requires: avahi-python
+Requires: Django >= 1.4
+Requires: Django-south >= 0.7.4
+Requires: django-tastypie = 0.9.11
+Requires: django-celery >= 3.0.10
+Requires: django-picklefield
+Requires: chroma-manager-libs = %{version}
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 

@@ -140,19 +140,25 @@ class Filesystem(ApiResource):
 class Volume(ApiResource):
     def __init__(self, *args, **kwargs):
         super(Volume, self).__init__(*args, **kwargs)
-        self.list_columns.extend(["label", "size", "status", "servers"])
+        self.list_columns.extend(["name", "size", "primary", "failover", "status"])
+
+    def name(self):
+        return " ".join(self.label.split())
 
     def size(self):
         return self.fmt_bytes(self.all_attributes['size'])
 
-    def servers(self):
-        nodes = []
+    def primary(self):
         for node in self.volume_nodes:
             if node['primary']:
-                nodes.insert(0, node['host_label'])
-            else:
-                nodes.append(node['host_label'])
-        return ",".join(nodes)
+                return ":".join([node['host_label'], node['path']])
+
+    def failover(self):
+        failover_nodes = []
+        for node in self.volume_nodes:
+            if not node['primary']:
+                failover_nodes.append(":".join([node['host_label'], node['path']]))
+        return ";".join(failover_nodes)
 
 
 class VolumeNode(ApiResource):

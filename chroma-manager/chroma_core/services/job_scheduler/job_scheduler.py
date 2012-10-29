@@ -6,7 +6,6 @@
 
 import json
 import threading
-import datetime
 import sys
 import traceback
 from dateutil import tz
@@ -15,6 +14,7 @@ import dateutil.parser
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q
+import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult, StateChangeJob
@@ -344,7 +344,7 @@ class JobScheduler(object):
             fs = changed_item.filesystem
             members = list(ManagedMdt.objects.filter(filesystem = fs)) + list(ManagedOst.objects.filter(filesystem = fs))
             states = set([t.state for t in members])
-            now = datetime.datetime.utcnow().replace(tzinfo = tz.tzutc())
+            now = django.utils.timezone.now()
 
             if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
                 log.debug('branched')

@@ -10,6 +10,7 @@ as possible in their choice of attribute class, and avoid using generic types li
 String as much as possible.
 
 """
+import re
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 from chroma_core.lib.storage_plugin.base_resource_attribute import BaseResourceAttribute
@@ -131,7 +132,11 @@ class PosixPath(BaseResourceAttribute):
 
 class Hostname(BaseResourceAttribute):
     """A DNS hostname or an IP address, e.g. mycompany.com, 192.168.0.67"""
-    pass
+    pattern = re.compile('(?!-)[a-zA-Z\d-]{1,63}(?<!-)$')
+
+    def validate(self, value):
+        if len(value) > 255 or not all(map(self.pattern.match, value.split('.'))):
+            raise ValueError("'%s' is not a valid hostname" % value)
 
 
 class ResourceReference(BaseResourceAttribute):

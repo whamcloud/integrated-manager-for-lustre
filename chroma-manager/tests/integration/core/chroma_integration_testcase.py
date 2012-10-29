@@ -195,50 +195,24 @@ class ChromaIntegrationTestCase(CleanClusterApiTestCase):
             params = {'category': 'usable', 'limit': 0}
         )
         self.assertEqual(response.successful, True, response.text)
-        return response.json['objects']
+        volumes = response.json['objects']
+        return self.filter_for_permitted_volumes(volumes)
 
-    def verify_usable_luns_valid(self, usable_luns, num_luns_needed):
+    def filter_for_permitted_volumes(self, volumes):
         """
-        Verify a list of luns both contains the correct number of devices
-        and that those devices are listed in the config as devices that
-        are allowable to use. This is an extra check so that in case there
-        is a bug in the chroma volume detection, we won't go wiping other
-        volumes the person running the tests cares about.
+        Take a list of volumes and return the members of the list that are also in the config.
+        This is an extra check so that if there is a bug in the chroma volume detection,
+        we won't go wiping other volumes the person running the tests cares about.
         """
-        # Assert meets the minimum number of devices needed for this test.
-        self.assertGreaterEqual(len(usable_luns), num_luns_needed)
-
-        # Verify no extra devices not in the config visible.
-        response = self.chroma_manager.get(
-            '/api/volume_node/'
-        )
-        self.assertTrue(response.successful, response.text)
-        lun_nodes = response.json['objects']
-
-        response = self.chroma_manager.get(
-            '/api/host/',
-        )
-        self.assertTrue(response.successful, response.text)
-        hosts = response.json['objects']
-
-        host_id_to_nodename = dict((h['id'], h['nodename']) for h in hosts)
-        usable_luns_ids = [l['id'] for l in usable_luns]
-
-        for lun_node in lun_nodes:
-            if lun_node['volume_id'] in usable_luns_ids:
-
-                # Create a list of usable device paths for the host of the
-                # current lun node as listed in the config.
-                host_id = lun_node['host_id']
-                host_nodename = host_id_to_nodename[host_id]
-                host_config = self.get_host_config(host_nodename)
-                config_device_paths = host_config['device_paths']
-                config_paths = [str(p) for p in config_device_paths]
-
-                self.assertTrue(lun_node['path'] in config_paths,
-                    "Path: %s Config Paths: %s" % (
-                        lun_node['path'], config_device_paths)
-                )
+        permitted_volumes = []
+        for volume in volumes:
+            for volume_node in volume['volume_nodes']:
+                host_config = self.get_host_config(volume_node['host_label'])
+                if host_config:
+                    if volume_node['path'] in host_config['device_paths']:
+                        permitted_volumes.append(volume)
+                        break
+        return permitted_volumes
 
     def set_volume_mounts(self, volume, primary_host_id, secondary_host_id):
         primary_volume_node_id = None

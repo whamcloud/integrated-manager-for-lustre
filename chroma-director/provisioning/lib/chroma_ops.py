@@ -95,9 +95,10 @@ class ChromaManagerOps(NodeOps):
     def setup_chroma(self):
         with self.open_session():
             put("%s" % (settings.CHROMA_SETTINGS), "/usr/share/chroma-manager/local_settings.py", use_sudo = True)
-            sudo("chroma-config setup %s %s" % (
+            sudo("chroma-config setup %s %s %s" % (
                 settings.CHROMA_MANAGER_USER,
-                settings.CHROMA_MANAGER_PASSWORD))
+                settings.CHROMA_MANAGER_PASSWORD,
+                settings.CHROMA_MANAGER_NTP_SERVER))
             sudo("echo '[chroma]' > ~/.chroma")
             sudo("echo username=%s >> ~/.chroma" % settings.CHROMA_MANAGER_USER)
             sudo("echo password=%s >> ~/.chroma" % settings.CHROMA_MANAGER_PASSWORD)

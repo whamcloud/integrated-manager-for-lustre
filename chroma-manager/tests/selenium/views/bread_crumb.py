@@ -6,26 +6,24 @@ class Breadcrumb:
         self.driver = driver
 
         # Initialise elements in breadcrumb on dashboard page
-        self.selectView = '#selectView'
+        self.selectView = '#breadcrumb_type'
         self.intervalSelect = '#intervalSelect'
         self.unitSelect = '#unitSelect'
-        self.fsSelect = '#fsSelect'
-        self.serverSelect = '#serverSelect'
+        self.fsSelect = '#breadcrumb_filesystem'
+        self.serverSelect = '#breadcrumb_server'
         self.ostSelect = '#ostSelect'
 
     def get_units_list(self):
         """Returns unit values list"""
         unit_select = self.driver.find_element_by_css_selector(self.unitSelect)
         units_list_options = unit_select.find_elements_by_tag_name('option')
-        # Remove the default option "Select Server" from original list
-        filtered_list_options = units_list_options[1:units_list_options.__len__()]
         filtered_unit_list = []
-        for count in range(len(filtered_list_options)):
-            filtered_unit_list.append(int(filtered_list_options.__getitem__(count).text))
+        for count in range(len(units_list_options)):
+            filtered_unit_list.append(int(units_list_options.__getitem__(count).text))
         filtered_unit_list.sort()
         return filtered_unit_list
 
-    def get_expected_unit_list(self, time_interval):
+    def get_expected_units_list(self, time_interval):
         """Returns expected unit values list"""
 
         expected_unit_list = []
@@ -33,7 +31,7 @@ class Breadcrumb:
             for count in range(60):
                 expected_unit_list.append(count + 1)
         elif time_interval == 'Hour':
-            for count in range(23):
+            for count in range(24):
                 expected_unit_list.append(count + 1)
         elif time_interval == 'Day':
             for count in range(31):
