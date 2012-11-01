@@ -28,11 +28,13 @@ Scenario Outline: Boolean Options
   Then the config parameter <config_key> should be set to True
 
 Examples: Long options
-  | option   | config_key |
-  | --nowait | nowait     |
-  | --force  | force      |
+  | option    | config_key |
+  | --nowait  | nowait     |
+  | --noproxy | noproxy    |
+  | --force   | force      |
 
 Examples: Short options
   | option | config_key |
   | -n     | nowait     |
+  | -x     | noproxy    |
   | -f     | force      |
