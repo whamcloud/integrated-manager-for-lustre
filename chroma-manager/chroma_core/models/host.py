@@ -91,10 +91,20 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         unique_together = ('address',)
 
     def __str__(self):
-        return self.pretty_name()
+        return self.get_label()
 
     def get_label(self):
-        return self.pretty_name()
+        """Return the FQDN if it is known, else the address"""
+        if self.fqdn:
+            name = self.fqdn
+        else:
+            user, host, port = self.ssh_params()
+            name = host
+
+        if name.endswith(".localdomain"):
+            name = name[:-len(".localdomain")]
+
+        return name
 
     def save(self, *args, **kwargs):
         from django.core.exceptions import ValidationError
@@ -156,19 +166,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         command = Command.set_state([(host, 'configured')], "Setting up host %s" % address_string)
 
         return host, command
-
-    def pretty_name(self):
-        # Take FQDN if we have it, or fall back to address
-        if self.fqdn:
-            name = self.fqdn
-        else:
-            user, host, port = self.ssh_params()
-            name = host
-
-        if name[-12:] == ".localdomain":
-            return name[:-12]
-        else:
-            return name
 
     def _role_strings(self):
         roles = set()
