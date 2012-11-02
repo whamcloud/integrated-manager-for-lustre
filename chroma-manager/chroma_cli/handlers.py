@@ -257,7 +257,7 @@ class ServerHandler(Handler):
             'reverse_ping': "The agent on %s was unable to ping the manager's IP address"
         }
         test_results = self.api.endpoints['test_host'].create(**kwargs)
-        if not all(test_results.values()) and not ns.force:
+        if not all(test_results.values()):
             failures = []
             for failkey in [k for k, v in test_results.items() if not v]:
                 failures.append(failure_text[failkey] % test_results['address'])
@@ -266,7 +266,8 @@ class ServerHandler(Handler):
 
     def add(self, ns):
         kwargs = {'address': ns.subject}
-        self.test_host(ns, **kwargs)
+        if not ns.force:
+            self.test_host(ns, **kwargs)
         self.output(self.api_endpoint.create(**kwargs))
 
 
