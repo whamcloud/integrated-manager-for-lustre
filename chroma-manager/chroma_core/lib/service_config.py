@@ -328,7 +328,7 @@ class ServiceConfig:
 
         valid_username = False
         while not valid_username:
-            username = self.get_input(msg = "Username", empty_allowed = False)
+            username = self.get_input(msg = "Chroma superuser", empty_allowed = False)
             if username.find(" ") > -1:
                 print "Username cannot contain spaces"
                 continue
