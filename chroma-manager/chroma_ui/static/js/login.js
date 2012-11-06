@@ -157,6 +157,7 @@ var ValidatedForm = function() {
     });
     return api_fn(url, obj,
       success_callback = function(data) {
+        clear_errors(element);
         if (success) {
           success(data);
         }
