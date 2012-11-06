@@ -132,6 +132,9 @@ var UserDetail = Backbone.View.extend({
     var view = this;
     var markup = _.template($('#user_alert_subs_form').html())({subscriptions: subscriptions});
     $(view.el).find('#user_alert_subs_tab').html(markup);
+    // This .button() call forces the buttons to be styled on page load
+    // rather than waiting for the next background alert poll.  Not exactly
+    // clear on WHY this is so, but it is.
     $(view.el).find('#user_alert_subs_tab').find('button').button();
   },
   clear_subscriptions: function() {
