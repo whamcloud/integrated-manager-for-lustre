@@ -7,6 +7,8 @@ from tests.unit.chroma_core.helper import freshen
 from django.db.utils import IntegrityError
 import django.utils.timezone
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, Nid
+from chroma_core.models.jobs import Command
+import settings
 
 
 class TestSetup(JobTestCase):
@@ -47,6 +49,21 @@ class TestSetup(JobTestCase):
             self.assertState(host, 'unconfigured')
         finally:
             MockAgent.selinux_enabled = False
+
+    def test_version(self):
+        """Test manager-agent version compatibility."""
+        versions = settings.VERSION, MockAgent.version
+        settings.VERSION, MockAgent.version = '2.0', '1.0'
+        try:
+            host, command = ManagedHost.create_from_string('myaddress')
+            self.assertTrue(command.errored)
+            self.assertState(host, 'unconfigured')
+            settings.VERSION = '1.1'
+            command = Command.set_state([(host, 'configured')])
+            self.assertFalse(command.errored)
+            self.assertNotEqual(freshen(host).state, 'unconfigured')
+        finally:
+            settings.VERSION, MockAgent.version = versions
 
 
 class NidTestCase(JobTestCase):

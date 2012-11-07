@@ -5,7 +5,7 @@
 
 
 import time
-
+import operator
 from django.db import models, transaction
 
 from polymorphic.models import DowncastManager
@@ -142,3 +142,10 @@ def await_async_result(async_result):
                 time.sleep(0.5)
 
     return async_result.get()
+
+
+class Version(tuple):
+    "Version string as a comparable tuple, similar to sys.version_info."
+    def __new__(cls, version):
+        return tuple.__new__(cls, (int(component) for component in (version or '').split('.') if component.isdigit()))
+    major, minor = (property(operator.itemgetter(index)) for index in range(2))

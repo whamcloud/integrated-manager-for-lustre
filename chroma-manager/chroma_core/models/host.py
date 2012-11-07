@@ -9,7 +9,6 @@ from exceptions import Exception
 import json
 import logging
 import dateutil.parser
-import re
 
 from django.db import models
 from django.db import transaction
@@ -28,7 +27,7 @@ from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLoc
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import  DependOn, DependAll, Step
 
-from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
+from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass, Version
 
 import settings
 
@@ -620,12 +619,10 @@ class GetHostProperties(Step):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         host_properties = self.invoke_agent(host, "host-properties")
-        versions = settings.VERSION, host_properties.get('agent_version')
-        manager, agent = (map(int, re.findall('(\d+)\.', version or '')) for version in versions)
+        manager, agent = Version(settings.VERSION), Version(host_properties.get('agent_version'))
         # only check production version compatibility: A.B.
-        # agent should match major version and not exceed minor version
-        if manager and agent and not (agent[0] == manager[0] and agent[:2] <= manager):
-            raise ValueError("Version incompatibility between manager ({0}) and agent ({1})".format(*versions))
+        if manager and agent and not (manager.major == agent.major and manager.minor >= agent.minor):
+            raise ValueError("Version incompatibility between manager {0} and agent {1}".format(manager, agent))
 
         # Get agent capabilities
         capabilities = host_properties['capabilities']
