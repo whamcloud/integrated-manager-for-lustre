@@ -13,7 +13,7 @@ class StatsTestCaseMixin(ApiTestCase):
     """
     This TestCase Mixin adds the verbose checks that stats are returning
     as expected. It is meant to be used with ChromaIntegrationTestCase using
-    multiple inheritance just for the integratino test classes that we
+    multiple inheritance just for the integration test classes that we
     would like to check on the stats.
     """
 
@@ -81,23 +81,19 @@ class StatsTestCaseMixin(ApiTestCase):
         # Make sure client cache is flushed and check client count while we are at it
         starting_client_count = filesystem['client_count']
         self.unmount_filesystem(client, filesystem['name'])
-        time.sleep(10)
-        filesystem = self.get_filesystem(filesystem_id)
-        self.assertEqual(starting_client_count - 1, filesystem['client_count'])
-        self.mount_filesystem(client, filesystem['name'], filesystem['mount_command'])
-        time.sleep(10)
-        filesystem = self.get_filesystem(filesystem_id)
-        self.assertEqual(starting_client_count, filesystem['client_count'])
+        self.wait_until_true(lambda: self.get_filesystem(filesystem_id).get('client_count') == starting_client_count - 1)
 
-        # Check bytes free and files free are what we expect after writing
-        bytes_free_after_write = filesystem['bytes_free']
-        self.assertEqual(
-            expected_bytes_written,
-            (starting_bytes_free - bytes_free_after_write),
-            "Bytes free after write: %s" % bytes_free_after_write
-        )
-        self.assertEqual(starting_files_free - 1, filesystem['files_free'])
-        self.assertEqual(bytes_total, filesystem['bytes_total'])
+        self.mount_filesystem(client, filesystem['name'], filesystem['mount_command'])
+        self.wait_until_true(lambda: self.get_filesystem(filesystem_id).get('client_count') == starting_client_count)
+
+        # Check bytes free are what we expect after the writing above
+        self.wait_until_true(lambda: expected_bytes_written == starting_bytes_free - self.get_filesystem(filesystem_id).get('bytes_free'))
+
+        # Check files free are what we expect after the writing above
+        self.wait_until_true(lambda: starting_files_free - 1 == self.get_filesystem(filesystem_id).get('files_free'))
+
+        #Check total bytes remained the same
+        self.assertEqual(bytes_total, self.get_filesystem(filesystem_id).get('bytes_total'))
 
         # Assert we can at least request each different stat without triggering
         # an exception. This is a smoke test and many of these should have more
