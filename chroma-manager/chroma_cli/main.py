@@ -15,6 +15,16 @@ from chroma_cli.output import StandardFormatter
 from chroma_cli.handlers import Dispatcher
 
 
+def detect_proxies():
+    from chroma_cli.defaults import PROXY_VARIABLES
+    import os
+    proxies = []
+    for proxy in PROXY_VARIABLES:
+        if proxy in os.environ:
+            proxies.append(proxy)
+    return proxies
+
+
 def standard_cli(args=None, config=None):
     config = config
     if not config:
@@ -28,6 +38,10 @@ def standard_cli(args=None, config=None):
     parser.add_argument("--output", "-o", help="Output format",
                         choices=StandardFormatter.formats())
     parser.add_argument("--nowait", "-n", help="Don't wait for jobs to complete",
+                        action="store_true")
+    parser.add_argument("--noproxy", "-x", help="Ignore $HTTP_PROXY, if present",
+                        action="store_true")
+    parser.add_argument("--force", "-f", help="Ignore validation errors and proceed anyway",
                         action="store_true")
     parser.clear_resets()
 
@@ -49,7 +63,7 @@ def standard_cli(args=None, config=None):
 
     # Allow CLI options to override defaults/.chroma config values
     config.update(dict([[key, val] for key, val in ns.__dict__.items()
-                                if val != None
+                                if val
                                 and key not in ["primary_action", "options"]]))
 
     authentication = {'username': config.username,
@@ -58,6 +72,14 @@ def standard_cli(args=None, config=None):
                     authentication=authentication)
 
     formatter = StandardFormatter(format=config.output, nowait=config.nowait, command_monitor=api.command_monitor)
+
+    proxies = detect_proxies()
+    if proxies and config.noproxy:
+        import os
+        for proxy in proxies:
+            del os.environ[proxy]
+    elif proxies:
+        sys.stderr.write("WARNING: Detected the following proxy variables: %s (--noproxy to disable them)\n" % ", ".join(proxies))
 
     from chroma_cli.exceptions import ApiException
     try:

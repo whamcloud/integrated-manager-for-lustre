@@ -34,15 +34,10 @@
       );
     }
 
-    function set_mdt_advanced_visible(show)
-    {
-      if (show) {
-          $('.mdt_advanced').show();
-          $('#mdt_advanced_button').parent().css('background-color', '#eee')
-      } else {
-          $('.mdt_advanced').hide();
-          $('#mdt_advanced_button').parent().css('background-color', '')
-      }
+    function set_mdt_advanced_visible(is_visible) {
+      $('#mdt_advanced').toggle(is_visible)
+        .parent()
+          .css('background-color', ( is_visible ? '#eee' : '' ));
     }
 
     function draw() {
@@ -117,10 +112,10 @@
         $('span#total_size_estimate').html(text)
       }
 
-      $('#mdt_advanced_button').button();
-      $('#mdt_advanced_button').change(function() {
-        set_mdt_advanced_visible($(this).attr('checked'));
-      });
+      $('#mdt_advanced_button').button()
+        .click(function() {
+          set_mdt_advanced_visible(($('#mdt_advanced').css('display') === 'block' ? false : true ));
+        });
 
       volume_chooser_store = VolumeChooserStore();
       volume_chooser_store.load(function() {
@@ -370,9 +365,8 @@
       <div class='step_body'>
         <button id='mdt_chooser'></button>
         <div>
-          <label for='mdt_advanced_button'>Advanced Options</label>
-          <input type='checkbox' id='mdt_advanced_button'/>
-          <div class='mdt_advanced'>
+          <button id='mdt_advanced_button'>Advanced Options</button>
+          <div id='mdt_advanced'>
             <table class='validated_form'>
               <tr>
                 <th><label for='inode_size'><a data-topic='_inode_size' class='help_hover'>Inode size</a>:</label></th>

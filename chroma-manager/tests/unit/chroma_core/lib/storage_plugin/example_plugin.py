@@ -1,13 +1,9 @@
-from chroma_core.lib.storage_plugin.api import attributes, statistics
-from chroma_core.lib.storage_plugin.api.identifiers import GlobalId, ScopedId
-from chroma_core.lib.storage_plugin.api import resources
-from chroma_core.lib.storage_plugin.api import relations
-from chroma_core.lib.storage_plugin.api.plugin import Plugin
+from chroma_core.lib.storage_plugin.api import attributes, identifiers, plugin, relations, resources, statistics
 
 
 class Couplet(resources.ScannableResource):
     class Meta:
-        identifier = GlobalId('address_1', 'address_2')
+        identifier = identifiers.GlobalId('address_1', 'address_2')
 
     address_1 = attributes.Hostname()
     address_2 = attributes.Hostname()
@@ -15,14 +11,14 @@ class Couplet(resources.ScannableResource):
 
 class Controller(resources.Controller):
     class Meta:
-        identifier = ScopedId('index')
+        identifier = identifiers.ScopedId('index')
 
     index = attributes.Enum(0, 1)
 
 
 class HardDrive(resources.PhysicalDisk):
     class Meta:
-        identifier = ScopedId('serial_number')
+        identifier = identifiers.ScopedId('serial_number')
 
     serial_number = attributes.String()
     capacity = attributes.Bytes()
@@ -31,7 +27,7 @@ class HardDrive(resources.PhysicalDisk):
 
 class RaidPool(resources.StoragePool):
     class Meta:
-        identifier = ScopedId('local_id')
+        identifier = identifiers.ScopedId('local_id')
 
     local_id = attributes.Integer()
     raid_type = attributes.Enum('raid0', 'raid1', 'raid5', 'raid6')
@@ -43,7 +39,7 @@ class RaidPool(resources.StoragePool):
 
 class Lun(resources.LogicalDrive):
     class Meta:
-        identifier = ScopedId('local_id')
+        identifier = identifiers.ScopedId('local_id')
         relations = [
                 relations.Provide(
                         provide_to = ('linux', 'ScsiDevice'),
@@ -60,7 +56,7 @@ class Lun(resources.LogicalDrive):
         return self.name
 
 
-class ExamplePlugin(Plugin):
+class ExamplePlugin(plugin.Plugin):
     def initial_scan(self, scannable_resource):
         # This is where the plugin should detect all the resources
         # belonging to scannable_resource, or throw an exception

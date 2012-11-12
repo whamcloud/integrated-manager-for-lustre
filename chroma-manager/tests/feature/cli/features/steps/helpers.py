@@ -65,3 +65,15 @@ def step(context, key, value):
         eq_(getattr(context.cli_config, key), True)
     else:
         eq_(getattr(context.cli_config, key), value)
+
+
+@given('the {testkey} host contact test should {result}')
+@then('the {testkey} host contact test should {result}')
+def step(context, testkey, result):
+    value = {'fail': False, 'succeed': True}[result]
+    kwargs = {testkey: value}
+    # This business of reaching into context._runner.hooks is necessitated
+    # by the lack of a good place to put these things.  Sigh.
+    fake_task = context._runner.hooks['FakeTestHostContactTask'](**kwargs)
+    context._runner.hooks['patch_test_host_contact_task'](context, fake_task)
+    context.cli_failure_expected = not value

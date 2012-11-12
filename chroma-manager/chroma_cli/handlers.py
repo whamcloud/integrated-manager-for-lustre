@@ -248,8 +248,26 @@ class ServerHandler(Handler):
 
         super(ServerHandler, self).list(ns, endpoint, **kwargs)
 
+    def test_host(self, ns, endpoint=None, **kwargs):
+        failure_text = {
+            'resolve': "Unable to resolve fqdn for %s",
+            'reverse_resolve': "The agent on %s was unable to resolve the manager's IP address",
+            'ping': "The manager was unable to ping %s",
+            'agent': "The manager was unable to invoke the agent on %s",
+            'reverse_ping': "The agent on %s was unable to ping the manager's IP address"
+        }
+        test_results = self.api.endpoints['test_host'].create(**kwargs)
+        if not all(test_results.values()):
+            failures = []
+            for failkey in [k for k, v in test_results.items() if not v]:
+                failures.append(failure_text[failkey] % test_results['address'])
+            message = "Failed sanity checks (use --force to add anyway):"
+            raise BadUserInput("\n".join([message] + failures))
+
     def add(self, ns):
         kwargs = {'address': ns.subject}
+        if not ns.force:
+            self.test_host(ns, **kwargs)
         self.output(self.api_endpoint.create(**kwargs))
 
 

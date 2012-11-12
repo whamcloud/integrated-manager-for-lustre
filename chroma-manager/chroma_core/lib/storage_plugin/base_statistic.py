@@ -47,4 +47,4 @@ class BaseStatistic(object):
             return self.units
 
     def validate(self, value):
-        pass
+        float(value)  # raises ValueError

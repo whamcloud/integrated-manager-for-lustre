@@ -152,16 +152,21 @@ class SeleniumBaseTestCase(TestCase):
         self.long_wait = wait_time['long']
 
     def setUp(self):
+        if not config['chroma_managers']['server_http_url']:
+            raise RuntimeError("Please set server_http_url in config file")
+
         if config['headless']:
             from pyvirtualdisplay import Display
             display = Display(visible = 0, size = (1280, 1024))
             display.start()
 
         if not self.driver:
-            self.driver = getattr(webdriver, config['chroma_managers']['browser'])()
+            browser = config['chroma_managers']['browser']
+            if browser == 'Chrome':
+                options = webdriver.ChromeOptions()
+                options.add_argument('no-proxy-server')
+            self.driver = getattr(webdriver, browser)(chrome_options=options)
 
-        if not config['chroma_managers']['server_http_url']:
-            raise RuntimeError("Please set server_http_url in config file")
         self.driver.get(config['chroma_managers']['server_http_url'])
 
         from tests.selenium.utils.navigation import Navigation
@@ -172,7 +177,6 @@ class SeleniumBaseTestCase(TestCase):
             if user['is_superuser']:
                 self.navigation.login(user['username'], user['password'])
                 superuser_present = True
-
         if not superuser_present:
             raise RuntimeError("No superuser in config file")
 

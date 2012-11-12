@@ -46,6 +46,9 @@ class TestDisplayNames(TestCase):
         td2 = TestDefaults2(name = "foo", name_scope = "bar")
         self.assertEqual(td2.get_label(), "TestDefaults2 ('foo', 'bar')")
         self.assertEqual(len(td2.get_charts()), 2)
+        td2.read = 0.0
+        with self.assertRaises(ValueError):
+            td2.write = ''
 
     def test_overrides(self):
         to = TestOverrides(name = "foo")

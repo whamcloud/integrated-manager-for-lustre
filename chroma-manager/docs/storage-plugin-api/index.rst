@@ -78,7 +78,7 @@ virtual machine.
        temperature = statistics.Gauge(units = 'C')
 
        class Meta:
-           identifier = GlobalId('serial_number')
+           identifier = identifiers.GlobalId('serial_number')
 
 In general storage resources may inherit from Resource directly, but
 optionally they may inherit from a built-in resource class as a way of 
@@ -137,7 +137,7 @@ by its shelf and slot number, like this:
 
     class HardDrive(Resource):
         class Meta:
-            identifier = ScopedId('shelf', 'slot')
+            identifier = identifiers.ScopedId('shelf', 'slot')
         shelf = attributes.ResourceReference()
         slot = attributes.Integer()
 
@@ -172,7 +172,7 @@ Alert conditions are specified for each resource in the Meta section, like this:
 
     class HardDrive(Resource):
         class Meta:
-            identifier = ScopedId('shelf', 'slot')
+            identifier = identifiers.ScopedId('shelf', 'slot')
             alert_conditions = [
                 alert_conditions.ValueCondition('status', warn_states = ['FAILED'], message = "Drive failure")
                ] 
@@ -188,7 +188,7 @@ necessary to add an `id` argument to allow Chroma to uniquely identify each one.
 
     class HardDrive(Resource):
         class Meta:
-            identifier = ScopedId('shelf', 'slot')
+            identifier = identifiers.ScopedId('shelf', 'slot')
             alert_conditions = [
                 alert_conditions.ValueCondition('status', warn_states = ['NEARFAILURE'], message = "Drive near failure", id = 'nearfailure'),
                 alert_conditions.ValueCondition('status', warn_states = ['FAILED'], message = "Drive failure", id = 'failure')
@@ -219,9 +219,7 @@ storage controllers.
 
 ::
 
-   from chroma_core.lib.storage_plugin.api import resources
-   from chroma_core.lib.storage_plugin.api import identifiers
-   from chroma_core.lib.storage_plugin.api import attributes
+   from chroma_core.lib.storage_plugin.api import attributes, identifiers, resources
 
    class StorageController(resources.ScannableResource):
        address_1 = attributes.Hostname()
