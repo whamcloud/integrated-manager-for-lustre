@@ -397,9 +397,6 @@ class ServiceConfig:
         self._start_services()
 
     def stop(self):
-        if not self._db_current():
-            log.error("Cannot start, database not configured")
-            return
         self._stop_services()
 
     def _service_config(self, interesting_services = None):
