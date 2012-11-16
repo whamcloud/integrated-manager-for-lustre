@@ -116,6 +116,8 @@ var UserDetail = Backbone.View.extend({
     var view = this;
     ValidatedForm.save($(this.el).find(".user_detail_form"), Api.put, this.model.get('resource_uri'), this.model.toJSON(), function() {
       $(view.el).find('#user_save_result').html("Changes saved successfully.");
+      // Ensure that the model is updated for other tabs.
+      view.model.fetch();
     });
   },
   reset_user: function() {
