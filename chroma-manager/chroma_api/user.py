@@ -63,7 +63,8 @@ class UserValidation(Validation):
             except KeyError:
                 errors['id'] = ['id attribute is mandatory']
             else:
-                if data['new_password1'] or data['new_password2']:
+                change_pw_fields = ['new_password1', 'new_password2']
+                if any((True for k in change_pw_fields if data[k] is not None)):
                     from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
                     # Non-superusers always require old_password
                     # Superusers require old_password when editing themselves
