@@ -7,7 +7,7 @@ local_settings.py
 production_version.py*
 database.db
 MANIFEST
-celerybeat-schedule
+celerybeat-schedule*
 celerystate.db
 chroma-manager.spec
 *~
@@ -16,3 +16,4 @@ chroma-manager.spec
 _build
 _topdir
 dist
+set_state.prof
