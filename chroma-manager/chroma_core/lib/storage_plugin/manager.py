@@ -124,7 +124,7 @@ class StoragePluginManager(object):
                     # Synthesize Subscribe objects on the objects which might
                     # be on the receiving event of a Provide relation.  The original
                     # Provide object plays no further role.
-                    subscription = relations.Subscribe(klass, relation.attributes)
+                    subscription = relations.Subscribe(klass, relation.attributes, relation.ignorecase)
                     if can_satisfy_relation(relation.provide_to, relation.attributes):
                         relation.provide_to._meta.relations.append(subscription)
                     for sc in all_subclasses(relation.provide_to):
