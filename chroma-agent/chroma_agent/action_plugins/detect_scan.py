@@ -8,14 +8,12 @@ import os
 import re
 import subprocess
 
-from chroma_agent.utils import normalize_device, Mounts
+from chroma_agent.utils import normalize_device, Mounts, BlkId
 from chroma_agent import shell
 from chroma_agent.plugins import ActionPlugin
 
 
 def get_local_targets():
-    blkid_lines = shell.try_run(['blkid', '-s', 'UUID']).split("\n")
-
     # Working set: accumulate device paths for each (uuid, name).  This is
     # necessary because in multipathed environments we will see the same
     # lustre target on more than one block device.  The reason we use name
@@ -23,9 +21,8 @@ def get_local_targets():
     # when we see a combined MGS+MDT
     uuid_name_to_target = {}
 
-    for line in [l for l in blkid_lines if len(l)]:
-        dev, uuid = re.search("(.*): UUID=\"(.*)\"", line).groups()
-        dev = normalize_device(dev)
+    for blkid_device in BlkId().all():
+        dev = normalize_device(blkid_device['dev'])
 
         rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", dev])
         if rc != 0:
@@ -62,15 +59,15 @@ def get_local_targets():
 
         for name in names:
             try:
-                target_dict = uuid_name_to_target[(uuid, name)]
+                target_dict = uuid_name_to_target[(blkid_device['uuid'], name)]
                 target_dict['devices'].append(dev)
             except KeyError:
                 target_dict = {"name": name,
-                               "uuid": uuid,
+                               "uuid": blkid_device['uuid'],
                                "params": params,
                                "devices": [dev],
                                "mounted": mounted}
-                uuid_name_to_target[(uuid, name)] = target_dict
+                uuid_name_to_target[(blkid_device['uuid'], name)] = target_dict
 
     return uuid_name_to_target.values()
 
