@@ -52,8 +52,8 @@ REQUEST_SCHEMA = {
     'properties': {
         'request_id': {'type': 'string', 'required': True},
         'method': {'type': 'string', 'required': True},
-        'args': {'type': 'list', 'required': True},
-        'kwargs': {'type': 'dict', 'required': True},
+        'args': {'type': 'array', 'required': True},
+        'kwargs': {'type': 'object', 'required': True},
         'response_routing_key': {'type': 'string', 'required': True},
     }
 }
