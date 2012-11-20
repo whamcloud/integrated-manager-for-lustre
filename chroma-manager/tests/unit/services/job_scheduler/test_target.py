@@ -42,8 +42,6 @@ class TestTargetTransitions(JobTestCaseWithHost):
         for tm in mgt_tms:
             ObjectCache.add(ManagedTargetMount, tm)
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
-        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
-        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
 
     def test_start_stop(self):
         from chroma_core.models import ManagedMgs
@@ -64,6 +62,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
         the target is not removed"""
         from chroma_core.models import ManagedMgs
 
+        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
         try:
             # Make it so that the mount unconfigure operations will fail
             MockAgentRpc.succeed = False
@@ -88,11 +87,37 @@ class TestTargetTransitions(JobTestCaseWithHost):
         """Test that if I try to stop LNet on a host where a target is running,
         stopping the target calculated as a dependency of that"""
 
-        self.assertState(self.mgt, 'mounted')
+        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
         self.assertState(self.host, 'lnet_up')
         consequences = JobSchedulerClient.get_transition_consequences(freshen(self.host), 'lnet_down')
         self.assertEqual(len(consequences['dependency_jobs']), 1)
         self.assertEqual(consequences['dependency_jobs'][0]['class'], 'StopTargetJob')
+
+    def test_reformat_idempotency(self):
+        """
+        Test that if a volume format passes its initial check for existing filesystems,
+        then it will format successfully even if the initial format operation is stopped
+        and restarted.  To do that it has to pass reformat=True the second time
+        """
+
+        path = self.mgt.managedtargetmount_set.get().volume_node.path
+        try:
+            MockAgentRpc.fail_commands = [('format_target', {'device': path, 'target_types': 'mgs'})]
+
+            command = self.set_state(self.mgt.managedtarget_ptr, 'formatted', check=False)
+            self.assertEqual(freshen(command).complete, True)
+            self.assertEqual(freshen(command).errored, True)
+        finally:
+            MockAgentRpc.fail_commands = []
+
+        # Check that the initial format did not pass the reformat flag
+        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path, 'target_types': 'mgs'}))
+
+        # This one should succeed
+        self.set_state(self.mgt.managedtarget_ptr, 'formatted', check=True)
+
+        # Check that it passed the reformat flag
+        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path, 'target_types': 'mgs', 'reformat': True}))
 
 
 class TestSharedTarget(JobTestCaseWithHost):

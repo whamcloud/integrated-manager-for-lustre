@@ -21,7 +21,7 @@ def get_local_targets():
     uuid_name_to_target = {}
 
     for blkid_device in BlkId().all():
-        dev = normalize_device(blkid_device['dev'])
+        dev = normalize_device(blkid_device['path'])
 
         rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", dev])
         if rc != 0:

@@ -115,12 +115,57 @@ var VolumeChooserStore = function ()
     return id_to_volume[volume_id]
   }
 
+  function reformatPrompt(volume_ids, normal_callback, reformat_callback) {
+    var prompt = null;
+    if (volume_ids.length == 1) {
+      var volume = getVolume(volume_ids[0]);
+      if (volume.filesystem_type != null) {
+        prompt = "The selected volume <span class='technical_name'>" + volume.label + "</span> contains a filesystem of type <span class='technical_name'>" + volume.filesystem_type + "</span>, although it may not be in use.  Do you wish to overwrite it?";
+      }
+    } else {
+      // If any volumes are formatted
+      var formatted_volumes = _.filter(_.map(volume_ids, function(id) {return getVolume(id)}), function(v) {return v.filesystem_type != null});
+      if (formatted_volumes.length) {
+        var plural = formatted_volumes.length > 1;
+        prompt = formatted_volumes.length + " of the selected volumes contain" + (plural ? "" : "s") + " a filesystem, although " + (plural ? "they" : "it") + " may not be in use.  Do you wish to overwrite " + (plural ? "them" : "it") +"?";
+        prompt += "<br><a href='#' onclick=\"$('div#volume_details').show();\">Details...</a><div id='volume_details' style='display: none; max-height: 300px;'><table class='properties'><thead><th>Volume</th><th>Filesystem type</th></thead><tbody>"
+        _.each(formatted_volumes, function(v){
+          prompt += "<tr><td>" + v.label + "</td><td>" + v.filesystem_type + "</td></tr>";
+        });
+        prompt += "</tbody></table></div>"
+      }
+    }
+    if (prompt) {
+      var dialog = $("<div style='overflow-y: auto; max-height: 700px;' class='confirmation_dialog'></div>");
+      dialog.html(prompt);
+      dialog.dialog({'buttons': {
+        'Cancel': function() {
+          $(this).dialog('close');
+          $(this).remove();
+        },
+        'Reformat':
+        {
+          text: "Overwrite",
+          id: "confirm_button",
+          click: function(){
+            $(this).dialog('close');
+            $(this).remove();
+            reformat_callback();
+          }
+        }
+      }});
+    } else {
+      normal_callback();
+    }
+  }
+
   return {
     load: load,
     select: select,
     getRows: getRows,
     getVolume: getVolume,
-    reload: reload
+    reload: reload,
+    reformatPrompt: reformatPrompt
   };
 };
 

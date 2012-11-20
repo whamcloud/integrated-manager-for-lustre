@@ -212,6 +212,8 @@ class Volume(models.Model):
 
     label = models.CharField(max_length = 128)
 
+    filesystem_type = models.CharField(max_length = 32, blank = True, null = True)
+
     __metaclass__ = DeletableMetaclass
 
     class Meta:

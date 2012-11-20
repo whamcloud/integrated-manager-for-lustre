@@ -72,6 +72,18 @@ class ApiTestCase(UtilityTestCase):
             self.remote_operations.await_server_boot(server['fqdn'], restart = True)
             logger.info("%s is running" % server['fqdn'])
 
+        # Erase all volumes
+        for server in config['lustre_servers']:
+            if not 'device_paths' in server:
+                # Working around the the 'existing_filesystem_configuration' tests
+                # which helpfully have their own different config file which doesn't
+                # include 'device_paths' (in any case we wouldn't want to do any
+                # erasing, but there isn't a neat way to distinguish the configs
+                # to make that decision).
+                continue
+            for path in server['device_paths']:
+                self.remote_operations.erase_block_device(server['fqdn'], path)
+
         reset = config.get('reset', True)
         if reset:
             self.reset_cluster()
@@ -195,6 +207,8 @@ class ApiTestCase(UtilityTestCase):
                             print ''
 
             self.assertFalse(command['errored'] or command['cancelled'], command)
+
+        return command
 
     def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT, verify_successful = True):
         for command_id in command_ids:

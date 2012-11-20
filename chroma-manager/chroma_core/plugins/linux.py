@@ -194,7 +194,8 @@ class Linux(Plugin):
                     node, created = self.update_or_create(ScsiDevice,
                             serial_80 = bdev['serial_80'],
                             serial_83 = bdev['serial_83'],
-                            size = bdev['size'])
+                            size = bdev['size'],
+                            filesystem_type = bdev['filesystem_type'])
                     res_by_serial[serial] = node
 
         # Map major:minor string to LinuxDeviceNode
@@ -225,7 +226,8 @@ class Linux(Plugin):
                 # Serial is not set, so create an UnsharedDevice
                 device, created = self.update_or_create(UnsharedDevice,
                         path = bdev['path'],
-                        size = bdev['size'])
+                        size = bdev['size'],
+                        filesystem_type = bdev['filesystem_type'])
                 node, created = self.update_or_create(LinuxDeviceNode,
                         parents = [device],
                         logical_drive = device,
@@ -281,7 +283,8 @@ class Linux(Plugin):
                         uuid = lv['uuid'],
                         name = lv['name'],
                         vg = vg_resource,
-                        size = lv['size'])
+                        size = lv['size'],
+                        filesystem_type = devices['devs'][lv['block_device']]['filesystem_type'])
 
                 try:
                     lv_node = major_minor_to_node_resource[lv['block_device']]
@@ -302,8 +305,10 @@ class Linux(Plugin):
                 mpath_node.add_parent(p)
 
         for uuid, md_info in devices['mds'].items():
+            bdev = devices['devs'][md_info['block_device']]
             md_res, created = self.update_or_create(MdRaid,
-                    size = devices['devs'][md_info['block_device']]['size'],
+                    size = bdev['size'],
+                    filesystem_type = bdev['filesystem_type'],
                     uuid = uuid)
             node_res, created = self.update_or_create(LinuxDeviceNode,
                     parents = [md_res],
@@ -335,7 +340,8 @@ class Linux(Plugin):
                     parents = [parent_resource],
                     container = parent_resource.logical_drive,
                     number = number,
-                    size = bdev['size'])
+                    size = bdev['size'],
+                    filesystem_type = bdev['filesystem_type'])
 
             this_node.add_parent(partition)
 

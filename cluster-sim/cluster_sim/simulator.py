@@ -312,3 +312,6 @@ class ClusterSimulator(Persisted):
         """
         data = self.controllers[controller_id].poll()
         return data
+
+    def format_block_device(self, fqdn, path, filesystem_type):
+        self.devices.format_local(fqdn, path, filesystem_type)

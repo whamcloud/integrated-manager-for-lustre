@@ -212,7 +212,7 @@ class TargetResource(MetricResource, ConfParamResource):
             'managedtargetmount_set', 'managedtargetmount_set__host',
             'managedtargetmount_set__host__lnetconfiguration')
         resource_name = 'target'
-        excludes = ['not_deleted', 'bytes_per_inode']
+        excludes = ['not_deleted', 'bytes_per_inode', 'reformat']
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'host_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()

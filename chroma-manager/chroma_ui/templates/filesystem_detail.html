@@ -19,6 +19,34 @@
       loadFilesystem(id);
     }
 
+    function create_osts(osts)
+    {
+      var i;
+      function chain_creation(i) {
+          if (i == undefined) {
+              i = 0;
+          }
+
+          Api.post("target/", osts[i],
+                  function(data)
+                  {
+                      if (i == osts.length - 1) {
+                          // Last POST succeeded, reload table
+                          $('#ost').dataTable().fnClearTable();
+                          $('#mdt').dataTable().fnClearTable();
+                          $('#mgt_configuration_view').dataTable().fnClearTable();
+                          volume_chooser_store.reload();
+                          loadFilesystem(filesystem.id);
+                      } else {
+                          // POST the next OST creation
+                          chain_creation(i + 1);
+                      }
+                  });
+      }
+
+      chain_creation();
+    }
+
     function init()
     {
       $('div#filesystem_detail button.advanced').click(function() {
@@ -73,23 +101,37 @@
             id: "ost_ok_button",
 
             click: function(){
-              var osts = _.map($('#new_ost_chooser').volumeChooser('val'), function(volume_id) {
-                  return {kind: 'OST', filesystem_id: filesystem.id, volume_id: volume_id}
-              });
-
               // HYD-987 - Prevent multiple submissions
               // just close the dialog right away and let the OST run
               $(this).dialog("close");
 
-              Api.patch("target/", {objects: osts, deletions: []},
-                function(data) {
-                  // Reload view
-                  $('#ost').dataTable().fnClearTable();
-                  $('#mdt').dataTable().fnClearTable();
-                  $('#mgt_configuration_view').dataTable().fnClearTable();
-                  volume_chooser_store.reload();
-                  loadFilesystem(filesystem.id);
+              function create_osts(osts) {
+                Api.patch("target/", {objects: osts, deletions: []},
+                  function(data) {
+                    // Reload view
+                    $('#ost').dataTable().fnClearTable();
+                    $('#mdt').dataTable().fnClearTable();
+                    $('#mgt_configuration_view').dataTable().fnClearTable();
+                    volume_chooser_store.reload();
+                    loadFilesystem(filesystem.id);
+                });
+              }
+
+              var osts = _.map($('#new_ost_chooser').volumeChooser('val'), function(volume_id) {
+                return {kind: 'OST', filesystem_id: filesystem.id, volume_id: volume_id}
               });
+
+              // Before submitting new OSTs, conditionally prompt for reformat
+              volume_chooser_store.reformatPrompt(
+                  $('#new_ost_chooser').volumeChooser('val'),
+                  function() {
+                      create_osts(osts);
+                  },
+                  function() {
+                      osts = _.map(osts, function(ost) {ost.reformat = true ; return ost;});
+                      create_osts(osts);
+                  }
+              )
             }
           },
           "Cancel": function() {

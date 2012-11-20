@@ -20,7 +20,7 @@ class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
         fs = self.chroma_manager.get("/api/filesystem/%s/" % fs_id).json
         mgt_id = fs['mgt']['id']
 
-        def create_for_mgs(name):
+        def create_for_mgs(name, reformat=False):
             ha_volumes = self.get_usable_volumes()
             self.assertGreaterEqual(len(ha_volumes), 2)
 
@@ -32,13 +32,15 @@ class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
                     'mgt': {'id': mgt_id},
                     'mdt': {
                         'volume_id': mdt_volume['id'],
-                        'conf_params': {}
+                        'conf_params': {},
+                        'reformat': reformat
                     },
                     'osts': [{
                         'volume_id': v['id'],
                         'conf_params': {}
                     } for v in ost_volumes],
-                    'conf_params': {}
+                    'conf_params': {},
+                    'reformat': reformat
                 }
             )
 
@@ -52,7 +54,7 @@ class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
         self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects']), 1)
         self.assertState("/api/filesystem/%s/" % other_fs_id, 'available')
 
-        reused_fs_id = create_for_mgs(reused_name)
+        reused_fs_id = create_for_mgs(reused_name, reformat=True)
 
         self.assertState("/api/filesystem/%s/" % reused_fs_id, 'available')
         self.assertState("/api/filesystem/%s/" % other_fs_id, 'available')

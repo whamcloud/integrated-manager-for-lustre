@@ -12,6 +12,17 @@
       }
     }
 
+    function submit(target)
+    {
+        Api.post("target/", target,
+                function(data) {
+                    $('#new_mgt_chooser').volumeChooser('clear');
+                    volume_chooser_store.reload();
+                    $('#mgt_configuration').dataTable().fnDraw();
+                }
+        );
+    }
+
     function init()
     {
       // List Existing MGT JQuery Table init()
@@ -64,15 +75,24 @@
         });
       });
 
+
+
       $('#btnNewMGT').click(function(){
         var volume_id = $('#new_mgt_chooser').volumeChooser('val');
-        Api.post("target/", {kind: 'MGT', volume_id: volume_id},
-          success_callback = function(data) {
-              $('#new_mgt_chooser').volumeChooser('clear');
-              volume_chooser_store.reload();
-              $('#mgt_configuration').dataTable().fnDraw();
-          }
+        var target = {kind: 'MGT', volume_id: volume_id};
+
+        volume_chooser_store.reformatPrompt(
+              [volume_id],
+              function() {
+                submit(target);
+              },
+              function() {
+                target.reformat = true;
+                submit(target);
+              }
         );
+
+
       });
     }
     return {draw:draw}

@@ -37,7 +37,8 @@
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/sda1", 
-          "size": 209715200
+          "size": 209715200,
+          "filesystem_type": null
         }, 
         "8:0": {
           "major_minor": "8:0", 
@@ -45,7 +46,8 @@
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/sda", 
-          "size": 6442450944
+          "size": 6442450944,
+          "filesystem_type": null
         }, 
         "8:2": {
           "major_minor": "8:2", 
@@ -53,7 +55,8 @@
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/sda2", 
-          "size": 6231687168
+          "size": 6231687168,
+          "filesystem_type": null
         }, 
         "253:1": {
           "major_minor": "253:1", 
@@ -61,7 +64,8 @@
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/mapper/LustreVG-swap", 
-          "size": 1560281088
+          "size": 1560281088,
+          "filesystem_type": null
         }, 
         "253:0": {
           "major_minor": "253:0", 
@@ -69,7 +73,8 @@
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/mapper/LustreVG-root", 
-          "size": 943718400
+          "size": 943718400,
+          "filesystem_type": null
         }, 
         "253:3": {
           "major_minor": "253:3", 
@@ -77,7 +82,8 @@
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/mapper/LustreVG-var", 
-          "size": 2071986176
+          "size": 2071986176,
+          "filesystem_type": null
         }, 
         "253:2": {
           "major_minor": "253:2", 
@@ -85,7 +91,8 @@
           "serial_83": null, 
           "serial_80": null, 
           "path": "/dev/mapper/LustreVG-usr", 
-          "size": 1652555776
+          "size": 1652555776,
+          "filesystem_type": null
         }, 
         "8:64": {
           "major_minor": "8:64", 
@@ -93,7 +100,8 @@
           "serial_83": "1IET     00020001", 
           "serial_80": "SIET     vol1", 
           "path": "/dev/disk/by-id/scsi-1IET_00020001", 
-          "size": 1073741824
+          "size": 1073741824,
+          "filesystem_type": null
         }, 
         "8:16": {
           "major_minor": "8:16", 
@@ -101,7 +109,8 @@
           "serial_83": "1IET     00010001", 
           "serial_80": "SIET     vol0", 
           "path": "/dev/disk/by-id/scsi-1IET_00010001", 
-          "size": 1073741824
+          "size": 1073741824,
+          "filesystem_type": null
         }, 
         "8:32": {
           "major_minor": "8:32", 
@@ -109,7 +118,8 @@
           "serial_83": "1IET     00080001", 
           "serial_80": "SIET     vol15", 
           "path": "/dev/disk/by-id/scsi-1IET_00080001", 
-          "size": 1073741824
+          "size": 1073741824,
+          "filesystem_type": null
         }, 
         "8:48": {
           "major_minor": "8:48", 
@@ -117,7 +127,8 @@
           "serial_83": "1IET     00030001", 
           "serial_80": "SIET     vol10", 
           "path": "/dev/disk/by-id/scsi-1IET_00030001", 
-          "size": 805306368
+          "size": 805306368,
+          "filesystem_type": null
         }, 
         "8:80": {
           "major_minor": "8:80", 
@@ -125,7 +136,8 @@
           "serial_83": "1IET     00070001", 
           "serial_80": "SIET     vol14", 
           "path": "/dev/disk/by-id/scsi-1IET_00070001", 
-          "size": 524288000
+          "size": 524288000,
+          "filesystem_type": null
         }, 
         "8:96": {
           "major_minor": "8:96", 
@@ -133,7 +145,8 @@
           "serial_83": "1IET     00040001", 
           "serial_80": "SIET     vol11", 
           "path": "/dev/disk/by-id/scsi-1IET_00040001", 
-          "size": 805306368
+          "size": 805306368,
+          "filesystem_type": null
         }
       }, 
       "local_fs": {

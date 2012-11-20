@@ -77,6 +77,7 @@ class LogicalDrive(BaseStorageResource):
         icon = 'virtual_disk'
 
     size = attributes.Bytes()
+    filesystem_type = attributes.Boolean(optional=True)
 
 
 class Enclosure(BaseStorageResource):

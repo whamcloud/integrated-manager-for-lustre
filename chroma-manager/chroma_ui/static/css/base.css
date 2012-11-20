@@ -914,3 +914,8 @@ div.help_loaded {
     padding: 0 6px 6px 6px;
     max-width: 400px;
 }
+
+.technical_name {
+    font-family: Courier, monospace;
+    font-weight: bold;
+}

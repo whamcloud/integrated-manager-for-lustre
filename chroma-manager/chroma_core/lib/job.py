@@ -119,8 +119,6 @@ class DependAny(MultiDependable):
 
 
 class Step(object):
-    timeout = None
-
     def __init__(self, job, args, log_callback, console_callback, cancel_event):
         self.args = args
         self.job_id = job.id

@@ -159,6 +159,25 @@ def get_resource_locations():
     return locations
 
 
+def check_block_device(path):
+    """
+    Precursor to formatting a device: check if there is already a filesystem on it.
+
+    :param path: Path to a block device
+    :return The filesystem type of the filesystem on the device, or None if unoccupied.
+    """
+
+    rc, blkid_output, blkid_err = shell.run(["blkid", "-p", "-o", "value", "-s", "TYPE", path])
+    if rc == 2:
+        # blkid returns 2 if there is no fileysstem on the device
+        return None
+    elif rc == 0:
+        # We have a filesystem type
+        return blkid_output.strip()
+    else:
+        raise RuntimeError("Unexpected return code %s from blkid %s: '%s' '%s'" % (rc, path, blkid_output, blkid_err))
+
+
 def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnode=(),
          servicenode=(), param={}, index=None, comment=None, mountfsoptions=None,
          network=(), backfstype=None, device_size=None, mkfsoptions=None,
@@ -216,8 +235,8 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnod
 
     shell.try_run(['mkfs.lustre'] + options + [device])
 
-    blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "UUID", device])
-    uuid = blkid_output.strip()
+    blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "UUID", "-s", "TYPE", device])
+    uuid, type = [i.strip() for i in blkid_output.strip().split("\n")]
 
     dumpe2fs_output = shell.try_run(["dumpe2fs", "-h", device])
     inode_count = int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
@@ -225,6 +244,7 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnod
 
     return {
             'uuid': uuid,
+            'filesystem_type': type,
             'inode_size': inode_size,
             'inode_count': inode_count
     }
@@ -611,7 +631,7 @@ def purge_configuration(device, filesystem_name):
 
 ACTIONS = [purge_configuration, register_target, configure_target_ha,
            unconfigure_target_ha, mount_target, unmount_target,
-           start_target, stop_target, format_target,
+           start_target, stop_target, format_target, check_block_device,
            writeconf_target, failback_target,
            failover_target, target_running,
            #migrate_target, unmigrate_target,
