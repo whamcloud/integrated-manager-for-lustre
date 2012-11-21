@@ -1,4 +1,5 @@
-from chroma_core.models.jobs import SchedulingError, Job
+from chroma_core.models.jobs import SchedulingError, Job, Command
+from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, ManagedHost
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread, JobScheduler
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import mock
@@ -10,10 +11,7 @@ import django.utils.timezone
 class TestTransitionsWithCommands(JobTestCaseWithHost):
     def test_onejob(self):
         # Our self.host is initially lnet_up
-        from chroma_core.models import ManagedHost
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
-
-        from chroma_core.models import Command
 
         # This tests a state transition which is done by a single job
         command_id = Command.set_state([(freshen(self.host), 'lnet_down')]).id
@@ -25,11 +23,9 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
         self.assertEqual(command, None)
 
     def test_2steps(self):
-        from chroma_core.models import ManagedHost
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
         # This tests a state transition which requires two jobs acting on the same object
-        from chroma_core.models import Command
         command_id = Command.set_state([(freshen(self.host), 'lnet_unloaded')]).id
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
@@ -37,9 +33,19 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 
 
 class TestStateManager(JobTestCaseWithHost):
+    def test_failing_job(self):
+        mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        try:
+            MockAgent.succeed = False
+            self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'mounted', check = False)
+            # This is to check that the scheduler doesn't run past the failed job (like in HYD-1572)
+            self.assertState(mgt, 'unformatted')
+        finally:
+            MockAgent.succeed = True
+            self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'mounted')
+
     def test_opportunistic_execution(self):
         # Set up an MGS, leave it offline
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
         mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
         ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = fs)
@@ -74,7 +80,6 @@ class TestStateManager(JobTestCaseWithHost):
 
     def test_1step(self):
         # Should be a simple one-step operation
-        from chroma_core.models import ManagedHost
         # Our self.host is initially lnet_up
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
@@ -87,7 +92,6 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertState(self.host, 'lnet_unloaded')
 
     def test_completion_hook(self):
-        from chroma_core.models import ManagedHost
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
         # This exercises the completion hooks (learning NIDs is a hook for lnet coming up)
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')

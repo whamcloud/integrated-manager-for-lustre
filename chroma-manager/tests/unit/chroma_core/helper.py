@@ -260,8 +260,10 @@ class JobTestCase(TestCase):
                     break
 
                 dep_cache = DepCache()
-                ok_jobs = self.job_scheduler._check_jobs(runnable_jobs, dep_cache)
+                ok_jobs, cancel_jobs = self.job_scheduler._check_jobs(runnable_jobs, dep_cache)
                 self.job_scheduler._job_collection.update_many(ok_jobs, 'tasked')
+                for job in cancel_jobs:
+                    self.job_scheduler._complete_job(job, False, True)
                 for job in ok_jobs:
                     self.job_scheduler._spawn_job(job)
 
