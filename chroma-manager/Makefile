@@ -46,6 +46,7 @@ unit_tests:
 feature_tests:
 	@echo "Running behave features tests..."
 	@for feature in tests/feature/*; do \
+		[ -d $$feature ] || continue; \
 		logname=feature-$$(basename $$feature); \
 		stdout=$$logname.stdout; stderr=$$logname.stderr; \
 		rm -f $$stdout $$stderr; \
