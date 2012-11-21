@@ -89,6 +89,7 @@ class Users(DatatableView):
                 enter_text_for_element(self.driver, self.edit_last_name, last_name)
                 # Click save button
                 self.driver.find_element_by_css_selector(self.edit_save_button).click()
+                wait_for_element(self.driver, '#user_save_result', self.medium_wait)
                 # Click close button
                 self.driver.find_element_by_css_selector('button.close').click()
                 self.quiesce()
