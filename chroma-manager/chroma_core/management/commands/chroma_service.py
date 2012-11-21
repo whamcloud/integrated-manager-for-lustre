@@ -58,14 +58,18 @@ class Command(BaseCommand):
                 try:
                     pid = int(open(pid_file).read())
                     os.kill(pid, 0)
-                except (ValueError, OSError):
+                except (ValueError, OSError, IOError):
                     # Not running, delete stale PID file
                     sys.stderr.write("Removing stale PID file\n")
+                    import errno
                     try:
                         os.remove(pid_file)
+                    except OSError, e:
+                        if e.errno != errno.ENOENT:
+                            raise e
+                    try:
                         os.remove(pid_file + ".lock")
                     except OSError, e:
-                        import errno
                         if e.errno != errno.ENOENT:
                             raise e
                 else:

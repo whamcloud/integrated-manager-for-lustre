@@ -41,11 +41,8 @@ class Lun(resources.LogicalDrive):
     class Meta:
         identifier = identifiers.ScopedId('local_id')
         relations = [
-                relations.Provide(
-                        provide_to = ('linux', 'ScsiDevice'),
-                        attributes = ['serial_83']
-                    )
-                ]
+            relations.Provide(provide_to=('linux', 'ScsiDevice'), attributes=['serial_83'], ignorecase=True),
+        ]
 
     local_id = attributes.Integer()
     name = attributes.String()

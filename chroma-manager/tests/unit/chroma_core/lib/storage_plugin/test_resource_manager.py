@@ -498,7 +498,7 @@ class TestVolumeNaming(ResourceManagerTestCase):
         lun_resource = self._make_local_resource('example_plugin', 'Lun',
             local_id = 1,
             name = self.PLUGIN_LUN_NAME,
-            serial_83 = self.SERIAL,
+            serial_83 = self.SERIAL.upper(),
             size = 4096
         )
 
