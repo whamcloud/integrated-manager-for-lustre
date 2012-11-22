@@ -207,7 +207,8 @@ class ChromaIntegrationTestCase(CleanClusterApiTestCase):
         permitted_volumes = []
         for volume in volumes:
             for volume_node in volume['volume_nodes']:
-                host_config = self.get_host_config(volume_node['host_label'])
+                host = self.chroma_manager.get(volume_node['host']).json
+                host_config = self.get_host_config(host['nodename'])
                 if host_config:
                     if volume_node['path'] in host_config['device_paths']:
                         permitted_volumes.append(volume)
