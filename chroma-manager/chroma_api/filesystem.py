@@ -368,7 +368,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
         # hydration errors through to validation.
         mgt_data = bundle.data['mgt']
         if 'volume_id' in mgt_data:
-            mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], name="MGS", **self._format_attrs(mgt_data))
+            mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], **self._format_attrs(mgt_data))
             mgt_id = mgt.pk
         else:
             mgt_id = mgt_data['id']

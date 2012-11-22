@@ -48,7 +48,7 @@ def _find_or_create_target(klass, mounts, **kwargs):
 
     # Create target if not found
     if not target:
-        target = klass.objects.create(volume = volume, **kwargs)
+        target = klass.create_for_volume(volume.id, create_target_mounts = False, **kwargs)
 
     # Find or create TargetMounts
     _create_mounts(target, mounts)
@@ -81,7 +81,7 @@ def _create_mounts(target, mounts):
                     volume_node = volume_node,
                     target = target,
                     host = host,
-                    mount_point = target.default_mount_path(host),
+                    mount_point = target.default_mount_point,
                     primary = primary)
 
 
@@ -164,7 +164,7 @@ def load_file(path):
 
 def save_filesystems(filesystem_names = None):
     from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst
-    filesystems = []
+
     if filesystem_names:
         filesystems = [ManagedFilesystem.objects.get(name = fsname) for fsname in filesystem_names]
     else:
