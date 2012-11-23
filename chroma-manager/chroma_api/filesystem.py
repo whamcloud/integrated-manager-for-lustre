@@ -342,7 +342,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
         resource_name = 'filesystem'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['not_deleted']
+        excludes = ['not_deleted', 'ost_next_index', 'mdt_next_index']
         ordering = ['name']
         filtering = {'id': ['exact', 'in'], 'name': ['exact']}
         list_allowed_methods = ['get', 'post']
