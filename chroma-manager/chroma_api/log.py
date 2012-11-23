@@ -17,12 +17,12 @@ class LogAuthorization(DjangoAuthorization):
     """
     custom authorization class for log retrieval
 
-    Only users in the superusers and filesystem_admins groups are
+    Only users in the superusers and filesystem_administrators groups are
     allowed to retrieve non-Lustre messages
     """
     def apply_limits(self, request, object_list):
         if (request.user.is_authenticated() and
-            request.user.groups.filter(name__in=['filesystem_admins', 'superusers']).exists()):
+            request.user.groups.filter(name__in=['filesystem_administrators', 'superusers']).exists()):
             return object_list
         else:
             # Lustre messages have a leading space
