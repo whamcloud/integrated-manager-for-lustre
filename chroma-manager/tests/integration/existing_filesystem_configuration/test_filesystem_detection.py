@@ -73,7 +73,7 @@ class TestFilesystemDetection(ChromaIntegrationTestCase, StatsTestCaseMixin):
 
         # Wait for active_host_name to get set on all of the targets
         self.wait_until_true(lambda: (
-            len([t for t in self.get_list('/api/target/') if not t['active_host_name'] == '---']) ==
+            len([t for t in self.get_list('/api/target/') if not t['active_host'] is None]) ==
             len(config['filesystem']['targets'])
         ))
 

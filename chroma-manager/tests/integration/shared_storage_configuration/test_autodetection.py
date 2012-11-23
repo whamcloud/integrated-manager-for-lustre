@@ -6,7 +6,6 @@ from tests.integration.core.chroma_integration_testcase import AuthorizedTestCas
 class TestAutodetection(AuthorizedTestCase):
     def setUp(self):
         super(TestAutodetection, self).setUp()
-        self.erase_volumes()
 
     def test_simple_detection(self):
         self.create_filesystem_simple()

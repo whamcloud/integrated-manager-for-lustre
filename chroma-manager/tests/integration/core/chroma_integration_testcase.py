@@ -295,4 +295,6 @@ class AuthorizedTestCase(ChromaIntegrationTestCase):
 
         if not reset:
             # Clean up a running Chroma instance without wiping it
+            self.unmount_filesystems_from_clients()
             self.graceful_teardown(self.chroma_manager)
+            self.remove_all_targets_from_pacemaker()
