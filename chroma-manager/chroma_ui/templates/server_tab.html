@@ -5,7 +5,7 @@
     <div class='host_selection_list'>
         <ul class='host_selection_list'>
             <% _.each(hosts, function(host) { %>
-                <li><input type='checkbox' data-host_uri="<%= host.resource_uri %>"></input><%= host.fqdn %></li>
+                <li><input type='checkbox' data-host_uri="<%= host.resource_uri %>"></input><%= host.label %></li>
             <% }); %>
         </ul>
     </div>
