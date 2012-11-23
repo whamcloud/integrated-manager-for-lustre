@@ -207,7 +207,7 @@ class FailoverTestCaseMixin(ApiTestCase):
                         return False
 
                 # Check pacemaker thinks it's running on the right host.
-                expected_resource_status = "%s is running on: %s" % (target['ha_label'], expected_host)
+                expected_resource_status = "%s is running on: %s" % (target['ha_label'], expected_host['fqdn'])
                 actual_resource_status = self.get_crm_resource_status(target['ha_label'], expected_host)
                 if assert_true:
                     self.assertRegexpMatches(
@@ -220,9 +220,9 @@ class FailoverTestCaseMixin(ApiTestCase):
 
         return True
 
-    def get_crm_resource_status(self, ha_label, expected_host):
+    def get_crm_resource_status(self, ha_label, host):
         result = self.remote_command(
-            expected_host,
+            host['address'],
             'crm resource status %s' % ha_label,
             timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
         )
@@ -232,8 +232,8 @@ class FailoverTestCaseMixin(ApiTestCase):
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
         result = self.remote_command(
-            expected_host,
-            'crm resource failcount %s show %s' % (ha_label, expected_host)
+            host['address'],
+            'crm resource failcount %s show %s' % (ha_label, host['address'])
         )
         self.assertRegexpMatches(
             result.stdout.read(),
