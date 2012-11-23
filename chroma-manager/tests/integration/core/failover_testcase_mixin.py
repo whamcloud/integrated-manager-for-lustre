@@ -233,7 +233,7 @@ class FailoverTestCaseMixin(ApiTestCase):
         # to check that it didn't have problems starting.
         result = self.remote_command(
             host['address'],
-            'crm resource failcount %s show %s' % (ha_label, host['address'])
+            'crm resource failcount %s show %s' % (ha_label, host['nodename'])
         )
         self.assertRegexpMatches(
             result.stdout.read(),
