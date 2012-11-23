@@ -28,11 +28,11 @@ storage_plugin: dist/
 
 .PHONY: internals
 internals: dist/
-        pushd internals &&\
-        rm -rf _build &&\
-        make html &&\
-        popd
-        rm -rf dist/internals
-        cp -r internals/_build/html dist/chroma-doc-internals
-        pushd dist ;\
-        tar czf chroma-doc-internals.tar.gz chroma-doc-internals
+	pushd internals &&\
+	rm -rf _build &&\
+	make html &&\
+	popd
+	rm -rf dist/internals
+	cp -r internals/_build/html dist/chroma-doc-internals
+	pushd dist ;\
+	tar czf chroma-doc-internals.tar.gz chroma-doc-internals
