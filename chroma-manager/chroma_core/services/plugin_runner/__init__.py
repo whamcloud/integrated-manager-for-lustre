@@ -6,7 +6,6 @@
 
 import threading
 from chroma_core.services import ChromaService, ServiceThread
-from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 
 
@@ -21,6 +20,7 @@ class Service(ChromaService):
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
         from chroma_core.services.plugin_runner.scan_daemon import ScanDaemon
         from chroma_core.services.plugin_runner.scan_daemon_interface import ScanDaemonRpcInterface
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
         errors = storage_plugin_manager.get_errored_plugins()
         if errors:
