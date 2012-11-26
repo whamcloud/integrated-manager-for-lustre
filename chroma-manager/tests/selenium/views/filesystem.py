@@ -4,9 +4,11 @@
 # ========================================================
 
 
-from tests.selenium.base_view import  DatatableView
-from tests.selenium.base import wait_for_element, element_visible
 from tests.selenium.base import wait_for_transition
+from tests.selenium.base_view import  DatatableView
+from tests.selenium.utils.element import (
+    wait_for_element_by_css_selector, find_visible_element_by_css_selector
+)
 
 
 class Filesystem(DatatableView):
@@ -21,7 +23,7 @@ class Filesystem(DatatableView):
 
     @property
     def visible(self):
-        return element_visible(self.driver, 'div#filesystem-tab-list')
+        return find_visible_element_by_css_selector(self.driver, 'div#filesystem-tab-list')
 
     def locate_filesystem(self, filesystem_name):
         filesystem_list = self.driver.find_elements_by_xpath("id('" + self.datatable_id + "')/tbody/tr")
@@ -41,7 +43,7 @@ class Filesystem(DatatableView):
             if button.text == transition_name:
                 button.click()
                 if transition_confirm:
-                    wait_for_element(self.driver, '#transition_confirm_button', self.medium_wait)
+                    wait_for_element_by_css_selector(self.driver, '#transition_confirm_button', self.medium_wait)
                     self.driver.find_element_by_css_selector('#transition_confirm_button').click()
                 wait_for_transition(self.driver, self.standard_wait)
                 return

@@ -4,11 +4,11 @@
 # ========================================================
 
 
-from tests.selenium.base import element_visible
 from tests.selenium.base_view import BaseView
+from tests.selenium.utils.element import find_visible_element_by_css_selector
 
 
 class CommandDetail(BaseView):
     @property
     def visible(self):
-        return element_visible(self.driver, 'div.command_detail')
+        return find_visible_element_by_css_selector(self.driver, 'div.command_detail')

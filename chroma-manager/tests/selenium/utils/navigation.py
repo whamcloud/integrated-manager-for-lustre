@@ -3,13 +3,17 @@
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 import datetime
-from testconfig import config
-from tests.selenium.base import wait_for_element, wait_for_any_element, element_visible
-from tests.selenium.base_view import BaseView
-
 from time import sleep
+
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
+from testconfig import config
+
+from tests.selenium.base_view import BaseView
+from tests.selenium.utils.element import (
+    find_visible_element_by_css_selector, wait_for_element_by_css_selector,
+    wait_for_any_element_by_css_selector
+)
 
 
 class Navigation(BaseView):
@@ -53,19 +57,19 @@ class Navigation(BaseView):
         """Login with given username and password"""
         self.log.debug("Logging in %s" % username)
         from tests.selenium.views.login import Login
-        wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
+        wait_for_any_element_by_css_selector(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
         login_view = Login(self.driver)
-        if not element_visible(self.driver, '#login_dialog'):
+        if not find_visible_element_by_css_selector(self.driver, '#login_dialog'):
             login_view.open_login_dialog()
         login_view.login_user(username, password)
-        wait_for_element(self.driver, '#username', 10)
+        wait_for_element_by_css_selector(self.driver, '#username', 10)
         self.quiesce()
         self._patch_api()
 
     def logout(self):
         self.log.debug("Logging out")
         self.driver.find_element_by_css_selector("#logout").click()
-        wait_for_any_element(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
+        wait_for_any_element_by_css_selector(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
         self._patch_api()
 
     def refresh(self):
@@ -76,7 +80,7 @@ class Navigation(BaseView):
 
     def reset(self):
         self.driver.get(config['chroma_managers']['server_http_url'])
-        wait_for_element(self.driver, '#dashboard_menu', 10)
+        wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
         self._patch_api()
         self.quiesce()
 

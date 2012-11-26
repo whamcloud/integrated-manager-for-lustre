@@ -1,11 +1,12 @@
 from tests.selenium.base import SeleniumBaseTestCase
-from tests.selenium.base import select_element_option
-from tests.selenium.base import wait_for_element
-from tests.selenium.base import get_selected_option_text
 from tests.selenium.utils.sample_data import Testdata
 from tests.selenium.views.bread_crumb import Breadcrumb
 from tests.selenium.views.filesystem import Filesystem
 from tests.selenium.views.servers import Servers
+from tests.selenium.utils.element import (
+    select_element_option, get_selected_option_text,
+    wait_for_element_by_css_selector
+)
 
 
 class TestBreadCrumb(SeleniumBaseTestCase):
@@ -57,7 +58,7 @@ class TestBreadCrumb(SeleniumBaseTestCase):
         self.navigation.go('Dashboard')
         self.breadcrumb_page = Breadcrumb(self.driver)
         select_element_option(self.driver, self.breadcrumb_page.selectView, 1)
-        wait_for_element(self.driver, self.breadcrumb_page.serverSelect, 10)
+        wait_for_element_by_css_selector(self.driver, self.breadcrumb_page.serverSelect, 10)
         breadcrumb_server_list = self.breadcrumb_page.get_server_list()
 
         self.assertListEqual(server_list, breadcrumb_server_list, 'Server list on breadcrumb and server tab do not match')

@@ -5,8 +5,9 @@ import time
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
-from tests.selenium.base import find_visible_element_by_css_selector, element_visible, wait_for_transition, wait_for_element
+from tests.selenium.base import wait_for_transition
 from tests.selenium.utils.constants import wait_time
+from tests.selenium.utils.element import find_visible_element_by_css_selector
 
 
 log = logging.getLogger(__name__)
@@ -33,10 +34,6 @@ class BaseView(object):
                 time.sleep(1)
 
         raise RuntimeError("Timed out waiting for API operations to complete after %s seconds" % self.standard_wait)
-
-    def wait_for_element(self, selector):
-        """Wait for an element to be visible"""
-        wait_for_element(self.driver, selector, self.standard_wait)
 
     def wait_for_removal(self, selector):
         """Wait for all elements matching selector to be removed from the DOM"""
@@ -79,7 +76,7 @@ class BaseView(object):
 
         self.quiesce()
 
-        if element_visible(self.driver, '#transition_confirm_button'):
+        if find_visible_element_by_css_selector(self.driver, '#transition_confirm_button'):
             self.driver.find_element_by_css_selector('#transition_confirm_button').click()
             self.quiesce()
         wait_for_transition(self.driver, self.standard_wait)
