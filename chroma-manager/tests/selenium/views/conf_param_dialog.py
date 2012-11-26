@@ -1,8 +1,11 @@
 
 
 from selenium.common.exceptions import NoSuchElementException
-from tests.selenium.base import enter_text_for_element, wait_for_element
 from tests.selenium.base_view import BaseView
+from tests.selenium.utils.element import (
+    enter_text_for_element, find_visible_element_by_css_selector,
+    wait_for_element_by_css_selector,
+)
 
 
 class ConfParamDialog(BaseView):
@@ -26,13 +29,13 @@ class ConfParamDialog(BaseView):
         for param in conf_params:
             self.log.info('Setting value for param name:' + param + " value:" + conf_params[param])
             param_element_id = 'conf_param_' + param
-            wait_for_element(self.driver, "input[id='" + param_element_id + "']", self.medium_wait)
+            wait_for_element_by_css_selector(self.driver, "input[id='" + param_element_id + "']", self.medium_wait)
             enter_text_for_element(self.driver, "input[id='" + param_element_id + "']", conf_params[param])
 
     def check_conf_params(self, target_conf_params):
         for param, expected in target_conf_params.items():
             param_element_id = 'conf_param_' + param
-            element = self.get_visible_element_by_css_selector("input[id='" + param_element_id + "']")
+            element = find_visible_element_by_css_selector(self.driver, "input[id='" + param_element_id + "']")
             actual = element.get_attribute("value")
             if expected != actual:
                 raise RuntimeError("Conf param doesn't match ('%s' should be '%s')" % (actual, expected))

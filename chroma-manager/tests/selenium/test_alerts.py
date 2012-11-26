@@ -1,6 +1,6 @@
 from tests.selenium.views.alerts import Alerts
 from tests.selenium.base import SeleniumBaseTestCase
-from tests.selenium.base import enter_text_for_element
+from tests.selenium.utils.element import enter_text_for_element
 
 
 class TestAlerts(SeleniumBaseTestCase):

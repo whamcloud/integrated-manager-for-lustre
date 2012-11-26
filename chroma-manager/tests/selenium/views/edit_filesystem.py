@@ -8,11 +8,11 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.support.ui import WebDriverWait
 
-from tests.selenium.base import (
-    element_visible, find_visible_element_by_css_selector,
-    wait_for_any_element, wait_for_transition
-)
+from tests.selenium.base import wait_for_transition
 from tests.selenium.base_view import BaseView
+from tests.selenium.utils.element import (
+    find_visible_element_by_css_selector, wait_for_any_element_by_css_selector
+)
 
 
 class EditFilesystem(BaseView):
@@ -78,7 +78,7 @@ class EditFilesystem(BaseView):
 
     def open_fs_conf_param_dialog(self):
         self.driver.find_element_by_css_selector("div#filesystem_detail button.advanced").click()
-        wait_for_any_element(self.driver, self.conf_param_apply_button, self.medium_wait)
+        wait_for_any_element_by_css_selector(self.driver, self.conf_param_apply_button, self.medium_wait)
 
     def add_ost(self, primary_server_address, volume_name):
         """Click button to add new OST and select an OST/s from ost chooser"""
@@ -139,4 +139,4 @@ class EditFilesystem(BaseView):
 
     @property
     def visible(self):
-        return element_visible(self.driver, 'div#filesystem-tab-detail')
+        return find_visible_element_by_css_selector(self.driver, 'div#filesystem-tab-detail')

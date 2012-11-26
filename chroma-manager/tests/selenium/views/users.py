@@ -4,11 +4,13 @@
 # ========================================================
 
 
-from tests.selenium.base import enter_text_for_element, element_visible
-from tests.selenium.base import select_element_option
-from tests.selenium.base import wait_for_element
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
+from tests.selenium.utils.element import (
+    enter_text_for_element, find_visible_element_by_css_selector,
+    select_element_option, wait_for_element_by_css_selector,
+    wait_for_element_by_xpath
+)
 
 
 class Users(DatatableView):
@@ -83,16 +85,16 @@ class Users(DatatableView):
         for button in buttons:
             if button.text == static_text['edit_user']:
                 button.click()
-                wait_for_element(self.driver, self.user_detail, self.medium_wait)
+                wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
                 enter_text_for_element(self.driver, self.edit_email, email)
                 enter_text_for_element(self.driver, self.edit_first_name, first_name)
                 enter_text_for_element(self.driver, self.edit_last_name, last_name)
                 # Click save button
                 self.driver.find_element_by_css_selector(self.edit_save_button).click()
-                wait_for_element(self.driver, '//div[@id="user_save_result"][contains(., "Changes saved successfully.")]', self.medium_wait)
+                wait_for_element_by_xpath(self.driver, '//div[@id="user_save_result"][contains(., "Changes saved successfully.")]', self.medium_wait)
                 # Click close button
                 self.driver.find_element_by_css_selector('button.close').click()
-                assert not element_visible(self.driver, self.user_detail)
+                assert not find_visible_element_by_css_selector(self.driver, self.user_detail)
                 self.quiesce()
                 return
 
@@ -105,7 +107,7 @@ class Users(DatatableView):
         for button in buttons:
             if button.text == static_text['edit_user']:
                 button.click()
-                wait_for_element(self.driver, self.user_detail, self.medium_wait)
+                wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
                 self.driver.find_element_by_css_selector(self.user_password_tab).click()
                 enter_text_for_element(self.driver, self.edit_password1, new_password)
                 enter_text_for_element(self.driver, self.edit_password2, new_confirm_password)
@@ -125,7 +127,7 @@ class Users(DatatableView):
         for button in buttons:
             if button.text == static_text['edit_user']:
                 button.click()
-                wait_for_element(self.driver, self.user_detail, self.medium_wait)
+                wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
                 self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
                 alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
                 self._fill_out_alerts_form(alerts_form, alert_subscriptions)
@@ -147,7 +149,7 @@ class Users(DatatableView):
             if button.text == static_text['delete_user']:
                 button.click()
                 self.quiesce()
-                wait_for_element(self.driver, self.delete_user_dialog, self.medium_wait)
+                wait_for_element_by_css_selector(self.driver, self.delete_user_dialog, self.medium_wait)
                 # Click delete button
                 self.driver.find_element_by_css_selector(self.delete_button).click()
                 return
@@ -166,7 +168,7 @@ class Users(DatatableView):
     def edit_own_password(self, password, new_password):
         self.driver.find_element_by_css_selector("#account").click()
         self.quiesce()
-        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
         self.driver.find_element_by_css_selector(self.user_password_tab).click()
         enter_text_for_element(self.driver, self.old_password, password)
         enter_text_for_element(self.driver, self.edit_password1, new_password)
@@ -180,7 +182,7 @@ class Users(DatatableView):
     def edit_own_details(self, username, email, first_name, last_name):
         self.driver.find_element_by_css_selector("#account").click()
         self.quiesce()
-        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
         enter_text_for_element(self.driver, self.edit_email, email)
         enter_text_for_element(self.driver, self.edit_first_name, first_name)
         enter_text_for_element(self.driver, self.edit_last_name, last_name)
@@ -193,7 +195,7 @@ class Users(DatatableView):
     def list_own_subscribed_alerts(self):
         self.driver.find_element_by_css_selector("#account").click()
         self.quiesce()
-        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
         self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
         alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
         subscribed = [el.get_attribute('name') for el in alerts_form.find_elements_by_css_selector('input[type="checkbox"]') if el.is_selected()]
@@ -207,7 +209,7 @@ class Users(DatatableView):
     def subscribe_to_no_alerts(self):
         self.driver.find_element_by_css_selector("#account").click()
         self.quiesce()
-        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
         self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
 
         # Click select all button
@@ -221,7 +223,7 @@ class Users(DatatableView):
     def subscribe_to_all_alerts(self):
         self.driver.find_element_by_css_selector("#account").click()
         self.quiesce()
-        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
         self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
 
         # Click select all button
@@ -248,7 +250,7 @@ class Users(DatatableView):
     def edit_own_subscribed_alerts(self, user_subscriptions):
         self.driver.find_element_by_css_selector("#account").click()
         self.quiesce()
-        wait_for_element(self.driver, self.user_detail, self.medium_wait)
+        wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
         self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
         alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
         self._fill_out_alerts_form(alerts_form, user_subscriptions)
@@ -277,4 +279,4 @@ class Users(DatatableView):
 
     def creation_dialog_close(self):
         self.get_visible_element_by_css_selector(".cancel_button").click()
-        assert not element_visible(self.driver, self.create_user_dialog)
+        assert not find_visible_element_by_css_selector(self.driver, self.create_user_dialog)
