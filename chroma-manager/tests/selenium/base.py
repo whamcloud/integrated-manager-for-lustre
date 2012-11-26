@@ -34,7 +34,11 @@ def find_visible_element_by_css_selector(driver, selector):
 
 
 def element_visible(driver, selector):
-    elements = driver.find_elements_by_css_selector(selector)
+    if (isinstance(selector, str) or isinstance(selector, unicode)) and selector.startswith('//'):
+        elements = driver.find_elements_by_xpath(selector)
+    else:
+        elements = driver.find_elements_by_css_selector(selector)
+    
     if not len(elements):
         return None
     elif len(elements) > 1:
