@@ -1,4 +1,5 @@
 from tests.selenium.base_view import BaseView
+from tests.selenium.utils.element import wait_for_element_by_css_selector
 
 
 class Login(BaseView):
@@ -13,7 +14,7 @@ class Login(BaseView):
     def open_login_dialog(self):
         self.quiesce()
         self.open_dialog_button.click()
-        #wait_for_element(self.driver, '#login_dialog input[name=username]', 10)
+        wait_for_element_by_css_selector(self.driver, '#login_dialog input[name=username]', 10)
 
     def login_user(self, username, password):
         self.username.send_keys(username)

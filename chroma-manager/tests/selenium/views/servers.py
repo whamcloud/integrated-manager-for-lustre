@@ -4,10 +4,12 @@
 # ========================================================
 from selenium.common.exceptions import NoSuchElementException
 
-from tests.selenium.base import wait_for_transition, find_visible_element_by_css_selector, element_visible
+from tests.selenium.base import wait_for_transition
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
-from tests.selenium.base import enter_text_for_element
+from tests.selenium.utils.element import (
+    enter_text_for_element, find_visible_element_by_css_selector
+)
 
 
 class Servers(DatatableView):
@@ -41,7 +43,7 @@ class Servers(DatatableView):
 
     @property
     def host_selection_list_visible(self):
-        return element_visible(self.driver, 'div.host_selection_list')
+        return find_visible_element_by_css_selector(self.driver, 'div.host_selection_list')
 
     @property
     def host_selection_list_selected(self):

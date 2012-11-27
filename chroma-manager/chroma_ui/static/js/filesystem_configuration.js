@@ -228,7 +228,7 @@ var VolumeChooserStore = function ()
       bInfo: false,
       bProcessing: true,
       aaData: opts.store.getRows(element),
-      aoSort: [[2, 'asc']],
+      aaSorting: [[2, 'asc']],
       aoColumns: [
         {sWidth: "1%", mDataProp: 'id', bSortable: false},
         {sWidth: "1%", mDataProp: 'select_widget', bSortable: false},

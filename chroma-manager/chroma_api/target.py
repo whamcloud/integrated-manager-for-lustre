@@ -227,17 +227,17 @@ class TargetResource(MetricResource, ConfParamResource):
             return None
 
     def dehydrate_primary_server_name(self, bundle):
-        return bundle.obj.primary_server().pretty_name()
+        return bundle.obj.primary_server().get_label()
 
     def dehydrate_failover_server_name(self, bundle):
         try:
-            return bundle.obj.managedtargetmount_set.get(primary = False).host.pretty_name()
+            return bundle.obj.managedtargetmount_set.get(primary = False).host.get_label()
         except ManagedTargetMount.DoesNotExist:
             return "---"
 
     def dehydrate_active_host_name(self, bundle):
         if bundle.obj.active_mount:
-            return bundle.obj.active_mount.host.pretty_name()
+            return bundle.obj.active_mount.host.get_label()
         else:
             return "---"
 
@@ -325,7 +325,7 @@ class TargetResource(MetricResource, ConfParamResource):
             fs = ManagedFilesystem.objects.get(id=filesystem_id)
             create_kwargs = {'filesystem': fs}
         elif kind == "MGT":
-            create_kwargs = {'name': 'MGS'}
+            create_kwargs = {}
 
         self.is_valid(bundle, request)
 

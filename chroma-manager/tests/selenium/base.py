@@ -10,115 +10,12 @@ import sys
 
 from django.utils.unittest import TestCase
 from selenium import webdriver
-from selenium.common.exceptions import StaleElementReferenceException
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support.ui import WebDriverWait
 from testconfig import config
 
 from tests.selenium.utils.constants import wait_time
-
-
-def find_visible_element_by_css_selector(driver, selector):
-    """Like find_element_by_css_selector, but restrict search
-    to visible elements, and if no visible matches are found
-    return None"""
-    elements = driver.find_elements_by_css_selector(selector)
-    for element in elements:
-        try:
-            if element.is_displayed():
-                return element
-        except StaleElementReferenceException:
-            pass
-
-    return None
-
-
-def element_visible(driver, selector):
-    elements = driver.find_elements_by_css_selector(selector)
-    if not len(elements):
-        return None
-    elif len(elements) > 1:
-        raise RuntimeError("Selector %s matches multiple elements!" % selector)
-    else:
-        element = elements[0]
-
-    try:
-        if element.is_displayed():
-            return element
-        else:
-            return None
-    except StaleElementReferenceException:
-        return None
-
-
-def wait_for_element(driver, selector, timeout):
-    for i in xrange(timeout):
-        element = element_visible(driver, selector)
-        if element:
-            return element
-
-        time.sleep(1)
-    raise RuntimeError("Timed out after %s seconds waiting for %s" % (timeout, selector))
-
-
-def wait_for_any_element(driver, selectors, timeout):
-    for i in xrange(timeout):
-        if isinstance(selectors, str) or isinstance(selectors, unicode):
-            element = find_visible_element_by_css_selector(driver, selectors)
-            if element:
-                return element
-        else:
-            for s in selectors:
-                element = element_visible(driver, s)
-                if element:
-                    return element
-
-        time.sleep(1)
-    raise RuntimeError("Timeout after %s seconds waiting for any of %s" % (timeout, selectors))
-
-
-def wait_for_transition(driver, timeout):
-    """Wait for a job to complete.  NB the busy icon must be visible initially
-    (call quiesce after state change operations to ensure that if the busy icon
-    is going to appear, it will have appeared)"""
-
-    for timer in xrange(timeout):
-        if element_visible(driver, "img#notification_icon_jobs"):
-            time.sleep(1)
-        else:
-            # We have to quiesce here because the icon is hidden on command completion
-            # but updates to changed objects are run asynchronously.
-            quiesce_api(driver, timeout)
-            return
-
-    raise RuntimeError('Timeout after %s seconds waiting for transition to complete' % timeout)
-
-
-def enter_text_for_element(driver, selector_or_element, text_value):
-    if isinstance(selector_or_element, str) or isinstance(selector_or_element, unicode):
-        element = driver.find_element_by_css_selector(selector_or_element)
-    else:
-        element = selector_or_element
-    element.clear()
-    element.send_keys(text_value)
-    WebDriverWait(driver, 10).until(lambda driver: element.get_attribute('value') == text_value)
-
-
-def click_element_and_wait(driver, xpath_selector, timeout):
-    element = driver.find_element_by_xpath(xpath_selector)
-    element.click()
-    wait_for_transition(driver, timeout)
-
-
-def select_element_option(driver, selector, index):
-    element = driver.find_element_by_css_selector(selector)
-    element_options = element.find_elements_by_tag_name('option')
-    element_options[index].click()
-
-
-def get_selected_option_text(driver, dropdown_element_selector):
-    selectbox_element = Select(driver.find_element_by_css_selector(dropdown_element_selector))
-    return selectbox_element.first_selected_option.text
+from tests.selenium.utils.element import (
+    find_visible_element_by_css_selector, wait_for_element_by_css_selector
+)
 
 
 def quiesce_api(driver, timeout):
@@ -129,6 +26,23 @@ def quiesce_api(driver, timeout):
         else:
             time.sleep(1)
     raise RuntimeError('Timeout')
+
+
+def wait_for_transition(driver, timeout):
+    """Wait for a job to complete.  NB the busy icon must be visible initially
+    (call quiesce after state change operations to ensure that if the busy icon
+    is going to appear, it will have appeared)"""
+
+    for timer in xrange(timeout):
+        if find_visible_element_by_css_selector(driver, "img#notification_icon_jobs"):
+            time.sleep(1)
+        else:
+            # We have to quiesce here because the icon is hidden on command completion
+            # but updates to changed objects are run asynchronously.
+            quiesce_api(driver, timeout)
+            return
+
+    raise RuntimeError('Timeout after %s seconds waiting for transition to complete' % timeout)
 
 
 log = logging.getLogger(__name__)
@@ -180,8 +94,8 @@ class SeleniumBaseTestCase(TestCase):
         if not superuser_present:
             raise RuntimeError("No superuser in config file")
 
-        wait_for_element(self.driver, '#user_info #authenticated', 10)
-        wait_for_element(self.driver, '#dashboard_menu', 10)
+        wait_for_element_by_css_selector(self.driver, '#user_info #authenticated', 10)
+        wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
 
         self.clear_all()
 

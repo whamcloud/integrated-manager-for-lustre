@@ -5,9 +5,11 @@
 
 
 from selenium.webdriver.support.ui import Select
-from tests.selenium.base import wait_for_element
-from tests.selenium.base import element_visible
+
 from tests.selenium.base_view import DatatableView
+from tests.selenium.utils.element import (
+    wait_for_element_by_css_selector, find_visible_element_by_css_selector
+)
 
 
 class Volumes(DatatableView):
@@ -52,7 +54,7 @@ class Volumes(DatatableView):
 
                 # Click Apply button
                 self.driver.find_element_by_css_selector('#btnApplyConfig').click()
-                wait_for_element(self.driver, self.volume_error_dialog, 10)
+                wait_for_element_by_css_selector(self.driver, self.volume_error_dialog, 10)
 
                 primary_text = Select(self.driver.find_element_by_id(primary_select_id)).first_selected_option.text
                 failover_text = ''
@@ -62,7 +64,7 @@ class Volumes(DatatableView):
 
                 # If selected text for primary and failover dropdowns are same then return display status of error dialog
                 if primary_text == failover_text:
-                    return element_visible(self.driver, self.volume_error_dialog)
+                    return find_visible_element_by_css_selector(self.driver, self.volume_error_dialog)
 
         raise RuntimeError("Primary and failover servers cannot be same for a particular volume")
 
@@ -91,7 +93,7 @@ class Volumes(DatatableView):
                             failover_select.select_by_visible_text(failover_server_hostname)
 
                         self.driver.find_element_by_css_selector('#btnApplyConfig').click()
-                        self.wait_for_element('#transition_confirm_button')
+                        wait_for_element_by_css_selector(self.driver, '#transition_confirm_button', 10)
                         self.driver.find_element_by_css_selector('#transition_confirm_button').click()
                         self.quiesce()
 

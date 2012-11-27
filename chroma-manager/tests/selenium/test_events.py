@@ -1,9 +1,8 @@
 from tests.selenium.base import SeleniumBaseTestCase
-from tests.selenium.base import select_element_option
-from tests.selenium.base import get_selected_option_text
 from tests.selenium.views.events import Events
 from tests.selenium.views.servers import Servers
 from tests.selenium.utils.constants import static_text
+from tests.selenium.utils.element import select_element_option, get_selected_option_text
 
 from utils.sample_data import Testdata
 

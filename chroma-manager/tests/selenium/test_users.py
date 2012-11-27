@@ -3,15 +3,15 @@
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 
+from testconfig import config
+
+from utils.sample_data import Testdata
+from utils.messages_text import validation_messages
 
 from tests.selenium.views.users import Users
 from tests.selenium.base import SeleniumBaseTestCase
-from utils.sample_data import Testdata
-from utils.messages_text import validation_messages
-from tests.selenium.base import enter_text_for_element
-from tests.selenium.base import select_element_option
 from tests.selenium.utils.constants import wait_time
-from testconfig import config
+from tests.selenium.utils.element import enter_text_for_element, select_element_option
 
 
 class SampleUser(object):

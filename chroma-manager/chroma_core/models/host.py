@@ -19,7 +19,6 @@ from django.db.models.query_utils import Q
 from django.utils.timezone import now
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
-from chroma_core.models.agent_session import AgentSession
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 
@@ -90,10 +89,20 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         unique_together = ('address',)
 
     def __str__(self):
-        return self.pretty_name()
+        return self.get_label()
 
     def get_label(self):
-        return self.pretty_name()
+        """Return the FQDN if it is known, else the address"""
+        if self.fqdn:
+            name = self.fqdn
+        else:
+            user, host, port = self.ssh_params()
+            name = host
+
+        if name.endswith(".localdomain"):
+            name = name[:-len(".localdomain")]
+
+        return name
 
     def save(self, *args, **kwargs):
         from django.core.exceptions import ValidationError
@@ -155,19 +164,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         command = Command.set_state([(host, 'configured')], "Setting up host %s" % address_string)
 
         return host, command
-
-    def pretty_name(self):
-        # Take FQDN if we have it, or fall back to address
-        if self.fqdn:
-            name = self.fqdn
-        else:
-            user, host, port = self.ssh_params()
-            name = host
-
-        if name[-12:] == ".localdomain":
-            return name[:-12]
-        else:
-            return name
 
     def _role_strings(self):
         roles = set()
@@ -710,7 +706,7 @@ class LearnDevicesStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonQueue, AgentDaemonRpcInterface
+        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
         # Get the device-scan output
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         updates = self.invoke_agent(host, "device-plugin")
@@ -719,19 +715,7 @@ class LearnDevicesStep(Step):
         except KeyError:
             pass
 
-        # Fake a session as if the agent had reported in
-        with transaction.commit_on_success():
-            session, created = AgentSession.objects.get_or_create(host = host)
-
-        AgentDaemonQueue().put({
-                    "session_id": session.session_id,
-                    "counter": 1,
-                    "started_at": now().isoformat() + "Z",
-                    "host_id": host.id,
-                    "updates": updates
-            })
-
-        AgentDaemonRpcInterface().await_session(kwargs['host_id'])
+        AgentDaemonRpcInterface().setup_host(host.id, updates)
 
 
 class SetupHostJob(StateChangeJob):

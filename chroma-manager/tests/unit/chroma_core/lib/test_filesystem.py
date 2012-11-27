@@ -185,8 +185,8 @@ class TestFSTransitions(JobTestCaseWithHost):
 
     def test_two_concurrent_removes(self):
         fs2 = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
-        ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
-        ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = self.fs)
+        ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = fs2)
+        ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = fs2)
 
         self.set_state(self.fs, 'available')
         self.set_state(fs2, 'available')

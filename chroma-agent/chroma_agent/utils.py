@@ -4,6 +4,8 @@
 # ========================================================
 
 
+from chroma_agent import shell
+
 import os
 import re
 
@@ -97,3 +99,20 @@ class Fstab(object):
 
     def all(self):
         return self.fstab
+
+
+class BlkId(object):
+    def __init__(self, fields = None):
+        blkid_lines = shell.try_run(['blkid', '-s', 'UUID']).split("\n")
+
+        devices = []
+        for line in [l for l in blkid_lines if len(l)]:
+            dev, uuid = re.search("(.*): UUID=\"(.*)\"", line).groups()
+            devices.append({
+                'dev': dev,
+                'uuid': uuid
+            })
+        self.devices = devices
+
+    def all(self):
+        return self.devices

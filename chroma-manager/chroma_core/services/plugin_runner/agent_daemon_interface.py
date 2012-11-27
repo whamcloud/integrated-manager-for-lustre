@@ -13,4 +13,4 @@ class AgentDaemonQueue(ServiceQueue):
 
 
 class AgentDaemonRpcInterface(ServiceRpcInterface):
-    methods = ['await_session', 'remove_host_resources']
+    methods = ['setup_host', 'remove_host_resources']

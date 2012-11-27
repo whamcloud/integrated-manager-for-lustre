@@ -4,13 +4,18 @@
 # ========================================================
 
 
-from exceptions import KeyError, Exception
 import os
 import threading
 import datetime
 import time
+import sys
+import traceback
 from django.db import transaction
+
 from chroma_core.services.log import log_register
+from chroma_core.models.storage_plugin import StorageResourceRecord
+from chroma_core.models.storage_plugin import StorageResourceOffline
+
 
 log = log_register(__name__.split('.')[-1])
 
@@ -29,9 +34,10 @@ class ScanDaemon(object):
     Creates a plugin instance for each ScannableResource.
 
     """
-    def __init__(self):
+    def __init__(self, resource_manager):
         self.stopping = False
 
+        self._resource_manager = resource_manager
         self._session_lock = threading.Lock()
         self._all_sessions = {}
         # Map of module name to map of root_resource_id to PluginSession
@@ -41,7 +47,7 @@ class ScanDaemon(object):
             # Create sessions for all root resources
             sessions = {}
             for srr_id in self.root_resource_ids(p):
-                session = PluginSession(srr_id)
+                session = PluginSession(self._resource_manager, srr_id)
                 sessions[srr_id] = session
                 self._all_sessions[srr_id] = session
 
@@ -51,8 +57,6 @@ class ScanDaemon(object):
         log.info("Loaded %s plugins, %s sessions" % (len(self.plugins), session_count))
 
     def modify_resource(self, resource_id, attrs):
-        from chroma_core.models.storage_plugin import StorageResourceRecord
-
         log.info("modifying %s" % resource_id)
         with self._session_lock:
             try:
@@ -91,8 +95,7 @@ class ScanDaemon(object):
                     time.sleep(1)
                 log.info("stopped.")
 
-            from chroma_core.lib.storage_plugin.resource_manager import resource_manager
-            resource_manager.global_remove_resource(resource_id)
+            self._resource_manager.global_remove_resource(resource_id)
         log.info("finished removing %s" % resource_id)
 
     def root_resource_ids(self, plugin):
@@ -119,7 +122,7 @@ class ScanDaemon(object):
                     for rrid in self.root_resource_ids(plugin):
                         if not rrid in sessions:
                             log.info("new session for resource %s" % rrid)
-                            s = PluginSession(rrid)
+                            s = PluginSession(self._resource_manager, rrid)
                             sessions[rrid] = s
                             self._all_sessions[rrid] = s
                             s.start()
@@ -146,7 +149,8 @@ class ScanDaemon(object):
 
 
 class PluginSession(threading.Thread):
-    def __init__(self, root_resource_id, *args, **kwargs):
+    def __init__(self, resource_manager, root_resource_id, *args, **kwargs):
+        self._resource_manager = resource_manager
         self.stopped = False
         self.stopping = threading.Event()
         self.root_resource_id = root_resource_id
@@ -155,7 +159,6 @@ class PluginSession(threading.Thread):
         super(PluginSession, self).__init__(*args, **kwargs)
 
     def run(self):
-        from chroma_core.models.storage_plugin import StorageResourceRecord
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         record = StorageResourceRecord.objects.get(id=self.root_resource_id)
         plugin_klass = storage_plugin_manager.get_plugin_class(
@@ -181,8 +184,6 @@ class PluginSession(threading.Thread):
                     retry_delay *= 2
 
                 log.warning("Exception in scan loop for resource %s, waiting %ss before restart" % (self.root_resource_id, retry_delay))
-                import sys
-                import traceback
                 exc_info = sys.exc_info()
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
                 log.warning("Backtrace: %s" % backtrace)
@@ -196,10 +197,8 @@ class PluginSession(threading.Thread):
         self.stopped = True
 
     def _scan_loop(self, plugin_klass, record):
-        from chroma_core.models.storage_plugin import StorageResourceOffline
-
         log.debug("Session %s: starting scan loop" % self.root_resource_id)
-        instance = plugin_klass(self.root_resource_id)
+        instance = plugin_klass(self._resource_manager, self.root_resource_id)
         # TODO: impose timeouts on plugin calls (especially teardown)
         try:
             log.debug("Session %s: >>initial_scan" % self.root_resource_id)

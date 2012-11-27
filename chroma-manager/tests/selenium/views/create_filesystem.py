@@ -5,8 +5,12 @@
 
 
 from selenium.webdriver.support.ui import Select
-from tests.selenium.base import enter_text_for_element, find_visible_element_by_css_selector, element_visible, get_selected_option_text
+
 from tests.selenium.base_view import BaseView
+from tests.selenium.utils.element import (
+    enter_text_for_element, find_visible_element_by_css_selector,
+    get_selected_option_text
+)
 
 
 class CreateFilesystem(BaseView):
@@ -114,4 +118,4 @@ class CreateFilesystem(BaseView):
 
     @property
     def mdt_advanced_visible(self):
-        return bool(element_visible(self.driver, '#mdt_advanced'))
+        return bool(find_visible_element_by_css_selector(self.driver, '#mdt_advanced'))

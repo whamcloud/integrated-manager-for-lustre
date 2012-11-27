@@ -20,6 +20,7 @@ agent:
 	$(BUILDER_IS_EL6) || cp -a chroma-agent/dist/* dist/
 
 $(SUBDIRS): dist agent
+	set -e; \
 	# We only do a full build on EL6
 	if $(BUILDER_IS_EL6); then \
 		$(MAKE) -C $@ rpms; \

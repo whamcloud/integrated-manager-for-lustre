@@ -22,6 +22,9 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     states = ['unavailable', 'stopped', 'available', 'removed', 'forgotten']
     initial_state = 'unavailable'
 
+    mdt_next_index = models.IntegerField(default = 0)
+    ost_next_index = models.IntegerField(default = 0)
+
     def get_label(self):
         return self.name
 

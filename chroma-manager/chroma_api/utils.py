@@ -179,7 +179,10 @@ class StatefulModelResource(CustomModelResource):
     def obj_delete(self, request = None, **kwargs):
         obj = self.obj_get(request, **kwargs)
         try:
-            command = Command.set_state([(obj, 'removed')])
+            if obj.immutable_state and 'forgotten' in obj.states:
+                command = Command.set_state([(obj, 'forgotten')])
+            else:
+                command = Command.set_state([(obj, 'removed')])
         except SchedulingError, e:
             raise custom_response(self, request, http.HttpBadRequest,
                     {'__all__': e.message})

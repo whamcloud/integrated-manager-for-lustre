@@ -26,7 +26,6 @@ class CleanClusterApiTestCase(ApiTestCase):
         self.unmount_filesystems_from_clients()
         self.reset_chroma_manager_db()
         self.remove_all_targets_from_pacemaker()
-        self.erase_volumes()
 
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:
@@ -175,13 +174,7 @@ class CleanClusterApiTestCase(ApiTestCase):
             # Remove filesystems
             remove_filesystem_command_ids = []
             for filesystem in filesystems:
-                if filesystem['immutable_state']:
-                    response = self.set_state(
-                        filesystem['resource_uri'],
-                        'forgotten'
-                    )
-                else:
-                    response = chroma_manager.delete(filesystem['resource_uri'])
+                response = chroma_manager.delete(filesystem['resource_uri'])
                 self.assertTrue(response.successful, response.text)
                 command_id = response.json['command']['id']
                 self.assertTrue(command_id)
@@ -267,22 +260,6 @@ class CleanClusterApiTestCase(ApiTestCase):
         #self.assertTrue(response.successful, response.text)
         #volumes = response.json['objects']
         #self.assertEqual(0, len(volumes))
-
-    def erase_volumes(self):
-        """Erase the volumes on non-monitor-only lustre servers"""
-        # Don't erase is a pre-existing filesystem exists (aka monitor only)
-        if not config.get('filesystem'):
-            erased_volumes = []
-            for server in config['lustre_servers']:
-                for device in server['device_paths']:
-                    # Don't bother erasing if already erased, unless a /dev/s*
-                    # path since those don't contain a unique and consistent id
-                    if not device in erased_volumes or re.search('/dev/s', device):
-                        self.remote_command(
-                            server['address'],
-                            "dd if=/dev/zero of=%s bs=4M count=1" % device
-                        )
-                        erased_volumes.append(device)
 
     def reset_accounts(self, chroma_manager):
         """Remove any user accounts which are not in the config (such as

@@ -134,7 +134,7 @@ var Api = function() {
         });
       }
       if (response_content) {
-        if (response_content.error_message && response_content.traceback) {
+        if (response_content.error_message != undefined && response_content.traceback) {
           // An API exception
           blockingError({
             'Status': jqXHR.status,

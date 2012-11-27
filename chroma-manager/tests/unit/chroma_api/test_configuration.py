@@ -67,7 +67,8 @@ class TestConfigurationDumpLoad(ChromaApiTestCase):
 
         # Add a hypothetical extra OST
         ost_data = deepcopy(data['mgts'][0]['filesystems'][0]['osts'][0])
-        ost_data['name'] = 'foofs-OST0002'
+        ost_data['name'] = 'foofs-OST0001'
+        ost_data['index'] = 1
         new_volume = self._test_lun(self.host)
         ost_data['mounts'][0]['path'] = new_volume.volumenode_set.get().path
         data['mgts'][0]['filesystems'][0]['osts'].append(ost_data)
@@ -79,3 +80,6 @@ class TestConfigurationDumpLoad(ChromaApiTestCase):
         self.assertEqual(ManagedMdt.objects.count(), 1)
         self.assertEqual(ManagedOst.objects.count(), 2)
         self.assertEqual(ManagedFilesystem.objects.count(), 1)
+        fs = ManagedFilesystem.objects.get()
+        self.assertEqual(fs.mdt_next_index, 1)
+        self.assertEqual(fs.ost_next_index, 2)

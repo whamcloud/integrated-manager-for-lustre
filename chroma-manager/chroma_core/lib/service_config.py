@@ -7,12 +7,17 @@
 import logging
 import subprocess
 import getpass
+import socket
+import errno
+import sys
 
 log = logging.getLogger('installation')
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.INFO)
 
-import settings
+from chroma_core.lib.chroma_settings import chroma_settings
+settings = chroma_settings()
+
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
 
@@ -41,13 +46,12 @@ class RsyslogConfig:
 
     def add(self, database, server, user, port = None, password = None):
         #:ommysql:database-server,database-name,database-userid,database-password
-        config_lines = []
-        config_lines.append(self.SENTINEL)
-        config_lines.extend([
+        config_lines = [
+                    self.SENTINEL,
                     "$ModLoad imtcp.so\n",
                     "$InputTCPServerRun 514\n",
                     "$ModLoad ommysql\n",
-                    "$template sqltpl,\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, convert_tz('%timereported:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), convert_tz('%timegenerated:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), %iut%, '%syslogtag%')\",SQL\n"])
+                    "$template sqltpl,\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, convert_tz('%timereported:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), convert_tz('%timegenerated:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), %iut%, '%syslogtag%')\",SQL\n"]
         if port:
             config_lines.append("$ActionOmmysqlServerPort %d\n" % port)
 
@@ -127,6 +131,75 @@ class CommandError(Exception):
 class ServiceConfig:
     def __init__(self):
         self.verbose = False
+
+    def _check_name_resolution(self):
+        """
+        Check:
+         * that the hostname is not localhost
+         * that the FQDN can be looked up from hostname
+         * that an IP can be looked up from the hostname
+         * that reverse lookup on the IP gives the FQDN
+         * that the host can connect to its own external IP address
+
+        This check is done ahead of configuring RabbitMQ, which fails unobviously if the
+        name resolution is bad.
+
+        :return: True if OK, else False
+
+        """
+        try:
+            hostname = socket.gethostname()
+        except socket.error:
+            log.error("Error: Unable to get the servers hostname. Please correct the hostname resolution.")
+            return False
+
+        if hostname == "localhost":
+            log.error("Error: Currently the hostname is '%s' which is invalid. "
+                      "Please correct the hostname resolution.", hostname)
+            return False
+
+        try:
+            fqdn = socket.getfqdn(hostname)
+        except socket.error:
+            log.error("Error: Unable to get the FQDN for the server name '%s'. "
+                      "Please correct the hostname resolution.", hostname)
+            return False
+
+        try:
+            ip_address = socket.gethostbyname(hostname)
+        except socket.error:
+            log.error("Error: Unable to get the ip address for the server name '%s'. "
+                      "Please correct the hostname resolution.", hostname)
+            return False
+
+        try:
+            hostname_from_ip, aliaslist, ipaddr = socket.gethostbyaddr(ip_address)
+        except socket.error:
+            log.error("Error: Unable to get the host name for ip address: %s. "
+                      "Please correct the hostname resolution.", ip_address)
+            return False
+
+        if fqdn != hostname_from_ip:
+            log.error("Need to correctly setup hostname resolution. Currently the hostname is: "
+                      "%s and the ip address hostname is: %s.", fqdn, hostname_from_ip)
+            return False
+
+        SSH_PORT = 22
+
+        # Make sure that the ip address is on the machine. Using port 22 to verify since all machines should
+        # have sshd running.
+        try:
+            tst_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tst_socket.bind((ip_address, SSH_PORT))
+            tst_socket.close()
+        except socket.error, err:
+            (err_num, err_msg) = err
+            if err_num != errno.EADDRINUSE:
+                log.error("Error: Unable to connect to IP address: %s. "
+                          "Please correct hostname resolution.", ip_address)
+                return False
+
+        return True
 
     def try_shell(self, cmdline, mystdout = subprocess.PIPE,
                   mystderr = subprocess.PIPE):
@@ -381,6 +454,9 @@ class ServiceConfig:
         ManagementUtility(args).execute()
 
     def setup(self, username = None, password = None, ntp_server = None):
+        if not self._check_name_resolution():
+            return ["Name resolution is not correctly configured"]
+
         self._setup_database(username, password)
         self._setup_ntp(ntp_server)
         self._setup_rabbitmq()
@@ -468,3 +544,70 @@ class ServiceConfig:
 
         # TODO: support SERVER_HTTP_URL
         # TODO: support LOG_SERVER_HOSTNAME
+
+
+def chroma_config():
+    """Entry point for chroma-config command line tool.
+
+    Distinction between this and ServiceConfig is that CLI-specific stuff lives here:
+    ServiceConfig utility methods don't do sys.exit or parse arguments.
+
+    """
+    service_config = ServiceConfig()
+    try:
+        command = sys.argv[1]
+    except IndexError:
+        log.error("Usage: %s <setup|validate|start|restart|stop>" % sys.argv[0])
+        sys.exit(-1)
+
+    def print_errors(errors):
+        if errors:
+            log.error("Errors found:")
+            for error in errors:
+                log.error("  * %s" % error)
+        else:
+            log.info("OK.")
+
+    if command == 'setup':
+        def usage():
+            log.error("Usage: setup [-v] [username password ntpserver]")
+            sys.exit(-1)
+
+        args = []
+        if len(sys.argv) > 2:
+            if sys.argv[2] == "-v":
+                service_config.verbose = True
+                if len(sys.argv) == 6:
+                    args = sys.argv[3:6]
+                elif len(sys.argv) != 3:
+                    usage()
+            elif len(sys.argv) == 5:
+                args = sys.argv[2:5]
+            else:
+                usage()
+
+        log.info("\nStarting the installation...\n")
+        errors = service_config.setup(*args)
+        if errors:
+            print_errors(errors)
+            sys.exit(-1)
+        else:
+            log.info("\nThe installation was SUCCESSFUL!\n")
+            sys.exit(0)
+    elif command == 'validate':
+        errors = service_config.validate()
+        print_errors(errors)
+        if errors:
+            sys.exit(1)
+        else:
+            sys.exit(0)
+    elif command == 'stop':
+        service_config.stop()
+    elif command == 'start':
+        service_config.start()
+    elif command == 'restart':
+        service_config.stop()
+        service_config.start()
+    else:
+        log.error("Invalid command '%s'" % command)
+        sys.exit(-1)

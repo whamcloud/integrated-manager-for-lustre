@@ -24,5 +24,7 @@ def chroma_settings():
 
     site_dir = _search_path(os.path.dirname(__file__))
     sys.path.insert(0, site_dir)
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+
     import settings
     return settings

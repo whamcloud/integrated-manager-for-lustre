@@ -29,8 +29,8 @@ class FailoverTestCaseMixin(ApiTestCase):
         volumes are running where expected both before and after failover based
         on volumes_expected_hosts_in_*_state. Expects format:
             {
-                foo_vol_id: foo_expected_host_fqdn,
-                bar_vol_id: bar_expected_host_fqdn,
+                foo_vol_id: foo_expected_host_dict,
+                bar_vol_id: bar_expected_host_dict,
                 ...
             }
         """
@@ -62,14 +62,13 @@ class FailoverTestCaseMixin(ApiTestCase):
         an unexpected loss of a server, this uses chroma to failover a server intentionally.
         (ex use case: someone needs to service the primary server)
         """
-        primary_host['config'] = self.get_host_config(primary_host['nodename'])
         response = self.chroma_manager.get(
             '/api/target/',
             params = {'filesystem_id': filesystem_id}
         )
         self.assertTrue(response.successful, response.text)
         targets_running_on_primary_host = [t for t in response.json['objects']
-            if t['active_host_name'] == primary_host['config']['fqdn']]
+            if t['active_host'] == primary_host['resource_uri']]
 
         failover_target_command_ids = []
         for target in targets_running_on_primary_host:
@@ -104,15 +103,13 @@ class FailoverTestCaseMixin(ApiTestCase):
         Trigger failback for all failed over targets with primary_host as their primary server
         and verifies after that volumes are running back in their expected locations.
         """
-        primary_host['config'] = self.get_host_config(primary_host['nodename'])
-
         response = self.chroma_manager.get(
             '/api/target/',
             params = {'filesystem_id': filesystem_id}
         )
         self.assertTrue(response.successful, response.text)
         targets_with_matching_primary_host = [t for t in response.json['objects']
-            if t['primary_server_name'] == primary_host['config']['fqdn']]
+            if t['primary_server'] == primary_host['resource_uri']]
 
         failback_target_command_ids = []
         for target in targets_with_matching_primary_host:
@@ -203,13 +200,14 @@ class FailoverTestCaseMixin(ApiTestCase):
 
                 # Check chroma manager thinks it's running on the right host.
                 if assert_true:
-                    self.assertEqual(expected_host, target['active_host_name'])
+
+                    self.assertEqual(expected_host['resource_uri'], target['active_host'])
                 else:
-                    if not expected_host == target['active_host_name']:
+                    if not expected_host['resource_uri'] == target['active_host']:
                         return False
 
                 # Check pacemaker thinks it's running on the right host.
-                expected_resource_status = "%s is running on: %s" % (target['ha_label'], expected_host)
+                expected_resource_status = "%s is running on: %s" % (target['ha_label'], expected_host['fqdn'])
                 actual_resource_status = self.get_crm_resource_status(target['ha_label'], expected_host)
                 if assert_true:
                     self.assertRegexpMatches(
@@ -222,9 +220,9 @@ class FailoverTestCaseMixin(ApiTestCase):
 
         return True
 
-    def get_crm_resource_status(self, ha_label, expected_host):
+    def get_crm_resource_status(self, ha_label, host):
         result = self.remote_command(
-            expected_host,
+            host['address'],
             'crm resource status %s' % ha_label,
             timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
         )
@@ -234,8 +232,8 @@ class FailoverTestCaseMixin(ApiTestCase):
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
         result = self.remote_command(
-            expected_host,
-            'crm resource failcount %s show %s' % (ha_label, expected_host)
+            host['address'],
+            'crm resource failcount %s show %s' % (ha_label, host['nodename'])
         )
         self.assertRegexpMatches(
             result.stdout.read(),

@@ -5,7 +5,7 @@
     <div class='host_selection_list'>
         <ul class='host_selection_list'>
             <% _.each(hosts, function(host) { %>
-                <li><input type='checkbox' data-host_uri="<%= host.resource_uri %>"></input><%= host.fqdn %></li>
+                <li><input type='checkbox' data-host_uri="<%= host.resource_uri %>"></input><%= host.label %></li>
             <% }); %>
         </ul>
     </div>
@@ -42,14 +42,14 @@
             var processed_data = [];
             $.each(data.aaData, function(i, row) {
               var server = $.extend({}, row);
-              row['label'] = LiveObject.label(server);
               row['state'] = LiveObject.state(server);
               row['actions'] = LiveObject.actions(server);
               row['icons'] = LiveObject.icons(server);
-              if (!server['fqdn']) {
-                row['fqdn'] = server['address'];
-              }
-              row['fqdn'] = RouteUtils.object_properties_link(server, row['fqdn']);
+              /* Although the value comes from the 'label' attribute, we name
+                 the column 'fqdn' so that it is sortable on the fqdn (from
+                 which the label is usually derived), since the 'label'
+                 attribute itself is not sortable. */
+              row['fqdn'] = RouteUtils.object_properties_link(server);
             });
 
             $('.multi_server_button').attr('disabled', data.aaData.length == 0);

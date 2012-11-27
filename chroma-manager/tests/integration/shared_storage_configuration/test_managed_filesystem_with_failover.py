@@ -105,10 +105,10 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
 
         # Define where we expect targets for volumes to be started on depending on our failover state.
         volumes_expected_hosts_in_normal_state = {
-            mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
-            mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
-            ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
-            ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
+            mgt_volume['id']: target_hosts['mgt']['primary'],
+            mdt_volume['id']: target_hosts['mdt']['primary'],
+            ost_volume_1['id']: target_hosts['ost1']['primary'],
+            ost_volume_2['id']: target_hosts['ost2']['primary'],
         }
 
         # Verify targets are started on the correct hosts
@@ -131,10 +131,10 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
         if config['failover_is_configured']:
             # Test MGS failover
             volumes_expected_hosts_in_failover_state = {
-                mgt_volume['id']: target_hosts['mgt']['failover']['fqdn'],
-                mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
-                ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
-                ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
+                mgt_volume['id']: target_hosts['mgt']['failover'],
+                mdt_volume['id']: target_hosts['mdt']['primary'],
+                ost_volume_1['id']: target_hosts['ost1']['primary'],
+                ost_volume_2['id']: target_hosts['ost2']['primary'],
             }
 
             self.failover(
@@ -153,10 +153,10 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
 
             # Test MDS failover
             volumes_expected_hosts_in_failover_state = {
-                mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
-                mdt_volume['id']: target_hosts['mdt']['failover']['fqdn'],
-                ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
-                ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
+                mgt_volume['id']: target_hosts['mgt']['primary'],
+                mdt_volume['id']: target_hosts['mdt']['failover'],
+                ost_volume_1['id']: target_hosts['ost1']['primary'],
+                ost_volume_2['id']: target_hosts['ost2']['primary'],
             }
 
             self.failover(
@@ -175,10 +175,10 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
 
             # Test failing over an OSS
             volumes_expected_hosts_in_failover_state = {
-                mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
-                mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
-                ost_volume_1['id']: target_hosts['ost1']['failover']['fqdn'],
-                ost_volume_2['id']: target_hosts['ost2']['primary']['fqdn'],
+                mgt_volume['id']: target_hosts['mgt']['primary'],
+                mdt_volume['id']: target_hosts['mdt']['primary'],
+                ost_volume_1['id']: target_hosts['ost1']['failover'],
+                ost_volume_2['id']: target_hosts['ost2']['primary'],
             }
 
             self.failover(
@@ -197,10 +197,10 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
 
             # Test failing over an OSS using chroma to do a controlled failover
             volumes_expected_hosts_in_failover_state = {
-                mgt_volume['id']: target_hosts['mgt']['primary']['fqdn'],
-                mdt_volume['id']: target_hosts['mdt']['primary']['fqdn'],
-                ost_volume_1['id']: target_hosts['ost1']['primary']['fqdn'],
-                ost_volume_2['id']: target_hosts['ost2']['failover']['fqdn'],
+                mgt_volume['id']: target_hosts['mgt']['primary'],
+                mdt_volume['id']: target_hosts['mdt']['primary'],
+                ost_volume_1['id']: target_hosts['ost1']['primary'],
+                ost_volume_2['id']: target_hosts['ost2']['failover'],
             }
 
             self.chroma_controlled_failover(

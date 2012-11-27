@@ -241,7 +241,6 @@ class JobScheduler(object):
 
         self._run_threads = {}  # Map of job ID to RunJobThread
 
-    @transaction.commit_on_success
     def _run_next(self):
         ready_jobs = self._job_collection.ready_jobs
 
@@ -251,15 +250,23 @@ class JobScheduler(object):
             len(self._job_collection.tasked_jobs)))
 
         dep_cache = DepCache()
-        ok_jobs = self._check_jobs(ready_jobs, dep_cache)
-        self._job_collection.update_many(ok_jobs, 'tasked')
+        ok_jobs, cancel_jobs = self._check_jobs(ready_jobs, dep_cache)
 
-        for job in ready_jobs:
+        for job in cancel_jobs:
+            self._complete_job(job, False, True)
+
+        self._job_collection.update_many(ok_jobs, 'tasked')
+        for job in ok_jobs:
             self._spawn_job(job)
+
+        if cancel_jobs:
+            # Cancellations may have made some jobs ready, run me again
+            self._run_next()
 
     def _check_jobs(self, jobs, dep_cache):
         """Return the list of jobs which pass their checks"""
         ok_jobs = []
+        cancel_jobs = []
 
         for job in jobs:
             try:
@@ -268,19 +275,17 @@ class JobScheduler(object):
                 # Catchall exception handler to ensure progression even if Job
                 # subclasses have bugs in their get_deps etc.
                 log.error("Job %s: exception in dependency check: %s" % (job.id,
-                                                                             '\n'.join(traceback.format_exception(*(sys.exc_info())))))
-                self.complete_job(job, cancelled = True)
-                continue
-
-            if not deps_satisfied:
-                log.warning("Job %d: cancelling because of failed dependency" % job.id)
-                self.complete_job(job, cancelled = True)
-                # TODO: tell someone WHICH dependency
-                continue
+                                                                         '\n'.join(traceback.format_exception(*(sys.exc_info())))))
+                cancel_jobs.append(job)
             else:
-                ok_jobs.append(job)
+                if not deps_satisfied:
+                    log.warning("Job %d: cancelling because of failed dependency" % job.id)
+                    cancel_jobs.append(job)
+                    # TODO: tell someone WHICH dependency
+                else:
+                    ok_jobs.append(job)
 
-        return ok_jobs
+        return ok_jobs, cancel_jobs
 
     def _spawn_job(self, job):
         thread = RunJobThread(self, job)
@@ -398,6 +403,7 @@ class JobScheduler(object):
             self._complete_job(job, errored, cancelled)
             self._run_next()
 
+    @transaction.commit_on_success
     def set_state(self, object_ids, message, run):
         with self._lock:
             ObjectCache.clear()

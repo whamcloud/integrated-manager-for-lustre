@@ -21,7 +21,6 @@ def freshen(obj):
 
 
 class MockAgent(object):
-    label_counter = 0
     mock_servers = {}
     calls = []
     host_calls = defaultdict(list)
@@ -97,21 +96,9 @@ class MockAgent(object):
             return {'location': target.primary_server().nodename}
         elif cmdline.startswith('register-target'):
             import re
-
-            # generic target (should be future-proof for multiple MDTs)
-            tgt_match = re.search("--mountpoint /mnt/(\w+)/(.{3})(\d+)", cmdline)
-            if tgt_match:
-                fsname, kind, idx = tgt_match.groups()
-                return {'label': "%s-%s%04d" % (fsname, kind.upper(), int(idx))}
-
-            # special-case match for non-CMD MDTs
-            mdt_match = re.search("--mountpoint /mnt/(\w+)/mdt", cmdline)
-            if mdt_match:
-                return {'label': "%s-MDT0000" % mdt_match.group(1)}
-
-            # fallback, gin up a label
-            MockAgent.label_counter += 1
-            return {'label': "foofs-TTT%04d" % self.label_counter}
+            # Assume mount paths are "/mnt/testfs-OST0001" style
+            label = re.search("--mountpoint /mnt/([^\s]+)", cmdline).group(1)
+            return {'label': label}
         elif cmdline.startswith('detect-scan'):
             return self.mock_servers[self.host.address]['detect-scan']
         elif cmdline == "device-plugin --plugin=lustre":
@@ -204,8 +191,10 @@ class JobTestCase(TestCase):
         ServiceQueue.put = mock.Mock(side_effect = NotImplementedError)
 
         # Create an instance for the purposes of the test
+        from chroma_core.services.plugin_runner.resource_manager import ResourceManager
+        resource_manager = ResourceManager()
         from chroma_core.services.plugin_runner.agent_daemon import AgentDaemon
-        agent_daemon = AgentDaemon()
+        agent_daemon = AgentDaemon(resource_manager)
 
         def patch_daemon_rpc(rpc_class, test_daemon):
             # Patch AgentDaemonRpc to call our instance instead of trying to do an RPC
@@ -258,8 +247,10 @@ class JobTestCase(TestCase):
                     break
 
                 dep_cache = DepCache()
-                ok_jobs = self.job_scheduler._check_jobs(runnable_jobs, dep_cache)
+                ok_jobs, cancel_jobs = self.job_scheduler._check_jobs(runnable_jobs, dep_cache)
                 self.job_scheduler._job_collection.update_many(ok_jobs, 'tasked')
+                for job in cancel_jobs:
+                    self.job_scheduler._complete_job(job, False, True)
                 for job in ok_jobs:
                     self.job_scheduler._spawn_job(job)
 

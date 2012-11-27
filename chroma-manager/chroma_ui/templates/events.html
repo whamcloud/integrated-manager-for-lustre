@@ -27,6 +27,7 @@
           function formatRows(data) {
             $.each(data.aaData, function(i, row) {
               row.created_at = shortLocalTime(row.created_at);
+              row.severity = UIHelper.severity_icon(row.severity);
             });
             callback(data);
           }
@@ -38,8 +39,8 @@
         },
         aaSorting: [[0, 'desc']],
         "aoColumns": [
+            { "sClass": 'icon_column',"mDataProp":"severity", "bSortable":false},
             { "sClass": 'txtleft',"mDataProp":"created_at", "bSortable":true},
-            { "sClass": 'txtcenter',"mDataProp":"severity", "bSortable":false},
             { "sClass": 'txtleft',"mDataProp":"host_name", "bSortable":true},
             { "sClass": 'txtleft',"mDataProp":"message","bSortable":false}
          ],
@@ -55,49 +56,50 @@
     return {draw:draw}
   }();
 </script>
-<h2 class="section_header">Event History</h2>
-<table width="100%" border="0" cellspacing="0" cellpadding="3" align="center" style="border: 1px;border-color: blue;" >
-  <tr style="background-color:#cccccc;">
-    <td width="60%">
-      <div class="timeint">
-        Host: &nbsp;
-        <select id="event_host">
-        <option value="">All</option>
-        </select>
-          &nbsp;
-          Severity: &nbsp;
-        <select id="event_severity">
-          <option value="">Any</option>
-          <option value="INFO">Info</option>
-          <option value="WARNING">Warning</option>
-          <option value="ERROR">Error</option>
-        </select>
-         &nbsp;Event type:&nbsp;
-        <select id="event_type">
-          <option value="">Any</option>
-          <option value="LearnEvent">Autodetection</option>
-          <option value="AlertEvent">Alert</option>
-          <option value="SyslogEvent">Syslog</option>
-          <option value="StorageResourceLearnEvent">Storage resource detection</option>
-        </select>
-        <input value="Filter" id="filter_btn" type="button"></input>
-      </div>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="3"><form>
-      <div class='content'>
+
+<div class='content'>
+  <h2 class="section_header">Event History</h2>
+  <table class='layout'>
+    <tr style="background-color:#cccccc;">
+      <td width="60%">
+        <div class="timeint">
+          Host: &nbsp;
+          <select id="event_host">
+          <option value="">All</option>
+          </select>
+            &nbsp;
+            Severity: &nbsp;
+          <select id="event_severity">
+            <option value="">Any</option>
+            <option value="INFO">Info</option>
+            <option value="WARNING">Warning</option>
+            <option value="ERROR">Error</option>
+          </select>
+           &nbsp;Event type:&nbsp;
+          <select id="event_type">
+            <option value="">Any</option>
+            <option value="LearnEvent">Autodetection</option>
+            <option value="AlertEvent">Alert</option>
+            <option value="SyslogEvent">Syslog</option>
+            <option value="StorageResourceLearnEvent">Storage resource detection</option>
+          </select>
+          <input value="Filter" id="filter_btn" type="button"></input>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" id="events_table">
           <thead>
             <tr>
-              <th width="10%">Event&nbsp;Created&nbsp;At</th>
-              <th width="10%">Status</th>
-              <th width="10%">Host</th>
+              <th class='icon_column'></th>
+              <th width="10%">Time</th>
+              <th width="20%">Host</th>
               <th width="70%">Message</th>
             </tr>
           </thead>
         </table>
-      </div>
-    </td>
-  </tr>
-</table>
+      </td>
+    </tr>
+  </table>
+</div>

@@ -5,6 +5,18 @@
 import json
 import os
 from django.utils import unittest
+from chroma_agent.device_plugins.linux import DmsetupTable
+
+
+class MockDmsetupTable(DmsetupTable):
+    def __init__(self, dmsetup_data, devices_data):
+        self.lvs = devices_data['lvs']
+        self.vgs = devices_data['vgs']
+        self.mpaths = {}
+        self.block_devices = object()
+        self.block_devices.node_block_devices = devices_data['node_block_devices']
+        self.block_devices.block_device_nodes = devices_data['block_device_nodes']
+        self._parse_dm_table(dmsetup_data)
 
 
 class TestDmSetupParse(unittest.TestCase):
@@ -22,12 +34,12 @@ class TestDmSetupParse(unittest.TestCase):
         self._test_dmsetup('devices_1.txt', 'dmsetup_1.txt', 'mpaths_1.txt')
 
     def _test_dmsetup(self, devices_filename, dmsetup_filename, mpaths_filename):
-        from chroma_agent.device_plugins.linux import _parse_dm_table
-        data = json.loads(self.load(devices_filename))
-        mpaths = {}
-        _parse_dm_table(self.load(dmsetup_filename), data['node_block_devices'], data['block_device_nodes'], data['vgs'], data['lvs'], mpaths)
+        devices_data = json.loads(self.load(devices_filename))
+        dmsetup_data = self.load(dmsetup_filename)
+        actual_mpaths = MockDmsetupTable(dmsetup_data, devices_data).mpaths
         expected_mpaths = json.loads(self.load(mpaths_filename))
-        self.assertDictEqual(mpaths, expected_mpaths)
+
+        self.assertDictEqual(actual_mpaths, expected_mpaths)
 
     def test_HYD_1383(self):
         """Minimal reproducer for HYD-1383.  The `dmsetup table` output is authentic, the other inputs are hand crafted to

@@ -342,7 +342,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
         resource_name = 'filesystem'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ['not_deleted']
+        excludes = ['not_deleted', 'ost_next_index', 'mdt_next_index']
         ordering = ['name']
         filtering = {'id': ['exact', 'in'], 'name': ['exact']}
         list_allowed_methods = ['get', 'post']
@@ -368,7 +368,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
         # hydration errors through to validation.
         mgt_data = bundle.data['mgt']
         if 'volume_id' in mgt_data:
-            mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], name="MGS", **self._format_attrs(mgt_data))
+            mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], **self._format_attrs(mgt_data))
             mgt_id = mgt.pk
         else:
             mgt_id = mgt_data['id']

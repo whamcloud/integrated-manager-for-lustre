@@ -5,6 +5,7 @@
 
 
 from collections import defaultdict
+from django.db.models import Max
 from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import Resource
 from tastypie import fields
@@ -13,7 +14,7 @@ from chroma_api import api_log
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode
-from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTargetMount
+from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTargetMount, FilesystemMember
 import chroma_core.lib.conf_param
 
 
@@ -137,6 +138,8 @@ class ConfigurationResource(Resource):
             data['state'] = target.state
             data['uuid'] = target.uuid
             data['name'] = target.name
+            if isinstance(target, FilesystemMember):
+                data['index'] = target.index
             data['inode_size'] = target.inode_size
             data['bytes_per_inode'] = target.bytes_per_inode
             data['inode_count'] = target.inode_count
@@ -160,6 +163,8 @@ class ConfigurationResource(Resource):
                 filesystem['mdts'] = [self._dehydrate_target(mdt) for mdt in ManagedMdt.objects.filter(filesystem = fs)]
                 filesystem['osts'] = [self._dehydrate_target(ost) for ost in ManagedOst.objects.filter(filesystem = fs)]
                 filesystem['immutable_state'] = fs.immutable_state
+                filesystem['ost_next_index'] = fs.ost_next_index
+                filesystem['mdt_next_index'] = fs.mdt_next_index
                 mgt['filesystems'].append(filesystem)
             mgts.append(mgt)
 
@@ -207,6 +212,11 @@ class ConfigurationResource(Resource):
             # against attrs in input
         except klass.DoesNotExist:
             api_log.info("ConfigurationResource creating target %s" % target_data['name'])
+
+            if 'filesystem' in kwargs:
+                # FilesystemMember, check indices
+                if klass.objects.filter(filesystem = kwargs['filesystem'], index = kwargs['index']).exists():
+                    raise RuntimeError("Attempted to re-use index %s for target %s" % (kwargs['index'], kwargs['name']))
             target = klass.objects.create(**kwargs)
 
         for mount in mounts:
@@ -240,6 +250,9 @@ class ConfigurationResource(Resource):
                 filesystem, created = ManagedFilesystem.objects.get_or_create(mgs = mgt, name = fs_data['name'])
                 if created:
                     api_log.info("ConfigurationResource: created filesystem %s" % filesystem)
+                    filesystem.mdt_next_index = fs_data['mdt_next_index']
+                    filesystem.ost_next_index = fs_data['ost_next_index']
+                    filesystem.save()
                 conf_params = dict([(k, v) for k, v in fs_data['conf_params'].items() if v is not None])
                 chroma_core.lib.conf_param.set_conf_params(filesystem, conf_params, new = False)
 
@@ -247,5 +260,13 @@ class ConfigurationResource(Resource):
                     self._load_target(ost_data, ManagedOst, filesystem = filesystem)
                 for mdt_data in fs_data['mdts']:
                     self._load_target(mdt_data, ManagedMdt, filesystem = filesystem)
+
+                # Update filesystem max_index attributes to account for any targets created
+                mdt_max_index = ManagedMdt.objects.filter(filesystem = filesystem).aggregate(Max('index'))['index__max']
+                if filesystem.mdt_next_index <= mdt_max_index:
+                    ManagedFilesystem.objects.filter(pk = filesystem.pk).update(mdt_next_index = mdt_max_index + 1)
+                ost_max_index = ManagedOst.objects.filter(filesystem = filesystem).aggregate(Max('index'))['index__max']
+                if filesystem.ost_next_index <= ost_max_index:
+                    ManagedFilesystem.objects.filter(pk = filesystem.pk).update(ost_next_index = ost_max_index + 1)
 
         return bundle

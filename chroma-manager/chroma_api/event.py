@@ -56,7 +56,7 @@ class EventResource(ModelResource):
         always_return_data = True
 
     def dehydrate_host_name(self, bundle):
-        return bundle.obj.host.pretty_name() if bundle.obj.host else "---"
+        return bundle.obj.host.get_label() if bundle.obj.host else "---"
 
     def dehydrate_message(self, bundle):
         return bundle.obj.message()
