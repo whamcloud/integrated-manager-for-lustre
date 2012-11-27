@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import Select
 from tests.selenium.base_view import BaseView
 from tests.selenium.utils.element import (
     enter_text_for_element, find_visible_element_by_css_selector,
-    get_selected_option_text
+    get_selected_option_text, wait_for_element_by_css_selector
 )
 
 
@@ -59,6 +59,7 @@ class CreateFilesystem(BaseView):
 
     def open_conf_params(self):
         self.advanced_button.click()
+        wait_for_element_by_css_selector(self.driver, self.conf_param_apply_button, self.standard_wait)
 
     def close_conf_params(self):
         self.driver.find_element_by_css_selector(self.conf_param_apply_button).click()
