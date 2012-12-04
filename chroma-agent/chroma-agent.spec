@@ -18,7 +18,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: python-simplejson python-argparse python-daemon python-setuptools
+Requires: python-simplejson python-argparse python-daemon python-setuptools util-linux-ng
 Requires(post): selinux-policy
 
 %description
