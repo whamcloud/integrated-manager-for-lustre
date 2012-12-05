@@ -502,7 +502,7 @@ Agent plugins
 
 Plugin code running within the Chroma agent has a simple interface:
 
-.. autoclass:: chroma_agent.plugins.DevicePlugin
+.. autoclass:: chroma_agent.plugin_manager.DevicePlugin
   :members: start_session, update_session
 
 Implementing `update_session` is optional: plugins which do not implement this function will only send

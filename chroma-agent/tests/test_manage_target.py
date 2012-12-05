@@ -2,87 +2,118 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
+from chroma_agent.action_plugins.manage_targets import writeconf_target, format_target
 
-
-from chroma_agent.action_plugins.manage_targets import tunefs, mkfs
 from django.utils import unittest
+import chroma_agent.shell
 
 
-class TestLustreTunefsCommand(unittest.TestCase):
+class CommandCaptureTestCase(unittest.TestCase):
+    results = {}
+
+    def setUp(self):
+        self._command_history = []
+
+        def fake_shell(args):
+            self._command_history.append(args)
+            if tuple(args) in self.results:
+                return self.results[tuple(args)]
+
+        self._old_shell = chroma_agent.shell.try_run
+        chroma_agent.shell.try_run = fake_shell
+
+    def assertRan(self, command):
+        self.assertIn(command, self._command_history)
+
+    def tearDown(self):
+        chroma_agent.shell.try_run = self._old_shell
+
+
+class TestWriteconfTarget(CommandCaptureTestCase):
     def test_mdt_tunefs(self):
-        cmd = tunefs(device='/dev/foo',
+        writeconf_target(device='/dev/foo',
                             target_types=['mdt'])
-        self.assertEqual(cmd, "tunefs.lustre --mdt /dev/foo")
+        self.assertRan(['tunefs.lustre', '--mdt', '/dev/foo'])
 
     def test_mgs_tunefs(self):
-        cmd = tunefs(device='/dev/foo',
+        writeconf_target(device='/dev/foo',
                             target_types=['mgs'])
-        self.assertEqual(cmd, "tunefs.lustre --mgs /dev/foo")
+        self.assertRan(["tunefs.lustre", "--mgs", "/dev/foo"])
 
     def test_ost_tunefs(self):
-        cmd = tunefs(device='/dev/foo',
+        writeconf_target(device='/dev/foo',
                             target_types=['ost'])
-        self.assertEqual(cmd, "tunefs.lustre --ost /dev/foo")
+        self.assertRan(["tunefs.lustre", "--ost", "/dev/foo"])
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case
     def test_tuple_opts(self):
-        cmd = tunefs(device='/dev/foo',
+        writeconf_target(device='/dev/foo',
                             target_types=['mgs', 'mdt'])
-        self.assertEqual(cmd, "tunefs.lustre --mgs --mdt /dev/foo")
+        self.assertRan(["tunefs.lustre", "--mgs", "--mdt", "/dev/foo"])
 
     def test_dict_opts(self):
-        cmd = tunefs(param={'foo': 'bar', 'baz': 'qux thud'})
-        self.assertEqual(cmd, 'tunefs.lustre --param foo=bar --param baz="qux thud"')
+        writeconf_target(device='/dev/foo',
+            param={'foo': 'bar', 'baz': 'qux thud'})
+        self.assertRan(["tunefs.lustre", "--param", "foo=bar", "--param", "baz=qux thud", "/dev/foo"])
 
     def test_flag_opts(self):
-        cmd = tunefs(dryrun=True)
-        self.assertEqual(cmd, "tunefs.lustre --dryrun")
+        writeconf_target(device='/dev/foo',
+            dryrun=True)
+        self.assertRan(["tunefs.lustre", "--dryrun", "/dev/foo"])
 
     def test_other_opts(self):
-        cmd = tunefs(index='42',
-                            mountfsoptions='-x 30 --y --z=83')
-        self.assertEqual(cmd, 'tunefs.lustre --index=42 --mountfsoptions="-x 30 --y --z=83"')
+        writeconf_target(device='/dev/foo',
+            index='42', mountfsoptions='-x 30 --y --z=83')
+        self.assertRan(["tunefs.lustre", "--index=42", "--mountfsoptions=-x 30 --y --z=83", "/dev/foo"])
 
     def test_unknown_opt(self):
-        self.assertRaises(TypeError, tunefs, unknown='whatever')
+        self.assertRaises(TypeError, writeconf_target, unknown='whatever')
 
 
-class TestLustreMkfsCommand(unittest.TestCase):
+class TestFormatTarget(CommandCaptureTestCase):
+    results = {
+        ("blkid", "-o", "value", "-s", "UUID", "/dev/foo"): "123456",
+        ("dumpe2fs", "-h", "/dev/foo"): """
+        Inode count: 1
+        Inode size: 2
+"""
+    }
+
     def test_mdt_mkfs(self):
-        cmd = mkfs(device='/dev/foo',
+        format_target(device='/dev/foo',
                           target_types=['mdt'])
-        self.assertEqual(cmd, "mkfs.lustre --mdt /dev/foo")
+        self.assertRan(["mkfs.lustre", "--mdt", "/dev/foo"])
 
     def test_mgs_mkfs(self):
-        cmd = mkfs(device='/dev/foo',
+        format_target(device='/dev/foo',
                           target_types=['mgs'])
-        self.assertEqual(cmd, "mkfs.lustre --mgs /dev/foo")
+        self.assertRan(["mkfs.lustre", "--mgs", "/dev/foo"])
 
     def test_ost_mkfs(self):
-        cmd = mkfs(device='/dev/foo',
+        format_target(device='/dev/foo',
                           target_types=['ost'])
-        self.assertEqual(cmd, "mkfs.lustre --ost /dev/foo")
+        self.assertRan(["mkfs.lustre", "--ost", "/dev/foo"])
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case
     def test_tuple_opts(self):
-        cmd = mkfs(device='/dev/foo',
+        format_target(device='/dev/foo',
                           target_types=['mgs', 'mdt'])
-        self.assertEqual(cmd, "mkfs.lustre --mgs --mdt /dev/foo")
+        self.assertRan(["mkfs.lustre", "--mgs", "--mdt", "/dev/foo"])
 
     def test_dict_opts(self):
-        cmd = mkfs(param={'foo': 'bar', 'baz': 'qux thud'})
-        self.assertEqual(cmd, 'mkfs.lustre --param foo=bar --param baz="qux thud"')
+        format_target(device = "/dev/foo", param={'foo': 'bar', 'baz': 'qux thud'})
+        self.assertRan(["mkfs.lustre", "--param", "foo=bar", "--param", "baz=qux thud", "/dev/foo"])
 
     def test_flag_opts(self):
-        cmd = mkfs(dryrun=True)
-        self.assertEqual(cmd, "mkfs.lustre --dryrun")
+        format_target(device = "/dev/foo", dryrun=True)
+        self.assertRan(["mkfs.lustre", "--dryrun", "/dev/foo"])
 
     def test_other_opts(self):
-        cmd = mkfs(index='42',
+        format_target(device = "/dev/foo", index='42',
                           mkfsoptions='-x 30 --y --z=83')
-        self.assertEqual(cmd, 'mkfs.lustre --index=42 --mkfsoptions="-x 30 --y --z=83"')
+        self.assertRan(["mkfs.lustre", "--index=42", "--mkfsoptions=-x 30 --y --z=83", "/dev/foo"])
 
     def test_unknown_opt(self):
-        self.assertRaises(TypeError, mkfs, unknown='whatever')
+        self.assertRaises(TypeError, format_target, unknown='whatever')

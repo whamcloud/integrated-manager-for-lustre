@@ -1,9 +1,10 @@
+
+
 from testconfig import config
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
-from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
 
-
-class TestAutodetection(AuthorizedTestCase):
+class TestAutodetection(ChromaIntegrationTestCase):
     def setUp(self):
         super(TestAutodetection, self).setUp()
 

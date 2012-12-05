@@ -1,6 +1,5 @@
 from chroma_core.lib.util import dbperf
 from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.host import ManagedHost
 from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst
 from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestCase
 from django.db import connection
@@ -28,7 +27,7 @@ class TestOneHost(JobTestCase):
             dbperf.enabled = True
 
             with dbperf("create_from_string"):
-                host, command = ManagedHost.create_from_string('myaddress')
+                host = self._create_host('myaddress')
             with dbperf("set_state"):
                 self.set_state_delayed([(host, 'lnet_up'), (host.lnetconfiguration, 'nids_known')])
             with dbperf("run_next"):
@@ -63,13 +62,13 @@ class TestBigFilesystem(JobTestCase):
             }
 
         with dbperf("object creation"):
-            self.mgs0, command = ManagedHost.create_from_string('mgs0')
-            self.mgs1, command = ManagedHost.create_from_string('mgs1')
-            self.mds0, command = ManagedHost.create_from_string('mds0')
-            self.mds1, command = ManagedHost.create_from_string('mds1')
+            self.mgs0 = self._create_host('mgs0')
+            self.mgs1 = self._create_host('mgs1')
+            self.mds0 = self._create_host('mds0')
+            self.mds1 = self._create_host('mds1')
             self.osss = {}
             for i in range(0, OSS_COUNT):
-                oss, command = ManagedHost.create_from_string('oss%d' % i)
+                oss = self._create_host('oss%d' % i)
                 self.osss[i] = oss
 
             self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.mgs0, self.mgs1).id, name = "MGS")
@@ -177,7 +176,7 @@ class TestFSTransitions(JobTestCaseWithHost):
         """Test that removing a filesystem whose MGT is online leaves the MGT online at completion, but
         stops it in the course of the removal (for the debugfs-ing)"""
         self.set_state(self.mgt, 'mounted')
-        with self.assertInvokes('stop-target --ha_label %s' % freshen(self.mgt).ha_label):
+        with self.assertInvokes('stop_target', {'ha_label': freshen(self.mgt).ha_label}):
             self.set_state(self.fs, 'removed')
         self.assertState(self.mgt, 'mounted')
         with self.assertRaises(ManagedFilesystem.DoesNotExist):

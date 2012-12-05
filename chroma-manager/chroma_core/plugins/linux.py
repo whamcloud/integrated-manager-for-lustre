@@ -136,7 +136,8 @@ class Linux(Plugin):
         self.log.debug("Linux.teardown")
 
     def agent_session_continue(self, host_id, data):
-        pass
+        # The agent plugin sends us another full report when it thinks something has changed
+        self.agent_session_start(host_id, data)
 
     def agent_session_start(self, host_id, data):
         devices = data

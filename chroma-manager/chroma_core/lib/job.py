@@ -151,12 +151,13 @@ class Step(object):
         self.result.log += "%s\n" % message
         self.result.save()
 
-    def invoke_agent(self, host, command, args = None):
+    def invoke_agent(self, host, command, args = {}):
         def console_callback(chunk):
             self.result.console += chunk
             self.result.save()
 
-        from chroma_core.lib.agent import Agent
+        from chroma_core.services.job_scheduler.agent_rpc import Agent
+        job_log.info("invoke_agent on agent %s %s %s" % (Agent, command, args))
         agent = Agent(host = host, log = job_log, console_callback = console_callback, timeout = self.timeout)
         return agent.invoke(command, args)
 
@@ -166,14 +167,15 @@ class IdempotentStep(Step):
 
 
 class AnyTargetMountStep(Step):
-    def _run_agent_command(self, target, command):
+    def _run_agent_command(self, target, command, args):
         # There is a set of hosts that we can try to contact to start the target: assume
         # that anything with a TargetMount on is part of the corosync cluster and can be
         # used to issue a command to start this resource.
 
         # Try and use each targetmount, the one with the most recent successful audit first
         from chroma_core.models import ManagedTargetMount
-        available_tms = ManagedTargetMount.objects.filter(target = target, host__state = 'lnet_up').order_by('-host__last_contact')
+        # FIXME: HYD-1238: use an authentic online/offline state to select where to run
+        available_tms = ManagedTargetMount.objects.filter(target = target)
         if available_tms.count() == 0:
             raise RuntimeError("No hosts are available for target %s" % target)
         available_tms = list(available_tms)
@@ -182,7 +184,7 @@ class AnyTargetMountStep(Step):
             job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
 
             try:
-                return self.invoke_agent(tm.host, command)
+                return self.invoke_agent(tm.host, command, args)
                 # Success!
             except Exception:
                 job_log.warning("Cannot run '%s' on %s." % (command, tm.host))

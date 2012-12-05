@@ -44,18 +44,6 @@ class Command(models.Model):
             the action being done by the command")
     created_at = models.DateTimeField(auto_now_add = True)
 
-    def check_completion(self):
-        jobs = self.jobs.all().values('state', 'errored', 'cancelled')
-        if set([j['state'] for j in jobs]) == set(['complete']) or len(jobs) == 0:
-            if True in [j['errored'] for j in jobs]:
-                self.errored = True
-            elif True in [j['cancelled'] for j in jobs]:
-                self.cancelled = True
-
-            job_log.info("Command %s (%s) completed in %s" % (self.id, self.message, now() - self.created_at))
-            self.complete = True
-            self.save()
-
     @classmethod
     def set_state(cls, objects, message = None, **kwargs):
         """The states argument must be a collection of 2-tuples

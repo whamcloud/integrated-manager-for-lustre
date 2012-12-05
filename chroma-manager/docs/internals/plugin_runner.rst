@@ -6,7 +6,7 @@ There are two somewhat distinct classes which operate within this service:
 
 .. autoclass:: chroma_core.services.plugin_runner.scan_daemon.ScanDaemon
 
-.. autoclass:: chroma_core.services.plugin_runner.agent_daemon.AgentDaemon
+.. autoclass:: chroma_core.services.plugin_runner.agent_daemon.AgentPluginHandler
 
 AgentDaemon and ScanDaemon run within one process because they share
 an instance of ResourceManager, which guards potentially overlapping modifications

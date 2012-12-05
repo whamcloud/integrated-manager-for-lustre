@@ -4,20 +4,30 @@
 # ========================================================
 
 
-"""Rsyslog actions."""
-
-from chroma_agent import shell
-from chroma_agent.plugins import ActionPlugin
-
+from chroma_agent.device_plugins.syslog import SYSLOG_PORT
 import os
+from chroma_agent import shell
 
 
-def unconfigure_rsyslog(args):
-    args.node = ""
-    configure_rsyslog(args)
+def unconfigure_rsyslog():
+    """
+    Modify the rsyslogd configuration to stop forwarding messages to chroma
+
+    :return: None
+    """
+    _configure_rsyslog("")
 
 
-def configure_rsyslog(args):
+def configure_rsyslog():
+    """
+    Modify the rsyslogd configuration to forward all messages to chroma
+
+    :return: None
+    """
+    _configure_rsyslog("127.0.0.1")
+
+
+def _configure_rsyslog(destination):
     from tempfile import mkstemp
     tmp_f, tmp_name = mkstemp(dir = '/etc')
     f = open('/etc/rsyslog.conf', 'r')
@@ -33,11 +43,11 @@ def configure_rsyslog(args):
         if not skip:
             os.write(tmp_f, line)
     f.close()
-    if args.node != "":
+    if destination != "":
         os.write(tmp_f, "# added by chroma-agent\n" \
                         "$PreserveFQDN on\n" \
-                        "*.* @@%s;RSYSLOG_ForwardFormat\n" \
-                        "# added by chroma-agent\n" % args.node)
+                        "*.* @@%s:%s;RSYSLOG_ForwardFormat\n" \
+                        "# added by chroma-agent\n" % (destination, SYSLOG_PORT))
     os.close(tmp_f)
     os.chmod(tmp_name, 0644)
     os.rename(tmp_name, "/etc/rsyslog.conf")
@@ -48,14 +58,5 @@ def configure_rsyslog(args):
         shell.try_run(['service', 'rsyslog', 'restart'])
 
 
-class RsyslogPlugin(ActionPlugin):
-    def register_commands(self, parser):
-        p = parser.add_parser("configure-rsyslog",
-                              help="configure rsyslog forwarding")
-        p.add_argument("--node", required=True,
-                       help="syslog aggregation node")
-        p.set_defaults(func=configure_rsyslog)
-
-        p = parser.add_parser("unconfigure-rsyslog",
-                              help="unconfigure rsyslog forwarding")
-        p.set_defaults(func=unconfigure_rsyslog)
+ACTIONS = [configure_rsyslog, unconfigure_rsyslog]
+CAPABILITIES = ['manage_rsyslog']

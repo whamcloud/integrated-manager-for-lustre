@@ -4,20 +4,16 @@
 # ========================================================
 
 
-"""NTP actions."""
-
-from chroma_agent import shell
-from chroma_agent.plugins import ActionPlugin
-
 import os
 
-
-def unconfigure_ntp(args):
-    args.node = ""
-    configure_ntp(args)
+from chroma_agent import shell
 
 
-def configure_ntp(args):
+def unconfigure_ntp():
+    configure_ntp(ntp_server = "")
+
+
+def configure_ntp(ntp_server):
     from tempfile import mkstemp
     from time import sleep
     tmp_f, tmp_name = mkstemp(dir = '/etc')
@@ -26,11 +22,11 @@ def configure_ntp(args):
     COMMENT_PREFIX = "# Commented by chroma-agent: "
     ADD_SUFFIX = " # Added by chroma-agent"
     for line in f.readlines():
-        if args.node:
+        if ntp_server:
             # Comment out existing server lines and add one of our own
             if line.startswith("server "):
                 if not added_server:
-                    os.write(tmp_f, "server %s%s\n" % (args.node, ADD_SUFFIX))
+                    os.write(tmp_f, "server %s%s\n" % (ntp_server, ADD_SUFFIX))
                     added_server = True
                 line = "%s%s" % (COMMENT_PREFIX, line)
         else:
@@ -41,10 +37,10 @@ def configure_ntp(args):
                 line = line[len(COMMENT_PREFIX):]
         os.write(tmp_f, line)
 
-    if args.node and not added_server:
+    if ntp_server and not added_server:
         # This can happen if there was no existing 'server' line for
         # us to insert before
-        os.write(tmp_f, "server %s%s\n" % (args.node, ADD_SUFFIX))
+        os.write(tmp_f, "server %s%s\n" % (ntp_server, ADD_SUFFIX))
 
     f.close()
     os.close(tmp_f)
@@ -53,7 +49,7 @@ def configure_ntp(args):
         os.rename("/etc/ntp.conf", "/etc/ntp.conf.pre-chroma")
     os.rename(tmp_name, "/etc/ntp.conf")
 
-    if args.node:
+    if ntp_server:
         # If we have a server, sync time to it now before letting ntpd take over
         shell.try_run(['service', 'ntpd', 'stop'])
 
@@ -65,7 +61,7 @@ def configure_ntp(args):
                 break
             else:
                 sleep(sleep_time)
-                timeout = timeout - sleep_time
+                timeout -= sleep_time
 
         # did we time out?
         if timeout < 1:
@@ -78,14 +74,5 @@ def configure_ntp(args):
         shell.try_run(['service', 'ntpd', 'restart'])
 
 
-class RsyslogPlugin(ActionPlugin):
-    def register_commands(self, parser):
-        p = parser.add_parser("configure-ntp",
-                              help="configure NTP server")
-        p.add_argument("--node", required=True,
-                       help="NTP server")
-        p.set_defaults(func=configure_ntp)
-
-        p = parser.add_parser("unconfigure-ntp",
-                              help="unconfigure NTP server")
-        p.set_defaults(func=unconfigure_ntp)
+ACTIONS = [configure_ntp, unconfigure_ntp]
+CAPABILITIES = ['manage_ntp']

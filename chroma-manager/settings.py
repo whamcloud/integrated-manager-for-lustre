@@ -221,12 +221,7 @@ LUSTRE_MKFS_OPTIONS_MDT = None
 LUSTRE_MKFS_OPTIONS_OST = None
 
 CELERY_ROUTES = (
-        {"chroma_core.tasks.audit_all": {"queue": "periodic"}},
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
-        {"chroma_core.tasks.parse_log_entries": {"queue": "periodic_slow"}},
-        {"chroma_core.tasks.prune_database": {"queue": "periodic_slow"}},
-
-        {"chroma_core.tasks.test_host_contact": {"queue": "jobs"}},
         {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
         )
 
@@ -264,14 +259,6 @@ SERIAL_PREFERENCE = ['serial_83', 'serial_80']
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = '/tmp/test_html'
 
-# If your server isn't serving at port 80 on its FQDN
-# SERVER_HTTP_URL = "http://myhost.mydomain:80/"
-SERVER_HTTP_URL = None
-
-# If your log server isn't running on this host's FQDN
-# LOG_SERVER_HOSTNAME = "mylogserver.mydoman"
-LOG_SERVER_HOSTNAME = None
-
 # If you really want to point the Lustre servers at a specific NTP server
 # NTP_SERVER_HOSTNAME = "myntpserver.mydoman"
 NTP_SERVER_HOSTNAME = None
@@ -290,6 +277,17 @@ DBLOG_HW = 1200000
 # The value at which we stop aging database log entries out to a flat
 # text file
 DBLOG_LW = 1000000
+
+# Internal port, used for inter-service communication
+HTTP_API_PORT = 8001
+# Internal port, used for inter-service communication
+HTTP_AGENT_PORT = 8002
+
+HTTPS_FRONTEND_PORT = 443
+# If your storage servers will address the manager server by a non-default
+# address or port, override this
+SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
+
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
 

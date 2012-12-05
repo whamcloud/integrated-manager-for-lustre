@@ -75,7 +75,7 @@ rpms: cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
-	cp chroma-storage-init.sh chroma-worker-init.sh chroma-host-discover-init.sh chroma-manager.conf logrotate.cfg _topdir/SOURCES
+	cp chroma-supervisor-init.sh chroma-host-discover-init.sh chroma-manager.conf logrotate.cfg _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
 	rpmbuild -bb --define "_topdir $$(pwd)/_topdir" _topdir/SPECS/chroma-manager.spec
 	mv _topdir/RPMS/noarch/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).noarch.rpm dist/

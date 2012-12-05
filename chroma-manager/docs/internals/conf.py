@@ -28,4 +28,10 @@ from docs.conf_common import *
 project = u'Chroma Internals'
 master_doc = 'index'
 
+graphviz_dot_args = [
+        "-Nfontname=Arial", "-Nfontsize=10", "-Nshape=box",
+        "-Efontname=Arial", "-Efontsize=10"
+]
+
 extensions.append('sphinx.ext.viewcode')
+extensions.append('sphinx.ext.graphviz')

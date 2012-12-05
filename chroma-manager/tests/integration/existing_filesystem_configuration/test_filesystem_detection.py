@@ -1,20 +1,16 @@
+
+
 import re
 import time
 
 from testconfig import config
-
-from tests.utils.http_requests import AuthorizedHttpRequests
-
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
 class TestFilesystemDetection(ChromaIntegrationTestCase, StatsTestCaseMixin):
     def setUp(self):
-        self.reset_cluster()
-        user = config['chroma_managers'][0]['users'][0]
-        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
-                server_http_url = config['chroma_managers'][0]['server_http_url'])
+        ChromaIntegrationTestCase.setUp(self)
 
         # Attempt to ensure all the targets are mounted for the filesystem.
         for host in config['lustre_servers']:
@@ -100,20 +96,18 @@ class TestFilesystemDetection(ChromaIntegrationTestCase, StatsTestCaseMixin):
         self.assertEqual('available', filesystem['state'])
 
         # Verify a client can use the filesystem using the mount command provided
-        mount_command = filesystem['mount_command']
-        self.assertTrue(mount_command)
         client = config['lustre_clients'].keys()[0]
-        self.mount_filesystem(client, config['filesystem']['name'], mount_command)
+        self.remote_operations.mount_filesystem(client, filesystem)
         try:
             self.remote_command(
                 client,
                 "rm -rf /mnt/%s/*" % filesystem['name'],
                 expected_return_code = None  # may not exist - dont care, move along.
             )
-            self.exercise_filesystem(client, filesystem)
+            self.remote_operations.exercise_filesystem(client, filesystem)
             self.check_stats(filesystem['id'])
         finally:
-            self.unmount_filesystem(client, config['filesystem']['name'])
+            self.remote_operations.unmount_filesystem(client, filesystem)
 
         # Verify detects target unmount.
         for target in targets:

@@ -2,8 +2,8 @@ from django.utils import unittest
 import tempfile
 import os
 import shutil
-import chroma_agent.audit.lustre
-from chroma_agent.audit.lustre import LnetAudit, MdtAudit, MdsAudit, MgsAudit, ObdfilterAudit, LustreAudit
+import chroma_agent.device_plugins.audit.lustre
+from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MdsAudit, MgsAudit, ObdfilterAudit, LustreAudit
 
 
 class TestLustreAuditClassMethods(unittest.TestCase):
@@ -29,14 +29,14 @@ class TestLustreAuditScanner(unittest.TestCase):
         tests = os.path.join(os.path.dirname(__file__), '..')
         test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         list = [cls.__name__ for cls in
-                chroma_agent.audit.lustre.local_audit_classes(test_root)]
+                chroma_agent.device_plugins.audit.lustre.local_audit_classes(test_root)]
         self.assertEqual(list, ['LnetAudit', 'MdtAudit', 'MgsAudit'])
 
     def test_18x_audit_scanner(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         test_root = os.path.join(tests, "data/lustre_versions/1.8.7.80/mds_mgs")
         list = [cls.__name__ for cls in
-                chroma_agent.audit.lustre.local_audit_classes(test_root)]
+                chroma_agent.device_plugins.audit.lustre.local_audit_classes(test_root)]
         self.assertEqual(list, ['LnetAudit', 'MdsAudit', 'MgsAudit'])
 
 

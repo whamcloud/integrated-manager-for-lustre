@@ -2,6 +2,7 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
+from chroma_core.lib.util import chroma_settings
 
 
 class FakeTestHostContactTask(object):
@@ -40,7 +41,6 @@ def patch_test_host_contact_task(context, fake_task=None):
 
 
 def before_all(context):
-    from chroma_core.lib.chroma_settings import chroma_settings
     settings = chroma_settings()
     from django.core.management import setup_environ
     setup_environ(settings)

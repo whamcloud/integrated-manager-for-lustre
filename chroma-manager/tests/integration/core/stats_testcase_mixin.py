@@ -1,15 +1,16 @@
+
+
 import logging
 import time
 
 from testconfig import config
-
-from tests.integration.core.api_testcase import ApiTestCase
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
 
-class StatsTestCaseMixin(ApiTestCase):
+class StatsTestCaseMixin(ChromaIntegrationTestCase):
     """
     This TestCase Mixin adds the verbose checks that stats are returning
     as expected. It is meant to be used with ChromaIntegrationTestCase using
@@ -23,12 +24,17 @@ class StatsTestCaseMixin(ApiTestCase):
         without exception and that a few are updated as expected when
         corresponding actions are taken. Far from exhaustive.
         """
+        if config['simulator']:
+            # Simulator doesn't know how to map client writes to decrementing
+            # OST stats
+            return
+
         filesystem = self.get_filesystem(filesystem_id)
         client = config['lustre_clients'].keys()[0]
 
         # Make sure client cache is flushed and stats up to date
-        self.unmount_filesystem(client, filesystem['name'])
-        self.mount_filesystem(client, filesystem['name'], filesystem['mount_command'])
+        self.remote_operations.unmount_filesystem(client, filesystem)
+        self.remote_operations.mount_filesystem(client, filesystem)
         time.sleep(20)
 
         # Check bytes free
@@ -80,10 +86,10 @@ class StatsTestCaseMixin(ApiTestCase):
 
         # Make sure client cache is flushed and check client count while we are at it
         starting_client_count = filesystem['client_count']
-        self.unmount_filesystem(client, filesystem['name'])
+        self.remote_operations.unmount_filesystem(client, filesystem)
         self.wait_until_true(lambda: self.get_filesystem(filesystem_id).get('client_count') == starting_client_count - 1)
 
-        self.mount_filesystem(client, filesystem['name'], filesystem['mount_command'])
+        self.remote_operations.mount_filesystem(client, filesystem)
         self.wait_until_true(lambda: self.get_filesystem(filesystem_id).get('client_count') == starting_client_count)
 
         # Check bytes free are what we expect after the writing above

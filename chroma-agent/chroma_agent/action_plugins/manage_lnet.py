@@ -4,46 +4,81 @@
 # ========================================================
 
 
-from chroma_agent.shell import try_run
-from chroma_agent.plugins import ActionPlugin
+from chroma_agent import shell
+from chroma_agent.log import console_log
 
 
-def start_lnet(args):
-    try_run(["lctl", "net", "up"])
+# Extra deps not expressed in lsmod's list of dependent modules
+RMMOD_EXTRA_DEPS = {"lquota": set(["lov", "osc", "mgc", "mds", "mdc", "lmv"])}
 
 
-def stop_lnet(args):
-    from chroma_agent.rmmod import rmmod
-    rmmod('ptlrpc')
-    try_run(["lctl", "net", "down"])
+class Module:
+    def __init__(self, lsmod_line):
+        parts = lsmod_line.split()
+        self.name = parts[0]
+        try:
+            self.dependents = set(parts[3].split(","))
+        except IndexError:
+            self.dependents = set([])
 
 
-def load_lnet(args):
-    try_run(["modprobe", "lnet"])
-    # hack for HYD-1263 - Fix or work around LU-1279 - failure trying to mount two targets at the same time after boot
-    # should be removed when LU-1279 is fixed
-    try_run(["modprobe", "lustre"])
+def _load_lsmod():
+    modules = {}
+
+    stdout = shell.try_run(["/sbin/lsmod"])
+    lines = [i for i in stdout.split("\n")[1:] if len(i) > 0]
+    for line in lines:
+        m = Module(line.strip())
+        modules[m.name] = m
+
+    for name, module in modules.items():
+        try:
+            module.dependents |= (RMMOD_EXTRA_DEPS[name] & set(modules.keys()))
+        except KeyError:
+            pass
+
+    return modules
 
 
-def unload_lnet(args):
-    from chroma_agent.rmmod import rmmod
-    rmmod('lnet')
+def _remove_module(name, modules):
+    try:
+        m = modules[name]
+    except KeyError:
+        # It's not loaded, do nothing.
+        return
+    console_log.info("Removing %d dependents of %s : %s" % (len(m.dependents), name, m.dependents))
+    while m.dependents:
+        _remove_module(m.dependents.pop(), modules)
+
+    console_log.info("Removing %s" % name)
+    shell.try_run(['rmmod', name])
+
+    modules.pop(name)
+    for m in modules.values():
+        if name in m.dependents:
+            m.dependents.remove(name)
 
 
-class LnetPlugin(ActionPlugin):
-    def register_commands(self, parser):
-        p = parser.add_parser("stop-lnet",
-                              help="stop LNet (lctl net down)")
-        p.set_defaults(func=stop_lnet)
+def _rmmod(module_name):
+    modules = _load_lsmod()
+    _remove_module(module_name, modules)
 
-        p = parser.add_parser("start-lnet",
-                              help="start LNet (lctl net up)")
-        p.set_defaults(func=start_lnet)
 
-        p = parser.add_parser("load-lnet",
-                              help="load LNet (modprobe lnet)")
-        p.set_defaults(func=load_lnet)
+def start_lnet():
+    shell.try_run(["lctl", "net", "up"])
 
-        p = parser.add_parser("unload-lnet",
-                              help="unload LNet (rmmod lnet)")
-        p.set_defaults(func=unload_lnet)
+
+def stop_lnet():
+    _rmmod('ptlrpc')
+    shell.try_run(["lctl", "net", "down"])
+
+
+def load_lnet():
+    shell.try_run(["modprobe", "lnet"])
+
+def unload_lnet():
+    _rmmod('lnet')
+
+
+ACTIONS = [start_lnet, stop_lnet, load_lnet, unload_lnet]
+CAPABILITIES = ['manage_lnet']

@@ -4,9 +4,8 @@
 # ========================================================
 
 
-from chroma_agent.agent_daemon import daemon_log
+from chroma_agent.log import daemon_log
 
-from chroma_agent.plugins import ActionPlugin
 import os
 
 
@@ -43,9 +42,8 @@ def get_nids():
     return lnet_nids
 
 
-def lnet_scan(args):
-    """Parse /proc for running LNet NIDs, and return a 2-tuple of
-       (whether lnet is up, list of NID strings)"""
+def lnet_scan():
+    """Parse /proc for running LNet NIDs, and return list of NID strings"""
     lnet_loaded, lnet_up = lnet_status()
 
     if not lnet_loaded:
@@ -60,9 +58,5 @@ def lnet_scan(args):
         raise RuntimeError("Failed to detect LNet NIDs")
     return nids
 
-
-class LnetScanPlugin(ActionPlugin):
-    def register_commands(self, parser):
-        p = parser.add_parser("lnet-scan",
-                              help="scan for LNet details")
-        p.set_defaults(func=lnet_scan)
+ACTIONS = [lnet_scan]
+CAPABILITIES = []

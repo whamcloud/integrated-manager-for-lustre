@@ -6,6 +6,7 @@
 
 """Chroma services may subscribe to named queues using this module.  The `ServiceQueue` class is a wrapper
 around an AMQP queue."""
+import threading
 
 from chroma_core.services import _amqp_connection
 from chroma_core.services.log import log_register
@@ -45,10 +46,10 @@ class ServiceQueue(object):
             log.info("Purged %s messages from '%s' queue" % (purged, self.name))
 
     def __init__(self):
-        self._stopping = False
+        self._stopping = threading.Event()
 
     def stop(self):
-        self._stopping = True
+        self._stopping.set()
 
     def serve(self, callback):
         from Queue import Empty as QueueEmpty
@@ -56,7 +57,7 @@ class ServiceQueue(object):
             q = conn.SimpleQueue(self.name, serializer = 'json')
             # FIXME: it would be preferable to avoid waking up so often: really what is wanted
             # here is to sleep on messages or a stop event.
-            while not self._stopping:
+            while not self._stopping.is_set():
                 try:
                     message = q.get(timeout = 1)
                     message.ack()

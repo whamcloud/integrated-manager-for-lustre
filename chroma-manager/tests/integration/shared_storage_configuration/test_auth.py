@@ -1,15 +1,12 @@
+
+
 from testconfig import config
-
 from tests.utils.http_requests import HttpRequests, AuthorizedHttpRequests
-
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
 class TestAuthentication(ChromaIntegrationTestCase):
     def setUp(self):
-        self.chroma_manager = HttpRequests(server_http_url =
-            config['chroma_managers'][0]['server_http_url'])
-
         superuser = config['chroma_managers'][0]['users'][0]
         self.reset_accounts(AuthorizedHttpRequests(superuser['username'], superuser['password'],
             server_http_url = config['chroma_managers'][0]['server_http_url']))
@@ -23,28 +20,31 @@ class TestAuthentication(ChromaIntegrationTestCase):
 
         user = config['chroma_managers'][0]['users'][0]
 
+        requests = HttpRequests(server_http_url =
+            config['chroma_managers'][0]['server_http_url'])
+
         # Must initially set up session and CSRF cookies
-        response = self.chroma_manager.get("/api/session/")
+        response = requests.get("/api/session/")
         self.assertEqual(response.successful, True, response.text)
         self.assertEqual(response.json['user'], None)
-        self.chroma_manager.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
-        self.chroma_manager.session.cookies['csrftoken'] = response.cookies['csrftoken']
-        self.chroma_manager.session.cookies['sessionid'] = response.cookies['sessionid']
+        requests.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
+        requests.session.cookies['csrftoken'] = response.cookies['csrftoken']
+        requests.session.cookies['sessionid'] = response.cookies['sessionid']
 
-        response = self.chroma_manager.post(
+        response = requests.post(
                 "/api/session/",
                 body = {'username': user['username'], 'password': user['password']},
         )
         self.assertEqual(response.successful, True, response.text)
 
-        response = self.chroma_manager.get("/api/session/")
+        response = requests.get("/api/session/")
         self.assertEqual(response.successful, True, response.text)
         self.assertEqual(response.json['user']['username'], user['username'])
 
-        response = self.chroma_manager.delete("/api/session/")
+        response = requests.delete("/api/session/")
         self.assertEqual(response.successful, True, response.text)
 
-        response = self.chroma_manager.get("/api/session/")
+        response = requests.get("/api/session/")
         self.assertEqual(response.successful, True, response.text)
         self.assertEqual(response.json['user'], None)
 

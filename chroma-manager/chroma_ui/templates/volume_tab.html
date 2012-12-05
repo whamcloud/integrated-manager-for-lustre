@@ -88,7 +88,8 @@
           volume.primary_select = "<select id='primary_host_"+volume.id+"'>";
           volume.secondary_select = "<select id='secondary_host_"+volume.id+"'>";
           volume.secondary_select += blank_option
-          $.each(volume.volume_nodes, function(i, node) {
+
+          $.each(_.sortBy(volume.volume_nodes, function(vn){return vn.host_label;}), function(i, node) {
             if (node.primary) {
               volume.primary_select += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
               volume.secondary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";

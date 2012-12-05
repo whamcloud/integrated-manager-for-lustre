@@ -5,65 +5,20 @@
 
 
 import logging
-import subprocess
 import getpass
 import socket
 import errno
 import sys
+from chroma_core.lib.util import chroma_settings, CommandLine
 
 log = logging.getLogger('installation')
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.INFO)
 
-from chroma_core.lib.chroma_settings import chroma_settings
 settings = chroma_settings()
 
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
-
-
-class RsyslogConfig:
-    CONFIG_FILE = "/etc/rsyslog.conf"
-    SENTINEL = "# Added by chroma-manager\n"
-
-    def __init__(self, config_file = None):
-        self.config_file = config_file or self.CONFIG_FILE
-
-    def remove(self):
-        """Remove our config section from the rsyslog config file, or do
-        nothing if our section is not there"""
-        rsyslog_lines = open(self.config_file).readlines()
-        try:
-            config_start = rsyslog_lines.index(self.SENTINEL)
-            rsyslog_lines.remove(self.SENTINEL)
-            config_end = rsyslog_lines.index(self.SENTINEL)
-            rsyslog_lines.remove(self.SENTINEL)
-            rsyslog_lines = rsyslog_lines[:config_start] + rsyslog_lines[config_end:]
-            open(self.config_file, 'w').write("".join(rsyslog_lines))
-        except ValueError:
-            # Missing start or end sentinel, cannot remove, ignore
-            pass
-
-    def add(self, database, server, user, port = None, password = None):
-        #:ommysql:database-server,database-name,database-userid,database-password
-        config_lines = [
-                    self.SENTINEL,
-                    "$ModLoad imtcp.so\n",
-                    "$InputTCPServerRun 514\n",
-                    "$ModLoad ommysql\n",
-                    "$template sqltpl,\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, convert_tz('%timereported:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), convert_tz('%timegenerated:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), %iut%, '%syslogtag%')\",SQL\n"]
-        if port:
-            config_lines.append("$ActionOmmysqlServerPort %d\n" % port)
-
-        action_line = "*.*       :ommysql:%s,%s,%s," % (server, database, user)
-        if password:
-            action_line += "%s" % password
-        action_line += ";sqltpl\n"
-        config_lines.append(action_line)
-        config_lines.append(self.SENTINEL)
-
-        rsyslog = open(self.config_file, 'a')
-        rsyslog.writelines(config_lines)
 
 
 class NTPConfig:
@@ -124,11 +79,7 @@ class NTPConfig:
         self.close_conf(tmp_f, tmp_name, f)
 
 
-class CommandError(Exception):
-    pass
-
-
-class ServiceConfig:
+class ServiceConfig(CommandLine):
     def __init__(self):
         self.verbose = False
 
@@ -201,26 +152,6 @@ class ServiceConfig:
 
         return True
 
-    def try_shell(self, cmdline, mystdout = subprocess.PIPE,
-                  mystderr = subprocess.PIPE):
-        rc, out, err = self.shell(cmdline, mystdout, mystderr)
-
-        if rc != 0:
-            log.error("Command failed: %s" % cmdline)
-            log.error("returned: %s" % rc)
-            log.error("stdout:\n%s" % out)
-            log.error("stderr:\n%s" % err)
-            raise CommandError("Command failed %s" % cmdline)
-        else:
-            return rc, out, err
-
-    def shell(self, cmdline, mystdout = subprocess.PIPE,
-              mystderr = subprocess.PIPE):
-        p = subprocess.Popen(cmdline, stdout = mystdout, stderr = mystderr)
-        out, err = p.communicate()
-        rc = p.wait()
-        return rc, out, err
-
     def _db_accessible(self):
         """Discover whether we have a working connection to the database"""
         from MySQLdb import OperationalError
@@ -272,21 +203,6 @@ class ServiceConfig:
         a user interface"""
         return self._db_current() and self._users_exist()
 
-    def _setup_rsyslog(self, database):
-        log.info("Writing rsyslog configuration")
-        rsyslog = RsyslogConfig()
-        rsyslog.remove()
-        rsyslog.add(database['NAME'],
-                    database['HOST'] or 'localhost',
-                    database['USER'],
-                    database['PORT'] or None,
-                    database['PASSWORD'] or None)
-
-    def _start_rsyslog(self):
-        log.info("Restarting rsyslog")
-        self.try_shell(["chkconfig", "rsyslog", "on"])
-        self.try_shell(['service', 'rsyslog', 'restart'])
-
     def _setup_ntp(self, server = None):
         if not server:
             server = self.get_input(msg = "NTP Server", default = "localhost")
@@ -329,7 +245,7 @@ class ServiceConfig:
 
         self.try_shell(["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
 
-    CONTROLLED_SERVICES = ['chroma-worker', 'chroma-storage', 'httpd']
+    CONTROLLED_SERVICES = ['chroma-supervisor']
 
     def _enable_services(self):
         log.info("Enabling Chroma daemons")
@@ -418,11 +334,8 @@ class ServiceConfig:
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
             self._setup_mysql(databases['default'])
-            self._setup_rsyslog(databases['default'])
         else:
             log.info("MySQL already accessible")
-
-        self._start_rsyslog()
 
         if not self._db_current():
             log.info("Creating database tables...")
@@ -507,7 +420,7 @@ class ServiceConfig:
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        interesting_services = self.CONTROLLED_SERVICES + ['mysqld', 'rsyslog', 'rabbitmq-server']
+        interesting_services = self.CONTROLLED_SERVICES + ['mysqld', 'rabbitmq-server']
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
@@ -543,7 +456,6 @@ class ServiceConfig:
         open(local_settings, 'w').write(local_settings_str)
 
         # TODO: support SERVER_HTTP_URL
-        # TODO: support LOG_SERVER_HOSTNAME
 
 
 def chroma_config():

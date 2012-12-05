@@ -12,6 +12,7 @@ WARNING:
 """
 import logging
 from chroma_core.lib.storage_plugin.api.resources import LogicalDrive
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
 from chroma_core.lib.storage_plugin.api import attributes, relations
@@ -329,7 +330,7 @@ class ResourceManager(object):
                     record.update_attribute('host_id', host.pk)
                 except ManagedHost.DoesNotExist:
                     log.info("Creating host for new VirtualMachine resource: %s" % resource.address)
-                    host, command = ManagedHost.create_from_string(resource.address)
+                    host, command = JobSchedulerClient.create_host_ssh(resource.address)
                     record.update_attribute('host_id', host.pk)
 
     def _balance_volume_nodes(self, volumes_to_balance, volume_id_to_nodes):
@@ -664,7 +665,7 @@ class ResourceManager(object):
         elif targets.count():
             log.warn("Leaving Volume %s, used by Target %s" % (volume.id, targets[0]))
         elif nodes.count():
-            log.warn("Leaving Volume %s, used by %s nodes" % (volume.id, nodes.count()))
+            log.warn("Leaving Volume %s, used by nodes %s" % (volume.id, [n.id for n in nodes]))
 
         return False
 
@@ -977,7 +978,7 @@ class ResourceManager(object):
             elif targets:
                 log.warn("Leaving Volume %s, used by Target %s" % (volume_id, targets[0]))
             elif nodes:
-                log.warn("Leaving Volume %s, used by %s nodes" % (volume_id, len(nodes)))
+                log.warn("Leaving Volume %s, used by nodes %s" % (volume_id, [n.id for n in nodes]))
 
         Volume.delayed.flush()
 
@@ -1032,18 +1033,24 @@ class ResourceManager(object):
             for record_id in ordered_for_deletion:
                 deleter.delete(int(record_id))
 
-    @transaction.commit_on_success
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
-            log.debug("global_remove_resource: %s" % resource_id)
-            from chroma_core.models import StorageResourceRecord
-            try:
-                record = StorageResourceRecord.objects.get(pk = resource_id)
-            except StorageResourceRecord.DoesNotExist:
-                log.error("ResourceManager received invalid request to remove non-existent resource %s" % resource_id)
-                return
+            # We must not already be in a transaction, or we might
+            # see dirty data from before another call
+            assert not transaction.is_managed()
+            with transaction.commit_manually():
+                # Be extra-sure to see a fresh view (HYD-1301)
+                transaction.commit()
+            with transaction.commit_on_success():
+                log.debug("global_remove_resource: %s" % resource_id)
+                from chroma_core.models import StorageResourceRecord
+                try:
+                    record = StorageResourceRecord.objects.get(pk = resource_id)
+                except StorageResourceRecord.DoesNotExist:
+                    log.error("ResourceManager received invalid request to remove non-existent resource %s" % resource_id)
+                    return
 
-            self._delete_resource(record)
+                self._delete_resource(record)
 
     def _record_find_ancestor(self, record_id, parent_klass):
         """Find an ancestor of type parent_klass, search depth first"""

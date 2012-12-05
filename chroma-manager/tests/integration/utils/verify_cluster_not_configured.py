@@ -16,4 +16,4 @@ class VerifyClusterNotConfigured(ChromaIntegrationTestCase):
             chroma_manager = HttpRequests(
                 server_http_url=chroma_manager_config['server_http_url']
             )
-            self.verify_cluster_has_no_managed_targets(chroma_manager)
+            self.assertDatabaseClear(chroma_manager)

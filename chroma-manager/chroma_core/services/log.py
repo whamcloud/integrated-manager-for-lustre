@@ -30,6 +30,7 @@ import settings
 _log_filename = None
 _loggers = set()
 _enable_stdout = False
+trace = None
 
 FILE_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
 STDOUT_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'

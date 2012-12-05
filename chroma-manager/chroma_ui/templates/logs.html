@@ -43,7 +43,7 @@
         "fnServerData": function (url, aoData, callback, settings) {
           var filter_args = {};
           if ( $('#id_only_lustre').is(':checked')) {
-            filter_args['message__startswith'] = " Lustre"
+            filter_args['message_class__in'] = ['LUSTRE', 'LUSTRE_ERROR']
           }
           filter_args['host_id'] = $('#logs_hostList').val();
 
@@ -59,8 +59,8 @@
             }
           }
 
-          filter_args['devicereportedtime__gte'] = timepicker_iso($('#datetime_from'));
-          filter_args['devicereportedtime__lte'] = timepicker_iso($('#datetime_to'));
+          filter_args['datetime__gte'] = timepicker_iso($('#datetime_from'));
+          filter_args['datetime__lte'] = timepicker_iso($('#datetime_to'));
           $.each(aoData, function(i, param) {
               if (param.name == 'sSearch') {
                   filter_args['message__icontains'] = param.value;
@@ -72,11 +72,10 @@
               _.each(data.aaData, function(row) {
                 // set styling for error vs info
                 row.DT_RowClass = row.message.search("LustreError") != -1 ? 'log_error' : 'log_info';
-                row.devicereportedtime = shortLocalTime(row.devicereportedtime);
-                row.syslogtag = row.syslogtag.slice(0, -1);
+                row.datetime = shortLocalTime(row.datetime);
 
-                var substituted = "",
-                    cursor = 0;
+                var substituted = "";
+                var cursor = 0;
                 _.each(row.substitutions, function(substitution) {
                     // get all text before our substitution
                     substituted += _.escape(row.message.substr(cursor, substitution.start - cursor));
@@ -96,18 +95,10 @@
         },
        aaSorting: [[0, 'desc']],
        "aoColumns": [
-           { "sClass": 'txtleft', "mDataProp":"devicereportedtime", "bSortable":true},
-           { "sClass": 'txtleft', "mDataProp":"fromhost", "bSortable":true},
-           { "sClass": 'txtleft', "mDataProp":"syslogtag", "bSortable":false},
+           { "sClass": 'txtleft', "mDataProp":"datetime", "bSortable":true},
+           { "sClass": 'txtleft', "mDataProp":"fqdn", "bSortable":true},
+           { "sClass": 'txtleft', "mDataProp":"tag", "bSortable":false},
            { "sClass": 'txtleft', "mDataProp":"message","bSearchable":true, "bSortable":false}
-           //{ "sClass": 'txtleft log_line', "mDataProp":"devicereportedtime", "bSortable":true},
-           //{ "sClass": 'txtleft log_line', "mDataProp":"fromhost", "bSortable":true},
-           //{ "sClass": 'txtleft log_line', "mDataProp":"syslogtag", "bSortable":false},
-           //{ "sClass": 'txtleft log_line', "mDataProp":"message","bSearchable":true, "bSortable":false}
-           //{ "mDataProp":"devicereportedtime", "bSortable":true},
-           //{ "mDataProp":"fromhost", "bSortable":true},
-           //{ "mDataProp":"syslogtag", "bSortable":false},
-           //{ "mDataProp":"message","bSearchable":true, "bSortable":false}
        ],
        "bJQueryUI": true
       });

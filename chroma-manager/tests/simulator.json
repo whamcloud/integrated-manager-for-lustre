@@ -1,0 +1,73 @@
+{
+    "simulator": true,
+    "log_dir": ".",
+    "reset": false,
+    "failover_is_configured": true,
+    "chroma_managers": [
+        {
+            "server_http_url": "https://jspray-mac01.local:8000/",
+            "users": [
+                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
+            ]
+        }
+    ],
+    "lustre_servers": [
+        {
+            "address": "test000.localdomain",
+            "nodename": "test000",
+            "fqdn": "test000.localdomain",
+            "device_paths": [
+                "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+            ]
+        },
+        {
+            "address": "test001.localdomain",
+            "nodename": "test001",
+            "fqdn": "test001.localdomain",
+            "device_paths": [
+                "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+            ]
+        },
+        {
+            "address": "test002.localdomain",
+            "nodename": "test002",
+            "fqdn": "test002.localdomain",
+            "device_paths": [
+                "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+            ]
+        },
+        {
+            "address": "test003.localdomain",
+            "nodename": "test003",
+            "fqdn": "test003.localdomain",
+            "device_paths": [
+                "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+            ]
+        }
+    ],
+    "lustre_clients": {
+        "imaginary_client": {}
+    },
+    "hosts": {
+    }
+}

@@ -21,7 +21,7 @@ python-daemon==1.5.2
 lockfile==0.8
 django-tastypie==0.9.11
 tablib
-requests
+requests>=1.0.3
 nose-testconfig
 fudge
 simplejson
@@ -30,7 +30,10 @@ prettytable
 dse
 selenium
 log4tailer
-cherrypy
 jsonschema
 supervisor
 django-supervisor
+gevent
+m2crypto
+pygraphviz # For building diagrams in the docs
+wsgiproxy

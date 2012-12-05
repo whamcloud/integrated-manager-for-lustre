@@ -28,7 +28,7 @@ class PingServerRpcInterface(ServiceRpcInterface):
 
 
 class Service(ChromaService):
-    def start(self):
+    def run(self):
         self.server = PingServerRpcInterface(PingServer())
         self.server.run()
 

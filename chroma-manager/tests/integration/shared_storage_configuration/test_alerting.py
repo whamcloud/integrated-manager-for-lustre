@@ -1,9 +1,10 @@
+
+
 import time
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
-from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
 
-
-class TestAlerting(AuthorizedTestCase):
+class TestAlerting(ChromaIntegrationTestCase):
     def test_alerts(self):
         fs_id = self.create_filesystem_simple()
 
@@ -17,16 +18,18 @@ class TestAlerting(AuthorizedTestCase):
         mgt = fs['mgt']
 
         # Check the alert is raised when the target unexpectedly stops
-        self.remote_command(host['address'], "chroma-agent stop-target --ha_label %s" % mgt['ha_label'])
+        self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
         # Updating the status is a (very) asynchronous operation
         # 10 second periodic update from the agent, then the state change goes
-        # into a queue serviced at some time by the serialize worker.
+        # into a queue serviced at some point in the future (fractions of a second
+        # on an idle system, but not bounded)
         time.sleep(20)
         self.assertHasAlert(mgt['resource_uri'])
         self.assertState(mgt['resource_uri'], 'unmounted')
 
         # Check the alert is cleared when restarting the target
-        self.remote_command(host['address'], "chroma-agent start-target --ha_label %s" % mgt['ha_label'])
+        self.remote_operations.start_target(host['fqdn'], mgt['ha_label'])
+
         time.sleep(20)
         self.assertNoAlerts(mgt['resource_uri'])
 
@@ -40,7 +43,7 @@ class TestAlerting(AuthorizedTestCase):
         # Check that an alert is raised when lnet unexpectedly goes down
         host = self.get_by_uri(host['resource_uri'])
         self.assertEqual(host['state'], 'lnet_up')
-        self.remote_command(host['address'], "chroma-agent stop-lnet")
+        self.remote_operations.stop_lnet(host['fqdn'])
         time.sleep(20)
         self.assertHasAlert(host['resource_uri'])
         self.assertState(host['resource_uri'], 'lnet_down')
@@ -56,8 +59,8 @@ class TestAlerting(AuthorizedTestCase):
         # Raise all the alerts we can
         self.set_state("/api/filesystem/%s/" % fs_id, 'available')
         for target in self.get_list("/api/target/"):
-            self.remote_command(host['address'], "chroma-agent stop-target --ha_label %s" % target['ha_label'])
-        self.remote_command(host['address'], "chroma-agent stop-lnet")
+            self.remote_operations.stop_target(host['fqdn'], target['ha_label'])
+        self.remote_operations.stop_lnet(host['fqdn'])
         time.sleep(20)
         self.assertEqual(len(self.get_list('/api/alert', {'active': True})), 4)
 

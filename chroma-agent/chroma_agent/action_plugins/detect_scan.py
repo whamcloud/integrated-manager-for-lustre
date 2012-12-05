@@ -10,7 +10,6 @@ import subprocess
 
 from chroma_agent.utils import normalize_device, Mounts, BlkId
 from chroma_agent import shell
-from chroma_agent.plugins import ActionPlugin
 
 
 def get_local_targets():
@@ -96,11 +95,11 @@ def get_mgs_targets(local_targets):
         except IndexError:
             pass
 
-        if size == 0:
+        if not size:
             continue
 
         match = re.search("([\w-]+)-client", name)
-        if match != None:
+        if match is not None:
             filesystems.append(match.group(1).__str__())
 
         match = re.search(TARGET_NAME_REGEX, name)
@@ -132,14 +131,14 @@ def get_mgs_targets(local_targets):
                 (code, action) = re.search("^\\((\d+)\\)([\w=]+)$", tokens[1]).groups()
                 if conf_param_type == 'filesystem' and action == 'setup':
                     # e.g. entry="#09 (144)setup     0:flintfs-MDT0000-mdc  1:flintfs-MDT0000_UUID  2:192.168.122.105@tcp"
-                    volume = re.search("0:([\w-]+)-\w+", tokens[2]).group(1)
-                    fs_name = volume.rsplit("-", 1)[0]
+                    label = re.search("0:([\w-]+)-\w+", tokens[2]).group(1)
+                    fs_name = label.rsplit("-", 1)[0]
                     uuid = re.search("1:(.*)", tokens[3]).group(1)
                     nid = re.search("2:(.*)", tokens[4]).group(1)
 
                     mgs_targets[fs_name].append({
                         "uuid": uuid,
-                        "name": volume,
+                        "name": label,
                         "nid": nid})
                 elif action == "param" or (action == 'SKIP' and tokens[2] == 'param'):
                     if action == 'SKIP':
@@ -199,7 +198,7 @@ def get_mgs_targets(local_targets):
     return (mgs_targets, conf_params)
 
 
-def detect_scan(args):
+def detect_scan():
     local_targets = get_local_targets()
     mgs_targets, mgs_conf_params = get_mgs_targets(local_targets)
 
@@ -208,8 +207,5 @@ def detect_scan(args):
         "mgs_conf_params": mgs_conf_params}
 
 
-class DetectScanPlugin(ActionPlugin):
-    def register_commands(self, parser):
-        p = parser.add_parser("detect-scan",
-                              help="scan for existing Lustre config")
-        p.set_defaults(func=detect_scan)
+ACTIONS = [detect_scan]
+CAPABILITIES = []

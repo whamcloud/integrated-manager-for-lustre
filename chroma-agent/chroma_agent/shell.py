@@ -6,8 +6,7 @@
 
 import subprocess
 import os
-import sys
-from chroma_agent.agent_daemon import daemon_log
+from chroma_agent.log import console_log
 
 
 def run(arg_list, shell = False):
@@ -17,7 +16,7 @@ def run(arg_list, shell = False):
     using this function.
     """
 
-    daemon_log.debug("shell.run: %s" % arg_list)
+    console_log.debug("shell.run: %s" % arg_list)
     os.environ["TERM"] = ""
 
     p = subprocess.Popen(arg_list, shell = shell,
@@ -26,8 +25,11 @@ def run(arg_list, shell = False):
                          close_fds = True)
     rc = p.wait()
     stdout_buf, stderr_buf = p.communicate()
-    sys.stderr.write(stderr_buf)
-    sys.stderr.write(stdout_buf)
+
+    # FIXME: reinstate some kind of echoing of these during action plugin execution (but make sure
+    # they're not echoing by default for device plugin execution)
+    #console_log.debug(stderr_buf)
+    #console_log.debug(stdout_buf)
 
     return rc, stdout_buf, stderr_buf
 

@@ -13,8 +13,8 @@
               </ul>
           </td></tr>
           <tr><th><a data-topic='_lnet_state' class='help_hover'>State</a>:</th><td><%= LiveObject.state(server) %></td></tr>
+          <tr><th>Boot time:</th><td><%= shortLocalTime(server.last_contact) %></td></tr>
           <tr><th><a data-topic='_state_changed' class='help_hover'>State changed</a>:</th><td><%= shortLocalTime(server.state_modified_at) %></td></tr>
-          <tr><th><a data-topic='_last_contact' class='help_hover'>Last contact</a>:</th><td><%= shortLocalTime(server.last_contact) %></td></tr>
           <tr><th>Alerts:</th><td><%= LiveObject.alertLabel(server) %></td></tr>
           <tr><th>Actions:</th><td><%= LiveObject.actions(server) %><%= LiveObject.busyIcon(server) %></td></tr>
       </table>

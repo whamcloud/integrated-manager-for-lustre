@@ -7,73 +7,53 @@
 from django.db import models
 
 
-class Systemevents(models.Model):
-    """Django representation of record format emitted by MySQL"""
-    id = models.AutoField(primary_key=True, db_column='ID')
-    customerid = models.BigIntegerField(null=True, db_column='CustomerID',
-                                        blank=True)
-    receivedat = models.DateTimeField(null=True, db_column='ReceivedAt',
-                                      blank=True)
-    devicereportedtime = models.DateTimeField(null=True,
-                                              db_column='DeviceReportedTime',
-                                              blank=True)
-    facility = models.IntegerField(null=True, db_column='Facility',
-                                   blank=True)
-    priority = models.IntegerField(null=True, db_column='Priority',
-                                   blank=True)
-    fromhost = models.CharField(max_length=255, db_column='FromHost',
-                                blank=True)
-    message = models.TextField(db_column='Message', blank=True)
-    ntseverity = models.IntegerField(null=True, db_column='NTSeverity',
-                                     blank=True)
-    importance = models.IntegerField(null=True, db_column='Importance',
-                                     blank=True)
-    eventsource = models.CharField(max_length=60, db_column='EventSource',
-                                   blank=True)
-    eventuser = models.CharField(max_length=60, db_column='EventUser',
-                                 blank=True)
-    eventcategory = models.IntegerField(null=True, db_column='EventCategory',
-                                        blank=True)
-    eventid = models.IntegerField(null=True, db_column='EventID', blank=True)
-    eventbinarydata = models.TextField(db_column='EventBinaryData',
-                                       blank=True)
-    maxavailable = models.IntegerField(null=True, db_column='MaxAvailable',
-                                       blank=True)
-    currusage = models.IntegerField(null=True, db_column='CurrUsage',
-                                    blank=True)
-    minusage = models.IntegerField(null=True, db_column='MinUsage', blank=True)
-    maxusage = models.IntegerField(null=True, db_column='MaxUsage', blank=True)
-    infounitid = models.IntegerField(null=True, db_column='InfoUnitID',
-                                     blank=True)
-    syslogtag = models.CharField(max_length=60, db_column='SysLogTag',
-                                 blank=True)
-    eventlogtype = models.CharField(max_length=60, db_column='EventLogType',
-                                    blank=True)
-    genericfilename = models.CharField(max_length=60,
-                                       db_column='GenericFileName', blank=True)
-    systemid = models.IntegerField(null=True, db_column='SystemID',
-                                   blank=True)
+class MessageClass:
+    NORMAL = 0
+    LUSTRE = 1
+    LUSTRE_ERROR = 2
 
+    @classmethod
+    def to_string(cls, n):
+        """Convert a MessageClass ID to a string"""
+        if not hasattr(cls, '_to_string'):
+            cls._to_string = dict([(v, k) for k, v in cls.__dict__.items() if not k.startswith('_') and isinstance(v, int)])
+        return cls._to_string[n]
+
+    @classmethod
+    def from_string(cls, s):
+        """Convert a string to a MessageClass ID"""
+        if not hasattr(cls, '_from_string'):
+            cls._from_string = dict([(k, v) for k, v in cls.__dict__.items() if not k.startswith('_') and isinstance(v, int)])
+        return cls._from_string[s]
+
+
+class LogMessage(models.Model):
     class Meta:
-        db_table = u'SystemEvents'
         app_label = 'chroma_core'
 
-    def get_message_class(self):
-        if self.message.startswith(" LustreError:"):
-            return "lustre_error"
-        elif self.message.startswith(" Lustre:"):
-            return "lustre"
-        else:
-            return "normal"
+    datetime = models.DateTimeField()
+    # Note: storing FQDN rather than ManagedHost ID because:
+    #  * The log store is a likely candidate for moving to a separate data store where
+    #    the relational ID of a host is a less sound ID than its name
+    #  * It is efficient to avoid looking up fqdn to host ID on insert (log messages
+    #    are inserted much more than they are queried).
+    fqdn = models.CharField(max_length = 255)
+    severity = models.SmallIntegerField()
+    facility = models.SmallIntegerField()
+    tag = models.CharField(max_length = 63)
+    message = models.TextField()
+    message_class = models.SmallIntegerField()
+
+    def save(self, *args, **kwargs):
+        if self.message_class is None:
+            if self.message.startswith("LustreError:"):
+                self.message_class = MessageClass.LUSTRE_ERROR
+            elif self.message.startswith("Lustre:"):
+                self.message_class = MessageClass.LUSTRE
+            else:
+                self.message_class = MessageClass.NORMAL
+
+        super(LogMessage, self).save(*args, **kwargs)
 
     def __str__(self):
-        return "%s %s %s %s" % (self.devicereportedtime, self.fromhost, self.syslogtag, self.message)
-
-
-class LastSystemeventsProcessed(models.Model):
-    """Record the ID of the latest log line that was
-    already parsed for event generation"""
-    class Meta:
-        app_label = 'chroma_core'
-
-    last = models.IntegerField(default = 0)
+        return "%s %s %s %s %s" % (self.datetime, self.fqdn, self.priority, self.source, self.message)

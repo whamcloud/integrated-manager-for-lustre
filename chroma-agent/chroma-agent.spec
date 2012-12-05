@@ -19,6 +19,8 @@ Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
 Requires: python-simplejson python-argparse python-daemon python-setuptools
+# FIXME: uncomment this once we have a python-requests package with a good version
+#Requires: python-requests >= 1.0.0
 Requires(post): selinux-policy
 
 %description
@@ -51,7 +53,6 @@ cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 touch management.files
 cat <<EndOfList>>management.files
 %{python_sitelib}/chroma_agent/action_plugins/manage_*
-%{python_sitelib}/chroma_agent/rmmod.*
 /usr/lib/ocf/resource.d/chroma/Target
 EndOfList
 
@@ -71,7 +72,6 @@ done
 rm -rf %{buildroot}
 
 %post
-chkconfig chroma-agent on
 chkconfig lustre-modules on
 # disable SELinux -- it prevents both lustre and pacemaker from working
 sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config

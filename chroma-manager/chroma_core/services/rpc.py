@@ -19,24 +19,11 @@ management command.
 import socket
 import threading
 import uuid
-from django.db import transaction
 import os
 import time
+import jsonschema
 
-try:
-    import jsonschema as real_jsonschema
-    jsonschema = real_jsonschema
-except ImportError:
-    # FIXME: TEMPORARY: until jsonschema is packaged.
-    class hack_jsonschema(object):
-        @classmethod
-        def validate(cls, data, schema):
-            pass
-        ValidationError = Exception
-
-    jsonschema = hack_jsonschema
-
-
+from django.db import transaction
 import kombu
 import kombu.pools
 from kombu.common import maybe_declare
@@ -126,7 +113,7 @@ class RunOneRpc(threading.Thread):
                 'result': None,
                 'exception': backtrace
             }
-            log.error("ServiceRpc: exception calling %s: %s" % (self.body['method'], backtrace))
+            log.error("RunOneRpc: exception calling %s: %s" % (self.body['method'], backtrace))
 
         with self._response_conn_pool[_amqp_connection()].acquire(block=True) as connection:
             with Producer(connection) as producer:
@@ -137,7 +124,7 @@ class RunOneRpc(threading.Thread):
 class RpcServer(ConsumerMixin):
     def __init__(self, rpc, connection, service_name, serialize = False):
         """
-        :param rpc: A ServiceRpc instance
+        :param rpc: A ServiceRpcInterface instance
         :param serialize: If True, then process RPCs one after another in a single thread
         rather than running a thread for each RPC.
         """
@@ -452,7 +439,7 @@ class ServiceRpcInterface(object):
           def functionality(self):
             pass
 
-        class FooRpc(ServiceRpc):
+        class FooRpc(ServiceRpcInterface):
           methods = ['functionality']
 
         server = FooRpc(Foo())
@@ -499,7 +486,7 @@ class ServiceRpcInterface(object):
         result = rpc_client.call(request)
 
         if result['exception']:
-            log.error("ServiceRpc._call: exception: %s" % result['exception'])
+            log.error("ServiceRpcInterface._call: exception: %s" % result['exception'])
             raise RpcError(result['exception'])
         else:
             log.info("Completed rpc '%s' (result=%s)" % (fn_name, result))

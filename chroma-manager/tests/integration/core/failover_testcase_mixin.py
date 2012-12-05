@@ -1,16 +1,13 @@
-import logging
-import re
-import socket
-import time
 
-from tests.integration.core.api_testcase import ApiTestCase
-from tests.integration.core.constants import TEST_TIMEOUT
+
+import logging
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
 
-class FailoverTestCaseMixin(ApiTestCase):
+class FailoverTestCaseMixin(ChromaIntegrationTestCase):
     """
     This TestCase Mixin adds functionality for failing over/back targets.
     It is meant to be used with ChromaIntegrationTestCase using multiple
@@ -39,19 +36,13 @@ class FailoverTestCaseMixin(ApiTestCase):
         primary_host['config'] = self.get_host_config(primary_host['nodename'])
 
         # "Pull the plug" on the primary lustre server
-        self.remote_command(
-            primary_host['config']['host'],
-            primary_host['config']['destroy_command']
-        )
+        self.remote_operations.kill_server(primary_host['config']['fqdn'])
 
         # Wait for failover to occur
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
-        self.wait_for_host_to_boot(
-            booting_host = primary_host,
-            available_host = secondary_host
-        )
+        self.remote_operations.await_server_boot(primary_host['fqdn'], secondary_host['fqdn'])
 
         # Verify did not auto-failback
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
@@ -90,11 +81,6 @@ class FailoverTestCaseMixin(ApiTestCase):
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
-        self.wait_for_host_to_boot(
-            booting_host = primary_host,
-            available_host = secondary_host
-        )
-
         # Verify did not auto-failback
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
@@ -127,40 +113,6 @@ class FailoverTestCaseMixin(ApiTestCase):
         # Wait for the targets to move back to their original server.
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state))
         self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_normal_state)
-
-    def wait_for_host_to_boot(self, booting_host, available_host):
-        """
-        Wait for the stonithed server to come back online
-        """
-        running_time = 0
-        while running_time < TEST_TIMEOUT:
-            try:
-                #TODO: Better way to check this?
-                self.remote_command(
-                    booting_host['address'],
-                    "echo 'Checking if node is ready to receive commands.'"
-                )
-            except socket.error:
-                continue
-            finally:
-                time.sleep(3)
-                running_time += 3
-
-            # Verify other host knows it is no longer offline
-            result = self.remote_command(
-                available_host['address'],
-                "crm node show %s" % booting_host['nodename']
-            )
-            node_status = result.stdout.read()
-            if not re.search('offline', node_status):
-                break
-
-        self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to come back online.")
-        result = self.remote_command(
-            available_host['address'],
-            "crm node show %s" % booting_host['nodename']
-        )
-        self.assertNotRegexpMatches(result.stdout.read(), 'offline')
 
     def targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts):
         """
@@ -195,49 +147,20 @@ class FailoverTestCaseMixin(ApiTestCase):
 
         for target in targets:
             if target['volume']['id'] in volumes_to_expected_hosts:
-
                 expected_host = volumes_to_expected_hosts[target['volume']['id']]
 
-                # Check chroma manager thinks it's running on the right host.
+                # Check chroma manager's view
                 if assert_true:
-
                     self.assertEqual(expected_host['resource_uri'], target['active_host'])
                 else:
                     if not expected_host['resource_uri'] == target['active_host']:
                         return False
 
-                # Check pacemaker thinks it's running on the right host.
-                expected_resource_status = "%s is running on: %s" % (target['ha_label'], expected_host['fqdn'])
-                actual_resource_status = self.get_crm_resource_status(target['ha_label'], expected_host)
+                # Check corosync's view
+                is_running = self.remote_operations.get_resource_running(expected_host, target['ha_label'])
                 if assert_true:
-                    self.assertRegexpMatches(
-                        actual_resource_status,
-                        expected_resource_status
-                    )
-                else:
-                    if not re.search(expected_resource_status, actual_resource_status):
-                        return False
+                    self.assertEqual(is_running, True)
+                elif not is_running:
+                    return False
 
         return True
-
-    def get_crm_resource_status(self, ha_label, host):
-        result = self.remote_command(
-            host['address'],
-            'crm resource status %s' % ha_label,
-            timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
-        )
-        resource_status = result.stdout.read()
-
-        # Sometimes crm resource status gives a false positive when it is repetitively
-        # trying to restart a resource over and over. Lets also check the failcount
-        # to check that it didn't have problems starting.
-        result = self.remote_command(
-            host['address'],
-            'crm resource failcount %s show %s' % (ha_label, host['nodename'])
-        )
-        self.assertRegexpMatches(
-            result.stdout.read(),
-            'value=0'
-        )
-
-        return resource_status

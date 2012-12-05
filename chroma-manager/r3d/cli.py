@@ -4,6 +4,7 @@
 # ========================================================
 
 
+from chroma_core.lib.util import chroma_settings
 import re
 import warnings
 import time
@@ -13,7 +14,6 @@ import argparse
 from argparse import ArgumentParser, ArgumentError
 from prettytable import PrettyTable
 
-from chroma_core.lib.chroma_settings import chroma_settings
 from django.core.management import setup_environ
 setup_environ(chroma_settings())
 

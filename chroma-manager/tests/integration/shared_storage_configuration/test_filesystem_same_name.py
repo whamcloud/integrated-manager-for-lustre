@@ -1,8 +1,10 @@
+
+
 from testconfig import config
-from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-class TestFilesystemSameName_HYD832(AuthorizedTestCase):
+class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
     def test_same_name(self):
         """
         Test that creating a filesystem with the same name as a

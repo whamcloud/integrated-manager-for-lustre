@@ -5,6 +5,8 @@
 
 
 from collections import defaultdict
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_core.services.rpc import RpcError
 from tastypie.validation import Validation
 
 from chroma_core.models import ManagedHost, Nid, ManagedFilesystem
@@ -57,7 +59,7 @@ class HostResource(MetricResource, StatefulModelResource):
     class Meta:
         queryset = ManagedHost.objects.all()
         resource_name = 'host'
-        excludes = ['not_deleted', 'agent_token']
+        excludes = ['not_deleted', 'ssl_fingerprint']
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
         ordering = ['fqdn']
@@ -71,13 +73,22 @@ class HostResource(MetricResource, StatefulModelResource):
                      'fqdn': ['exact', 'startswith'],
                     'role': ['exact']}
 
-    #role = fields.CharField()
-    #def dehydrate_role(self, bundle):
-    #    return bundle.obj.role()
-
     def obj_create(self, bundle, request = None, **kwargs):
-        host, command = ManagedHost.create_from_string(bundle.data['address'])
-        raise custom_response(self, request, http.HttpAccepted,
+
+        # FIXME: we get errors back just fine when something goes wrong
+        # during registration, but the UI tries to format backtraces into
+        # a 'validation errors' dialog which is pretty ugly.
+
+        try:
+            host, command = JobSchedulerClient.create_host_ssh(bundle.data['address'])
+        except RpcError, e:
+            # Rather stretching the meaning of "BAD REQUEST", say that this
+            # request is bad on the basis that the user specified a host that
+            # is (for some reason) not playing ball.
+            raise custom_response(self, request, http.HttpBadRequest,
+                {'address': ["Cannot add host at this address: %s" % e]})
+        else:
+            raise custom_response(self, request, http.HttpAccepted,
                 {'command': dehydrate_command(command),
                  'host': self.full_dehydrate(self.build_bundle(obj = host)).data})
 
@@ -124,11 +135,6 @@ class HostTestResource(Resource):
         validation = HostValidation()
 
     def obj_create(self, bundle, request = None, **kwargs):
-        from chroma_core.models.utils import await_async_result
-        from chroma_core.tasks import test_host_contact
-
-        host = ManagedHost(address = bundle.data['address'])
-        async_result = test_host_contact.delay(host)
-        result = await_async_result(async_result)
+        result = JobSchedulerClient.test_host_contact(bundle.data['address'])
 
         raise custom_response(self, request, http.HttpAccepted, result)

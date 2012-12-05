@@ -4,9 +4,11 @@
 # ========================================================
 
 
+import subprocess
+import os
+import sys
 import logging
 import time
-from django.db import connection
 import settings
 
 
@@ -78,6 +80,11 @@ class dbperf(object):
     logger = logging.getLogger('dbperf')
 
     def __init__(self, label = ""):
+        # Avoid importing this at module scope in order
+        # to co-habit with chroma_settings()
+        from django.db import connection
+        self.connection = connection
+
         self.label = label
         self.logger.disabled = not self.enabled
         if self.enabled and not len(self.logger.handlers):
@@ -87,21 +94,21 @@ class dbperf(object):
     def __enter__(self):
         if settings.DEBUG:
             self.t_initial = time.time()
-            self.q_initial = len(connection.queries)
+            self.q_initial = len(self.connection.queries)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self.enabled:
             return
 
         self.t_final = time.time()
-        self.q_final = len(connection.queries)
+        self.q_final = len(self.connection.queries)
 
         t = self.t_final - self.t_initial
         q = self.q_final - self.q_initial
 
         if q:
             logfile = open("%s.log" % self.label, 'w')
-            for query in connection.queries[self.q_initial:]:
+            for query in self.connection.queries[self.q_initial:]:
                 logfile.write("(%s) %s\n" % (query['time'], query['sql']))
             logfile.close()
 
@@ -111,3 +118,84 @@ class dbperf(object):
             avg_t = 0
         self.logger.debug("%s: %d queries in %.2fs (avg %dms)" % (self.label, q, t, avg_t))
         self.q = q
+
+
+def chroma_settings():
+    """
+    Walk back up parent directories until settings.py is found.
+    Insert that directory as the first entry in sys.path.
+    Import the settings module, then return it to the caller.
+    """
+    def _search_path(path):
+        if os.path.exists(os.path.join(path, "settings.py")):
+            return path
+        else:
+            if path == "/":
+                raise RuntimeError("Can't find settings.py")
+            else:
+                return _search_path(os.path.dirname(path))
+
+    site_dir = _search_path(os.path.dirname(__file__))
+    sys.path.insert(0, site_dir)
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+
+    import settings
+    return settings
+
+
+class CommandError(Exception):
+    def __init__(self, cmd, rc, stdout, stderr):
+        self.cmd = cmd
+        self.rc = rc
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __str__(self):
+        return """Command failed: %s
+    return code %s
+    stdout: %s
+    stderr: %s""" % (self.cmd, self.rc, self.stdout, self.stderr)
+
+
+class CommandLine(object):
+    def try_shell(self, cmdline, mystdout = subprocess.PIPE,
+                  mystderr = subprocess.PIPE, stdin_text = None):
+        rc, out, err = self.shell(cmdline, mystdout, mystderr, stdin_text)
+
+        if rc != 0:
+            raise CommandError(cmdline, rc, out, err)
+        else:
+            return rc, out, err
+
+    def shell(self, cmdline, mystdout = subprocess.PIPE,
+              mystderr = subprocess.PIPE, stdin_text = None):
+        if stdin_text is not None:
+            stdin = subprocess.PIPE
+        else:
+            stdin = None
+        p = subprocess.Popen(cmdline, stdout = mystdout, stderr = mystderr, stdin = stdin)
+        if stdin_text is not None:
+            p.stdin.write(stdin_text)
+        out, err = p.communicate()
+        rc = p.wait()
+        return rc, out, err
+
+
+def normalize_nids(nid_list):
+    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
+       direct comparisons between NIDs"""
+    return [normalize_nid(n) for n in nid_list]
+
+
+def normalize_nid(string):
+    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
+       direct comparisons between NIDs"""
+    if string[-4:] == "@tcp":
+        string += "0"
+
+    # remove _ from nids (i.e. @tcp_0 -> @tcp0
+    i = string.find("_")
+    if i > -1:
+        string = string[:i] + string[i + 1:]
+
+    return string

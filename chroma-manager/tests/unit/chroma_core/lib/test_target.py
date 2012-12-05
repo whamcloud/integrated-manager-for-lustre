@@ -15,7 +15,7 @@ class TestMkfsOverrides(JobTestCaseWithHost):
         settings.LUSTRE_MKFS_OPTIONS_MDT = "-E block_size=1024"
         self.set_state(self.mdt, "formatted")
         cmd, args = MockAgent.last_call()
-        self.assertEqual(cmd, "format-target")
+        self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_MDT}, args)
 
     def test_ost_override(self):
@@ -27,7 +27,7 @@ class TestMkfsOverrides(JobTestCaseWithHost):
         settings.LUSTRE_MKFS_OPTIONS_OST = "-E block_size=2048"
         self.set_state(self.ost, "formatted")
         cmd, args = MockAgent.last_call()
-        self.assertEqual(cmd, "format-target")
+        self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_OST}, args)
 
 

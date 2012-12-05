@@ -1,46 +1,30 @@
-    #
+#
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 
 
-from optparse import make_option
-
 import threading
 import sys
-import traceback
 import signal
+import datetime
+import linecache
+from chroma_core.services import ServiceThread
 import os
+from optparse import make_option
 from daemon.pidlockfile import PIDLockFile
 from daemon import DaemonContext
 from django.core.management.base import BaseCommand
 from chroma_core.services.log import log_set_filename, log_register, log_enable_stdout
 from chroma_core.services.rpc import RpcClientFactory
+import chroma_core.services.log
 
 
 log = log_register(__name__.split('.')[-1])
 
 
-class ServiceMain(threading.Thread):
-    """Given a ChromaService instance, execute its start() method, logging any
-    exception thrown"""
-    def __init__(self, service, *args, **kwargs):
-        super(ServiceMain, self).__init__(*args, **kwargs)
-        self.service = service
-
-    def run(self):
-        service_name = self.service.__class__.__module__.split('.')[-1]
-        self.service.log = log_register(service_name)
-        try:
-            log.info("Running %s" % service_name)
-            self.service.start()
-        except Exception:
-            exc_info = sys.exc_info()
-            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-            log.warning("Exception from run_main_loop.  backtrace: %s" % backtrace)
-
-
 class Command(BaseCommand):
+    requires_model_validation = False
     help = """Run a single ChromaService in a new plugin."""
     option_list = BaseCommand.option_list + (
         make_option('--gevent', action = 'store_true', dest = 'gevent', default = False),
@@ -48,6 +32,7 @@ class Command(BaseCommand):
         make_option('--verbose', action = 'store_true', dest = 'verbose', default = False),
         make_option('--name', dest = 'name', default = 'chroma_service'),
         make_option('--daemon', dest = 'daemon', action = 'store_true', default = None),
+        make_option('--trace', dest = 'trace', action = 'store_true', default = None),
         make_option('--pid-file', dest = 'pid-file', default = None),
     )
 
@@ -87,7 +72,32 @@ class Command(BaseCommand):
 
         if options['gevent']:
             from gevent.monkey import patch_all
-            patch_all()
+            patch_all(thread = True)
+
+            import django.db
+            django.db.connections._connections = threading.local()
+
+        if options['trace']:
+            class Trace(object):
+                def __init__(self):
+                    self.tracefile = open('trace.log', 'w', buffering = 0)
+                    self.tracefile.write("Started at %s: %s %s\n" % (datetime.datetime.utcnow(), args, options))
+
+                def __call__(self, frame, event, arg):
+                    if event == "line":
+                        try:
+                            pyfile = frame.f_globals['__file__'].strip('co')
+                            line = linecache.getline(pyfile, frame.f_lineno)
+                        except KeyError:
+                            pass
+                        else:
+                            if line is not None:
+                                self.tracefile.write("%s:%s %s" % (pyfile, frame.f_lineno, line))
+
+                    return self
+
+            chroma_core.services.log.trace = Trace()
+            sys.settrace(chroma_core.services.log.trace)
 
         from chroma_core.lib.service_config import ServiceConfig
         if not ServiceConfig().configured():
@@ -108,11 +118,11 @@ class Command(BaseCommand):
 
             """
             for service_thread in service_mains:
-                log.info("Stopping %s" % service_thread.service.__class__.__name__)
+                log.info("Stopping %s" % service_thread.service.name)
                 service_thread.service.stop()
 
             for service_thread in service_mains:
-                log.info("Joining %s" % service_thread.service.__class__.__name__)
+                log.info("Joining %s" % service_thread.service.name)
                 service_thread.join()
 
             stopped.set()
@@ -133,10 +143,10 @@ class Command(BaseCommand):
             for comp in components[1:]:
                 mod = getattr(mod, comp)
 
-            service_label = "%s-%s" % (options['name'], service_name)
             service = getattr(mod, 'Service')()
+            service.log = log_register(service.name)
 
-            service_thread = ServiceMain(service, name = service_label)
+            service_thread = ServiceThread(service)
             service_thread.start()
             service_mains.append(service_thread)
 

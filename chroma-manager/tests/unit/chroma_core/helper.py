@@ -1,23 +1,49 @@
 from collections import defaultdict
 from contextlib import contextmanager
 import datetime
+from chroma_agent.crypto import Crypto
+from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.services.http_agent import AgentSessionRpc
+from chroma_core.services.https_frontend import RoutingProxyRpc, RoutingProxy
+from chroma_core.services.job_scheduler.agent_rpc import AgentException, AgentRpc
 from chroma_core.services.log import log_register
-from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface, AgentDaemonQueue
+from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+from chroma_core.services.http_agent import Service as HttpAgentService
+from dateutil import tz
 from django.test import TestCase
 import mock
-from chroma_core.lib.agent import AgentException
 from chroma_core.models.jobs import Command
-from chroma_core.models import Volume, VolumeNode
+from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
+import re
+from tastypie.serializers import Serializer
+from tests.unit.chroma_api.tastypie_test import TestApiClient
 
 
 log = log_register('test_helper')
 
 
+class FakeCrypto(Crypto):
+    FOLDER = "/tmp/"
+
+
 def freshen(obj):
     return obj.__class__.objects.get(pk=obj.pk)
+
+
+def fake_log_message(message):
+    t = datetime.datetime.utcnow()
+    t = t.replace(tzinfo = tz.tzutc())
+    return LogMessage.objects.create(
+        datetime = t,
+        message = message,
+        message_class = 0,
+        severity = 0,
+        facility = 0,
+        tag = ""
+    )
 
 
 class MockAgent(object):
@@ -34,7 +60,7 @@ class MockAgent(object):
         return cls.calls[-1]
 
     succeed = True
-    fail_globs = []
+    fail_commands = []
     selinux_enabled = False
     version = None
     capabilities = ['manage_targets']
@@ -44,22 +70,22 @@ class MockAgent(object):
 
     def _fail(self):
         log.error("Synthetic agent error on host %s" % self.host)
-        raise AgentException(self.host.id, agent_exception = RuntimeError("Fake exception"), agent_backtrace = "Fake backtrace")
+        raise AgentException(self.host.fqdn, "cmd", {'foo': 'bar'}, "Fake backtrace")
 
-    def invoke(self, cmdline, args = None):
-        self.calls.append((cmdline, args))
-        self.host_calls[self.host].append((cmdline, args))
+    def invoke(self, cmd, args = {}):
+        self.calls.append((cmd, args))
+        self.host_calls[self.host].append((cmd, args))
 
         if not self.succeed:
             self._fail()
 
-        if cmdline in self.fail_globs:
+        if (cmd, args) in self.fail_commands:
             self._fail()
 
-        log.info("invoke_agent %s %s %s" % (self.host, cmdline, args))
-        if cmdline == "lnet-scan":
+        log.info("invoke_agent %s %s %s" % (self.host, cmd, args))
+        if cmd == "lnet_scan":
             return self.mock_servers[self.host.address]['nids']
-        elif cmdline == 'host-properties':
+        elif cmd == 'host_properties':
             return {
                 'time': datetime.datetime.utcnow().isoformat() + "Z",
                 'fqdn': self.mock_servers[self.host.address]['fqdn'],
@@ -68,9 +94,8 @@ class MockAgent(object):
                 'selinux_enabled': self.selinux_enabled,
                 'agent_version': self.version,
             }
-        elif cmdline.startswith("format-target"):
+        elif cmd == 'format_target':
             import uuid
-            import re
             inode_size = None
             if 'mkfsoptions' in args:
                 inode_arg = re.search("-I (\d+)", args['mkfsoptions'])
@@ -82,51 +107,81 @@ class MockAgent(object):
                 inode_size = 777
 
             return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': inode_size}
-        elif cmdline.startswith('stop-target'):
-            import re
+        elif cmd == 'stop_target':
             from chroma_core.models import ManagedTarget
-            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
+            ha_label = args['ha_label']
             target = ManagedTarget.objects.get(ha_label = ha_label)
             return
-        elif cmdline.startswith('start-target'):
-            import re
+        elif cmd == 'start_target':
             from chroma_core.models import ManagedTarget
-            ha_label = re.search("--ha_label ([^\s]+)", cmdline).group(1)
+            ha_label = args['ha_label']
             target = ManagedTarget.objects.get(ha_label = ha_label)
             return {'location': target.primary_server().nodename}
-        elif cmdline.startswith('register-target'):
-            import re
+        elif cmd == 'register_target':
             # Assume mount paths are "/mnt/testfs-OST0001" style
-            label = re.search("--mountpoint /mnt/([^\s]+)", cmdline).group(1)
+            mount_point = args['mount_point']
+            label = re.search("/mnt/([^\s]+)", mount_point).group(1)
             return {'label': label}
-        elif cmdline.startswith('detect-scan'):
+        elif cmd == 'detect_scan':
             return self.mock_servers[self.host.address]['detect-scan']
-        elif cmdline == "device-plugin --plugin=lustre":
+        elif cmd == 'device_plugin' and args['plugin'] == 'lustre':
             return {'lustre': {
                 'lnet_up': True,
                 'lnet_loaded': True
             }}
-        elif cmdline.startswith("device-plugin"):
+        elif cmd == 'register_server':
+            api_client = TestApiClient()
+            old_is_authenticated = CsrfAuthentication.is_authenticated
             try:
-                return self.mock_servers[self.host.address]['device-plugin']
+                CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
+                api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
+                fqdn = self.mock_servers[self.host]['fqdn']
+                csr = FakeCrypto().generate_csr(fqdn)
+                response = api_client.post(args['url'] + "register/xyz/", data = {
+                    'address': self.host,
+                    'fqdn': fqdn,
+                    'nodename': self.mock_servers[self.host]['nodename'],
+                    'capabilities': ['manage_targets'],
+                    'version': MockAgent.version,
+                    'csr': csr
+                })
+                assert response.status_code == 201
+                registration_data = Serializer().deserialize(response.content, format = response['Content-Type'])
+                print "MockAgent.invoke returning %s" % registration_data
+                return registration_data
+            finally:
+                CsrfAuthentication.is_authenticated = old_is_authenticated
+        elif cmd == 'device_plugin':
+            try:
+                data = self.mock_servers[self.host.address]['device-plugin']
             except KeyError:
-                return {}
+                data = {}
+            if args['plugin'] in data:
+                return {args['plugin']: data[args['plugin']]}
+            else:
+                raise AgentException(self.host.fqdn, cmd, args, "")
 
 
 class JobTestCase(TestCase):
     mock_servers = None
     hosts = None
 
+    def _create_host(self, address):
+        return ManagedHost.create(
+            self.mock_servers[address]['fqdn'],
+            self.mock_servers[address]['nodename'],
+            ['manage_targets'],
+            address = address)[0]
+
     @contextmanager
-    def assertInvokes(self, agent_command):
+    def assertInvokes(self, agent_command, agent_args):
         initial_call_count = len(MockAgent.calls)
         yield
         wrapped_calls = MockAgent.calls[initial_call_count:]
-        for call in wrapped_calls:
-            call_cmd = call[0]
-            if call_cmd == agent_command:
+        for cmd, args in wrapped_calls:
+            if cmd == agent_command and args == agent_args:
                 return
-        raise self.failureException("Command '%s' was not invoked (calls were: %s)" % (agent_command, wrapped_calls))
+        raise self.failureException("Command '%s', %s was not invoked (calls were: %s)" % (agent_command, agent_args, wrapped_calls))
 
     def _test_lun(self, primary_host, *args):
         volume = Volume.objects.create()
@@ -179,10 +234,19 @@ class JobTestCase(TestCase):
         app_or_default().conf.CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 
         # Intercept attempts to call out to lustre servers
-        import chroma_core.lib.agent
-        self.old_agent = chroma_core.lib.agent.Agent
+        import chroma_core.services.job_scheduler.agent_rpc
+        self.old_agent = chroma_core.services.job_scheduler.agent_rpc.Agent
+        self.old_agent_ssh = chroma_core.services.job_scheduler.agent_rpc.AgentSsh
         MockAgent.mock_servers = self.mock_servers
-        chroma_core.lib.agent.Agent = MockAgent
+
+        class MockAgentRpc(AgentRpc):
+            @classmethod
+            def remove(cls, fqdn):
+                pass
+
+        chroma_core.services.job_scheduler.agent_rpc.AgentRpc = MockAgentRpc
+        chroma_core.services.job_scheduler.agent_rpc.Agent = MockAgent
+        chroma_core.services.job_scheduler.agent_rpc.AgentSsh = MockAgent
 
         # Any RPCs that are going to get called need explicitly overriding to
         # turn into local calls -- self is a catch-all to prevent any RPC classes
@@ -193,8 +257,7 @@ class JobTestCase(TestCase):
         # Create an instance for the purposes of the test
         from chroma_core.services.plugin_runner.resource_manager import ResourceManager
         resource_manager = ResourceManager()
-        from chroma_core.services.plugin_runner.agent_daemon import AgentDaemon
-        agent_daemon = AgentDaemon(resource_manager)
+        from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
 
         def patch_daemon_rpc(rpc_class, test_daemon):
             # Patch AgentDaemonRpc to call our instance instead of trying to do an RPC
@@ -205,13 +268,11 @@ class JobTestCase(TestCase):
 
             rpc_class._call = mock.Mock(side_effect = rpc_local)
 
-        patch_daemon_rpc(AgentDaemonRpcInterface, agent_daemon)
+        patch_daemon_rpc(AgentDaemonRpcInterface, AgentPluginHandlerCollection(resource_manager))
 
-        # When someone pushes something to 'agent' queue, call back AgentDaemon
-        def queue_immediate(body):
-            log.info("patch_daemon_queue: %s" % body)
-            agent_daemon.on_message(body)
-        AgentDaemonQueue.put = mock.Mock(side_effect = queue_immediate)
+        patch_daemon_rpc(RoutingProxyRpc, RoutingProxy(None))
+
+        patch_daemon_rpc(AgentSessionRpc, HttpAgentService())
 
         from chroma_core.services.job_scheduler.dep_cache import DepCache
         from chroma_core.services.job_scheduler.job_scheduler import JobScheduler, RunJobThread
@@ -276,8 +337,9 @@ class JobTestCase(TestCase):
         AgentDaemonRpcInterface.remove_host_resources = mock.Mock(side_effect = fake_remove_host_resources)
 
     def tearDown(self):
-        import chroma_core.lib.agent
-        chroma_core.lib.agent.Agent = self.old_agent
+        import chroma_core.services.job_scheduler.agent_rpc
+        chroma_core.services.job_scheduler.agent_rpc.Agent = self.old_agent
+        chroma_core.services.job_scheduler.agent_rpc.AgentSsh = self.old_agent_ssh
 
         from celery.app import app_or_default
         app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
@@ -297,7 +359,7 @@ class JobTestCaseWithHost(JobTestCase):
         super(JobTestCaseWithHost, self).setUp()
 
         from chroma_core.models import ManagedHost
-        self.hosts = [ManagedHost.create_from_string(address)[0] for address, info in self.mock_servers.items()]
+        self.hosts = [ManagedHost.create(info['fqdn'], info['nodename'], ['manage_targets'], address = address)[0] for address, info in self.mock_servers.items()]
 
         # Handy if you're only using one
         self.host = self.hosts[0]

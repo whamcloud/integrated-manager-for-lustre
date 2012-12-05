@@ -2,8 +2,8 @@ from django.utils import unittest
 import tempfile
 import os
 import shutil
-from chroma_agent.audit.local import LocalAudit
-from chroma_agent.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit
+from chroma_agent.device_plugins.audit.local import LocalAudit
+from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit
 
 
 class TestLocalLustreMetrics(unittest.TestCase):

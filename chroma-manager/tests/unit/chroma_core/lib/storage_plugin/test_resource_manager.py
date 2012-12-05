@@ -5,10 +5,10 @@ from chroma_core.lib.util import dbperf
 from chroma_core.models.host import Volume, VolumeNode, ManagedHost
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from helper import load_plugins
-from tests.unit.chroma_core.helper import JobTestCase
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent
 
 
-class ResourceManagerTestCase(JobTestCase):
+class ResourceManagerTestCase(JobTestCaseWithHost):
     def setUp(self):
         super(ResourceManagerTestCase, self).setUp()
 
@@ -92,18 +92,8 @@ class TestSessions(ResourceManagerTestCase):
 
 
 class TestManyObjects(ResourceManagerTestCase):
-    mock_servers = {
-        'myaddress': {
-            'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
-        }
-    }
-
     def setUp(self):
         super(TestManyObjects, self).setUp()
-
-        self.host, command = ManagedHost.create_from_string('myaddress')
 
         resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources',
                 {'plugin_name': 'linux', 'host_id': self.host.id})
@@ -175,19 +165,60 @@ class TestManyObjects(ResourceManagerTestCase):
             connection.use_debug_cursor = False
 
 
-class TestResourceOperations(ResourceManagerTestCase):
-    mock_servers = {
-        'myaddress': {
-            'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
-        }
-    }
+class TestVirtualMachines(ResourceManagerTestCase):
+    def setUp(self):
+        super(TestVirtualMachines, self).setUp()
+        self.mock_servers = {'myvm': {
+            'fqdn': 'myvm.mycompany.com',
+            'nodename': 'test01.myvm.mycompany.com',
+            'nids': ["192.168.0.19@tcp"]
+        }}
+        MockAgent.mock_servers = self.mock_servers
 
+    def test_virtual_machine_initial(self):
+        """Check that ManagedHosts are created for VirtualMachines when
+        present in the initial resource set"""
+        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller', {'address': '192.168.0.1'})
+        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = 'myvm')
+
+        self.assertEqual(ManagedHost.objects.count(), 1)
+
+        resource_manager = ResourceManager()
+        # Session for host resources
+        resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
+        self.assertEqual(ManagedHost.objects.count(), 2)
+
+    def test_virtual_machine_update(self):
+        """Check that ManagedHosts are created for VirtualMachines when
+        added in an update"""
+        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller',
+            {'address': '192.168.0.1'})
+        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine',
+            address = 'myvm')
+
+        resource_manager = ResourceManager()
+        # Session for host resources
+        resource_manager.session_open(controller_record.pk, [controller_resource], 60)
+        self.assertEqual(ManagedHost.objects.count(), 1)
+        resource_manager.session_add_resources(controller_record.pk, [controller_resource, vm_resource])
+        self.assertEqual(ManagedHost.objects.count(), 2)
+
+    def test_virtual_machine_existing(self):
+        """Check that a virtual machine with the same address
+        as an existing host gets linked to that host"""
+        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller', {'address': '192.168.0.1'})
+        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = 'myaddress')
+
+        resource_manager = ResourceManager()
+        # Session for host resources
+        self.assertEqual(ManagedHost.objects.count(), 1)
+        resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
+        self.assertEqual(ManagedHost.objects.count(), 1)
+
+
+class TestResourceOperations(ResourceManagerTestCase):
     def setUp(self):
         super(TestResourceOperations, self).setUp()
-
-        self.host, command = ManagedHost.create_from_string('myaddress')
 
         resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
 
@@ -263,46 +294,6 @@ class TestResourceOperations(ResourceManagerTestCase):
 
         # Check the Lun and DeviceNode are still there but the Presentation is gone
         self.assertEquals(count_after, count_before - 1)
-
-    def test_virtual_machine_initial(self):
-        """Check that ManagedHosts are created for VirtualMachines when
-        present in the initial resource set"""
-        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller', {'address': '192.168.0.1'})
-        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = 'myvm')
-
-        self.assertEqual(ManagedHost.objects.count(), 1)
-
-        resource_manager = ResourceManager()
-        # Session for host resources
-        resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
-        self.assertEqual(ManagedHost.objects.count(), 2)
-
-    def test_virtual_machine_update(self):
-        """Check that ManagedHosts are created for VirtualMachines when
-        added in an update"""
-        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller',
-                {'address': '192.168.0.1'})
-        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine',
-            address = 'myvm')
-
-        resource_manager = ResourceManager()
-        # Session for host resources
-        resource_manager.session_open(controller_record.pk, [controller_resource], 60)
-        self.assertEqual(ManagedHost.objects.count(), 1)
-        resource_manager.session_add_resources(controller_record.pk, [controller_resource, vm_resource])
-        self.assertEqual(ManagedHost.objects.count(), 2)
-
-    def test_virtual_machine_existing(self):
-        """Check that a virtual machine with the same address
-        as an existing host gets linked to that host"""
-        controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller', {'address': '192.168.0.1'})
-        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = 'myaddress')
-
-        resource_manager = ResourceManager()
-        # Session for host resources
-        self.assertEqual(ManagedHost.objects.count(), 1)
-        resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
-        self.assertEqual(ManagedHost.objects.count(), 1)
 
     def test_update_host_lun(self):
         """Test that Volumes are generated from LogicalDrives when they are reported
@@ -403,8 +394,6 @@ class TestSubscriberIndex(ResourceManagerTestCase):
     def test_populate(self):
         """Test that the subscriber index is set up correctly for
         resources already in the database"""
-        from chroma_core.models import ManagedHost
-        self.host, command = ManagedHost.create_from_string('myaddress')
 
         resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
 
@@ -432,27 +421,19 @@ class TestSubscriberIndex(ResourceManagerTestCase):
 
 
 class TestVolumeBalancing(ResourceManagerTestCase):
-    mock_servers = {
-        'myaddress': {
-            'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
-        }
-    }
-
     def test_volume_balance(self):
         resource_manager = ResourceManager()
 
         hosts = []
         for i in range(0, 3):
-            hostname = "host_%d" % i
-            self.mock_servers[hostname] = {
-                'fqdn': "%s.mycompany.com" % hostname,
-                'nodename': "%s.mycompany.com" % hostname,
+            address = "host_%d" % i
+            self.mock_servers[address] = {
+                'fqdn': "%s.mycompany.com" % address,
+                'nodename': "%s.mycompany.com" % address,
                 'nids': ["192.168.0.%d@tcp" % i]
             }
 
-            host, command = ManagedHost.create_from_string(hostname)
+            host, command = ManagedHost.create(self.mock_servers[address]['fqdn'], self.mock_servers[address]['nodename'], ['manage_targets'], address = address)
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})
             hosts.append({'host': host, 'record': resource_record, 'resource': scannable_resource})
 
@@ -475,14 +456,6 @@ class TestVolumeBalancing(ResourceManagerTestCase):
 
 
 class TestVolumeNaming(ResourceManagerTestCase):
-    mock_servers = {
-        'myaddress': {
-            'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
-        }
-    }
-
     PLUGIN_LUN_NAME = 'mylun123'
     SERIAL = "123abc456"
     VG = 'foovg'
@@ -506,8 +479,6 @@ class TestVolumeNaming(ResourceManagerTestCase):
 
     def _start_host_session(self, lvm = False):
         resource_manager = ResourceManager()
-
-        self.host, command = ManagedHost.create_from_string('myaddress')
 
         host_record, host_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
 

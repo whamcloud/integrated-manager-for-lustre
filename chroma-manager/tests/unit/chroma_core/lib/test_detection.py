@@ -26,7 +26,7 @@ class TestDetection(JobTestCase):
                 'nids': nids
             }
 
-            ManagedHost.create_from_string(address)
+            ManagedHost.create(address, address, ['manage_targets'], address = address)
 
         host_data = {}
         for path in fixture_glob("*detect_scan_output.txt"):

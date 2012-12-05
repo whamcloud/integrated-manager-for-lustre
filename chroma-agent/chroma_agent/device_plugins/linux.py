@@ -4,8 +4,8 @@
 # ========================================================
 
 
-from chroma_agent.plugins import DevicePlugin
-from chroma_agent.log import agent_log
+from chroma_agent.log import console_log
+from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import shell
 from chroma_agent.utils import normalize_device
 
@@ -15,7 +15,11 @@ import re
 
 
 class LinuxDevicePlugin(DevicePlugin):
-    def start_session(self):
+    def _quick_scan(self):
+        """Lightweight enumeration of available block devices"""
+        return os.listdir("/sys/block/")
+
+    def _full_scan(self):
         # Map of block devices major:minors to /dev/ path.
         block_devices = BlockDevices()
 
@@ -35,8 +39,15 @@ class LinuxDevicePlugin(DevicePlugin):
                 "local_fs": local_fs,
                 'mds': mds}
 
+    def start_session(self):
+        self._devices = self._quick_scan()
+        return self._full_scan()
+
     def update_session(self):
-        raise NotImplementedError()
+        devices = self._quick_scan()
+        if devices != self._devices:
+            self._devices = devices
+            return self._full_scan()
 
 
 class DeviceHelper(object):
@@ -130,7 +141,7 @@ class BlockDevices(DeviceHelper):
             elif os.path.exists(fallback_dev_path):
                 return fallback_dev_path
             else:
-                agent_log.warning("Could not find device node for %s (%s)" % (major_minor, fallback_dev_path))
+                console_log.warning("Could not find device node for %s (%s)" % (major_minor, fallback_dev_path))
                 return None
 
         block_device_nodes = {}
@@ -383,7 +394,7 @@ class DmsetupTable(object):
                     # Single device linear range
                     devices = [tokens[4]]
                 else:
-                    agent_log.error("Failed to parse line '%s'" % line)
+                    console_log.error("Failed to parse dmsetupline '%s'" % line)
                     continue
 
                 # To be an LV:
@@ -438,7 +449,7 @@ class DmsetupTable(object):
                             pass
                     else:
                         # No trailing p\d+, therefore not a partition
-                        agent_log.error("Cannot handle devicemapper device %s: it doesn't look like an LV or a partition" % name)
+                        console_log.error("Cannot handle devicemapper device %s: it doesn't look like an LV or a partition" % name)
             elif dm_type == 'multipath':
                 major_minors = self._parse_multipath_params(tokens[4:])
                 devices = [self.block_devices.block_device_nodes[i] for i in major_minors]

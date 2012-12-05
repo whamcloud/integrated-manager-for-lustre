@@ -7,8 +7,6 @@ from tests.unit.chroma_core.helper import freshen
 from django.db.utils import IntegrityError
 import django.utils.timezone
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, Nid
-from chroma_core.models.jobs import Command
-import settings
 
 
 class TestSetup(JobTestCase):
@@ -24,10 +22,10 @@ class TestSetup(JobTestCase):
         """Test that if a host is added and then acquired lnet_up state passively,
         we will go and get the NIDs"""
         try:
-            MockAgent.fail_globs = ['device-plugin --plugin=lustre']
-            host, command = ManagedHost.create_from_string('myaddress')
+            MockAgent.fail_commands = [('device_plugin', {'plugin': 'lustre'})]
+            host = self._create_host('myaddress')
         finally:
-            MockAgent.fail_globs = []
+            MockAgent.fail_commands = []
         self.assertState(host, 'configured')
         self.assertState(host.lnetconfiguration, 'nids_unknown')
         now = django.utils.timezone.now()
@@ -36,34 +34,6 @@ class TestSetup(JobTestCase):
         JobSchedulerClient.notify_state(freshen(host), now, 'lnet_up', ['configured'])
         self.assertState(host.lnetconfiguration, 'nids_known')
         freshen(host).lnetconfiguration.get_nids()
-
-    def test_selinux_detection(self):
-        """Test that a host with SELinux enabled fails setup."""
-        MockAgent.selinux_enabled = True
-        try:
-            import time
-            host, command = ManagedHost.create_from_string('myaddress')
-            while not command.complete:
-                time.sleep(1)
-            self.assertTrue(command.errored)
-            self.assertState(host, 'unconfigured')
-        finally:
-            MockAgent.selinux_enabled = False
-
-    def test_version(self):
-        """Test manager-agent version compatibility."""
-        versions = settings.VERSION, MockAgent.version
-        settings.VERSION, MockAgent.version = '2.0', '1.0'
-        try:
-            host, command = ManagedHost.create_from_string('myaddress')
-            self.assertTrue(command.errored)
-            self.assertState(host, 'unconfigured')
-            settings.VERSION = '1.1'
-            command = Command.set_state([(host, 'configured')])
-            self.assertFalse(command.errored)
-            self.assertNotEqual(freshen(host).state, 'unconfigured')
-        finally:
-            settings.VERSION, MockAgent.version = versions
 
 
 class NidTestCase(JobTestCase):
@@ -91,7 +61,7 @@ class TestNidChange(NidTestCase):
     }
 
     def attempt_nid_change(self, new_nids):
-        host, command = ManagedHost.create_from_string('myaddress')
+        host = self._create_host('myaddress')
         self.set_state(host.lnetconfiguration, 'nids_known')
         self.assertNidsCorrect(host)
         self.mock_servers['myaddress']['nids'] = new_nids
@@ -129,9 +99,9 @@ class TestUpdateNids(NidTestCase):
     }
 
     def test_mgs_nid_change(self):
-        mgs, command = ManagedHost.create_from_string('mgs')
-        mds, command = ManagedHost.create_from_string('mds')
-        oss, command = ManagedHost.create_from_string('oss')
+        mgs = self._create_host('mgs')
+        mds = self._create_host('mds')
+        oss = self._create_host('oss')
 
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
         self.mgt = ManagedMgs.create_for_volume(self._test_lun(mgs).id, name = "MGS")
@@ -147,9 +117,9 @@ class TestUpdateNids(NidTestCase):
 
         JobSchedulerClient.command_run_jobs([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test update nids")
         # The -3 looks past the start/stop that happens after writeconf
-        self.assertEqual(MockAgent.host_calls[mgs][-3][0], "writeconf-target")
-        self.assertEqual(MockAgent.host_calls[mds][-3][0], "writeconf-target")
-        self.assertEqual(MockAgent.host_calls[oss][-3][0], "writeconf-target")
+        self.assertEqual(MockAgent.host_calls[mgs][-3][0], "writeconf_target")
+        self.assertEqual(MockAgent.host_calls[mds][-3][0], "writeconf_target")
+        self.assertEqual(MockAgent.host_calls[oss][-3][0], "writeconf_target")
         self.assertState(self.fs, 'stopped')
 
 
@@ -163,17 +133,17 @@ class TestHostAddRemove(JobTestCase):
     }
 
     def test_creation(self):
-        ManagedHost.create_from_string('myaddress')
+        self._create_host('myaddress')
         self.assertEqual(ManagedHost.objects.count(), 1)
 
     def test_dupe_creation(self):
-        ManagedHost.create_from_string('myaddress')
+        self._create_host('myaddress')
         with self.assertRaises(IntegrityError):
-            ManagedHost.create_from_string('myaddress')
+            self._create_host('myaddress')
         self.assertEqual(ManagedHost.objects.count(), 1)
 
     def test_removal(self):
-        host, command = ManagedHost.create_from_string('myaddress')
+        host = self._create_host('myaddress')
 
         self._test_lun(host)
         self.assertEqual(Volume.objects.count(), 1)
@@ -189,7 +159,7 @@ class TestHostAddRemove(JobTestCase):
     def test_force_removal(self):
         """Test the mode of removal which should not rely on the host
            being accessible"""
-        host, command = ManagedHost.create_from_string('myaddress')
+        host = self._create_host('myaddress')
 
         self._test_lun(host)
         self.assertEqual(Volume.objects.count(), 1)
@@ -212,7 +182,7 @@ class TestHostAddRemove(JobTestCase):
         """Test that when a filesystem depends on a host, the filesystem
         is deleted along with the host when doing a force remove"""
 
-        host, command = ManagedHost.create_from_string('myaddress')
+        host = self._create_host('myaddress')
 
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
         self.mgt = ManagedMgs.create_for_volume(self._test_lun(host).id, name = "MGS")

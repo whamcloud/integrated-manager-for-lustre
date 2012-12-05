@@ -27,10 +27,11 @@ class TestClusterSetup(TestCase):
         # If we indicate failover is set up, ensure we have the proper
         # information configured to test it.
         if config['failover_is_configured']:
-            self.assertGreaterEqual(len(config['hosts']), 1)
-            for lustre_server in config['lustre_servers']:
-                self.assertTrue(lustre_server['host'])
-                self.assertTrue(lustre_server['destroy_command'])
+            if not config.get('simulator', False):
+                self.assertGreaterEqual(len(config['hosts']), 1)
+                for lustre_server in config['lustre_servers']:
+                    self.assertTrue(lustre_server['host'])
+                    self.assertTrue(lustre_server['destroy_command'])
 
         # TODO(kelsey): I'd like to add a lot more validation of the cluster.
         #   - devices mounted properly

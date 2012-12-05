@@ -4,69 +4,47 @@
 # ========================================================
 
 
+import datetime
+from chroma_agent.crypto import Crypto
 import os
-import time
 import logging
 import sys
 import traceback
-import datetime
 import argparse
 import signal
 import socket
 
-daemon_log = logging.getLogger('daemon')
-daemon_log.setLevel(logging.INFO)
+from daemon.daemon import set_signal_handlers
+from daemon import DaemonContext
+from daemon.pidlockfile import PIDLockFile
+
+from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
+from chroma_agent.agent_client import AgentClient
+from chroma_agent.log import  daemon_log, daemon_log_setup, console_log_setup, console_log
+
+from chroma_agent.store import AgentStore
 
 
-def daemon_log_setup():
-    handler = logging.FileHandler("/var/log/chroma-agent.log")
-    handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-    daemon_log.addHandler(handler)
+# FIXME: don't leave these set to DEBUG (preferably make them configurable)
+daemon_log.setLevel(logging.DEBUG)
+console_log.setLevel(logging.DEBUG)
 
 
-def retry_main_loop():
-    DEFAULT_BACKOFF = 10
-    MAX_BACKOFF = 120
-    backoff = DEFAULT_BACKOFF
+class ServerProperties(object):
+    @property
+    def fqdn(self):
+        return socket.getfqdn()
 
-    while True:
-        started_at = datetime.datetime.now()
-        try:
-            daemon_log.info("Entering main loop")
-            loop = MainLoop()
-            loop.run()
-            # NB I would rather ensure cleanup by using 'with', but this
-            # is python 2.4-compatible code
-        except Exception, e:
-            exc_info = sys.exc_info()
-            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-            daemon_log.error("Unhandled exception: %s" % backtrace)
+    @property
+    def nodename(self):
+        return os.uname()[1]
 
-            duration = datetime.datetime.now() - started_at
-            daemon_log.error("(Ran main loop for %s)" % duration)
-            if duration > datetime.timedelta(seconds = DEFAULT_BACKOFF):
-                # This was a 'reasonably' long run, reset to the default backoff interval
-                # to avoid a historical error causing the backoff to stick at max forever.
-                backoff = DEFAULT_BACKOFF
-
-            # We now check for some cases on which we should terminate instead
-            # of retrying.
-            if isinstance(e, socket.error):
-                # This is a 'system call interrupted' exception which
-                # can result from a signal received during a system call --
-                # it's not an internal error, so pass the exception up
-                errno, message = e
-                if errno == 4:
-                    raise
-            elif isinstance(e, SystemExit):
-                # NB this is redundant in Python >= 2.5 (SystemExit no longer
-                # inherits from Exception) but is necessary for Python 2.4
-                raise
-            else:
-                daemon_log.error("Waiting %s seconds before retrying" % backoff)
-                time.sleep(backoff)
-                if backoff < MAX_BACKOFF:
-                    backoff *= 2
+    @property
+    def boot_time(self):
+        for line in open("/proc/stat").readlines():
+            name, val = line.split(" ", 1)
+            if name == 'btime':
+                return datetime.datetime.fromtimestamp(int(val))
 
 
 def main():
@@ -77,10 +55,12 @@ def main():
     parser.add_argument("--pid-file", default = "/var/run/chroma-agent.pid")
     args = parser.parse_args()
 
-    if not args.foreground:
-        from daemon import DaemonContext
-        from daemon.pidlockfile import PIDLockFile
+    # FIXME: at startup, if there is a PID file hanging around, find any
+    # processes which are children of that old PID, and kill them: prevent
+    # orphaned processes from an old agent run hanging around where they
+    # could cause trouble (think of a 2 hour mkfs)
 
+    if not args.foreground:
         if os.path.exists(args.pid_file + ".lock") or os.path.exists(args.pid_file):
             try:
                 pid = int(open(args.pid_file).read())
@@ -101,178 +81,52 @@ def main():
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         context = DaemonContext(pidfile = PIDLockFile(args.pid_file))
         context.open()
-        # NB Have to set up logger after entering DaemonContext because it closes all files when
-        # it forks
-        handler = logging.FileHandler("/var/log/chroma-agent.log")
-        handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-        daemon_log.addHandler(handler)
+
+        daemon_log_setup()
+        console_log_setup()
         daemon_log.info("Starting in the background")
     else:
         context = None
-        daemon_log.setup()
-        daemon_log.info("Starting in the foreground")
+        daemon_log_setup()
+        daemon_log.addHandler(logging.StreamHandler())
 
-    if args.publish_zconf:
-        try:
-            from chroma_agent.avahi_publish import ZeroconfService
-            from chroma_agent.avahi_publish import ZeroconfServiceException
-        except ImportError:
-            daemon_log.error("Unable to import Zeroconf modules, is python-avahi installed?")
-            if context:
-                context.close()
-            sys.exit(-1)
-
-        # Before entering the main loop, advertize ourselves
-        # using Avahi (call this only once per process)
-        service = ZeroconfService(name="%s" % os.uname()[1], port=22)
-        try:
-            service.publish()
-        except ZeroconfServiceException, e:
-            daemon_log.error("Could not publish the host with Zeroconf: Avahi is not running.  Exiting.")
-            if context:
-                context.close()
-            sys.exit(-1)
-        except Exception, e:
-            exc_info = sys.exc_info()
-            backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-            msg = "Error creating Zeroconf publisher: %s\n\n%s" % (e, backtrace)
-            daemon_log.error(msg)
-            raise RuntimeError(msg)
-
-        # don't need to call service.unpublish() since the service
-        # will be unpublished when this daemon exits
+        console_log_setup()
 
     try:
-        retry_main_loop()
-    except Exception:
-        # Swallow terminating exceptions (they were already logged in
-        # retry_main_loop) and proceed to teardown
-        pass
+        daemon_log.info("Entering main loop")
+        conf = AgentStore.get_server_conf()
+        if conf is None:
+            daemon_log.error("No configuration found (must be registered before running the agent service)")
+            return
+
+        agent_client = AgentClient(
+            conf['url'] + "message/",
+            ActionPluginManager(),
+            DevicePluginManager(),
+            ServerProperties(),
+            Crypto())
+
+        def teardown_callback(*args, **kwargs):
+            agent_client.stop()
+            agent_client.join()
+
+        if not args.foreground:
+            set_signal_handlers({signal.SIGTERM: teardown_callback})
+        else:
+            signal.signal(signal.SIGINT, teardown_callback)
+
+        agent_client.start()
+        # Waking-wait to pick up signals
+        while not agent_client.stopped.is_set():
+            agent_client.stopped.wait(timeout = 10)
+
+        agent_client.join()
+    except Exception, e:
+        backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
+        daemon_log.error("Unhandled exception: %s" % backtrace)
 
     if context:
+        # NB I would rather ensure cleanup by using 'with', but this
+        # is python 2.4-compatible code
         context.close()
     daemon_log.info("Terminating")
-
-
-def send_update(server_url, server_token, session, started_at, updates):
-    """POST to the UpdateScan API method.
-       Returns None on errors"""
-    from httplib import BadStatusLine
-    import simplejson as json
-    import urllib2
-    url = server_url + "api/agent/"
-    req = urllib2.Request(url,
-                          headers = {"Content-Type": "application/json"},
-                          data = json.dumps({
-                                  'session': session,
-                                  'fqdn': socket.getfqdn(),
-                                  'token': server_token,
-                                  'started_at': started_at.isoformat() + "Z",
-                                  'sent_at': datetime.datetime.utcnow().isoformat() + "Z",
-                                  'updates': updates}))
-
-    response_data = None
-    try:
-        response = urllib2.urlopen(req)
-        response_data = json.loads(response.read())
-    except urllib2.HTTPError, e:
-        daemon_log.error("Failed to post results to %s: %s" % (url, e))
-        try:
-            content = json.loads(e.read())
-            daemon_log.error("Exception: %s" % content['traceback'])
-        except ValueError:
-            daemon_log.error("Unreadable payload")
-        except KeyError:
-            daemon_log.error("No exception in payload")
-    except urllib2.URLError, e:
-        daemon_log.error("Failed to open %s: %s" % (url, e))
-    except BadStatusLine, e:
-        daemon_log.error("Malformed response header from %s: '%s'" % (url, e.line))
-    except ValueError, e:
-        daemon_log.error("Malformed response body from %s: '%s'" % (url, e))
-
-    return response_data
-
-
-class MainLoop(object):
-    def run(self):
-        # Load server config (server URL etc)
-        from chroma_agent.store import AgentStore
-        server_conf = AgentStore.get_server_conf()
-        if server_conf:
-            daemon_log.info("Server configuration loaded (url: %s)" % server_conf['url'])
-
-        # How often to report to a configured server
-        report_interval = 10
-
-        # How often to re-read JSON to see if we
-        # have a server configured
-        config_interval = 10
-        session_id = None
-        session_started = False
-        session_counter = None
-        session_state = None
-        while True:
-            if AgentStore.server_conf_changed():
-                server_conf = AgentStore.get_server_conf()
-                if not server_conf:
-                    daemon_log.info("Server configuration cleared")
-                else:
-                    daemon_log.info("Server configuration changed (url: %s)" % server_conf['url'])
-                self._reload_config = False
-            elif server_conf:
-                from datetime import datetime, timedelta
-                # Record the *start* of the reporting cycle (all enclosed
-                # data is younger than this time)
-                update_started_at = datetime.utcnow()
-
-                updates = {}
-                from chroma_agent.plugins import DevicePluginManager
-                if session_id and not session_started:
-                    daemon_log.info("New session, sending full information")
-                    for plugin_name, plugin in DevicePluginManager.get_plugins().items():
-                        instance = plugin()
-                        session_state[plugin_name] = instance
-                        updates[plugin_name] = instance.start_session()
-                elif session_id:
-                    daemon_log.debug("Continue session, sending update information")
-                    for plugin_name, plugin in DevicePluginManager.get_plugins().items():
-                        instance = session_state[plugin_name]
-                        try:
-                            updates[plugin_name] = instance.update_session()
-                        except NotImplementedError:
-                            pass
-                else:
-                    daemon_log.debug("No session")
-                    pass
-
-                session = {
-                        'id': session_id,
-                        'counter': session_counter
-                        }
-                response_data = send_update(server_conf['url'], server_conf['token'], session, update_started_at, updates)
-                quick_retry = False
-                if response_data:
-                    if session_id and response_data['session_id'] != session_id:
-                        daemon_log.info("Session %s evicted" % (session_id))
-                        session_id = response_data['session_id']
-                        session_counter = 0
-                        session_started = False
-                        session_state = {}
-                        quick_retry = True
-                    elif not session_id:
-                        session_id = response_data['session_id']
-                        session_counter = 0
-                        session_started = False
-                        session_state = {}
-                        daemon_log.info("Session %s began" % (session_id))
-                        quick_retry = True
-                    elif session_id and response_data['session_id'] == session_id:
-                        session_started = True
-                        session_counter += 1
-
-                if not quick_retry:
-                    while (datetime.utcnow() - update_started_at) < timedelta(seconds = report_interval):
-                        time.sleep(1)
-            else:
-                time.sleep(config_interval)

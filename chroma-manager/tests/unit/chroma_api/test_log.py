@@ -1,7 +1,8 @@
+
 from django.contrib.auth.models import User, Group
-from chroma_core.models import Systemevents
 from tests.unit.chroma_api.tastypie_test import TestApiClient
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_core.helper import fake_log_message
 
 
 class TestLogResource(ChromaApiTestCase):
@@ -24,10 +25,10 @@ class TestLogResource(ChromaApiTestCase):
 
         # some basic log entries
         # all Lustre log entries have a leading space.
-        self.messages = ['Plain old log message', ' Lustre: Normal Lustre Message', ' LustreError: Lustre Error Message']
+        self.messages = ['Plain old log message', 'Lustre: Normal Lustre Message', 'LustreError: Lustre Error Message']
         self.lustre_messages = [message for message in self.messages if message.startswith(' Lustre')]
         for message in self.messages:
-            Systemevents.objects.create(message=message)
+            fake_log_message(message)
 
     def test_get_logs_lustre_only(self):
         """Verifies unauthenticated users and filesystem_users only get lustre messages"""

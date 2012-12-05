@@ -95,6 +95,14 @@ return a single serialized object in the response.
 To see all the filesystems, we simply leave the /1/ off the URL and do a ``GET /api/filesystem/``.
 This type of operation is referred to in this document as a _list_ operation. 
 
+
+Use of HTTPS
+~~~~~~~~~~~~
+
+By default, Chroma manager uses a server certificate signed by its built-in CA.  To verify this
+certificate in an API client, you must download the Chroma manager CA.  The CA is available for
+download from the manager server at the ``/certificate/`` path.
+
 Filtering and ordering
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -387,7 +395,7 @@ The example below is written in Python and uses the ``python-requests``
 module for HTTP operations.  It demonstrates how to establish a session, authenticate,
 and retrieve a list of hosts.
 
-.. literalinclude:: example_api_client.py
+.. literalinclude:: /../../tests/integration/shared_storage_configuration/example_api_client.py
    :language: python
    :linenos:
 

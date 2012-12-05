@@ -39,7 +39,7 @@ class Pinger(threading.Thread):
 
 
 class Service(ChromaService):
-    def start(self):
+    def run(self):
         overall_ts = time.time()
         threads = []
         N = 4096

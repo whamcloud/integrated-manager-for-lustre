@@ -21,7 +21,8 @@ Table of contents
   :maxdepth: 2
 
   toplevel
+  dataflow
+  services
   job_scheduler
   plugin_runner
-  services
 

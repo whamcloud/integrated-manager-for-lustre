@@ -116,7 +116,7 @@ class CommandPlan(object):
             for dependency in self._dep_cache.get(job).all():
                 if not dependency.satisfied():
                     log.info("add_jobs: setting required dependency %s %s" % (dependency.stateful_object, dependency.preferred_state))
-                    self.set_state(dependency.get_stateful_object(), dependency.preferred_state, command)
+                    self._set_state(dependency.get_stateful_object(), dependency.preferred_state, command)
             log.info("add_jobs: done checking dependencies")
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
@@ -128,7 +128,6 @@ class CommandPlan(object):
             log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
             command.jobs.add(job)
 
-        self._job_collection.add_many(jobs)
         self._job_collection.add_command(command, jobs)
 
     def get_transition_consequences(self, instance, new_state):
@@ -258,7 +257,7 @@ class CommandPlan(object):
         object_leaf_distances.sort(lambda x, y: cmp(x[1], y[1]))
         return [obj for obj, ld in object_leaf_distances]
 
-    def set_state(self, instance, new_state, command):
+    def _set_state(self, instance, new_state, command):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
 
@@ -275,13 +274,13 @@ class CommandPlan(object):
         self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
 
         if new_state == self.get_expected_state(instance):
+            log.info("set_state: already expected to be in state %s" % new_state)
             if instance.state != new_state:
                 # This is a no-op because of an in-progress Job:
                 job = self._lock_cache.get_latest_write(instance).job
+                log.info("set_state: state %s to be reached by job" % job.id)
                 command.jobs.add(job)
                 self._job_collection.add_command(command, [job])
-
-            command.check_completion()
 
             # Pick out whichever job made it so, and attach that to the Command
             return None
@@ -316,7 +315,6 @@ class CommandPlan(object):
             command.jobs.add(job)
 
         command.save()
-        self._job_collection.add_many(jobs)
         self._job_collection.add_command(command, jobs)
 
     def _emit_transition_deps(self, transition, transition_stack = {}):
@@ -445,8 +443,11 @@ class CommandPlan(object):
         for ct_nk, o_pk, state in object_ids:
             model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
             instance = model_klass.objects.get(pk = o_pk)
-            self.set_state(instance, state, command)
+            self._set_state(instance, state, command)
 
         log.info("Created command %s (%s) with %s jobs" % (command.id, command.message, command.jobs.count()))
+        if command.jobs.count() == 0:
+            command.complete = True
+            command.save()
 
         return command

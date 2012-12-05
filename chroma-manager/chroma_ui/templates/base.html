@@ -6,9 +6,6 @@
     {% include 'user_detail.html' %}
     {% include 'command_detail.html' %}
     {% include 'storage_resource_detail.html' %}
-    <div style="display:none">
-      {% include 'login_dialog.html' %}
-    </div>
     <script type='text/javascript'>
       // Take a javascript copy of the STATIC_URL variable
       // so that we can access it from static .js code
@@ -81,6 +78,10 @@
     {% block scripts %}{% endblock %}
     <title>Chroma</title>
   </head>
+
+  <div style="display:none">
+      {% include 'login_dialog.html' %}
+  </div>
 
   <script type='text/javascript'>
         function updateSizes() {

@@ -4,11 +4,9 @@
 # ========================================================
 
 
-import datetime
-from exceptions import Exception
 import json
 import logging
-import dateutil.parser
+from chroma_core.lib.util import normalize_nid
 
 from django.db import models
 from django.db import transaction
@@ -16,17 +14,16 @@ from django.db import IntegrityError
 import itertools
 from django.db.models.aggregates import Max, Count
 from django.db.models.query_utils import Q
-from django.utils.timezone import now
+
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
+from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
-
 from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import  DependOn, DependAll, Step
-
-from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass, Version
+from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
 import settings
 
@@ -62,27 +59,23 @@ class DeletableStatefulObject(StatefulObject):
 
 
 class ManagedHost(DeletableStatefulObject, MeasuredEntity):
-    # FIXME: either need to make address non-unique, or need to
-    # associate objects with a child object, because there
-    # can be multiple servers on one hostname, eg ddn10ke
     address = models.CharField(max_length = 255, help_text = "A URI like 'user@myhost.net:22'")
 
     # A fully qualified domain name like flint02.testnet
-    fqdn = models.CharField(max_length = 255, blank = True, null = True, help_text = "Unicode string, fully qualified domain name")
+    fqdn = models.CharField(max_length = 255, help_text = "Unicode string, fully qualified domain name")
 
     # a nodename to match against fqdn in corosync output
-    nodename = models.CharField(max_length = 255, blank = True, null = True, help_text = "Unicode string, node name")
+    nodename = models.CharField(max_length = 255, help_text = "Unicode string, node name")
 
-    # A basic authentication mechanism
-    agent_token = models.CharField(max_length = 64)
+    # The SHA1 fingerprint of the certificate issued to the host
+    ssl_fingerprint = models.CharField(max_length = 64)
+
+    # The last known boot time
+    boot_time = models.DateTimeField(null = True, blank = True)
 
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
-
-    last_contact = models.DateTimeField(blank = True, null = True, help_text = "When the Chroma agent on this host last sent an update to this server")
-
-    DEFAULT_USERNAME = 'root'
 
     class Meta:
         app_label = 'chroma_core'
@@ -93,11 +86,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def get_label(self):
         """Return the FQDN if it is known, else the address"""
-        if self.fqdn:
-            name = self.fqdn
-        else:
-            user, host, port = self.ssh_params()
-            name = host
+        name = self.fqdn
 
         if name.endswith(".localdomain"):
             name = name[:-len(".localdomain")]
@@ -105,29 +94,13 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         return name
 
     def save(self, *args, **kwargs):
-        from django.core.exceptions import ValidationError
-        MIN_LENGTH = 1
-        if len(self.address) < MIN_LENGTH:
-            raise ValidationError("Address '%s' is too short" % self.address)
-
-        if self.fqdn:
-            try:
-                ManagedHost.objects.get(~Q(pk = self.pk), fqdn = self.fqdn)
-                raise IntegrityError("FQDN %s in use" % self.fqdn)
-            except ManagedHost.DoesNotExist:
-                pass
+        try:
+            ManagedHost.objects.get(~Q(pk = self.pk), fqdn = self.fqdn)
+            raise IntegrityError("FQDN %s in use" % self.fqdn)
+        except ManagedHost.DoesNotExist:
+            pass
 
         super(ManagedHost, self).save(*args, **kwargs)
-
-    def is_available(self):
-        """Whether the Host is in contact"""
-        if not self.last_contact:
-            # Never had contact
-            return False
-        else:
-            # Have we had contact within timeout?
-            time_since = now() - self.last_contact
-            return time_since <= datetime.timedelta(seconds=settings.AUDIT_PERIOD * 2)
 
     def get_available_states(self, begin_state):
         if self.immutable_state:
@@ -139,29 +112,31 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return super(ManagedHost, self).get_available_states(begin_state)
 
     @classmethod
-    def create_from_string(cls, address_string):
+    def create(cls, fqdn, nodename, capabilities, **kwargs):
         # Single transaction for creating Host and related database objects
         # * Firstly because we don't want any of these unless they're all setup
         # * Secondly because we want them committed before creating any Jobs which
         #   will try to use them.
-        with transaction.commit_on_success():
-            try:
-                host = ManagedHost.objects.get(address = address_string)
-                # It already existed
-                raise IntegrityError("Duplicate address %s" % address_string)
-            except ManagedHost.DoesNotExist:
-                import uuid
-                # NB: this is NOT A CRYPTOGRAPHICALLY SECURE RANDOM NUMBER,
-                # it is a very lightweight security measure intended primarily
-                # to make the system more robust
-                token = uuid.uuid4().__str__()
-                host = ManagedHost.objects.create(address = address_string, agent_token = token)
+        immutable_state = not any("manage_" in c for c in capabilities)
 
+        # The address of a host isn't something we can learn from it (the
+        # address is specifically how the host is to be reached from the manager
+        # for outbound connections, not just its FQDN).  If during creation we know
+        # the address, then great, accept it.  Else default to FQDN, it's a reasonable guess.
+        if not 'address' in kwargs or kwargs['address'] is None:
+            kwargs['address'] = fqdn
+
+        with transaction.commit_on_success():
+            host = ManagedHost.objects.create(
+                fqdn = fqdn,
+                nodename = nodename,
+                immutable_state = immutable_state,
+                **kwargs)
             lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
 
         # Attempt some initial setup jobs
         from chroma_core.models.jobs import Command
-        command = Command.set_state([(host, 'configured')], "Setting up host %s" % address_string)
+        command = Command.set_state([(host, 'configured')], "Setting up host %s" % host)
 
         return host, command
 
@@ -170,12 +145,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         for mountable in self.managedtargetmount_set.all():
             target = mountable.target.downcast()
             roles.add("%sS" % target.role()[:-1])
-
-            #if isinstance(mountable, Client):
-            #    roles.add("Client")
-
-        #if self.router_set.count() > 0:
-        #    roles.add("Router")
 
         return roles
 
@@ -203,20 +172,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return "Unused"
         else:
             return "/".join(roles)
-
-    def ssh_params(self):
-        if self.address.find("@") != -1:
-            user, host = self.address.split("@")
-        else:
-            user = self.DEFAULT_USERNAME
-            host = self.address
-
-        if host.find(":") != -1:
-            host, port = host.split(":")
-        else:
-            port = None
-
-        return user, host, port
 
     @classmethod
     def get_by_nid(cls, nid_string):
@@ -469,9 +424,9 @@ class LearnNidsStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost, Nid
-        from chroma_core.lib.lustre_audit import normalize_nid
+
         host = ManagedHost.objects.get(pk = kwargs['host_id'])
-        result = self.invoke_agent(host, "lnet-scan")
+        result = self.invoke_agent(host, "lnet_scan")
 
         self.log("Scanning NIDs on host %s..." % host)
 
@@ -512,16 +467,10 @@ class ConfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        if settings.LOG_SERVER_HOSTNAME:
-            fqdn = settings.LOG_SERVER_HOSTNAME
-        else:
-            import socket
-            fqdn = socket.getfqdn()
-
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         if not host.immutable_state:
-            self.invoke_agent(host, "configure-rsyslog --node %s" % fqdn)
+            self.invoke_agent(host, "configure_rsyslog")
 
 
 class ConfigureNTPStep(Step):
@@ -529,15 +478,15 @@ class ConfigureNTPStep(Step):
 
     def run(self, kwargs):
         if settings.NTP_SERVER_HOSTNAME:
-            fqdn = settings.NTP_SERVER_HOSTNAME
+            ntp_server = settings.NTP_SERVER_HOSTNAME
         else:
             import socket
-            fqdn = socket.getfqdn()
+            ntp_server = socket.getfqdn()
 
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         if not host.immutable_state:
-            self.invoke_agent(host, "configure-ntp --node %s" % fqdn)
+            self.invoke_agent(host, "configure_ntp", {'ntp_server': ntp_server})
 
 
 class UnconfigureRsyslogStep(Step):
@@ -547,7 +496,7 @@ class UnconfigureRsyslogStep(Step):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         if not host.immutable_state:
-            self.invoke_agent(host, "unconfigure-rsyslog")
+            self.invoke_agent(host, "unconfigure_rsyslog")
 
 
 class UnconfigureNTPStep(Step):
@@ -557,7 +506,7 @@ class UnconfigureNTPStep(Step):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
         if not host.immutable_state:
-            self.invoke_agent(host, "unconfigure-ntp")
+            self.invoke_agent(host, "unconfigure_ntp")
 
 
 class GetLNetStateStep(Step):
@@ -567,7 +516,7 @@ class GetLNetStateStep(Step):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
 
-        lustre_data = self.invoke_agent(host, "device-plugin --plugin=lustre")['lustre']
+        lustre_data = self.invoke_agent(host, "device_plugin", {'plugin': 'lustre'})['lustre']
 
         if lustre_data['lnet_up']:
             state = 'lnet_up'
@@ -608,98 +557,13 @@ class GetLNetStateJob(Job):
         return [(GetLNetStateStep, {'host_id': self.host.id})]
 
 
-class GetHostProperties(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        host_properties = self.invoke_agent(host, "host-properties")
-        manager, agent = Version(settings.VERSION), Version(host_properties.get('agent_version'))
-        # only check production version compatibility: A.B.
-        if manager and agent and not (manager.major == agent.major and manager.minor >= agent.minor):
-            raise ValueError("Version incompatibility between manager {0} and agent {1}".format(manager, agent))
-
-        # Get agent capabilities
-        capabilities = host_properties['capabilities']
-        immutable_state = not any("manage_" in c for c in capabilities)
-        if host.immutable_state != immutable_state:
-            host.immutable_state = immutable_state
-            host.save()
-
-        # Get FQDN and nodename
-        fqdn = host_properties['fqdn']
-        nodename = host_properties['nodename']
-
-        assert fqdn != None
-        assert nodename != None
-
-        from django.db import IntegrityError
-        try:
-            host.fqdn = fqdn
-            host.nodename = nodename
-            host.save()
-            job_log.info("Learned FQDN '%s' for host %s (%s)" % (fqdn, host.pk, host.address))
-        except IntegrityError:
-            # TODO: make this an Event or Alert?
-            host.fqdn = None
-            job_log.error("Cannot complete setup of host %s, it is reporting an already-used FQDN %s" % (host, fqdn))
-            raise
-
-        if host_properties['selinux_enabled']:
-            job_log.error("Cannot complete setup of host %s, SELinux is not disabled" % host)
-            raise RuntimeError("SELinux must be disabled on %s" % host)
-
-
-class GetHostClock(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        host_properties = self.invoke_agent(host, "host-properties")
-
-        # Get agent time and check it against server time
-        agent_time_str = host_properties['time']
-        agent_time = dateutil.parser.parse(agent_time_str)
-        server_time = now()
-        from dateutil import tz
-        server_time = server_time.replace(tzinfo=tz.tzutc())
-
-        if agent_time > server_time:
-            if (agent_time - server_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
-                raise RuntimeError("Host %s clock is fast.  agent time %s, server time %s" % (host, agent_time, server_time))
-
-        if server_time > agent_time:
-            if (server_time - agent_time) > datetime.timedelta(seconds = settings.AGENT_CLOCK_TOLERANCE):
-                raise RuntimeError("Host %s clock is slow.  agent time %s, server time %s" % (host, agent_time, server_time))
-
-
-class SetServerConfStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        import settings
-
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
-        if settings.SERVER_HTTP_URL:
-            url = settings.SERVER_HTTP_URL
-        else:
-            import socket
-            fqdn = socket.getfqdn()
-            url = "http://%s/" % fqdn
-        self.invoke_agent(host, "set-server-conf", {"url": url, 'token': host.agent_token})
-
-
 class RemoveServerConfStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "remove-server-conf")
+        self.invoke_agent(host, "deregister_server")
 
 
 class LearnDevicesStep(Step):
@@ -707,15 +571,20 @@ class LearnDevicesStep(Step):
 
     def run(self, kwargs):
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
         # Get the device-scan output
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        updates = self.invoke_agent(host, "device-plugin")
-        try:
-            del updates['lustre']
-        except KeyError:
-            pass
 
-        AgentDaemonRpcInterface().setup_host(host.id, updates)
+        plugin_data = {}
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        for plugin in storage_plugin_manager.loaded_plugin_names:
+            try:
+                plugin_data[plugin] = self.invoke_agent(host, "device_plugin", {'plugin': plugin})[plugin]
+            except AgentException:
+                self.log("No data for plugin %s from host %s" % (plugin, host))
+
+        AgentDaemonRpcInterface().setup_host(host.id, plugin_data)
 
 
 class SetupHostJob(StateChangeJob):
@@ -728,12 +597,9 @@ class SetupHostJob(StateChangeJob):
         return "Set up server %s" % self.managed_host
 
     def get_steps(self):
-        return [(GetHostProperties, {'host_id': self.managed_host.pk}),
-                (ConfigureNTPStep, {'host_id': self.managed_host.pk}),
-                (GetHostClock, {'host_id': self.managed_host.pk}),
-                (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
-                (LearnDevicesStep, {'host_id': self.managed_host.pk}),
-                (SetServerConfStep, {'host_id': self.managed_host.pk})]
+        return [(ConfigureNTPStep, {'host_id': self.managed_host.pk}),
+               (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
+                (LearnDevicesStep, {'host_id': self.managed_host.pk})]
 
     class Meta:
         app_label = 'chroma_core'
@@ -771,7 +637,7 @@ class DetectTargetsStep(Step):
         for host in ManagedHost.objects.filter(id__in = kwargs['host_ids']):
             with transaction.commit_on_success():
                 self.log("Scanning server %s..." % host)
-            data = self.invoke_agent(host, 'detect-scan')
+            data = self.invoke_agent(host, 'detect_scan')
             host_data[host] = data
 
         with transaction.commit_on_success():
@@ -802,7 +668,7 @@ class StartLNetStep(Step):
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "start-lnet")
+        self.invoke_agent(host, "start_lnet")
 
 
 class StopLNetStep(Step):
@@ -811,7 +677,7 @@ class StopLNetStep(Step):
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "stop-lnet")
+        self.invoke_agent(host, "stop_lnet")
 
 
 class LoadLNetStep(Step):
@@ -820,7 +686,7 @@ class LoadLNetStep(Step):
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "load-lnet")
+        self.invoke_agent(host, "load_lnet")
 
 
 class UnloadLNetStep(Step):
@@ -829,7 +695,7 @@ class UnloadLNetStep(Step):
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
         host = ManagedHost.objects.get(id = kwargs['host_id'])
-        self.invoke_agent(host, "unload-lnet")
+        self.invoke_agent(host, "unload_lnet")
 
 
 class LoadLNetJob(StateChangeJob):
@@ -900,6 +766,28 @@ class DeleteHostStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        from chroma_core.services.https_frontend import RoutingProxyRpc
+        from chroma_core.services.http_agent import AgentSessionRpc
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+
+        # First, cut off any more incoming connections
+        host = ManagedHost._base_manager.get(pk = kwargs['host_id'])
+        RoutingProxyRpc().revoke(host.ssl_fingerprint)
+
+        # Second, terminate any currently open connections and ensure there is nothing in a queue
+        # which will be drained into AMQP
+        AgentSessionRpc().remove_host(host.fqdn)
+
+        # Third, for all receivers of AMQP messages from originating from hosts, ask them to
+        # drain their queues, discarding any messages from the host being removed
+        # ... or if we could get a bit of info from rabbitmq we could look at how many N messages
+        # are pending in a queue, then track its 'messages consumed' count (if such a count exists)
+        # until N + 1 messages have been consumed
+        # TODO
+        # The last receiver of AMQP messages to clean up is myself (JobScheduler, inside which
+        # this code will execute)
+        AgentRpc.remove(host.fqdn)
+
         from chroma_core.models import StorageResourceRecord
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
         try:
@@ -909,9 +797,7 @@ class DeleteHostStep(Step):
             # then crash, then get restarted.
             pass
 
-        from chroma_core.models import ManagedHost, AgentSession
         ManagedHost.delete(kwargs['host_id'])
-        AgentSession.objects.filter(host = kwargs['host_id']).delete()
         if kwargs['force']:
             ManagedHost._base_manager.filter(id = kwargs['host_id']).update(state = 'removed')
 
@@ -931,10 +817,10 @@ class RemoveHostJob(StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        return [(RemoveServerConfStep, {'host_id': self.host.id}),
-                (UnconfigureNTPStep, {'host_id': self.host.id}),
+        return [(UnconfigureNTPStep, {'host_id': self.host.id}),
                 (UnconfigureRsyslogStep, {'host_id': self.host.id}),
-            (DeleteHostStep, {'host_id': self.host.id, 'force': False})]
+                (RemoveServerConfStep, {'host_id': self.host.id}),
+                (DeleteHostStep, {'host_id': self.host.id, 'force': False})]
 
 
 def _get_host_dependents(host):
@@ -1071,7 +957,6 @@ class WriteConfStep(Step):
 
         target = ManagedTarget.objects.get(pk = args['target_id']).downcast()
         primary_tm = target.managedtargetmount_set.get(primary = True)
-        # tunefs.lustre --erase-param --mgsnode=<new_nid(s)> --writeconf /dev/..
 
         agent_args = {
             'writeconf': True,
@@ -1084,7 +969,7 @@ class WriteConfStep(Step):
         fail_nids = target.get_failover_nids()
         if fail_nids:
             agent_args['failnode'] = fail_nids
-        self.invoke_agent(primary_tm.host, "writeconf-target", agent_args)
+        self.invoke_agent(primary_tm.host, "writeconf_target", agent_args)
 
 
 class ResetConfParamsStep(Step):
@@ -1210,6 +1095,20 @@ class HostContactAlert(AlertState):
             host = self.alert_item,
             alert = self,
             severity = logging.INFO)
+
+
+class HostRebootEvent(Event):
+    boot_time = models.DateTimeField()
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    @staticmethod
+    def type_name():
+        return "Autodetection"
+
+    def message(self):
+        return "%s restarted at %s" % (self.host, self.boot_time)
 
 
 class LNetOfflineAlert(AlertState):

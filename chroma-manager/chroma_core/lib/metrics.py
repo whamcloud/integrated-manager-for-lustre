@@ -278,8 +278,7 @@ class TargetMetricStore(R3dMetricStore):
                 pass
                 #brw_stats = metrics[key]
             else:
-                ds_name = key
-                update[ds_name] = {'value': metrics[key], 'type': 'Gauge'}
+                update[key] = {'value': metrics[key], 'type': 'Gauge'}
 
         for key in stats:
             ds_name = "stats_%s" % key

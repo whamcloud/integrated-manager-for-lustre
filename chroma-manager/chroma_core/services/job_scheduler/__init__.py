@@ -5,12 +5,14 @@
 
 
 import threading
+from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 from django.db import transaction
 
 from django.db.models.query_utils import Q
 
 from chroma_core.services.job_scheduler.job_scheduler_client import NotificationQueue
 from chroma_core.services import ChromaService, ServiceThread
+from chroma_core.models.jobs import Job, Command
 
 
 class QueueHandler(object):
@@ -45,40 +47,42 @@ class Service(ChromaService):
 
         self._complete = threading.Event()
 
-    def start(self):
+    def run(self):
         from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
-        from chroma_core.models.jobs import Command, Job
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc
+
         # Cancel anything that's left behind from a previous run
         Command.objects.filter(complete = False).update(complete = True, cancelled = True)
         Job.objects.filter(~Q(state = 'complete')).update(state = 'complete', cancelled = True)
 
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc
+        job_scheduler = JobScheduler()
+        self._queue_thread = ServiceThread(QueueHandler(job_scheduler))
+        self._rpc_thread = ServiceThread(JobSchedulerRpc(job_scheduler))
 
-        self.job_scheduler = JobScheduler()
-
-        self._queue_thread = ServiceThread(QueueHandler(self.job_scheduler))
+        AgentRpc.start()
         self._queue_thread.start()
-
-        self._rpc_thread = ServiceThread(JobSchedulerRpc(self.job_scheduler))
         self._rpc_thread.start()
 
         self._complete.wait()
 
-    def stop(self):
-        from chroma_core.models.jobs import Job
         self.log.info("Cancelling outstanding jobs...")
 
         # Get a fresh view of the job table
         with transaction.commit_manually():
             transaction.commit()
         for job in Job.objects.filter(~Q(state = 'complete')).order_by('-id'):
-            self.job_scheduler.cancel_job(job.id)
+            job_scheduler.cancel_job(job.id)
+
+    def stop(self):
+        AgentRpc.stop()
 
         self.log.info("Stopping...")
         self._rpc_thread.stop()
         self._queue_thread.stop()
+
         self.log.info("Joining...")
         self._rpc_thread.join()
         self._queue_thread.join()
         self.log.info("Complete.")
+
         self._complete.set()

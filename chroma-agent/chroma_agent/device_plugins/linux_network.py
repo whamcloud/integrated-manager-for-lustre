@@ -4,7 +4,7 @@
 # ========================================================
 
 
-from chroma_agent.plugins import DevicePlugin
+from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import shell
 
 import re

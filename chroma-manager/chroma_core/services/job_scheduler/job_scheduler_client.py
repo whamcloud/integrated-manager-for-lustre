@@ -26,7 +26,7 @@ class NotificationQueue(ServiceQueue):
 
 
 class JobSchedulerRpc(ServiceRpcInterface):
-    methods = ['set_state', 'run_jobs', 'cancel_job']
+    methods = ['set_state', 'run_jobs', 'cancel_job', 'create_host_ssh', 'test_host_contact']
 
 
 class JobSchedulerClient(object):
@@ -106,9 +106,7 @@ class JobSchedulerClient(object):
         :param stateful_object: Instance of a StatefulObject
         :return: A list of dicts like {'state': '<new state>', 'verb': '<human readable verb>'}
         """
-        """Return a list states to which the object can be set from
-           its current state, or None if the object is currently
-           locked by a Job"""
+
         if hasattr(stateful_object, 'content_type'):
             stateful_object = stateful_object.downcast()
 
@@ -208,3 +206,22 @@ class JobSchedulerClient(object):
         :param job_id: ID of a Job object
         """
         JobSchedulerRpc().cancel_job(job_id)
+
+    @classmethod
+    def create_host_ssh(cls, address):
+        """
+        Set up a host using SSH
+
+        FIXME: determine whether this is really the right place, is this an insane
+        flow of remote calls?
+
+        :param address: SSH address
+        :return: (<ManagedHost instance>, <Command instance>)
+        """
+        from chroma_core.models import ManagedHost, Command
+        host_id, command_id = JobSchedulerRpc().create_host_ssh(address)
+        return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
+
+    @classmethod
+    def test_host_contact(cls, address):
+        return JobSchedulerRpc().test_host_contact(address)

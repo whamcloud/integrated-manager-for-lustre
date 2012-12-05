@@ -1,17 +1,16 @@
 from testconfig import config
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
-from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
 
-
-class TestWriteconf(AuthorizedTestCase):
+class TestWriteconf(ChromaIntegrationTestCase):
     def _exercise_simple(self, fs_id):
         filesystem = self.get_filesystem(fs_id)
         client = config['lustre_clients'].keys()[0]
-        self.mount_filesystem(client, "testfs", filesystem['mount_command'])
+        self.remote_operations.mount_filesystem(client, filesystem)
         try:
-            self.exercise_filesystem(client, filesystem)
+            self.remote_operations.exercise_filesystem(client, filesystem)
         finally:
-            self.unmount_filesystem(client, 'testfs')
+            self.remote_operations.unmount_filesystem(client, filesystem)
 
     def testUpdateNids(self):
         """Test that running UpdateNids on a filesystem leaves it in a working state,
@@ -52,7 +51,7 @@ class TestWriteconf(AuthorizedTestCase):
             }
         )
 
-        self._exercise_simple(self.filesystem_id)
+        #self._exercise_simple(self.filesystem_id)
 
         for host in self.hosts:
             response = self.chroma_manager.post("/api/command/", body = {
@@ -74,4 +73,4 @@ class TestWriteconf(AuthorizedTestCase):
         # Writeconf will leave the filesystem down, so bring it up again
         self.set_state("/api/filesystem/%s/" % self.filesystem_id, 'available')
 
-        self._exercise_simple(self.filesystem_id)
+        #self._exercise_simple(self.filesystem_id)

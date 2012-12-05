@@ -4,9 +4,6 @@
 # ========================================================
 
 
-import json
-from re import escape
-
 from django.db import models
 from chroma_core.lib.job import DependOn, Step, DependAll
 from polymorphic.models import DowncastMetaclass
@@ -20,12 +17,10 @@ class ConfParamStep(Step):
     idempotent = False
 
     def run(self, kwargs):
-        from chroma_core.models import ConfParam
         conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
 
-        self.invoke_agent(conf_param.mgs.primary_server(),
-                "set-conf-param --args %s" % escape(json.dumps({
-                    'key': conf_param.get_key(), 'value': conf_param.value})))
+        self.invoke_agent(conf_param.mgs.primary_server(), "set_conf_param", {
+            'key': conf_param.get_key(), 'value': conf_param.value})
 
 
 class ConfParamVersionStep(Step):

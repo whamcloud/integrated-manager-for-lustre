@@ -93,15 +93,14 @@ ___________________________
 
 *Device plugins* are python modules which provide monitoring of 
 
-These are modules which follow the interface in chroma_agent.plugins.DevicePlugin.
+These are modules which follow the interface in chroma_agent.plugin_manager.DevicePlugin.
 
-.. autoclass:: chroma_agent.plugins.DevicePlugin
+.. autoclass:: chroma_agent.plugin_manager.DevicePlugin
   :members:
 
 chroma_agent/action_plugins
 ___________________________
 
-These are modules which follow the interface in chroma_agent.plugins.ActionPlugin.
-
-.. autoclass:: chroma_agent.plugins.ActionPlugin
-  :members:
+These are modules which follow a simple implicit interface.  They define a 1 or more functions, and
+set module-scope names ACTIONS and CAPABILITIES to a list of 1 or more functions and a list of 0
+or more strings respectively.

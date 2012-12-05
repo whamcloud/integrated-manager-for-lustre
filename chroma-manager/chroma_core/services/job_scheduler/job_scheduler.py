@@ -4,10 +4,16 @@
 # ========================================================
 
 
+from collections import defaultdict
+
 import json
+import socket
+import subprocess
 import threading
 import sys
 import traceback
+import urlparse
+from chroma_core.services.https_frontend import Crypto
 from dateutil import tz
 import dateutil.parser
 
@@ -22,6 +28,7 @@ from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
 from chroma_core.services.log import log_register
+import settings
 
 
 log = log_register(__name__.split('.')[-1])
@@ -79,7 +86,7 @@ class RunJobThread(threading.Thread):
 
             step = klass(self.job, args, result)
 
-            from chroma_core.lib.agent import AgentException
+            from chroma_core.services.job_scheduler.agent_rpc import AgentException
             try:
                 log.debug("Job %d running step %d" % (self.job.id, step_index))
                 step.run(args)
@@ -90,7 +97,7 @@ class RunJobThread(threading.Thread):
                 log.error("Job %d step %d encountered an agent error" % (self.job.id, step_index))
                 self._job_scheduler.complete_job(self.job, errored = True)
 
-                result.backtrace = e.agent_backtrace
+                result.backtrace = e.backtrace
                 # Don't bother storing the backtrace to invoke_agent, the interesting part
                 # is the backtrace inside the AgentException
                 result.state = 'failed'
@@ -160,20 +167,26 @@ class JobCollection(object):
             'complete': {}
         }
         self._jobs = {}
+        self._commands = {}
+
+        self._command_to_jobs = defaultdict(set)
+        self._job_to_commands = defaultdict(set)
 
     def add(self, job):
         self._jobs[job.id] = job
         self._state_jobs[job.state][job.id] = job
-
-    def add_many(self, jobs):
-        for job in jobs:
-            self.add(job)
 
     def add_command(self, command, jobs):
         """Add command if it doesn't already exist, and ensure that all
         of `jobs` are associated with it
 
         """
+        for job in jobs:
+            self.add(job)
+        self._commands[command.id] = command
+        self._command_to_jobs[command.id] |= set([j.id for j in jobs])
+        for job in jobs:
+            self._job_to_commands[job.id].add(command.id)
 
     def get(self, job_id):
         return self._jobs[job_id]
@@ -183,8 +196,27 @@ class JobCollection(object):
 
         Job.objects.filter(id = job.id).update(state = new_state, **kwargs)
         job.state = new_state
+        for attr, val in kwargs.items():
+            setattr(job, attr, val)
 
         self._state_jobs[job.state][job.id] = job
+
+    def update_commands(self, job):
+        """
+        Update any commands which relate to this job (complete the command if all its jobs are complete)
+        """
+        if job.state == 'complete':
+            for command_id in self._job_to_commands[job.id]:
+                jobs = [self._jobs[job_id] for job_id in self._command_to_jobs[command_id]]
+                if set([j.state for j in jobs]) == set(['complete']) or len(jobs) == 0:
+                    # Mark the command as complete
+                    errored = True in [j.errored for j in jobs]
+                    cancelled = True in [j.cancelled for j in jobs]
+                    log.debug("Completing command %s (%s, %s) as a result of completing job %s" % (command_id, errored, cancelled, job.id))
+                    self._commands[command_id].errored = errored
+                    self._commands[command_id].cancelled = cancelled
+                    self._commands[command_id].complete = True
+                    Command.objects.filter(pk = command_id).update(errored = errored, cancelled = cancelled, complete = True)
 
     def update_many(self, jobs, new_state):
         for job in jobs:
@@ -299,13 +331,14 @@ class JobScheduler(object):
 
         log.info("Job %s completing (errored=%s, cancelled=%s)" %
                      (job.id, errored, cancelled))
-        self._job_collection.update(job, 'complete', errored = errored, cancelled = cancelled)
 
         try:
             command = Command.objects.filter(jobs = job, complete = False)[0]
         except IndexError:
             log.warning("Job %s: No incomplete command while completing" % job.pk)
             command = None
+
+        self._job_collection.update(job, 'complete', errored = errored, cancelled = cancelled)
 
         locks = json.loads(job.locks_json)
 
@@ -322,8 +355,9 @@ class JobScheduler(object):
                 except Exception:
                     log.error("Error in completion hooks: %s" % '\n'.join(traceback.format_exception(*(sys.exc_info()))))
 
-        for command in Command.objects.filter(jobs = job):
-            command.check_completion()
+        # Do this last so that the state of the command reflects both the completion
+        # of this job and any new jobs added by completion hooks
+        self._job_collection.update_commands(job)
 
     def _completion_hooks(self, changed_item, command = None):
         """
@@ -352,7 +386,6 @@ class JobScheduler(object):
             now = django.utils.timezone.now()
 
             if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
-                log.debug('branched')
                 self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
                 self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
@@ -409,7 +442,6 @@ class JobScheduler(object):
             ObjectCache.clear()
             with transaction.commit_on_success():
                 command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(object_ids, message)
-            self._job_collection.add_many(command.jobs.all())
             if run:
                 self._run_next()
         return command.id
@@ -490,11 +522,80 @@ class JobScheduler(object):
                 except KeyError:
                     pass
                 self._job_collection.update(job, 'complete', cancelled = True)
+                self._job_collection.update_commands(job)
             elif job.state == 'pending':
                 self._job_collection.update(job, 'complete', cancelled = True)
-
-            for command in Command.objects.filter(jobs = job_id):
-                command.check_completion()
+                self._job_collection.update_commands(job)
 
             # So that anything waiting on this job can be cancelled too
             self._run_next()
+
+    @transaction.commit_on_success
+    def create_host_ssh(self, address):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
+
+        result = AgentSsh(address).invoke('register_server', {
+            'url': settings.SERVER_HTTP_URL + "agent/",
+            'address': address,
+            'ca': open(Crypto().authority_cert).read().strip()
+            })
+        return result['host_id'], result['command_id']
+
+    def test_host_contact(self, address):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
+
+        agent_ssh = AgentSsh(address)
+        user, hostname, port = agent_ssh.ssh_params()
+
+        try:
+            resolved_address = socket.gethostbyname(hostname)
+        except socket.gaierror:
+            resolve = False
+            ping = False
+        else:
+            resolve = True
+            ping = (0 == subprocess.call(['ping', '-c 1', resolved_address]))
+
+        if resolve:
+            manager_hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
+            try:
+                rc, out, err = agent_ssh.ssh("ping -c 1 %s" % manager_hostname)
+            except Exception, e:
+                log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
+                reverse_resolve = False
+                reverse_ping = False
+            else:
+                if rc == 0:
+                    reverse_resolve = True
+                    reverse_ping = True
+                elif rc == 1:
+                    # Can resolve, cannot ping
+                    reverse_resolve = True
+                    reverse_ping = False
+                else:
+                    # Cannot resolve
+                    reverse_resolve = False
+                    reverse_ping = False
+        else:
+            reverse_resolve = False
+            reverse_ping = False
+
+        # Don't depend on ping to try invoking agent, could well have
+        # SSH but no ping
+        agent = False
+        if resolve:
+            try:
+                agent_ssh.invoke('lnet_scan')
+                agent = True
+            except Exception, e:
+                log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
+                agent = False
+
+        return {
+            'address': address,
+            'resolve': resolve,
+            'ping': ping,
+            'agent': agent,
+            'reverse_resolve': reverse_resolve,
+            'reverse_ping': reverse_ping
+        }

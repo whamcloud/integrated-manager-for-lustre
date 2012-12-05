@@ -67,7 +67,7 @@ Target_start() {
     fi
 
     # start the target
-    if ! chroma-agent mount-target --uuid $TARGET; then
+    if ! chroma-agent mount_target --uuid $TARGET; then
         ocf_log err "Couldn't start target $TARGET"
         return $OCF_ERR_GENERIC
     fi
@@ -85,7 +85,7 @@ Target_stop() {
         # woo!  nothing to do.
         rc=$OCF_SUCCESS
     else
-        chroma-agent unmount-target --uuid $TARGET
+        chroma-agent unmount_target --uuid $TARGET
     fi
 
     return $rc
@@ -93,7 +93,7 @@ Target_stop() {
 
 Target_status() {
     # call the agent to see if it's running
-    if chroma-agent target-running --uuid $TARGET; then
+    if chroma-agent target_running --uuid $TARGET; then
         rc=$OCF_SUCCESS
         msg="$TARGET is started (running)"
     else

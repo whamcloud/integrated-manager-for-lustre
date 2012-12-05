@@ -131,6 +131,10 @@ class StoragePluginManager(object):
                         if can_satisfy_relation(sc, relation.attributes):
                             sc._meta.relations.append(subscription)
 
+    @property
+    def loaded_plugin_names(self):
+        return self.loaded_plugins.keys()
+
     def get_errored_plugins(self):
         return self.errored_plugins
 

@@ -1,9 +1,9 @@
 from testconfig import config
 
-from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
-class TestConfParams(AuthorizedTestCase):
+class TestConfParams(ChromaIntegrationTestCase):
     def _create_with_params(self):
         self.hosts = self.add_hosts([
             config['lustre_servers'][0]['address'],
@@ -45,26 +45,17 @@ class TestConfParams(AuthorizedTestCase):
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(len(response.json['objects']), 1)
         filesystem = response.json['objects'][0]
-
-        mount_command = filesystem['mount_command']
-        self.assertTrue(mount_command)
-
         client = config['lustre_clients'].keys()[0]
-        self.mount_filesystem(client, "testfs", mount_command)
+        self.remote_operations.mount_filesystem(client, filesystem)
 
         try:
-            client_hostname = config['lustre_clients'].keys()[0]
-            result = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
-            self.assertEqual(result.stdout.read().strip(), "16")
+            self.assertEqual("16", self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"))
 
-            server_hostname = self.hosts[0]['address']
-            result = self.remote_command(server_hostname, "cat /proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize")
-            self.assertEqual(result.stdout.read().strip(), "2097152")
-
-            result = self.remote_command(server_hostname, "cat /proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable")
-            self.assertEqual(result.stdout.read().strip(), "0")
+            server_address = self.hosts[0]['address']
+            self.assertEqual("2097152", self.remote_operations.read_proc(server_address, "/proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize"))
+            self.assertEqual("0", self.remote_operations.read_proc(server_address, "/proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable"))
         finally:
-            self.unmount_filesystem(client, 'testfs')
+            self.remote_operations.unmount_filesystem(client, filesystem)
 
     def test_creation_conf_params(self):
         self._create_with_params()
@@ -75,7 +66,6 @@ class TestConfParams(AuthorizedTestCase):
         self._create_with_params()
         self.filesystem_id = 1
         self.hosts = self.chroma_manager.get('/api/host/').json['objects']
-        #self._test_params()
 
         # Check that conf params are properly preserved across a dump/load of the configuration
 
@@ -155,19 +145,20 @@ class TestConfParams(AuthorizedTestCase):
             '/api/filesystem/%s/' % filesystem_id,
         )
         self.assertEqual(response.successful, True, response.text)
-        mount_command = response.json['mount_command']
-        self.assertTrue(mount_command)
+        filesystem = response.json
+        client = config['lustre_clients'].keys()[0]
 
-        client_hostname = config['lustre_clients'].keys()[0]
-        self.mount_filesystem(client_hostname, "testfs", mount_command)
-
+        # Mount and check that the existing value is different to what we will set
+        self.remote_operations.mount_filesystem(client, filesystem)
         new_conf_params = {'llite.max_cached_mb': '16'}
         try:
-            result = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
-            self.assertNotEqual(result.stdout.read().strip(), new_conf_params['llite.max_cached_mb'])
+            self.assertNotEqual(
+                self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"),
+                new_conf_params['llite.max_cached_mb'])
         finally:
-            self.unmount_filesystem(client_hostname, 'testfs')
+            self.remote_operations.unmount_filesystem(client, filesystem)
 
+        # Set our new conf param
         filesystem = self.chroma_manager.get("/api/filesystem/" + filesystem_id + "/").json
         for k, v in new_conf_params.items():
             filesystem['conf_params'][k] = v
@@ -178,13 +169,13 @@ class TestConfParams(AuthorizedTestCase):
         self.assertDictContainsSubset(new_conf_params, filesystem['conf_params'])
         self.wait_for_command(self.chroma_manager, command['id'])
 
-        self.mount_filesystem(client_hostname, "testfs", mount_command)
-
+        # Mount and check that the new value has made it through
+        self.remote_operations.mount_filesystem(client, filesystem)
         try:
-            client_hostname = config['lustre_clients'].keys()[0]
-            result = self.remote_command(client_hostname, "cat /proc/fs/lustre/llite/*/max_cached_mb")
-            self.assertEqual(result.stdout.read().strip(), new_conf_params['llite.max_cached_mb'])
+            self.assertEqual(
+                self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"),
+                new_conf_params['llite.max_cached_mb'])
         finally:
-            self.unmount_filesystem(client_hostname, 'testfs')
+            self.remote_operations.unmount_filesystem(client, filesystem)
 
         self.graceful_teardown(self.chroma_manager)

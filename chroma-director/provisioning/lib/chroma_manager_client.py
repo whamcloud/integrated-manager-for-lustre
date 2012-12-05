@@ -27,7 +27,7 @@ class HttpRequests(object):
         if body and 'data' not in kwargs:
             kwargs['data'] = json.dumps(body)
 
-        response = self.session.post(
+        response = self.session.request(
             urljoin(self.server_http_url, url),
             **kwargs
         )

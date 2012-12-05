@@ -5,13 +5,15 @@
 
 
 from django.db import transaction
-
-from chroma_core.lib.lustre_audit import audit_log, normalize_nids
+from chroma_core.lib.util import normalize_nids
+from chroma_core.services import log_register
 from chroma_core.models import NoLNetInfo
 from chroma_core.models.event import LearnEvent
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode, Nid
 from chroma_core.models.target import ManagedMgs, ManagedTargetMount, ManagedTarget, FilesystemMember, ManagedMdt, ManagedOst
+
+log = log_register(__name__)
 
 
 class DetectScan(object):
@@ -33,19 +35,19 @@ class DetectScan(object):
         self.all_hosts_data = all_hosts_data
 
         # Create ManagedMgs objects
-        audit_log.debug(">>learn_mgs_targets")
+        log.debug(">>learn_mgs_targets")
         self.learn_mgs_targets()
 
         # Create ManagedTargetMount objects
-        audit_log.debug(">>learn_mgs_target_mounts")
+        log.debug(">>learn_mgs_target_mounts")
         self.learn_target_mounts()
 
         # Create ManagedMdt and ManagedOst objects
-        audit_log.debug(">>learn_fs_targets")
+        log.debug(">>learn_fs_targets")
         self.learn_fs_targets()
 
         # Create ManagedTargetMount objects
-        audit_log.debug(">>learn_target_mounts")
+        log.debug(">>learn_target_mounts")
         self.learn_target_mounts()
 
         # Clean up:
@@ -92,13 +94,13 @@ class DetectScan(object):
         unique_nids = [n['nid_string'] for n in nids if n['id__count'] == 1]
 
         if not len(unique_nids):
-            audit_log.warning("nids_to_mgs: No unique NIDs among %s!" % nids)
+            log.warning("nids_to_mgs: No unique NIDs among %s!" % nids)
 
         hosts = list(ManagedHost.objects.filter(lnetconfiguration__nid__nid_string__in = unique_nids).distinct())
         try:
             mgs = ManagedMgs.objects.distinct().get(managedtargetmount__host__in = hosts)
         except ManagedMgs.MultipleObjectsReturned:
-            audit_log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
+            log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
             # TODO: detect and report the pathological case where someone has given
             # us two NIDs that refer to different hosts which both have a
             # targetmount for a ManagedMgs, but they're not the
@@ -162,7 +164,7 @@ class DetectScan(object):
                 if not mgs_target_info:
                     raise KeyError
             except KeyError:
-                audit_log.warning("Saw target %s on %s:%s which is not known to mgs %s" % (local_info['name'], host, local_info['devices'], mgs_host))
+                log.warning("Saw target %s on %s:%s which is not known to mgs %s" % (local_info['name'], host, local_info['devices'], mgs_host))
                 return False
             primary_nid = mgs_target_info['nid']
             target_nids.append(primary_nid)
@@ -196,7 +198,7 @@ class DetectScan(object):
                 debug_id = (host, local_info['devices'][0], local_info['name'])
                 targets = ManagedTarget.objects.filter(uuid = local_info['uuid'])
                 if not targets.count():
-                    audit_log.warning("Ignoring %s:%s (%s), target unknown" % debug_id)
+                    log.warning("Ignoring %s:%s (%s), target unknown" % debug_id)
                     continue
 
                 for target in targets:
@@ -204,18 +206,18 @@ class DetectScan(object):
                         try:
                             mgs = self._target_find_mgs(host, local_info)
                         except ManagedMgs.DoesNotExist:
-                            audit_log.warning("Can't find MGS for target %s:%s (%s)" % debug_id)
+                            log.warning("Can't find MGS for target %s:%s (%s)" % debug_id)
                             continue
                     else:
                         mgs = None
 
                     if not self.target_available_here(host, mgs, local_info):
-                        audit_log.warning("Ignoring %s on %s, as it is not mountable on this host" % (local_info['name'], host))
+                        log.warning("Ignoring %s on %s, as it is not mountable on this host" % (local_info['name'], host))
                         continue
 
                     try:
                         primary = self.is_primary(host, local_info)
-                        audit_log.info("Target %s seen on %s: primary=%s" % (target, host, primary))
+                        log.info("Target %s seen on %s: primary=%s" % (target, host, primary))
                         volumenode = self._get_volume_node(host, local_info['devices'])
                         (tm, created) = ManagedTargetMount.objects.get_or_create(target = target,
                             host = host, primary = primary,
@@ -223,7 +225,7 @@ class DetectScan(object):
                         if created:
                             tm.immutable_state = True
                             tm.save()
-                            audit_log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], host))
+                            log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], host))
                             self._learn_event(host, tm)
 
                         if local_info['mounted']:
@@ -232,26 +234,26 @@ class DetectScan(object):
                             target.save()
 
                     except NoLNetInfo:
-                        audit_log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], host))
+                        log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], host))
 
     def _get_volume_node(self, host, paths):
         volume_nodes = VolumeNode.objects.filter(path__in = paths, host = host)
         if not volume_nodes.count():
-            audit_log.warning("No device nodes detected matching paths %s on host %s" % (paths, host))
+            log.warning("No device nodes detected matching paths %s on host %s" % (paths, host))
             raise VolumeNode.DoesNotExist
         else:
             if volume_nodes.count() > 1:
                 # On a sanely configured server you wouldn't have more than one, but if
                 # e.g. you formatted an mpath device and then stopped multipath, you
                 # might end up seeing the two underlying devices.  So we cope, but warn.
-                audit_log.warning("DetectScan: Multiple VolumeNodes found for paths %s on host %s, using %s" % (paths, host, volume_nodes[0].path))
+                log.warning("DetectScan: Multiple VolumeNodes found for paths %s on host %s, using %s" % (paths, host, volume_nodes[0].path))
             return volume_nodes[0]
 
     def learn_fs_targets(self):
         for host, host_data in self.all_hosts_data.items():
             for local_info in host_data['local_targets']:
                 if not local_info['mounted']:
-                    audit_log.warning("Ignoring unmounted target %s on host %s" % (local_info['name'], host))
+                    log.warning("Ignoring unmounted target %s on host %s" % (local_info['name'], host))
                     continue
 
                 name = local_info['name']
@@ -291,9 +293,9 @@ class DetectScan(object):
                         state = "mounted", volume = volumenode.volume, index = index,
                         immutable_state = True)
                     target.save()
-                    audit_log.debug("%s" % [mt.name for mt in ManagedTarget.objects.all()])
-                    audit_log.info("%s %s %s" % (mgs.id, name, device_node_paths))
-                    audit_log.info("Learned %s %s" % (klass.__name__, name))
+                    log.debug("%s" % [mt.name for mt in ManagedTarget.objects.all()])
+                    log.info("%s %s %s" % (mgs.id, name, device_node_paths))
+                    log.info("Learned %s %s" % (klass.__name__, name))
                     self._learn_event(host, target)
 
     def _learn_event(self, host, learned_item):
@@ -307,7 +309,7 @@ class DetectScan(object):
                 if volume['name'] == "MGS" and volume['mounted'] == True:
                     mgs_local_info = volume
             if not mgs_local_info:
-                audit_log.debug("No MGS found on host %s" % host)
+                log.debug("No MGS found on host %s" % host)
                 continue
 
             try:
@@ -318,7 +320,7 @@ class DetectScan(object):
                 except VolumeNode.DoesNotExist:
                     continue
 
-                audit_log.info("Learned MGS %s (%s)" % (host, mgs_local_info['devices'][0]))
+                log.info("Learned MGS %s (%s)" % (host, mgs_local_info['devices'][0]))
                 # We didn't find an existing ManagedMgs referring to
                 # this LUN, create one
                 mgs = ManagedMgs(uuid = mgs_local_info['uuid'],
@@ -334,5 +336,5 @@ class DetectScan(object):
                     self.created_filesystems.append(fs)
                     fs.immutable_state = True
                     fs.save()
-                    audit_log.info("Learned filesystem '%s'" % fs_name)
+                    log.info("Learned filesystem '%s'" % fs_name)
                     self._learn_event(host, fs)

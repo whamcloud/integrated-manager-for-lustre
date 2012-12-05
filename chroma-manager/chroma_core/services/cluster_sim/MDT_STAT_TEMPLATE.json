@@ -1,0 +1,137 @@
+{
+    "stats": {
+        "ldlm_ibits_enqueue": {
+            "count": 103086, 
+            "sumsquare": 103086, 
+            "min": 1, 
+            "units": "reqs", 
+            "max": 1, 
+            "sum": 103086
+        }, 
+        "req_qdepth": {
+            "count": 156851, 
+            "sumsquare": 18, 
+            "min": 0, 
+            "units": "reqs", 
+            "max": 1, 
+            "sum": 18
+        }, 
+        "mds_sync": {
+            "count": 3027, 
+            "sumsquare": 117311300019, 
+            "min": 178, 
+            "units": "usec", 
+            "max": 69483, 
+            "sum": 4480017
+        }, 
+        "mds_getattr": {
+            "count": 1, 
+            "sumsquare": 1681, 
+            "min": 41, 
+            "units": "usec", 
+            "max": 41, 
+            "sum": 41
+        }, 
+        "reqbuf_avail": {
+            "count": 312901, 
+            "sumsquare": 5108762569, 
+            "min": 127, 
+            "units": "bufs", 
+            "max": 128, 
+            "sum": 39981495
+        }, 
+        "mkdir": {
+            "count": 7, 
+            "units": "reqs"
+        }, 
+        "getxattr": {
+            "count": 31, 
+            "units": "reqs"
+        }, 
+        "req_active": {
+            "count": 156851, 
+            "sumsquare": 158075, 
+            "min": 1, 
+            "units": "reqs", 
+            "max": 2, 
+            "sum": 157259
+        }, 
+        "mds_getstatus": {
+            "count": 1, 
+            "sumsquare": 361, 
+            "min": 19, 
+            "units": "usec", 
+            "max": 19, 
+            "sum": 19
+        }, 
+        "req_timeout": {
+            "count": 156851, 
+            "sumsquare": 158930, 
+            "min": 1, 
+            "units": "sec", 
+            "max": 10, 
+            "sum": 157040
+        }, 
+        "mds_statfs": {
+            "count": 14, 
+            "sumsquare": 25658, 
+            "min": 21, 
+            "units": "usec", 
+            "max": 61, 
+            "sum": 572
+        }, 
+        "rmdir": {
+            "count": 7, 
+            "units": "reqs"
+        }, 
+        "mds_connect": {
+            "count": 21, 
+            "sumsquare": 56787309, 
+            "min": 70, 
+            "units": "usec", 
+            "max": 4322, 
+            "sum": 23369
+        }, 
+        "close": {
+            "count": 52028, 
+            "units": "reqs"
+        }, 
+        "mds_getxattr": {
+            "count": 31, 
+            "sumsquare": 30874, 
+            "min": 19, 
+            "units": "usec", 
+            "max": 72, 
+            "sum": 870
+        }, 
+        "unlink": {
+            "count": 50254, 
+            "units": "reqs"
+        }, 
+        "open": {
+            "count": 52028, 
+            "units": "reqs"
+        }, 
+        "obd_ping": {
+            "count": 275, 
+            "sumsquare": 647024, 
+            "min": 39, 
+            "units": "usec", 
+            "max": 66, 
+            "sum": 13260
+        }, 
+        "req_waittime": {
+            "count": 156851, 
+            "sumsquare": 4397829873, 
+            "min": 8, 
+            "units": "usec", 
+            "max": 8706, 
+            "sum": 3087049
+        }
+    }, 
+    "filestotal": 512000, 
+    "num_exports": 2, 
+    "filesfree": 511954, 
+    "kbytesfree": 727748, 
+    "kbytestotal": 767824
+}

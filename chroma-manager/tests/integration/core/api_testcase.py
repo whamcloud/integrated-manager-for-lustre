@@ -1,8 +1,12 @@
+
+
 import logging
 import time
 
+from testconfig import config
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.utility_testcase import UtilityTestCase
+from tests.utils.http_requests import AuthorizedHttpRequests
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -12,6 +16,16 @@ class ApiTestCase(UtilityTestCase):
     """
     Adds set of convenience functions for interacting with the chroma api.
     """
+
+    _chroma_manager = None
+
+    @property
+    def chroma_manager(self):
+        if self._chroma_manager is None:
+            user = config['chroma_managers'][0]['users'][0]
+            self._chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
+                server_http_url = config['chroma_managers'][0]['server_http_url'])
+        return self._chroma_manager
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         logger.debug("wait_for_command: %s" % self.get_by_uri('/api/command/%s/' % command_id))

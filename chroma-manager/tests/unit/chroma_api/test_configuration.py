@@ -48,7 +48,8 @@ class TestConfigurationDumpLoad(ChromaApiTestCase):
             ManagedMgs.objects.get()
 
         # Add the host back and try re-instantiating the filesystem
-        self.host, command = ManagedHost.create_from_string('myaddress')
+        host_info = self.mock_servers['myaddress']
+        self.host, command = ManagedHost.create(host_info['fqdn'], host_info['nodename'], ['manage_targets'], address = 'myaddress')
         for path in volume_paths:
             VolumeNode.objects.create(volume = Volume.objects.create(), path = path, host = self.host, primary = True)
 

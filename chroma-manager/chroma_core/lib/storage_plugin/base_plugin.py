@@ -5,11 +5,7 @@
 
 
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
-
 import settings
-
-from chroma_core.lib.storage_plugin.log import storage_plugin_log
-
 import threading
 
 
@@ -270,8 +266,6 @@ class BaseStoragePlugin(object):
                 if settings.STORAGE_PLUGIN_ENABLE_STATS:
                     self._resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
                 sent_stats += len(r_stats)
-        if sent_stats > 0:
-            storage_plugin_log.debug("commit_resource_statistics %s (%s sent)", self._scannable_id, sent_stats)
 
     def update_or_create(self, klass, parents = [], **attrs):
         """Report a storage resource.  If it already exists then

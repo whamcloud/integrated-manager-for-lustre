@@ -1,11 +1,12 @@
-from testconfig import config
 
-from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
+
+from testconfig import config
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.failover_testcase_mixin import FailoverTestCaseMixin
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
-class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixin, StatsTestCaseMixin):
+class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixin, ChromaIntegrationTestCase):
     def test_create_filesystem_with_failover(self):
         # Add hosts as managed hosts
         self.assertGreaterEqual(len(config['lustre_servers']), 4)
@@ -119,12 +120,12 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
         self.assertTrue(filesystem['mount_command'])
 
         client = config['lustre_clients'].keys()[0]
-        self.mount_filesystem(client, "testfs", filesystem['mount_command'])
+        self.remote_operations.mount_filesystem(client, filesystem)
         try:
-            self.exercise_filesystem(client, filesystem)
+            self.remote_operations.exercise_filesystem(client, filesystem)
             self.check_stats(filesystem_id)
         finally:
-            self.unmount_filesystem(client, 'testfs')
+            self.remote_operations.unmount_filesystem(client, filesystem)
 
         # Test failover if the cluster config indicates that failover has
         # been properly configured with stonith, etc.
@@ -218,39 +219,29 @@ class TestManagedFilesystemWithFailover(AuthorizedTestCase, FailoverTestCaseMixi
             )
 
     def test_lnet_operational_after_failover(self):
-        if config['failover_is_configured']:
-            # "Pull the plug" on host
-            self.remote_command(
-                config['lustre_servers'][0]['host'],
-                config['lustre_servers'][0]['destroy_command']
-            )
+        self.remote_operations.kill_server(config['lustre_servers'][0]['fqdn'])
+        self.remote_operations.await_server_boot(config['lustre_servers'][0]['fqdn'], config['lustre_servers'][1]['fqdn'])
 
-            # Wait for host to boot back up
-            self.wait_for_host_to_boot(
-                booting_host = config['lustre_servers'][0],
-                available_host = config['lustre_servers'][2]
-            )
+        # Add two hosts
+        host_1 = self.add_hosts([config['lustre_servers'][0]['address']])[0]
+        host_2 = self.add_hosts([config['lustre_servers'][1]['address']])[0]
 
-            # Add two hosts
-            host_1 = self.add_hosts([config['lustre_servers'][0]['address']])[0]
-            host_2 = self.add_hosts([config['lustre_servers'][1]['address']])[0]
+        # Set volume mounts
+        ha_volumes = self.get_shared_volumes()
+        self.assertGreaterEqual(len(ha_volumes), 4)
+        self.set_volume_mounts(ha_volumes[0], host_1['id'], host_2['id'])
+        self.set_volume_mounts(ha_volumes[1], host_1['id'], host_2['id'])
+        self.set_volume_mounts(ha_volumes[2], host_2['id'], host_1['id'])
+        self.set_volume_mounts(ha_volumes[3], host_2['id'], host_1['id'])
 
-            # Set volume mounts
-            ha_volumes = self.get_shared_volumes()
-            self.assertGreaterEqual(len(ha_volumes), 4)
-            self.set_volume_mounts(ha_volumes[0], host_1['id'], host_2['id'])
-            self.set_volume_mounts(ha_volumes[1], host_1['id'], host_2['id'])
-            self.set_volume_mounts(ha_volumes[2], host_2['id'], host_1['id'])
-            self.set_volume_mounts(ha_volumes[3], host_2['id'], host_1['id'])
-
-            # Create new filesystem such that the mgs/mdt is on the host we
-            # failed over and the osts are not.
-            self.create_filesystem(
-                {
-                    'name': 'testfs',
-                    'mgt': {'volume_id': ha_volumes[0]['id']},
-                    'mdt': {'volume_id': ha_volumes[1]['id'], 'conf_params': {}},
-                    'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[2:3]],
-                    'conf_params': {}
-                }
-            )
+        # Create new filesystem such that the mgs/mdt is on the host we
+        # failed over and the osts are not.
+        self.create_filesystem(
+            {
+                'name': 'testfs',
+                'mgt': {'volume_id': ha_volumes[0]['id']},
+                'mdt': {'volume_id': ha_volumes[1]['id'], 'conf_params': {}},
+                'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[2:3]],
+                'conf_params': {}
+            }
+        )

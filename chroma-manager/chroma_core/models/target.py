@@ -15,7 +15,7 @@ from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTarget
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
-from chroma_core.models.host import ManagedHost, LNetConfiguration
+from chroma_core.models.host import ManagedHost, LNetConfiguration, VolumeNode, Volume
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 import settings
@@ -114,6 +114,7 @@ class ManagedTarget(StatefulObject):
     active_mount = models.ForeignKey('ManagedTargetMount', blank = True, null = True)
 
     def set_active_mount(self, active_mount):
+        job_log.debug("set_active_mount %s %s %s" % (self, self.active_mount, active_mount))
         if self.active_mount == active_mount:
             return
 
@@ -121,7 +122,14 @@ class ManagedTarget(StatefulObject):
         with transaction.commit_on_success():
             # Doing an .update instead of .save() to avoid potentially
             # writing stale 'state' attribute (fixing HYD-619)
+
+            # FIXME: if this was always invoked inside job_scheduler then
+            # we could just update our attribute and trust it to save us on completion
+            # but this is also called from lustre_audit sometimes so we have to do
+            # an .update() (and then also a save() so that this works when called
+            # from a job).
             ManagedTarget.objects.filter(pk = self.pk).update(active_mount = active_mount)
+            self.active_mount = active_mount
 
             from chroma_core.models import TargetFailoverAlert
             for tm in self.managedtargetmount_set.filter(primary = False):
@@ -180,8 +188,6 @@ class ManagedTarget(StatefulObject):
     @classmethod
     def create_for_volume(cls, volume_id, create_target_mounts = True, **kwargs):
         # Local imports to avoid inter-model import dependencies
-        from chroma_core.models.host import Volume, VolumeNode
-
         volume = Volume.objects.get(pk = volume_id)
 
         target = cls(**kwargs)
@@ -398,6 +404,14 @@ class DeleteTargetStep(Step):
                 assert ManagedFilesystem.objects.filter(mgs = target).count() == 0
             ManagedTarget.delete(kwargs['target_id'])
 
+            if target.volume.storage_resource is None:
+                # If a LogicalDrive storage resource goes away, but the
+                # volume is in use by a target, then the volume is left behind.
+                # Check if this is the case, and clean up any remaining volumes.
+                for vn in VolumeNode.objects.filter(volume = target.volume):
+                    VolumeNode.delete(vn.id)
+                Volume.delete(target.volume_id)
+
 
 class RemoveConfiguredTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'removed')
@@ -496,7 +510,9 @@ class RegisterTargetStep(Step):
         if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
             raise RuntimeError("Cannot register target while MGS is not started on its primary server")
 
-        result = self.invoke_agent(target_mount.host, "register-target --device %s --mountpoint %s" % (target_mount.volume_node.path, target_mount.mount_point))
+        result = self.invoke_agent(target_mount.host, "register_target",
+            {'device': target_mount.volume_node.path,
+             'mount_point': target_mount.mount_point})
 
         target = target_mount.target
         if not result['label'] == target.name:
@@ -527,12 +543,12 @@ class ConfigurePacemakerStep(Step):
         # target.name should have been populated by RegisterTarget
         assert(target_mount.volume_node is not None and target_mount.target.name is not None)
 
-        self.invoke_agent(target_mount.host, "configure-ha --device %s --ha_label %s --uuid %s %s --mountpoint %s" % (
-                                    target_mount.volume_node.path,
-                                    target_mount.target.ha_label,
-                                    target_mount.target.uuid,
-                                    target_mount.primary and "--primary" or "",
-                                    target_mount.mount_point))
+        self.invoke_agent(target_mount.host, "configure_ha", {
+                                    'device': target_mount.volume_node.path,
+                                    'ha_label': target_mount.target.ha_label,
+                                    'uuid': target_mount.target.uuid,
+                                    'primary': target_mount.primary,
+                                    'mount_point': target_mount.mount_point})
 
 
 class UnconfigurePacemakerStep(Step):
@@ -547,10 +563,12 @@ class UnconfigurePacemakerStep(Step):
         # didn't have its name
         assert(target_mount.target.name != None)
 
-        self.invoke_agent(target_mount.host, "unconfigure-ha --ha_label %s --uuid %s %s" % (
-                                    target_mount.target.ha_label,
-                                    target_mount.target.uuid,
-                                    target_mount.primary and "--primary" or ""))
+        self.invoke_agent(target_mount.host, "unconfigure_ha",
+            {
+                'ha_label': target_mount.target.ha_label,
+                'uuid': target_mount.target.uuid,
+                'primary': target_mount.primary
+            })
 
 
 class ConfigureTargetJob(StateChangeJob):
@@ -646,12 +664,13 @@ class MountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
-        result = self._run_agent_command(target, "start-target --ha_label %s" % target.ha_label)
+        result = self._run_agent_command(target, "start_target", {'ha_label': target.ha_label})
         try:
             started_on = ManagedHost.objects.get(nodename = result['location'])
         except ManagedHost.DoesNotExist:
             raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (target, target_id, result['location']))
         try:
+            job_log.debug("Started %s on %s" % (target.ha_label, started_on))
             target.set_active_mount(target.managedtargetmount_set.get(host = started_on))
         except ManagedTargetMount.DoesNotExist:
             job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this target" % (target, target_id, started_on, started_on.pk))
@@ -690,7 +709,7 @@ class UnmountStep(AnyTargetMountStep):
         target_id = kwargs['target_id']
         target = ManagedTarget.objects.get(id = target_id)
 
-        self._run_agent_command(target, "stop-target --ha_label %s" % target.ha_label)
+        self._run_agent_command(target, "stop_target", {'ha_label': target.ha_label})
         target.set_active_mount(None)
 
 
@@ -740,7 +759,7 @@ class MkfsStep(Step):
 
         kwargs['device'] = primary_mount.volume_node.path
         if isinstance(target, FilesystemMember):
-            kwargs['index'] = "%d" % target.index
+            kwargs['index'] = target.index
 
         mkfsoptions = []
         if target.inode_size:
@@ -777,7 +796,7 @@ class MkfsStep(Step):
         target_mount = target.managedtargetmount_set.get(primary = True)
 
         args = self._mkfs_args(target)
-        result = self.invoke_agent(target_mount.host, "format-target", args)
+        result = self.invoke_agent(target_mount.host, "format_target", args)
         target.uuid = result['uuid']
 
         # Check that inode_size was applied correctly
@@ -889,7 +908,7 @@ class FailbackTargetStep(Step):
     def run(self, kwargs):
         target = kwargs['target']
         primary = target.primary_host
-        self.invoke_agent(primary, "failback-target --ha_label %s" % target.ha_label)
+        self.invoke_agent(primary, "failback_target", {'ha_label': target.ha_label})
         target.set_active_mount(target.managedtargetmount_set.get(primary = True))
 
 
@@ -902,9 +921,11 @@ class FailbackTargetJob(MigrateTargetJob):
     @classmethod
     def can_run(cls, instance):
         return len(instance.failover_hosts) > 0 and \
-                instance.active_host is not None and \
-                instance.primary_host.is_available() and \
+                instance.active_host is not None and\
                 instance.primary_host != instance.active_host
+        # HYD-1238: once we have a valid online/offline piece of info for each host,
+        # reinstate the condition
+        #instance.primary_host.is_available() and \
 
     def description(self):
         return "Migrate failed-over target back to primary host"
@@ -926,7 +947,7 @@ class FailoverTargetStep(Step):
     def run(self, kwargs):
         target = kwargs['target']
         secondary = target.failover_hosts[0]
-        self.invoke_agent(secondary, "failover-target --ha_label %s" % target.ha_label)
+        self.invoke_agent(secondary, "failover_target", {'ha_label': target.ha_label})
         target.set_active_mount(target.managedtargetmount_set.get(primary = False))
 
 
@@ -938,9 +959,11 @@ class FailoverTargetJob(MigrateTargetJob):
 
     @classmethod
     def can_run(cls, instance):
-        return len(instance.failover_hosts) > 0 and \
-                instance.failover_hosts[0].is_available() and \
-                instance.primary_host == instance.active_host
+        return len(instance.failover_hosts) > 0 and\
+               instance.primary_host == instance.active_host
+    # HYD-1238: once we have a valid online/offline piece of info for each host,
+    # reinstate the condition
+#                instance.failover_hosts[0].is_available() and \
 
     def description(self):
         return "Migrate target to secondary host"

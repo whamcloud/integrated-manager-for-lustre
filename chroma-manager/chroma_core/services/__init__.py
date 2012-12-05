@@ -8,8 +8,10 @@ import threading
 from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange
 import os
+import sys
+import traceback
 
-from chroma_core.services.log import log_register
+from chroma_core.services.log import log_register, trace
 
 import settings
 
@@ -22,7 +24,15 @@ class ChromaService(object):
     tags messages with the service name.
 
     """
-    def start(self):
+
+    def __init__(self):
+        self.log = None
+
+    @property
+    def name(self):
+        return self.__class__.__module__.split('.')[-1]
+
+    def run(self):
         raise NotImplementedError()
 
     def stop(self):
@@ -44,11 +54,18 @@ class ServiceThread(threading.Thread):
         self.log = log_register('service_thread')
 
     def run(self):
+        if hasattr(self.service, 'name'):
+            name = self.service.name
+        else:
+            name = self.service.__class__.__name__
+        self.log.debug("running ServiceThread '%s'" % name)
+
+        if trace:
+            sys.settrace(trace)
+
         try:
             self.service.run()
         except Exception:
-            import sys
-            import traceback
             exc_info = sys.exc_info()
             backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
             self.log.warning("Exception in main loop.  backtrace: %s" % backtrace)

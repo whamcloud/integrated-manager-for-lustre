@@ -1,6 +1,6 @@
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from chroma_core import models
+from tests.unit.chroma_core.helper import fake_log_message
 
 
 class TestTargetResource(ChromaApiTestCase):
@@ -43,7 +43,7 @@ class TestTargetResource(ChromaApiTestCase):
     def test_log_links(self):
         """Test that log viewer only displays valid links."""
         self.create_simple_filesystem()
-        models.Systemevents.objects.create(message='192.168.0.1@tcp testfs-MDT0000')
+        fake_log_message('192.168.0.1@tcp testfs-MDT0000')
         response = self.api_client.get('/api/log/')
         event, = self.deserialize(response)['objects']
         self.assertEqual(len(event['substitutions']), 2)

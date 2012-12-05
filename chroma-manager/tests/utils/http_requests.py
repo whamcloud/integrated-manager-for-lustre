@@ -6,6 +6,7 @@
 
 
 import json
+import os
 import requests
 from urlparse import urljoin
 
@@ -13,9 +14,14 @@ from urlparse import urljoin
 class HttpRequests(object):
     def __init__(self, server_http_url = '', *args, **kwargs):
         self.server_http_url = server_http_url
-        self.session = requests.session(headers = {"Accept": "application/json", "Content-type": "application/json"})
+        self.session = requests.session()
+        self.session.headers = {"Accept": "application/json", "Content-type": "application/json"}
+        self.session.verify = False
 
     def get(self, url, **kwargs):
+        if 'data' in kwargs:
+            kwargs['params'] = kwargs['data']
+            del kwargs['data']
         response = self.session.get(
             urljoin(self.server_http_url, url),
             **kwargs
@@ -63,6 +69,8 @@ class HttpRequests(object):
         return HttpResponse(response)
 
 
+# FIXME: in python-requests >= 1.0.x this class is redundant
+# (the standard repsonse has .json and .ok)
 class HttpResponse(requests.Response):
     def __init__(self, response, *args, **kwargs):
         super(HttpResponse, self).__init__(*args, **kwargs)
@@ -91,7 +99,10 @@ class AuthorizedHttpRequests(HttpRequests):
 
         response = self.get("/api/session/")
         if not response.successful:
-            raise RuntimeError("Failed to open session")
+            if 'http_proxy' in os.environ:
+                raise RuntimeError("Failed to open session (using proxy %s)" % (os.environ['http_proxy']))
+            else:
+                raise RuntimeError("Failed to open session")
         self.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
         self.session.cookies['csrftoken'] = response.cookies['csrftoken']
         self.session.cookies['sessionid'] = response.cookies['sessionid']

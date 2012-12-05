@@ -2,7 +2,6 @@ import inspect
 import logging
 import os
 import paramiko
-import re
 import time
 
 from django.utils.unittest import TestCase
@@ -78,55 +77,6 @@ class UtilityTestCase(TestCase):
             running_time += 1
         self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
 
-    def mount_filesystem(self, client, filesystem_name, mount_command, expected_return_code=0):
-        """
-        Mounts a lustre filesystem on a specified client.
-        """
-        self.remote_command(
-            client,
-            "mkdir -p /mnt/%s" % filesystem_name,
-            expected_return_code = None  # May fail if already exists. Keep going.
-        )
-
-        self.remote_command(
-            client,
-            mount_command
-        )
-
-        result = self.remote_command(
-            client,
-            'mount'
-        )
-        self.assertRegexpMatches(
-            result.stdout.read(),
-            " on /mnt/%s " % filesystem_name
-        )
-
-    def unmount_filesystem(self, client, filesystem_name):
-        """
-        Unmounts a lustre filesystem from the specified client if mounted.
-        """
-        result = self.remote_command(
-            client,
-            'mount'
-        )
-        if re.search(" on /mnt/%s " % filesystem_name, result.stdout.read()):
-            logger.debug("Unmounting %s" % filesystem_name)
-            self.remote_command(
-                client,
-                "umount /mnt/%s" % filesystem_name
-            )
-        result = self.remote_command(
-            client,
-            'mount'
-        )
-        mount_output = result.stdout.read()
-        logger.debug("`Mount`: %s" % mount_output)
-        self.assertNotRegexpMatches(
-            mount_output,
-            " on /mtn/%s " % filesystem_name
-        )
-
     def get_host_config(self, nodename):
         """
         Get the entry for a lustre server from the cluster config.
@@ -134,14 +84,3 @@ class UtilityTestCase(TestCase):
         for host in config['lustre_servers']:
             if host['nodename'] == nodename:
                 return host
-
-    def get_available_lustre_server(self):
-        for host in config['lustre_servers']:
-            try:
-                self.remote_command(
-                    host['address'],
-                    'echo "ping!"'
-                )
-            except Exception:
-                continue
-            return host

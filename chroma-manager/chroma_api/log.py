@@ -4,13 +4,14 @@
 # ========================================================
 
 
+from chroma_core.lib.util import normalize_nid
+
 from tastypie import fields
-
-from chroma_core.models.log import Systemevents
-
 from tastypie.resources import ModelResource
 from tastypie.authorization import DjangoAuthorization
+
 from chroma_api.authentication import AnonymousAuthentication
+from chroma_core.models.log import LogMessage, MessageClass
 
 
 class LogAuthorization(DjangoAuthorization):
@@ -26,7 +27,7 @@ class LogAuthorization(DjangoAuthorization):
             return object_list
         else:
             # Lustre messages have a leading space
-            return object_list.filter(message__startswith=u' Lustre')
+            return object_list.filter(message_class__in = [MessageClass.LUSTRE, MessageClass.LUSTRE_ERROR])
 
 
 class LogResource(ModelResource):
@@ -47,27 +48,36 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
         return self._substitutions(bundle.obj)
 
     class Meta:
-        queryset = Systemevents.objects.all()
+        queryset = LogMessage.objects.all()
         filtering = {
-                'severity': ['exact'],
-                'fromhost': ['exact', 'startswith'],
-                'devicereportedtime': ['gte', 'lte'],
+                'fqdn': ['exact', 'startswith'],
+                'datetime': ['gte', 'lte'],
                 'message': ['icontains', 'startswith', 'contains'],
+                'message_class': ['in', 'exact']
                 }
         authorization = LogAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ['devicereportedtime', 'fromhost']
+        ordering = ['datetime', 'fqdn']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
 
+    def dehydrate_message_class(self, bundle):
+        return MessageClass.to_string(bundle.obj.message_class)
+
     def build_filters(self, filters = None):
-        # TODO: let the UI filter on nodename to avoid the need for this mangling
+        # TODO: make the UI filter on FQDN to avoid the need for this mangling
         host_id = filters.get('host_id', None)
-        if host_id:
+        if host_id is not None:
             del filters['host_id']
             from chroma_core.models import ManagedHost
             host = ManagedHost.objects.get(id=host_id)
-            filters['fromhost'] = host.fqdn
+            filters['fqdn'] = host.fqdn
+
+        if 'message_class__in' in filters:
+            filters.setlist('message_class__in', [MessageClass.from_string(s).__str__() for s in filters.getlist('message_class__in')])
+
+        if 'message_class' in filters:
+            filters['message_class'] = MessageClass.from_string(filters['message_class'])
 
         return super(LogResource, self).build_filters(filters)
 
@@ -77,7 +87,6 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
         from chroma_api.urls import api
 
         from chroma_core.models import ManagedHost, ManagedTarget
-        from chroma_core.lib.lustre_audit import normalize_nid
         import re
 
         substitutions = []

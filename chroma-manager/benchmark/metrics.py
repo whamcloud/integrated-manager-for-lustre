@@ -14,7 +14,7 @@ from django.test.simple import DjangoTestSuiteRunner
 from django.db import transaction
 
 from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, Volume, VolumeNode
-from chroma_core.lib.lustre_audit import UpdateScan
+from chroma_core.services.lustre_audit.update_scan import UpdateScan
 from benchmark.generic import GenericBenchmark
 
 
