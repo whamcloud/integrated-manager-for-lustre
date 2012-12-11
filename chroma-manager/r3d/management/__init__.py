@@ -15,7 +15,7 @@ def archiverow_custom_pk(sender, **kwargs):
     # This isn't perfect, but it should prevent us from attempting to
     # mangle the PK on already-mangled DBs.
     cursor.execute("SHOW INDEX from r3d_archiverow")
-    indexed_columns = [r[4] for r in cursor.fetchall()]
+    indexed_columns = [r[4] for r in cursor.fetchall() or ()]
     if 'archive_id' in indexed_columns and 'slot' in indexed_columns:
         return
 

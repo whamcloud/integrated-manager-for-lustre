@@ -21,13 +21,6 @@ import cPickle as pickle
 from cPickle import UnpicklingError
 
 
-class PickledObject(str):
-    """
-    Used by PickledObjectField to flag when the value's already been pickled.
-    """
-    pass
-
-
 class PickledObjectField(models.Field):
     """
     A field which automatically pickles on save and unpickles on load.
@@ -42,17 +35,17 @@ class PickledObjectField(models.Field):
             return value
 
     def get_prep_value(self, value):
-        if value is not None and not isinstance(value, PickledObject):
-            #items = value.keys()
+        if value is not None and not isinstance(value, str):
             # NB: Binary pickle doesn't play well with field types
             # that expect to work with strings (i.e. have a character
             # encoding).  On MySQL, we want to use a BLOB type.
-            value = PickledObject(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
-
-        #if value is not None:
-            #print "%s: %d items, %d bytes" % (self.name, len(items),
-            #                                             len(value))
-            #print "%s: %s" % (self.name, items)
+            value = pickle.dumps(value, pickle.HIGHEST_PROTOCOL)
+        elif isinstance(value, str):
+            # Bit of belt-and-suspenders here...  It's reasonably safe to
+            # assume that we wouldn't knowingly define a string-like field
+            # as a PickledObjectField.  We don't want to pickle an
+            # already-pickled value, though.
+            raise RuntimeError("%s: already pickled?" % self.name)
         return value
 
     def db_type(self, connection):
