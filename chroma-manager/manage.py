@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass
+
 from django.core.management import execute_manager
 try:
     import settings # Assumed to be in the same directory.

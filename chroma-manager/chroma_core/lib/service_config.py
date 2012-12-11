@@ -151,11 +151,12 @@ class ServiceConfig:
     def _db_accessible(self):
         """Discover whether we have a working connection to the database"""
         from MySQLdb import OperationalError
+        from pymysql import InternalError
         try:
             from django.db import connection
             connection.introspection.table_names()
             return True
-        except OperationalError:
+        except (OperationalError, InternalError):
             return False
 
     def _db_populated(self):

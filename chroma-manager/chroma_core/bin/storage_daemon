@@ -7,6 +7,12 @@
 import sys
 import os
 
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass
+
 bin_dir = os.path.abspath(os.path.dirname(sys.modules['__main__'].__file__))
 project_dir = "/" + os.path.join(*(bin_dir.split(os.sep)[0:-2]))
 sys.path.append(project_dir)

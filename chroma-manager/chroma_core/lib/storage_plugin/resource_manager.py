@@ -256,9 +256,9 @@ class ResourceManager(object):
         dse.patch_models()
 
     def session_open(self,
-            scannable_id,
-            initial_resources,
-            update_period):
+                     scannable_id,
+                     initial_resources,
+                     update_period):
         scannable_class = self._class_index.get(scannable_id)
         assert issubclass(scannable_class, BaseScannableResource) or issubclass(scannable_class, HostsideResource)
         log.debug(">> session_open %s (%s resources)" % (scannable_id, len(initial_resources)))
@@ -363,7 +363,7 @@ class ResourceManager(object):
                     {'id': primary_lun_node.id,
                      'use': True,
                      'primary': True
-                    })
+                     })
                 log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host_id, volume_id))
 
                 # Remove the primary host from consideration for the secondary mount
@@ -410,11 +410,11 @@ class ResourceManager(object):
 
         # Get all DeviceNodes within this scope
         node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
-                for klass in all_subclasses(DeviceNode)]
+                          for klass in all_subclasses(DeviceNode)]
 
         node_resources = StorageResourceRecord.objects.filter(
             resource_class__in = node_klass_ids, storage_id_scope = scannable_id).annotate(
-            child_count = Count('resource_parent'))
+                child_count = Count('resource_parent'))
 
         # DeviceNodes elegible for use as a VolumeNode (leaves)
         usable_node_resources = [nr for nr in node_resources if nr.child_count == 0]
@@ -473,7 +473,7 @@ class ResourceManager(object):
         node_to_logicaldrive_id = {}
         for node_record in unassigned_node_resources:
             logicaldrive_id = self._record_find_ancestor(node_record.id, LogicalDrive)
-            if logicaldrive_id == None:
+            if logicaldrive_id is None:
                 # This is not an error: a plugin may report a device node from
                 # an agent plugin before reporting the LogicalDrive from the controller.
                 log.info("DeviceNode %s has no LogicalDrive ancestor" % node_record.pk)
@@ -485,7 +485,7 @@ class ResourceManager(object):
         sizes = StorageResourceAttributeSerialized.objects.filter(
             resource__id__in = node_to_logicaldrive_id.values(), key = 'size').values('resource_id', 'value')
         logicaldrive_id_to_size = dict([(s['resource_id'],
-                                    StorageResourceAttributeSerialized.decode(s['value'])) for s in sizes])
+                                         StorageResourceAttributeSerialized.decode(s['value'])) for s in sizes])
 
         existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
         logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
@@ -934,7 +934,7 @@ class ResourceManager(object):
                     VolumeNode.delayed.update({'id': volume_node.id, 'not_deleted': None})
                     volumes_need_attention.append(volume_node.volume_id)
 
-            volumes_need_attention.extend(record_id_to_volumes[record_id])
+            volumes_need_attention.extend([v.id for vin in record_id_to_volumes[record_id]])
 
         VolumeNode.delayed.flush()
 

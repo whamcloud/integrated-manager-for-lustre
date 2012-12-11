@@ -4,6 +4,12 @@
 # Copyright 2011 Whamcloud, Inc.
 # ==============================
 
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass
+
 import sys
 import os
 import socket
