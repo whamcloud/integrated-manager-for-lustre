@@ -903,6 +903,7 @@ class FailbackTargetStep(Step):
         target = kwargs['target']
         primary = target.primary_host
         self.invoke_agent(primary, "failback-target --ha_label %s" % target.ha_label)
+        target.set_active_mount(target.managedtargetmount_set.get(primary = True))
 
 
 class FailbackTargetJob(MigrateTargetJob):
@@ -939,6 +940,7 @@ class FailoverTargetStep(Step):
         target = kwargs['target']
         secondary = target.failover_hosts[0]
         self.invoke_agent(secondary, "failover-target --ha_label %s" % target.ha_label)
+        target.set_active_mount(target.managedtargetmount_set.get(primary = False))
 
 
 class FailoverTargetJob(MigrateTargetJob):
