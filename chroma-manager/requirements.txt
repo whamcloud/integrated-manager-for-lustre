@@ -26,5 +26,6 @@ fudge
 simplejson
 behave>=1.1.0
 prettytable
+mercurial
 -e hg+https://bitbucket.org/jcspray/dse2-django1.3#egg=dse
 selenium
