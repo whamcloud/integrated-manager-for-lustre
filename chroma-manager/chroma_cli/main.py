@@ -81,10 +81,10 @@ def standard_cli(args=None, config=None):
     elif proxies:
         sys.stderr.write("WARNING: Detected the following proxy variables: %s (--noproxy to disable them)\n" % ", ".join(proxies))
 
-    from chroma_cli.exceptions import ApiException
+    from chroma_cli.exceptions import ApiException, AbnormalCommandCompletion
     try:
         ns.handler(api=api, formatter=formatter)(parser=parser, args=args, ns=ns)
-    except ApiException, e:
+    except (AbnormalCommandCompletion, ApiException), e:
         print e
         sys.exit(1)
     except Exception, e:
