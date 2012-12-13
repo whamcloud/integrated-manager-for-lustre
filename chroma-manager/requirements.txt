@@ -28,4 +28,4 @@ prettytable
 mercurial
 -e hg+https://bitbucket.org/jcspray/dse2-django1.3#egg=dse
 selenium
-python-PyMySQL
+PyMySQL
