@@ -124,9 +124,6 @@ BROKER_VHOST = "chromavhost"
 
 CELERY_RESULT_BACKEND = "database"
 
-# HYD-471: This must be set for unit tests to pass in general
-SOUTH_TESTS_MIGRATE = False
-
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
