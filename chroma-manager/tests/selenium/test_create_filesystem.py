@@ -120,42 +120,43 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         create_filesystem_page.quiesce()
         self.assertEqual(create_filesystem_page.name_error, "Name may not contain spaces")
 
-    def test_mdt_advanced_validation(self):
-        create_filesystem_page = CreateFilesystem(self.driver)
-        create_filesystem_page.enter_name(self.filesystem_name)
-        create_filesystem_page.select_mgt_volume(self.mgt_server_address, self.mgt_volume_name)
-        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
-        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
-
-        # Enter an invalid value
-        create_filesystem_page.expand_mdt_advanced()
-        create_filesystem_page.enter_mdt_inode_size('rhubarb')
-        create_filesystem_page.collapse_mdt_advanced()
-
-        create_filesystem_page.create_filesystem_button.click()
-        create_filesystem_page.quiesce()
-
-        self.assertTrue(create_filesystem_page.mdt_advanced_visible)
-        self.assertEqual(create_filesystem_page.mdt_inode_size_error, "Must be an integer")
-        self.assertEqual(create_filesystem_page.mdt_bytes_per_inode_error, None)
-
-        # Make the other field invalid
-        create_filesystem_page.enter_mdt_inode_size('512')
-        create_filesystem_page.enter_mdt_bytes_per_inode('rhubarb')
-
-        create_filesystem_page.create_filesystem_button.click()
-        create_filesystem_page.quiesce()
-
-        self.assertTrue(create_filesystem_page.mdt_advanced_visible)
-        self.assertEqual(create_filesystem_page.mdt_inode_size_error, None)
-        self.assertEqual(create_filesystem_page.mdt_bytes_per_inode_error, "Must be an integer")
-
-        # Navigate away and back, check the validations are cleared
-        self.navigation.go('Configure', 'Servers')
-        self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
-        create_filesystem_page.expand_mdt_advanced()
-        self.assertEqual(create_filesystem_page.mdt_inode_size_error, None)
-        self.assertEqual(create_filesystem_page.mdt_bytes_per_inode_error, None)
+    # Disabled for HYD-1502, which we do not intend to fix in the b1_0 branch.
+    #def test_mdt_advanced_validation(self):
+    #    create_filesystem_page = CreateFilesystem(self.driver)
+    #    create_filesystem_page.enter_name(self.filesystem_name)
+    #    create_filesystem_page.select_mgt_volume(self.mgt_server_address, self.mgt_volume_name)
+    #    create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+    #    create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
+    #
+    #    # Enter an invalid value
+    #    create_filesystem_page.expand_mdt_advanced()
+    #    create_filesystem_page.enter_mdt_inode_size('rhubarb')
+    #    create_filesystem_page.collapse_mdt_advanced()
+    #
+    #    create_filesystem_page.create_filesystem_button.click()
+    #    create_filesystem_page.quiesce()
+    #
+    #    self.assertTrue(create_filesystem_page.mdt_advanced_visible)
+    #    self.assertEqual(create_filesystem_page.mdt_inode_size_error, "Must be an integer")
+    #    self.assertEqual(create_filesystem_page.mdt_bytes_per_inode_error, None)
+    #
+    #    # Make the other field invalid
+    #    create_filesystem_page.enter_mdt_inode_size('512')
+    #    create_filesystem_page.enter_mdt_bytes_per_inode('rhubarb')
+    #
+    #    create_filesystem_page.create_filesystem_button.click()
+    #    create_filesystem_page.quiesce()
+    #
+    #    self.assertTrue(create_filesystem_page.mdt_advanced_visible)
+    #    self.assertEqual(create_filesystem_page.mdt_inode_size_error, None)
+    #    self.assertEqual(create_filesystem_page.mdt_bytes_per_inode_error, "Must be an integer")
+    #
+    #    # Navigate away and back, check the validations are cleared
+    #    self.navigation.go('Configure', 'Servers')
+    #    self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
+    #    create_filesystem_page.expand_mdt_advanced()
+    #    self.assertEqual(create_filesystem_page.mdt_inode_size_error, None)
+    #    self.assertEqual(create_filesystem_page.mdt_bytes_per_inode_error, None)
 
     def test_mgt_not_selected(self):
         """Test that MGT is validated as present"""

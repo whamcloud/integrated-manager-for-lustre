@@ -84,7 +84,7 @@ class EditFilesystem(BaseView):
         """Click button to add new OST and select an OST/s from ost chooser"""
         # Open the ost chooser pop-up
         self.driver.find_element_by_css_selector('#btnNewOST').click()
-        self.wait_for_element_by_css_selector('#new_ost_chooser_table')
+        wait_for_any_element_by_css_selector(self.driver, '#new_ost_chooser_table', self.medium_wait)
 
         # Click on the row that has the given volume name and primary server address
         try:
