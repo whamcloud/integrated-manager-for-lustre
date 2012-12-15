@@ -86,8 +86,8 @@ def wait_for_any_element_by_css_selector(driver, selectors, timeout):
     _wait_for_any_element(driver, By.CSS_SELECTOR, selectors, timeout)
 
 
-def wait_for_any_element_by_xpath(driver, by, selectors, timeout):
-    _wait_for_any_element(driver, by.XPATH, selectors, timeout)
+def wait_for_any_element_by_xpath(driver, selectors, timeout):
+    _wait_for_any_element(driver, By.XPATH, selectors, timeout)
 
 
 def enter_text_for_element(driver, selector_or_element, text_value):

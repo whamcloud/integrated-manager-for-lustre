@@ -193,18 +193,18 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "unmounted")
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "mounted")
 
-    def test_remove_ost(self):
-        self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "removed")
-        with self.assertRaises(NoSuchElementException):
-            self.driver.find_element_by_link_text("%s-OST0000" % self.filesystem_name)
-
     # Disabled for a test stability I don't intend to address in b1_0
-    #def test_remove_filesystem(self):
-    #    """Test that when removing a filesystem from it's detail page, we are
-    #    sent to the filesystem list view after completion"""
-    #    self.edit_filesystem_page.set_state('removed')
-    #    list_view = Filesystem(self.driver)
-    #    self.assertTrue(list_view.visible)
+    #def test_remove_ost(self):
+    #    self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "removed")
+    #    with self.assertRaises(NoSuchElementException):
+    #        self.driver.find_element_by_link_text("%s-OST0000" % self.filesystem_name)
+
+    def test_remove_filesystem(self):
+        """Test that when removing a filesystem from it's detail page, we are
+        sent to the filesystem list view after completion"""
+        self.edit_filesystem_page.set_state('removed')
+        list_view = Filesystem(self.driver)
+        self.assertTrue(list_view.visible)
 
     def test_stop_start_mdt(self):
         self.edit_filesystem_page.mdt_set_state("%s-MDT0000" % self.filesystem_name, "unmounted")
