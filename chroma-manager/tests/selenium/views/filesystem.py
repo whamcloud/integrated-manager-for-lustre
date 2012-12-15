@@ -48,7 +48,7 @@ class Filesystem(DatatableView):
                 wait_for_transition(self.driver, self.standard_wait)
                 return
 
-        raise RuntimeError("Cannot perform transition " + transition_name + " on filesystem " + filesystem_name)
+        raise RuntimeError("Cannot perform transition %s on filesystem %s. Buttons found: '%s'" % (transition_name, filesystem_name, [b.text for b in buttons]))
 
     def check_action_unavailable(self, fs_name, action_name):
         """Check whether the given transition(action) is present in all possible transitions available for the filesystem"""

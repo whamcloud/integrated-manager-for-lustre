@@ -8,6 +8,7 @@ from tests.selenium.views.filesystem import Filesystem
 from tests.selenium.base import SeleniumBaseTestCase, wait_for_transition
 from utils.sample_data import Testdata
 from tests.selenium.utils.constants import static_text
+from tests.selenium.utils.element import wait_for_any_element_by_css_selector
 
 
 class TestFilesystem(SeleniumBaseTestCase):
@@ -30,6 +31,7 @@ class TestFilesystem(SeleniumBaseTestCase):
 
         fs_page = Filesystem(self.driver)
 
+        wait_for_any_element_by_css_selector(self.driver, '.transition_buttons button', self.standard_wait)
         fs_page.transition(self.filesystem_name, static_text['stop_fs'])
         fs_page.check_action_unavailable(self.filesystem_name, static_text['stop_fs'])
 

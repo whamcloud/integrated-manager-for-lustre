@@ -60,7 +60,7 @@ class BaseView(object):
         for button in buttons:
             if button.get_attribute('data-state') == state:
                 return button
-        raise NoSuchElementException("No button (of %s buttons) found with state %s" % (len(buttons), state))
+        raise NoSuchElementException("No button found with state %s. Buttons found: '%s'" % (state, [b.text for b in buttons]))
 
     def click_command_button(self, container, state):
         """Find a button within `container` that is a state transition
