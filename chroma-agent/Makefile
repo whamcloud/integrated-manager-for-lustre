@@ -12,7 +12,7 @@ else
   PACKAGE_VERSION := $(BUILD)
 endif
 
-PACKAGE_RELEASE := 2
+PACKAGE_RELEASE := 1
 
 all: rpms
 

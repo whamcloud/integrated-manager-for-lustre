@@ -12,7 +12,7 @@ else
   PACKAGE_VERSION := $(BUILD)
 endif
 
-PACKAGE_RELEASE := 2
+PACKAGE_RELEASE := 1
 
 # In development, we want to stop at first failure, but when running
 # in a Jenkins job we want all the gory details.
