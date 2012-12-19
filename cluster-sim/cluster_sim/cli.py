@@ -7,7 +7,6 @@
 import argparse
 import json
 import signal
-from gevent import monkey
 import threading
 import datetime
 import dateutil.tz
@@ -66,10 +65,7 @@ class SimulatorCli(object):
         simulator = ClusterSimulator(args.config, args.url)
         simulator.setup(server_count, volume_count, int(args.nid_count), int(args.cluster_size), int(args.psu_count))
 
-    def _acquire_token(self, url, username, password, credit_count, duration = None):
-        """
-        Localised use of the REST API to acquire a server registration token.
-        """
+    def _get_authenticated_session(self, url, username, password):
         session = requests.session()
         session.headers = {"Accept": "application/json"}
         session.verify = False
@@ -86,6 +82,14 @@ class SimulatorCli(object):
                                 headers = {"Content-type": "application/json"})
         if not response.ok:
             raise RuntimeError("Failed to authenticate")
+
+        return session
+
+    def _acquire_token(self, url, username, password, credit_count, duration = None):
+        """
+        Localised use of the REST API to acquire a server registration token.
+        """
+        session = self._get_authenticated_session(url, username, password)
 
         args = {'credits': credit_count}
         if duration is not None:
@@ -114,7 +118,62 @@ class SimulatorCli(object):
         log.info("Registering %s servers in %s/" % (server_count, args.config))
         simulator.register_all(secret)
 
+        if args.create_pdu_entries:
+            self.create_pdu_entries(simulator, args)
+
         return simulator
+
+    def create_pdu_entries(self, simulator, args):
+        if not (args.username and args.password):
+            sys.stderr.write("Username and password required to create PDU entries\n")
+            sys.exit(-1)
+
+        session = self._get_authenticated_session(args.url, args.username, args.password)
+
+        log.info("Creating PDU entries and associating PDU outlets with servers...")
+
+        # keep it stupid for now...
+        response = session.post("%s/api/power_control_type/" % args.url, data = json.dumps({
+            'agent': "fence_apc",
+            'make': "APC",
+            'model': "7901",
+            'default_username': "apc",
+            'default_password': "apc",
+            'max_outlets': 8
+        }))
+
+        assert 200 <= response.status_code < 300, response.text
+        fence_apc = json.loads(response.text)
+
+        log.debug("Created power_control_type: %s" % fence_apc['name'])
+
+        pdu_entries = []
+        for pdu_sim in simulator.power.pdu_sims.values():
+            response = session.post("%s/api/power_control_device/" % args.url, data = json.dumps({
+                'device_type': fence_apc['resource_uri'],
+                'name': pdu_sim.name,
+                'address': pdu_sim.address,
+                'port': pdu_sim.port
+            }))
+
+            assert 200 <= response.status_code < 300, response.text
+            pdu_entries.append(json.loads(response.text))
+            log.debug("Created power_control_device: %s" % pdu_entries[-1]['name'])
+
+        response = session.get("%s/api/host/" % args.url, data = json.dumps({
+            'limit': 0
+        }))
+        assert 200 <= response.status_code < 300, response.text
+        servers = json.loads(response.text)['objects']
+
+        for i, server in enumerate(sorted(servers, key=lambda server: server['fqdn'])):
+            for pdu in pdu_entries:
+                outlet = [o for o in pdu['outlets'] if o['identifier'] == str(i + 1)][0]
+                response = session.patch("%s/%s" % (args.url, outlet['resource_uri']), data = json.dumps({
+                    'host': server['resource_uri']
+                }))
+                assert 200 <= response.status_code < 300, response.text
+                log.debug("Created association %s <=> %s:%s" % (server['fqdn'], pdu['name'], outlet['identifier']))
 
     def run(self, args):
         simulator = ClusterSimulator(args.config, args.url)
@@ -128,7 +187,6 @@ class SimulatorCli(object):
         self._stopping.set()
 
     def main(self):
-        monkey.patch_all()
         log.addHandler(logging.StreamHandler())
 
         # Usually on our Intel laptops https_proxy is set, and needs to be unset for tests,
@@ -154,6 +212,7 @@ class SimulatorCli(object):
         register_parser.add_argument('--secret', required = False, help = "Registration token secret")
         register_parser.add_argument('--username', required = False, help = "API username")
         register_parser.add_argument('--password', required = False, help = "API password")
+        register_parser.add_argument('--create_pdu_entries', action='store_true', help = "Create PDU entries in the command center")
         register_parser.set_defaults(func = self.register)
 
         run_parser = subparsers.add_parser("run")

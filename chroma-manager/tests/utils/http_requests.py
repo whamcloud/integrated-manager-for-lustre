@@ -53,6 +53,17 @@ class HttpRequests(object):
 
         return HttpResponse(response)
 
+    def patch(self, url, body = None, **kwargs):
+        if body and 'data' not in kwargs:
+            kwargs['data'] = json.dumps(body)
+
+        response = self.session.patch(
+            urljoin(self.server_http_url, url),
+            **kwargs
+        )
+
+        return HttpResponse(response)
+
     def delete(self, url, **kwargs):
         response = self.session.delete(
             urljoin(self.server_http_url, url),

@@ -20,6 +20,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'cluster-sim = cluster_sim.cli:main',
+            'cluster-power = cluster_sim.cli:power_main',
             'cluster-sim-benchmark = cluster_sim.benchmark:main'
         ],
     }

@@ -1,5 +1,10 @@
 include ../include/Makefile.version
 
+FENCE_AGENTS_URL	:= http://mirrors.kernel.org/centos/6/os/x86_64/Packages/fence-agents-3.1.5-25.el6.x86_64.rpm
+FENCE_AGENTS_RPM	:= $(shell basename $(FENCE_AGENTS_URL))
+FENCE_APC			:= $(shell if which fence_apc 2>/dev/null; then true; else echo $(word 1,$(subst :, ,$(PATH)))/fence_apc; fi)
+RPM2CPIO			:= $(shell if which rpm2cpio 2>/dev/null; then true; else echo rpm2cpio; fi)
+
 all: rpms
 
 cleandist:
@@ -33,3 +38,24 @@ rpms: cleandist tarball
 
 docs:
 	@echo "Nothing to do here"
+
+$(RPM2CPIO):
+	@echo "You need to install $@ first... (brew install $@?)"
+	exit 1
+
+$(FENCE_APC): $(RPM2CPIO)
+	tmpdir=$$(mktemp -d -t fence.XXXX); \
+	venv=$$(dirname $$(dirname $(FENCE_APC))); \
+	cd $$tmpdir && curl -o $(FENCE_AGENTS_RPM) $(FENCE_AGENTS_URL); \
+	rpm2cpio $(FENCE_AGENTS_RPM) | cpio -id; \
+	mkdir -p $$venv/share/fence && cp usr/share/fence/*.py $$venv/share/fence; \
+	cp usr/sbin/$$(basename $(FENCE_APC)) $(FENCE_APC); \
+	sed -e "s:/usr/share/fence:$$venv/share/fence:" \
+	    -e "s:/usr/bin/python:/usr/bin/env python:" \
+		< $(FENCE_APC) > $(FENCE_APC).new; \
+	mv $(FENCE_APC).new $(FENCE_APC); chmod +x $(FENCE_APC); \
+	rm -fr $$tmpdir
+
+# This target will cause a fence-agents RPM to be downloaded and torn apart
+# so that fence_apc is available in a development environment.
+fence_agents: $(FENCE_APC)

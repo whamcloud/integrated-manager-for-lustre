@@ -81,5 +81,26 @@
     },
     "hosts": {
     },
-    "provision": true
+    "provision": true,
+    "power_control_types": [
+        {
+            "agent": "fence_apc",
+            "make": "APC",
+            "model": "7900",
+            "default_username": "apc",
+            "default_password": "apc"
+        }
+    ],
+    "power_distribution_units": [
+        {
+            "type": "fence_apc APC 7900",
+            "address": "127.0.0.1",
+            "port": 2300
+        },
+        {
+            "type": "fence_apc APC 7900",
+            "address": "127.0.0.1",
+            "port": 2301
+        }
+    ]
 }
