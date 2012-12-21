@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # hate to hard-code these, but whatevs
 RABBITMQ_USER="chroma"
