@@ -224,31 +224,47 @@ var CommandDetail = Backbone.View.extend({
 var JobDetail = Backbone.View.extend({
   className: 'job_dialog',
   template: _.template($('#job_detail_template').html()),
+  openStepIndex: function(job_steps) {
+    // returns the first indexed job.step that isn't in state "success"
+    // ie errors and currently running steps
+    // defaults to 0 on not found
+    for ( var i = 0; i < job_steps.length ; i++) {
+      if (job_steps[i].state !== 'success') {
+        return i;
+      }
+    }
+    return 0;
+  },
   render: function() {
-    var el = $(this.el);
-    var model = this.model;
-    var template = this.template;
-
     var steps = new StepCollection();
-    steps.fetch_uris(model.attributes.steps, function() {
-      var job = model.toJSON();
+
+    steps.fetch_uris(this.model.attributes.steps, function() {
+      var job = this.model.toJSON();
       job.steps = steps.toJSON();
       var wait_for = new JobCollection();
 
-      wait_for.fetch_uris(model.attributes.wait_for, function() {
+      wait_for.fetch_uris(this.model.attributes.wait_for, function() {
         job.wait_for = wait_for.toJSON();
 
-        var rendered = template({job: job});
+        var rendered = this.template({job: job});
+        var el = $(this.el);
         el.find('.ui-dialog-content').html(rendered);
         el.find('.dialog_tabs').tabs();
         if (job.wait_for.length == 0) {
           el.find('.dialog_tabs').tabs('disable', 'dependencies');
         }
+
+        // make an accordian if there's more than one step
+        // open the first step if all steps successful
+        // open the first non-successful step otherwise
         if (job.steps.length > 1) {
-          el.find('.job_step_list').accordion({collapsible: true});
+          el.find('.job_step_list').accordion({
+            collapsible : true,
+            active      : this.openStepIndex(job.steps)
+          });
         }
-      });
-    });
+      }.bind(this));
+    }.bind(this));
 
     return this;
   }
