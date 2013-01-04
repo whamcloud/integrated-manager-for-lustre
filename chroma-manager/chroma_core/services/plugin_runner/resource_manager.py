@@ -1035,9 +1035,6 @@ class ResourceManager(object):
 
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
-            # We must not already be in a transaction, or we might
-            # see dirty data from before another call
-            assert not transaction.is_managed()
             with transaction.commit_manually():
                 # Be extra-sure to see a fresh view (HYD-1301)
                 transaction.commit()
