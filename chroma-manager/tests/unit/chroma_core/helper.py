@@ -225,14 +225,6 @@ class JobTestCase(TestCase):
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
 
-        # NB by self stage celery has already read in its settings, so we have to update
-        # ALWAYS_EAGER inside celery instead of in settings.*
-        from celery.app import app_or_default
-        self.old_celery_always_eager = app_or_default().conf.CELERY_ALWAYS_EAGER
-        app_or_default().conf.CELERY_ALWAYS_EAGER = True
-        self.old_celery_eager_propagates_exceptions = app_or_default().conf.CELERY_EAGER_PROPAGATES_EXCEPTIONS
-        app_or_default().conf.CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
-
         # Intercept attempts to call out to lustre servers
         import chroma_core.services.job_scheduler.agent_rpc
         self.old_agent = chroma_core.services.job_scheduler.agent_rpc.Agent
@@ -340,10 +332,6 @@ class JobTestCase(TestCase):
         import chroma_core.services.job_scheduler.agent_rpc
         chroma_core.services.job_scheduler.agent_rpc.Agent = self.old_agent
         chroma_core.services.job_scheduler.agent_rpc.AgentSsh = self.old_agent_ssh
-
-        from celery.app import app_or_default
-        app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_always_eager
-        app_or_default().conf.CELERY_ALWAYS_EAGER = self.old_celery_eager_propagates_exceptions
 
 
 class JobTestCaseWithHost(JobTestCase):
