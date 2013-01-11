@@ -76,6 +76,7 @@ to be used by the Chroma test framework.
 %prep
 %setup -n %{name}-%{unmangled_version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
+echo -e "/^HTTPS_FRONTEND_PORT =/s/= .*$/= 443/\nwq" | ed settings.py 2>/dev/null
 
 %build
 %{__python} setup.py build
