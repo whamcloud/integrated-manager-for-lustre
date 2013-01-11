@@ -6,6 +6,7 @@
 
 
 import json
+import sys
 import os
 import requests
 from urlparse import urljoin
@@ -97,10 +98,17 @@ class AuthorizedHttpRequests(HttpRequests):
     def __init__(self, username, password, *args, **kwargs):
         super(AuthorizedHttpRequests, self).__init__(*args, **kwargs)
 
+        # Usually on our Intel laptops https_proxy is set, and needs to be unset for tests,
+        # but let's not completely rule out the possibility that someone might want to run
+        # the tests on a remote system using a proxy.
+        if 'https_proxy' in os.environ:
+            sys.stderr.write("Warning: Using proxy %s from https_proxy" % os.environ['https_proxy'] +
+                             " environment variable, you probably don't want that\n")
+
         response = self.get("/api/session/")
         if not response.successful:
-            if 'http_proxy' in os.environ:
-                raise RuntimeError("Failed to open session (using proxy %s)" % (os.environ['http_proxy']))
+            if 'https_proxy' in os.environ:
+                raise RuntimeError("Failed to open session (using proxy %s)" % (os.environ['https_proxy']))
             else:
                 raise RuntimeError("Failed to open session")
         self.session.headers['X-CSRFToken'] = response.cookies['csrftoken']
