@@ -218,4 +218,3 @@ class ActionPluginManager(object):
             raise RuntimeError("Unknown command %s" % cmd)
 
         return fn(**args)
-
