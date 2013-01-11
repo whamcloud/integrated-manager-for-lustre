@@ -51,7 +51,6 @@ class RoutingProxy(object):
         yield text
 
     def __call__(self, environ, start_response):
-        print 'frontend'
         ssl_socket = environ['wsgi.input'].ssl_socket
         validated_client_cert = ssl_socket.getpeercert()
         if self.SECURE_FQDN_HEADER in environ:

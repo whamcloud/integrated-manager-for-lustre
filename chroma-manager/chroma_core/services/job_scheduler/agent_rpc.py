@@ -91,15 +91,15 @@ class AgentRpcMessenger(object):
             log.debug("on_rx: %s" % message)
             fqdn = message['fqdn']
             session_id = message['session_message']['session_id']
-            log.info("AgentRpcMessager.on_rx: %s/%s" % (fqdn, session_id))
+            log.info("AgentRpcMessenger.on_rx: %s/%s" % (fqdn, session_id))
 
             def abort_session(old_session_id, new_session_id = None):
-                log.warning("AgentRpcMessager.on_rx: aborting session %s" % old_session_id)
+                log.warning("AgentRpcMessenger.on_rx: aborting session %s" % old_session_id)
                 old_rpcs = self._session_rpcs[old_session_id]
                 self._sessions[fqdn] = new_session_id
                 for rpc in old_rpcs.values():
                     if new_session_id:
-                        log.warning("AgentRpcMessager.on_rx: re-issuing RPC %s for session %s (was %s)" % (
+                        log.warning("AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s)" % (
                             rpc.id, new_session_id, old_session_id))
                         rpc.session_id = new_session_id
                         self._resend(rpc)
@@ -116,25 +116,25 @@ class AgentRpcMessenger(object):
                     self._sessions[fqdn] = session_id
 
                 # First message is just to say hi, record the session ID
-                log.info("AgentRpcMessager.on_rx: Start session %s/%s/%s" % (fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id))
+                log.info("AgentRpcMessenger.on_rx: Start session %s/%s/%s" % (fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id))
 
             else:
                 rpc_response = message['session_message']['body']
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
-                    log.info("AgentRpcMessager.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
+                    log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
                     abort_session(self._sessions[fqdn])
                     AgentSessionRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
                 elif fqdn in self._sessions:
-                    log.info("AgentRpcMessager.on_rx: good session %s/%s" % (fqdn, session_id))
+                    log.info("AgentRpcMessenger.on_rx: good session %s/%s" % (fqdn, session_id))
                     # Find this RPC and complete it
                     rpc = self._session_rpcs[session_id][rpc_response['id']]
                     del self._session_rpcs[session_id][rpc_response['id']]
                     rpc.exception = rpc_response['exception']
                     rpc.result = rpc_response['result']
-                    log.info("AgentRpcMessager.on_rx: completing rpc %s" % rpc.id)
+                    log.info("AgentRpcMessenger.on_rx: completing rpc %s" % rpc.id)
                     rpc.complete.set()
                 else:
-                    log.info("AgentRpcMessager.on_rx: unknown session %s/%s" % (fqdn, session_id))
+                    log.info("AgentRpcMessenger.on_rx: unknown session %s/%s" % (fqdn, session_id))
                     # A session I never heard of?
                     AgentSessionRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
 
@@ -142,7 +142,7 @@ class AgentRpcMessenger(object):
         self._action_runner_rx_queue.stop()
 
     def _resend(self, rpc):
-        log.debug("AgentRpcMessager._resend: rpc %s in session %s" % (rpc.id, rpc.session_id))
+        log.debug("AgentRpcMessenger._resend: rpc %s in session %s" % (rpc.id, rpc.session_id))
         self._session_rpcs[rpc.session_id][rpc.id] = rpc
         AgentTxQueue().put(rpc.get_msg())
 
@@ -153,7 +153,7 @@ class AgentRpcMessenger(object):
             # Allow a short wait for a session to show up, for example
             # when running setup actions on a host we've just added its
             # session may not yet have been fully established
-            log.error("AgentRpcMessager._send: no session for %s" % fqdn)
+            log.error("AgentRpcMessenger._send: no session for %s" % fqdn)
             wait_count += 1
             time.sleep(1)
             if wait_count > WAIT_LIMIT:
@@ -161,7 +161,7 @@ class AgentRpcMessenger(object):
 
         with self._lock:
             session_id = self._sessions[fqdn]
-            log.debug("AgentRpcMessager._send: using session %s" % session_id)
+            log.debug("AgentRpcMessenger._send: using session %s" % session_id)
 
             rpc = ActionInFlight(session_id, fqdn, action, args)
 
@@ -170,16 +170,16 @@ class AgentRpcMessenger(object):
             return rpc
 
     def _complete(self, rpc):
-        log.info("AgentRpcMessager._complete: starting wait for rpc %s" % rpc.id)
+        log.info("AgentRpcMessenger._complete: starting wait for rpc %s" % rpc.id)
         rpc.complete.wait()
-        log.info("AgentRpcMessager._complete: completed wait for rpc %s" % rpc.id)
+        log.info("AgentRpcMessenger._complete: completed wait for rpc %s" % rpc.id)
         if rpc.exception:
             raise AgentException(rpc.fqdn, rpc.action, rpc.args, rpc.exception)
         else:
             return rpc.result
 
     def call(self, fqdn, action, args):
-        log.debug("AgentRpcMessager.call: %s %s" % (fqdn, action))
+        log.debug("AgentRpcMessenger.call: %s %s" % (fqdn, action))
         rpc = self._send(fqdn, action, args)
         return self._complete(rpc)
 
@@ -190,12 +190,12 @@ class AgentRpc(object):
     AgentRpcMessenger
     """
     thread = None
-    _messager = None
+    _Messenger = None
 
     @classmethod
     def start(cls):
-        cls._messager = AgentRpcMessenger()
-        cls.thread = ServiceThread(cls._messager)
+        cls._Messenger = AgentRpcMessenger()
+        cls.thread = ServiceThread(cls._Messenger)
         cls.thread.start()
 
     @classmethod
@@ -205,11 +205,11 @@ class AgentRpc(object):
 
     @classmethod
     def call(cls, fqdn, action, args):
-        return cls._messager.call(fqdn, action, args)
+        return cls._Messenger.call(fqdn, action, args)
 
     @classmethod
     def remove(cls, fqdn):
-        return cls._messager.remove(fqdn)
+        return cls._Messenger.remove(fqdn)
 
 
 class Agent(object):

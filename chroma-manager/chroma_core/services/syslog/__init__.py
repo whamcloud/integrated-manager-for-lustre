@@ -16,8 +16,12 @@ from django.db import transaction
 import settings
 
 
+SYSLOG_PLUGIN_NAME = 'syslog'
+
+
 class SyslogRxQueue(ServiceQueue):
-    name = 'agent_syslog_rx'
+    # FIXME: queue named by convention, document it or wrap it in a function
+    name = 'agent_%s_rx' % SYSLOG_PLUGIN_NAME
 
 
 class Service(ChromaService):
@@ -63,6 +67,11 @@ class Service(ChromaService):
 
     def on_message(self, body):
         fqdn = body['fqdn']
+
+        # FIXME: body['session_message']['body'] is ugly and too transparent
+        # -- better to pass services a Message class instance with a body member
+        # (they do need the outer envelope too sometimes, e.g. for agent_rpc, but
+        #  this simple case of consuming bodies should be made simple)
         for msg in body['session_message']['body']['messages']:
             try:
                 log_message = LogMessage.objects.create(
