@@ -14,21 +14,23 @@ from chroma_core.services.http_agent import AgentSessionRpc, AgentTxQueue
 from chroma_core.services.queue import ServiceQueue
 
 
-log = log_register('agent_rpc')
+log = log_register(__name__)
 
-JOB_PLUGIN_NAME = 'jobs'
-
-
-class JobPluginRxQueue(ServiceQueue):
-    name = 'agent_%s_rx' % JOB_PLUGIN_NAME
+# The name of the device plugin on the agent with which
+# this module will communicate
+ACTION_MANAGER_PLUGIN_NAME = 'action_runner'
 
 
-class RpcInFlight(object):
-    def __init__(self, session_id, fqdn, cmd, args):
+class AgentRunnerPluginRxQueue(ServiceQueue):
+    name = 'agent_%s_rx' % ACTION_MANAGER_PLUGIN_NAME
+
+
+class ActionInFlight(object):
+    def __init__(self, session_id, fqdn, action, args):
         self.id = uuid.uuid4().__str__()
         self.session_id = session_id
         self.fqdn = fqdn
-        self.cmd = cmd
+        self.action = action
         self.args = args
         self.complete = threading.Event()
         self.exception = None
@@ -39,30 +41,31 @@ class RpcInFlight(object):
             'fqdn': self.fqdn,
             'session_message': {
                 'type': 'DATA',
-                'plugin': JOB_PLUGIN_NAME,
+                'plugin': ACTION_MANAGER_PLUGIN_NAME,
                 'session_id': self.session_id,
                 'session_seq': None,
                 'body': {
                     'id': self.id,
-                    'command': self.cmd,
+                    'action': self.action,
                     'args': self.args
                 }
             }
         }
 
 # TODO: on start up, we should message the agent http daemon to
-# tell it to reset any sessions (so that the jobs session restarts
+# tell it to reset any sessions (so that the action_runner session restarts
 # and we learn about the new session)
 
 
-class AgentRpcMessager(object):
-    # Listen to the agent_jobs_rx queue
-    # * on receive a {} body, reset session
-    # * else receiving an RPC response
-    # Send to the agent_tx queue to start an RPC
+class AgentRpcMessenger(object):
+    """
+    This class consumes AgentRunnerPluginRxQueue, sends
+    messages to AgentTxQueue, and maintains state for
+    actions in progress.
+    """
 
     def __init__(self):
-        super(AgentRpcMessager, self).__init__()
+        super(AgentRpcMessenger, self).__init__()
 
         # session to list of RPC IDs
         self._session_rpcs = defaultdict(dict)
@@ -70,12 +73,12 @@ class AgentRpcMessager(object):
         # FQDN to session
         self._sessions = {}
 
-        self._job_rx_queue = JobPluginRxQueue()
+        self._action_runner_rx_queue = AgentRunnerPluginRxQueue()
 
         self._lock = threading.Lock()
 
     def run(self):
-        self._job_rx_queue.serve(self.on_rx)
+        self._action_runner_rx_queue.serve(self.on_rx)
 
     def remove(self, fqdn):
         try:
@@ -113,14 +116,14 @@ class AgentRpcMessager(object):
                     self._sessions[fqdn] = session_id
 
                 # First message is just to say hi, record the session ID
-                log.info("AgentRpcMessager.on_rx: Start session %s/%s/%s" % (fqdn, JOB_PLUGIN_NAME, session_id))
+                log.info("AgentRpcMessager.on_rx: Start session %s/%s/%s" % (fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id))
 
             else:
                 rpc_response = message['session_message']['body']
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
                     log.info("AgentRpcMessager.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
                     abort_session(self._sessions[fqdn])
-                    AgentSessionRpc().reset_session(fqdn, JOB_PLUGIN_NAME, session_id)
+                    AgentSessionRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
                 elif fqdn in self._sessions:
                     log.info("AgentRpcMessager.on_rx: good session %s/%s" % (fqdn, session_id))
                     # Find this RPC and complete it
@@ -133,34 +136,34 @@ class AgentRpcMessager(object):
                 else:
                     log.info("AgentRpcMessager.on_rx: unknown session %s/%s" % (fqdn, session_id))
                     # A session I never heard of?
-                    AgentSessionRpc().reset_session(fqdn, JOB_PLUGIN_NAME, session_id)
+                    AgentSessionRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
 
     def stop(self):
-        self._job_rx_queue.stop()
+        self._action_runner_rx_queue.stop()
 
     def _resend(self, rpc):
         log.debug("AgentRpcMessager._resend: rpc %s in session %s" % (rpc.id, rpc.session_id))
         self._session_rpcs[rpc.session_id][rpc.id] = rpc
         AgentTxQueue().put(rpc.get_msg())
 
-    def _send(self, fqdn, cmd, args):
+    def _send(self, fqdn, action, args):
         wait_count = 0
         WAIT_LIMIT = 10
         while not fqdn in self._sessions:
-            # Allow a short delay before a session shows up, for example
-            # when running setup jobs on a host we've just added its
+            # Allow a short wait for a session to show up, for example
+            # when running setup actions on a host we've just added its
             # session may not yet have been fully established
             log.error("AgentRpcMessager._send: no session for %s" % fqdn)
             wait_count += 1
             time.sleep(1)
             if wait_count > WAIT_LIMIT:
-                raise AgentException(fqdn, cmd, args, "No %s session for %s" % (JOB_PLUGIN_NAME, fqdn))
+                raise AgentException(fqdn, action, args, "No %s session for %s" % (ACTION_MANAGER_PLUGIN_NAME, fqdn))
 
         with self._lock:
             session_id = self._sessions[fqdn]
             log.debug("AgentRpcMessager._send: using session %s" % session_id)
 
-            rpc = RpcInFlight(session_id, fqdn, cmd, args)
+            rpc = ActionInFlight(session_id, fqdn, action, args)
 
             self._session_rpcs[session_id][rpc.id] = rpc
             AgentTxQueue().put(rpc.get_msg())
@@ -171,24 +174,28 @@ class AgentRpcMessager(object):
         rpc.complete.wait()
         log.info("AgentRpcMessager._complete: completed wait for rpc %s" % rpc.id)
         if rpc.exception:
-            raise AgentException(rpc.fqdn, rpc.cmd, rpc.args, rpc.exception)
+            raise AgentException(rpc.fqdn, rpc.action, rpc.args, rpc.exception)
         else:
             return rpc.result
 
-    def call(self, fqdn, cmd, args):
-        log.debug("AgentRpcMessager.call: %s %s" % (fqdn, cmd))
-        rpc = self._send(fqdn, cmd, args)
+    def call(self, fqdn, action, args):
+        log.debug("AgentRpcMessager.call: %s %s" % (fqdn, action))
+        rpc = self._send(fqdn, action, args)
         return self._complete(rpc)
 
 
 class AgentRpc(object):
+    """
+    This class exists to provide one-per-process initialization of
+    AgentRpcMessenger
+    """
     thread = None
     _messager = None
 
     @classmethod
     def start(cls):
-        cls.messager = AgentRpcMessager()
-        cls.thread = ServiceThread(cls.messager)
+        cls._messager = AgentRpcMessenger()
+        cls.thread = ServiceThread(cls._messager)
         cls.thread.start()
 
     @classmethod
@@ -197,17 +204,17 @@ class AgentRpc(object):
             cls.thread.stop()
 
     @classmethod
-    def call(cls, fqdn, cmd, args):
-        return cls.messager.call(fqdn, cmd, args)
+    def call(cls, fqdn, action, args):
+        return cls._messager.call(fqdn, action, args)
 
     @classmethod
     def remove(cls, fqdn):
-        return cls.messager.remove(fqdn)
+        return cls._messager.remove(fqdn)
 
 
 class Agent(object):
-    def invoke(self, cmd, args = {}):
-        return AgentRpc.call(self.host.fqdn, cmd, args)
+    def invoke(self, action, args = {}):
+        return AgentRpc.call(self.host.fqdn, action, args)
 
     def __init__(self, host, log = None, console_callback = None, timeout = None):
         DEFAULT_TIMEOUT = 60
@@ -228,22 +235,26 @@ class Agent(object):
 
 
 class AgentException(Exception):
-    def __init__(self, fqdn, cmd, params, backtrace):
+    def __init__(self, fqdn, action, params, backtrace):
         self.fqdn = fqdn
-        self.cmd = cmd
+        self.action = action
         self.params = params
         self.backtrace = backtrace
 
     def __str__(self):
         return """AgentException
 Host: %s
-Command: %s
+Action: %s
 Arguments: %s
 Exception: %s
-""" % (self.fqdn, self.cmd, self.params, self.backtrace)
+""" % (self.fqdn, self.action, self.params, self.backtrace)
 
 
 class AgentSsh(object):
+    """
+    This class can run agent actions over SSH (as opposed to the usual
+    way of running actions over reverse-HTTPS).
+    """
     def __init__(self, address, log = None, console_callback = None, timeout = None):
         DEFAULT_TIMEOUT = 60
         if timeout:
@@ -340,9 +351,9 @@ class AgentSsh(object):
             self.log.error(stderr_buf)
         return result_code, stdout_buf, stderr_buf
 
-    def invoke(self, cmd, args = {}):
+    def invoke(self, action, args = {}):
         args_str = " ".join(["--%s=\"%s\"" % (k, v) for (k, v) in args.items()])
-        cmdline = "chroma-agent %s %s" % (cmd, args_str)
+        cmdline = "chroma-agent %s %s" % (action, args_str)
         self.log.debug("%s.invoke: %s" % (self.__class__.__name__, cmdline))
         code, out, err = self.ssh(cmdline)
 
@@ -350,7 +361,7 @@ class AgentSsh(object):
             try:
                 data = json.loads(out)
             except ValueError:
-                raise AgentException(self.address, cmd, args, "Malformed JSON: %s" % out)
+                raise AgentException(self.address, action, args, "Malformed JSON: %s" % out)
 
             try:
                 if data['success']:
@@ -358,9 +369,9 @@ class AgentSsh(object):
                 else:
                     backtrace = data['backtrace']
                     self.log.error("Agent returned exception from host %s running '%s': %s" % (self.address, cmdline, backtrace))
-                    raise AgentException(self.address, cmd, args, backtrace)
+                    raise AgentException(self.address, action, args, backtrace)
             except KeyError, e:
-                raise AgentException(self.address, cmd, args, "Malformed output (%s) from agent: '%s'" % (e, out))
+                raise AgentException(self.address, action, args, "Malformed output (%s) from agent: '%s'" % (e, out))
 
         else:
-            raise AgentException(self.address, cmd, args, "Error %s running agent: %s" % (code, err))
+            raise AgentException(self.address, action, args, "Error %s running agent: %s" % (code, err))

@@ -13,7 +13,7 @@ import datetime
 import uuid
 import time
 from copy import deepcopy
-from chroma_agent.device_plugins.jobs import ActionRunnerPlugin
+from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin
 from chroma_agent.plugin_manager import DevicePlugin
 
 
@@ -822,7 +822,7 @@ class FakeDevicePlugins():
             'linux': FakeLinuxPlugin,
             'linux_network': FakeLinuxNetworkPlugin,
             'lustre': FakeLustrePlugin,
-            'jobs': ActionRunnerPlugin,
+            'action_runner': ActionRunnerPlugin,
             'syslog': FakeSyslogPlugin
         }
 
