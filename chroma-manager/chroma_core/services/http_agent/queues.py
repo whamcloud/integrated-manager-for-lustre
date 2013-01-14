@@ -1,0 +1,107 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+import Queue
+import threading
+from chroma_core.services import _amqp_connection, log_register
+from chroma_core.services.queue import ServiceQueue
+
+
+class AgentTxQueue(ServiceQueue):
+    name = "agent_tx"
+
+
+log = log_register(__name__)
+
+
+class HostQueueCollection(object):
+    def __init__(self):
+        self._host_queues = {}
+
+        # A queue for all plugin RX messages, will be fanned
+        # out to an AMQP queue per plugin
+        self.plugin_rx_queue = Queue.Queue()
+
+        self._lock = threading.Lock()
+
+    def get(self, fqdn):
+        with self._lock:
+            try:
+                return self._host_queues[fqdn]
+            except KeyError:
+                queues = HostQueues(fqdn)
+                self._host_queues[fqdn] = queues
+                return queues
+
+    def remove_host(self, fqdn):
+        with self._lock:
+            self._host_queues.pop(fqdn, None)
+
+    def send(self, fqdn, message):
+        queues = self.get(fqdn)
+        log.debug("send %s %s" % (fqdn, queues.tx))
+        queues.tx.put(message)
+
+    def receive(self, fqdn, message):
+        # An extra envelope to record which FQDN sent this message
+        self.plugin_rx_queue.put(
+            {
+                'fqdn': fqdn,
+                'session_message': message
+            }
+        )
+
+
+class HostQueues(object):
+    """Both directions of messages for a single host"""
+    def __init__(self, fqdn):
+        self.fqdn = fqdn
+        self.rx = Queue.Queue()
+        self.tx = Queue.Queue()
+
+
+class AmqpRxForwarder(object):
+    def __init__(self, queue_collection):
+        self._stopping = threading.Event()
+        self._queue_collection = queue_collection
+
+    def run(self):
+        with _amqp_connection() as conn:
+            while not self._stopping.is_set():
+                try:
+                    msg = self._queue_collection.plugin_rx_queue.get(block = True, timeout = 1)
+                except Queue.Empty:
+                    pass
+                else:
+                    plugin_name = msg['session_message']['plugin']
+                    rx_queue_name = "agent_%s_rx" % plugin_name
+                    q = conn.SimpleQueue(rx_queue_name, serializer = 'json')
+                    q.put(msg)
+
+    def stop(self):
+        self._stopping.set()
+
+
+class AmqpTxForwarder(object):
+    def __init__(self, queue_collection):
+        self._queue = AgentTxQueue()
+        self._queue_collection = queue_collection
+
+    def on_message(self, message):
+        log.debug("AmqpTxForwarder.on_message: %s/%s/%s %s" % (
+            message['fqdn'],
+            message['session_message']['plugin'],
+            message['session_message']['session_id'],
+            message['session_message']['type']))
+        fqdn = message['fqdn']
+        session_message = message['session_message']
+        self._queue_collection.send(fqdn, session_message)
+
+    def run(self):
+        self._queue.serve(self.on_message)
+
+    def stop(self):
+        self._queue.stop()

@@ -10,8 +10,7 @@ import M2Crypto
 from chroma_core.models import ManagedHost
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
-from chroma_core.services.https_frontend import Crypto
-import dateutil
+from chroma_core.services.http_agent.crypto import Crypto
 
 from django.http import HttpResponseNotAllowed, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -38,8 +37,8 @@ class MessageView(View):
         fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
         messages = body['messages']
 
-        self.hosts.update(fqdn)
-        log.debug("message_receive: %s %s messages" % (fqdn, len(messages)))
+        #self.hosts.update(fqdn)
+        log.debug("MessageView.post: %s %s messages" % (fqdn, len(messages)))
         for message in messages:
             if message['type'] == 'DATA':
                 try:
@@ -77,27 +76,30 @@ class MessageView(View):
         """
 
         fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
-        server_boot_time = dateutil.parser.parse(request.GET['server_boot_time'])
-        client_start_time = dateutil.parser.parse(request.GET['client_start_time'])
+#        server_boot_time = dateutil.parser.parse(request.GET['server_boot_time'])
+#        client_start_time = dateutil.parser.parse(request.GET['client_start_time'])
 
         payload = []
 
-        # If server_boot_time has changed, then the server has rebooted
-        reset_required = self.hosts.update(fqdn, server_boot_time, client_start_time)
-        if reset_required:
-            # This is the case where the http_agent service restarts, so
-            # we have to let the agent know that all open sessions
-            # are now over.
-            payload.append({
-                'type': 'SESSION_TERMINATE_ALL',
-                'plugin': None,
-                'session_id': None,
-                'session_seq': None,
-                'body': None
-            })
+# FIXME: host_state is doing writes to ManagedHost, which is deadlocking with job_scheduler
+# during the host setup immediately after registration.
+#        # If server_boot_time has changed, then the server has rebooted
+#        reset_required = self.hosts.update(fqdn, server_boot_time, client_start_time)
+#        if reset_required:
+#            # This is the case where the http_agent service restarts, so
+#            # we have to let the agent know that all open sessions
+#            # are now over.
+#            payload.append({
+#                'type': 'SESSION_TERMINATE_ALL',
+#                'plugin': None,
+#                'session_id': None,
+#                'session_seq': None,
+#                'body': None
+#            })
 
-        log.info("message_send: composing messages for %s" % fqdn)
+        log.info("MessageView.get: composing messages for %s" % fqdn)
         queue = self.queues.get(fqdn).tx
+        log.debug("MessageView.get: waiting for queue %s/%s" % (fqdn, queue))
 
         try:
             first_message = queue.get(block = True, timeout = self.LONG_POLL_TIMEOUT)
@@ -115,7 +117,7 @@ class MessageView(View):
                     # TODO: filter the returned message such that all DATA Messages
                     # have the current session ID, or are dropped
 
-        log.info("message_send: responding to %s with %s messages" % (fqdn, len(payload)))
+        log.info("MessageView.get: responding to %s with %s messages" % (fqdn, len(payload)))
         return HttpResponse(json.dumps({'messages': payload}), mimetype = "application/json")
 
 

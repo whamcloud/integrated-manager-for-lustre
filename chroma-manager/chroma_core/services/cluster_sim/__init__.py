@@ -22,7 +22,7 @@ class Service(ChromaService):
         self.stopping = threading.Event()
 
     def run(self):
-        N = 10
+        N = 32
         folder = 'cluster_sim'
         url = settings.SERVER_HTTP_URL
 
@@ -39,7 +39,7 @@ class Service(ChromaService):
 
         self.log.info("Running using config '%s' for %s hosts" % (folder, N))
         self.simulator = ClusterSimulator(N, folder, url)
-        self.simulator.register_all()
+        #self.simulator.register_all()
         self.simulator.start_all()
         while not self.stopping.is_set():
             self.stopping.wait(timeout = 10)

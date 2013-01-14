@@ -13,7 +13,7 @@ import threading
 import sys
 import traceback
 import urlparse
-from chroma_core.services.https_frontend import Crypto
+from chroma_core.services.http_agent.crypto import Crypto
 from dateutil import tz
 import dateutil.parser
 

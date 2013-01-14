@@ -30,9 +30,7 @@ class LinuxNetwork(Plugin):
             iface_resource.tx_bytes = iface['tx_bytes']
 
     def agent_session_continue(self, host_resource, data):
-        self.log.info('session continue')
         self._linux_update(data)
 
     def agent_session_start(self, host_resource, data):
-        self.log.info('session start')
         self._linux_update(data)

@@ -5,7 +5,6 @@ from chroma_agent.crypto import Crypto
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.http_agent import AgentSessionRpc
-from chroma_core.services.https_frontend import RoutingProxyRpc, RoutingProxy
 from chroma_core.services.job_scheduler.agent_rpc import AgentException, AgentRpc
 from chroma_core.services.log import log_register
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
@@ -261,8 +260,6 @@ class JobTestCase(TestCase):
             rpc_class._call = mock.Mock(side_effect = rpc_local)
 
         patch_daemon_rpc(AgentDaemonRpcInterface, AgentPluginHandlerCollection(resource_manager))
-
-        patch_daemon_rpc(RoutingProxyRpc, RoutingProxy(None))
 
         patch_daemon_rpc(AgentSessionRpc, HttpAgentService())
 

@@ -10,7 +10,8 @@ import threading
 import time
 import uuid
 from chroma_core.services import log_register, ServiceThread
-from chroma_core.services.http_agent import AgentSessionRpc, AgentTxQueue
+from chroma_core.services.http_agent.sessions import AgentSessionRpc
+from chroma_core.services.http_agent.queues import AgentTxQueue
 from chroma_core.services.queue import ServiceQueue
 
 
