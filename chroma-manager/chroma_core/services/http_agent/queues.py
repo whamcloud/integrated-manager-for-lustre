@@ -42,7 +42,6 @@ class HostQueueCollection(object):
 
     def send(self, fqdn, message):
         queues = self.get(fqdn)
-        log.debug("send %s %s" % (fqdn, queues.tx))
         queues.tx.put(message)
 
     def receive(self, fqdn, message):

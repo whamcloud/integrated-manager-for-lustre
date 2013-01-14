@@ -4,25 +4,26 @@
 # ========================================================
 
 
-import logging
-from chroma_agent.agent_client import AgentClient
-from chroma_agent.crypto import Crypto
-from chroma_core.services.cluster_sim.fakes import FakeActionPlugins, FakeDevicePlugins, FakeCluster, FakeDevices, FakeServer, FakeClient
-
+import glob
+import json
 import os
 
-log = logging.getLogger(__name__)
+from chroma_agent.agent_client import AgentClient, HttpError
+from chroma_agent.crypto import Crypto
 
-handler = logging.FileHandler('cluster_sim.log')
-handler.setFormatter(logging.Formatter("[%(asctime)s: %(levelname)s/%(name)s] %(message)s"))
+from cluster_sim.fake_action_plugins import FakeActionPlugins
+from cluster_sim.fake_client import FakeClient
+from cluster_sim.fake_cluster import FakeCluster
+from cluster_sim.fake_devices import FakeDevices
+from cluster_sim.fake_server import FakeServer
+from cluster_sim.fake_device_plugins import  FakeDevicePlugins
+from cluster_sim.log import log
 
-log.addHandler(handler)
-log.setLevel(logging.DEBUG)
+from requests import ConnectionError
 
 
 class ClusterSimulator(object):
-    def __init__(self, N, folder, url):
-        self.N = N
+    def __init__(self, folder, url):
         self.folder = folder
         self.url = url + "agent/"
 
@@ -33,12 +34,14 @@ class ClusterSimulator(object):
         self.cluster = FakeCluster(folder)
         self.devices = FakeDevices(folder)
         self.servers = {}
-        for n in range(0, self.N):
-            nodename = "test%.3d" % n
-            fqdn = "%s.localdomain" % nodename
-            nids = ["10.0.%d.%d@tcp0" % (n / 256, n % 256)]
+        self._load_servers()
 
-            server = self.servers[fqdn] = FakeServer(self.folder, self.devices, self.cluster, fqdn, nodename, nids)
+        self._clients = {}
+
+    def _load_servers(self):
+        for server_conf in glob.glob("%s/fake_server_*.json" % self.folder):
+            conf = json.load(open(server_conf))
+            server = self.servers[conf['fqdn']] = FakeServer(self.folder, self.devices, self.cluster, conf['fqdn'], conf['nodename'], conf['nids'])
 
             class FakeCrypto(Crypto):
                 FOLDER = os.path.join(self.folder, "%s_crypto" % server.fqdn)
@@ -47,11 +50,26 @@ class ClusterSimulator(object):
                 os.makedirs(FakeCrypto.FOLDER)
             server.crypto = FakeCrypto()
 
-        self._clients = {}
+
+    def setup(self, server_count, volume_count):
+        for n in range(0, server_count):
+            nodename = "test%.3d" % n
+            fqdn = "%s.localdomain" % nodename
+            nids = ["10.0.%d.%d@tcp0" % (n / 256, n % 256)]
+
+            FakeServer(self.folder, self.devices, self.cluster, fqdn, nodename, nids)
+
+        self._load_servers()
+
+        self.devices.setup(volume_count)
+
 
     def register_all(self):
-        for fqdn in self.servers.keys():
-            self.register(fqdn)
+        for fqdn, server in self.servers.items():
+            if server.crypto.certificate_file is None:
+                self.register(fqdn)
+            else:
+                self.start_server(fqdn)
 
     def register(self, fqdn):
         log.debug("register %s" % fqdn)
@@ -65,15 +83,21 @@ class ClusterSimulator(object):
             server_properties = server,
             crypto = server.crypto
         )
-#        try:
-        registration_result = client.register()
+
+        try:
+            registration_result = client.register()
+        except ConnectionError as e:
+            log.error("Registration connection failed for %s: %s" % (fqdn, e))
+            return
+        except HttpError as e:
+            log.error("Registration request failed for %s: %s" % (fqdn, e))
+            return
         server.crypto.install_certificate(registration_result['certificate'])
-        #self.start_server(server.fqdn)
+
+        # Immediately start the agent after registration, to pick up the
+        # setup actions that will be waiting for us on the manager.
+        self.start_server(fqdn)
         return registration_result
-#        except Exception:
-#            # probably it's already registered
-#            # TODO: handle this case specifically
-#            pass
 
     def stop_server(self, fqdn, shutdown = False):
         """
@@ -99,6 +123,9 @@ class ClusterSimulator(object):
         log.debug("start %s" % fqdn)
         assert fqdn not in self._clients
         server = self.servers[fqdn]
+        if server.crypto.certificate_file is None:
+            log.warning("Not starting %s, it is not registered" % fqdn)
+            return
         client = AgentClient(
             url = self.url + "message/",
             action_plugins = FakeActionPlugins(server, self),
@@ -128,7 +155,6 @@ class ClusterSimulator(object):
             client.stop()
 
     def join(self):
-        log.debug("join me")
         log.info("Joining...")
         for client in self._clients.values():
             client.join()

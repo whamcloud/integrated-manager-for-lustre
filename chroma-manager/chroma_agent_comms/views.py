@@ -99,7 +99,6 @@ class MessageView(View):
 
         log.info("MessageView.get: composing messages for %s" % fqdn)
         queue = self.queues.get(fqdn).tx
-        log.debug("MessageView.get: waiting for queue %s/%s" % (fqdn, queue))
 
         try:
             first_message = queue.get(block = True, timeout = self.LONG_POLL_TIMEOUT)

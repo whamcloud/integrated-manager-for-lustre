@@ -5,7 +5,6 @@ from testconfig import config
 from tests.integration.core.api_testcase import ApiTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.remote_operations import  SimulatorRemoteOperations, RealRemoteOperations
-from chroma_core.services.cluster_sim.simulator import ClusterSimulator
 
 
 logger = logging.getLogger('test')
@@ -23,9 +22,19 @@ class ChromaIntegrationTestCase(ApiTestCase):
 
     def setUp(self):
         if config.get('simulator', False):
+            try:
+                from cluster_sim.simulator import ClusterSimulator
+            except ImportError:
+                raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of chroma-agent?")
+
             state_path = 'simulator_state_%s.%s' % (self.__class__.__name__, self._testMethodName)
 
-            self.simulator = ClusterSimulator(4, state_path, config['chroma_managers'][0]['server_http_url'])
+            # These are sufficient for tests existing at time of writing, could
+            # trivially let tests ask for more by looking for these vars at class scope
+            SIMULATOR_SERVER_COUNT = 4
+            SIMULATOR_VOLUME_COUNT = 8
+            self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
+            self.simulator.setup(SIMULATOR_SERVER_COUNT, SIMULATOR_VOLUME_COUNT)
             self.remote_operations = SimulatorRemoteOperations(self.simulator)
         else:
             self.remote_operations = RealRemoteOperations(self)
@@ -71,7 +80,6 @@ class ChromaIntegrationTestCase(ApiTestCase):
                 # FIXME: requiring config to have same address and fqdn (address
                 # is not meaningful to the simulator)
                 registration_result = self.simulator.register(host_address)
-                self.simulator.start_server(host_address)
                 host_create_command_ids.append(registration_result['command_id'])
             else:
                 response = self.chroma_manager.post(
