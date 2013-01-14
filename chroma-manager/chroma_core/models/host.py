@@ -766,13 +766,12 @@ class DeleteHostStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.services.https_frontend import RoutingProxyRpc
         from chroma_core.services.http_agent import AgentSessionRpc
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
         # First, cut off any more incoming connections
         host = ManagedHost._base_manager.get(pk = kwargs['host_id'])
-        RoutingProxyRpc().revoke(host.ssl_fingerprint)
+        # TODO: populate a CRL and do an apachectl graceful to reread it
 
         # Second, terminate any currently open connections and ensure there is nothing in a queue
         # which will be drained into AMQP

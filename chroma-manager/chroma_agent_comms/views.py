@@ -19,7 +19,7 @@ from django.views.generic import View
 import settings
 
 
-security_log = log_register('security')
+log = log_register('agent_views')
 
 
 class MessageView(View):
@@ -27,7 +27,6 @@ class MessageView(View):
     sessions = None
     hosts = None
 
-    log = log_register('MessageView')
     LONG_POLL_TIMEOUT = 30
 
     def post(self, request):
@@ -36,17 +35,17 @@ class MessageView(View):
         Handle a POST containing messages from the agent
         """
         body = json.loads(request.body)
-        fqdn = request.META['HTTP_X_IMFL_FQDN']
+        fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
         messages = body['messages']
 
         self.hosts.update(fqdn)
-        self.log.debug("message_receive: %s %s messages" % (fqdn, len(messages)))
+        log.debug("message_receive: %s %s messages" % (fqdn, len(messages)))
         for message in messages:
             if message['type'] == 'DATA':
                 try:
                     self.sessions.get(fqdn, message['plugin'], message['session_id'])
                 except KeyError:
-                    self.log.warning("Terminating session because unknown %s/%s/%s" % (fqdn, message['plugin'], message['session_id']))
+                    log.warning("Terminating session because unknown %s/%s/%s" % (fqdn, message['plugin'], message['session_id']))
                     self.queues.send(fqdn, {
                         'type': 'SESSION_TERMINATE',
                         'plugin': message['plugin'],
@@ -55,12 +54,12 @@ class MessageView(View):
                         'body': None
                     })
                 else:
-                    self.log.debug("Forwarding valid message %s/%s/%s-%s" % (fqdn, message['plugin'], message['session_id'], message['session_seq']))
+                    log.debug("Forwarding valid message %s/%s/%s-%s" % (fqdn, message['plugin'], message['session_id'], message['session_seq']))
                     self.queues.receive(fqdn, message)
 
             elif message['type'] == 'SESSION_CREATE_REQUEST':
                 session = self.sessions.create(fqdn, message['plugin'])
-                self.log.info("Creating session %s/%s/%s" % (fqdn, message['plugin'], session.id))
+                log.info("Creating session %s/%s/%s" % (fqdn, message['plugin'], session.id))
                 self.queues.send(fqdn, {
                     'type': 'SESSION_CREATE_RESPONSE',
                     'plugin': session.plugin,
@@ -77,7 +76,7 @@ class MessageView(View):
         Handle a long-polling GET for messages to the agent
         """
 
-        fqdn = request.META['HTTP_X_IMFL_FQDN']
+        fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
         server_boot_time = dateutil.parser.parse(request.GET['server_boot_time'])
         client_start_time = dateutil.parser.parse(request.GET['client_start_time'])
 
@@ -97,7 +96,7 @@ class MessageView(View):
                 'body': None
             })
 
-        self.log.info("message_send: composing messages for %s" % fqdn)
+        log.info("message_send: composing messages for %s" % fqdn)
         queue = self.queues.get(fqdn).tx
 
         try:
@@ -116,7 +115,7 @@ class MessageView(View):
                     # TODO: filter the returned message such that all DATA Messages
                     # have the current session ID, or are dropped
 
-        self.log.info("message_send: responding to %s with %s messages" % (fqdn, len(payload)))
+        log.info("message_send: responding to %s with %s messages" % (fqdn, len(payload)))
         return HttpResponse(json.dumps({'messages': payload}), mimetype = "application/json")
 
 
@@ -147,7 +146,7 @@ def register(request, key = None):
     csr_fqdn = certificate.get_subject().commonName
     if csr_fqdn != host_attributes['fqdn']:
         # Terse response to attacker
-        security_log.warning("FQDN mismatch '%s' vs. '%s' from %s" % (csr_fqdn, host_attributes['fqdn'], request.META['HTTP_X_FORWARDED_FOR']))
+        log.error("FQDN mismatch '%s' vs. '%s' from %s" % (csr_fqdn, host_attributes['fqdn'], request.META['HTTP_X_FORWARDED_FOR']))
         return HttpResponse(status = 400, content = "")
 
     # FIXME: handle the case where someone registers,

@@ -31,7 +31,7 @@ selenium
 log4tailer
 jsonschema
 supervisor
-django-supervisor
+django-supervisor==0.3.0
 gevent
 m2crypto
 pygraphviz # For building diagrams in the docs

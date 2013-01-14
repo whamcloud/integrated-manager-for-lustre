@@ -64,7 +64,8 @@ def log_set_filename(filename):
     :return: None
     """
     global _log_filename
-    assert not _log_filename
+    if _log_filename:
+        assert _log_filename == filename
     _log_filename = os.path.join(settings.LOG_PATH, filename)
 
     # Explicit file creation here so that we don't wait until first message

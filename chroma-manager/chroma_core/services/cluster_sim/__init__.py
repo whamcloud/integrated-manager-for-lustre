@@ -11,6 +11,7 @@ from chroma_agent.agent_daemon import daemon_log
 from chroma_core.services import ChromaService
 from chroma_core.services.cluster_sim.simulator import ClusterSimulator
 from chroma_core.services.cluster_sim.simulator import log as simulator_log
+import os
 
 import settings
 
@@ -21,9 +22,12 @@ class Service(ChromaService):
         self.stopping = threading.Event()
 
     def run(self):
-        N = 1
+        N = 10
         folder = 'cluster_sim'
         url = settings.SERVER_HTTP_URL
+
+        if 'https_proxy' in os.environ:
+            self.log.warning("https_proxy set to %s, you probably don't want that" % os.environ['https_proxy'])
 
         simulator_log.addHandler(logging.StreamHandler())
 

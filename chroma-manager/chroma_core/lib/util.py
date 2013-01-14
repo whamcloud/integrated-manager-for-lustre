@@ -120,12 +120,7 @@ class dbperf(object):
         self.q = q
 
 
-def chroma_settings():
-    """
-    Walk back up parent directories until settings.py is found.
-    Insert that directory as the first entry in sys.path.
-    Import the settings module, then return it to the caller.
-    """
+def site_dir():
     def _search_path(path):
         if os.path.exists(os.path.join(path, "settings.py")):
             return path
@@ -135,8 +130,17 @@ def chroma_settings():
             else:
                 return _search_path(os.path.dirname(path))
 
-    site_dir = _search_path(os.path.dirname(__file__))
-    sys.path.insert(0, site_dir)
+    return _search_path(os.path.dirname(__file__))
+
+
+def chroma_settings():
+    """
+    Walk back up parent directories until settings.py is found.
+    Insert that directory as the first entry in sys.path.
+    Import the settings module, then return it to the caller.
+    """
+
+    sys.path.insert(0, site_dir())
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
     import settings

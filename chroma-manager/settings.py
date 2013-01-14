@@ -283,7 +283,9 @@ HTTP_API_PORT = 8001
 # Internal port, used for inter-service communication
 HTTP_AGENT_PORT = 8002
 
+HTTP_FRONTEND_PORT = 9000
 HTTPS_FRONTEND_PORT = 8000
+
 # If your storage servers will address the manager server by a non-default
 # address or port, override this
 SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)

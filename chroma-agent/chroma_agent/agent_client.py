@@ -46,12 +46,13 @@ class AgentClient(object):
         return self.request('post', data = json.dumps(data), **kwargs)
 
     def request(self, method, **kwargs):
-        key, cert = self._crypto.private_key_file, self._crypto.certificate_file
+        cert, key = self._crypto.certificate_file, self._crypto.private_key_file
         if cert:
             kwargs['cert'] = (cert, key)
 
         try:
             response = requests.request(method, self.url,
+                # FIXME: set verify to true if we have a CA bundle
                 verify = False,
                 headers = {"Content-Type": "application/json"},
                 **kwargs)
