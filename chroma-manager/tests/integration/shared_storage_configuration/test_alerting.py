@@ -8,7 +8,6 @@ class TestAlerting(ChromaIntegrationTestCase):
     def test_alerts(self):
         fs_id = self.create_filesystem_simple()
 
-        #self.set_state("/api/filesystem/%s/" % fs_id, 'available')
         fs = self.get_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]
 
@@ -62,7 +61,7 @@ class TestAlerting(ChromaIntegrationTestCase):
             self.remote_operations.stop_target(host['fqdn'], target['ha_label'])
         self.remote_operations.stop_lnet(host['fqdn'])
         time.sleep(20)
-        self.assertEqual(len(self.get_list('/api/alert', {'active': True})), 4)
+        self.assertEqual(len(self.get_list('/api/alert/', {'active': True})), 4)
 
         # Remove everything
         self.graceful_teardown(self.chroma_manager)

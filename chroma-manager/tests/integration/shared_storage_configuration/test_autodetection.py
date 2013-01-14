@@ -10,7 +10,7 @@ class TestAutodetection(ChromaIntegrationTestCase):
 
     def test_simple_detection(self):
         self.create_filesystem_simple()
-        host_id = self.chroma_manager.get("/api/host").json['objects'][0]['id']
+        host_id = self.chroma_manager.get("/api/host/").json['objects'][0]['id']
 
         command = self.chroma_manager.post("/api/command/", body = {
             'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host_id}}],
