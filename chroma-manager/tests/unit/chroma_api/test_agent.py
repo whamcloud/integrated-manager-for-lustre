@@ -1,6 +1,6 @@
 import settings
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import MockAgent, FakeCrypto
+from tests.unit.chroma_core.helper import MockAgent, generate_csr
 
 
 # FIXME: this stuff shouldn't really be in chroma_api as it's testing
@@ -28,7 +28,7 @@ class TestRegistration(ChromaApiTestCase):
                 'version': MockAgent.version,
                 'capabilities': ['manage_targets'],
                 'address': 'mynewhost',
-                'csr': FakeCrypto().generate_csr(host_info['fqdn'])
+                'csr': generate_csr(host_info['fqdn'])
             })
             self.assertHttpBadRequest(response)
 
@@ -39,7 +39,7 @@ class TestRegistration(ChromaApiTestCase):
                 'version': MockAgent.version,
                 'capabilities': ['manage_targets'],
                 'address': 'mynewhost',
-                'csr': FakeCrypto().generate_csr(host_info['fqdn'])
+                'csr': generate_csr(host_info['fqdn'])
             })
             self.assertHttpCreated(response)
 

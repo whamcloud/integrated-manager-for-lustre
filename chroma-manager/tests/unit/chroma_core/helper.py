@@ -1,7 +1,8 @@
 from collections import defaultdict
 from contextlib import contextmanager
 import datetime
-from chroma_agent.crypto import Crypto
+import subprocess
+import tempfile
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.http_agent import AgentSessionRpc
@@ -24,12 +25,17 @@ from tests.unit.chroma_api.tastypie_test import TestApiClient
 log = log_register('test_helper')
 
 
-class FakeCrypto(Crypto):
-    FOLDER = "/tmp/"
-
-
 def freshen(obj):
     return obj.__class__.objects.get(pk=obj.pk)
+
+
+def generate_csr(common_name):
+    # Generate a disposable CSR
+    client_key = tempfile.NamedTemporaryFile(delete = False)
+    subprocess.call(['openssl', 'genrsa', '-out', client_key.name, '2048'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    csr = subprocess.Popen(['openssl', "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % common_name, "-key", client_key.name],
+        stdout = subprocess.PIPE, stderr = subprocess.PIPE).communicate()[0]
+    return csr
 
 
 def fake_log_message(message):
@@ -135,14 +141,14 @@ class MockAgent(object):
                 CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
                 api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
                 fqdn = self.mock_servers[self.host]['fqdn']
-                csr = FakeCrypto().generate_csr(fqdn)
+
                 response = api_client.post(args['url'] + "register/xyz/", data = {
                     'address': self.host,
                     'fqdn': fqdn,
                     'nodename': self.mock_servers[self.host]['nodename'],
                     'capabilities': ['manage_targets'],
                     'version': MockAgent.version,
-                    'csr': csr
+                    'csr': generate_csr(fqdn)
                 })
                 assert response.status_code == 201
                 registration_data = Serializer().deserialize(response.content, format = response['Content-Type'])
