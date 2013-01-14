@@ -5,6 +5,7 @@ Tests for the frontend HTTP and HTTPS functionality provided by Apache (httpd)
 
 import subprocess
 import tempfile
+import sys
 import requests
 from requests.exceptions import SSLError
 import settings
@@ -26,6 +27,15 @@ class TestInsecureUrls(SupervisorTestCase):
             verify = False, allow_redirects = False)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers['location'], "https://localhost:%s/" % settings.HTTPS_FRONTEND_PORT)
+
+    def test_missing_slash(self):
+        """Test rewriting of HTTP redirects is happening (ProxyPassReverse)"""
+
+        without_slash = "https://localhost:%s/api/session" % settings.HTTPS_FRONTEND_PORT
+        response = requests.get(without_slash,
+            verify = False, allow_redirects = False)
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response.headers['location'], without_slash + "/")
 
     def test_simple_access(self):
         """Test passthrough for /ui/, /api/, /static/"""
@@ -61,8 +71,11 @@ class TestSecureUrls(SupervisorTestCase):
     # Note that this test replicates a subset of the manager and agent Crypto classes, this
     # is intentional as the unit under test is the HTTPS frontend config, not those classes.
     def _openssl(self, args):
-        rc = subprocess.call(['openssl'] + args)
-        self.assertEqual(rc, 0)
+        p = subprocess.Popen(['openssl'] + args, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        sys.stdout.write(stdout)
+        sys.stdout.write(stderr)
+        self.assertEqual(p.returncode, 0)
 
     def _bad_server_credentials(self):
         server_key = tempfile.NamedTemporaryFile(delete = False)

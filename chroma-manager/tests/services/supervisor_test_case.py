@@ -8,6 +8,7 @@ import tempfile
 import time
 from unittest import TestCase
 import xmlrpclib
+import sys
 from chroma_core.lib.util import site_dir
 import os
 
@@ -55,7 +56,7 @@ class SupervisorTestCase(TestCase):
 
         cmdline = ["supervisord", "-n", "-c", self._tmp_conf.name]
 
-        self._supervisor = subprocess.Popen(cmdline)
+        self._supervisor = subprocess.Popen(cmdline, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
 
         while True:
             s = socket.socket()
@@ -76,7 +77,12 @@ class SupervisorTestCase(TestCase):
         if self._supervisor is not None:
             try:
                 self._xmlrpc.supervisor.shutdown()
-                self._supervisor.communicate()
+                stdout, stderr = self._supervisor.communicate()
+                # Echo these at the end: by outputting using sys.std* rather than
+                # letting the subprocess write directly, this verbose output can be
+                # captured by nose and only output on failure.
+                sys.stdout.write(stdout)
+                sys.stdout.write(stderr)
             except:
                 self._supervisor.kill()
             finally:
