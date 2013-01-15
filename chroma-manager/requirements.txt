@@ -27,7 +27,7 @@ fudge
 simplejson
 behave>=1.1.0
 prettytable
-dse
+dse==3.3.0
 selenium
 log4tailer
 cherrypy
