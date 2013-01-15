@@ -76,6 +76,7 @@ def stop_lnet():
 def load_lnet():
     shell.try_run(["modprobe", "lnet"])
 
+
 def unload_lnet():
     _rmmod('lnet')
 
