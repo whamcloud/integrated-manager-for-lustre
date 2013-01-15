@@ -67,7 +67,7 @@ class Crypto(CommandLine):
             hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
 
             self.log.info("Generating manager certificate file")
-            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", self.MANAGER_KEY_FILE])
+            rc, csr, err = self.try_shell(["openssl", "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", self.server_key])
             rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", "365", "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", self.MANAGER_CERT_FILE], stdin_text = csr)
 
             self.log.info("Generated %s" % self.MANAGER_CERT_FILE)

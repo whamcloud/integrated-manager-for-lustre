@@ -10,6 +10,7 @@ import socket
 import errno
 import sys
 from chroma_core.lib.util import chroma_settings, CommandLine
+from chroma_core.services.http_agent.crypto import Crypto
 
 log = logging.getLogger('installation')
 log.addHandler(logging.StreamHandler())
@@ -217,11 +218,7 @@ class ServiceConfig(CommandLine):
         self.try_shell(["chkconfig", "ntpd", "on"])
         self.try_shell(['service', 'ntpd', 'restart'])
 
-    def _setup_rabbitmq(self):
-        RABBITMQ_USER = "chroma"
-        RABBITMQ_PASSWORD = "chroma123"
-        RABBITMQ_VHOST = "chromavhost"
-
+    def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
         self.try_shell(["chkconfig", "rabbitmq-server", "on"])
         # FIXME: there's really no sane reason to have to set the stderr and
@@ -229,7 +226,12 @@ class ServiceConfig(CommandLine):
         #        blocking subprocess.communicate().
         #        we need to figure out why
         self.try_shell(["service", "rabbitmq-server", "restart"],
-                       mystderr = None, mystdout = None)
+            mystderr = None, mystdout = None)
+
+    def _setup_rabbitmq_credentials(self):
+        RABBITMQ_USER = "chroma"
+        RABBITMQ_PASSWORD = "chroma123"
+        RABBITMQ_VHOST = "chromavhost"
 
         rc, out, err = self.try_shell(["rabbitmqctl", "-q", "list_users"])
         users = [line.split()[0] for line in out.split("\n") if len(line)]
@@ -244,6 +246,10 @@ class ServiceConfig(CommandLine):
             self.try_shell(["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
 
         self.try_shell(["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
+
+    def _setup_crypto(self):
+        # The server_cert attribute is created on read
+        Crypto().server_cert
 
     CONTROLLED_SERVICES = ['chroma-supervisor']
 
@@ -328,6 +334,16 @@ class ServiceConfig(CommandLine):
 
         return username, email, password
 
+    def _syncdb(self):
+        if not self._db_current():
+            log.info("Creating database tables...")
+            args = ['', 'syncdb', '--noinput', '--migrate']
+            if not self.verbose:
+                args = args + ["--verbosity", "0"]
+            ManagementUtility(args).execute()
+        else:
+            log.info("Database tables already OK")
+
     def _setup_database(self, username = None, password = None):
         if not self._db_accessible():
             # For the moment use the builtin configuration
@@ -337,14 +353,7 @@ class ServiceConfig(CommandLine):
         else:
             log.info("MySQL already accessible")
 
-        if not self._db_current():
-            log.info("Creating database tables...")
-            args = ['', 'syncdb', '--noinput', '--migrate']
-            if not self.verbose:
-                args = args + ["--verbosity", "0"]
-            ManagementUtility(args).execute()
-        else:
-            log.info("Database tables already OK")
+        self._syncdb()
 
         if not self._users_exist():
             if not username:
@@ -372,7 +381,8 @@ class ServiceConfig(CommandLine):
 
         self._setup_database(username, password)
         self._setup_ntp(ntp_server)
-        self._setup_rabbitmq()
+        self._setup_rabbitmq_service()
+        self._setup_rabbitmq_credentials()
         self._enable_services()
 
         self._start_services()

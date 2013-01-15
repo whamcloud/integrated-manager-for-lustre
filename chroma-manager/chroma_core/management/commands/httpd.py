@@ -29,9 +29,14 @@ class Command(BaseCommand):
         from chroma_core.lib.util import site_dir
 
         SITE_ROOT = site_dir()
-        # TODO: fill out a template to generate a temporary dev config file
         DEV_HTTPD_CONF_TEMPLATE = os.path.join(SITE_ROOT, "chroma-manager.conf")
         HTTPD_BIN = "/usr/sbin/httpd"
+
+        # TODO: make this a bit more flexible (also look in the location where
+        # the module would be on a centos system)
+        WSGI_PATH = '/usr/local/Cellar/mod_wsgi/3.3/libexec/mod_wsgi.so'
+        if not os.path.exists(WSGI_PATH):
+            raise RuntimeError("WSGI module not found (brew install it?)")
 
         DEV_HTTPD_DIR = os.path.join(SITE_ROOT, "dev_httpd")
         if not os.path.exists(DEV_HTTPD_DIR):
@@ -42,7 +47,7 @@ class Command(BaseCommand):
             'log': SITE_ROOT,
             'ssl': SITE_ROOT,
             'app': SITE_ROOT,
-            'wsgi_path': '/usr/local/Cellar/mod_wsgi/3.3/libexec/mod_wsgi.so',
+            'wsgi_path': WSGI_PATH,
             'HTTP_FRONTEND_PORT': settings.HTTP_FRONTEND_PORT,
             'HTTPS_FRONTEND_PORT': settings.HTTPS_FRONTEND_PORT,
             'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,
