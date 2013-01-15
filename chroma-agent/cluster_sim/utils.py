@@ -34,7 +34,7 @@ class Persisted(object):
         try:
             self.state = json.load(open(os.path.join(self.path, self.filename), 'r'))
         except IOError:
-            self.state = self.default_state
+            self.state = deepcopy(self.default_state)
 
     def save(self):
         output_state = deepcopy(self.state)

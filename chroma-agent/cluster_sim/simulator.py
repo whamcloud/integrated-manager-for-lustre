@@ -34,8 +34,8 @@ class ClusterSimulator(object):
         self.cluster = FakeCluster(folder)
         self.devices = FakeDevices(folder)
         self.servers = {}
-        self._load_servers()
 
+        self._load_servers()
         self._clients = {}
 
     def _load_servers(self):
@@ -50,7 +50,6 @@ class ClusterSimulator(object):
                 os.makedirs(FakeCrypto.FOLDER)
             server.crypto = FakeCrypto()
 
-
     def setup(self, server_count, volume_count):
         for n in range(0, server_count):
             nodename = "test%.3d" % n
@@ -62,7 +61,6 @@ class ClusterSimulator(object):
         self._load_servers()
 
         self.devices.setup(volume_count)
-
 
     def register_all(self):
         for fqdn, server in self.servers.items():
