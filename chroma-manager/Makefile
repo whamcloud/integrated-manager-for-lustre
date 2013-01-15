@@ -85,6 +85,9 @@ docs: version
 	virtualenv myenv
 	cd myenv; \
 	. bin/activate; \
+	if grep -q "^Version: 4.0.0-pre" build/dse/PKG-INFO; then \
+	    pip uninstall dse; \
+	fi; \
 	pip install -r ../requirements.txt; \
 	cd ../docs; \
 	make SPHINXBUILD="$$PWD/../myenv/bin/sphinx-build"
