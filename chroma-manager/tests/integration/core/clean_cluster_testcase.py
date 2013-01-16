@@ -54,10 +54,10 @@ class CleanClusterApiTestCase(ApiTestCase):
                 running_time += 1
             self.assertEqual(services, [], "Not all services were stopped by chroma-config before timeout: %s" % services)
 
-            # Drop the database to start from a clean state.
+            # Completely nuke the database to start from a clean state.
             self.remote_command(
                 chroma_manager['address'],
-                'echo "drop database chroma; create database chroma;" | mysql -u root'
+                'service postgresql stop; rm -fr /var/lib/pgsql/data/*'
             )
 
             # Run chroma-config setup to recreate the database and start the chroma manager.

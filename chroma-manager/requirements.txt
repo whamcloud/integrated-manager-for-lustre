@@ -15,7 +15,7 @@ pyflakes
 South==0.7.6
 sphinx==1.1.3
 werkzeug
-MySQL-python
+psycopg2==2.0.14
 coverage
 python-daemon==1.5.2
 lockfile==0.8

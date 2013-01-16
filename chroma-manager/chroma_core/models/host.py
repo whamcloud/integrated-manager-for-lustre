@@ -14,7 +14,8 @@ from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
 import itertools
-from django.db.models.aggregates import Max, Count
+from django.db.models.aggregates import Aggregate, Count
+from django.db.models.sql import aggregates as sql_aggregates
 from django.db.models.query_utils import Q
 from django.utils.timezone import now
 from chroma_core.lib.cache import ObjectCache
@@ -29,6 +30,24 @@ from chroma_core.lib.job import  DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass, Version
 
 import settings
+
+
+# Max() worked on mysql's NullBooleanField because the DB value is stored
+# in a TINYINT.  pgsql uses an actual boolean field type, so Max() won't
+# work.  bool_or() seems to be the moral equivalent.
+# http://www.postgresql.org/docs/8.4/static/functions-aggregate.html
+class BoolOr(Aggregate):
+    name = 'BoolOr'
+
+    def _default_alias(self):
+        return '%s__bool_or' % self.lookup
+
+
+# Unfortunately, we have to do a bit of monkey-patching to make this
+# work cleanly.
+class SqlBoolOr(sql_aggregates.Aggregate):
+    sql_function = 'BOOL_OR'
+sql_aggregates.BoolOr = SqlBoolOr
 
 
 # FIXME: HYD-1367: Chroma 1.0 Job objects aren't amenable to using m2m
@@ -294,7 +313,7 @@ class Volume(models.Model):
         if not queryset:
             queryset = cls.objects.all()
 
-        queryset = queryset.annotate(any_targets = Max('volumenode__managedtargetmount__target__not_deleted'))
+        queryset = queryset.annotate(any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'))
         return queryset.filter(any_targets = None)
 
     @classmethod
@@ -310,10 +329,10 @@ class Volume(models.Model):
         # know at least where the primary mount should be)
         return queryset.filter(volumenode__host__not_deleted = True).\
                 annotate(
-                    any_targets = Max('volumenode__managedtargetmount__target__not_deleted'),
-                    has_primary = Max('volumenode__primary'),
+                    any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'),
+                    has_primary = BoolOr('volumenode__primary'),
                     num_volumenodes = Count('volumenode')
-                ).filter((Q(num_volumenodes = 1) | Q(has_primary = 1.0)) & Q(any_targets = None))
+                ).filter((Q(num_volumenodes = 1) | Q(has_primary = True)) & Q(any_targets = None))
 
     def get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding

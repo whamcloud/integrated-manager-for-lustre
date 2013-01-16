@@ -73,7 +73,11 @@ logrotate -fv /etc/logrotate.d/syslog
 
 yum remove -y chroma-manager*
 rm -rf /usr/share/chroma-manager/
-echo "drop database chroma; create database chroma;" | mysql -u root
+
+# this is a big hammer, but it's good because it allows full
+# testing of chroma-config setup
+service postgresql stop
+rm -fr /var/lib/pgsql/data/*
 
 pip install --force-reinstall -r ~/requirements.txt
 yum install -y ~/rpms/chroma-manager-*

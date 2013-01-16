@@ -10,6 +10,7 @@ import getpass
 import socket
 import errno
 import sys
+import os
 
 log = logging.getLogger('installation')
 log.addHandler(logging.StreamHandler())
@@ -23,7 +24,7 @@ from django.core.management import ManagementUtility
 
 
 class RsyslogConfig:
-    CONFIG_FILE = "/etc/rsyslog.conf"
+    CONFIG_FILE = "/etc/rsyslog.d/chroma-logging.conf"
     SENTINEL = "# Added by chroma-manager\n"
 
     def __init__(self, config_file = None):
@@ -32,6 +33,14 @@ class RsyslogConfig:
     def remove(self):
         """Remove our config section from the rsyslog config file, or do
         nothing if our section is not there"""
+        # don't bother with editing if it's a rsyslog.d file
+        if self.config_file == self.CONFIG_FILE:
+            try:
+                os.unlink(self.config_file)
+            except OSError:
+                pass
+            return
+
         rsyslog_lines = open(self.config_file).readlines()
         try:
             config_start = rsyslog_lines.index(self.SENTINEL)
@@ -45,25 +54,27 @@ class RsyslogConfig:
             pass
 
     def add(self, database, server, user, port = None, password = None):
-        #:ommysql:database-server,database-name,database-userid,database-password
+        #:ompgsql:database-server,database-name,database-userid,database-password
         config_lines = [
                     self.SENTINEL,
                     "$ModLoad imtcp.so\n",
                     "$InputTCPServerRun 514\n",
-                    "$ModLoad ommysql\n",
-                    "$template sqltpl,\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, convert_tz('%timereported:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), convert_tz('%timegenerated:::date-mysql%', '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%', '+00:00'), %iut%, '%syslogtag%')\",SQL\n"]
-        if port:
-            config_lines.append("$ActionOmmysqlServerPort %d\n" % port)
+                    "$ModLoad ompgsql\n",
+                    "$template sqltpl,\"INSERT INTO \\\"SystemEvents\\\" (\\\"Message\\\", \\\"Facility\\\", \\\"FromHost\\\", \\\"Priority\\\", \\\"DeviceReportedTime\\\", \\\"ReceivedAt\\\", \\\"InfoUnitID\\\", \\\"SysLogTag\\\") VALUES ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, (SELECT ('%timereported:::date-pgsql%' AT TIME ZONE '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%') AT TIME ZONE '+00:00'), (SELECT ('%timegenerated:::date-pgsql%' AT TIME ZONE '%timereported:R,ERE,0,DFLT:([+-][0-9][0-9]:[0-9][0-9])--end:date-rfc3339%') AT TIME ZONE '+00:00'), %iut%, '%syslogtag%')\",SQL\n"]
 
-        action_line = "*.*       :ommysql:%s,%s,%s," % (server, database, user)
+        action_line = "*.*       :ompgsql:%s,%s,%s," % (server, database, user)
         if password:
             action_line += "%s" % password
         action_line += ";sqltpl\n"
         config_lines.append(action_line)
         config_lines.append(self.SENTINEL)
 
-        rsyslog = open(self.config_file, 'a')
-        rsyslog.writelines(config_lines)
+        if self.config_file == self.CONFIG_FILE:
+            with open(self.config_file, 'w') as rsyslog:
+                rsyslog.writelines(config_lines)
+        else:
+            with open(self.config_file, 'a') as rsyslog:
+                rsyslog.writelines(config_lines)
 
 
 class NTPConfig:
@@ -223,12 +234,13 @@ class ServiceConfig:
 
     def _db_accessible(self):
         """Discover whether we have a working connection to the database"""
-        from MySQLdb import OperationalError
+        from psycopg2 import OperationalError
+        from django.db import connection
         try:
-            from django.db import connection
             connection.introspection.table_names()
             return True
         except OperationalError:
+            connection._rollback()
             return False
 
     def _db_populated(self):
@@ -241,6 +253,8 @@ class ServiceConfig:
             MigrationHistory.objects.count()
             return True
         except DatabaseError:
+            from django.db import connection
+            connection._rollback()
             return False
 
     def _db_current(self):
@@ -346,14 +360,50 @@ class ServiceConfig:
         for service in self.CONTROLLED_SERVICES:
             self.try_shell(['service', service, 'stop'])
 
-    def _setup_mysql(self, database):
-        log.info("Setting up MySQL daemon...")
-        self.try_shell(["service", "mysqld", "restart"])
-        self.try_shell(["chkconfig", "mysqld", "on"])
+    def _init_pgsql(self, database):
+        rc, out, err = self.shell(["service", "postgresql", "initdb"])
+        if rc != 0:
+            if 'is not empty' not in out:
+                log.error("Failed to initialize postgresql service")
+                log.error("stdout:\n%s" % out)
+                log.error("stderr:\n%s" % err)
+                raise CommandError("service postgresql initdb")
+            return
+        # Only mess with auth if we've freshly initialized the db
+        self._config_pgsql_auth(database)
+
+    def _config_pgsql_auth(self, database):
+        auth_cfg_file = "/var/lib/pgsql/data/pg_hba.conf"
+        os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
+        with open(auth_cfg_file, "w") as cfg:
+            # Allow our django user to connect with no password
+            cfg.write("local\tall\t%s\t\ttrust\n" % database['USER'])
+            # Allow rsyslogd to connect
+            cfg.write("host\tall\t%s\t127.0.0.1/32\ttrust\n" % database['USER'])
+            cfg.write("host\tall\t%s\t::1/128\ttrust\n" % database['USER'])
+            # Allow the system superuser (postgres) to connect
+            cfg.write("local\tall\tall\t\tident\n")
+
+    def _setup_pgsql(self, database):
+        log.info("Setting up PostgreSQL service...")
+        self._init_pgsql(database)
+        self.try_shell(["service", "postgresql", "restart"])
+        self.try_shell(["chkconfig", "postgresql", "on"])
+
+        import time
+        tries = 0
+        while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
+            if tries >= 4:
+                raise RuntimeError("Timed out waiting for PostgreSQL service to start")
+            tries += 1
+            time.sleep(1)
 
         if not self._db_accessible():
+            log.info("Creating database owner '%s'...\n" % database['USER'])
+            self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database['USER']])
+
             log.info("Creating database '%s'...\n" % database['NAME'])
-            self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
+            self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'], database['NAME'])])
 
     def get_input(self, msg, empty_allowed = True, password = False, default = ""):
         if msg == "":
@@ -417,12 +467,10 @@ class ServiceConfig:
             # For the moment use the builtin configuration
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
-            self._setup_mysql(databases['default'])
+            self._setup_pgsql(databases['default'])
             self._setup_rsyslog(databases['default'])
         else:
-            log.info("MySQL already accessible")
-
-        self._start_rsyslog()
+            log.info("DB already accessible")
 
         if not self._db_current():
             log.info("Creating database tables...")
@@ -432,6 +480,9 @@ class ServiceConfig:
             ManagementUtility(args).execute()
         else:
             log.info("Database tables already OK")
+
+        # Don't (re-)start rsyslog until AFTER the SystemEvents table exists
+        self._start_rsyslog()
 
         if not self._users_exist():
             if not username:
@@ -507,7 +558,7 @@ class ServiceConfig:
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        interesting_services = self.CONTROLLED_SERVICES + ['mysqld', 'rsyslog', 'rabbitmq-server']
+        interesting_services = self.CONTROLLED_SERVICES + ['postgresql', 'rsyslog', 'rabbitmq-server']
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
@@ -528,7 +579,7 @@ class ServiceConfig:
         local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
         local_settings_str = ""
         local_settings_str += "CELERY_RESULT_BACKEND = \"database\"\n"
-        local_settings_str += "CELERY_RESULT_DBURI = \"mysql://%s:%s@%s%s/%s\"\n" % (
+        local_settings_str += "CELERY_RESULT_DBURI = \"postgresql://%s:%s@%s%s/%s\"\n" % (
                 databases['default']['USER'],
                 databases['default']['PASSWORD'],
                 databases['default']['HOST'] or "localhost",
