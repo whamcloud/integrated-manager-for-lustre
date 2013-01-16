@@ -33,7 +33,7 @@ def tunefs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
     block device."""
 
     # freeze a view of the namespace before we start messing with it
-    args = locals()
+    args = dict(locals())
     types = []
     options = []
 
@@ -102,7 +102,7 @@ def mkfs(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
     block device."""
 
     # freeze a view of the namespace before we start messing with it
-    args = locals()
+    args = dict(locals())
     types = []
     options = []
 
