@@ -65,14 +65,15 @@ class Service(ChromaService):
 
         return removed_num_entries
 
-    def on_message(self, body):
-        fqdn = body['fqdn']
+    def on_message(self, message):
+        fqdn = message['fqdn']
 
-        # FIXME: body['session_message']['body'] is ugly and too transparent
+        # FIXME: message['body'] assumes this class knows the agent comms
+        # message format
         # -- better to pass services a Message class instance with a body member
-        # (they do need the outer envelope too sometimes, e.g. for agent_rpc, but
+        # (they do need the rest of the envelope too sometimes, e.g. for agent_rpc, but
         #  this simple case of consuming bodies should be made simple)
-        for msg in body['session_message']['body']['messages']:
+        for msg in message['body']['messages']:
             try:
                 log_message = LogMessage.objects.create(
                     fqdn = fqdn,

@@ -30,7 +30,7 @@ class Service(ChromaService):
             fqdn = message['fqdn']
             # Ignore session info and go straight to body, as the lustre
             # plugin just sends a periodic full dump
-            data = message['session_message']['body']
+            data = message['body']
 
             host = ManagedHost.objects.get(fqdn = fqdn)
             UpdateScan().run(host.id, data)

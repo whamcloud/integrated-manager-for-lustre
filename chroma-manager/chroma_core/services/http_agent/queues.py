@@ -40,18 +40,13 @@ class HostQueueCollection(object):
         with self._lock:
             self._host_queues.pop(fqdn, None)
 
-    def send(self, fqdn, message):
-        queues = self.get(fqdn)
+    def send(self, message):
+        queues = self.get(message['fqdn'])
         queues.tx.put(message)
 
     def receive(self, fqdn, message):
         # An extra envelope to record which FQDN sent this message
-        self.plugin_rx_queue.put(
-            {
-                'fqdn': fqdn,
-                'session_message': message
-            }
-        )
+        self.plugin_rx_queue.put(message)
 
 
 class HostQueues(object):
@@ -75,7 +70,7 @@ class AmqpRxForwarder(object):
                 except Queue.Empty:
                     pass
                 else:
-                    plugin_name = msg['session_message']['plugin']
+                    plugin_name = msg['plugin']
                     rx_queue_name = "agent_%s_rx" % plugin_name
                     q = conn.SimpleQueue(rx_queue_name, serializer = 'json')
                     q.put(msg)
@@ -92,12 +87,10 @@ class AmqpTxForwarder(object):
     def on_message(self, message):
         log.debug("AmqpTxForwarder.on_message: %s/%s/%s %s" % (
             message['fqdn'],
-            message['session_message']['plugin'],
-            message['session_message']['session_id'],
-            message['session_message']['type']))
-        fqdn = message['fqdn']
-        session_message = message['session_message']
-        self._queue_collection.send(fqdn, session_message)
+            message['plugin'],
+            message['session_id'],
+            message['type']))
+        self._queue_collection.send(message)
 
     def run(self):
         self._queue.serve(self.on_message)

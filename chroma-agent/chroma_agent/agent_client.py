@@ -270,7 +270,12 @@ class HttpWriter(ExceptionCatchingThread):
                 break
 
         try:
-            self._client.post({'messages': [m.dump() for m in messages]})
+            def prepare(message):
+                dict = message.dump()
+                dict['fqdn'] = self._client._fqdn
+                return dict
+
+            self._client.post({'messages': [prepare(m) for m in messages]})
         except HttpError:
             # Terminate any sessions which we've just lost messages for
             # FIXME: up to a point, we should keep these messages around

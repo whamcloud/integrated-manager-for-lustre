@@ -40,16 +40,14 @@ class ActionInFlight(object):
     def get_msg(self):
         return {
             'fqdn': self.fqdn,
-            'session_message': {
-                'type': 'DATA',
-                'plugin': ACTION_MANAGER_PLUGIN_NAME,
-                'session_id': self.session_id,
-                'session_seq': None,
-                'body': {
-                    'id': self.id,
-                    'action': self.action,
-                    'args': self.args
-                }
+            'type': 'DATA',
+            'plugin': ACTION_MANAGER_PLUGIN_NAME,
+            'session_id': self.session_id,
+            'session_seq': None,
+            'body': {
+                'id': self.id,
+                'action': self.action,
+                'args': self.args
             }
         }
 
@@ -91,7 +89,7 @@ class AgentRpcMessenger(object):
         with self._lock:
             log.debug("on_rx: %s" % message)
             fqdn = message['fqdn']
-            session_id = message['session_message']['session_id']
+            session_id = message['session_id']
             log.info("AgentRpcMessenger.on_rx: %s/%s" % (fqdn, session_id))
 
             def abort_session(old_session_id, new_session_id = None):
@@ -109,7 +107,7 @@ class AgentRpcMessenger(object):
                         rpc.complete.set()
                 del self._session_rpcs[old_session_id]
 
-            if message['session_message']['session_seq'] == 0:
+            if message['session_seq'] == 0:
                 if fqdn in self._sessions:
                     old_session_id = self._sessions[fqdn]
                     abort_session(old_session_id, session_id)
@@ -120,7 +118,7 @@ class AgentRpcMessenger(object):
                 log.info("AgentRpcMessenger.on_rx: Start session %s/%s/%s" % (fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id))
 
             else:
-                rpc_response = message['session_message']['body']
+                rpc_response = message['body']
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
                     log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
                     abort_session(self._sessions[fqdn])

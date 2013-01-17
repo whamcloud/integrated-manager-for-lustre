@@ -117,9 +117,8 @@ class AgentPluginHandler(object):
     def on_message(self, message):
         with self._processing_lock:
             fqdn = message['fqdn']
-            session_message = message['session_message']
-            assert session_message['type'] == "DATA"
-            assert session_message['plugin'] == self._plugin_name
+            assert message['type'] == "DATA"
+            assert message['plugin'] == self._plugin_name
 
             try:
                 host = ManagedHost.objects.get(fqdn = fqdn)
@@ -127,55 +126,55 @@ class AgentPluginHandler(object):
                 log.error("Received agent message for non-existent host %s" % fqdn)
                 return
 
-            log.debug("Received agent message for %s/%s/%s" % (fqdn, session_message['plugin'], session_message['session_id']))
+            log.debug("Received agent message for %s/%s/%s" % (fqdn, message['plugin'], message['session_id']))
 
             existing_session = self._sessions.get(host.id, None)
             if existing_session is None:
-                if session_message['session_seq'] == 0:
+                if message['session_seq'] == 0:
                     # No existing session, start a new one
                     log.info("New session")
-                    self._sessions[host.id] = Session(session_message['session_id'], self._create_plugin_instance(host))
+                    self._sessions[host.id] = Session(message['session_id'], self._create_plugin_instance(host))
                 else:
                     # Partway through a session, reset it
                     log.info("Nonzero counter for new (to me) session, resetting")
-                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, session_message['session_id'])
+                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
                     return
 
-            elif existing_session.id != session_message['session_id']:
-                if session_message['session_seq'] == 0:
+            elif existing_session.id != message['session_id']:
+                if message['session_seq'] == 0:
                     # Existing session to be replaced with this one
                     log.info("Replacing session %s/%s with %s/%s" % (
-                        self._plugin_name, existing_session.id, self._plugin_name, session_message['session_id']))
-                    self._sessions[host.id] = Session(session_message['session_id'], self._create_plugin_instance(host))
+                        self._plugin_name, existing_session.id, self._plugin_name, message['session_id']))
+                    self._sessions[host.id] = Session(message['session_id'], self._create_plugin_instance(host))
                 else:
                     # Existing session is dead, new session is not at zero, must send a reset
                     log.info("Nonzero counter for new (to me) replacement session, resetting")
                     del self._sessions[host.id]
-                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, session_message['session_id'])
+                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
                     return
             else:
-                if session_message['session_seq'] == existing_session.seq + 1:
+                if message['session_seq'] == existing_session.seq + 1:
                     # Continuation of session
                     pass
                 else:
                     # Got out of sequence, reset it
-                    log.info("Out of sequence message (seq %s, expected %s), resetting" % (session_message['session_seq'], existing_session.seq + 1))
+                    log.info("Out of sequence message (seq %s, expected %s), resetting" % (message['session_seq'], existing_session.seq + 1))
                     del self._sessions[host.id]
-                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, session_message['session_id'])
+                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
                     return
 
             session = self._sessions.get(host.id, None)
             try:
-                if session_message['session_seq'] == 0:
-                    session.plugin.do_agent_session_start(session_message['body'])
+                if message['session_seq'] == 0:
+                    session.plugin.do_agent_session_start(message['body'])
                 else:
                     session.seq += 1
-                    session.plugin.do_agent_session_continue(session_message['body'])
+                    session.plugin.do_agent_session_continue(message['body'])
             except Exception:
                 exc_info = sys.exc_info()
                 backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
                 log.error("Exception in agent session for %s from %s: %s" % (
                     self._plugin_name, host, backtrace))
-                log.error("Data: %s" % session_message['body'])
+                log.error("Data: %s" % message['body'])
 
-                AgentSessionRpc().reset_session(fqdn, self._plugin_name, session_message['session_id'])
+                AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])

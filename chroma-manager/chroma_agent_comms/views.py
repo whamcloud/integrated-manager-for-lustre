@@ -6,19 +6,33 @@
 
 import Queue
 import json
+import traceback
 import M2Crypto
 from chroma_core.models import ManagedHost
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
 from chroma_core.services.http_agent.crypto import Crypto
 
-from django.http import HttpResponseNotAllowed, HttpResponse
+from django.http import HttpResponseNotAllowed, HttpResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
+from functools import wraps
 import settings
 
 
 log = log_register('agent_views')
+
+
+def log_exception(f):
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        try:
+            return f(*args)
+        except Exception:
+            log.error(traceback.format_exc())
+            raise
+
+    return wrapped
 
 
 class MessageView(View):
@@ -28,6 +42,7 @@ class MessageView(View):
 
     LONG_POLL_TIMEOUT = 30
 
+    @log_exception
     def post(self, request):
         """
         Receive messages FROM the agent.
@@ -35,7 +50,18 @@ class MessageView(View):
         """
         body = json.loads(request.body)
         fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
-        messages = body['messages']
+
+        try:
+            messages = body['messages']
+        except KeyError:
+            return HttpResponseBadRequest("Missing attribute 'messages'")
+
+        # Check that the server identifier in each message
+        # is valid by comparing against the SSL_CLIENT_NAME
+        # which is cryptographically vouched for at the HTTPS frontend
+        for message in messages:
+            if message['fqdn'] != fqdn:
+                return HttpResponseBadRequest("Incorrect client name")
 
         #self.hosts.update(fqdn)
         log.debug("MessageView.post: %s %s messages" % (fqdn, len(messages)))
@@ -45,7 +71,8 @@ class MessageView(View):
                     self.sessions.get(fqdn, message['plugin'], message['session_id'])
                 except KeyError:
                     log.warning("Terminating session because unknown %s/%s/%s" % (fqdn, message['plugin'], message['session_id']))
-                    self.queues.send(fqdn, {
+                    self.queues.send({
+                        'fqdn': fqdn,
                         'type': 'SESSION_TERMINATE',
                         'plugin': message['plugin'],
                         'session_id': message['session_id'],
@@ -59,7 +86,8 @@ class MessageView(View):
             elif message['type'] == 'SESSION_CREATE_REQUEST':
                 session = self.sessions.create(fqdn, message['plugin'])
                 log.info("Creating session %s/%s/%s" % (fqdn, message['plugin'], session.id))
-                self.queues.send(fqdn, {
+                self.queues.send({
+                    'fqdn': fqdn,
                     'type': 'SESSION_CREATE_RESPONSE',
                     'plugin': session.plugin,
                     'session_id': session.id,
@@ -69,6 +97,7 @@ class MessageView(View):
 
         return HttpResponse()
 
+    @log_exception
     def get(self, request):
         """
         Send messages TO the agent.
@@ -121,6 +150,7 @@ class MessageView(View):
 
 
 @csrf_exempt
+@log_exception
 def register(request, key = None):
     if request.method != "POST":
         return HttpResponseNotAllowed(['POST'])
