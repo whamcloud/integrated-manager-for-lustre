@@ -65,3 +65,36 @@ class ServiceQueue(object):
                     callback(message)
                 except QueueEmpty:
                     pass
+
+
+class AgentRxQueue(ServiceQueue):
+    """Specialization of ServiceQueue for receiving messages from agents:
+        the callback invoked depends on the message_type.  Instead of
+        setting the queue name, set the plugin name."""
+    plugin = None
+
+    def __route_message(self, message):
+        if message['type'] == 'DATA' and self.__data_callback:
+            self.__data_callback(message['fqdn'], message['body'])
+        else:
+            self.__session_callback(message)
+
+    def __init__(self):
+        super(AgentRxQueue, self).__init__()
+        self.name = "agent_%s_rx" % self.plugin
+
+    def serve(self, data_callback = None, session_callback = None):
+        """Data callback will receive only DATA mesages, being passed the fqdn and the body (i.e.
+        the object returned by a device plugin).  Session callback will receive all messages,
+        including the outer envelope.
+
+        Simple consumer services should just set data_callback.  Session-aware services should
+        set session_callback.
+        """
+        if data_callback is None and session_callback is None:
+            raise AssertionError('Set at least one callback')
+
+        self.__data_callback = data_callback
+        self.__session_callback = session_callback
+
+        return ServiceQueue.serve(self, self.__route_message)

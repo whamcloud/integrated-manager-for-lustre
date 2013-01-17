@@ -8,10 +8,10 @@ import sys
 import traceback
 import threading
 from chroma_core.services.http_agent import AgentSessionRpc
+from chroma_core.services.queue import AgentRxQueue
 
 from django.db import transaction
 from chroma_core.services.log import log_register
-from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonQueue
 from chroma_core.models import StorageResourceRecord, ManagedHost
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 
@@ -51,8 +51,8 @@ class AgentPluginHandler(object):
         self._plugin_name = plugin_name
         self._plugin_klass = storage_plugin_manager.get_plugin_class(plugin_name)
 
-        class PluginQueue(AgentDaemonQueue):
-            name = "agent_%s_rx" % plugin_name
+        class PluginQueue(AgentRxQueue):
+            plugin = plugin_name
 
         self._queue = PluginQueue()
 
@@ -62,7 +62,7 @@ class AgentPluginHandler(object):
     def run(self):
         # Disregard any old messages
         self._queue.purge()
-        self._queue.serve(self.on_message)
+        self._queue.serve(session_callback = self.on_message)
 
     def remove_host_resources(self, host_id):
         log.info("Removing resources for host %s, plugin %s" % (host_id, self._plugin_name))
@@ -117,8 +117,14 @@ class AgentPluginHandler(object):
     def on_message(self, message):
         with self._processing_lock:
             fqdn = message['fqdn']
-            assert message['type'] == "DATA"
             assert message['plugin'] == self._plugin_name
+
+            if message['type'] != 'DATA':
+                # We are session aware in that we check sequence numbers etc, but
+                # we don't actually require any actions on SESSION_CREATE or
+                # SESSION_TERMINATE.
+                assert message['type'] in ('SESSION_CREATE', 'SESSION_TERMINATE')
+                return
 
             try:
                 host = ManagedHost.objects.get(fqdn = fqdn)

@@ -50,11 +50,6 @@ class ActionRunnerPlugin(DevicePlugin):
                 'exception': backtrace
             })
 
-    def start_session(self):
-        return {
-            'id': None
-        }
-
     def on_message(self, body):
         self.run(body['id'], body['action'], body['args'])
 

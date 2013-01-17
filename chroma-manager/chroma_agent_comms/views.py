@@ -81,7 +81,7 @@ class MessageView(View):
                     })
                 else:
                     log.debug("Forwarding valid message %s/%s/%s-%s" % (fqdn, message['plugin'], message['session_id'], message['session_seq']))
-                    self.queues.receive(fqdn, message)
+                    self.queues.receive(message)
 
             elif message['type'] == 'SESSION_CREATE_REQUEST':
                 session = self.sessions.create(fqdn, message['plugin'])
@@ -97,6 +97,26 @@ class MessageView(View):
 
         return HttpResponse()
 
+    def _filter_valid_messages(self, fqdn, messages):
+        plugin_to_session_id = {}
+
+        def is_valid(message):
+            try:
+                session_id = plugin_to_session_id[message['plugin']]
+            except KeyError:
+                try:
+                    plugin_to_session_id[message['plugin']] = session_id = self.sessions.get(fqdn, message['plugin']).id
+                except KeyError:
+                    plugin_to_session_id[message['plugin']] = session_id = None
+
+            if message['session_id'] != session_id:
+                log.debug("Dropping message because it has stale session id (current is %s): %s" % (session_id, message))
+                return False
+
+            return True
+
+        return [m for m in messages if is_valid(m)]
+
     @log_exception
     def get(self, request):
         """
@@ -108,7 +128,7 @@ class MessageView(View):
 #        server_boot_time = dateutil.parser.parse(request.GET['server_boot_time'])
 #        client_start_time = dateutil.parser.parse(request.GET['client_start_time'])
 
-        payload = []
+        messages = []
 
 # FIXME: host_state is doing writes to ManagedHost, which is deadlocking with job_scheduler
 # during the host setup immediately after registration.
@@ -135,18 +155,17 @@ class MessageView(View):
             pass
         else:
             # TODO: limit number of messages per response
-            payload.append(first_message)
+            messages.append(first_message)
             while True:
                 try:
-                    payload.append(queue.get(block = False))
+                    messages.append(queue.get(block = False))
                 except Queue.Empty:
                     break
 
-                    # TODO: filter the returned message such that all DATA Messages
-                    # have the current session ID, or are dropped
+        messages = self._filter_valid_messages(fqdn, messages)
 
-        log.info("MessageView.get: responding to %s with %s messages" % (fqdn, len(payload)))
-        return HttpResponse(json.dumps({'messages': payload}), mimetype = "application/json")
+        log.info("MessageView.get: responding to %s with %s messages" % (fqdn, len(messages)))
+        return HttpResponse(json.dumps({'messages': messages}), mimetype = "application/json")
 
 
 @csrf_exempt

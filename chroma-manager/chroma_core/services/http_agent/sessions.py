@@ -36,12 +36,30 @@ class SessionCollection(object):
 
     def create(self, fqdn, plugin):
         with self._lock:
-            if fqdn in self._sessions:
-                log.warning("Destroying session %s/%s/%s to create new one" % (fqdn, self._sessions[fqdn].plugin, self._sessions[fqdn].id))
-                # TODO: send a message upstream to notify that the session is over
-                pass
+            if (fqdn, plugin) in self._sessions:
+                old_session = self._sessions[(fqdn, plugin)]
+                log.warning("Destroying session %s/%s/%s to create new one" % (fqdn, plugin, old_session.id))
+                # Send a message upstream to notify that the previous session is over
+                self._queues.receive({
+                    'fqdn': fqdn,
+                    'type': 'SESSION_TERMINATE',
+                    'plugin': plugin,
+                    'session_id': old_session.id,
+                    'session_seq': None,
+                    'body': None
+                })
+
             session = Session(plugin)
             self._sessions[(fqdn, plugin)] = session
+            # Send a message upstream to notify that the previous session is over
+            self._queues.receive({
+                'fqdn': fqdn,
+                'type': 'SESSION_CREATE',
+                'plugin': plugin,
+                'session_id': session.id,
+                'session_seq': None,
+                'body': None
+            })
             return session
 
     def reset_session(self, fqdn, plugin, session_id):
@@ -49,7 +67,8 @@ class SessionCollection(object):
             if (fqdn, plugin) in self._sessions:
                 log.warning("Terminating session on request %s/%s/%s" % (fqdn, plugin, session_id))
                 del self._sessions[(fqdn, plugin)]
-                self._queues.send(fqdn, {
+                self._queues.send({
+                    'fqdn': fqdn,
                     'type': 'SESSION_TERMINATE',
                     'plugin': plugin,
                     'session_id': session_id,

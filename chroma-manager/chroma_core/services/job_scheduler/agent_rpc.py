@@ -12,7 +12,7 @@ import uuid
 from chroma_core.services import log_register, ServiceThread
 from chroma_core.services.http_agent.sessions import AgentSessionRpc
 from chroma_core.services.http_agent.queues import AgentTxQueue
-from chroma_core.services.queue import ServiceQueue
+from chroma_core.services.queue import AgentRxQueue
 
 
 log = log_register(__name__)
@@ -22,8 +22,8 @@ log = log_register(__name__)
 ACTION_MANAGER_PLUGIN_NAME = 'action_runner'
 
 
-class AgentRunnerPluginRxQueue(ServiceQueue):
-    name = 'agent_%s_rx' % ACTION_MANAGER_PLUGIN_NAME
+class AgentRunnerPluginRxQueue(AgentRxQueue):
+    plugin = ACTION_MANAGER_PLUGIN_NAME
 
 
 class ActionInFlight(object):
@@ -77,7 +77,7 @@ class AgentRpcMessenger(object):
         self._lock = threading.Lock()
 
     def run(self):
-        self._action_runner_rx_queue.serve(self.on_rx)
+        self._action_runner_rx_queue.serve(session_callback = self.on_rx)
 
     def remove(self, fqdn):
         try:
@@ -107,16 +107,16 @@ class AgentRpcMessenger(object):
                         rpc.complete.set()
                 del self._session_rpcs[old_session_id]
 
-            if message['session_seq'] == 0:
+            if message['type'] == 'SESSION_CREATE':
                 if fqdn in self._sessions:
                     old_session_id = self._sessions[fqdn]
                     abort_session(old_session_id, session_id)
                 else:
                     self._sessions[fqdn] = session_id
-
-                # First message is just to say hi, record the session ID
-                log.info("AgentRpcMessenger.on_rx: Start session %s/%s/%s" % (fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id))
-
+            elif message['type'] == 'SESSION_TERMINATE':
+                # TODO: abort all RPCs within the terminating session (if this is indeed
+                # a session that we are aware of!)
+                pass
             else:
                 rpc_response = message['body']
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:

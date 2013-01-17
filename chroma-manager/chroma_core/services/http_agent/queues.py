@@ -44,8 +44,7 @@ class HostQueueCollection(object):
         queues = self.get(message['fqdn'])
         queues.tx.put(message)
 
-    def receive(self, fqdn, message):
-        # An extra envelope to record which FQDN sent this message
+    def receive(self, message):
         self.plugin_rx_queue.put(message)
 
 

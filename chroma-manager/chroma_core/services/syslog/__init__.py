@@ -10,7 +10,7 @@ import os
 from chroma_core.services.syslog.parser import LogMessageParser
 from chroma_core.models.log import LogMessage
 from chroma_core.services import ChromaService
-from chroma_core.services.queue import ServiceQueue
+from chroma_core.services.queue import AgentRxQueue
 
 from django.db import transaction
 import settings
@@ -19,9 +19,8 @@ import settings
 SYSLOG_PLUGIN_NAME = 'syslog'
 
 
-class SyslogRxQueue(ServiceQueue):
-    # FIXME: queue named by convention, document it or wrap it in a function
-    name = 'agent_%s_rx' % SYSLOG_PLUGIN_NAME
+class SyslogRxQueue(AgentRxQueue):
+    plugin = SYSLOG_PLUGIN_NAME
 
 
 class Service(ChromaService):
@@ -65,15 +64,8 @@ class Service(ChromaService):
 
         return removed_num_entries
 
-    def on_message(self, message):
-        fqdn = message['fqdn']
-
-        # FIXME: message['body'] assumes this class knows the agent comms
-        # message format
-        # -- better to pass services a Message class instance with a body member
-        # (they do need the rest of the envelope too sometimes, e.g. for agent_rpc, but
-        #  this simple case of consuming bodies should be made simple)
-        for msg in message['body']['messages']:
+    def on_data(self, fqdn, body):
+        for msg in body['messages']:
             try:
                 log_message = LogMessage.objects.create(
                     fqdn = fqdn,
@@ -89,7 +81,7 @@ class Service(ChromaService):
                 self.log.error("Error %s parsing syslog entry: %s" % (e, msg))
 
     def run(self):
-        self._queue.serve(self.on_message)
+        self._queue.serve(data_callback = self.on_data)
 
     def stop(self):
         self._queue.stop()

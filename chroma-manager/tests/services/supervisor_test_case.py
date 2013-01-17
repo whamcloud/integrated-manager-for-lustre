@@ -1,16 +1,21 @@
 
 
-from ConfigParser import ConfigParser
-from StringIO import StringIO
+import logging
 import socket
 import subprocess
 import tempfile
 import time
-from unittest import TestCase
 import xmlrpclib
 import sys
-from chroma_core.lib.util import site_dir
 import os
+
+from ConfigParser import ConfigParser
+from StringIO import StringIO
+from unittest import TestCase
+
+from chroma_core.lib.util import site_dir
+
+log = logging.getLogger(__name__)
 
 
 class SupervisorTestCase(TestCase):
@@ -53,10 +58,12 @@ class SupervisorTestCase(TestCase):
         self._tmp_conf = tempfile.NamedTemporaryFile(delete = False)
         cp.write(self._tmp_conf)
         self._tmp_conf.close()
+        log.debug("Wrote supervisor config to %s" % self._tmp_conf.name)
 
         cmdline = ["supervisord", "-n", "-c", self._tmp_conf.name]
 
         self._supervisor = subprocess.Popen(cmdline, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        log.info("Started supervisord")
 
         while True:
             s = socket.socket()
@@ -65,12 +72,14 @@ class SupervisorTestCase(TestCase):
             except socket.error:
                 time.sleep(1)
             else:
+                log.info("Opened supervisord XMLRPC socket")
                 s.close()
                 break
 
         self._xmlrpc = xmlrpclib.Server("http://%s:%s@localhost:%s/RPC2" % (self.TEST_USERNAME, self.TEST_PASSWORD, self.TEST_PORT))
 
         for service in self.SERVICES:
+            log.info("Starting service '%s'" % service)
             self.start(service)
 
     def tearDown(self):
@@ -90,10 +99,9 @@ class SupervisorTestCase(TestCase):
 
         if self._tmp_conf and os.path.exists(self._tmp_conf.name):
             os.unlink(self._tmp_conf.name)
-            pass
 
     def start(self, program):
-        self._xmlrpc.supervisor.startProcess('httpd')
+        self._xmlrpc.supervisor.startProcess(program)
         self.assertRunning(program)
 
     def assertRunning(self, program):
