@@ -119,6 +119,9 @@ class BugHyd352(TestCase):
                           object_id=user.id)
 
     def tearDown(self):
+        # Clean up after IntegrityError
+        from django.db import connection
+        connection._rollback()
         self.rrd.delete()
 
 
