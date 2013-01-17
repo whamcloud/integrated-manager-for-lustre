@@ -17,3 +17,6 @@ _build
 _topdir
 dist
 set_state.prof
+.DS_Store
+*.crt
+*.pem
