@@ -51,7 +51,7 @@ class TestWriteconf(ChromaIntegrationTestCase):
             }
         )
 
-        #self._exercise_simple(self.filesystem_id)
+        self._exercise_simple(self.filesystem_id)
 
         for host in self.hosts:
             response = self.chroma_manager.post("/api/command/", body = {
@@ -73,4 +73,4 @@ class TestWriteconf(ChromaIntegrationTestCase):
         # Writeconf will leave the filesystem down, so bring it up again
         self.set_state("/api/filesystem/%s/" % self.filesystem_id, 'available')
 
-        #self._exercise_simple(self.filesystem_id)
+        self._exercise_simple(self.filesystem_id)
