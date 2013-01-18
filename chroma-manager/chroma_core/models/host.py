@@ -884,7 +884,7 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     @classmethod
     def get_args(cls, host):
-        return {'host': host}
+        return {'host_id': host.id}
 
     def description(self):
         return "Force remove host %s from configuration" % self.host
