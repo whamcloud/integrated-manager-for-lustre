@@ -156,7 +156,7 @@ class JobSchedulerClient(object):
         for aj in all_subclasses(AdvertisedJob):
             if not aj.plural:
                 for class_name in aj.classes:
-                    ct = ContentType.objects.get_by_natural_key('chroma_core', class_name)
+                    ct = ContentType.objects.get_by_natural_key('chroma_core', class_name.lower())
                     klass = ct.model_class()
                     if isinstance(instance, klass):
                         if aj.can_run(instance):
