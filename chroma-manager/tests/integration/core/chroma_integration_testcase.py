@@ -1,5 +1,8 @@
 
 import logging
+import shutil
+import sys
+import datetime
 
 from testconfig import config
 from tests.integration.core.api_testcase import ApiTestCase
@@ -27,7 +30,10 @@ class ChromaIntegrationTestCase(ApiTestCase):
             except ImportError:
                 raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of chroma-agent?")
 
-            state_path = 'simulator_state_%s.%s' % (self.__class__.__name__, self._testMethodName)
+            # The simulator's state directory will be left behind when a test fails,
+            # so make sure it has a unique-per-run name
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
+            state_path = 'simulator_state_%s.%s_%s' % (self.__class__.__name__, self._testMethodName, timestamp)
 
             # These are sufficient for tests existing at time of writing, could
             # trivially let tests ask for more by looking for these vars at class scope
@@ -52,6 +58,10 @@ class ChromaIntegrationTestCase(ApiTestCase):
         if hasattr(self, 'simulator'):
             self.simulator.stop()
             self.simulator.join()
+
+            passed = sys.exc_info() == (None, None, None)
+            if passed:
+                shutil.rmtree(self.simulator.folder)
 
     def reset_cluster(self):
         """
