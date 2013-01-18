@@ -20,7 +20,7 @@ def writeconf_target(device="", target_types=(), mgsnode=(), fsname="", failnode
            network=(), erase_params=False, nomgs=False, writeconf=False,
            dryrun=False, verbose=False, quiet=False):
     # freeze a view of the namespace before we start messing with it
-    args = locals()
+    args = dict(locals())
     options = []
 
     # Workaround for tunefs.lustre being sensitive to argument order:
@@ -184,7 +184,7 @@ def format_target(device="", target_types=(), mgsnode=(), fsname="", failnode=()
     block device."""
 
     # freeze a view of the namespace before we start messing with it
-    args = locals()
+    args = dict(locals())
     options = []
 
     tuple_options = ["target_types", "mgsnode", "failnode", "servicenode", "network"]
