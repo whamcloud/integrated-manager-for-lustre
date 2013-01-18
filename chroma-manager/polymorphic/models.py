@@ -44,8 +44,12 @@ class PolymorphicMetaclass(ModelBase):
                 models.Model.save(self, *args, **kwargs)
             base_save()
 
+        @property
+        def downcast_class(self):
+            return ContentType.objects.get_for_id(self.content_type_id).model_class()
+
         def downcast(self):
-            model = ContentType.objects.get_for_id(self.content_type_id).model_class()
+            model = self.downcast_class
             if (model == self.__class__):
                 return self
             return getattr(self, model.__name__.lower())
@@ -57,6 +61,7 @@ class PolymorphicMetaclass(ModelBase):
             dct['content_type'] = models.ForeignKey(ContentType, editable=False, null=True)
             dct['save'] = save
             dct['downcast'] = downcast
+            dct['downcast_class'] = downcast_class
 
         return super(PolymorphicMetaclass, cls).__new__(cls, name, bases, dct)
 

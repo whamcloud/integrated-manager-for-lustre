@@ -112,7 +112,9 @@ class StatefulObject(models.Model):
         job_log.info("StatefulObject.set_state %s %s->%s (intentional=%s)" % (self, self.state, state, intentional))
         self.state = state
         self.state_modified_at = now()
-        self.save()
+        self.__class__._base_manager.filter(pk = self.id).update(
+            state = self.state,
+            state_modified_at = self.state_modified_at)
 
     def not_state(self, state):
         return list(set(self.states) - set([state]))

@@ -31,7 +31,7 @@ class TestSetup(JobTestCase):
         now = django.utils.timezone.now()
         with self.assertRaises(NoLNetInfo):
             freshen(host).lnetconfiguration.get_nids()
-        JobSchedulerClient.notify_state(freshen(host), now, 'lnet_up', ['configured'])
+        JobSchedulerClient.notify(freshen(host), now, {'state': 'lnet_up'}, ['configured'])
         self.assertState(host.lnetconfiguration, 'nids_known')
         freshen(host).lnetconfiguration.get_nids()
 

@@ -97,7 +97,6 @@ class TestBigFilesystem(JobTestCase):
                     self.job_scheduler._run_next()
         finally:
             dbperf.enabled = False
-
         self.assertEqual(freshen(self.fs).state, 'available')
 
 

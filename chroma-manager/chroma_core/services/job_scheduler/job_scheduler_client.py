@@ -13,12 +13,15 @@ non-remote functionality is wrapped in JobSchedulerClient.
 """
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.lib.job import job_log
 from chroma_core.lib.util import all_subclasses
+from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 from django.contrib.contenttypes.models import ContentType
+
+
+log = log_register(__name__)
 
 
 class NotificationQueue(ServiceQueue):
@@ -66,14 +69,14 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().set_state(object_ids, message, run)
 
     @classmethod
-    def notify_state(cls, instance, time, new_state, from_states):
+    def notify(cls, instance, time, update_attrs, from_states):
         """Having detected that the state of an object in the database does not
         match information from real life (i.e. chroma-agent), call this to
         request an update to the object.
 
         :param instance: An instance of a StatefulObject
         :param time: A UTC datetime.datetime object
-        :param new_state: The new value of the `state` attribute
+        :param update_attrs: Dict of attribute name to json-serializable value of the changed attributes
         :param from_states: A list of states from which the instance may be
                             set to the new state.  This lets updates happen
                             safely without risking e.g. notifying an 'unconfigured'
@@ -83,14 +86,23 @@ class JobSchedulerClient(object):
 
         """
 
-        if instance.state in from_states and instance.state != new_state:
-            job_log.info("Enqueuing notify_state %s %s->%s at %s" % (instance, instance.state, new_state, time))
+        difference = False
+        for attr, value in update_attrs.items():
+            old_value = getattr(instance, attr)
+            if old_value != value:
+                difference = True
+
+        if instance.state in from_states and difference:
+            log.info("Enqueuing notify %s at %s:" % (instance, time))
+            for attr, value in update_attrs.items():
+                log.info("  .%s %s->%s" % (attr, getattr(instance, attr), value))
+
             time_serialized = time.isoformat()
             NotificationQueue().put({
                 'instance_natural_key': instance.content_type.natural_key(),
                 'instance_id': instance.id,
                 'time': time_serialized,
-                'new_state': new_state,
+                'update_attrs': update_attrs,
                 'from_states': from_states
             })
 
@@ -128,7 +140,7 @@ class JobSchedulerClient(object):
             try:
                 verb = stateful_object.get_verb(from_state, to_state)
             except KeyError:
-                job_log.warning("Object %s in state %s advertised an unreachable state %s" % (stateful_object, from_state, to_state))
+                log.warning("Object %s in state %s advertised an unreachable state %s" % (stateful_object, from_state, to_state))
             else:
                 # NB: a None verb means its an internal transition that shouldn't be advertised
                 if verb:

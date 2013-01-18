@@ -76,8 +76,11 @@ class AgentRxQueue(ServiceQueue):
     def __route_message(self, message):
         if message['type'] == 'DATA' and self.__data_callback:
             self.__data_callback(message['fqdn'], message['body'])
-        else:
+        elif self.__session_callback:
             self.__session_callback(message)
+        else:
+            # Not a data message, and no session callback, drop.
+            pass
 
     def __init__(self):
         super(AgentRxQueue, self).__init__()

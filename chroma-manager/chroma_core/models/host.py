@@ -6,15 +6,15 @@
 
 import json
 import logging
-from chroma_core.lib.util import normalize_nid
+import itertools
 
 from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
-import itertools
 from django.db.models.aggregates import Max, Count
 from django.db.models.query_utils import Q
 
+from chroma_core.lib.util import normalize_nid
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StateChangeJob
 from chroma_core.models.event import Event
@@ -423,9 +423,9 @@ class LearnNidsStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost, Nid
+        from chroma_core.models import Nid
 
-        host = ManagedHost.objects.get(pk = kwargs['host_id'])
+        host = kwargs['host']
         result = self.invoke_agent(host, "lnet_scan")
 
         self.log("Scanning NIDs on host %s..." % host)
@@ -454,7 +454,7 @@ class ConfigureLNetJob(StateChangeJob):
         return "Configure LNet on %s" % self.lnet_configuration.host
 
     def get_steps(self):
-        return [(LearnNidsStep, {'host_id': self.lnet_configuration.host_id})]
+        return [(LearnNidsStep, {'host': self.lnet_configuration.host})]
 
     def get_deps(self):
         return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lnet_configuration.host_id), "lnet_up")
@@ -467,8 +467,7 @@ class ConfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         if not host.immutable_state:
             self.invoke_agent(host, "configure_rsyslog")
 
@@ -483,8 +482,7 @@ class ConfigureNTPStep(Step):
             import socket
             ntp_server = socket.getfqdn()
 
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         if not host.immutable_state:
             self.invoke_agent(host, "configure_ntp", {'ntp_server': ntp_server})
 
@@ -493,8 +491,7 @@ class UnconfigureRsyslogStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         if not host.immutable_state:
             self.invoke_agent(host, "unconfigure_rsyslog")
 
@@ -503,8 +500,7 @@ class UnconfigureNTPStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         if not host.immutable_state:
             self.invoke_agent(host, "unconfigure_ntp")
 
@@ -513,8 +509,7 @@ class GetLNetStateStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
 
         lustre_data = self.invoke_agent(host, "device_plugin", {'plugin': 'lustre'})['lustre']
 
@@ -548,21 +543,20 @@ class GetLNetStateJob(Job):
 
     @classmethod
     def get_args(cls, host):
-        return {'host_id': host.id}
+        return {'host': host}
 
     def description(self):
         return "Get LNet state for %s" % self.host
 
     def get_steps(self):
-        return [(GetLNetStateStep, {'host_id': self.host.id})]
+        return [(GetLNetStateStep, {'host': self.host})]
 
 
 class RemoveServerConfStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         self.invoke_agent(host, "deregister_server")
 
 
@@ -574,7 +568,7 @@ class LearnDevicesStep(Step):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
         # Get the device-scan output
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
 
         plugin_data = {}
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
@@ -597,9 +591,9 @@ class SetupHostJob(StateChangeJob):
         return "Set up server %s" % self.managed_host
 
     def get_steps(self):
-        return [(ConfigureNTPStep, {'host_id': self.managed_host.pk}),
-               (ConfigureRsyslogStep, {'host_id': self.managed_host.pk}),
-                (LearnDevicesStep, {'host_id': self.managed_host.pk})]
+        return [(ConfigureNTPStep, {'host': self.managed_host}),
+               (ConfigureRsyslogStep, {'host': self.managed_host}),
+                (LearnDevicesStep, {'host': self.managed_host})]
 
     class Meta:
         app_label = 'chroma_core'
@@ -666,8 +660,7 @@ class StartLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         self.invoke_agent(host, "start_lnet")
 
 
@@ -675,8 +668,7 @@ class StopLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         self.invoke_agent(host, "stop_lnet")
 
 
@@ -684,8 +676,7 @@ class LoadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         self.invoke_agent(host, "load_lnet")
 
 
@@ -693,8 +684,7 @@ class UnloadLNetStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        host = kwargs['host']
         self.invoke_agent(host, "unload_lnet")
 
 
@@ -711,7 +701,7 @@ class LoadLNetJob(StateChangeJob):
         return "Load LNet module on %s" % self.host
 
     def get_steps(self):
-        return [(LoadLNetStep, {'host_id': self.host.id})]
+        return [(LoadLNetStep, {'host': self.host})]
 
 
 class UnloadLNetJob(StateChangeJob):
@@ -727,7 +717,7 @@ class UnloadLNetJob(StateChangeJob):
         return "Unload LNet module on %s" % self.host
 
     def get_steps(self):
-        return [(UnloadLNetStep, {'host_id': self.host.id})]
+        return [(UnloadLNetStep, {'host': self.host})]
 
 
 class StartLNetJob(StateChangeJob):
@@ -743,7 +733,7 @@ class StartLNetJob(StateChangeJob):
         return "Start LNet on %s" % self.host
 
     def get_steps(self):
-        return [(StartLNetStep, {'host_id': self.host.id})]
+        return [(StartLNetStep, {'host': self.host})]
 
 
 class StopLNetJob(StateChangeJob):
@@ -759,7 +749,7 @@ class StopLNetJob(StateChangeJob):
         return "Stop LNet on %s" % self.host
 
     def get_steps(self):
-        return [(StopLNetStep, {'host_id': self.host.id})]
+        return [(StopLNetStep, {'host': self.host})]
 
 
 class DeleteHostStep(Step):
@@ -769,8 +759,8 @@ class DeleteHostStep(Step):
         from chroma_core.services.http_agent import AgentSessionRpc
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
+        host = kwargs['host']
         # First, cut off any more incoming connections
-        host = ManagedHost._base_manager.get(pk = kwargs['host_id'])
         # TODO: populate a CRL and do an apachectl graceful to reread it
 
         # Second, terminate any currently open connections and ensure there is nothing in a queue
@@ -790,15 +780,15 @@ class DeleteHostStep(Step):
         from chroma_core.models import StorageResourceRecord
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
         try:
-            AgentDaemonRpcInterface().remove_host_resources(kwargs['host_id'])
+            AgentDaemonRpcInterface().remove_host_resources(host.id)
         except StorageResourceRecord.DoesNotExist:
             # This is allowed, to account for the case where we submit the request_remove_resource,
             # then crash, then get restarted.
             pass
 
-        ManagedHost.delete(kwargs['host_id'])
+        host.mark_deleted()
         if kwargs['force']:
-            ManagedHost._base_manager.filter(id = kwargs['host_id']).update(state = 'removed')
+            host.state = 'removed'
 
 
 class RemoveHostJob(StateChangeJob):
@@ -816,10 +806,10 @@ class RemoveHostJob(StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        return [(UnconfigureNTPStep, {'host_id': self.host.id}),
-                (UnconfigureRsyslogStep, {'host_id': self.host.id}),
-                (RemoveServerConfStep, {'host_id': self.host.id}),
-                (DeleteHostStep, {'host_id': self.host.id, 'force': False})]
+        return [(UnconfigureNTPStep, {'host': self.host}),
+                (UnconfigureRsyslogStep, {'host': self.host}),
+                (RemoveServerConfStep, {'host': self.host}),
+                (DeleteHostStep, {'host': self.host, 'force': False})]
 
 
 def _get_host_dependents(host):
@@ -845,7 +835,7 @@ class DeleteHostDependents(Step):
     idempotent = True
 
     def run(self, kwargs):
-        host = ManagedHost.objects.get(pk = kwargs['host_id'])
+        host = kwargs['host']
         targets, filesystems = _get_host_dependents(host)
 
         job_log.info("DeleteHostDependents(%s): targets: %s, filesystems: %s" % (host, targets, filesystems))
@@ -853,8 +843,8 @@ class DeleteHostDependents(Step):
         for object in itertools.chain(targets, filesystems):
             # We are allowed to modify state directly because we have locked these objects
             object.set_state('removed')
+            object.mark_deleted()
             object.save()
-            object.__class__.delete(object.id)
 
 
 class ForceRemoveHostJob(AdvertisedJob):
@@ -894,7 +884,7 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     @classmethod
     def get_args(cls, host):
-        return {'host_id': host.id}
+        return {'host': host}
 
     def description(self):
         return "Force remove host %s from configuration" % self.host
@@ -903,8 +893,8 @@ class ForceRemoveHostJob(AdvertisedJob):
         return DependOn(self.host, 'configured', acceptable_states=self.host.not_state('removed'))
 
     def get_steps(self):
-        return [(DeleteHostDependents, {'host_id': self.host.id}),
-                (DeleteHostStep, {'host_id': self.host.id, 'force': True})]
+        return [(DeleteHostDependents, {'host': self.host}),
+                (DeleteHostStep, {'host': self.host, 'force': True})]
 
     @classmethod
     def get_confirmation(cls, instance):
@@ -927,7 +917,7 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        return [(DeleteHostStep, {'host_id': self.host.id, 'force': False})]
+        return [(DeleteHostStep, {'host': self.host, 'force': False})]
 
 
 class RelearnNidsJob(Job, HostListMixin):
@@ -943,7 +933,7 @@ class RelearnNidsJob(Job, HostListMixin):
 
     def get_steps(self):
         return [
-            (LearnNidsStep, {'host_id': host.id})
+            (LearnNidsStep, {'host': host})
             for host in self.hosts.all()]
 
     class Meta:
@@ -952,9 +942,9 @@ class RelearnNidsJob(Job, HostListMixin):
 
 class WriteConfStep(Step):
     def run(self, args):
-        from chroma_core.models.target import ManagedTarget, FilesystemMember
+        from chroma_core.models.target import FilesystemMember
 
-        target = ManagedTarget.objects.get(pk = args['target_id']).downcast()
+        target = args['target']
         primary_tm = target.managedtargetmount_set.get(primary = True)
 
         agent_args = {
@@ -962,7 +952,7 @@ class WriteConfStep(Step):
             'erase_params': True,
             'device': primary_tm.volume_node.path}
 
-        if isinstance(target, FilesystemMember):
+        if issubclass(target.downcast_class, FilesystemMember):
             agent_args['mgsnode'] = tuple(target.filesystem.mgs.nids()[0:1])
 
         fail_nids = target.get_failover_nids()
@@ -973,11 +963,11 @@ class WriteConfStep(Step):
 
 class ResetConfParamsStep(Step):
     def run(self, args):
-        from chroma_core.models.target import ManagedMgs
-
         # Reset version to zero so that next time the target is started
         # it will write all its parameters from chroma to lustre.
-        ManagedMgs.objects.filter(pk = args['mgt_id']).update(conf_param_version_applied = 0)
+        mgt = args['mgt']
+        mgt.conf_param_version_applied = 0
+        mgt.save()
 
 
 class UpdateNidsJob(Job, HostListMixin):
@@ -989,15 +979,16 @@ class UpdateNidsJob(Job, HostListMixin):
 
     def _targets_on_hosts(self):
         from chroma_core.models.target import ManagedMgs, ManagedTarget, FilesystemMember
-        targets = ManagedTarget.objects.filter(managedtargetmount__host__in = self.hosts.all())
-        targets = [t.downcast() for t in targets]
 
         filesystems = set()
-        for target in targets:
-            if isinstance(target, FilesystemMember):
+        targets = []
+        for target in ManagedTarget.objects.filter(managedtargetmount__host__in = self.hosts.all()):
+            target = target.downcast()
+            targets.append(target)
+            if issubclass(target.downcast_class, FilesystemMember):
                 filesystems.add(target.filesystem)
 
-            if isinstance(target, ManagedMgs):
+            if isinstance(target.downcast_class, ManagedMgs):
                 for fs in target.managedfilesystem_set.all():
                     filesystems.add(fs)
 
@@ -1021,8 +1012,26 @@ class UpdateNidsJob(Job, HostListMixin):
             + [DependOn(t, 'unmounted') for t in targets]
         )
 
+    def create_locks(self):
+        locks = []
+        filesystems, targets = self._targets_on_hosts()
+
+        for target in targets:
+            locks.append(StateLock(
+                job = self,
+                locked_item = target,
+                begin_state = "unmounted",
+                end_state = "unmounted",
+                write = True
+            ))
+
+        return locks
+
     def get_steps(self):
         from chroma_core.models.target import ManagedMgs
+        from chroma_core.models.target import MountStep
+        from chroma_core.models.target import UnmountStep
+
         filesystems, targets = self._targets_on_hosts()
         all_targets = set()
         for fs in filesystems:
@@ -1032,34 +1041,27 @@ class UpdateNidsJob(Job, HostListMixin):
         steps = []
         for target in all_targets:
             target = target.downcast()
-            steps.append((WriteConfStep, {'target_id': target.id}))
+            steps.append((WriteConfStep, {'target': target}))
 
-        for target in all_targets:
-            target = target.downcast()
-            if isinstance(target, ManagedMgs):
-                steps.append((ResetConfParamsStep, {'mgt_id': target.id}))
+        mgs_targets = [t for t in targets if issubclass(t.downcast_class, ManagedMgs)]
+        fs_targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
 
-        for target in all_targets:
-            if isinstance(target, ManagedMgs):
-                from chroma_core.models.target import MountStep
-                steps.append((MountStep, {'target_id': target.id}))
+        for target in mgs_targets:
+            steps.append((ResetConfParamsStep, {'mgt': target}))
+
+        for target in mgs_targets:
+            steps.append((MountStep, {'target': target}))
 
         # FIXME: HYD-1133: when doing this properly these should
         # be run as parallel jobs
-        for target in all_targets:
-            if not isinstance(target, ManagedMgs):
-                from chroma_core.models.target import MountStep
-                steps.append((MountStep, {'target_id': target.id}))
+        for target in fs_targets:
+            steps.append((MountStep, {'target': target}))
 
-        for target in all_targets:
-            if not isinstance(target, ManagedMgs):
-                from chroma_core.models.target import UnmountStep
-                steps.append((UnmountStep, {'target_id': target.id}))
+        for target in fs_targets:
+            steps.append((UnmountStep, {'target': target}))
 
-        for target in all_targets:
-            if isinstance(target, ManagedMgs):
-                from chroma_core.models.target import UnmountStep
-                steps.append((UnmountStep, {'target_id': target.id}))
+        for target in mgs_targets:
+            steps.append((UnmountStep, {'target': target}))
 
         # FIXME: HYD-1133: should be marking targets as unregistered
         # so that they get started in the correct order next time

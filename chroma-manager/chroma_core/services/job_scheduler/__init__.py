@@ -32,11 +32,11 @@ class QueueHandler(object):
         self._queue.serve(self.on_message)
 
     def on_message(self, message):
-        self._job_scheduler.notify_state(
+        self._job_scheduler.notify(
             message['instance_natural_key'],
             message['instance_id'],
             message['time'],
-            message['new_state'],
+            message['update_attrs'],
             message['from_states']
         )
 

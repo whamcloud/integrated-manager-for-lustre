@@ -126,13 +126,23 @@ class RunJobThread(threading.Thread):
         if self._cancel.is_set():
             return
 
+        # TODO: document the rules here: jobs may only modify objects that they
+        # have taken out a writelock on, and they may only modify instances obtained
+        # via ObjectCache, or via their stateful_object attribute.  Jobs may not
+        # modify objects via .update() calls, all changes must be done on loaded instances.
+        # They do not have to .save() their stateful_object, but they do have to .save()
+        # any other objects that they modify (having obtained their from ObjectCache and
+        # held a writelock on them)
+
         # For StateChangeJobs, set update the state of the affected object
         if isinstance(self.job, StateChangeJob):
             obj = self.job.get_stateful_object()
-            obj = obj.__class__._base_manager.get(pk = obj.pk)
             new_state = self.job.state_transition[2]
             obj.set_state(new_state, intentional = True)
+            obj.save()
             log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.job.pk, new_state, obj))
+            if isinstance(obj, DeletableStatefulObject):
+                log.info("Job %d: StateChangeJob complete, not_deleted = %s" % (self.job.pk, obj.not_deleted))
 
         # Freshen cached information about anything that this job held a writelock on
         locks = json.loads(self.job.locks_json)
@@ -213,6 +223,10 @@ class JobCollection(object):
                     errored = True in [j.errored for j in jobs]
                     cancelled = True in [j.cancelled for j in jobs]
                     log.debug("Completing command %s (%s, %s) as a result of completing job %s" % (command_id, errored, cancelled, job.id))
+                    if errored or cancelled:
+                        for job in jobs:
+                            log.debug("Command %s job %s: %s %s" % (command_id, job.id, job.errored, job.cancelled))
+
                     self._commands[command_id].errored = errored
                     self._commands[command_id].cancelled = cancelled
                     self._commands[command_id].complete = True
@@ -367,7 +381,8 @@ class JobScheduler(object):
         if hasattr(changed_item, 'content_type'):
             changed_item = changed_item.downcast()
 
-        log.debug("_completion_hooks command %s, %s (%s) state=%s" % (command, changed_item, changed_item.__class__, changed_item.state))
+        log.debug("_completion_hooks command %s, %s (%s) state=%s" % (
+            None if command is None else command.id, changed_item, changed_item.__class__, changed_item.state))
 
         def running_or_failed(klass, **kwargs):
             """Look for jobs of the same type with the same params, either incomplete (don't start the job because
@@ -386,11 +401,11 @@ class JobScheduler(object):
             now = django.utils.timezone.now()
 
             if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
-                self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'available', ['stopped', 'unavailable'])
+                self._notify(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, {'state': 'available'}, ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
-                self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'stopped', ['stopped', 'unavailable'])
+                self._notify(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, {'state': 'stopped'}, ['stopped', 'unavailable'])
             if changed_item.state == 'unmounted' and fs.state == 'available' and states != set(['mounted']):
-                self._notify_state(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, 'unavailable', ['available'])
+                self._notify(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, {'state': 'unavailable'}, ['available'])
 
         if isinstance(changed_item, ManagedHost):
             if changed_item.state == 'lnet_up' and changed_item.lnetconfiguration.state != 'nids_known':
@@ -410,6 +425,7 @@ class JobScheduler(object):
                     CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
 
         if isinstance(changed_item, ManagedTarget):
+            # See if any MGS conf params need applying
             if isinstance(changed_item, FilesystemMember):
                 mgs = changed_item.filesystem.mgs
             else:
@@ -422,6 +438,11 @@ class JobScheduler(object):
                         if not command:
                             command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
                         CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
+
+            # Update TargetFailoverAlert from .active_mount
+            from chroma_core.models import TargetFailoverAlert
+            for tm in changed_item.managedtargetmount_set.filter(primary = False):
+                TargetFailoverAlert.notify(tm, changed_item.active_mount == tm)
 
     @transaction.commit_on_success
     def complete_job(self, job, errored = False, cancelled = False):
@@ -446,49 +467,63 @@ class JobScheduler(object):
                 self._run_next()
         return command.id
 
-    def _notify_state(self, content_type, object_id, notification_time, new_state, from_states):
+    def _notify(self, content_type, object_id, notification_time, update_attrs, from_states):
         # Get the StatefulObject
         from django.contrib.contenttypes.models import ContentType
         model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
         instance = model_klass.objects.get(pk = object_id).downcast()
 
-        # Assert its class
+        # We only operate on StatefulObjects
         from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
 
-        # If a state update is needed/possible
-        if instance.state in from_states and instance.state != new_state:
-            # Check that no incomplete jobs hold a lock on this object
-            if not len(self._lock_cache.get_by_locked_item(instance)):
-                modified_at = instance.state_modified_at
-                modified_at = modified_at.replace(tzinfo = tz.tzutc())
+        # Drop if it's not in an allowed state
+        if not instance.state in from_states:
+            log.info("_notify_state: Dropping update to %s because %s is not in %s" % (instance, instance.state, from_states))
+            return
 
-                if notification_time > modified_at:
-                    # No jobs lock this object, go ahead and update its state
-                    log.info("notify_state: Updating state of item %s (%s) from %s to %s" % (instance.id, instance, instance.state, new_state))
-                    instance.set_state(new_state)
-                    ObjectCache.update(instance)
+        # Drop if it's outdated
+        modified_at = instance.state_modified_at
+        modified_at = modified_at.replace(tzinfo = tz.tzutc())
+        if notification_time <= modified_at:
+            log.info("notify_state: Dropping update of %s (%s) because it has been updated since" % (instance.id, instance))
+            return
 
-                    # FIXME: should check the new state against reverse dependencies
-                    # and apply any fix_states
-                    self._completion_hooks(instance)
-                else:
-                    log.info("notify_state: Dropping update of %s (%s) %s->%s because it has been updated since" % (instance.id, instance, instance.state, new_state))
-                    pass
+        # Drop if it's locked
+        if self._lock_cache.get_by_locked_item(instance):
+            log.info("_notify_state: Dropping update to %s because of locks" % instance)
+            for lock in self._lock_cache.get_by_locked_item(instance):
+                log.info("  %s" % lock)
+            return
+
+        for attr, value in update_attrs.items():
+            old_value = getattr(instance, attr)
+            if old_value == value:
+                log.info("_notify_state: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
+                continue
+
+            log.info("notify_state: Updating .%s of item %s (%s) from %s to %s" % (attr, instance.id, instance, old_value, value))
+            if attr == 'state':
+                # If setting the special 'state' attribute then maybe schedule some jobs
+                instance.set_state(value)
+                ObjectCache.update(instance)
+
+                # FIXME: should check the new state against reverse dependencies
+                # and apply any fix_states
+                self._completion_hooks(instance)
             else:
-                log.info("notify_state: Dropping update to %s because of locks" % instance)
-                for lock in self._lock_cache.get_by_locked_item(instance):
-                    log.info("  %s" % lock)
-        else:
-            log.info("notify_state: Dropping update to %s because its state is %s" % (instance, instance.state))
+                # If setting a normal attribute just write it straight away
+                setattr(instance, attr, value)
+                instance.save()
+                self._completion_hooks(instance)
 
     @transaction.commit_on_success
-    def notify_state(self, content_type, object_id, time_serialized, new_state, from_states):
+    def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):
         with self._lock:
             ObjectCache.clear()
 
             notification_time = dateutil.parser.parse(time_serialized)
-            self._notify_state(content_type, object_id, notification_time, new_state, from_states)
+            self._notify(content_type, object_id, notification_time, update_attrs, from_states)
 
             self._run_next()
 

@@ -76,9 +76,9 @@ class UpdateScan(object):
                 (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
                                           self.host_data['lnet_up'])]
 
-        JobSchedulerClient.notify_state(self.host.downcast(),
+        JobSchedulerClient.notify(self.host.downcast(),
                                   self.started_at,
-                                  lnet_state,
+                                  {'state': lnet_state},
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up', 'configured'])
 
         try:
@@ -113,12 +113,17 @@ class UpdateScan(object):
             if target_mount.target.immutable_state:
                 target = target_mount.target
                 if mounted_locally:
-                    target.set_active_mount(target_mount)
-                    JobSchedulerClient.notify_state(target, self.started_at, 'mounted', ['mounted', 'unmounted'])
+                    JobSchedulerClient.notify(target, self.started_at, {
+                        'state': 'mounted',
+                        'active_mount_id': target_mount.id
+                    }, ['mounted', 'unmounted'])
                 elif not mounted_locally and target.active_mount == target_mount:
                     log.debug("clearing active_mount, %s %s", self.started_at, self.host)
-                    target.set_active_mount(None)
-                    JobSchedulerClient.notify_state(target, self.started_at, 'unmounted', ['mounted', 'unmounted'])
+
+                    JobSchedulerClient.notify(target, self.started_at, {
+                        'state': 'unmounted',
+                        'active_mount_id': None
+                    }, ['mounted', 'unmounted'])
 
             if target_mount.target.active_mount == None:
                 TargetRecoveryInfo.update(target_mount.target, {})
@@ -147,7 +152,7 @@ class UpdateScan(object):
 
             # If we're operating on a Managed* rather than a purely monitored target
             if not target.immutable_state:
-                if node_name == None:
+                if node_name is None:
                     active_mount = None
                 else:
                     try:
@@ -161,10 +166,10 @@ class UpdateScan(object):
                         log.warning("Resource location node '%s' does not match any Host" % (node_name))
                         active_mount = None
 
-                target.set_active_mount(active_mount)
-
-                state = ['unmounted', 'mounted'][active_mount != None]
-                JobSchedulerClient.notify_state(target, self.started_at, state, ['mounted', 'unmounted'])
+                JobSchedulerClient.notify(target, self.started_at, {
+                    'state': ['unmounted', 'mounted'][active_mount != None],
+                    'active_mount_id': None if active_mount is None else active_mount.id
+                }, ['mounted', 'unmounted'])
 
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.

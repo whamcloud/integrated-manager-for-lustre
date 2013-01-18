@@ -100,7 +100,7 @@ class TestStateManager(JobTestCaseWithHost):
         """Test that state notifications cause the state of an object to change"""
         self.assertState(self.host, 'lnet_up')
         now = django.utils.timezone.now()
-        JobSchedulerClient.notify_state(freshen(self.host), now, 'lnet_down', ['lnet_up'])
+        JobSchedulerClient.notify(freshen(self.host), now, {'state': 'lnet_down'}, ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_down')
 
     def test_late_notification(self):
@@ -108,7 +108,7 @@ class TestStateManager(JobTestCaseWithHost):
         the last change to an objects state"""
         self.assertState(self.host, 'lnet_up')
         awhile_ago = django.utils.timezone.now() - datetime.timedelta(seconds = 120)
-        JobSchedulerClient.notify_state(freshen(self.host), awhile_ago, 'lnet_down', ['lnet_up'])
+        JobSchedulerClient.notify(freshen(self.host), awhile_ago, {'state': 'lnet_down'}, ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_up')
 
     def test_2steps(self):

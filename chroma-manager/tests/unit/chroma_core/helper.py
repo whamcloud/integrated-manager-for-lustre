@@ -324,10 +324,10 @@ class JobTestCase(TestCase):
         def fake_remove_host_resources(host_id):
             from chroma_core.models.host import Volume, VolumeNode
             for vn in VolumeNode.objects.filter(host__id = host_id):
-                VolumeNode.delete(vn.id)
+                vn.mark_deleted()
             for volume in Volume.objects.all():
                 if volume.volumenode_set.count() == 0:
-                    Volume.delete(volume.id)
+                    volume.mark_deleted()
 
         AgentDaemonRpcInterface.remove_host_resources = mock.Mock(side_effect = fake_remove_host_resources)
 

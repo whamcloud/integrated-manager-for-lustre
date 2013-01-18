@@ -278,7 +278,7 @@ class CommandPlan(object):
             if instance.state != new_state:
                 # This is a no-op because of an in-progress Job:
                 job = self._lock_cache.get_latest_write(instance).job
-                log.info("set_state: state %s to be reached by job" % job.id)
+                log.info("set_state: state %s to be reached by job %s" % (new_state, job.id))
                 command.jobs.add(job)
                 self._job_collection.add_command(command, [job])
 
@@ -300,8 +300,6 @@ class CommandPlan(object):
 
         jobs = []
         for d in self.deps:
-            log.debug("  dep %s" % d)
-
             # Create and save the Job instance
             job = d.to_job()
             locks = self._create_locks(job)
@@ -405,16 +403,17 @@ class CommandPlan(object):
             for dependency in self._dep_cache.get(dependent, dependent_state).all():
                 if dependency.stateful_object == root_transition.stateful_object \
                         and not root_transition.new_state in dependency.acceptable_states:
-                    assert dependency.fix_state != None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
-                    log.debug("Reverse dependency: %s-%s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
-                        dependent, dependent_state, root_transition.stateful_object.__class__,
-                        root_transition.stateful_object.id, dependency.acceptable_states, root_transition.new_state,
-                        dependency.fix_state))
+                    assert dependency.fix_state is not None, "A reverse dependency must provide a fix_state: %s in state %s depends on %s in state %s" % (dependent, dependent_state, root_transition.stateful_object, dependency.acceptable_states)
 
                     if hasattr(dependency.fix_state, '__call__'):
                         fix_state = dependency.fix_state(root_transition.new_state)
                     else:
                         fix_state = dependency.fix_state
+
+                    log.debug("Reverse dependency: %s-%s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
+                        dependent, dependent_state, root_transition.stateful_object.__class__,
+                        root_transition.stateful_object.id, dependency.acceptable_states, root_transition.new_state,
+                        fix_state))
 
                     dep_transition = self._emit_transition_deps(Transition(
                             dependent,

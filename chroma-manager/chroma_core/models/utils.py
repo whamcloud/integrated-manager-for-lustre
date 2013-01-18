@@ -24,11 +24,10 @@ class DeletableManager(models.Manager):
 
 
 def _make_deletable(metaclass, dct):
-    @classmethod
     # commit_on_success to ensure that the object is only marked deleted
     # if the updates to alerts also succeed
     @transaction.commit_on_success
-    def delete(clss, id):
+    def mark_deleted(self):
         """Mark a record as deleted, returns nothing.
 
         Looks up the model instance by pk, sets the not_deleted attribute
@@ -44,23 +43,22 @@ def _make_deletable(metaclass, dct):
         # Not implemented as an instance method because
         # we will need to use _base_manager to ensure
         # we can get at the object
-        instance = clss._base_manager.get(pk = id)
-        if hasattr(instance, 'content_type'):
-            klass = instance.content_type.model_class()
-        else:
-            klass = instance.__class__
 
-        if instance.not_deleted:
-            instance.not_deleted = None
-            instance.save()
+        if self.not_deleted:
+            self.not_deleted = None
+            self.save()
 
         from chroma_core.lib.job import job_log
         from chroma_core.models.alert import AlertState
-        updated = AlertState.filter_by_item_id(klass, id).update(active = None)
-        job_log.info("Lowered %d alerts while deleting %s %s" % (updated, klass, id))
+        updated = AlertState.filter_by_item_id(self.__class__, self.id).update(active = None)
+        job_log.info("Lowered %d alerts while deleting %s %s" % (updated, self.__class__, self.id))
+
+    def delete(self):
+        raise NotImplementedError("Must use .mark_deleted on Deletable objects")
 
     dct['objects'] = DeletableManager()
     dct['delete'] = delete
+    dct['mark_deleted'] = mark_deleted
     # Conditional to only create the 'deleted' attribute on the immediate
     # user of the metaclass, not again on subclasses.
     if issubclass(dct.get('__metaclass__', type), metaclass):

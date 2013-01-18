@@ -6,6 +6,7 @@
 
 from django.db import models
 from chroma_core.lib.job import  DependOn, DependAll, Step
+from chroma_core.models.target import ManagedTargetMount, ManagedMgs, FilesystemMember
 from chroma_core.models.host import NoLNetInfo
 from chroma_core.models.jobs import StatefulObject, StateChangeJob, StateLock
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
@@ -46,7 +47,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
         unique_together = ('name', 'mgs')
 
     def get_targets(self):
-        return [self.mgs.downcast()] + self.get_filesystem_targets()
+        return [self.mgs] + self.get_filesystem_targets()
 
     def get_filesystem_targets(self):
         from chroma_core.models import ManagedOst, ManagedMdt
@@ -97,7 +98,6 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
         deps = []
 
-        from chroma_core.models import ManagedMgs
         mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == self.mgs_id)
 
         remove_state = 'forgotten' if self.immutable_state else 'removed'
@@ -112,11 +112,12 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
     @classmethod
     def filter_by_target(cls, target):
-        from chroma_core.models import ManagedMgs
-        if isinstance(target, ManagedMgs):
+        if issubclass(target.downcast_class, ManagedMgs):
             return ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.mgs_id == target.id)
+        elif issubclass(target.downcast_class, FilesystemMember):
+            return ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.id == target.downcast().filesystem_id)
         else:
-            return ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.id == target.filesystem_id)
+            raise NotImplementedError(target.__class__)
 
     reverse_deps = {
                 'ManagedTarget': lambda mt: ManagedFilesystem.filter_by_target(mt)
@@ -128,18 +129,18 @@ class DeleteFilesystemStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models.target import ManagedMdt, ManagedOst
-        assert ManagedMdt.objects.filter(filesystem = kwargs['filesystem_id']).count() == 0
-        assert ManagedOst.objects.filter(filesystem = kwargs['filesystem_id']).count() == 0
-        ManagedFilesystem.delete(kwargs['filesystem_id'])
+        assert ManagedMdt.objects.filter(filesystem = kwargs['filesystem'].id).count() == 0
+        assert ManagedOst.objects.filter(filesystem = kwargs['filesystem'].id).count() == 0
+        kwargs['filesystem'].mark_deleted()
 
 
 class PurgeFilesystemStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        fs = ManagedFilesystem.objects.get(pk = kwargs['filesystem_id'])
-        mgs = fs.mgs
-        mgs_primary_mount = mgs.managedtargetmount_set.get(primary = True)
+        fs = kwargs['filesystem']
+        mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == fs.mgs_id)
+        mgs_primary_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == mgs.id and mtm.primary == True)
 
         initial_mgs_state = mgs.state
 
@@ -152,7 +153,10 @@ class PurgeFilesystemStep(Step):
         })
 
         if initial_mgs_state == 'mounted':
-            self.invoke_agent(mgs_primary_mount.host, "start_target", {'ha_label': mgs.ha_label})
+            result = self.invoke_agent(mgs_primary_mount.host, "start_target", {'ha_label': mgs.ha_label})
+            # Update active_mount because it won't necessarily start the same place it was started to
+            # begin with
+            mgs.update_active_mount(result['location'])
 
 
 class RemoveFilesystemJob(StateChangeJob):
@@ -189,8 +193,8 @@ class RemoveFilesystemJob(StateChangeJob):
         mgt_setup = self.filesystem.mgs.state not in ['unformatted', 'formatted']
 
         if (not self.filesystem.immutable_state) and mgt_setup:
-            steps.append((PurgeFilesystemStep, {'filesystem_id': self.filesystem.id}))
-        steps.append((DeleteFilesystemStep, {'filesystem_id': self.filesystem.id}))
+            steps.append((PurgeFilesystemStep, {'filesystem': self.filesystem}))
+        steps.append((DeleteFilesystemStep, {'filesystem': self.filesystem}))
         return steps
 
 
@@ -289,4 +293,4 @@ class ForgetFilesystemJob(StateChangeJob):
         return "Remove unmanaged file system %s" % (self.filesystem.name)
 
     def get_steps(self):
-        return [(DeleteFilesystemStep, {'filesystem_id': self.filesystem.id})]
+        return [(DeleteFilesystemStep, {'filesystem': self.filesystem})]
