@@ -13,6 +13,12 @@ for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1; do
     ssh $machine "rm -rvf ~/rpms/*"
 done
 
+# Remove test results and coverate reports from previous run
+rm -rf ~/ss_test_reports/*
+rm -rf ~/ss_coverage_reports/.coverage*
+mkdir -p ~/ss_test_reports/*
+mkdir -p ~/ss_coverage_reports/.coverage*
+
 # Copy rpms to each of the machines
 scp $(ls ~/ss_rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager-*| grep -v integration-tests) $CHROMA_MANAGER:~/rpms/
 scp ss_requirements/requirements.txt $CHROMA_MANAGER:~/requirements.txt
@@ -43,6 +49,17 @@ for storage_appliance in ${STORAGE_APPLIANCES[@]}; do
     set -xe
     yum remove -y chroma-agent*
     yum install -y ~/rpms/chroma-agent-*
+    rm -f /var/tmp/.coverage*
+    echo "
+[run]
+data_file = /var/tmp/.coverage
+parallel = True
+source = /usr/lib/python2.6/site-packages/chroma_agent/
+" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
+    echo "import coverage
+cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
+cov.start()
+" > /usr/lib/python2.6/site-packages/sitecustomize.py
     service chroma-agent restart
 EOF
 done
@@ -53,13 +70,28 @@ chroma-config stop
 rm -f /var/run/chroma*
 logrotate -fv /etc/logrotate.d/chroma-manager
 logrotate -fv /etc/logrotate.d/syslog
+
 yum remove -y chroma-manager*
 rm -rf /usr/share/chroma-manager/
 echo "drop database chroma; create database chroma;" | mysql -u root
+
 pip install --force-reinstall -r ~/requirements.txt
 yum install -y ~/rpms/chroma-manager-*
+
 echo "import logging 
 LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
+
+rm -f /var/tmp/.coverage*
+echo "
+[run]
+data_file = /var/tmp/.coverage
+parallel = True
+source = /usr/share/chroma-manager/
+" > /usr/share/chroma-manager/.coveragerc
+echo "import coverage
+cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
+cov.start()
+" > /usr/lib/python2.6/site-packages/sitecustomize.py
 EOF
 
 echo "End installation and setup."
@@ -78,6 +110,20 @@ integration_test_status=$?
 scp $CLIENT_1:~/test_report.xml ss_test_reports/
 
 echo "End running tests."
+
+ssh $CHROMA_MANAGER chroma-config stop
+
+for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
+ssh $machine <<"EOC"
+    set -x
+    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    cd /var/tmp/
+    coverage combine
+EOC
+scp $machine:/var/tmp/.coverage ss_coverage_reports/.coverage.$machine
+done
+
+ssh $CHROMA_MANAGER chroma-config start
 
 if [ $integration_test_status -ne 0 ]; then
     echo "AUTOMATED TEST RUN FAILED"
