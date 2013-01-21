@@ -9,11 +9,17 @@ import logging
 import threading
 from chroma_core.models import ManagedHost, HostContactAlert, HostRebootEvent
 from chroma_core.services import log_register
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 log = log_register("http_agent_host_state")
 
 
 class HostState(object):
+    """
+    The http_agent service maintains some per-host state unrelated to
+    managing communication sessions, in order to detect and report
+    reboots and generate timeouts.
+    """
     CONTACT_TIMEOUT = 30
 
     def __init__(self, fqdn, boot_time, client_start_time):
@@ -44,14 +50,13 @@ class HostState(object):
         self.last_contact = datetime.datetime.utcnow()
         if boot_time is not None and boot_time != self._boot_time:
             self._boot_time = boot_time
-            ManagedHost.objects.filter(fqdn = self.fqdn).update(boot_time = boot_time)
+            JobSchedulerClient.notify(self._host, self._boot_time, {'boot_time': boot_time})
             if self._boot_time is not None:
                 HostRebootEvent.objects.create(
                     host = self._host,
                     boot_time = boot_time,
                     severity = logging.WARNING)
                 log.warning("Server %s rebooted at %s" % (self.fqdn, boot_time))
-                pass
 
         require_reset = False
         if client_start_time is not None and client_start_time != self._client_start_time:
@@ -98,11 +103,10 @@ class HostStateCollection(object):
         return self._hosts.items()
 
 
-class HostContactChecker(object):
+class HostStatePoller(object):
     """
-    This thread periodically checks when each host last sent
-    us an update, and raises HostOfflineAlert instances
-    if a timeout is exceeded.
+    This thread periodically calls the .poll method of all the
+    hosts in a collection, in order to generate timeouts.
     """
     def __init__(self, host_state_collection):
         self._stopping = threading.Event()

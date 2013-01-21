@@ -25,8 +25,8 @@ class FakeServer(Persisted):
         super(FakeServer, self).__init__(folder)
 
         self.nodename = nodename
-        self.boot_time = datetime.datetime.utcnow()
         self.nids = nids
+        self.boot_time = datetime.datetime.utcnow()
 
         self._log_messages = []
         self._devices = fake_devices

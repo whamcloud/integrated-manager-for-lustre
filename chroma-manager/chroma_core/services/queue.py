@@ -6,6 +6,8 @@
 
 """Chroma services may subscribe to named queues using this module.  The `ServiceQueue` class is a wrapper
 around an AMQP queue."""
+
+
 import threading
 
 from chroma_core.services import _amqp_connection

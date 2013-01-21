@@ -5,14 +5,20 @@
 
 
 import threading
-from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
-from django.db import transaction
+import dateutil.parser
 
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+from django.db.models import DateTimeField
 from django.db.models.query_utils import Q
 
+from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 from chroma_core.services.job_scheduler.job_scheduler_client import NotificationQueue
-from chroma_core.services import ChromaService, ServiceThread
+from chroma_core.services import ChromaService, ServiceThread, log_register
 from chroma_core.models.jobs import Job, Command
+
+
+log = log_register(__name__)
 
 
 class QueueHandler(object):
@@ -32,11 +38,28 @@ class QueueHandler(object):
         self._queue.serve(self.on_message)
 
     def on_message(self, message):
+        # Deserialize any datetimes which were serialized for JSON
+        deserialized_update_attrs = {}
+        model_klass = ContentType.objects.get_by_natural_key(*message['instance_natural_key']).model_class()
+        for attr, value in message['update_attrs'].items():
+            try:
+                field = [f for f in model_klass._meta.fields if f.name == attr][0]
+            except IndexError:
+                # e.g. _id names, they aren't datetimes so ignore them
+                deserialized_update_attrs[attr] = value
+            else:
+                if isinstance(field, DateTimeField):
+                    deserialized_update_attrs[attr] = dateutil.parser.parse(value)
+                else:
+                    deserialized_update_attrs[attr] = value
+
+        log.debug("on_message: %s %s" % (message, deserialized_update_attrs))
+
         self._job_scheduler.notify(
             message['instance_natural_key'],
             message['instance_id'],
             message['time'],
-            message['update_attrs'],
+            deserialized_update_attrs,
             message['from_states']
         )
 

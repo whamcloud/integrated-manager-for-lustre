@@ -471,27 +471,36 @@ class JobScheduler(object):
         # Get the StatefulObject
         from django.contrib.contenttypes.models import ContentType
         model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
-        instance = model_klass.objects.get(pk = object_id).downcast()
+        try:
+            # FIXME: this works because although may get() and save() an independent
+            # instance here, it gets loaded to ObjectCache on the next set_state
+            # when the cache is flushed.  The cache shouldn't need to be flushed
+            # on every op, and when that's the case, this code will need to
+            # operate on an ObjectCache instance instead of a fresh one.
+            instance = model_klass.objects.get(pk = object_id).downcast()
+        except model_klass.DoesNotExist:
+            log.warning("_notify: Dropping update for not-found object %s/%s" % (content_type, object_id))
+            return
 
         # We only operate on StatefulObjects
         from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
 
         # Drop if it's not in an allowed state
-        if not instance.state in from_states:
-            log.info("_notify_state: Dropping update to %s because %s is not in %s" % (instance, instance.state, from_states))
+        if from_states and not instance.state in from_states:
+            log.info("_notify: Dropping update to %s because %s is not in %s" % (instance, instance.state, from_states))
             return
 
         # Drop if it's outdated
         modified_at = instance.state_modified_at
         modified_at = modified_at.replace(tzinfo = tz.tzutc())
         if notification_time <= modified_at:
-            log.info("notify_state: Dropping update of %s (%s) because it has been updated since" % (instance.id, instance))
+            log.info("notify: Dropping update of %s (%s) because it has been updated since" % (instance.id, instance))
             return
 
         # Drop if it's locked
         if self._lock_cache.get_by_locked_item(instance):
-            log.info("_notify_state: Dropping update to %s because of locks" % instance)
+            log.info("_notify: Dropping update to %s because of locks" % instance)
             for lock in self._lock_cache.get_by_locked_item(instance):
                 log.info("  %s" % lock)
             return
@@ -499,10 +508,10 @@ class JobScheduler(object):
         for attr, value in update_attrs.items():
             old_value = getattr(instance, attr)
             if old_value == value:
-                log.info("_notify_state: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
+                log.info("_notify: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
                 continue
 
-            log.info("notify_state: Updating .%s of item %s (%s) from %s to %s" % (attr, instance.id, instance, old_value, value))
+            log.info("_notify: Updating .%s of item %s (%s) from %s to %s" % (attr, instance.id, instance, old_value, value))
             if attr == 'state':
                 # If setting the special 'state' attribute then maybe schedule some jobs
                 instance.set_state(value)
@@ -515,6 +524,7 @@ class JobScheduler(object):
                 # If setting a normal attribute just write it straight away
                 setattr(instance, attr, value)
                 instance.save()
+                log.info("_notify: Set %s=%s on %s (%s-%s) and saved" % (attr, value, instance, model_klass.__name__, instance.id))
                 self._completion_hooks(instance)
 
     @transaction.commit_on_success

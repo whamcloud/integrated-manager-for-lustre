@@ -6,6 +6,7 @@
 
 import glob
 import json
+import datetime
 import os
 
 from chroma_agent.agent_client import AgentClient, HttpError
@@ -121,6 +122,7 @@ class ClusterSimulator(object):
         log.debug("start %s" % fqdn)
         assert fqdn not in self._clients
         server = self.servers[fqdn]
+        server.boot_time = datetime.datetime.utcnow()
         if server.crypto.certificate_file is None:
             log.warning("Not starting %s, it is not registered" % fqdn)
             return

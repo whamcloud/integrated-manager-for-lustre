@@ -7,7 +7,7 @@
 from django.core.handlers.wsgi import WSGIHandler
 import gevent.wsgi
 
-from chroma_core.services.http_agent.host_state import HostStateCollection, HostContactChecker
+from chroma_core.services.http_agent.host_state import HostStateCollection, HostStatePoller
 from chroma_core.services.http_agent.queues import HostQueueCollection, AmqpRxForwarder, AmqpTxForwarder
 from chroma_core.services.http_agent.sessions import SessionCollection, AgentSessionRpc
 from chroma_core.services import ChromaService, ServiceThread, log_register
@@ -86,7 +86,7 @@ class Service(ChromaService):
         MessageView.hosts = self.hosts
 
         # The thread for generating HostOfflineAlerts
-        host_checker_thread = ServiceThread(HostContactChecker(self.hosts))
+        host_checker_thread = ServiceThread(HostStatePoller(self.hosts))
         host_checker_thread.start()
 
         # The main thread serves incoming requests to exchanges messages

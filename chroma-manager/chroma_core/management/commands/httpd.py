@@ -36,7 +36,7 @@ class Command(BaseCommand):
         # the module would be on a centos system)
         WSGI_PATH = '/usr/local/Cellar/mod_wsgi/3.3/libexec/mod_wsgi.so'
         if not os.path.exists(WSGI_PATH):
-            raise RuntimeError("WSGI module not found (brew install it?)")
+            raise RuntimeError("WSGI module not found (https://github.com/Homebrew/homebrew-apache)")
 
         DEV_HTTPD_DIR = os.path.join(SITE_ROOT, "dev_httpd")
         if not os.path.exists(DEV_HTTPD_DIR):

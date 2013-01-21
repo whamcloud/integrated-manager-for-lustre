@@ -81,7 +81,7 @@ class SimulatorRemoteOperations(RemoteOperations):
     def kill_server(self, fqdn):
         self._simulator.stop_server(fqdn, shutdown = True)
 
-    def await_server_boot(self, boot_fqdn, monitor_fqdn):
+    def await_server_boot(self, boot_fqdn, monitor_fqdn = None):
         self._simulator.start_server(boot_fqdn)
 
     def unmount_clients(self):
@@ -287,12 +287,12 @@ class RealRemoteOperations(RemoteOperations):
             server_config['destroy_command']
         )
 
-    def await_server_boot(self, boot_fqdn, monitor_fqdn):
+    def await_server_boot(self, boot_fqdn, monitor_fqdn = None):
         """
         Wait for the stonithed server to come back online
         """
         boot_server = self._fqdn_to_server_config(boot_fqdn)
-        monitor_server = self._fqdn_to_server_config(monitor_fqdn)
+        monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(monitor_fqdn)
 
         running_time = 0
         while running_time < TEST_TIMEOUT:
@@ -308,21 +308,23 @@ class RealRemoteOperations(RemoteOperations):
                 time.sleep(3)
                 running_time += 3
 
-            # Verify other host knows it is no longer offline
+            if monitor_server:
+                # Verify other host knows it is no longer offline
+                result = self._ssh_address(
+                    monitor_server['address'],
+                    "crm node show %s" % boot_server['nodename']
+                )
+                node_status = result.stdout.read()
+                if not re.search('offline', node_status):
+                    break
+
+        self._test_case.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to come back online.")
+        if monitor_server:
             result = self._ssh_address(
                 monitor_server['address'],
                 "crm node show %s" % boot_server['nodename']
             )
-            node_status = result.stdout.read()
-            if not re.search('offline', node_status):
-                break
-
-        self._test_case.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to come back online.")
-        result = self._ssh_address(
-            monitor_server['address'],
-            "crm node show %s" % boot_server['nodename']
-        )
-        self._test_case.assertNotRegexpMatches(result.stdout.read(), 'offline')
+            self._test_case.assertNotRegexpMatches(result.stdout.read(), 'offline')
 
     def unmount_clients(self):
         """

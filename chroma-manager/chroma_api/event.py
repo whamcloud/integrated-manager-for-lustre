@@ -50,6 +50,7 @@ class EventResource(ModelResource):
         filtering = {
                 'severity': ['exact'],
                 'host': tastypie.constants.ALL_WITH_RELATIONS,
+                'created_at': ['gte', 'lte', 'gt', 'lt']
                 }
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
