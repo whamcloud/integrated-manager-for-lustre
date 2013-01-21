@@ -4,6 +4,7 @@
 # ========================================================
 
 
+import sys
 import os
 
 from django.template import Template, Context
@@ -57,4 +58,5 @@ class Command(BaseCommand):
         open(DEV_HTTPD_CONF, 'w').write(conf_text)
 
         cmdline = [HTTPD_BIN, "-D", "NO_DETACH", "-D", "FOREGROUND", "-f", DEV_HTTPD_CONF]
+        sys.stderr.write("Run this:\n")
         print " ".join(cmdline)
