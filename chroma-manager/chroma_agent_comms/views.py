@@ -130,7 +130,14 @@ class MessageView(View):
 
         messages = []
 
-        reset_required = self.hosts.update(fqdn, server_boot_time, client_start_time)
+        try:
+            reset_required = self.hosts.update(fqdn, server_boot_time, client_start_time)
+        except ManagedHost.DoesNotExist:
+            # This should not happen because the HTTPS frontend should have the
+            # agent certificate revoked before removing the ManagedHost from the database
+            log.error("GET from unknown server %s" % fqdn)
+            return HttpResponseBadRequest("Unknown server '%s'" % fqdn)
+
         if reset_required:
             # This is the case where the http_agent service restarts, so
             # we have to let the agent know that all open sessions

@@ -2,10 +2,16 @@
 """
 Tests for the inter-service interactions that occur through the lifetime of an agent device_plugin session
 """
-from Queue import Empty
 
+from chroma_core.lib.util import chroma_settings
+settings = chroma_settings()
+
+from Queue import Empty
 import json
 import time
+import datetime
+
+from chroma_core.models import ManagedHost
 from chroma_core.services import _amqp_connection
 import requests
 import settings
@@ -33,6 +39,12 @@ class TestHttpAgent(SupervisorTestCase):
         "X-SSL-Client-Name": 'myserver'}
     URL = "http://localhost:%s/agent/message/" % settings.HTTP_AGENT_PORT
 
+    def __init__(self, *args, **kwargs):
+        super(TestHttpAgent, self).__init__(*args, **kwargs)
+        self.client_start_time = datetime.datetime.now().isoformat()
+        self.server_boot_time = datetime.datetime.now().isoformat()
+        self.get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
+
     def assertResponseOk(self, response):
         self.assertTrue(response.ok, "%s: %s" % (response.status_code, response.content))
 
@@ -55,17 +67,25 @@ class TestHttpAgent(SupervisorTestCase):
         self.assertResponseOk(response)
 
         # Read from the TX channel
-        response = requests.get(self.URL, headers = self.HEADERS)
+        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
         self.assertResponseOk(response)
 
-        # Should be one SESSION_CREATE_RESPONSE message back to the agent
-        self.assertEqual(len(response.json()['messages']), 1)
-        message = response.json()['messages'][0]
-        self.assertEqual(message['type'], 'SESSION_CREATE_RESPONSE')
-        self.assertEqual(message['plugin'], self.PLUGIN)
-        self.assertEqual(message['session_seq'], None)
-        self.assertEqual(message['body'], None)
-        session_id = message['session_id']
+        first_session = old_session is None
+        if first_session:
+            # On the first connection from a host that this http_agent hasn't
+            # seen before, http_agent sends a TERMINATE_ALL
+            # and then the SESSION_CREATE_RESPONSE
+            self.assertEqual(len(response.json()['messages']), 2)
+            response_message = response.json()['messages'][1]
+        else:
+            # Should be one SESSION_CREATE_RESPONSE message back to the agent
+            self.assertEqual(len(response.json()['messages']), 1)
+            response_message = response.json()['messages'][0]
+        self.assertEqual(response_message['type'], 'SESSION_CREATE_RESPONSE')
+        self.assertEqual(response_message['plugin'], self.PLUGIN)
+        self.assertEqual(response_message['session_seq'], None)
+        self.assertEqual(response_message['body'], None)
+        session_id = response_message['session_id']
 
         if old_session is not None:
             # Should be a SESSION_TERMINATE for the session we are replacing
@@ -116,6 +136,21 @@ class TestHttpAgent(SupervisorTestCase):
         self._flush_queue(self.RX_QUEUE_NAME)
         self._flush_queue(self.TX_QUEUE_NAME)
 
+        if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
+            ManagedHost.objects.create(
+                fqdn = self.CLIENT_NAME,
+                nodename = self.CLIENT_NAME,
+                address = self.CLIENT_NAME
+            )
+
+    def tearDown(self):
+        super(TestHttpAgent, self).tearDown()
+        try:
+            host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
+            host.mark_deleted()
+        except ManagedHost.DoesNotExist:
+            pass
+
     def test_reopen_session(self):
         """Test that opening a new session that supercedes a previous one
         is accepted, and results in a session termination message for
@@ -160,7 +195,7 @@ class TestHttpAgent(SupervisorTestCase):
         }
         self._send_one_amqp(sent_fresh_message)
 
-        response = requests.get(self.URL, headers = self.HEADERS)
+        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
@@ -199,7 +234,7 @@ class TestHttpAgent(SupervisorTestCase):
         }
         self._send_one_amqp(sent_fresh_message)
 
-        response = requests.get(self.URL, headers = self.HEADERS)
+        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
