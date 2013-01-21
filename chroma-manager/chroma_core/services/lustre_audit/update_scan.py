@@ -218,8 +218,6 @@ class UpdateScan(object):
         Pass the received metrics into the metrics library for storage.
         """
         raw_metrics = self.host_data['metrics']['raw']
-        import json
-        open('raw-metrics.log', 'a').write(json.dumps(raw_metrics, indent = 4))
         count = 0
 
         if not hasattr(self, 'update_time'):
