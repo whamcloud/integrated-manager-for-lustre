@@ -24,7 +24,6 @@ setup(
     long_description = open('README.txt').read(),
     entry_points = {
         'console_scripts': [
-            'cluster-sim = cluster_sim.cli:main',
             'chroma-agent = chroma_agent.cli:main',
             'chroma-agent-daemon = chroma_agent.agent_daemon:main',
         ],
