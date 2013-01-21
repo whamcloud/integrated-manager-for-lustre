@@ -52,6 +52,7 @@ class Command(BaseCommand):
             'HTTPS_FRONTEND_PORT': settings.HTTPS_FRONTEND_PORT,
             'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,
             'HTTP_API_PORT': settings.HTTP_API_PORT,
+            'VIRTUAL_ENV': os.environ['VIRTUAL_ENV']
         }))
         open(DEV_HTTPD_CONF, 'w').write(conf_text)
 
