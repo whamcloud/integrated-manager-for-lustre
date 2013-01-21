@@ -77,7 +77,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
             nid_specs.append(nids)
 
-        return ":".join(nid_specs)
+        return ":".join(sorted(nid_specs))
 
     def mount_path(self):
         try:
