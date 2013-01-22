@@ -7,6 +7,8 @@
 import sys
 import os
 
+from distutils.sysconfig import get_python_lib
+
 from django.template import Template, Context
 from django.core.management.commands.runserver import Command as BaseCommand
 
@@ -53,7 +55,7 @@ class Command(BaseCommand):
             'HTTPS_FRONTEND_PORT': settings.HTTPS_FRONTEND_PORT,
             'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,
             'HTTP_API_PORT': settings.HTTP_API_PORT,
-            'VIRTUAL_ENV': os.environ['VIRTUAL_ENV']
+            'WSGI_PYTHON_PATH': get_python_lib()
         }))
         open(DEV_HTTPD_CONF, 'w').write(conf_text)
 
