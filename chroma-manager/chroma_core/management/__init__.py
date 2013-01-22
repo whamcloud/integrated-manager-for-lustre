@@ -5,21 +5,20 @@
 
 
 from django.contrib.auth.models import User
-from django.db.models.signals import post_syncdb
 from django.contrib.contenttypes.models import ContentType
 import django.contrib.auth as auth
-import settings
+from south.signals import post_migrate
 
 from chroma_core.models import ManagedHost, ManagedTarget, ManagedFilesystem, StorageResourceRecord
 from chroma_core.models import Job, Command, Volume, VolumeNode
 
-# Ensure that the auto post_syncdb hook is installed
-# before our hook, so that Permission objects will be there
-# by the time we are called.
-import django.contrib.auth.management
+import settings
 
 
-def setup_groups(sender, **kwargs):
+def setup_groups(app, **kwargs):
+    if app != 'chroma_core':
+        return
+
     if auth.models.Group.objects.count() == 0:
         print "Creating groups..."
         auth.models.Group.objects.create(name = "superusers")
@@ -53,4 +52,9 @@ def setup_groups(sender, **kwargs):
         user.groups.add(auth.models.Group.objects.get(name='filesystem_administrators'))
 
 
-post_syncdb.connect(setup_groups, sender=auth.models)
+## Ensure that the auto post_syncdb hook is installed
+## before our hook, so that Permission objects will be there
+## by the time we are called.
+import django.contrib.auth.management
+
+post_migrate.connect(setup_groups)
