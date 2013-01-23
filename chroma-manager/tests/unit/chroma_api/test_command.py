@@ -1,10 +1,10 @@
 
 from chroma_api.job import JobResource
 from chroma_core.models.host import ManagedHost
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 
 
-class TestCommandResource(ChromaApiTestCase):
+class TestCommandResource(ChromaApiTestCaseHeavy):
     def setUp(self):
         self.mock_servers = {}
         for n in range(0, 10):

@@ -7,18 +7,24 @@
 import Queue
 import json
 import traceback
+import datetime
 import M2Crypto
-from chroma_core.models import ManagedHost
-from chroma_core.models.utils import Version
-from chroma_core.services import log_register
-from chroma_core.services.http_agent.crypto import Crypto
 import dateutil
+import dateutil.tz
 
+from django.db import transaction
 from django.http import HttpResponseNotAllowed, HttpResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from functools import wraps
 import settings
+from tastypie.http import HttpForbidden
+
+from chroma_core.models import ManagedHost
+from chroma_core.models.utils import Version
+from chroma_core.models.registration_token import RegistrationToken
+from chroma_core.services import log_register
+from chroma_core.services.http_agent.crypto import Crypto
 
 
 log = log_register('agent_views')
@@ -174,13 +180,36 @@ class MessageView(View):
 
 @csrf_exempt
 @log_exception
-def register(request, key = None):
+def register(request, key):
     if request.method != "POST":
         return HttpResponseNotAllowed(['POST'])
 
-    # TODO: validate the key against one issued via the API
-    # Test that the host is registering using a URL containing
-    # a known key
+    # Validate the secret key
+    try:
+        with transaction.commit_on_success():
+            token = RegistrationToken.objects.get(secret = key)
+            if not token.credits:
+                log.warning("Attempt to register with exhausted token %s" % key)
+                return HttpForbidden()
+            else:
+                # Decrement .credits
+                RegistrationToken.objects.filter(secret = key).update(credits = token.credits - 1)
+    except RegistrationToken.DoesNotExist:
+        log.warning("Attempt to register with non-existent token %s" % key)
+        return HttpForbidden()
+    else:
+        now = datetime.datetime.utcnow()
+        now = now.replace(tzinfo = dateutil.tz.tzutc())
+        log.info("now.tzinfo= %s" % now.tzinfo)
+        log.info("expiry.tzinfo = %s" % token.expiry)
+
+        if token.expiry < now:
+            log.warning("Attempt to register with expired token %s (now %s, expired at %s)" % (key, now, token.expiry))
+            return HttpForbidden()
+        elif token.cancelled:
+            log.warning("Attempt to register with cancelled token %s" % key)
+            return HttpForbidden()
+
     host_attributes = json.loads(request.body)
 
     # Fail at the first if the version of the agent on the server is incorrect

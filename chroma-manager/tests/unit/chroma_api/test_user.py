@@ -1,8 +1,8 @@
 from django.contrib.auth.models import User, Group
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 
 
-class TestUserResource(ChromaApiTestCase):
+class TestUserResource(ChromaApiTestCaseHeavy):
     """Test that old_password is checked in PUTs to user, unless the superuser is
        modifying another user."""
 

@@ -1,5 +1,6 @@
+from chroma_core.models.registration_token import RegistrationToken
 import settings
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 from tests.unit.chroma_core.helper import MockAgent, generate_csr
 
 
@@ -7,8 +8,8 @@ from tests.unit.chroma_core.helper import MockAgent, generate_csr
 # other HTTP-accessed things
 
 
-class TestRegistration(ChromaApiTestCase):
-    """API unit tests which are not specific to a particular resource"""
+class TestRegistration(ChromaApiTestCaseHeavy):
+    """API unit tests for functionality used only by the agent"""
 
     def test_version(self):
         versions = settings.VERSION, MockAgent.version
@@ -21,8 +22,10 @@ class TestRegistration(ChromaApiTestCase):
         }}
 
         try:
+            token = RegistrationToken.objects.create()
+
             host_info = self.mock_servers['mynewhost']
-            response = self.api_client.post("/agent/register/xyz/", data = {
+            response = self.api_client.post("/agent/register/%s/" % token.secret, data = {
                 'fqdn': host_info['fqdn'],
                 'nodename': host_info['nodename'],
                 'version': MockAgent.version,
@@ -32,8 +35,10 @@ class TestRegistration(ChromaApiTestCase):
             })
             self.assertHttpBadRequest(response)
 
+            token = RegistrationToken.objects.create()
+
             settings.VERSION = '1.1'
-            response = self.api_client.post("/agent/register/xyz/", data = {
+            response = self.api_client.post("/agent/register/%s/" % token.secret, data = {
                 'fqdn': host_info['fqdn'],
                 'nodename': host_info['nodename'],
                 'version': MockAgent.version,

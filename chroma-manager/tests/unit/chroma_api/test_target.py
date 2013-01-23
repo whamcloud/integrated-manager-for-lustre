@@ -1,9 +1,9 @@
 
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 from tests.unit.chroma_core.helper import fake_log_message
 
 
-class TestTargetResource(ChromaApiTestCase):
+class TestTargetResource(ChromaApiTestCaseHeavy):
     def test_HYD965(self):
         """Test that targets cannot be added using volumes which are already in use"""
         self.create_simple_filesystem()

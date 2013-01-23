@@ -4,13 +4,12 @@
 # ========================================================
 
 
-from django.contrib.auth.models import User
+import django.contrib.auth.models
 from django.contrib.contenttypes.models import ContentType
 import django.contrib.auth as auth
 from south.signals import post_migrate
 
-from chroma_core.models import ManagedHost, ManagedTarget, ManagedFilesystem, StorageResourceRecord
-from chroma_core.models import Job, Command, Volume, VolumeNode
+import chroma_core.models
 
 import settings
 
@@ -28,19 +27,20 @@ def setup_groups(app, **kwargs):
             for perm in auth.models.Permission.objects.filter(content_type = ContentType.objects.get_for_model(model)):
                 group.permissions.add(perm)
 
-        grant_write(fsadmin_group, ManagedTarget)
-        grant_write(fsadmin_group, ManagedHost)
-        grant_write(fsadmin_group, ManagedFilesystem)
-        grant_write(fsadmin_group, StorageResourceRecord)
-        grant_write(fsadmin_group, Job)
-        grant_write(fsadmin_group, Command)
-        grant_write(fsadmin_group, Volume)
-        grant_write(fsadmin_group, VolumeNode)
-        grant_write(fsadmin_group, User)
+        grant_write(fsadmin_group, chroma_core.models.ManagedTarget)
+        grant_write(fsadmin_group, chroma_core.models.ManagedHost)
+        grant_write(fsadmin_group, chroma_core.models.ManagedFilesystem)
+        grant_write(fsadmin_group, chroma_core.models.StorageResourceRecord)
+        grant_write(fsadmin_group, chroma_core.models.Job)
+        grant_write(fsadmin_group, chroma_core.models.Command)
+        grant_write(fsadmin_group, chroma_core.models.Volume)
+        grant_write(fsadmin_group, chroma_core.models.VolumeNode)
+        grant_write(fsadmin_group, django.contrib.auth.models.User)
+        grant_write(fsadmin_group, chroma_core.models.RegistrationToken)
 
         fsusers_group = auth.models.Group.objects.create(name = "filesystem_users")
         # For modifying his own account
-        grant_write(fsusers_group, User)
+        grant_write(fsusers_group, django.contrib.auth.models.User)
 
     if settings.DEBUG and auth.models.User.objects.count() == 0:
         print "***\n" * 3,

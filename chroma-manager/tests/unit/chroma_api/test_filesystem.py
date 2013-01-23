@@ -1,9 +1,9 @@
 
 from chroma_core.models.target import ManagedMgs
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 
 
-class TestFilesystemResource(ChromaApiTestCase):
+class TestFilesystemResource(ChromaApiTestCaseHeavy):
     def test_spider(self):
         self.spider_api()
         self.create_simple_filesystem()

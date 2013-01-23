@@ -13,6 +13,7 @@ import threading
 import sys
 import traceback
 import urlparse
+from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
 from dateutil import tz
 import dateutil.parser
@@ -579,10 +580,15 @@ class JobScheduler(object):
     def create_host_ssh(self, address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
+        # Commit token so that registration request handler will see it
+        with transaction.commit_on_success():
+            token = RegistrationToken.objects.create(credits = 1)
+
         result = AgentSsh(address).invoke('register_server', {
             'url': settings.SERVER_HTTP_URL + "agent/",
             'address': address,
-            'ca': open(Crypto().authority_cert).read().strip()
+            'ca': open(Crypto().authority_cert).read().strip(),
+            'secret': token.secret
             })
         return result['host_id'], result['command_id']
 

@@ -71,7 +71,7 @@ def deregister_server():
     KillLater().start()
 
 
-def register_server(url, ca, address = None):
+def register_server(url, ca, secret, address = None):
     from chroma_agent.store import AgentStore
 
     if _service_is_running():
@@ -83,7 +83,7 @@ def register_server(url, ca, address = None):
     crypto.delete()
     crypto.install_authority(ca)
 
-    agent_client = AgentClient(url + "register/xyz/",
+    agent_client = AgentClient(url + "register/%s/" % secret,
         ActionPluginManager(),
         DevicePluginManager(),
         ServerProperties(),

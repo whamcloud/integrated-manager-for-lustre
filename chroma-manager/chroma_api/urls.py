@@ -50,10 +50,12 @@ import chroma_api.storage_resource
 import chroma_api.storage_resource_class
 
 import chroma_api.host
+import chroma_api.registration_token
 import chroma_api.filesystem
 import chroma_api.target
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.HostTestResource())
+api.register(chroma_api.registration_token.RegistrationTokenResource())
 api.register(chroma_api.filesystem.FilesystemResource())
 api.register(chroma_api.target.TargetResource())
 api.register(chroma_api.volume.VolumeResource())

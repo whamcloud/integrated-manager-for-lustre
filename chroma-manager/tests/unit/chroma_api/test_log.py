@@ -1,11 +1,11 @@
 
 from django.contrib.auth.models import User, Group
 from tests.unit.chroma_api.tastypie_test import TestApiClient
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 from tests.unit.chroma_core.helper import fake_log_message
 
 
-class TestLogResource(ChromaApiTestCase):
+class TestLogResource(ChromaApiTestCaseHeavy):
 
     def setUp(self):
         super(TestLogResource, self).setUp()

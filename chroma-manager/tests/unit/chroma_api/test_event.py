@@ -1,12 +1,12 @@
 from chroma_core.services.syslog.parser import client_connection_handler, admin_client_eviction_handler, client_eviction_handler
 from chroma_core.models.event import Event
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 from tests.unit.chroma_core.helper import fake_log_message
 
 from tests.unit.chroma_core.lib.test_log_message import examples
 
 
-class TestTargetResource(ChromaApiTestCase):
+class TestTargetResource(ChromaApiTestCaseHeavy):
     def test_syslogevents_render(self):
         e1 = Event.objects.count()
 

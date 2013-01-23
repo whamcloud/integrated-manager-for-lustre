@@ -2,11 +2,11 @@ import dateutil.parser
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode
 from chroma_core.models.jobs import StepResult
 from chroma_core.models.target import ManagedTarget
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 from tests.unit.chroma_core.helper import MockAgent
 
 
-class TestMisc(ChromaApiTestCase):
+class TestMisc(ChromaApiTestCaseHeavy):
     """API unit tests which are not specific to a particular resource"""
     def test_HYD648(self):
         """Test that datetimes in the API have a timezone"""

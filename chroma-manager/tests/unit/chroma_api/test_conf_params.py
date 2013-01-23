@@ -1,9 +1,9 @@
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.target import ManagedOst
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 
 
-class TestTargetPostValidation(ChromaApiTestCase):
+class TestTargetPostValidation(ChromaApiTestCaseHeavy):
     def setUp(self):
         super(TestTargetPostValidation, self).setUp()
         self.create_simple_filesystem()
@@ -81,7 +81,7 @@ class TestTargetPostValidation(ChromaApiTestCase):
         self.assertEqual(errors['conf_params']['lov.qos_prio_free'], ["Only valid for MDT"])
 
 
-class TestTargetPutValidation(ChromaApiTestCase):
+class TestTargetPutValidation(ChromaApiTestCaseHeavy):
     def setUp(self):
         super(TestTargetPutValidation, self).setUp()
         self.create_simple_filesystem()
@@ -118,7 +118,7 @@ class TestTargetPutValidation(ChromaApiTestCase):
         self.assertEqual(errors['conf_params'], ["Cannot modify conf_params on immutable_state objects"])
 
 
-class TestFilesystemConfParamValidation(ChromaApiTestCase):
+class TestFilesystemConfParamValidation(ChromaApiTestCaseHeavy):
     def _post_filesystem(self, fs_params, mgt_params, mdt_params, ost_params):
         mgt_volume = self._test_lun(self.host)
         mdt_volume = self._test_lun(self.host)

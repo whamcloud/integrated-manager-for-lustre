@@ -142,7 +142,7 @@ class MockAgent(object):
                 api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
                 fqdn = self.mock_servers[self.host]['fqdn']
 
-                response = api_client.post(args['url'] + "register/xyz/", data = {
+                response = api_client.post(args['url'] + "register/%s/" % args['secret'], data = {
                     'address': self.host,
                     'fqdn': fqdn,
                     'nodename': self.mock_servers[self.host]['nodename'],

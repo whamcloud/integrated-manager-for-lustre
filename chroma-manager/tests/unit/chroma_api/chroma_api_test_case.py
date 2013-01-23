@@ -3,15 +3,12 @@ from tests.unit.chroma_api.tastypie_test import ResourceTestCase
 from tests.unit.chroma_core.helper import JobTestCaseWithHost
 
 
-class ChromaApiTestCase(JobTestCaseWithHost, ResourceTestCase):
-    def __init__(self, *args, **kwargs):
-        JobTestCaseWithHost.__init__(self, *args, **kwargs)
-        ResourceTestCase.__init__(self, *args, **kwargs)
-
+class ChromaApiTestCase(ResourceTestCase):
+    """
+    Unit tests which drive the *Resource classes in chroma_api/
+    """
     def setUp(self):
-        JobTestCaseWithHost.setUp(self)
-        ResourceTestCase.setUp(self)
-
+        super(ChromaApiTestCase, self).setUp()
         from chroma_api.authentication import CsrfAuthentication
         self.old_is_authenticated = CsrfAuthentication.is_authenticated
         CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
@@ -20,9 +17,6 @@ class ChromaApiTestCase(JobTestCaseWithHost, ResourceTestCase):
     def tearDown(self):
         from chroma_api.authentication import CsrfAuthentication
         CsrfAuthentication.is_authenticated = self.old_is_authenticated
-
-        ResourceTestCase.tearDown(self)
-        JobTestCaseWithHost.tearDown(self)
 
     def api_set_state_full(self, uri, state):
         original_object = self.api_get(uri)
@@ -68,3 +62,20 @@ class ChromaApiTestCase(JobTestCaseWithHost, ResourceTestCase):
                     for o in objects:
                         response = self.api_client.get(o['resource_uri'])
                         self.assertEqual(response.status_code, 200, "%s: %s %s" % (o['resource_uri'], response.status_code, self.deserialize(response)))
+
+
+class ChromaApiTestCaseHeavy(JobTestCaseWithHost, ChromaApiTestCase):
+    """
+    LEGACY.  DO NOT USE THIS FOR NEW TESTS.
+
+    Variant of ChromaApiTestCase which pulls in JobTestCaseWithHost (does
+    heavy-handed patching of JobScheduler et al).
+
+    """
+    def setUp(self):
+        JobTestCaseWithHost.setUp(self)
+        ChromaApiTestCase.setUp(self)
+
+    def tearDown(self):
+        ChromaApiTestCase.tearDown(self)
+        JobTestCaseWithHost.tearDown(self)

@@ -87,9 +87,25 @@ class ChromaIntegrationTestCase(ApiTestCase):
         host_create_command_ids = []
         for host_address in addresses:
             if hasattr(self, 'simulator'):
-                # FIXME: requiring config to have same address and fqdn (address
-                # is not meaningful to the simulator)
-                registration_result = self.simulator.register(host_address)
+                # FIXME: should look up fqdn from address rather than
+                # assuming they are the same.  note that address is
+                # not meaningful to the simulator ('address' is shorthand
+                # for 'ssh address').
+                fqdn = host_address
+
+                # POST to the /registration_token/ REST API resource to acquire
+                # permission to add a server
+                response = self.chroma_manager.post(
+                    '/api/registration_token/',
+                    body = {'credits': 1}
+                )
+
+                self.assertTrue(response.successful)
+                token_uri = response.headers['location']
+                token = self.chroma_manager.get(token_uri).json
+
+                # Pass our token to the simulator to register a server
+                registration_result = self.simulator.register(fqdn, token['secret'])
                 host_create_command_ids.append(registration_result['command_id'])
             else:
                 response = self.chroma_manager.post(

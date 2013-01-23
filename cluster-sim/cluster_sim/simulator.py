@@ -63,20 +63,20 @@ class ClusterSimulator(object):
 
         self.devices.setup(volume_count)
 
-    def register_all(self):
+    def register_all(self, secret):
         for fqdn, server in self.servers.items():
             if server.crypto.certificate_file is None:
-                self.register(fqdn)
+                self.register(fqdn, secret)
             else:
                 self.start_server(fqdn)
 
-    def register(self, fqdn):
+    def register(self, fqdn, secret):
         log.debug("register %s" % fqdn)
         if fqdn in self._clients:
             self.stop_server(fqdn)
         server = self.servers[fqdn]
         client = AgentClient(
-            url = self.url + "register/xyz/",
+            url = self.url + "register/%s/" % secret,
             action_plugins = FakeActionPlugins(self, server),
             device_plugins = FakeDevicePlugins(server),
             server_properties = server,

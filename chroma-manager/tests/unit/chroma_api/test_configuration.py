@@ -4,10 +4,10 @@ from chroma_core.models.host import ManagedHost, VolumeNode, Volume
 from chroma_core.models.target import ManagedMgs, ManagedOst, ManagedMdt
 import chroma_core.lib.conf_param
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
 
 
-class TestConfigurationDumpLoad(ChromaApiTestCase):
+class TestConfigurationDumpLoad(ChromaApiTestCaseHeavy):
     def setUp(self):
         super(TestConfigurationDumpLoad, self).setUp()
         self.create_simple_filesystem()

@@ -10,5 +10,5 @@ from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = patterns('',
     (r'^message/$', csrf_exempt(views.MessageView.as_view())),
-    (r'^register/(?P<key>\w+)/$', views.register)
+    (r"^register/(\w+)/$", views.register)
 )
