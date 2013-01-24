@@ -21,6 +21,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         """
         Add a list of lustre servers to chroma and ensure lnet is started.
         """
+
         response = self.chroma_manager.get(
             '/api/host/',
         )
@@ -54,7 +55,6 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     body = {'address': host_address}
                 )
                 self.assertEqual(response.successful, True, response.text)
-                self.assertTrue(response.json['agent'])
                 self.assertTrue(response.json['ping'])
                 self.assertTrue(response.json['auth'])
                 self.assertTrue(response.json['resolve'])
@@ -63,7 +63,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
                 response = self.chroma_manager.post(
                     '/api/host/',
-                    body = {'address': host_address}
+                    body = {'address': host_address, 'profile': 'default'}
                 )
                 self.assertEqual(response.successful, True, response.text)
                 host_id = response.json['host']['id']

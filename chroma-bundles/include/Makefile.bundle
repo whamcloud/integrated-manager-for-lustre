@@ -1,12 +1,15 @@
-REPO := $(patsubst %/,%,$(REPO))
-RPMS := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
-NAME := $(notdir $(CURDIR))
+REPO        := $(patsubst %/,%,$(REPO))
+RPMS        := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
+NAME        := $(notdir $(CURDIR))
+BUNDLE_NAME ?= $(NAME)-bundle
 
-all: $(NAME)-bundle.tar.gz install
+all: $(BUNDLE_NAME).tar.gz install
 
-$(NAME)-bundle.tar.gz: $(patsubst %,stamps/%.rpm,$(RPMS))
+$(BUNDLE_NAME).tar.gz: $(patsubst %,stamps/%.rpm,$(RPMS))
 	cd repo && createrepo --pretty .
-	echo "{'name': '$(NAME)'}" > repo/meta
+	echo "{\"name\": \"$(NAME)\", \"description\": \"$(DESC)\"}" > \
+		repo/meta
+	rm -f *.tar.gz
 	tar -C repo -czf $@ .
 
 stamps/%.rpm: $(REPO)/%.rpm Makefile
@@ -17,15 +20,15 @@ stamps/%.rpm: $(REPO)/%.rpm Makefile
 	ln $(patsubst %,$(REPO)/%.rpm,$(RPMS)) repo
 	touch $(patsubst %,stamps/%.rpm,$(RPMS))
 
-$(TOP)/../artifacts/$(NAME)-bundle.tar.gz: $(NAME)-bundle.tar.gz
+$(TOP)/../artifacts/$(BUNDLE_NAME).tar.gz: $(BUNDLE_NAME).tar.gz
 	mkdir -p $(TOP)/../artifacts
 	rm -f $@
 	ln $^ $@
 
-install: $(TOP)/../artifacts/$(NAME)-bundle.tar.gz
+install: $(TOP)/../artifacts/$(BUNDLE_NAME).tar.gz
 
 clean:
-	rm -rf repo stamps $(NAME)-bundle.tar.gz
+	rm -rf repo stamps $(BUNDLE_NAME).tar.gz
 
 list:
 	@echo "$(RPMS)" | tr ' ' '\n'

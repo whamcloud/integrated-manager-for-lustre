@@ -38,7 +38,7 @@ from copy import deepcopy
 from paramiko import SSHException, AuthenticationException
 
 from chroma_core.models.registration_token import RegistrationToken
-from chroma_core.services.http_agent.crypto import Crypto
+from chroma_core.models.server_profile import ServerProfile
 
 
 from django.contrib.contenttypes.models import ContentType
@@ -866,12 +866,12 @@ class JobScheduler(object):
                 self._run_next()
 
     @transaction.commit_on_success
-    def create_host_ssh(self, address, root_pw=None, pkey=None, pkey_pw=None):
+    def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
         """Agent boot strap the storage host at this address
 
-        :param address the resolveable address of the host option user@ in front
+        :param address: the resolveable address of the host option user@ in front
 
-        :param pw is either the root password, or the password that goes with
+        :param root_pw: is either the root password, or the password that goes with
         the user if address is user@address, or, pw is it is the password of
         the private key if a pkey is specified.
 
@@ -879,21 +879,25 @@ class JobScheduler(object):
         server at this address.
         """
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            profile_obj = ServerProfile.objects.get(name = profile)
+        except ObjectDoesNotExist:
+            profile_obj = ServerProfile.objects.get(name = 'default')
 
         # Commit token so that registration request handler will see it
         with transaction.commit_on_success():
-            token = RegistrationToken.objects.create(credits = 1)
+            token = RegistrationToken.objects.create(credits = 1, profile=profile_obj)
 
         agent_ssh = AgentSsh(address)
         auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
 
-        args = {
-            'url': settings.SERVER_HTTP_URL + "agent/",
-            'address': address,
-            'ca': open(Crypto().authority_cert).read().strip(),
-            'secret': token.secret}
-        result = agent_ssh.invoke('register_server', args, auth_args=auth_args)
-        return result['host_id'], result['command_id']
+        agent_ssh.ssh('curl -k %s/agent/setup/%s/ | python' %
+                      (settings.SERVER_HTTP_URL, token.secret), auth_args)
+
+        # XXX - what should these return now?
+        return 0, ""
 
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
         """Test that a host at this address can be created
@@ -1098,8 +1102,13 @@ class JobScheduler(object):
 
         return [target.id for target in targets], command.id
 
-    def create_host(self, fqdn, nodename, capabilities, address):
-        immutable_state = not any("manage_" in c for c in capabilities)
+    def create_host(self, fqdn, nodename, capabilities, address, **kwargs):
+
+        if 'immutable_state' in kwargs:
+            immutable_state = kwargs['immutable_state']
+            del kwargs['immutable_state']
+        else:
+            immutable_state = not any("manage_" in c for c in capabilities)
 
         with self._lock:
             with transaction.commit_on_success():

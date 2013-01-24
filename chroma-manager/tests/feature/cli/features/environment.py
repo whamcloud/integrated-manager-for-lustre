@@ -65,7 +65,7 @@ def before_feature(context, feature):
     from chroma_core.models import ManagedHost, Command
     from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
-    def create_host_ssh(address, root_pw, pkey, pkey_pw):
+    def create_host_ssh(address, profile, root_pw, pkey, pkey_pw):
         host_data = AgentRpc.mock_servers[address]
         host = synthetic_host(address, nids = host_data['nids'], fqdn=host_data['fqdn'], nodename=host_data['nodename'])
         ObjectCache.add(ManagedHost, host)
@@ -119,6 +119,9 @@ def before_feature(context, feature):
     from chroma_api.authentication import CsrfAuthentication
     context.old_is_authenticated = CsrfAuthentication.is_authenticated
     CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
+
+    from tests.unit.chroma_core.helper import load_default_profile
+    load_default_profile()
 
 
 def after_feature(context, feature):

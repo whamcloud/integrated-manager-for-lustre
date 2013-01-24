@@ -88,6 +88,7 @@ class Command(BaseCommand):
             'app': SITE_ROOT,
             'wsgi_path': self._wsgi_path,
             'module_path': self._module_path,
+            'REPO_PATH': settings.DEV_REPO_PATH,
             'HTTP_FRONTEND_PORT': settings.HTTP_FRONTEND_PORT,
             'HTTPS_FRONTEND_PORT': settings.HTTPS_FRONTEND_PORT,
             'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,

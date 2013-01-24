@@ -117,6 +117,15 @@ class FakeActionPlugins():
                 return
             elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker']:
                 return
+            elif cmd == 'configure_repo':
+                return
+            elif cmd == 'update_packages':
+                return
+            elif cmd == 'kernel_status':
+                return {
+                    'running': 'fake_kernel-0.1',
+                    'latest': 'fake_kernel-0.1'
+                }
             elif cmd in ['configure_fencing', 'unconfigure_fencing']:
                 return
             elif cmd == "host_corosync_config":

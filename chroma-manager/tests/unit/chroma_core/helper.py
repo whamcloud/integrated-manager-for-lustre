@@ -9,7 +9,7 @@ from collections import defaultdict
 from tastypie.serializers import Serializer
 import mock
 
-from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, StorageResourceRecord, LNetConfiguration, Nid, ManagedTarget
+from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, StorageResourceRecord, LNetConfiguration, Nid, ManagedTarget, Bundle
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import normalize_nid
@@ -123,7 +123,7 @@ def generate_csr(common_name):
     client_key = tempfile.NamedTemporaryFile(delete = False)
     subprocess.call(['openssl', 'genrsa', '-out', client_key.name, '2048'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     csr = subprocess.Popen(['openssl', "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % common_name, "-key", client_key.name],
-        stdout = subprocess.PIPE, stderr = subprocess.PIPE).communicate()[0]
+                           stdout = subprocess.PIPE, stderr = subprocess.PIPE).communicate()[0]
     return csr
 
 
@@ -138,6 +138,44 @@ def fake_log_message(message):
         tag = "",
         message_class = LogMessage.get_message_class(message)
     )
+
+
+def load_default_bundles():
+    try:
+        from django.db import connection
+        cursor = connection.cursor()
+        if 'chroma_core_bundle' in connection.introspection.get_table_list(cursor) and not Bundle.objects.filter(name='lustre'):
+            bundle = Bundle(bundle_name='lustre', location='/tmp/',
+                            description='Lustre Bundle')
+            bundle.save()
+        if 'chroma_core_bundle' in connection.introspection.get_table_list(cursor) and not Bundle.objects.filter(name='agent'):
+            bundle = Bundle(bundle_name='agent', location='/tmp/',
+                            description='Agent Bundle')
+            bundle.save()
+        if 'chroma_core_bundle' in connection.introspection.get_table_list(cursor) and not Bundle.objects.filter(name='agent_dependencies'):
+            bundle = Bundle(bundle_name='agent_dependencies', location='/tmp/',
+                            description='Agent Dependency Bundle')
+            bundle.save()
+    except:
+        pass
+
+
+def load_default_profile():
+    try:
+        from django.db import connection
+        from chroma_core.models import ServerProfile
+        cursor = connection.cursor()
+        load_default_bundles()
+        if 'chroma_core_serverprofile' in connection.introspection.get_table_list(cursor) and not ServerProfile.objects.filter(name='default'):
+            default_sp = ServerProfile(name='default', ui_name='Managed storage server',
+                                       ui_description = 'A storage server suitable for creating new HA-enabled filesystem targets',
+                                       managed = True)
+            default_sp.bundles.add('lustre')
+            default_sp.bundles.add('agent')
+            default_sp.bundles.add('agent_dependencies')
+            default_sp.save()
+    except:
+        pass
 
 
 class MockAgentRpc(object):

@@ -23,6 +23,7 @@
 import datetime
 import dateutil.tz
 from django.db import models
+from chroma_core.models.server_profile import ServerProfile
 import os
 
 
@@ -56,6 +57,14 @@ class RegistrationToken(models.Model):
     credits = models.IntegerField(
         default = DEFAULT_CREDITS,
         help_text = "Integer, the number of servers which may register using this token before it expires (default %s)" % DEFAULT_CREDITS)
+
+    profile = models.ForeignKey(ServerProfile, null=True)
+    # FIXME: need to change back the default when migration has been done
+    #profile = models.ForeignKey(ServerProfile, default=lambda: ServerProfile.objects.get(name='default'))
+
+    def save(self, *args, **kwargs):
+        assert self.profile
+        super(RegistrationToken, self).save(*args, **kwargs)
 
     class Meta:
         app_label = 'chroma_core'

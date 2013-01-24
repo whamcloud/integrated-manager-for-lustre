@@ -73,6 +73,7 @@ import chroma_api.registration_token
 import chroma_api.filesystem
 import chroma_api.target
 api.register(chroma_api.host.HostResource())
+api.register(chroma_api.host.ServerProfileResource())
 api.register(chroma_api.host.HostTestResource())
 api.register(chroma_api.registration_token.RegistrationTokenResource())
 api.register(chroma_api.filesystem.FilesystemResource())

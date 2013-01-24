@@ -282,7 +282,7 @@ class ServerHandler(Handler):
             raise BadUserInput("\n".join([message] + failures))
 
     def add(self, ns):
-        kwargs = {'address': ns.subject}
+        kwargs = {'address': ns.subject, 'profile': 'default'}
         if not ns.force:
             self.test_host(ns, **kwargs)
         self.output(self.api_endpoint.create(**kwargs))

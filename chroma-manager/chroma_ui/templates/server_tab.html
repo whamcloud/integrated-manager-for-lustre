@@ -116,13 +116,20 @@
         });
       });
 
-      $('div#server_list button.writeconf_button').click(function() {
-        ServerCommandPrompt({
+        $('div#server_list button.writeconf_button').click(function() {
+            ServerCommandPrompt({
             help_topic: '_rewrite_target_configuration-dialog',
-            message: "Updating filesystem NIDs",
-            job_class: 'UpdateNidsJob'
+                message: "Updating filesystem NIDs",
+                job_class: 'UpdateNidsJob'
+            });
         });
-      });
+
+        $('div#server_list button.updates_button').click(function() {
+            ServerCommandPrompt({
+                message: "Install updates",
+                job_class: 'UpdateJob'
+            });
+        });
     }
 
     return {draw:draw}
@@ -209,6 +216,7 @@
 <button class='detect_button multi_server_button help_hover' data-topic='_detect_file_systems-tooltip'>Detect File Systems...</button>
 <button class='rescan_nids_button multi_server_button help_hover' data-topic='_rescan_NIDs-tooltip'>Re-scan NIDs...</button>
 <button class='writeconf_button multi_server_button help_hover' data-topic='_rewrite_target_configuration-tooltip'>Re-write target configuration...</button>
+<button class='updates_button multi_server_button'>Install updates...</button>
 
 <script type="text/template" id="add_host_dialog_template">
     <div class="add_host_dialog">
@@ -262,12 +270,17 @@
                         <label style="margin-right: 6px; font-weight: bold" for='id_add_host_address'>Hostname:</label>
                         <input tabindex="1" style="width:100%; margin-bottom: 15px" type='entry' class='add_host_address' id="id_add_host_address" name='address'/>
 
-                    <label style="margin-right: 6px; font-weight: bold" >SSH Authentication:</label>
-                    <div class="choice_ssh_auth" style="margin-bottom: 10px">
-                        <input type="radio" id="id_existing_keys_choice" name="auth_type" checked="checked" value='existing_keys_choice'/><label for="id_existing_keys_choice">Existing key</label>
-                        <input type="radio" id="id_password_choice" name="auth_type" value='root_password_choice'/><label for="id_password_choice">Root Password</label>
-                        <input type="radio" id="id_other_keys_choice" name="auth_type"  value='private_key_choice'/><label for="id_other_keys_choice">Another key</label>
-                    </div>
+                        <label style="margin-right: 6px; font-weight: bold" for='add_server_profile'>Server profile:</label>
+                        <br>
+                        <select style="margin-bottom: 15px;" class="add_server_profile" name='server_profile'></select>
+                        <br>
+
+                        <label style="margin-right: 6px; font-weight: bold" >SSH Authentication:</label>
+                        <div class="choice_ssh_auth" style="margin-bottom: 10px">
+                            <input type="radio" id="id_existing_keys_choice" name="auth_type" checked="checked" value='existing_keys_choice'/><label for="id_existing_keys_choice">Existing key</label>
+                            <input type="radio" id="id_password_choice" name="auth_type" value='root_password_choice'/><label for="id_password_choice">Root Password</label>
+                            <input type="radio" id="id_other_keys_choice" name="auth_type"  value='private_key_choice'/><label for="id_other_keys_choice">Another key</label>
+                        </div>
 
                         <div id="id_existing_keys">
                             <div style="margin-bottom: 5px">

@@ -75,6 +75,43 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                 )
                 self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout.read())
 
+            # Register the default bundles and profile again
+            result = self.remote_command(
+                chroma_manager['address'],
+                "for bundle in lustre chroma-agent e2fsprogs; do chroma-config bundle register /var/lib/chroma/repo/$bundle; done &> config_bundle.log",
+                expected_return_code = None
+            )
+            chroma_config_exit_status = result.exit_status
+            if not chroma_config_exit_status == 0:
+                result = self.remote_command(
+                    chroma_manager['address'],
+                    "cat config_bundle.log"
+                )
+                self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout.read())
+
+            result = self.remote_command(
+                chroma_manager['address'],
+                """chroma-config profile register <(cat <<EOF
+{
+ "name": "base_managed",
+ "bundles": ["lustre", "chroma-agent", "e2fsprogs"],
+ "ui_name": "Managed storage server",
+ "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
+ "managed": true
+}
+
+EOF
+) &> config_bundle.log""",
+                expected_return_code = None
+            )
+            chroma_config_exit_status = result.exit_status
+            if not chroma_config_exit_status == 0:
+                result = self.remote_command(
+                    chroma_manager['address'],
+                    "cat config_bundle.log"
+                )
+                self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout.read())
+
     def graceful_teardown(self, chroma_manager):
         """
         Removes all filesystems, MGSs, and hosts from chroma via the api.  This is

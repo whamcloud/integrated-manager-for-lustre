@@ -103,6 +103,11 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
         ProxyPass http://localhost:{{HTTP_AGENT_PORT}}/agent/register/
     </Location>
 
+    <Location /agent/setup/>
+        ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/setup/
+        ProxyPass http://localhost:{{HTTP_AGENT_PORT}}/agent/setup/
+    </Location>
+
     <Location /agent/reregister/>
         ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/reregister/
 
@@ -141,6 +146,17 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
 
         RewriteEngine on
         RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/message/ [P,L]
+    </Location>
+
+    Alias /repo {{REPO_PATH}}
+    <Location /repo >
+        SSLVerifyClient require
+        RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
+        RewriteRule .* - [E=SSLC_ON:%1]
+        RequestHeader add X-SSL-Client-On %{SSLC_ON}e
+
+        RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
+        RewriteRule .* - [E=SSLC_NAME:%1]
     </Location>
 </VirtualHost>
 

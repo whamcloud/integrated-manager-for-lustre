@@ -21,9 +21,11 @@
 
 
 import datetime
+from chroma_api.host import ServerProfileResource
 import dateutil
 
 from tastypie.authorization import DjangoAuthorization
+from tastypie.fields import ToOneField
 from tastypie.validation import Validation
 
 from chroma_api.authentication import AnonymousAuthentication
@@ -50,10 +52,12 @@ class RegistrationTokenValidation(Validation):
     def is_valid(self, bundle, request = None):
         errors = {}
         if request.method == 'POST':
-            ALLOWED_CREATION_ATTRIBUTES = ['expiry', 'credits']
+            ALLOWED_CREATION_ATTRIBUTES = ['expiry', 'credits', 'profile']
             for attr in bundle.data.keys():
                 if attr not in ALLOWED_CREATION_ATTRIBUTES:
                     errors[attr] = ["Forbidden during creation"]
+            if not 'profile' in bundle.data or not bundle.data['profile']:
+                errors['profile'] = ["Mandatory"]
         elif request.method == "PATCH":
             READONLY_ATTRIBUTES = ['secret', 'expiry', 'credits']
             for attr in bundle.data.keys():
@@ -74,13 +78,16 @@ class RegistrationTokenResource(CustomModelResource):
     PATCHs may only be passed 'cancelled'
     """
 
+    profile = ToOneField(ServerProfileResource, 'profile', null=False,
+                         help_text="Server profile to be used when setting up servers using this token")
+
     class Meta:
         object_class = RegistrationToken
         authentication = AnonymousAuthentication()
         authorization = TokenAuthorization()
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['patch', 'get']
-        fields = ['id', 'secret', 'expiry', 'credits', 'cancelled']
+        fields = ['id', 'secret', 'expiry', 'credits', 'cancelled', 'profile']
         resource_name = 'registration_token'
         queryset = RegistrationToken.objects.filter(
             cancelled = False,

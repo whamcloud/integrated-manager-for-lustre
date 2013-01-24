@@ -26,7 +26,7 @@ def patch_open(path_to_result):
     """Return a context manager intercepting calls to 'open' so as to return
     a static result string on read()s according to the path"""
 
-    def fake_open(path):
+    def fake_open(path, *args):
         return StringIO.StringIO(path_to_result[path])
     return mock.patch('__builtin__.open', fake_open, create = True)
 

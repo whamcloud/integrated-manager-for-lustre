@@ -33,3 +33,5 @@ from registration_token import *
 from stats import *
 from ha_cluster import *
 from power_control import *
+from bundle import *
+from server_profile import *

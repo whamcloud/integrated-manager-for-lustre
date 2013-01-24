@@ -170,6 +170,39 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return super(ManagedHost, self).get_available_states(begin_state)
 
     @classmethod
+    def create(cls, fqdn, nodename, capabilities, **kwargs):
+        # Single transaction for creating Host and related database objects
+        # * Firstly because we don't want any of these unless they're all setup
+        # * Secondly because we want them committed before creating any Jobs which
+        #   will try to use them.
+        if 'immutable_state' in kwargs:
+            immutable_state = kwargs['immutable_state']
+            del kwargs['immutable_state']
+        else:
+            immutable_state = not any("manage_" in c for c in capabilities)
+
+        # The address of a host isn't something we can learn from it (the
+        # address is specifically how the host is to be reached from the manager
+        # for outbound connections, not just its FQDN).  If during creation we know
+        # the address, then great, accept it.  Else default to FQDN, it's a reasonable guess.
+        if not 'address' in kwargs or kwargs['address'] is None:
+            kwargs['address'] = fqdn
+
+        with transaction.commit_on_success():
+            host = ManagedHost.objects.create(
+                fqdn = fqdn,
+                nodename = nodename,
+                immutable_state = immutable_state,
+                **kwargs)
+            lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
+
+        # Attempt some initial setup jobs
+        from chroma_core.models.jobs import Command
+        command = Command.set_state([(host, 'configured')], "Setting up host %s" % host)
+
+        return host, command
+
+    @classmethod
     def get_by_nid(cls, nid_string):
         """Resolve a NID string to a ManagedHost (best effort).  Not guaranteed to work:
          * The NID might not exist for any host
@@ -226,8 +259,10 @@ class Volume(models.Model):
     # Size may be null for VolumeNodes created when setting up
     # from a JSON file which just tells us a path.
     size = models.BigIntegerField(blank = True, null = True,
-            help_text = "Integer number of bytes.  Can be null if this device \
-                    was manually created, rather than detected.")
+                                  help_text = "Integer number of bytes.  "
+                                              "Can be null if this device "
+                                              "was manually created, rather "
+                                              "than detected.")
 
     label = models.CharField(max_length = 128)
 
@@ -261,11 +296,11 @@ class Volume(models.Model):
         # a primary VolumeNode (i.e. one or more VolumeNodes is available and we
         # know at least where the primary mount should be)
         return queryset.filter(volumenode__host__not_deleted = True).\
-                annotate(
-                    any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'),
-                    has_primary = BoolOr('volumenode__primary'),
-                    num_volumenodes = Count('volumenode')
-                ).filter((Q(num_volumenodes = 1) | Q(has_primary = True)) & Q(any_targets = None))
+            annotate(
+                any_targets = BoolOr('volumenode__managedtargetmount__target__not_deleted'),
+                has_primary = BoolOr('volumenode__primary'),
+                num_volumenodes = Count('volumenode')
+            ).filter((Q(num_volumenodes = 1) | Q(has_primary = True)) & Q(any_targets = None))
 
     def get_kind(self):
         if not hasattr(self, 'kind'):
@@ -388,8 +423,8 @@ class LearnNidsStep(Step):
         nids = []
         for nid_string in result:
             nid, created = Nid.objects.get_or_create(
-                    lnet_configuration = host.lnetconfiguration,
-                    nid_string = normalize_nid(nid_string))
+                lnet_configuration = host.lnetconfiguration,
+                nid_string = normalize_nid(nid_string))
             if created:
                 self.log("Learned new nid %s:%s" % (host, nid.nid_string))
             nids.append(nid)
@@ -438,6 +473,18 @@ class ConfigureCorosyncStep(Step):
             # Empty dict if no host-side config.
             config = self.invoke_agent(host, "host_corosync_config")
             self.invoke_agent(host, "configure_corosync", config)
+
+
+class AgentActionStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        cmd = kwargs['command']
+        payload = dict([(k, v) for k, v in kwargs.items() if k not in ['host', 'command']])
+        del kwargs['command']
+        if not host.immutable_state:
+            self.invoke_agent(host, cmd, args=payload)
 
 
 class ConfigureRsyslogStep(Step):
@@ -1056,6 +1103,19 @@ class RelearnNidsJob(Job, HostListMixin):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+
+class UpdateJob(Job, HostListMixin):
+    def description(self):
+        return "Update packages on hosts: %s" % ",".join([h.fqdn for h in self.hosts.all()])
+
+    def get_steps(self):
+        steps_update = [(AgentActionStep, {'host': h, 'command': 'update_packages'}) for h in self.hosts.all()]
+        steps_restart = [(AgentActionStep, {'host': h, 'command': 'restart_server'}) for h in self.hosts.all()]
+        return steps_update + steps_restart
+
+    class Meta:
+        app_label = 'chroma_core'
 
 
 class WriteConfStep(Step):

@@ -47,6 +47,9 @@ from chroma_core.services.http_agent.crypto import Crypto
 
 from supervisor.xmlrpc import SupervisorTransport
 
+from chroma_core.models.bundle import Bundle
+from chroma_core.models.server_profile import ServerProfile
+
 
 class SupervisorStatus(object):
     def __init__(self):
@@ -66,8 +69,8 @@ class SupervisorStatus(object):
         self._xmlrpc = xmlrpclib.ServerProxy(
             'http://127.0.0.1',
             transport = SupervisorTransport(username,
-                password,
-                url)
+                                            password,
+                                            url)
         )
 
     def get_all_process_info(self):
@@ -255,7 +258,7 @@ class ServiceConfig(CommandLine):
         #        blocking subprocess.communicate().
         #        we need to figure out why
         self.try_shell(["service", "rabbitmq-server", "restart"],
-            mystderr = None, mystdout = None)
+                       mystderr = None, mystdout = None)
 
     def _setup_rabbitmq_credentials(self):
         RABBITMQ_USER = "chroma"
@@ -445,7 +448,7 @@ class ServiceConfig(CommandLine):
             valid_username = True
         email = self.get_input(msg = "Email")
         password = self.get_pass(msg = "Password", empty_allowed = False,
-                                     confirm_msg = "Confirm password")
+                                 confirm_msg = "Confirm password")
 
         return username, email, password
 
@@ -575,11 +578,11 @@ class ServiceConfig(CommandLine):
         local_settings_str = ""
         local_settings_str += "CELERY_RESULT_BACKEND = \"database\"\n"
         local_settings_str += "CELERY_RESULT_DBURI = \"postgresql://%s:%s@%s%s/%s\"\n" % (
-                databases['default']['USER'],
-                databases['default']['PASSWORD'],
-                databases['default']['HOST'] or "localhost",
-                ":%d" % databases['default']['PORT'] if databases['default']['PORT'] else "",
-                databases['default']['NAME'])
+            databases['default']['USER'],
+            databases['default']['PASSWORD'],
+            databases['default']['HOST'] or "localhost",
+            ":%d" % databases['default']['PORT'] if databases['default']['PORT'] else "",
+            databases['default']['NAME'])
 
         # Usefully, a JSON dict looks a lot like python
         local_settings_str += "DATABASES = %s\n" % json.dumps(databases, indent=4).replace("null", "None")
@@ -588,6 +591,60 @@ class ServiceConfig(CommandLine):
         open(local_settings, 'w').write(local_settings_str)
 
         # TODO: support SERVER_HTTP_URL
+
+
+def bundle(operation, path=None):
+    if operation == "register":
+        # create new bundle record
+        meta_path = os.path.join(path, "meta")
+        try:
+            meta = json.load(open(meta_path))
+        except (IOError, ValueError):
+            raise RuntimeError("Could not read bundle metadata from %s" %
+                               meta_path)
+        bundle = Bundle.objects.create(bundle_name = meta['name'],
+                                       location = path,
+                                       description = meta['description'])
+    else:
+        # remove bundle record
+        try:
+            bundle = Bundle.objects.get(location = path)
+            bundle.delete()
+        except Bundle.DoesNotExist:
+            # doesn't exist anyway, so just exit silently
+            return
+
+
+def register_profile(profile_file):
+    # create new profile record
+    try:
+        data = json.load(profile_file)
+    except ValueError, e:
+        raise RuntimeError("Malformed profile: %s" % e)
+    profile = ServerProfile.objects.create(name = data['name'],
+                                           ui_name = data['ui_name'],
+                                           ui_description =
+                                           data['ui_description'],
+                                           managed = data['managed'])
+    # validate and add the bundles
+    for name in data['bundles']:
+        try:
+            bundle = Bundle.objects.get(bundle_name = name)
+        except Bundle.DoesNotExist:
+            profile.delete()
+            log.error("No such bundle named %s" % name)
+            sys.exit(-1)
+        profile.bundles.add(bundle)
+
+
+def delete_profile(name):
+    # remove profile record
+    try:
+        profile = ServerProfile.objects.get(name=name)
+        profile.delete()
+    except ServerProfile.DoesNotExist:
+        # doesn't exist anyway, so just exit silently
+        return
 
 
 def chroma_config():
@@ -652,6 +709,20 @@ def chroma_config():
     elif command == 'restart':
         service_config.stop()
         service_config.start()
+    elif command == 'bundle':
+        operation = sys.argv[2]
+        bundle(operation, path = sys.argv[3])
+    elif command == 'profile':
+        operation = sys.argv[2]
+        if operation == 'register':
+            try:
+                register_profile(open(sys.argv[3]))
+            except IOError:
+                print "Error opening %s" % sys.argv[3]
+        elif operation == 'delete':
+            delete_profile(sys.argv[3])
+        else:
+            raise NotImplementedError(operation)
     else:
         log.error("Invalid command '%s'" % command)
         sys.exit(-1)

@@ -30,6 +30,7 @@ template_file = sys.argv[1]
 
 production_settings = {
     "app": "/usr/share/chroma-manager",
+    "REPO_PATH": "/var/lib/chroma/repo",
     "HTTP_FRONTEND_PORT": "80",
     "HTTPS_FRONTEND_PORT": "443",
     "HTTP_AGENT_PORT": "8002",

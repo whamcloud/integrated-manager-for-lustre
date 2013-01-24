@@ -263,22 +263,17 @@ class JobSchedulerClient(object):
         JobSchedulerRpc().cancel_job(job_id)
 
     @classmethod
-    def create_host_ssh(cls, address, root_pw=None, pkey=None, pkey_pw=None):
+    def create_host_ssh(cls, address, profile, root_pw=None, pkey=None, pkey_pw=None):
         """
         Set up a host using SSH
-
-        FIXME: determine whether this is really the right place,
-        is this an insane flow of remote calls?
 
         :param address: SSH address
         :return: (<ManagedHost instance>, <Command instance>)
         """
         from chroma_core.models import ManagedHost, Command
-        host_id, command_id = JobSchedulerRpc().create_host_ssh(address,
-            root_pw, pkey, pkey_pw)
-        host = ManagedHost.objects.get(pk = host_id)
-        command = Command.objects.get(pk = command_id)
-        return  host, command
+
+        host_id, command_id = JobSchedulerRpc().create_host_ssh(address, profile, root_pw, pkey, pkey_pw)
+        return ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id)
 
     @classmethod
     def test_host_contact(cls, address, root_pw=None, pkey=None, pkey_pw=None):
@@ -290,7 +285,7 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().create_filesystem(fs_data)
 
     @classmethod
-    def create_host(cls, fqdn, nodename, capabilities, address = None):
+    def create_host(cls, fqdn, nodename, capabilities, address = None, **kwargs):
         from chroma_core.models import ManagedHost, Command
         # The address of a host isn't something we can learn from it (the
         # address is specifically how the host is to be reached from the manager
@@ -299,7 +294,7 @@ class JobSchedulerClient(object):
         if address is None:
             address = fqdn
 
-        host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, capabilities, address)
+        host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, capabilities, address, **kwargs)
 
         return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
 

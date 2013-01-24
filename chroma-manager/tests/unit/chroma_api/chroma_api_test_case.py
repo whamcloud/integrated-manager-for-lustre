@@ -13,6 +13,8 @@ class ChromaApiTestCase(ResourceTestCase):
         self.old_is_authenticated = CsrfAuthentication.is_authenticated
         CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
         self.api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
+        from tests.unit.chroma_core.helper import load_default_profile
+        load_default_profile()
 
         # If the test that just ran imported storage_plugin_manager, it will
         # have instantiated its singleton, and created some DB records.

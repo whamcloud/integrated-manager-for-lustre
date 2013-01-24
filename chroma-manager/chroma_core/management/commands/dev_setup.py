@@ -20,6 +20,10 @@
 # express and approved by Intel in writing.
 
 
+from StringIO import StringIO
+import tarfile
+import os
+
 from django.core.management import BaseCommand
 import settings
 
@@ -28,10 +32,52 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from chroma_core.lib.service_config import ServiceConfig
 
-        service_config = ServiceConfig()
-        service_config._setup_rabbitmq_credentials()
-        service_config._setup_crypto()
-        service_config._syncdb()
+        sc = ServiceConfig()
+        sc._setup_rabbitmq_credentials()
+        sc._setup_crypto()
+        sc._syncdb()
+
+        BUNDLE_NAMES = ['lustre', 'chroma-agent', 'e2fsprogs']
+
+        import chroma_core.lib.service_config
+        from chroma_core.models import Bundle, ServerProfile
+
+        missing_bundles = False
+        for bundle_name in BUNDLE_NAMES:
+            path = os.path.join(settings.DEV_REPO_PATH, bundle_name)
+            if not os.path.exists(os.path.join(path, 'meta')):
+                tarball_path = os.path.join(settings.DEV_REPO_PATH, bundle_name) + "-bundle.tar.gz"
+                if os.path.exists(tarball_path):
+                    print "Extracting %s" % bundle_name
+                    if not os.path.exists(path):
+                        os.makedirs(path)
+                    archive = tarfile.open(tarball_path, "r:gz")
+                    archive.list()
+                    archive.extractall(path)
+                else:
+                    print "Missing bundle %s" % bundle_name
+                    missing_bundles = True
+
+            else:
+                if not Bundle.objects.filter(location=path).exists():
+                    chroma_core.lib.service_config.bundle('register', path)
+
+        if missing_bundles:
+            print "Obtain bundles from Jenkins or build them yourself on a linux host, then unpack in %s" % settings.DEV_REPO_PATH
+            return
+
+        # FIXME: having to copy-paste this because the production version is embedded in a .sh
+        base_profile = """
+        {
+            "name": "base_managed",
+            "bundles": ["lustre", "chroma-agent", "e2fsprogs"],
+            "ui_name": "Managed storage server",
+            "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
+            "managed": true
+        }
+"""
+        if not ServerProfile.objects.filter(name = 'base_managed').exists():
+            chroma_core.lib.service_config.register_profile(StringIO(base_profile))
 
         print """Great success:
  * run `./manage.py supervisor`

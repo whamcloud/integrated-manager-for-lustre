@@ -25,13 +25,13 @@ from chroma_core.services.job_scheduler import job_scheduler_client
 from chroma_core.services.rpc import RpcError
 from tastypie.validation import Validation
 
-from chroma_core.models import ManagedHost, Nid, ManagedFilesystem
+from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 import tastypie.http as http
-from tastypie.resources import Resource
+from tastypie.resources import Resource, ModelResource
 from tastypie import fields
 from chroma_api.utils import custom_response, StatefulModelResource, MetricResource, dehydrate_command
 from tastypie.authorization import DjangoAuthorization
@@ -145,9 +145,8 @@ class HostResource(MetricResource, StatefulModelResource):
         # a 'validation errors' dialog which is pretty ugly.
 
         try:
-            host_params = _host_params(bundle)
-            host, command = job_scheduler_client.JobSchedulerClient.create_host_ssh(
-                **host_params)
+            host, command = job_scheduler_client.JobSchedulerClient.create_host_ssh(bundle.data['profile'],
+                                                                                    **_host_params(bundle))
         except RpcError, e:
             # Rather stretching the meaning of "BAD REQUEST", say that this
             # request is bad on the basis that the user specified a host that
@@ -184,6 +183,16 @@ class HostResource(MetricResource, StatefulModelResource):
             )
 
         return objects.distinct()
+
+
+class ServerProfileResource(ModelResource):
+    class Meta:
+        queryset = ServerProfile.objects.all()
+        resource_name = 'profile'
+        authentication = AnonymousAuthentication()
+        authorization = DjangoAuthorization()
+        list_allowed_methods = ['get']
+        readonly = ['ui_name']
 
 
 class HostTestResource(Resource):

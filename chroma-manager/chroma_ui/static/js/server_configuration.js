@@ -72,6 +72,8 @@ function add_host_dialog() {
                   }
                 });
 
+  get_profiles();
+
   element.find('.add_host_close_button').button();
   element.find('.add_host_confirm_button').button();
   element.find('.add_host_submit_button').button();
@@ -151,7 +153,7 @@ function add_host_dialog() {
   element.find('.add_host_submit_button').click(function(ev) {
 
       var form_params = element
-          .find('form').find('input, textarea')
+          .find('form').find('input, textarea, select')
           .filter(':visible')
           .serializeArray()
           .reduce(function (hash, pair) {
@@ -204,6 +206,15 @@ function add_host_dialog() {
       $('#id_add_host_private_key').focus();
   });
 
+  function get_profiles() {
+    Api.get("profile/", {limit: 0}, success_callback = function(data) {
+      $.each(data.objects, function(i, profile) {
+        var option = "<option value='" + profile.name + "'>"+ profile.ui_name + "</option>";
+        $('div.add_host_dialog select[name=\'profile\']').prepend(option)
+      });
+    });
+  }
+
   function create_host() {
     test_skipped = true;
     if (test_xhr) {
@@ -216,7 +227,7 @@ function add_host_dialog() {
     var post_params = element
       .find('form')
       .find('div#' + auth_group)
-      .find('input, textarea')
+      .find('input, textarea, select')
       .serializeArray()
       .reduce(function (hash, pair) {
           hash[pair.name] = pair.value;
@@ -226,6 +237,10 @@ function add_host_dialog() {
       post_params['address'] = element
           .find('form')
           .find('#id_add_host_address').val();
+
+      post_params['profile'] = element
+          .find('form')
+          .find('.add_server_profile').val();
 
       Api.post('host/', post_params,
                   success_callback = function(data)
