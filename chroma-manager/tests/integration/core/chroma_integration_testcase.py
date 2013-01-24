@@ -289,12 +289,15 @@ class AuthorizedTestCase(ChromaIntegrationTestCase):
             # Forcefully reset Chroma
             self.reset_cluster()
 
-        user = config['chroma_managers'][0]['users'][0]
-        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
-            server_http_url = config['chroma_managers'][0]['server_http_url'])
+        self.login()
 
         if not reset:
             # Clean up a running Chroma instance without wiping it
             self.unmount_filesystems_from_clients()
             self.graceful_teardown(self.chroma_manager)
             self.remove_all_targets_from_pacemaker()
+
+    def login(self):
+        user = config['chroma_managers'][0]['users'][0]
+        self.chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
+            server_http_url = config['chroma_managers'][0]['server_http_url'])
