@@ -1,6 +1,6 @@
 
-Chroma Manager: Job Scheduler Service
-=====================================
+Job Scheduler Service
+=====================
 
 The *Job Scheduler* is the component that handles changes to the system, either initiated by
 the user (i.e. via chroma_api) or detected from reports sent by chroma-agent.  It's name comes

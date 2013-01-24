@@ -1,6 +1,6 @@
 
-Dataflow
-========
+Inter process communication
+===========================
 
 Inter-process communication in Chroma happens in three ways:
  * HTTP/HTTPS

@@ -1,6 +1,6 @@
 
-Chroma Manager: Plugin Runner Service
-=====================================
+Plugin Runner Service
+=====================
 
 There are two somewhat distinct classes which operate within this service:
 

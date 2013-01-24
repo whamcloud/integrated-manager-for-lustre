@@ -1,6 +1,6 @@
 
-Cluster simulator
------------------
+cluster-sim
+------------
 
 Introduction
 ____________

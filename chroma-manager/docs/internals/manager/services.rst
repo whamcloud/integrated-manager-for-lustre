@@ -1,6 +1,6 @@
 
-Chroma Manager backend infrastructure
-=====================================
+Services infrastructure
+=======================
 
 Long-running threads are declared as services, subclassing `ChromaService`.  The purpose of 
 having this class rather than just having each service operate as a standalone script is to

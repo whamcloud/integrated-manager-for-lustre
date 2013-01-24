@@ -1,15 +1,16 @@
 
-Top level modules
-=================
-
-Chroma is split into the *agent* and the *manager*.  The manager is the central
-monitoring service, while an instance of the agent runs on each Lustre server 
-(aka Chroma Storage Server) reporting back to the central manager.
-
-.. contents::
-
 chroma-manager
---------------
+==============
+
+.. toctree::
+  :maxdepth: 2
+
+  commands
+  services
+  dataflow
+  job_scheduler
+  plugin_runner
+
 
 chroma_core
 ___________
@@ -81,32 +82,3 @@ _______
 This contains builtin plugins, principally used for generic Linux storage device
 detection (in chroma_core.plugins.linux)
 
-chroma-agent
-------------
-
-The agent runs on Lustre servers, and all operations that the manager does on a server are
-done on its behalf by the agent, invoked via SSH.  The agent is also responsible for periodically posting
-reports back to the manager via HTTP.
-
-chroma_agent/device_plugins
-___________________________
-
-*Device plugins* are python modules which provide monitoring of 
-
-These are modules which follow the interface in chroma_agent.plugin_manager.DevicePlugin.
-
-.. autoclass:: chroma_agent.plugin_manager.DevicePlugin
-  :members:
-
-chroma_agent/action_plugins
-___________________________
-
-These are modules which follow a simple implicit interface.  They define a 1 or more functions, and
-set module-scope names ACTIONS and CAPABILITIES to a list of 1 or more functions and a list of 0
-or more strings respectively.
-
-cluster-sim
------------
-
-The cluster simulator.  This is a development and testing tool that impersonates a collection of chroma-agent
-instances, to drive the interfaces of chroma-manager.  :doc:`cluster_sim`

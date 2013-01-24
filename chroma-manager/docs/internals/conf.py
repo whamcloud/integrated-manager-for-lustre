@@ -32,8 +32,9 @@ project = u'Chroma Internals'
 master_doc = 'index'
 
 graphviz_dot_args = [
-        "-Nfontname=Arial", "-Nfontsize=10", "-Nshape=box",
-        "-Efontname=Arial", "-Efontsize=10"
+        "-Gfontname=Arial bold", "-Gfontsize=10", "-Gshape=box", "-Gpenwidth=0.5", "-Gfontweight=bold",
+        "-Nfontname=Arial", "-Nfontsize=10", "-Nshape=box", "-Nstyle=rounded", "-Npenwidth=1.2", "-Ncolor=lightblue",
+        "-Efontname=Arial", "-Efontsize=8", "-Epenwidth=0.5"
 ]
 
 extensions.append('sphinx.ext.viewcode')
