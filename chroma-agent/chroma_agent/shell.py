@@ -16,7 +16,7 @@ def run(arg_list, shell = False):
     using this function.
     """
 
-    console_log.debug("shell.run: %s" % arg_list)
+    console_log.debug("shell.run: %s" % repr(arg_list))
     os.environ["TERM"] = ""
 
     p = subprocess.Popen(arg_list, shell = shell,

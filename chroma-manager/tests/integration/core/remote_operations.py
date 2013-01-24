@@ -396,10 +396,15 @@ class RealRemoteOperations(RemoteOperations):
                     'rm -rf /var/lib/chroma/*',
                     expected_return_code = None  # Keep going if it failed - may be none there.
                 )
+
+                # FIXME: chroma-agent restart is unreliable
+                self._ssh_address(
+                    server['address'],
+                    'killall -9 chroma-agent-daemon'
+                )
                 self._ssh_address(
                     server['address'],
                     'service chroma-agent restart'
                 )
-
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])

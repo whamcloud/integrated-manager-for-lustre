@@ -31,7 +31,7 @@ This is the Whamcloud monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker python-dateutil
 %if 0%{?rhel} > 5
 Requires: fence-agents
 %endif

@@ -11,6 +11,17 @@ def patch_shell(args_to_result):
     return mock.patch('chroma_agent.shell.try_run', fake_shell)
 
 
+def patch_run(expected_args=None, rc=0, stdout='', stderr=''):
+    def fake_shell(args):
+        if args == expected_args:
+            return rc, stdout, stderr
+        else:
+            raise RuntimeError("Unexpected args:  %s got %s " %
+                                           (repr(expected_args), repr(args)))
+
+    return mock.patch('chroma_agent.shell.run', fake_shell)
+
+
 def patch_open(path_to_result):
     """Return a context manager intercepting calls to 'open' so as to return
     a static result string on read()s according to the path"""

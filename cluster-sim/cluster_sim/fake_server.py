@@ -35,7 +35,7 @@ class FakeServer(Persisted):
         self._devices = fake_devices
         self._cluster = fake_cluster
 
-        self._cluster.join(nodename)
+        self._cluster.join(nodename, fqdn=fqdn)
 
         self.state['nids'] = nids
         self.state['nodename'] = nodename
