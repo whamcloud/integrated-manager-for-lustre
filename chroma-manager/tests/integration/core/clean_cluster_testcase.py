@@ -21,7 +21,6 @@ class CleanClusterApiTestCase(ApiTestCase):
           - dropping and recreating the chroma manager database
           - unmounting any lustre filesystems from the clients
           - unconfiguring any chroma targets in pacemaker
-          - erasing volumes in the config for chroma-managed lustre servers
         """
         self.unmount_filesystems_from_clients()
         self.reset_chroma_manager_db()
@@ -252,14 +251,13 @@ class CleanClusterApiTestCase(ApiTestCase):
         self.assertEqual(0, len(hosts))
 
         # Verify there are now zero volumes in the database.
-        # TEMPORARILY COMMENTED OUT DUE TO HYD-1143.
-        #response = self.chroma_manager.get(
-        #    '/api/volume/',
-        #    params = {'limit': 0}
-        #)
-        #self.assertTrue(response.successful, response.text)
-        #volumes = response.json['objects']
-        #self.assertEqual(0, len(volumes))
+        response = self.chroma_manager.get(
+            '/api/volume/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        volumes = response.json['objects']
+        self.assertEqual(0, len(volumes))
 
     def reset_accounts(self, chroma_manager):
         """Remove any user accounts which are not in the config (such as

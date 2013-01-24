@@ -32,17 +32,22 @@ class TestVolumes(AuthorizedTestCase):
                 'conf_params': {}
             }
         )
+        host_id = self.chroma_manager.get("/api/host").json['objects'][0]['id']
 
-        # Completely drop the database to ensure all knowledge of the
-        # file system, volumes, and hosts is lost.
-        self.reset_chroma_manager_db()
-        self.login()
+        # Force remove the hosts (and thus the file system) so that they are
+        # forgotten from the db but not actually torn down.
+        command = self.chroma_manager.post("/api/command/", body = {
+            'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host_id}}],
+            'message': "Test force remove hosts"
+        }).json
+        self.wait_for_command(self.chroma_manager, command['id'])
+        self.assertEqual(len(self.chroma_manager.get("/api/host").json['objects']), 0)
 
         # Re-add the removed hosts
         self.add_hosts([config['lustre_servers'][0]['address']])
 
         # Verify that the used volumes aren't showing as usable volumes.
-        usable_volumes_ids = [v['id'] for v in self.get_usable_volumes()]
-        self.assertNotIn(mgt_volume['id'], usable_volumes_ids)
-        self.assertNotIn(mdt_volume['id'], usable_volumes_ids)
-        self.assertNotIn(ost_volumes[0]['id'], usable_volumes_ids)
+        usable_volumes_labels = [v['label'] for v in self.get_usable_volumes()]
+        self.assertNotIn(mgt_volume['label'], usable_volumes_labels)
+        self.assertNotIn(mdt_volume['label'], usable_volumes_labels)
+        self.assertNotIn(ost_volumes[0]['label'], usable_volumes_labels)
