@@ -5,7 +5,7 @@
     "failover_is_configured": true,
     "chroma_managers": [
         {
-            "server_http_url": "https://jspray-mac01.local:8000/",
+            "server_http_url": "https://localhost:8000/",
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ]
