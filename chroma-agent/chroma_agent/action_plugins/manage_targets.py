@@ -180,8 +180,7 @@ def format_target(device="", target_types=(), mgsnode=(), fsname="", failnode=()
          network=(), backfstype="", device_size="", mkfsoptions="",
          reformat=False, stripe_count_hint="", iam_dir=False,
          dryrun=False, verbose=False, quiet=False):
-    """Returns shell code for performing a mkfs.lustre operation on a
-    block device."""
+    """Perform a mkfs.lustre operation on a block device."""
 
     # freeze a view of the namespace before we start messing with it
     args = dict(locals())

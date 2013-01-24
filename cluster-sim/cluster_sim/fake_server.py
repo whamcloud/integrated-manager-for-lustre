@@ -13,6 +13,9 @@ from cluster_sim.utils import Persisted, perturb
 
 
 class FakeServer(Persisted):
+    """Represent a single storage server.  Initialized with an arbitrary
+    hostname and NIDs, subsequently manages/modifies its own /proc/ etc.
+    """
     default_state = {
         'lnet_loaded': False,
         'lnet_up': False,

@@ -10,6 +10,15 @@ from cluster_sim.utils import Persisted
 
 
 class FakeCluster(Persisted):
+    """Represents the shared HA resource state, which is held in corosync in
+    a real system:
+
+    * The cluster membership of nodes (online/offline)
+    * The configuration of a resource (primary/secondary locations)
+    * The state of a resource (where it is running)
+
+    This represents a simple environment where all nodes are in the same cluster.
+    """
     filename = 'cluster.json'
     default_state = {
         'nodes': {},

@@ -33,10 +33,10 @@ HTTPS handling
 .. graphviz::
     
     digraph https_dataflow {
-            https_frontend -> http_agent [label="/agent/"]
-            https_frontend -> "Apache (chroma_api)" [label="/api/, /ui/"]
-            "chroma-agent" -> https_frontend [label="client cert"]
-            "Browser (chroma_ui)" -> https_frontend
+            "Apache (HTTPS)" -> http_agent [label="/agent/"]
+            "Apache (HTTPS)" -> "Apache (chroma_api)" [label="/api/, /ui/"]
+            "chroma-agent" -> "Apache (HTTPS)" [label="client cert"]
+            "Browser (chroma_ui)" -> "Apache (HTTPS)"
     }
 
 
@@ -49,10 +49,10 @@ Agent communications
 .. graphviz::
     
     digraph agent_dataflow {
-            "chroma-agent" -> https_frontend
-            https_frontend -> http_agent
-            https_frontend -> "chroma-agent"
-            http_agent -> https_frontend 
+            "chroma-agent" -> "Apache (HTTPS)"
+            "Apache (HTTPS)" -> http_agent
+            "Apache (HTTPS)" -> "chroma-agent"
+            http_agent -> "Apache (HTTPS)" 
             http_agent -> lustre_audit -> database
             http_agent -> plugin_runner -> database
             http_agent -> syslog -> database
@@ -75,8 +75,8 @@ UI and API
 .. graphviz::
     
     digraph api_dataflow {
-            "Browser (chroma_ui)" -> https_frontend -> "Apache (chroma_api)"
-            "Apache (chroma_api)" -> https_frontend -> "Browser (chroma_ui)"
+            "Browser (chroma_ui)" -> "Apache (HTTPS)" -> "Apache (chroma_api)"
+            "Apache (chroma_api)" -> "Apache (HTTPS)" -> "Browser (chroma_ui)"
             "Apache (chroma_api)" -> job_scheduler [label="Commands"]
             job_scheduler -> database [label="Writing state changes"]
             job_scheduler -> http_agent [label="Running agent operations"]
@@ -102,7 +102,6 @@ All RPCs and Queues
 
        plugin_runner -> http_agent [label="AgentSessionRpc",color=blue]
        job_scheduler -> http_agent [label="AgentSessionRpc",color=blue]
-       job_scheduler -> https_frontend [label="RoutingProxyRpc",color=blue]
        "Apache (chroma_api)" -> job_scheduler [label="JobSchedulerRpc",color=blue]
        job_scheduler -> plugin_runner [label="AgentDaemonRpcInterface",color=blue]
        job_scheduler -> plugin_runner [label="ScanDaemonRpcInterface",color=blue]

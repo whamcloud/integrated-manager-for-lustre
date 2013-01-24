@@ -11,6 +11,11 @@ from cluster_sim.fake_device_plugins import FakeDevicePlugins
 
 
 class FakeActionPlugins():
+    """
+    Provides action plugin execution by passing through to the other
+    fake classes.  Where the real ActionPluginManager delegates running
+    actions to the plugins, this class has all the actions built-in.
+    """
     def __init__(self, server, simulator):
         self._label_counter = 0
         self._server = server

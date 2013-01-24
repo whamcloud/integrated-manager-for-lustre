@@ -24,6 +24,10 @@ from requests import ConnectionError
 
 
 class ClusterSimulator(object):
+    """
+    Create the global fakes and the per-server fakes, and publish
+    start/stop/register operations for each simulated agent.
+    """
     def __init__(self, folder, url):
         self.folder = folder
         self.url = url + "agent/"

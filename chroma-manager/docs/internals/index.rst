@@ -25,4 +25,6 @@ Table of contents
   services
   job_scheduler
   plugin_runner
-
+  cluster_sim
+  commands
+  foo/bar.rst

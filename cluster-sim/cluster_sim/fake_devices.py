@@ -14,8 +14,12 @@ OST_STAT_TEMPLATE = load_data('OST_STAT_TEMPLATE.json')
 
 
 class FakeDevices(Persisted):
-    """Simplified devices: everything is a SCSI drive visible to all hosts as the same
-    node path on each host"""
+    """Represents shared storage, including all state which would live on a disk.  On initial
+    setup this is just a set of imaginary volumes and device nodes, but when filesystems are
+    formatted the Lustre state lives here too.
+
+    This is a simple all-to-all SAN type setup, where everything is a SCSI drive visible
+    to all hosts as the same node path on each host"""
     filename = 'devices.json'
     default_state = {
         'mgts': {},

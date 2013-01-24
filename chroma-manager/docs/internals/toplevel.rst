@@ -104,3 +104,9 @@ ___________________________
 These are modules which follow a simple implicit interface.  They define a 1 or more functions, and
 set module-scope names ACTIONS and CAPABILITIES to a list of 1 or more functions and a list of 0
 or more strings respectively.
+
+cluster-sim
+-----------
+
+The cluster simulator.  This is a development and testing tool that impersonates a collection of chroma-agent
+instances, to drive the interfaces of chroma-manager.  :doc:`cluster_sim`

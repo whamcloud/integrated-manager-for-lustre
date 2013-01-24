@@ -9,6 +9,10 @@ from cluster_sim.utils import Persisted
 
 
 class FakeClient(Persisted):
+    """
+    Represents a Lustre client: one or more filesystem mounts, and corresponding
+    /proc/ information derived from the filesystem(s).
+    """
     default_state = {
         'mounts': []
     }

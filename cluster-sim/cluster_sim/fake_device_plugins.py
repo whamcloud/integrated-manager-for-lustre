@@ -100,6 +100,12 @@ class BaseFakeLustrePlugin(DevicePlugin):
 
 
 class FakeDevicePlugins():
+    """
+    Fake versions of the device plugins, sending monitoring
+    information derived from the simulator state (e.g. corosync
+    resource locations come from FakeCluster, lustre target
+    statistics come from FakeDevices).
+    """
     def __init__(self, server):
         self._server = server
 

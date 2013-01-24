@@ -23,6 +23,9 @@ sys.path.append(project_dir)
 agent_dir = os.path.join(*(list(os.path.split(project_dir)[0:-1]) + ['chroma-agent']))
 sys.path.append(agent_dir)
 
+simulator_dir = os.path.join(*(list(os.path.split(project_dir)[0:-1]) + ['cluster-sim']))
+sys.path.append(simulator_dir)
+
 from docs.conf_common import *
 
 project = u'Chroma Internals'
