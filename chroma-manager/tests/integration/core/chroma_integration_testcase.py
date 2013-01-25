@@ -28,7 +28,7 @@ class ChromaIntegrationTestCase(ApiTestCase):
             try:
                 from cluster_sim.simulator import ClusterSimulator
             except ImportError:
-                raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of chroma-agent?")
+                raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of it?")
 
             # The simulator's state directory will be left behind when a test fails,
             # so make sure it has a unique-per-run name
