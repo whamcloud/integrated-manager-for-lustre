@@ -23,9 +23,7 @@ class MetricStore(object):
 
 
 def _autocreate_ds(db, key, payload):
-    # FIXME should include the app label in this query to avoid risk of
-    # name overlap with other apps
-    ct = ContentType.objects.get(model=payload['type'])
+    ct = ContentType.objects.get_by_natural_key('r3d', payload['type'].lower())
     ds_klass = ct.model_class()
 
     new_ds = ds_klass.objects.create(name=key,

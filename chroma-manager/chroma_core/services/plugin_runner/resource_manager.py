@@ -957,7 +957,7 @@ class ResourceManager(object):
                     VolumeNode.delayed.update({'id': volume_node.id, 'not_deleted': None})
                     volumes_need_attention.append(volume_node.volume_id)
 
-            volumes_need_attention.extend(record_id_to_volumes[record_id])
+            volumes_need_attention.extend([v.pk for v in record_id_to_volumes[record_id]])
 
         VolumeNode.delayed.flush()
 

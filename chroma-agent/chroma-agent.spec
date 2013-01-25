@@ -21,6 +21,9 @@ BuildRequires: python-setuptools
 Requires: python-simplejson python-argparse python-daemon python-setuptools
 # FIXME: uncomment this once we have a python-requests package with a good version
 #Requires: python-requests >= 1.0.0
+%if 0%{?rhel} > 5
+Requires: util-linux-ng
+%endif
 Requires(post): selinux-policy
 
 %description

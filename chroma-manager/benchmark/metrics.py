@@ -258,8 +258,14 @@ class Benchmark(GenericBenchmark):
         stats_size = LazyStruct()
         from django.db import connection
         cursor = connection.cursor()
-        cursor.execute("select data_length, index_length from information_schema.tables where table_name = 'r3d_archiverow' and table_schema = 'test_chroma'")
-        stats_size.data, stats_size.index = cursor.fetchone()
+        if 'mysql' in connection.settings_dict['ENGINE']:
+            cursor.execute("select data_length, index_length from information_schema.tables where table_name = 'r3d_archiverow' and table_schema = 'test_chroma'")
+            stats_size.data, stats_size.index = cursor.fetchone()
+        elif 'postgres' in connection.settings_dict['ENGINE']:
+            cursor.execute("select pg_relation_size('r3d_archiverow') as data_length, pg_total_relation_size('r3d_archiverow') - pg_relation_size('r3d_archiverow') as index_length")
+            stats_size.data, stats_size.index = cursor.fetchone()
+        else:
+            raise RuntimeError("Unsupported DB: %s" % connection.settings_dict['ENGINE'])
         from r3d.models import ArchiveRow
         stats_size.row_count = ArchiveRow.objects.count()
         return stats_size

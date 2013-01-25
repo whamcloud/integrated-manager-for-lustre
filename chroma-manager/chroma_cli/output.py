@@ -5,6 +5,7 @@
 
 
 import tablib
+from chroma_cli.exceptions import AbnormalCommandCompletion
 
 
 class StandardFormatter(object):
@@ -90,3 +91,5 @@ class StandardFormatter(object):
                 monitor.update()
             print "\r" + " " * last_len,
             print "\r%s: %s" % (command['message'], monitor.status)
+            if monitor.status != "Finished":
+                raise AbnormalCommandCompletion(command, monitor.status)

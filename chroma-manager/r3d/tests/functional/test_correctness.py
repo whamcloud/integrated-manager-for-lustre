@@ -450,6 +450,9 @@ class DatabaseNamesShouldBeUnique(TestCase):
                           step=audit_freq)
 
     def tearDown(self):
+        # Clean up after IntegrityError
+        from django.db import connection
+        connection._rollback()
         self.rrd.delete()
 
 

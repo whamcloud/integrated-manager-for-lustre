@@ -21,6 +21,7 @@ def writeconf_target(device="", target_types=(), mgsnode=(), fsname="", failnode
            dryrun=False, verbose=False, quiet=False):
     # freeze a view of the namespace before we start messing with it
     args = dict(locals())
+
     options = []
 
     # Workaround for tunefs.lustre being sensitive to argument order:
@@ -71,6 +72,7 @@ def writeconf_target(device="", target_types=(), mgsnode=(), fsname="", failnode
         if name == "device":
             continue
         value = args[name]
+
         if value:
             options.append("--%s=%s" % (name, value))
 

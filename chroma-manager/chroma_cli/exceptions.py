@@ -113,3 +113,13 @@ class ApiConnectionError(ApiException):
 
     def __str__(self):
         return "Failed to connect to %s (is --api_url correct?)" % self.api_url
+
+
+class AbnormalCommandCompletion(Exception):
+    def __init__(self, command, status):
+        self.status = status
+        self.command = command
+        super(AbnormalCommandCompletion, self).__init__()
+
+    def __str__(self):
+        return "Command completed with abnormal status: %s (%s)" % (self.status, self.command['message'])

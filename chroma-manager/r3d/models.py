@@ -20,11 +20,10 @@ from r3d.lib import DNAN, DINF, debug_print
 import cPickle as pickle
 from cPickle import UnpicklingError
 
-
-class PickledObject(str):
-    """
-    Used by PickledObjectField to flag when the value's already been pickled.
-    """
+try:
+    from psycopg2 import Binary
+    pg_binary_cls = type(Binary(''))
+except ImportError:
     pass
 
 
@@ -42,17 +41,24 @@ class PickledObjectField(models.Field):
             return value
 
     def get_prep_value(self, value):
-        if value is not None and not isinstance(value, PickledObject):
-            #items = value.keys()
+        from django.db import connection
+        pickled_cls = str
+        if 'postgresql' in connection.settings_dict['ENGINE']:
+            pickled_cls = pg_binary_cls
+
+        if value is not None and not isinstance(value, pickled_cls):
             # NB: Binary pickle doesn't play well with field types
             # that expect to work with strings (i.e. have a character
             # encoding).  On MySQL, we want to use a BLOB type.
-            value = PickledObject(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
-
-        #if value is not None:
-            #print "%s: %d items, %d bytes" % (self.name, len(items),
-            #                                             len(value))
-            #print "%s: %s" % (self.name, items)
+            value = pickle.dumps(value, pickle.HIGHEST_PROTOCOL)
+            if pickled_cls != str:
+                value = Binary(value)
+        elif isinstance(value, pickled_cls):
+            # Bit of belt-and-suspenders here...  It's reasonably safe to
+            # assume that we wouldn't knowingly define a string-like field
+            # as a PickledObjectField.  We don't want to pickle an
+            # already-pickled value, though.
+            raise RuntimeError("%s: already pickled?" % self.name)
         return value
 
     def db_type(self, connection):
@@ -69,6 +75,9 @@ class PickledObjectField(models.Field):
             return 'MEDIUMBLOB'
             # 2^32 bytes == 4GB
             #return 'LONGBLOB'
+        elif 'postgresql' in connection.settings_dict['ENGINE']:
+            # variable-length binary string
+            return 'bytea'
         else:
             # generic default
             return 'TEXTFIELD'
@@ -862,16 +871,36 @@ class ArchiveRow(models.Model):
 
         from django.db import connection, transaction
         cursor = connection.cursor()
-        sql = """
+        if 'mysql' in connection.settings_dict['ENGINE']:
+            sql = """
 INSERT INTO %s_archiverow (archive_id, slot, ds_pickle)
 VALUES(%%s, %%s, %%s)
 ON DUPLICATE KEY UPDATE
   archive_id=VALUES(archive_id),
   slot=VALUES(slot),
   ds_pickle=VALUES(ds_pickle)
-        """ % (self._meta.app_label)
-        params = [self.archive_id, self.slot, prepped_pickle]
-        cursor.execute(sql, params)
+            """ % (self._meta.app_label)
+            params = [self.archive_id, self.slot, prepped_pickle]
+            cursor.execute(sql, params)
+        elif 'postgres' in connection.settings_dict['ENGINE']:
+            from itertools import repeat
+            # Somewhat racy, but probably OK since we've only got one
+            # process throwing metrics at the DB.  Apparently upserts are
+            # hard, so pgsql doesn't handle them.
+            # Cribbed from http://stackoverflow.com/a/6527838/204920
+            sql = """
+UPDATE %s_archiverow SET ds_pickle=%%s WHERE archive_id=%%s AND slot=%%s;
+INSERT INTO %s_archiverow (archive_id, slot, ds_pickle)
+    SELECT %%s, %%s, %%s
+    WHERE NOT EXISTS (SELECT 1 FROM %s_archiverow
+                      WHERE archive_id=%%s AND slot=%%s);
+            """ % tuple(repeat(self._meta.app_label, 3))
+            params = [prepped_pickle, self.archive_id, self.slot,
+                      self.archive_id, self.slot, prepped_pickle,
+                      self.archive_id, self.slot]
+            cursor.execute(sql, params)
+        else:
+            raise RuntimeError("Unsupported DB: %s" % connection.settings_dict['ENGINE'])
         transaction.commit_unless_managed()
 
 
