@@ -91,7 +91,7 @@ class BaseFakeLustrePlugin(DevicePlugin):
             },
             'mounts': mounts,
             'lnet_up': self._server.state['lnet_up'],
-            'started_at': datetime.datetime.now().isoformat() + "Z",
+            'started_at': datetime.datetime.utcnow().isoformat() + "Z",
             'agent_version': 'dummy'
         }
 

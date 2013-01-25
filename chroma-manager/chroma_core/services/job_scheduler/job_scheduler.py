@@ -15,7 +15,6 @@ import traceback
 import urlparse
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
-from dateutil import tz
 import dateutil.parser
 
 from django.contrib.contenttypes.models import ContentType
@@ -494,7 +493,6 @@ class JobScheduler(object):
 
         # Drop if it's outdated
         modified_at = instance.state_modified_at
-        modified_at = modified_at.replace(tzinfo = tz.tzutc())
         if notification_time <= modified_at:
             log.info("notify: Dropping update of %s (%s) because it has been updated since" % (instance.id, instance))
             return
