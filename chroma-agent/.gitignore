@@ -2,6 +2,3 @@ MANIFEST
 chroma-agent.spec
 setup.py
 dist/
-*.swp
-*.py[o,c]
-*~

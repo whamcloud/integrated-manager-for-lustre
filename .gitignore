@@ -1,2 +1,11 @@
 .idea
 *~
+*.py[co]
+*.swp
+*.swo
+*.log
+*.pid
+local_settings.py
+production_version.py*
+database.db
+.DS_Store
