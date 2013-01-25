@@ -86,7 +86,7 @@ class TestSecureUrls(SupervisorTestCase):
         self._openssl(['genrsa', '-out', server_key.name, '2048'])
         # A self signed cert
         self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority", "-key", server_key.name, "-out", csr.name])
-        self._openssl(["x509", "-req", "-days", "365", "-signkey", server_key.name, "-out", server_cert.name, "-in", csr.name])
+        self._openssl(["x509", "-req", "-days", "36500", "-signkey", server_key.name, "-out", server_cert.name, "-in", csr.name])
 
         return server_key.name, server_cert.name
 
@@ -100,7 +100,7 @@ class TestSecureUrls(SupervisorTestCase):
         # Client CSR
         self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % client_cn, "-key", client_key.name, "-out", client_csr.name])
         # Generate client cert
-        self._openssl(["x509", "-req", "-days", "365", "-CAkey", authority_key, "-CA", authority_cert, "-CAcreateserial", "-out", client_cert.name, "-in", client_csr.name])
+        self._openssl(["x509", "-req", "-days", "36500", "-CAkey", authority_key, "-CA", authority_cert, "-CAcreateserial", "-out", client_cert.name, "-in", client_csr.name])
 
         return client_cert.name, client_key.name
 

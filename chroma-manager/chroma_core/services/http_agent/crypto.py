@@ -26,9 +26,11 @@ class Crypto(CommandLine):
     AUTHORITY_KEY_FILE = 'authority.pem'
     AUTHORITY_CERT_FILE = 'authority.crt'
 
-    log = log_register('crypto')
+    # Certificate duration: we don't use expiration/reissue, so
+    # this is set to a 'forever' value.
+    CERTIFICATE_DAYS = "36500"
 
-    # FIXME: set durations when signing to something meaningful (permanent?)
+    log = log_register('crypto')
 
     def _get_or_create_private_key(self, filename):
         if not os.path.exists(filename):
@@ -50,7 +52,7 @@ class Crypto(CommandLine):
         """
         if not os.path.exists(self.AUTHORITY_CERT_FILE):
             rc, csr, err = self.try_shell(["openssl", "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority", "-key", self.authority_key])
-            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", "365", "-signkey", self.authority_key, "-out", self.AUTHORITY_CERT_FILE], stdin_text = csr)
+            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-signkey", self.authority_key, "-out", self.AUTHORITY_CERT_FILE], stdin_text = csr)
 
         return self.AUTHORITY_CERT_FILE
 
@@ -68,7 +70,7 @@ class Crypto(CommandLine):
 
             self.log.info("Generating manager certificate file")
             rc, csr, err = self.try_shell(["openssl", "req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % hostname, "-key", self.server_key])
-            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", "365", "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", self.MANAGER_CERT_FILE], stdin_text = csr)
+            rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-CA", self.authority_cert, "-CAcreateserial", "-CAkey", self.authority_key, "-out", self.MANAGER_CERT_FILE], stdin_text = csr)
 
             self.log.info("Generated %s" % self.MANAGER_CERT_FILE)
         return self.MANAGER_CERT_FILE
@@ -76,5 +78,5 @@ class Crypto(CommandLine):
     def sign(self, csr_string):
         self.log.info("Signing")
 
-        rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", "365", "-CAkey", self.authority_key, "-CA", self.authority_cert, "-CAcreateserial"], stdin_text = csr_string)
+        rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-CAkey", self.authority_key, "-CA", self.authority_cert, "-CAcreateserial"], stdin_text = csr_string)
         return out.strip()
