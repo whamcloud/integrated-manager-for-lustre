@@ -21,7 +21,7 @@ python-daemon==1.5.2
 lockfile==0.8
 django-tastypie==0.9.11
 tablib
-requests
+requests<1.0.0
 nose-testconfig
 fudge
 simplejson
