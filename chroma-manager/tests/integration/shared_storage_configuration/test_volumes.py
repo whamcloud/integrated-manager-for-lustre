@@ -8,6 +8,8 @@ class TestVolumes(AuthorizedTestCase):
         super(TestVolumes, self).setUp()
 
     def test_volumes_on_existing_filesystem_not_usable(self):
+        # Testing that volumes mounted on a server known to Chroma
+        # are not included in the list of usable volumes. Repro of HYD-1699.
         # Create a file system.
         self.add_hosts([config['lustre_servers'][0]['address']])
 
@@ -51,3 +53,48 @@ class TestVolumes(AuthorizedTestCase):
         self.assertNotIn(mgt_volume['label'], usable_volumes_labels)
         self.assertNotIn(mdt_volume['label'], usable_volumes_labels)
         self.assertNotIn(ost_volumes[0]['label'], usable_volumes_labels)
+
+    def test_volumes_cleared_on_teardown(self):
+        # Create a file system and tear it down, then verify after
+        # tear down that the volumes from the file system no longer
+        # appear in the database. Repro of HYD-1143.
+        hosts = self.add_hosts([
+            config['lustre_servers'][0]['address'],
+            config['lustre_servers'][1]['address']
+        ])
+
+        volumes = self.get_usable_volumes()
+        self.assertGreaterEqual(len(volumes), 3)
+
+        mgt_volume = volumes[0]
+        mdt_volume = volumes[1]
+        ost_volume = volumes[2]
+        self.set_volume_mounts(mgt_volume, hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(mdt_volume, hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(ost_volume, hosts[1]['id'], hosts[0]['id'])
+
+        self.create_filesystem(
+            {
+                'name': 'testfs',
+                'mgt': {'volume_id': mgt_volume['id']},
+                'mdt': {
+                    'volume_id': mdt_volume['id'],
+                    'conf_params': {}
+                },
+                'osts': [{
+                    'volume_id': ost_volume['id'],
+                    'conf_params': {}
+                }],
+                'conf_params': {}
+            }
+        )
+
+        self.graceful_teardown(self.chroma_manager)
+
+        response = self.chroma_manager.get(
+            '/api/volume/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        volumes = response.json['objects']
+        self.assertEqual(0, len(volumes))
