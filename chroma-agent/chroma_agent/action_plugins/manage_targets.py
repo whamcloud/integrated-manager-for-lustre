@@ -15,8 +15,8 @@ from chroma_agent.store import AgentStore
 from chroma_agent import shell
 
 
-def writeconf_target(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
-           servicenode=(), param={}, index=None, comment="", mountfsoptions="",
+def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None, failnode=(),
+           servicenode=(), param={}, index=None, comment=None, mountfsoptions=None,
            network=(), erase_params=False, nomgs=False, writeconf=False,
            dryrun=False, verbose=False, quiet=False):
     # freeze a view of the namespace before we start messing with it
@@ -73,7 +73,7 @@ def writeconf_target(device="", target_types=(), mgsnode=(), fsname="", failnode
             continue
         value = args[name]
 
-        if value:
+        if value is not None:
             options.append("--%s=%s" % (name, value))
 
     shell.try_run(['tunefs.lustre'] + options + [device])
@@ -177,10 +177,10 @@ def _cibadmin(command_args):
     return rc, stdout, stderr
 
 
-def format_target(device="", target_types=(), mgsnode=(), fsname="", failnode=(),
-         servicenode=(), param={}, index=None, comment="", mountfsoptions="",
-         network=(), backfstype="", device_size="", mkfsoptions="",
-         reformat=False, stripe_count_hint="", iam_dir=False,
+def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnode=(),
+         servicenode=(), param={}, index=None, comment=None, mountfsoptions=None,
+         network=(), backfstype=None, device_size=None, mkfsoptions=None,
+         reformat=False, stripe_count_hint=None, iam_dir=False,
          dryrun=False, verbose=False, quiet=False):
     """Perform a mkfs.lustre operation on a block device."""
 
@@ -229,7 +229,7 @@ def format_target(device="", target_types=(), mgsnode=(), fsname="", failnode=()
         if name == "device":
             continue
         value = args[name]
-        if value:
+        if value is not None:
             options.append("--%s=%s" % (name, value))
 
     shell.try_run(['mkfs.lustre'] + options + [device])

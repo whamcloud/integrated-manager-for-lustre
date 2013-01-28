@@ -110,8 +110,13 @@ class TestFormatTarget(CommandCaptureTestCase):
         format_target(device = "/dev/foo", dryrun=True)
         self.assertRan(["mkfs.lustre", "--dryrun", "/dev/foo"])
 
+    def test_zero_opt(self):
+        format_target(device = "/dev/foo", index=0,
+            mkfsoptions='-x 30 --y --z=83')
+        self.assertRan(["mkfs.lustre", "--index=0", "--mkfsoptions=-x 30 --y --z=83", "/dev/foo"])
+
     def test_other_opts(self):
-        format_target(device = "/dev/foo", index='42',
+        format_target(device = "/dev/foo", index=42,
                           mkfsoptions='-x 30 --y --z=83')
         self.assertRan(["mkfs.lustre", "--index=42", "--mkfsoptions=-x 30 --y --z=83", "/dev/foo"])
 
