@@ -237,6 +237,11 @@ if DEBUG:
 else:
     LOG_PATH = "/var/log/chroma"
 
+if DEBUG:
+    CRYPTO_FOLDER = "./"
+else:
+    CRYPTO_FOLDER = "/var/lib/chroma"
+
 LOG_LEVEL = logging.INFO
 
 EMAIL_HOST = None

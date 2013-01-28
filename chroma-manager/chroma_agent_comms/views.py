@@ -8,7 +8,6 @@ import Queue
 import json
 import traceback
 import datetime
-import M2Crypto
 import dateutil
 import dateutil.tz
 
@@ -220,17 +219,16 @@ def register(request, key):
     # Fulfil the registering server's request for a certificate authenticating
     # it as the owner of this FQDN.
     csr = host_attributes['csr']
-    certificate_str = Crypto().sign(csr)
-    certificate = M2Crypto.X509.load_cert_string(certificate_str, M2Crypto.X509.FORMAT_PEM)
-    fingerprint = certificate.get_fingerprint(md = 'sha1')
 
     # Check that the commonName in the CSR is the same as that in host_attributes
     # (prevent registering as one host and getting a certificate to impersonate another)
-    csr_fqdn = certificate.get_subject().commonName
+    csr_fqdn = Crypto().get_common_name(csr)
     if csr_fqdn != host_attributes['fqdn']:
         # Terse response to attacker
         log.error("FQDN mismatch '%s' vs. '%s' from %s" % (csr_fqdn, host_attributes['fqdn'], request.META['HTTP_X_FORWARDED_FOR']))
         return HttpResponse(status = 400, content = "")
+
+    certificate_str = Crypto().sign(csr)
 
     # FIXME: handle the case where someone registers,
     # and then dies before saving their certificate:
@@ -248,8 +246,7 @@ def register(request, key):
         address = host_attributes['address'],
         fqdn = host_attributes['fqdn'],
         nodename = host_attributes['nodename'],
-        capabilities = host_attributes['capabilities'],
-        ssl_fingerprint = fingerprint
+        capabilities = host_attributes['capabilities']
     )
 
     # TODO: document this return format

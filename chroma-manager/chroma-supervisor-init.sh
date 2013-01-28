@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# chroma-storage Chroma storage monitoring service
+# chroma-supervisor     Runs supervisord with the Chroma configuration file
 #
 # chkconfig: 345 88 12
-# description: starts the chroma storage daemon
-# processname: python
+# description: Runs supervisord with the Chroma configuration file
+# processname: supervisord
 
 . /etc/init.d/functions
 
@@ -15,7 +15,7 @@ export LOG_DIR=/var/log/chroma
 export PYTHONPATH=${PROJECT_PATH}
 
 start() {
-    action "Starting ${SERVICE_NAME}"  python ${PROJECT_PATH}/manage.py chroma_service --daemon --pid-file=${PID_FILE} job_scheduler plugin_runner
+    action "Starting ${SERVICE_NAME}" supervisord --pidfile=${PID_FILE} -c ${PROJECT_PATH}/supervisord.conf -d ${PROJECT_PATH} -l ${LOG_DIR}/supervisord.conf
     echo
 }
 

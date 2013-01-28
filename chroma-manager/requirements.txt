@@ -1,5 +1,5 @@
 python>=2.6.5
-django==1.4.1
+Django==1.4.1
 nose>=1.1.2
 django-nose
 django-extensions
@@ -32,6 +32,5 @@ log4tailer
 jsonschema
 supervisor
 django-supervisor==0.3.0
-gevent
-m2crypto
+http://github.com/downloads/SiteSupport/gevent/gevent-1.0rc2.tar.gz#egg=gevent
 pygraphviz # For building diagrams in the docs

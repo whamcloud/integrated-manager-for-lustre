@@ -8,21 +8,14 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'RegistrationToken'
-        db.create_table('chroma_core_registrationtoken', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('expiry', self.gf('django.db.models.fields.DateTimeField')()),
-            ('cancelled', self.gf('django.db.models.fields.BooleanField')(default=False)),
-            ('secret', self.gf('django.db.models.fields.CharField')(max_length=32)),
-            ('credits', self.gf('django.db.models.fields.IntegerField')(default=1)),
-        ))
-        db.send_create_signal('chroma_core', ['RegistrationToken'])
+        # Deleting field 'ManagedHost.ssl_fingerprint'
+        db.delete_column('chroma_core_managedhost', 'ssl_fingerprint')
 
 
     def backwards(self, orm):
-        # Deleting model 'RegistrationToken'
-        db.delete_table('chroma_core_registrationtoken')
 
+        # User chose to not deal with backwards NULL issues for 'ManagedHost.ssl_fingerprint'
+        raise RuntimeError("Cannot reverse this migration. 'ManagedHost.ssl_fingerprint' and its values cannot be restored.")
 
     models = {
         'auth.group': {
@@ -281,7 +274,6 @@ class Migration(SchemaMigration):
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
-            'ssl_fingerprint': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
@@ -356,9 +348,9 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 1, 21, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 1, 30, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'H\\xcdw;\\x18K\\xbfE\\xdb\\x13\\x0eR\\xcd\\xffT\\xe7'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'1C6524CAF1A014F906CECE0EC39334DE'", 'max_length': '32'})
         },
         'chroma_core.relearnnidsjob': {
             'Meta': {'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},

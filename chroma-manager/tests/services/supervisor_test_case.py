@@ -53,8 +53,6 @@ class SupervisorTestCase(TestCase):
         cp.set("supervisorctl", "password", self.TEST_PASSWORD)
         cp.set("supervisorctl", "serverurl", "http://localhost:%s/" % self.TEST_PORT)
 
-        cp.add_section('supervisord')
-
         self._tmp_conf = tempfile.NamedTemporaryFile(delete = False)
         cp.write(self._tmp_conf)
         self._tmp_conf.close()

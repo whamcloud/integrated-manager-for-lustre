@@ -59,7 +59,7 @@ class HostResource(MetricResource, StatefulModelResource):
     class Meta:
         queryset = ManagedHost.objects.all()
         resource_name = 'host'
-        excludes = ['not_deleted', 'ssl_fingerprint']
+        excludes = ['not_deleted']
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
         ordering = ['fqdn']

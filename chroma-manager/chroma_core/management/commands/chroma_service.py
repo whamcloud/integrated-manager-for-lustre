@@ -73,6 +73,9 @@ class Command(BaseCommand):
         if options['gevent']:
             from gevent.monkey import patch_all
             patch_all(thread = True)
+            # Gevent's implementation of select removes 'poll'
+            import subprocess
+            subprocess._has_poll = False
 
             import django.db
             django.db.connections._connections = threading.local()

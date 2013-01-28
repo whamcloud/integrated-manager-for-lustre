@@ -9,8 +9,11 @@ import getpass
 import socket
 import errno
 import sys
+import os
+import json
+import tempfile
+
 from chroma_core.lib.util import chroma_settings, CommandLine
-from chroma_core.services.http_agent.crypto import Crypto
 
 log = logging.getLogger('installation')
 log.addHandler(logging.StreamHandler())
@@ -20,6 +23,7 @@ settings = chroma_settings()
 
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
+from chroma_core.services.http_agent.crypto import Crypto
 
 
 class NTPConfig:
@@ -31,13 +35,11 @@ class NTPConfig:
         self.config_file = config_file or self.CONFIG_FILE
 
     def open_conf_for_edit(self):
-        from tempfile import mkstemp
-        tmp_f, tmp_name = mkstemp(dir = '/etc')
+        tmp_f, tmp_name = tempfile.mkstemp(dir = '/etc')
         f = open('/etc/ntp.conf', 'r')
         return tmp_f, tmp_name, f
 
     def close_conf(self, tmp_f, tmp_name, f):
-        import os
         f.close()
         os.close(tmp_f)
         if not os.path.exists("/etc/ntp.conf.pre-chroma"):
@@ -46,7 +48,6 @@ class NTPConfig:
         os.rename(tmp_name, "/etc/ntp.conf")
 
     def remove(self):
-        import os
         """Remove our config section from the ntp config file, or do
         nothing if our section is not there"""
         tmp_f, tmp_name, f = self.open_conf_for_edit()
@@ -65,7 +66,6 @@ class NTPConfig:
         self.close_conf(tmp_f, tmp_name, f)
 
     def add(self, server):
-        import os
         tmp_f, tmp_name, f = self.open_conf_for_edit()
         added_server = False
         for line in f.readlines():
@@ -248,10 +248,14 @@ class ServiceConfig(CommandLine):
         self.try_shell(["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
 
     def _setup_crypto(self):
+        if not os.path.exists(settings.CRYPTO_FOLDER):
+            os.makedirs(settings.CRYPTO_FOLDER)
+        crypto = Crypto()
         # The server_cert attribute is created on read
-        Crypto().server_cert
+        # FIXME: tidy up Crypto, some of its methods are no longer used
+        crypto.server_cert
 
-    CONTROLLED_SERVICES = ['chroma-supervisor']
+    CONTROLLED_SERVICES = ['chroma-supervisor', 'httpd']
 
     def _enable_services(self):
         log.info("Enabling Chroma daemons")
@@ -383,6 +387,7 @@ class ServiceConfig(CommandLine):
         self._setup_ntp(ntp_server)
         self._setup_rabbitmq_service()
         self._setup_rabbitmq_credentials()
+        self._setup_crypto()
         self._enable_services()
 
         self._start_services()
@@ -442,11 +447,12 @@ class ServiceConfig(CommandLine):
             except KeyError:
                 errors.append("Service %s not found" % s)
 
+        # TODO: XMLRPC to supervisord to ask it about the status of individual services
+
         return errors
 
     def _write_local_settings(self, databases):
         # Build a local_settings file
-        import os
         project_dir = os.path.dirname(os.path.realpath(settings.__file__))
         local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
         local_settings_str = ""
@@ -459,7 +465,6 @@ class ServiceConfig(CommandLine):
                 databases['default']['NAME'])
 
         # Usefully, a JSON dict looks a lot like python
-        import json
         local_settings_str += "DATABASES = %s\n" % json.dumps(databases, indent=4).replace("null", "None")
 
         # Dump local_settings_str to local_settings
@@ -508,13 +513,13 @@ def chroma_config():
             else:
                 usage()
 
-        log.info("\nStarting the installation...\n")
+        log.info("Starting setup...\n")
         errors = service_config.setup(*args)
         if errors:
             print_errors(errors)
             sys.exit(-1)
         else:
-            log.info("\nThe installation was SUCCESSFUL!\n")
+            log.info("\nSetup complete.")
             sys.exit(0)
     elif command == 'validate':
         errors = service_config.validate()

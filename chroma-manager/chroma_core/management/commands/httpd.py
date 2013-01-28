@@ -32,7 +32,7 @@ class Command(BaseCommand):
         from chroma_core.lib.util import site_dir
 
         SITE_ROOT = site_dir()
-        DEV_HTTPD_CONF_TEMPLATE = os.path.join(SITE_ROOT, "chroma-manager.conf")
+        DEV_HTTPD_CONF_TEMPLATE = os.path.join(SITE_ROOT, "chroma-manager.conf.template")
         HTTPD_BIN = "/usr/sbin/httpd"
 
         # TODO: make this a bit more flexible (also look in the location where
@@ -59,6 +59,9 @@ class Command(BaseCommand):
         }))
         open(DEV_HTTPD_CONF, 'w').write(conf_text)
 
-        cmdline = [HTTPD_BIN, "-D", "NO_DETACH", "-D", "FOREGROUND", "-f", DEV_HTTPD_CONF]
+        # Value used for conditional regions of config
+        CHROMA_DEV_FLAG = "ChromaDev"
+
+        cmdline = [HTTPD_BIN, "-D", CHROMA_DEV_FLAG, "-D", "NO_DETACH", "-D", "FOREGROUND", "-f", DEV_HTTPD_CONF]
         sys.stderr.write("Run this:\n")
         print " ".join(cmdline)

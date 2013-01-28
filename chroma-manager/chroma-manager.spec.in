@@ -21,10 +21,12 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: mod_wsgi httpd ntp ed
+Requires: mod_wsgi mod_ssl httpd ntp ed
 Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse
+Requires: python-supervisor
+Requires: python-jsonschema
 Requires: python-dateutil
 Requires: python-uuid
 Requires: python-multiprocessing
@@ -34,7 +36,6 @@ Requires: python-daemon
 Requires: python-celery >= 3.0.11
 Requires: python-amqplib
 Requires: pygobject2
-Requires: rsyslog-mysql
 Requires: mysql-server
 Requires: MySQL-python >= 1.2.1p2
 Requires: rabbitmq-server
@@ -46,6 +47,7 @@ Requires: django-tastypie = 0.9.11
 Requires: django-celery >= 3.0.10
 Requires: django-picklefield
 Requires: chroma-manager-libs = %{version}
+Requires: policycoreutils-python
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 
@@ -82,6 +84,7 @@ echo -e "/^HTTPS_FRONTEND_PORT =/s/= .*$/= 443/\nwq" | ed settings.py 2>/dev/nul
 %{__python} setup.py build
 # workaround setuptools inanity for top-level datafiles
 cp -a chroma-manager.wsgi build/lib
+cp -a supervisord.conf build/lib
 
 %install
 %{__python} setup.py install --skip-build --root=%{buildroot}
@@ -136,6 +139,9 @@ setsebool -P httpd_can_network_connect 1 2>/dev/null
 # module (see HYD-1475)
 setsebool -P httpd_tmp_exec 1 2>/dev/null
 
+# This is required for apache to serve HTTP_API_PORT
+semanage port -a -t http_port_t -p tcp 8001
+
 
 echo "Thank you for installing Chroma.  To complete your installation, please"
 echo "run chroma-config"
@@ -146,18 +152,6 @@ service chroma-supervisor stop
 rm -rf /usr/share/chroma-manager/static
 find /usr/share/chroma-manager/ -name "*.pyc" -exec rm -f {} \;
 
-%postun
-# remove rsyslog entries if this the last version being removed.
-if [[ $1 -eq 0 ]]; then
-    # configure rsyslog.conf
-    while egrep -q  "^# Added by chroma-manager" /etc/rsyslog.conf; do
-        ed /etc/rsyslog.conf <<"EOF" 2>/dev/null
-/^# Added by chroma-manager/;/^# Added by chroma-manager/d
-w
-q
-EOF
-    done
-fi
 
 %files
 %defattr(-,root,root)

@@ -1,4 +1,9 @@
 
+<IfDefine ChromaDev>
+
+# In development mode, this file is a standalone apache config, whereas
+# in production mode it is added to the system defaults.
+
 ErrorLog {{log}}/error_log
 PidFile {{var}}/httpd.pid
 LockFile {{var}}/accept.lock
@@ -6,20 +11,29 @@ LockFile {{var}}/accept.lock
 LoadModule wsgi_module {{wsgi_path}}
 LoadModule proxy_module libexec/apache2/mod_proxy.so
 LoadModule proxy_http_module libexec/apache2/mod_proxy_http.so
-LoadModule ssl_module libexec/apache2/mod_ssl.so
 LoadModule alias_module libexec/apache2/mod_alias.so
 LoadModule authz_host_module libexec/apache2/mod_authz_host.so
 LoadModule rewrite_module libexec/apache2/mod_rewrite.so
 LoadModule headers_module libexec/apache2/mod_headers.so
 LoadModule log_config_module libexec/apache2/mod_log_config.so
+LoadModule ssl_module libexec/apache2/mod_ssl.so
 
 LogFormat "%h %l %u %t \"%r\" %>s %b" common
 CustomLog {{log}}/access_log common
 
+
+
+WSGIPythonPath {{WSGI_PYTHON_PATH}}
+
+Listen {{HTTPS_FRONTEND_PORT}}
+Listen {{HTTP_FRONTEND_PORT}}
+
+</IfDefine>
+
+
 DocumentRoot .
 
 # HTTPS frontend
-Listen {{HTTPS_FRONTEND_PORT}}
 NameVirtualHost *:{{HTTPS_FRONTEND_PORT}}
 
 # chroma_api and chroma_ui
@@ -27,17 +41,7 @@ Listen {{HTTP_API_PORT}}
 NameVirtualHost *:{{HTTP_API_PORT}}
 
 # HTTP just to redirect to HTTPS
-Listen {{HTTP_FRONTEND_PORT}}
 NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
-
-# NB apache-serving of static files is production-only
-#Alias /static /usr/share/chroma-manager/static/
-#<Location "/static">
-#	SetHandler None
-#</Location>
-
-WSGIPythonPath {{WSGI_PYTHON_PATH}}
-
 
 <VirtualHost *:{{HTTP_FRONTEND_PORT}}>
     RewriteEngine On
@@ -46,12 +50,11 @@ WSGIPythonPath {{WSGI_PYTHON_PATH}}
 </VirtualHost>
 
 <VirtualHost *:{{HTTPS_FRONTEND_PORT}}>
-    # TODO: generate certificates in chroma-config
     SSLEngine on
     SSLProtocol all -SSLv2
     SSLCipherSuite ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:!LOW:!SSLv2:+EXP
     SSLCertificateFile {{ssl}}/manager.crt
-    SSLCertificateKeyFile {{ssl}}/privkey.pem
+    SSLCertificateKeyFile {{ssl}}/manager.pem
     SSLCACertificateFile {{ssl}}/authority.crt
 
     RedirectMatch permanent ^/$ /ui/
@@ -65,10 +68,17 @@ WSGIPythonPath {{WSGI_PYTHON_PATH}}
         SetHandler None
     </Location>
 
-    # NB ProxyPass /static is development-only
-    <Location /static/>
-        ProxyPass http://localhost:{{HTTP_API_PORT}}/static/
-    </Location>
+    <IfDefine ChromaDev>
+        <Location /static/>
+            ProxyPass http://localhost:{{HTTP_API_PORT}}/static/
+        </Location>
+    </IfDefine>
+    <IfDefine !ChromaDev>
+        Alias /static {{app}}/static/
+        <Location "/static">
+        	SetHandler None
+        </Location>
+    </IfDefine>
 
     <Location /ui/>
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/

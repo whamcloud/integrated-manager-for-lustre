@@ -9,6 +9,7 @@ import os
 
 from chroma_core.lib.util import CommandLine
 from chroma_core.services import log_register
+import re
 
 import settings
 
@@ -17,14 +18,14 @@ class Crypto(CommandLine):
     # The manager's local key and certificate, used for
     # identifying itself to agents and to API clients such
     # as web browsers and the command line interface.
-    MANAGER_KEY_FILE = 'privkey.pem'
-    MANAGER_CERT_FILE = 'manager.crt'
+    MANAGER_KEY_FILE = os.path.join(settings.CRYPTO_FOLDER, 'manager.pem')
+    MANAGER_CERT_FILE = os.path.join(settings.CRYPTO_FOLDER, 'manager.crt')
 
     # The local CA used for issuing certificates to agents, and
     # for signing the manager cert if an externally signed cert
     # is not provided
-    AUTHORITY_KEY_FILE = 'authority.pem'
-    AUTHORITY_CERT_FILE = 'authority.crt'
+    AUTHORITY_KEY_FILE = os.path.join(settings.CRYPTO_FOLDER, 'authority.pem')
+    AUTHORITY_CERT_FILE = os.path.join(settings.CRYPTO_FOLDER, 'authority.crt')
 
     # Certificate duration: we don't use expiration/reissue, so
     # this is set to a 'forever' value.
@@ -74,6 +75,10 @@ class Crypto(CommandLine):
 
             self.log.info("Generated %s" % self.MANAGER_CERT_FILE)
         return self.MANAGER_CERT_FILE
+
+    def get_common_name(self, csr_string):
+        rc, out, err = self.try_shell(['openssl', 'req', '-noout', '-subject'], stdin_text = csr_string)
+        return re.search("/CN=([^/]+)", out).group(1)
 
     def sign(self, csr_string):
         self.log.info("Signing")

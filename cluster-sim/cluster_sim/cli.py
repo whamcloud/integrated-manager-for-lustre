@@ -72,18 +72,17 @@ class SimulatorCli(object):
         return response.json()['secret']
 
     def register(self, args):
+        self.simulator = ClusterSimulator(args.config, args.url)
         server_count = len(self.simulator.servers)
+
         if args.secret:
             secret = args.secret
         elif args.username and args.password:
             secret = self._acquire_token(args.url, args.username, args.password, server_count)
         else:
-            sys.stderr.write("""
-            Must pass either --secret or --username and --password
-            """)
+            sys.stderr.write("Must pass either --secret or --username and --password\n")
             sys.exit(-1)
 
-        self.simulator = ClusterSimulator(args.config, args.url)
         log.info("Registering %s servers in %s/" % (server_count, args.config))
         self.simulator.register_all(secret)
 

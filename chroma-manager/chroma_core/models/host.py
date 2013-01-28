@@ -67,9 +67,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # a nodename to match against fqdn in corosync output
     nodename = models.CharField(max_length = 255, help_text = "Unicode string, node name")
 
-    # The SHA1 fingerprint of the certificate issued to the host
-    ssl_fingerprint = models.CharField(max_length = 64)
-
     # The last known boot time
     boot_time = models.DateTimeField(null = True, blank = True)
 
