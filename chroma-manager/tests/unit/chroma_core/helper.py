@@ -14,7 +14,7 @@ from dateutil import tz
 from django.test import TestCase
 import mock
 from chroma_core.models.jobs import Command
-from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage
+from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, StorageResourceRecord
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 import re
@@ -23,6 +23,26 @@ from tests.unit.chroma_api.tastypie_test import TestApiClient
 
 
 log = log_register('test_helper')
+
+
+def synthetic_volume(serial = None):
+    volume = Volume.objects.create()
+
+    if serial is None:
+        serial = "foobar%d" % volume.id
+
+    attrs = {'serial_80': None,
+     'serial_83': serial,
+     'size': 1024000}
+
+    from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+    resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDevice')
+    storage_resource, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, attrs)
+
+    volume.storage_resource = storage_resource
+    volume.save()
+
+    return volume
 
 
 def freshen(obj):
@@ -189,10 +209,12 @@ class JobTestCase(TestCase):
         raise self.failureException("Command '%s', %s was not invoked (calls were: %s)" % (agent_command, agent_args, wrapped_calls))
 
     def _test_lun(self, primary_host, *args):
-        volume = Volume.objects.create()
-        VolumeNode.objects.create(volume = volume, host = primary_host, path = "/fake/path/%s" % volume.id, primary = True)
+        volume = synthetic_volume()
+        path = "/fake/path/%s" % volume.id
+
+        VolumeNode.objects.create(volume = volume, host = primary_host, path = path, primary = True)
         for host in args:
-            VolumeNode.objects.create(volume = volume, host = host, path = "/fake/path/%s" % volume.id, primary = False)
+            VolumeNode.objects.create(volume = volume, host = host, path = path, primary = False)
 
         return volume
 

@@ -2,42 +2,29 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
+
+
+import mock
 from chroma_core.lib.util import chroma_settings
 
 
-class FakeTestHostContactTask(object):
-    def __init__(self, resolve=True, ping=True, agent=True,
-                 reverse_resolve=True, reverse_ping=True):
-        self.resolve = resolve
-        self.ping = ping
-        self.agent = agent
-        self.reverse_resolve = reverse_resolve
-        self.reverse_ping = reverse_ping
+def patch_test_host_contact_task(context, result_attrs = {}):
+    from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
-    def delay(self, host):
-        result = {
-            'address': host.address,
-            'resolve': self.resolve,
-            'ping': self.ping,
-            'agent': self.agent,
-            'reverse_resolve': self.reverse_resolve,
-            'reverse_ping': self.reverse_ping,
-        }
+    defaults = {
+        'resolve': True,
+        'ping': True,
+        'agent': True,
+        'reverse_resolve': True,
+        'reverse_ping': True,
+    }
 
-        from celery.states import SUCCESS
-        from celery.result import EagerResult
-        return EagerResult(42, result, SUCCESS)
-
-
-def patch_test_host_contact_task(context, fake_task=None):
-    if not fake_task:
-        fake_task = FakeTestHostContactTask()
-
-    import chroma_core.tasks
     # Don't overwrite the original reference!
     if not 'old_test_host_contact' in context:
-        context.old_test_host_contact = chroma_core.tasks.test_host_contact
-    chroma_core.tasks.test_host_contact = fake_task
+        context.old_test_host_contact = JobSchedulerClient.test_host_contact
+
+    result = dict(defaults.items() + result_attrs.items())
+    JobSchedulerClient.test_host_contact = mock.Mock(side_effect = lambda address: dict([('address', address)] + result.items()))
 
 
 def before_all(context):
@@ -119,9 +106,12 @@ def after_feature(context, feature):
     from chroma_api.authentication import CsrfAuthentication
     CsrfAuthentication.is_authenticated = context.old_is_authenticated
 
-    import chroma_core.tasks
-    chroma_core.tasks.test_host_contact = context.old_test_host_contact
-#--def before_scenario(context, scenario):
+    from django.contrib.contenttypes.models import ContentType
+    ContentType.objects.clear_cache()
+
+    from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+    JobSchedulerClient.test_host_contact = context.old_test_host_contact
+##--def before_scenario(context, scenario):
 #--    # Set up the scenario test environment
 #--    context.runner.setup_test_environment()
 #--    # We must set up and tear down the entire database between

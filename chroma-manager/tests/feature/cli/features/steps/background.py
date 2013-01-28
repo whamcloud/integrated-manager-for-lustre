@@ -62,16 +62,16 @@ def step(context, name):
 
 @given('the mock servers are set up')
 def step(context):
-    from chroma_core.models.host import ManagedHost
+    from chroma_core.models.host import ManagedHost, VolumeNode
     from tests.unit.chroma_core.helper import MockAgent
 
-    # Skip setup if it was already done in a previous scenario.
-    if ManagedHost.objects.count() > 0:
-        return
+    for address, host_info in sorted(MockAgent.mock_servers.items()):
+        if not ManagedHost.objects.filter(fqdn = host_info['fqdn']).exists():
+            ManagedHost.create(host_info['fqdn'], host_info['nodename'], ['manage_targets'], address = address)
 
     for address, host_info in sorted(MockAgent.mock_servers.items()):
-        host = ManagedHost.create(host_info['fqdn'], host_info['nodename'], ['manage_targets'], address = address)[0]
-        context.test_case._test_lun(host)
+        if not VolumeNode.objects.filter(host__fqdn = host_info['fqdn'], path__startswith = "/fake/path/").exists():
+            context.test_case._test_lun(ManagedHost.objects.get(fqdn = host_info['fqdn']))
 
     eq_(ManagedHost.objects.count(), len(MockAgent.mock_servers))
 

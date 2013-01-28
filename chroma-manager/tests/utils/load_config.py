@@ -16,7 +16,8 @@ def _validate_conf_params(conf_params):
 
 
 def _find_or_create_target(klass, mounts, **kwargs):
-    from chroma_core.models import ManagedHost, Volume, VolumeNode, ManagedTargetMount
+    from chroma_core.models import ManagedHost, VolumeNode, ManagedTargetMount
+    from tests.unit.chroma_core.helper import synthetic_volume
 
     # Setup Volume/VolumeNode
     volume = None
@@ -30,7 +31,7 @@ def _find_or_create_target(klass, mounts, **kwargs):
             pass
 
     if not volume:
-        volume = Volume.objects.create()
+        volume = synthetic_volume("%s:%s" % (mounts[0]['host'], mounts[0]['device_node']))
 
     # Find existing Target if there is one
     target = None
