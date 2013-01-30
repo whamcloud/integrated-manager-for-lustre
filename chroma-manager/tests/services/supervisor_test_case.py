@@ -11,7 +11,7 @@ import os
 
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from unittest import TestCase
+from django.utils.unittest import TestCase
 
 from chroma_core.lib.util import site_dir
 
@@ -32,6 +32,37 @@ class SupervisorTestCase(TestCase):
         self._supervisor = None
         self._tmp_conf = None
 
+    def _wait_for_supervisord(self):
+        try:
+            self._wait_for_port(self.TEST_PORT)
+        except AssertionError:
+            rc = self._supervisor.poll()
+            if rc is not None:
+                stdout, stderr = self._supervisor.communicate()
+                log.error("supervisord stdout: %s" % stdout)
+                log.error("supervisord stderr: %s" % stderr)
+                log.error("supervisord rc = %s" % rc)
+                raise AssertionError("supervisord terminated prematurely with status %s" % rc)
+            else:
+                raise
+
+    def _wait_for_port(self, port, timeout = 10):
+        log.info("Waiting for port %s..." % port)
+        i = 0
+        while True:
+            s = socket.socket()
+            try:
+                s.connect(("localhost", port))
+            except socket.error:
+                if i > timeout:
+                    raise AssertionError("Timed out after %s seconds waiting for port %s" % (timeout, port))
+                i += 1
+                time.sleep(1)
+            else:
+                s.close()
+                log.info("Port %s ready after %s seconds" % (port, i))
+                break
+
     def setUp(self):
         cfg_stringio = StringIO(open(self.CONF).read())
         cp = ConfigParser()
@@ -44,7 +75,7 @@ class SupervisorTestCase(TestCase):
                 cp.set(section, 'autostart', 'false')
 
         cp.add_section('inet_http_server')
-        cp.set("inet_http_server", "port", self.TEST_PORT)
+        cp.set("inet_http_server", "port", "127.0.0.1:%s" % self.TEST_PORT)
         cp.set("inet_http_server", "username", self.TEST_USERNAME)
         cp.set("inet_http_server", "password", self.TEST_PASSWORD)
 
@@ -63,22 +94,21 @@ class SupervisorTestCase(TestCase):
         self._supervisor = subprocess.Popen(cmdline, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
         log.info("Started supervisord")
 
-        while True:
-            s = socket.socket()
-            try:
-                s.connect(("localhost", self.TEST_PORT))
-            except socket.error:
-                time.sleep(1)
-            else:
-                log.info("Opened supervisord XMLRPC socket")
-                s.close()
-                break
+        try:
+            self._wait_for_supervisord()
 
-        self._xmlrpc = xmlrpclib.Server("http://%s:%s@localhost:%s/RPC2" % (self.TEST_USERNAME, self.TEST_PASSWORD, self.TEST_PORT))
+            self._xmlrpc = xmlrpclib.Server("http://%s:%s@localhost:%s/RPC2" % (self.TEST_USERNAME, self.TEST_PASSWORD, self.TEST_PORT))
 
-        for service in self.SERVICES:
-            log.info("Starting service '%s'" % service)
-            self.start(service)
+            for service in self.SERVICES:
+                log.info("Starting service '%s'" % service)
+                self.start(service)
+
+            for port in self.PORTS:
+                self._wait_for_port(port)
+        except:
+            # Ensure we don't leave a supervisor process behind
+            self.tearDown()
+            raise
 
     def tearDown(self):
         if self._supervisor is not None:

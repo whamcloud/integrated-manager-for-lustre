@@ -17,9 +17,32 @@ import settings
 
 class Command(BaseCommand):
     """
-    Run apache, using configuration files modified to work in development
+    Set up an apache config to work in development
     mode as an unprivileged user
     """
+
+    @property
+    def _wsgi_path(self):
+        WSGI_LOCATIONS = [
+            '/usr/lib64/httpd/modules/mod_wsgi.so',  # CentOS 6 location
+            '/usr/local/Cellar/mod_wsgi/3.3/libexec/mod_wsgi.so'  # OS X 10.7 + homebrew location
+        ]
+        for path in WSGI_LOCATIONS:
+            if os.path.exists(path):
+                return path
+
+        raise RuntimeError("WSGI module not found (yum install mod_wsgi, or "
+                           "https://github.com/Homebrew/homebrew-apache).  Tried locations: %s" % WSGI_LOCATIONS)
+
+    @property
+    def _module_path(self):
+        PATHS = ["/usr/libexec/apache2/", "/usr/lib64/httpd/modules/"]
+        for path in PATHS:
+            if os.path.exists(path):
+                return path
+
+        raise RuntimeError("Apache module path not found (tried %s)" % PATHS)
+
     def handle(self, *args, **kwargs):
         """
         Generate config files for running apache, and send the httpd command
@@ -31,15 +54,12 @@ class Command(BaseCommand):
         """
         from chroma_core.lib.util import site_dir
 
+        # This command is only for development
+        assert settings.DEBUG
+
         SITE_ROOT = site_dir()
         DEV_HTTPD_CONF_TEMPLATE = os.path.join(SITE_ROOT, "chroma-manager.conf.template")
         HTTPD_BIN = "/usr/sbin/httpd"
-
-        # TODO: make this a bit more flexible (also look in the location where
-        # the module would be on a centos system)
-        WSGI_PATH = '/usr/local/Cellar/mod_wsgi/3.3/libexec/mod_wsgi.so'
-        if not os.path.exists(WSGI_PATH):
-            raise RuntimeError("WSGI module not found (https://github.com/Homebrew/homebrew-apache)")
 
         DEV_HTTPD_DIR = os.path.join(SITE_ROOT, "dev_httpd")
         if not os.path.exists(DEV_HTTPD_DIR):
@@ -50,7 +70,8 @@ class Command(BaseCommand):
             'log': SITE_ROOT,
             'ssl': SITE_ROOT,
             'app': SITE_ROOT,
-            'wsgi_path': WSGI_PATH,
+            'wsgi_path': self._wsgi_path,
+            'module_path': self._module_path,
             'HTTP_FRONTEND_PORT': settings.HTTP_FRONTEND_PORT,
             'HTTPS_FRONTEND_PORT': settings.HTTPS_FRONTEND_PORT,
             'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,

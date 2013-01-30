@@ -9,14 +9,14 @@ PidFile {{var}}/httpd.pid
 LockFile {{var}}/accept.lock
 
 LoadModule wsgi_module {{wsgi_path}}
-LoadModule proxy_module libexec/apache2/mod_proxy.so
-LoadModule proxy_http_module libexec/apache2/mod_proxy_http.so
-LoadModule alias_module libexec/apache2/mod_alias.so
-LoadModule authz_host_module libexec/apache2/mod_authz_host.so
-LoadModule rewrite_module libexec/apache2/mod_rewrite.so
-LoadModule headers_module libexec/apache2/mod_headers.so
-LoadModule log_config_module libexec/apache2/mod_log_config.so
-LoadModule ssl_module libexec/apache2/mod_ssl.so
+LoadModule proxy_module {{module_path}}mod_proxy.so
+LoadModule proxy_http_module {{module_path}}mod_proxy_http.so
+LoadModule alias_module {{module_path}}mod_alias.so
+LoadModule authz_host_module {{module_path}}mod_authz_host.so
+LoadModule rewrite_module {{module_path}}mod_rewrite.so
+LoadModule headers_module {{module_path}}mod_headers.so
+LoadModule log_config_module {{module_path}}mod_log_config.so
+LoadModule ssl_module {{module_path}}mod_ssl.so
 
 LogFormat "%h %l %u %t \"%r\" %>s %b" common
 CustomLog {{log}}/access_log common

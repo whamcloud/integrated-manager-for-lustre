@@ -13,11 +13,15 @@ from tests.services.http_listener import HttpListener
 from tests.services.supervisor_test_case import SupervisorTestCase
 
 
-class TestInsecureUrls(SupervisorTestCase):
+class HttpdTestCase(SupervisorTestCase):
+    SERVICES = ['httpd']
+    PORTS = [settings.HTTPS_FRONTEND_PORT]
+
+
+class TestInsecureUrls(HttpdTestCase):
     """
     Test the namespaces that do not require SSL client authentication
     """
-    SERVICES = ['httpd']
 
     def test_http_redirect(self):
         """Test that connections on the HTTP url are redirected
@@ -61,12 +65,10 @@ class TestInsecureUrls(SupervisorTestCase):
             self.assertEqual(listener.last_request.path, "/agent/register/")
 
 
-class TestSecureUrls(SupervisorTestCase):
+class TestSecureUrls(HttpdTestCase):
     """
     Test the namespaces that require SSL client authentication
     """
-
-    SERVICES = ['httpd']
 
     # Note that this test replicates a subset of the manager and agent Crypto classes, this
     # is intentional as the unit under test is the HTTPS frontend config, not those classes.

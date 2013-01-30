@@ -29,6 +29,7 @@ class TestHttpAgent(SupervisorTestCase):
     it go back and forth
     """
     SERVICES = ['http_agent']
+    PORTS = [settings.HTTP_AGENT_PORT]
     PLUGIN = 'test_messaging'
     RX_QUEUE_NAME = "agent_test_messaging_rx"
     TX_QUEUE_NAME = 'agent_tx'
