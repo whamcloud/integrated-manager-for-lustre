@@ -95,6 +95,7 @@ class Command(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StatefulObject(models.Model):
@@ -376,6 +377,7 @@ class Job(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def create_locks(self):
         return []
@@ -473,6 +475,7 @@ class StepResult(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StateChangeJob(Job):

@@ -43,6 +43,7 @@ class ApplyConfParams(Job):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Update conf_params on %s" % (self.mgs.primary_server())
@@ -97,6 +98,7 @@ class ConfParam(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @staticmethod
     def get_latest_params(queryset):
@@ -126,6 +128,7 @@ class FilesystemClientConfParam(ConfParam):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def __init__(self, *args, **kwargs):
         super(FilesystemClientConfParam, self).__init__(*args, **kwargs)
@@ -147,6 +150,7 @@ class FilesystemGlobalConfParam(ConfParam):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class MdtConfParam(ConfParam):
@@ -163,6 +167,7 @@ class MdtConfParam(ConfParam):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class OstConfParam(ConfParam):
@@ -179,3 +184,4 @@ class OstConfParam(ConfParam):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']

@@ -87,6 +87,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     class Meta:
         app_label = 'chroma_core'
         unique_together = ('address',)
+        ordering = ['id']
 
     def __str__(self):
         return self.get_label()
@@ -285,6 +286,7 @@ class Volume(models.Model):
     class Meta:
         unique_together = ('storage_resource',)
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @classmethod
     def get_unused_luns(cls, queryset = None):
@@ -391,6 +393,7 @@ class VolumeNode(models.Model):
     class Meta:
         unique_together = ('host', 'path')
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
@@ -453,6 +456,7 @@ class LNetConfiguration(StatefulObject):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class Nid(models.Model):
@@ -462,6 +466,7 @@ class Nid(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class LearnNidsStep(Step):
@@ -506,6 +511,7 @@ class ConfigureLNetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class ConfigureRsyslogStep(Step):
@@ -587,6 +593,7 @@ class GetLNetStateJob(Job):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def create_locks(self):
         return [StateLock(
@@ -737,6 +744,7 @@ class SetupHostJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class EnableLNetJob(StateChangeJob):
@@ -755,6 +763,7 @@ class EnableLNetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class DetectTargetsStep(Step):
@@ -781,6 +790,7 @@ class DetectTargetsStep(Step):
 class DetectTargetsJob(Job, HostListMixin):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Scan for Lustre targets"
@@ -840,6 +850,7 @@ class LoadLNetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Load LNet module on %s" % self.host
@@ -856,6 +867,7 @@ class UnloadLNetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Unload LNet module on %s" % self.host
@@ -872,6 +884,7 @@ class StartLNetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Start LNet on %s" % self.host
@@ -888,6 +901,7 @@ class StopLNetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Stop LNet on %s" % self.host
@@ -926,6 +940,7 @@ class RemoveHostJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Remove host %s from configuration" % self.host
@@ -983,6 +998,7 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def create_locks(self):
         locks = super(ForceRemoveHostJob, self).create_locks()
@@ -1037,6 +1053,7 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Remove host %s from configuration" % self.host
@@ -1063,6 +1080,7 @@ class RelearnNidsJob(Job, HostListMixin):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class WriteConfStep(Step):
@@ -1188,6 +1206,7 @@ class UpdateNidsJob(Job, HostListMixin):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class HostContactAlert(AlertState):
@@ -1196,6 +1215,7 @@ class HostContactAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def begin_event(self):
         return AlertEvent(
@@ -1218,6 +1238,7 @@ class LNetOfflineAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def begin_event(self):
         return AlertEvent(
@@ -1240,6 +1261,7 @@ class LNetNidsChangedAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def begin_event(self):
         return AlertEvent(

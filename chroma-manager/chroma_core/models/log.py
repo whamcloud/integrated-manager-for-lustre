@@ -57,6 +57,7 @@ class Systemevents(models.Model):
     class Meta:
         db_table = u'SystemEvents'
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def get_message_class(self):
         if self.message.startswith(" LustreError:"):
@@ -75,5 +76,6 @@ class LastSystemeventsProcessed(models.Model):
     already parsed for event generation"""
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     last = models.IntegerField(default = 0)

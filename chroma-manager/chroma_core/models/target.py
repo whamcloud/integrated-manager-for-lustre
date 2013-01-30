@@ -137,6 +137,7 @@ class ManagedTarget(StatefulObject):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def get_deps(self, state = None):
         from chroma_core.models import ManagedFilesystem
@@ -233,6 +234,7 @@ class ManagedTarget(StatefulObject):
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def __str__(self):
         return self.name
@@ -253,6 +255,7 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
 class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def __str__(self):
         if not self.name:
@@ -307,6 +310,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def nids(self):
         """Return a list of NID strings"""
@@ -358,6 +362,7 @@ class TargetRecoveryInfo(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @staticmethod
     @transaction.commit_on_success
@@ -416,6 +421,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Remove target %s from configuration" % (self.target.downcast())
@@ -439,6 +445,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
 class RemoveTargetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     state_transition = (ManagedTarget, ['unformatted', 'formatted', 'registered'], 'removed')
     stateful_object = 'target'
@@ -467,6 +474,7 @@ class RemoveTargetJob(StateChangeJob):
 class ForgetTargetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Remove unmanaged target %s" % (self.target.downcast())
@@ -561,6 +569,7 @@ class ConfigureTargetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         target = self.target.downcast()
@@ -592,6 +601,7 @@ class RegisterTargetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         target = self.target.downcast()
@@ -666,6 +676,7 @@ class StartTargetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Start target %s" % self.target.downcast()
@@ -705,6 +716,7 @@ class StopTargetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Stop target %s" % self.target.downcast()
@@ -808,6 +820,7 @@ class FormatTargetJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         target = self.target.downcast()
@@ -898,6 +911,7 @@ class FailbackTargetJob(MigrateTargetJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @classmethod
     def can_run(cls, instance):
@@ -935,6 +949,7 @@ class FailoverTargetJob(MigrateTargetJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @classmethod
     def can_run(cls, instance):
@@ -992,6 +1007,7 @@ class ManagedTargetMount(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def __str__(self):
         if self.primary:
@@ -1010,6 +1026,7 @@ class TargetOfflineAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def begin_event(self):
         return AlertEvent(
@@ -1032,6 +1049,7 @@ class TargetFailoverAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def begin_event(self):
         # FIXME: reporting this event against the primary server
@@ -1057,6 +1075,7 @@ class TargetRecoveryAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def begin_event(self):
         return AlertEvent(
