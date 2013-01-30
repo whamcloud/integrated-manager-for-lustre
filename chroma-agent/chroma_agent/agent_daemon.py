@@ -20,14 +20,9 @@ from daemon.pidlockfile import PIDLockFile
 
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 from chroma_agent.agent_client import AgentClient
-from chroma_agent.log import  daemon_log, daemon_log_setup, console_log_setup, console_log
+from chroma_agent.log import  daemon_log, daemon_log_setup, console_log_setup
 
 from chroma_agent.store import AgentStore
-
-
-# FIXME: don't leave these set to DEBUG (preferably make them configurable)
-daemon_log.setLevel(logging.DEBUG)
-console_log.setLevel(logging.DEBUG)
 
 
 class ServerProperties(object):

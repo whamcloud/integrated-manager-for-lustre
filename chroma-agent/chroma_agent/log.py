@@ -16,6 +16,9 @@ daemon_log = logging.getLogger('daemon')
 # doing for them
 console_log = logging.getLogger('console')
 
+daemon_log.setLevel(logging.WARN)
+console_log.setLevel(logging.WARN)
+
 
 # Not setting up logs at import time because we want to
 # set them up after daemonization
