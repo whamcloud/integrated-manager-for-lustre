@@ -2,7 +2,7 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
-from chroma_agent.action_plugins.manage_targets import writeconf_target, format_target
+from chroma_agent.action_plugins.manage_targets import writeconf_target, format_target, _get_nvpairid_from_xml
 
 from django.utils import unittest
 import chroma_agent.shell
@@ -122,3 +122,23 @@ class TestFormatTarget(CommandCaptureTestCase):
 
     def test_unknown_opt(self):
         self.assertRaises(TypeError, format_target, unknown='whatever')
+
+
+class TestXMLParsing(unittest.TestCase):
+    xml_example = """<primitive class="ocf" provider="chroma" type="Target" id="MGS_a3903a">
+  <meta_attributes id="MGS_a3903a-meta_attributes">
+    <nvpair name="target-role" id="MGS_a3903a-meta_attributes-target-role" value="Started"/>
+  </meta_attributes>
+  <operations id="MGS_a3903a-operations">
+    <op id="MGS_a3903a-monitor-120" interval="120" name="monitor" timeout="60"/>
+    <op id="MGS_a3903a-start-0" interval="0" name="start" timeout="300"/>
+    <op id="MGS_a3903a-stop-0" interval="0" name="stop" timeout="300"/>
+  </operations>
+  <instance_attributes id="MGS_a3903a-instance_attributes">
+    <nvpair id="MGS_a3903a-instance_attributes-target" name="target" value="c2890397-e0a2-4759-8f4e-df5ed64e1518"/>
+  </instance_attributes>
+</primitive>
+"""
+
+    def test_get_nvpairid_from_xml(self):
+        self.assertEqual('c2890397-e0a2-4759-8f4e-df5ed64e1518', _get_nvpairid_from_xml(self.xml_example))
