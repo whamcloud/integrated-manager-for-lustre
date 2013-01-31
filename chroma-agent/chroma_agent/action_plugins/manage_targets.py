@@ -7,7 +7,6 @@
 import errno
 import os
 import re
-import libxml2
 import tempfile
 
 from chroma_agent.log import daemon_log, console_log
@@ -377,6 +376,16 @@ def configure_ha(primary, device, ha_label, uuid, mount_point):
     _mkdir_p_concurrent(mount_point)
 
 
+def _get_nvpairid_from_xml(xml_string):
+    try:
+        import xml.etree.ElementTree as et
+        doc = et.fromstring(xml_string)
+        node = doc.find('instance_attributes/nvpair[@name="target"]')
+        return node.get('value')
+    except Exception:
+        return None
+
+
 def _query_ha_targets():
     targets = {}
 
@@ -392,13 +401,7 @@ def _query_ha_targets():
 
             target = {'ha_label': resource_id}
             raw_xml = "\n".join(shell.try_run(['crm_resource', '-r', resource_id, '-q']).split("\n")[2:])
-            try:
-                doc = libxml2.parseDoc(raw_xml)
-                node = doc.xpathEval('//instance_attributes/nvpair[@name="target"]')[0]
-                target['uuid'] = node.prop('value')
-            except (ValueError, IndexError, libxml2.parserError):
-                continue
-
+            target['uuid'] = _get_nvpairid_from_xml(raw_xml)
             targets[resource_id] = target
 
         return targets
