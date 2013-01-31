@@ -10,6 +10,12 @@ class TestConfParams(ChromaIntegrationTestCase):
             config['lustre_servers'][1]['address'],
         ])
 
+        # Since the test code seems to rely on this ordering, we should
+        # check for it right away and blow up if it's not as we expect.
+        self.assertEqual([h['address'] for h in self.hosts],
+                         [config['lustre_servers'][0]['address'],
+                          config['lustre_servers'][1]['address']])
+
         volumes = self.get_usable_volumes()
         self.assertGreaterEqual(len(volumes), 4)
 

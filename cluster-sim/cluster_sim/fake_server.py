@@ -68,8 +68,9 @@ class FakeServer(Persisted):
                 if target['label'] == mdt_name:
                     return target
 
-            raise RuntimeError("Cannot get proc information for %s, it's not started here (targets here are: %s)" % (
-                mdt_name, [t['label'] for t in self._targets_started_here]))
+            raise RuntimeError("%s: Cannot get proc information for %s, it's not started here (targets here are: %s)" % (
+                self.fqdn, mdt_name,
+                [t['label'] for t in self._targets_started_here]))
 
         elif parts[3] == 'obdfilter':
             # /proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable
@@ -78,8 +79,9 @@ class FakeServer(Persisted):
                 if target['label'] == ost_name:
                     return target
 
-            raise RuntimeError("Cannot get proc information for %s, it's not started here (targets here are: %s)" % (
-                ost_name, [t['label'] for t in self._targets_started_here]))
+            raise RuntimeError("%s: Cannot get proc information for %s, it's not started here (targets here are: %s)" % (
+                self.fqdn, ost_name,
+                [t['label'] for t in self._targets_started_here]))
 
         raise NotImplementedError("Simulator cannot resolve '%s' to target" % path)
 

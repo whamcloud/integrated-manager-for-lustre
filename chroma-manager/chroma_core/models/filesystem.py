@@ -68,17 +68,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
     def mgs_spec(self):
         """Return a string which is foo in <foo>:/lustre for client mounts"""
-        mgs = self.mgs
-        nid_specs = []
-        for target_mount in mgs.managedtargetmount_set.all():
-            host = target_mount.host
-            nids = ",".join(host.lnetconfiguration.get_nids())
-            if nids == "":
-                raise NoLNetInfo("NIDs for MGS host %s not known" % host)
-
-            nid_specs.append(nids)
-
-        return ":".join(sorted(nid_specs))
+        return ":".join(self.mgs.nids())
 
     def mount_path(self):
         try:

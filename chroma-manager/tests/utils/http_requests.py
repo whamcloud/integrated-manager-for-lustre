@@ -98,6 +98,18 @@ class AuthorizedHttpRequests(HttpRequests):
     def __init__(self, username, password, *args, **kwargs):
         super(AuthorizedHttpRequests, self).__init__(*args, **kwargs)
 
+        # Set IGNORE_PROXY_LIST to either "all" or a space-separated list
+        # of proxies to ignore when making requests.
+        if 'IGNORE_PROXY_LIST' in os.environ:
+            ignore_set = set(os.environ['IGNORE_PROXY_LIST'].split())
+            if len(ignore_set & set(['all', 'ALL'])):
+                for key in [key for key in os.environ.keys() if key in
+                            [key for p in ['_proxy', '_PROXY'] if p in key]]:
+                    del(os.environ[key])
+            else:
+                for key in set(os.environ.keys()) & ignore_set:
+                    del(os.environ[key])
+
         # Usually on our Intel laptops https_proxy is set, and needs to be unset for tests,
         # but let's not completely rule out the possibility that someone might want to run
         # the tests on a remote system using a proxy.
