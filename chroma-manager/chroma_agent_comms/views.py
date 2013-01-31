@@ -148,6 +148,7 @@ class MessageView(View):
             # we have to let the agent know that all open sessions
             # are now over.
             messages.append({
+                'fqdn': fqdn,
                 'type': 'SESSION_TERMINATE_ALL',
                 'plugin': None,
                 'session_id': None,

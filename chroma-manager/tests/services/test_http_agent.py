@@ -53,7 +53,14 @@ class TestHttpAgent(SupervisorTestCase):
         with _amqp_connection() as conn:
             conn.SimpleQueue(queue).consumer.purge()
 
-    def _open_session(self, old_session = None):
+    def _open_session(self, expect_termination = None, expect_initial = True):
+        """
+        :param expect_termination: Whether to expect the server to have state for an existing
+                                   session replaced by this session
+        :param expect_initial: Whether to expect the server to behave as if this is the first
+                               request it has received after starting
+        :return: session ID string
+        """
         message = {
             'fqdn': self.CLIENT_NAME,
             'type': 'SESSION_CREATE_REQUEST',
@@ -71,8 +78,7 @@ class TestHttpAgent(SupervisorTestCase):
         response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
         self.assertResponseOk(response)
 
-        first_session = old_session is None
-        if first_session:
+        if expect_initial:
             # On the first connection from a host that this http_agent hasn't
             # seen before, http_agent sends a TERMINATE_ALL
             # and then the SESSION_CREATE_RESPONSE
@@ -88,7 +94,7 @@ class TestHttpAgent(SupervisorTestCase):
         self.assertEqual(response_message['body'], None)
         session_id = response_message['session_id']
 
-        if old_session is not None:
+        if expect_termination is not None:
             # Should be a SESSION_TERMINATE for the session we are replacing
             message = self._receive_one_amqp()
             self.assertDictEqual(message, {
@@ -96,7 +102,7 @@ class TestHttpAgent(SupervisorTestCase):
                 'type': 'SESSION_TERMINATE',
                 'plugin': self.PLUGIN,
                 'session_seq': None,
-                'session_id': old_session,
+                'session_id': expect_termination,
                 'body': None
             })
 
@@ -157,7 +163,7 @@ class TestHttpAgent(SupervisorTestCase):
         is accepted, and results in a session termination message for
         the previous session being sent to AMQP"""
         first_session_id = self._open_session()
-        second_session_id = self._open_session(old_session = first_session_id)
+        second_session_id = self._open_session(expect_termination= first_session_id)
         self.assertNotEqual(first_session_id, second_session_id)
 
     def test_message_rx(self):
@@ -223,7 +229,7 @@ class TestHttpAgent(SupervisorTestCase):
         # We need http_agent to definitely have received that stale message
         # by the time we open our fresh session for this test to be distinct
         time.sleep(RABBITMQ_GRACE_PERIOD)
-        fresh_session_id = self._open_session(old_session = stale_session_id)
+        fresh_session_id = self._open_session(expect_termination= stale_session_id)
 
         sent_fresh_message = {
             'fqdn': self.CLIENT_NAME,
@@ -246,5 +252,24 @@ class TestHttpAgent(SupervisorTestCase):
         which GET are sent a message to terminate any sessions
         they have open"""
 
-        # TODO SESSION_TERMINATE_ALL
-        pass
+        first_session_id = self._open_session()
+
+        self.restart('http_agent')
+
+        # If we try to continue our session, it will tell us to terminate
+        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        self.assertResponseOk(response)
+        forwarded_messages = response.json()['messages']
+        self.assertEqual(len(forwarded_messages), 1)
+        self.assertDictEqual(forwarded_messages[0], {
+            'fqdn': self.CLIENT_NAME,
+            'type': 'SESSION_TERMINATE_ALL',
+            'plugin': None,
+            'session_seq': None,
+            'session_id': None,
+            'body': None
+            })
+
+        # And we can open a new session which will get a new ID
+        second_session_id = self._open_session(expect_initial = False)
+        self.assertNotEqual(first_session_id, second_session_id)

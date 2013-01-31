@@ -132,6 +132,18 @@ class SupervisorTestCase(TestCase):
         self._xmlrpc.supervisor.startProcess(program)
         self.assertRunning(program)
 
+    def stop(self, program):
+        self._xmlrpc.supervisor.stopProcess(program)
+        self.assertStopped(program)
+
+    def restart(self, program):
+        self.stop(program)
+        self.start(program)
+
     def assertRunning(self, program):
         info = self._xmlrpc.supervisor.getProcessInfo(program)
         self.assertEqual(info['statename'], "RUNNING")
+
+    def assertStopped(self, program):
+        info = self._xmlrpc.supervisor.getProcessInfo(program)
+        self.assertEqual(info['statename'], "STOPPED")
