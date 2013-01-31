@@ -43,6 +43,9 @@ def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None, fail
         if name == "target_types":
             for type in arg:
                 options.append("--%s" % type)
+        elif name == 'mgsnode':
+            for mgs_nids in arg:
+                options.append("--%s=%s" % (name, ",".join(mgs_nids)))
         else:
             if len(arg) > 0:
                 options.append("--%s=%s" % (name, ",".join(arg)))
@@ -198,8 +201,8 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnod
             for type in arg:
                 options.append("--%s" % type)
         elif name == 'mgsnode':
-            for mgsnode in arg:
-                options.append("--%s=%s" % (name, mgsnode))
+            for mgs_nids in arg:
+                options.append("--%s=%s" % (name, ",".join(mgs_nids)))
         else:
             if len(arg) > 0:
                 options.append("--%s=%s" % (name, ",".join(arg)))

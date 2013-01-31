@@ -39,8 +39,9 @@ class ApiTestCase(UtilityTestCase):
             # trivially let tests ask for more by looking for these vars at class scope
             SIMULATOR_SERVER_COUNT = 4
             SIMULATOR_VOLUME_COUNT = 8
+            SIMULATOR_NID_COUNT = 1
             self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
-            self.simulator.setup(SIMULATOR_SERVER_COUNT, SIMULATOR_VOLUME_COUNT)
+            self.simulator.setup(SIMULATOR_SERVER_COUNT, SIMULATOR_VOLUME_COUNT, SIMULATOR_NID_COUNT)
             self.remote_operations = SimulatorRemoteOperations(self.simulator)
         else:
             self.remote_operations = RealRemoteOperations(self)

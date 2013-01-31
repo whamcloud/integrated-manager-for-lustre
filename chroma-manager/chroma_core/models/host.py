@@ -997,7 +997,7 @@ class WriteConfStep(Step):
             'device': primary_tm.volume_node.path}
 
         if issubclass(target.downcast_class, FilesystemMember):
-            agent_args['mgsnode'] = tuple(target.filesystem.mgs.nids()[0:1])
+            agent_args['mgsnode'] = target.filesystem.mgs.nids()
 
         fail_nids = target.get_failover_nids()
         if fail_nids:

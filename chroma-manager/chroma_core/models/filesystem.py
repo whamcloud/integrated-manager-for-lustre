@@ -69,7 +69,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
     def mgs_spec(self):
         """Return a string which is foo in <foo>:/lustre for client mounts"""
-        return ":".join(self.mgs.nids())
+        return ":".join([",".join(nids) for nids in self.mgs.nids()])
 
     def mount_path(self):
         try:

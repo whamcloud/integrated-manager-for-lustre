@@ -206,8 +206,10 @@ class FakeServer(Persisted):
             label = "MGS"
             mgsnode = tuple(self.nids)
             if failnode:
-                mgsnode = mgsnode + tuple(failnode)
-            self._devices.mgt_create(",".join(mgsnode))
+                mgsnode = tuple([mgsnode, tuple(failnode)])
+            else:
+                mgsnode = tuple([mgsnode])
+            self._devices.mgt_create(":".join([",".join(mgsnids) for mgsnids in mgsnode]))
         elif 'mdt' in target_types:
             label = "%s-MDT%.4x" % (fsname, index)
         else:
@@ -218,7 +220,7 @@ class FakeServer(Persisted):
         target = {
             'label': label,
             'uuid': tgt_uuid,
-            'mgsnode': ",".join(mgsnode),
+            'mgsnode': ":".join([",".join(mgsnids) for mgsnids in mgsnode]),
             'fsname': fsname,
             'index': index,
             'primary_nid': None

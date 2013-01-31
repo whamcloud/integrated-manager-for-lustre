@@ -5,6 +5,85 @@ from tests.unit.chroma_core.helper import JobTestCaseWithHost, freshen, JobTestC
 from django.db import connection
 
 
+class TestNidStrings(JobTestCase):
+    mock_servers = {
+        'primary-mgs': {
+            'fqdn': 'primary-mgs.mycompany.com',
+            'nodename': 'primary-mgs.mycompany.com',
+            'nids': ['1.2.3.4@tcp']
+        },
+        'failover-mgs': {
+            'fqdn': 'failover-mgs.mycompany.com',
+            'nodename': 'failover-mgs.mycompany.com',
+            'nids': ['1.2.3.5@tcp']
+        },
+        'primary-mgs-twonid': {
+            'fqdn': 'primary-mgs-twonid.mycompany.com',
+            'nodename': 'primary-mgs-twonid.mycompany.com',
+            'nids': ['1.2.3.4@tcp', '4.3.2.1@tcp1']
+        },
+        'failover-mgs-twonid': {
+            'fqdn': 'failover-mgs-twonid.mycompany.com',
+            'nodename': 'failover-mgs-twonid.mycompany.com',
+            'nids': ['1.2.3.5@tcp', '4.3.2.2@tcp1']
+        },
+        'othernode': {
+            'fqdn': 'othernode.mycompany.com',
+            'nodename': 'othernode.mycompany.com',
+            'nids': ['1.2.3.6@tcp', '4.3.2.3@tcp1']
+        }
+    }
+
+    def setUp(self):
+        super(TestNidStrings, self).setUp()
+
+    def test_one_nid_no_failover(self):
+        mgs0 = self._create_host('primary-mgs')
+        other = self._create_host('othernode')
+        mgt = ManagedMgs.create_for_volume(self._test_lun(mgs0).id, name = "MGS")
+        fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
+        ManagedMdt.create_for_volume(self._test_lun(other).id, filesystem = fs)
+        ManagedOst.create_for_volume(self._test_lun(other).id, filesystem = fs)
+
+        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0',),))
+        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0')
+
+    def test_one_nid_with_failover(self):
+        mgs0 = self._create_host('primary-mgs')
+        mgs1 = self._create_host('failover-mgs')
+        other = self._create_host('othernode')
+        mgt = ManagedMgs.create_for_volume(self._test_lun(mgs0, mgs1).id, name = "MGS")
+        fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
+        ManagedMdt.create_for_volume(self._test_lun(other).id, filesystem = fs)
+        ManagedOst.create_for_volume(self._test_lun(other).id, filesystem = fs)
+
+        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0',), (u'1.2.3.5@tcp0',)))
+        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0:1.2.3.5@tcp0')
+
+    def test_two_nids_no_failover(self):
+        mgs0 = self._create_host('primary-mgs-twonid')
+        other = self._create_host('othernode')
+        mgt = ManagedMgs.create_for_volume(self._test_lun(mgs0).id, name = "MGS")
+        fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
+        ManagedMdt.create_for_volume(self._test_lun(other).id, filesystem = fs)
+        ManagedOst.create_for_volume(self._test_lun(other).id, filesystem = fs)
+
+        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0', u'4.3.2.1@tcp1'),))
+        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0,4.3.2.1@tcp1')
+
+    def test_two_nids_with_failover(self):
+        mgs0 = self._create_host('primary-mgs-twonid')
+        mgs1 = self._create_host('failover-mgs-twonid')
+        other = self._create_host('othernode')
+        mgt = ManagedMgs.create_for_volume(self._test_lun(mgs0, mgs1).id, name = "MGS")
+        fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
+        ManagedMdt.create_for_volume(self._test_lun(other).id, filesystem = fs)
+        ManagedOst.create_for_volume(self._test_lun(other).id, filesystem = fs)
+
+        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0', u'4.3.2.1@tcp1'), (u'1.2.3.5@tcp0', u'4.3.2.2@tcp1')))
+        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0,4.3.2.1@tcp1:1.2.3.5@tcp0,4.3.2.2@tcp1')
+
+
 class TestOneHost(JobTestCase):
     mock_servers = {
         'myaddress': {

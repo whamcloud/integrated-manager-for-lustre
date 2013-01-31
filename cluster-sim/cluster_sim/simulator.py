@@ -55,11 +55,14 @@ class ClusterSimulator(object):
                 os.makedirs(FakeCrypto.FOLDER)
             server.crypto = FakeCrypto()
 
-    def setup(self, server_count, volume_count):
+    def setup(self, server_count, volume_count, nid_count):
         for n in range(0, server_count):
+            nids = []
             nodename = "test%.3d" % n
             fqdn = "%s.localdomain" % nodename
-            nids = ["10.0.%d.%d@tcp0" % (n / 256, n % 256)]
+            x, y = (n / 256, n % 256)
+            for network in range(0, nid_count):
+                nids.append("10.%d.%d.%d@tcp%d" % (network, x, y, network))
 
             FakeServer(self.folder, self.devices, self.cluster, fqdn, nodename, nids)
 

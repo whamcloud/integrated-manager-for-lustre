@@ -67,6 +67,13 @@ class TestWriteconfTarget(CommandCaptureTestCase):
             index='42', mountfsoptions='-x 30 --y --z=83')
         self.assertRan(["tunefs.lustre", "--index=42", "--mountfsoptions=-x 30 --y --z=83", "/dev/foo"])
 
+    def test_mgsnode_multiple_nids(self):
+        writeconf_target(device='/dev/foo',
+                         writeconf = True,
+                         erase_params = True,
+                         mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1'], ['1.2.3.5@tcp', '4.3.2.2@tcp1']])
+        self.assertRan(["tunefs.lustre", "--erase-params", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp,4.3.2.2@tcp1", "--writeconf", "/dev/foo"])
+
     def test_unknown_opt(self):
         self.assertRaises(TypeError, writeconf_target, unknown='whatever')
 
@@ -94,6 +101,30 @@ class TestFormatTarget(CommandCaptureTestCase):
         format_target(device='/dev/foo',
                           target_types=['ost'])
         self.assertRan(["mkfs.lustre", "--ost", "/dev/foo"])
+
+    def test_single_mgs_one_nid(self):
+        format_target(device='/dev/foo',
+                      target_types=['ost'],
+                      mgsnode = [['1.2.3.4@tcp']])
+        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp", "/dev/foo"])
+
+    def test_mgs_pair_one_nid(self):
+        format_target(device='/dev/foo',
+                      target_types=['ost'],
+                      mgsnode = [['1.2.3.4@tcp'], ['1.2.3.5@tcp']])
+        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp", "--mgsnode=1.2.3.5@tcp", "/dev/foo"])
+
+    def test_single_mgs_multiple_nids(self):
+        format_target(device='/dev/foo',
+                      target_types=['ost'],
+                      mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1']])
+        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "/dev/foo"])
+
+    def test_mgs_pair_multiple_nids(self):
+        format_target(device='/dev/foo',
+                      target_types=['ost'],
+                      mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1'], ['1.2.3.5@tcp', '4.3.2.2@tcp1']])
+        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp,4.3.2.2@tcp1", "/dev/foo"])
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case

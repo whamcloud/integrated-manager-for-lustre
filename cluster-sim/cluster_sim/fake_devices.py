@@ -94,9 +94,7 @@ class FakeDevices(Persisted):
         raise KeyError(label)
 
     def get_conf_params_by_mgsspec(self, mgsspec):
-        # mgsspec as defined in 'man mount.lustre'
-        mgsnode = mgsspec.replace(":", ",")
-        return self.state['mgts'][mgsnode]['conf_params']
+        return self.state['mgts'][mgsspec]['conf_params']
 
     def get_by_path(self, path):
         for serial, device in self.state['devices'].items():

@@ -39,7 +39,7 @@ class SimulatorCli(object):
             volume_count = server_count * 2
 
         self.simulator = ClusterSimulator(args.config, args.url)
-        self.simulator.setup(server_count, volume_count)
+        self.simulator.setup(server_count, volume_count, int(args.nid_count))
         self.stop()
 
     def _acquire_token(self, url, username, password, credits):
@@ -111,6 +111,7 @@ class SimulatorCli(object):
         subparsers = parser.add_subparsers()
         setup_parser = subparsers.add_parser("setup")
         setup_parser.add_argument('--server_count', required = False, help = "Number of simulated storage servers", default = '8')
+        setup_parser.add_argument('--nid_count', required = False, help = "Number of LNet NIDs per storage server, defaults to 1 per server", default = '1')
         setup_parser.add_argument('--volume_count', required = False, help = "Number of simulated storage devices, defaults to twice the number of servers")
         setup_parser.set_defaults(func = self.setup)
 
