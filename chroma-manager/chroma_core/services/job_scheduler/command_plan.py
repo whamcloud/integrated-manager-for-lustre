@@ -121,7 +121,8 @@ class CommandPlan(object):
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks)
-            job.save()
+            with transaction.commit_on_success():
+                job.save()
             for l in locks:
                 self._lock_cache.add(l)
 

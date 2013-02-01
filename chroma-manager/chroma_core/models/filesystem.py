@@ -45,6 +45,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
     class Meta:
         unique_together = ('name', 'mgs')
+        ordering = ['id']
 
     def get_targets(self):
         return [self.mgs] + self.get_filesystem_targets()
@@ -81,6 +82,7 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def get_deps(self, state = None):
         if not state:
@@ -160,6 +162,7 @@ class RemoveFilesystemJob(StateChangeJob):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def description(self):
         return "Remove file system %s from configuration" % self.filesystem.name
@@ -193,6 +196,7 @@ class FilesystemJob():
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def get_steps(self):
         return []
@@ -272,6 +276,7 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
 class ForgetFilesystemJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     state_transition = (ManagedFilesystem, ['unavailable', 'stopped', 'available'], 'forgotten')
     stateful_object = 'filesystem'

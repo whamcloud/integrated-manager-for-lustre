@@ -19,6 +19,7 @@ class Event(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @staticmethod
     def type_name():
@@ -36,6 +37,7 @@ class LearnEvent(Event):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @staticmethod
     def type_name():
@@ -59,6 +61,7 @@ class AlertEvent(Event):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @staticmethod
     def type_name():
@@ -74,6 +77,7 @@ class SyslogEvent(Event):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @staticmethod
     def type_name():
@@ -89,6 +93,7 @@ class ClientConnectEvent(Event):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def message(self):
         return self.message_str

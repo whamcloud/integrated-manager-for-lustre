@@ -68,6 +68,7 @@ class AlertState(models.Model):
     class Meta:
         unique_together = ('alert_item_type', 'alert_item_id', 'alert_type', 'active')
         app_label = 'chroma_core'
+        ordering = ['id']
 
     @classmethod
     def subclasses(cls, exclude=[]):
@@ -186,6 +187,7 @@ class AlertSubscription(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class AlertEmail(models.Model):
@@ -194,6 +196,7 @@ class AlertEmail(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     def __str__(self):
         str = ""

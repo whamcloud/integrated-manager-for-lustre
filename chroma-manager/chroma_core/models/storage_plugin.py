@@ -28,6 +28,7 @@ class StoragePluginRecord(models.Model):
     class Meta:
         unique_together = ('module_name',)
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StorageResourceClass(models.Model):
@@ -46,6 +47,7 @@ class StorageResourceClass(models.Model):
     class Meta:
         unique_together = ('storage_plugin', 'class_name')
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StorageResourceRecord(models.Model):
@@ -74,6 +76,7 @@ class StorageResourceRecord(models.Model):
     class Meta:
         app_label = 'chroma_core'
         unique_together = ('storage_id_str', 'storage_id_scope', 'resource_class')
+        ordering = ['id']
 
     def __str__(self):
         return self.alias_or_name()
@@ -206,6 +209,7 @@ class SimpleHistoStoreBin(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class SimpleHistoStoreTime(models.Model):
@@ -214,12 +218,14 @@ class SimpleHistoStoreTime(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StorageResourceStatistic(models.Model):
     class Meta:
         unique_together = ('storage_resource', 'name')
         app_label = 'chroma_core'
+        ordering = ['id']
 
     storage_resource = models.ForeignKey(StorageResourceRecord, on_delete = models.PROTECT)
     sample_period = models.IntegerField()
@@ -288,6 +294,7 @@ class StorageResourceAttribute(models.Model):
 class StorageResourceAttributeSerialized(StorageResourceAttribute):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     value = models.TextField()
 
@@ -303,6 +310,7 @@ class StorageResourceAttributeSerialized(StorageResourceAttribute):
 class StorageResourceAttributeReference(StorageResourceAttribute):
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
     value = models.ForeignKey(StorageResourceRecord, blank = True, null = True, related_name = 'value_resource', on_delete = models.PROTECT)
 
@@ -330,6 +338,7 @@ class StorageResourceClassStatistic(models.Model):
     class Meta:
         unique_together = ('resource_class', 'name')
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StorageResourceOffline(AlertState):
@@ -352,6 +361,7 @@ class StorageResourceOffline(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StorageResourceAlert(AlertState):
@@ -386,6 +396,7 @@ class StorageResourceAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StorageAlertPropagated(models.Model):
@@ -395,6 +406,7 @@ class StorageAlertPropagated(models.Model):
     class Meta:
         unique_together = ('storage_resource', 'alert_state')
         app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StorageResourceLearnEvent(Event):
@@ -411,3 +423,4 @@ class StorageResourceLearnEvent(Event):
 
     class Meta:
         app_label = 'chroma_core'
+        ordering = ['id']

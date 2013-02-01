@@ -36,8 +36,8 @@ Requires: python-daemon
 Requires: python-celery >= 3.0.11
 Requires: python-amqplib
 Requires: pygobject2
-Requires: mysql-server
-Requires: MySQL-python >= 1.2.1p2
+Requires: postgresql-server
+Requires: python-psycopg2
 Requires: rabbitmq-server
 Requires: avahi-dnsconfd
 Requires: avahi-python

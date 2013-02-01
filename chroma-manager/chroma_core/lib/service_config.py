@@ -13,7 +13,8 @@ import os
 import json
 import tempfile
 
-from chroma_core.lib.util import chroma_settings, CommandLine
+from chroma_core.lib.util import chroma_settings, CommandLine, CommandError
+
 
 log = logging.getLogger('installation')
 log.addHandler(logging.StreamHandler())
@@ -23,6 +24,7 @@ settings = chroma_settings()
 
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
+
 from chroma_core.services.http_agent.crypto import Crypto
 
 
@@ -155,12 +157,13 @@ class ServiceConfig(CommandLine):
 
     def _db_accessible(self):
         """Discover whether we have a working connection to the database"""
-        from MySQLdb import OperationalError
+        from psycopg2 import OperationalError
+        from django.db import connection
         try:
-            from django.db import connection
             connection.introspection.table_names()
             return True
         except OperationalError:
+            connection._rollback()
             return False
 
     def _db_populated(self):
@@ -173,6 +176,8 @@ class ServiceConfig(CommandLine):
             MigrationHistory.objects.count()
             return True
         except DatabaseError:
+            from django.db import connection
+            connection._rollback()
             return False
 
     def _db_current(self):
@@ -272,14 +277,50 @@ class ServiceConfig(CommandLine):
         for service in self.CONTROLLED_SERVICES:
             self.try_shell(['service', service, 'stop'])
 
-    def _setup_mysql(self, database):
-        log.info("Setting up MySQL daemon...")
-        self.try_shell(["service", "mysqld", "restart"])
-        self.try_shell(["chkconfig", "mysqld", "on"])
+    def _init_pgsql(self, database):
+        rc, out, err = self.shell(["service", "postgresql", "initdb"])
+        if rc != 0:
+            if 'is not empty' not in out:
+                log.error("Failed to initialize postgresql service")
+                log.error("stdout:\n%s" % out)
+                log.error("stderr:\n%s" % err)
+                raise CommandError("service postgresql initdb", rc, out, err)
+            return
+        # Only mess with auth if we've freshly initialized the db
+        self._config_pgsql_auth(database)
+
+    def _config_pgsql_auth(self, database):
+        auth_cfg_file = "/var/lib/pgsql/data/pg_hba.conf"
+        os.rename(auth_cfg_file, "%s.dist" % auth_cfg_file)
+        with open(auth_cfg_file, "w") as cfg:
+            # Allow our django user to connect with no password
+            cfg.write("local\tall\t%s\t\ttrust\n" % database['USER'])
+            # Allow rsyslogd to connect
+            cfg.write("host\tall\t%s\t127.0.0.1/32\ttrust\n" % database['USER'])
+            cfg.write("host\tall\t%s\t::1/128\ttrust\n" % database['USER'])
+            # Allow the system superuser (postgres) to connect
+            cfg.write("local\tall\tall\t\tident\n")
+
+    def _setup_pgsql(self, database):
+        log.info("Setting up PostgreSQL service...")
+        self._init_pgsql(database)
+        self.try_shell(["service", "postgresql", "restart"])
+        self.try_shell(["chkconfig", "postgresql", "on"])
+
+        import time
+        tries = 0
+        while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
+            if tries >= 4:
+                raise RuntimeError("Timed out waiting for PostgreSQL service to start")
+            tries += 1
+            time.sleep(1)
 
         if not self._db_accessible():
+            log.info("Creating database owner '%s'...\n" % database['USER'])
+            self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database['USER']])
+
             log.info("Creating database '%s'...\n" % database['NAME'])
-            self.try_shell(["mysql", "-e", "create database %s;" % database['NAME']])
+            self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'], database['NAME'])])
 
     def get_input(self, msg, empty_allowed = True, password = False, default = ""):
         if msg == "":
@@ -353,9 +394,11 @@ class ServiceConfig(CommandLine):
             # For the moment use the builtin configuration
             # TODO: this is where we would establish DB name and credentials
             databases = settings.DATABASES
-            self._setup_mysql(databases['default'])
+
+            self._setup_pgsql(databases['default'])
+            self._setup_rsyslog(databases['default'])
         else:
-            log.info("MySQL already accessible")
+            log.info("DB already accessible")
 
         self._syncdb()
 
@@ -435,7 +478,7 @@ class ServiceConfig(CommandLine):
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        interesting_services = self.CONTROLLED_SERVICES + ['mysqld', 'rabbitmq-server']
+        interesting_services = self.CONTROLLED_SERVICES + ['postgresql', 'rabbitmq-server']
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
             try:
@@ -457,7 +500,7 @@ class ServiceConfig(CommandLine):
         local_settings = os.path.join(project_dir, settings.LOCAL_SETTINGS_FILE)
         local_settings_str = ""
         local_settings_str += "CELERY_RESULT_BACKEND = \"database\"\n"
-        local_settings_str += "CELERY_RESULT_DBURI = \"mysql://%s:%s@%s%s/%s\"\n" % (
+        local_settings_str += "CELERY_RESULT_DBURI = \"postgresql://%s:%s@%s%s/%s\"\n" % (
                 databases['default']['USER'],
                 databases['default']['PASSWORD'],
                 databases['default']['HOST'] or "localhost",
