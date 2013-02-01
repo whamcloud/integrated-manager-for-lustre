@@ -4,17 +4,20 @@ Tests for the inter-service interactions that occur through the lifetime of an a
 """
 
 from chroma_core.lib.util import chroma_settings
+
 settings = chroma_settings()
 
 from Queue import Empty
 import json
 import time
 import datetime
-
-from chroma_core.models import ManagedHost
-from chroma_core.services import _amqp_connection
 import requests
-import settings
+from django.db import transaction
+
+from chroma_core.models import ManagedHost, HostContactAlert
+from chroma_core.services import _amqp_connection
+from chroma_core.services.http_agent.host_state import HostState, HostStatePoller
+
 from tests.services.supervisor_test_case import SupervisorTestCase
 
 # The amount of time we allow rabbitmq to forward a message (including
@@ -144,7 +147,7 @@ class TestHttpAgent(SupervisorTestCase):
         self._flush_queue(self.TX_QUEUE_NAME)
 
         if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
-            ManagedHost.objects.create(
+            self.host = ManagedHost.objects.create(
                 fqdn = self.CLIENT_NAME,
                 nodename = self.CLIENT_NAME,
                 address = self.CLIENT_NAME
@@ -153,7 +156,10 @@ class TestHttpAgent(SupervisorTestCase):
     def tearDown(self):
         super(TestHttpAgent, self).tearDown()
         try:
+            with transaction.commit_manually():
+                transaction.commit()
             host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
+            HostContactAlert.filter_by_item(host).delete()
             host.mark_deleted()
         except ManagedHost.DoesNotExist:
             pass
@@ -163,7 +169,7 @@ class TestHttpAgent(SupervisorTestCase):
         is accepted, and results in a session termination message for
         the previous session being sent to AMQP"""
         first_session_id = self._open_session()
-        second_session_id = self._open_session(expect_termination= first_session_id)
+        second_session_id = self._open_session(expect_termination = first_session_id, expect_initial = False)
         self.assertNotEqual(first_session_id, second_session_id)
 
     def test_message_rx(self):
@@ -229,7 +235,7 @@ class TestHttpAgent(SupervisorTestCase):
         # We need http_agent to definitely have received that stale message
         # by the time we open our fresh session for this test to be distinct
         time.sleep(RABBITMQ_GRACE_PERIOD)
-        fresh_session_id = self._open_session(expect_termination= stale_session_id)
+        fresh_session_id = self._open_session(expect_termination = stale_session_id, expect_initial = False)
 
         sent_fresh_message = {
             'fqdn': self.CLIENT_NAME,
@@ -273,3 +279,31 @@ class TestHttpAgent(SupervisorTestCase):
         # And we can open a new session which will get a new ID
         second_session_id = self._open_session(expect_initial = False)
         self.assertNotEqual(first_session_id, second_session_id)
+
+    def test_timeout(self):
+        """Test that when a session is established, then left idle
+            for the timeout period, the http_agent service emits
+            a termination message on the RX channel."""
+        session_id = self._open_session()
+
+        # No alert to begin with
+        alerts = HostContactAlert.filter_by_item(self.host)
+        self.assertEqual(alerts.count(), 0)
+
+        time.sleep(HostState.CONTACT_TIMEOUT + HostStatePoller.POLL_INTERVAL + RABBITMQ_GRACE_PERIOD)
+
+        # Should be one SESSION_CREATE message to AMQP with a matching session ID
+        message = self._receive_one_amqp()
+        self.assertDictEqual(message, {
+            'fqdn': self.CLIENT_NAME,
+            'type': 'SESSION_TERMINATE',
+            'plugin': self.PLUGIN,
+            'session_seq': None,
+            'session_id': session_id,
+            'body': None
+        })
+
+        with transaction.commit_manually():
+            transaction.commit()
+        alerts = HostContactAlert.filter_by_item(self.host)
+        self.assertEqual(alerts.count(), 1)

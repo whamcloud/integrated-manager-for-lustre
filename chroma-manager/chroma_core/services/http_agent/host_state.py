@@ -33,12 +33,6 @@ class HostState(object):
         self._client_start_time = client_start_time
 
     def update_health(self, healthy):
-        # TODO: when going into the state, send a message on agent_rx to
-        # tell all consumers that the sessions are over... this is annoying
-        # because it means that you have to stay in contact the whole time
-        # during a long running operation, but the alternative is to have
-        # the job_scheduler wait indefinitely for a host that may never
-        # come back
         HostContactAlert.notify(self._host, not healthy)
         self._healthy = healthy
 
@@ -75,6 +69,7 @@ class HostState(object):
             time_since_contact = datetime.datetime.utcnow() - self.last_contact
             if time_since_contact > datetime.timedelta(seconds = self.CONTACT_TIMEOUT):
                 self.update_health(False)
+        return self._healthy
 
 
 class HostStateCollection(object):
@@ -108,28 +103,29 @@ class HostStatePoller(object):
     This thread periodically calls the .poll method of all the
     hosts in a collection, in order to generate timeouts.
     """
-    def __init__(self, host_state_collection):
+
+    # How often to wake up and update alerts
+    POLL_INTERVAL = 10
+
+    # How long to wait at startup (to avoid immediately generating offline
+    # alerts for all hosts when restarting, aka HYD-1273)
+    STARTUP_DELAY = 30
+
+    def __init__(self, host_state_collection, sessions):
         self._stopping = threading.Event()
         self._hosts = host_state_collection
+        self._sessions = sessions
 
     def run(self):
-        # How often to wake up and update alerts
-        POLL_INTERVAL = 10
-
-        # How long to wait at startup (to avoid immediately generating offline
-        # alerts for all hosts when restarting, aka HYD-1273)
-        STARTUP_DELAY = 30
-
-        # How long does a host have to be out of contact before we raise
-        # an offline alert for it?
-
-        self._stopping.wait(STARTUP_DELAY)
+        self._stopping.wait(self.STARTUP_DELAY)
 
         while not self._stopping.is_set():
             for fqdn, host_state in self._hosts.items():
-                host_state.poll()
+                healthy = host_state.poll()
+                if not healthy:
+                    self._sessions.reset_fqdn_sessions(host_state.fqdn)
 
-            self._stopping.wait(POLL_INTERVAL)
+            self._stopping.wait(self.POLL_INTERVAL)
 
     def stop(self):
         self._stopping.set()

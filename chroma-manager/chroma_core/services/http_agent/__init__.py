@@ -86,7 +86,7 @@ class Service(ChromaService):
         MessageView.hosts = self.hosts
 
         # The thread for generating HostOfflineAlerts
-        host_checker_thread = ServiceThread(HostStatePoller(self.hosts))
+        host_checker_thread = ServiceThread(HostStatePoller(self.hosts, self.sessions))
         host_checker_thread.start()
 
         # The main thread serves incoming requests to exchanges messages

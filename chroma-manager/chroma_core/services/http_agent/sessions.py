@@ -63,6 +63,9 @@ class SessionCollection(object):
             return session
 
     def reset_session(self, fqdn, plugin, session_id):
+        """
+        This is a reset in the TX direction, to tell the agent that a session has gone away
+        """
         with self._lock:
             if (fqdn, plugin) in self._sessions:
                 log.warning("Terminating session on request %s/%s/%s" % (fqdn, plugin, session_id))
@@ -77,6 +80,30 @@ class SessionCollection(object):
                 })
             else:
                 log.warning("Ignoring request to terminate unknown session %s/%s/%s" % (fqdn, plugin, session_id))
+
+    def reset_fqdn_sessions(self, victim_fqdn):
+        """
+        This is a reset in the RX direction, to tell services that an agent session has gone away
+        """
+        with self._lock:
+            remove_keys = []
+            for (fqdn, plugin), session in self._sessions.items():
+                if fqdn == victim_fqdn:
+                    log.info("Terminating session %s/%s/%s" % (fqdn, plugin, session.id))
+                    self._queues.receive({
+                        'fqdn': fqdn,
+                        'type': 'SESSION_TERMINATE',
+                        'plugin': plugin,
+                        'session_id': session.id,
+                        'session_seq': None,
+                        'body': None
+                    })
+                    remove_keys.append((fqdn, plugin))
+
+            for key in remove_keys:
+                del self._sessions[key]
+
+            log.debug("Session count: %s" % len(self._sessions))
 
 
 class Session(object):
