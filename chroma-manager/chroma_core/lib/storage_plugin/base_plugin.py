@@ -4,9 +4,12 @@
 # ========================================================
 
 
-from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
+import os
+import logging
 import settings
 import threading
+
+from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
 
 
 class ResourceNotFound(Exception):
@@ -57,7 +60,16 @@ class BaseStoragePlugin(object):
     #: Set to true for plugins which should not be shown in the user interface
     internal = False
 
-    log = None
+    _log = None
+    _log_format = None
+
+    @property
+    def log(self):
+        if not self._log.handlers:
+            handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
+            handler.setFormatter(logging.Formatter(self._log_format, '%d/%b/%Y:%H:%M:%S'))
+            self._log.addHandler(handler)
+        return self._log
 
     # TODO: need to document that initial_scan may not kick off async operations, because
     # the caller looks at overall resource state at exit of function.  If they eg

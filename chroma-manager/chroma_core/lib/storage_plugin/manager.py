@@ -279,19 +279,16 @@ class StoragePluginManager(object):
             plugin_klass = plugin_klasses[0]
 
         # Hook in a logger to the BaseStoragePlugin subclass
-        if not plugin_klass.log:
+        if not plugin_klass._log:
             import logging
-            import os
             import settings
             log = logging.getLogger("storage_plugin_log_%s" % module)
-            handler = logging.handlers.WatchedFileHandler(os.path.join(settings.LOG_PATH, 'storage_plugin.log'))
-            handler.setFormatter(logging.Formatter("[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module, '%d/%b/%Y:%H:%M:%S'))
-            log.addHandler(handler)
             if module in settings.STORAGE_PLUGIN_DEBUG_PLUGINS or settings.STORAGE_PLUGIN_DEBUG:
                 log.setLevel(logging.DEBUG)
             else:
                 log.setLevel(logging.WARNING)
-            plugin_klass.log = log
+            plugin_klass._log = log
+            plugin_klass._log_format = "[%%(asctime)s: %%(levelname)s/%s] %%(message)s" % module
         else:
             storage_plugin_log.warning("Double load of %s (okay if testing)" % plugin_name)
 
