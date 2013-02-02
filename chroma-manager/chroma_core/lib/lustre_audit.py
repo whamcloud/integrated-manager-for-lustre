@@ -5,10 +5,6 @@
 # ========================================================
 
 
-import functools
-
-# HYD-646: Use django 1.4 db exceptions
-import MySQLdb as Database
 from chroma_core.services import log_register
 from django.db import transaction
 
@@ -223,25 +219,6 @@ class UpdateScan(object):
     def store_node_metrics(self, metrics):
         return self.host.downcast().metrics.update(metrics, self.update_time)
 
-    def catch_metrics_deadlocks(fn):
-        # This decorator is specific to catching deadlocks which may occur
-        # during an r3d update.  Ideally, these shouldn't happen at all, but
-        # if they do they shouldn't be fatal.  In any case, we need to log
-        # warnings so we can keep track of this and figure out if it's really
-        # a problem, and if it is, whether to fix it in code or in db tuning.
-        @functools.wraps(fn)
-        def wrapper(*args, **kwargs):
-            try:
-                return fn(*args, **kwargs)
-            except Database.OperationalError, e:
-                if e[0] == 1213:
-                    audit_log.warn("Caught deadlock on metrics update; discarding metrics and continuing")
-                    return 0
-
-                raise e
-        return wrapper
-
-    @catch_metrics_deadlocks
     @transaction.commit_on_success
     def store_metrics(self):
         """
