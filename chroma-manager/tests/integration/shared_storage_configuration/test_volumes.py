@@ -1,9 +1,8 @@
 from testconfig import config
+from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
-from tests.integration.core.chroma_integration_testcase import AuthorizedTestCase
 
-
-class TestVolumes(AuthorizedTestCase):
+class TestVolumes(ChromaIntegrationTestCase):
     def setUp(self):
         super(TestVolumes, self).setUp()
 
