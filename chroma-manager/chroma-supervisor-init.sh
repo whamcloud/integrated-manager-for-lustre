@@ -10,7 +10,7 @@
 
 export SERVICE_NAME=chroma-supervisor
 export PROJECT_PATH=/usr/share/chroma-manager
-export PID_FILE=/var/run/chroma-storage.pid
+export PID_FILE=/var/run/chroma-supervisor.pid
 export LOG_DIR=/var/log/chroma
 export PYTHONPATH=${PROJECT_PATH}
 export SUPERVISOR_CONFIG=${PROJECT_PATH}/production_supervisord.conf
