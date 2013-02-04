@@ -64,7 +64,7 @@ class ScanDaemon(object):
             except KeyError:
                 pass
             else:
-                kill_session.shutdown()
+                kill_session.stop()
                 log.info("waiting for session to stop")
                 while(not kill_session.stopped):
                     time.sleep(1)
@@ -89,7 +89,7 @@ class ScanDaemon(object):
             except KeyError:
                 pass
             else:
-                kill_session.shutdown()
+                kill_session.stop()
                 log.info("waiting for session to stop")
                 while(not kill_session.stopped):
                     time.sleep(1)
@@ -136,7 +136,7 @@ class ScanDaemon(object):
 
         log.info("stopping sessions")
         for scannable_id, session in self._all_sessions.items():
-            session.shutdown()
+            session.stop()
         log.info("joining sessions")
         for scannable_id, session in self._all_sessions.items():
             session.join(timeout = JOIN_TIMEOUT)

@@ -65,7 +65,7 @@ class Service(ChromaService):
     def stop(self):
         self.log.debug("Stopping...")
         for thread in self.threads:
-            thread.shutdown()
+            thread.stop()
         self.log.debug("Joining...")
         for thread in self.threads:
             thread.join()
