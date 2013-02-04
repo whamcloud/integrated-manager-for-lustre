@@ -22,7 +22,7 @@ def filter_class_ids():
     Return a list of storage resource class IDs which are valid for display (i.e.
     those for which we have a plugin available in this process)
     """
-    from MySQLdb import OperationalError
+    from psycopg2 import OperationalError
     from django.db.utils import DatabaseError
     try:
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
