@@ -13,6 +13,7 @@ from chroma_core.services import log_register, ServiceThread
 from chroma_core.services.http_agent.sessions import AgentSessionRpc
 from chroma_core.services.http_agent.queues import AgentTxQueue
 from chroma_core.services.queue import AgentRxQueue
+from chroma_core.services.rpc import RpcTimeout
 
 
 log = log_register(__name__)
@@ -77,8 +78,15 @@ class AgentRpcMessenger(object):
         self._lock = threading.Lock()
 
     def run(self):
+        try:
+            AgentSessionRpc().reset_plugin_sessions(ACTION_MANAGER_PLUGIN_NAME)
+        except RpcTimeout:
+            # Assume this means that the http_agent service isn't running: this
+            # is acceptable, as our goal of there not being any sessions is
+            # already the case.
+            log.warning("Unable to reset %s sessions" % ACTION_MANAGER_PLUGIN_NAME)
+
         self._action_runner_rx_queue.purge()
-        AgentSessionRpc().reset_plugin_sessions(ACTION_MANAGER_PLUGIN_NAME)
         self._action_runner_rx_queue.serve(session_callback = self.on_rx)
         log.info("AgentRpcMessenger.complete")
 
@@ -206,12 +214,12 @@ class AgentRpc(object):
     AgentRpcMessenger
     """
     thread = None
-    _Messenger = None
+    _messenger = None
 
     @classmethod
     def start(cls):
-        cls._Messenger = AgentRpcMessenger()
-        cls.thread = ServiceThread(cls._Messenger)
+        cls._messenger = AgentRpcMessenger()
+        cls.thread = ServiceThread(cls._messenger)
         cls.thread.start()
 
     @classmethod
@@ -219,15 +227,15 @@ class AgentRpc(object):
         if cls.thread is not None:
             cls.thread.stop()
             cls.thread.join()
-            cls._Messenger.complete_all()
+            cls._messenger.complete_all()
 
     @classmethod
     def call(cls, fqdn, action, args):
-        return cls._Messenger.call(fqdn, action, args)
+        return cls._messenger.call(fqdn, action, args)
 
     @classmethod
     def remove(cls, fqdn):
-        return cls._Messenger.remove(fqdn)
+        return cls._messenger.remove(fqdn)
 
 
 class Agent(object):

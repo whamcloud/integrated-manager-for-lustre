@@ -22,6 +22,7 @@ class SupervisorTestCase(TestCase):
     """A test case which starts and stops supervisor services"""
 
     SERVICES = []
+    PORTS = []
     CONF = os.path.join(site_dir(), "supervisord.conf")
     TEST_USERNAME = 'test'
     TEST_PASSWORD = 'asiyud97sdyuias'
@@ -67,11 +68,11 @@ class SupervisorTestCase(TestCase):
         cfg_stringio = StringIO(open(self.CONF).read())
         cp = ConfigParser()
         cp.readfp(cfg_stringio)
-        programs = []
+        self.programs = []
         for section in cp.sections():
             if section.startswith("program:"):
                 progname = section.split("program:")[1]
-                programs.append(progname)
+                self.programs.append(progname)
                 cp.set(section, 'autostart', 'false')
 
         cp.add_section('inet_http_server')
@@ -111,6 +112,13 @@ class SupervisorTestCase(TestCase):
             raise
 
     def tearDown(self):
+        test_failed = (sys.exc_info() != (None, None, None))
+
+        if test_failed:
+            log.info(self._xmlrpc.system.listMethods())
+            log_chunk = self._xmlrpc.supervisor.readLog(0, 4096)
+            log.error("Supervisor log: %s" % log_chunk)
+
         if self._supervisor is not None:
             try:
                 self._xmlrpc.supervisor.shutdown()
@@ -150,3 +158,12 @@ class SupervisorTestCase(TestCase):
 
     def assertResponseOk(self, response):
         self.assertTrue(response.ok, "%s: %s" % (response.status_code, response.content))
+
+    def assertExitedCleanly(self, program_name):
+        info = self._xmlrpc.supervisor.getProcessInfo(program_name)
+        try:
+            self.assertEqual(info['exitstatus'], 0, "%s exitstatus=%s (detail: %s)" % (program_name, info['exitstatus'], info))
+        except AssertionError:
+            log.error("%s stdout: %s" % (program_name, self._xmlrpc.supervisor.readProcessStdoutLog(program_name, 0, 4096)))
+            log.error("%s stderr: %s" % (program_name, self._xmlrpc.supervisor.readProcessStderrLog(program_name, 0, 4096)))
+            raise

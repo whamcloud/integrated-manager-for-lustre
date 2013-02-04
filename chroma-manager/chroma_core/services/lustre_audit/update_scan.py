@@ -40,7 +40,6 @@ class UpdateScan(object):
 
     @transaction.commit_on_success
     def audit_host(self):
-
         self.update_capabilities()
 
         self.update_lnet()
