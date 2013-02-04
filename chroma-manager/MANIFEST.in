@@ -2,7 +2,7 @@ include Makefile
 include logrotate.cfg
 include logrotate.cfg
 include chroma-manager.wsgi
-include supervisord.conf
+include production_supervisord.conf
 include chroma_core/fixtures/*
 include chroma_core/bin/*.py
 include chroma_core/bin/storage-daemon

@@ -67,17 +67,19 @@ tarball: version
 	    -e 's/@RELEASE@/$(PACKAGE_RELEASE)/g' \
 	< chroma-manager.spec.in > chroma-manager.spec
 	python scripts/production_httpd.py chroma-manager.conf.template > chroma-manager.conf
+	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
 	# workaround setuptools
 	touch .chroma-manager.wsgi
-	touch .supervisord.conf
+	touch .production_supervisord.conf
 	python setup.py sdist
-	rm -f .supervisord.conf
+	rm -f .chroma-manager.wsgi
+	rm -f .production_supervisord.conf
 
 rpms: cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
-	cp chroma-supervisor-init.sh chroma-host-discover-init.sh chroma-manager.conf supervisord.conf logrotate.cfg _topdir/SOURCES
+	cp chroma-supervisor-init.sh chroma-host-discover-init.sh chroma-manager.conf production_supervisord.conf logrotate.cfg _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
 	rpmbuild -bb --define "_topdir $$(pwd)/_topdir" _topdir/SPECS/chroma-manager.spec
 	mv _topdir/RPMS/noarch/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).noarch.rpm dist/

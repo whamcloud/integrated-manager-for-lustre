@@ -85,7 +85,7 @@ echo -e "/^HTTPS_FRONTEND_PORT =/s/= .*$/= 443/\nwq" | ed settings.py 2>/dev/nul
 %{__python} setup.py build
 # workaround setuptools inanity for top-level datafiles
 cp -a chroma-manager.wsgi build/lib
-cp -a supervisord.conf build/lib
+cp -a production_supervisord.conf build/lib
 
 %install
 %{__python} setup.py install --skip-build --root=%{buildroot}

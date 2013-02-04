@@ -13,9 +13,11 @@ export PROJECT_PATH=/usr/share/chroma-manager
 export PID_FILE=/var/run/chroma-storage.pid
 export LOG_DIR=/var/log/chroma
 export PYTHONPATH=${PROJECT_PATH}
+export SUPERVISOR_CONFIG=${PROJECT_PATH}/production_supervisord.conf
+
 
 start() {
-    action "Starting ${SERVICE_NAME}" supervisord --pidfile=${PID_FILE} -c ${PROJECT_PATH}/supervisord.conf -d ${PROJECT_PATH} -l ${LOG_DIR}/supervisord.conf
+    action "Starting ${SERVICE_NAME}" supervisord --pidfile=${PID_FILE} -c ${SUPERVISOR_CONFIG} -d ${PROJECT_PATH} -l ${LOG_DIR}/supervisord.log
     echo
 }
 
