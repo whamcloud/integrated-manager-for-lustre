@@ -1,21 +1,21 @@
 
-Chroma REST API
+REST API for Intel(r) Manager for Lustre* Software
 ===============
 
 Introduction
 ------------
 
-The Chroma web interface and command line are built on an API, accessed
+The Command Center web interface and command line interface (CLI) included with the Intel(r) Manager for Lustre* software are built on an API, which is accessed
 via HTTP.  This API is available for integration with third party applications.  The 
-types of operations possible using the API include creating a filesystem, checking
-the system for alert conditions and downloading performance metrics.  All functionality
-provided in the standard Chroma web interface is based on this API, so anything that
-the web interface can do is also possible for third party applications.
+types of operations possible using the API include creating a file system, checking
+the system for alert conditions, and downloading performance metrics.  All functionality
+provided in the standard Command Center web interface is based on this API, so anything that can be done using
+the web interface can also potentially be done from third party applications.
 
 The API is based on the `REST <http://en.wikipedia.org/wiki/Representational_state_transfer>`_
 style, and uses `JSON <http://en.wikipedia.org/wiki/JSON>`_ serialization.  Some of the
-resources exposed in the API correspond to things within the Lustre filesystem, while
-others refer to Chroma-specific functionality.
+resources exposed in the API correspond to functionality within the Lustre file system, while
+others refer to functionality specific to the Intel Manager for Lustre software.
 
 This document consists of a series of sections explaining how to use the API, followed
 by an `Example client`_, and a detailed `API Reference`_ describing all
@@ -24,21 +24,21 @@ available functionality.
 Prerequisites
 ~~~~~~~~~~~~~
 
-* Familiarity with managing Lustre using Chroma server's web interface.
+* Familiarity with managing Lustre using the Command Center web interface provided with the Intel Manager for Lustre software.
 * Familiarity with HTTP, including the meanings and conventions around the 
   methods (e.g. GET, POST, DELETE) and status codes (e.g. 404, 200).
-* Competance in a suitable high level programming language to write your
-  API client, and the libraries used with your language for HTTP network
+* Competence in using a suitable high level programming language to write your
+  API client and the libraries used with your language for HTTP network
   operations and JSON serialization.
 
-Overview of Lustre filesystems in the API
+Overview of Lustre file systems in the API
 -----------------------------------------
 
 Terminology
 ~~~~~~~~~~~
 
 We avoid some of the redundant terminology from manual Lustre 
-adminitration.  Especially, we avoid referring to hosts as 
+administration.  Especially, we avoid referring to hosts as 
 OSS, MDS or MGS -- this terminology is ambiguous as a host can
 serve targets of different types.  The Lustre specific terminology
 used in the API is:
