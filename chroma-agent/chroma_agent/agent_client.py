@@ -199,14 +199,14 @@ class SessionTable(object):
             raise KeyError()
         return session
 
-    def terminate(self, plugin_name, id):
+    def terminate(self, plugin_name):
         try:
-            session = self.get(plugin_name, id)
+            session = self.get(plugin_name)
         except KeyError:
-            daemon_log.warning("SessionTable.terminate not found %s/%s" % (plugin_name, id))
+            daemon_log.warning("SessionTable.terminate not found %s" % plugin_name)
             return
         else:
-            daemon_log.info("SessionTable.terminate %s/%s" % (plugin_name, id))
+            daemon_log.info("SessionTable.terminate %s/%s" % (plugin_name, session.id))
             session.teardown()
             del self._sessions[plugin_name]
 
@@ -344,7 +344,7 @@ class HttpReader(ExceptionCatchingThread):
                 elif m.type == "SESSION_TERMINATE_ALL":
                     self._client.sessions.terminate_all()
                 elif m.type == "SESSION_TERMINATE":
-                    self._client.sessions.terminate(m.plugin_name, m.session_id)
+                    self._client.sessions.terminate(m.plugin_name)
                 elif m.type == "DATA":
                     try:
                         session = self._client.sessions.get(m.plugin_name, m.session_id)

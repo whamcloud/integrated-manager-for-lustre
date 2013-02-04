@@ -49,13 +49,6 @@ class TestHttpAgent(SupervisorTestCase):
         self.server_boot_time = datetime.datetime.now().isoformat()
         self.get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
 
-    def assertResponseOk(self, response):
-        self.assertTrue(response.ok, "%s: %s" % (response.status_code, response.content))
-
-    def _flush_queue(self, queue):
-        with _amqp_connection() as conn:
-            conn.SimpleQueue(queue).consumer.purge()
-
     def _open_session(self, expect_termination = None, expect_initial = True):
         """
         :param expect_termination: Whether to expect the server to have state for an existing
@@ -121,6 +114,10 @@ class TestHttpAgent(SupervisorTestCase):
         })
 
         return session_id
+
+    def _flush_queue(self, queue):
+        with _amqp_connection() as conn:
+            conn.SimpleQueue(queue).consumer.purge()
 
     def _receive_one_amqp(self):
         TIMEOUT = RABBITMQ_GRACE_PERIOD

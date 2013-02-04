@@ -80,7 +80,7 @@ class MessageView(View):
                         'fqdn': fqdn,
                         'type': 'SESSION_TERMINATE',
                         'plugin': message['plugin'],
-                        'session_id': message['session_id'],
+                        'session_id': None,
                         'session_seq': None,
                         'body': None
                     })

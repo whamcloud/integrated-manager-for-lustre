@@ -47,6 +47,9 @@ class Service(ChromaService):
     def reset_session(self, fqdn, plugin, session_id):
         return self.sessions.reset_session(fqdn, plugin, session_id)
 
+    def reset_plugin_sessions(self, plugin):
+        return self.sessions.reset_plugin_sessions(plugin)
+
     def remove_host(self, fqdn):
         self.sessions.remove_host(fqdn)
         self.queues.remove_host(fqdn)
@@ -74,6 +77,23 @@ class Service(ChromaService):
         rx_svc_thread = ServiceThread(self.amqp_rx_forwarder)
         rx_svc_thread.start()
         tx_svc_thread.start()
+
+        # FIXME: this TERMINATE_ALL format could in principle
+        # be passed back from the agent (but it should never
+        # originate there), affecting sessions for other agents.
+
+        # At restart, message receiving services to clear out any
+        # existing session state (from a previous instance of this
+        # service).
+        for plugin in ['action_runner']:
+            self.queues.receive({
+                'fqdn': None,
+                'type': 'SESSION_TERMINATE_ALL',
+                'plugin': plugin,
+                'session_id': None,
+                'session_seq': None,
+                'body': None
+            })
 
         # This thread services session management RPCs, so that other
         # services can explicitly request a session reset

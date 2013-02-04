@@ -5,6 +5,7 @@
 
 
 import threading
+import traceback
 import dateutil.parser
 
 from django.contrib.contenttypes.models import ContentType
@@ -38,30 +39,35 @@ class QueueHandler(object):
         self._queue.serve(self.on_message)
 
     def on_message(self, message):
-        # Deserialize any datetimes which were serialized for JSON
-        deserialized_update_attrs = {}
-        model_klass = ContentType.objects.get_by_natural_key(*message['instance_natural_key']).model_class()
-        for attr, value in message['update_attrs'].items():
-            try:
-                field = [f for f in model_klass._meta.fields if f.name == attr][0]
-            except IndexError:
-                # e.g. _id names, they aren't datetimes so ignore them
-                deserialized_update_attrs[attr] = value
-            else:
-                if isinstance(field, DateTimeField):
-                    deserialized_update_attrs[attr] = dateutil.parser.parse(value)
-                else:
+        try:
+            # Deserialize any datetimes which were serialized for JSON
+            deserialized_update_attrs = {}
+            model_klass = ContentType.objects.get_by_natural_key(*message['instance_natural_key']).model_class()
+            for attr, value in message['update_attrs'].items():
+                try:
+                    field = [f for f in model_klass._meta.fields if f.name == attr][0]
+                except IndexError:
+                    # e.g. _id names, they aren't datetimes so ignore them
                     deserialized_update_attrs[attr] = value
+                else:
+                    if isinstance(field, DateTimeField):
+                        deserialized_update_attrs[attr] = dateutil.parser.parse(value)
+                    else:
+                        deserialized_update_attrs[attr] = value
 
-        log.debug("on_message: %s %s" % (message, deserialized_update_attrs))
+            log.debug("on_message: %s %s" % (message, deserialized_update_attrs))
 
-        self._job_scheduler.notify(
-            message['instance_natural_key'],
-            message['instance_id'],
-            message['time'],
-            deserialized_update_attrs,
-            message['from_states']
-        )
+            self._job_scheduler.notify(
+                message['instance_natural_key'],
+                message['instance_id'],
+                message['time'],
+                deserialized_update_attrs,
+                message['from_states']
+            )
+        except:
+            # Log bad messages and continue, swallow the exception to avoid
+            # bringing down the whole service
+            log.warning("on_message: bad message: %s" % traceback.format_exc())
 
 
 class Service(ChromaService):
@@ -97,7 +103,7 @@ class Service(ChromaService):
             job_scheduler.cancel_job(job.id)
 
     def stop(self):
-        AgentRpc.stop()
+        AgentRpc.shutdown()
 
         self.log.info("Stopping...")
         self._rpc_thread.stop()

@@ -59,6 +59,7 @@ class ServiceThread(threading.Thread):
         else:
             name = self.service.__class__.__name__
         self.log.debug("running ServiceThread '%s'" % name)
+        self.name = name
 
         if trace:
             sys.settrace(trace)

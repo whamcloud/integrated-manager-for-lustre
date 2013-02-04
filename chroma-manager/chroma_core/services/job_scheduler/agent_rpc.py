@@ -21,6 +21,10 @@ log = log_register(__name__)
 # this module will communicate
 ACTION_MANAGER_PLUGIN_NAME = 'action_runner'
 
+# If no action_runner session is present when trying to run
+# an action, wait this long for one to show up
+SESSION_WAIT_TIMEOUT = 10
+
 
 class AgentRunnerPluginRxQueue(AgentRxQueue):
     plugin = ACTION_MANAGER_PLUGIN_NAME
@@ -51,10 +55,6 @@ class ActionInFlight(object):
             }
         }
 
-# TODO: on start up, we should message the agent http daemon to
-# tell it to reset any sessions (so that the action_runner session restarts
-# and we learn about the new session)
-
 
 class AgentRpcMessenger(object):
     """
@@ -77,7 +77,23 @@ class AgentRpcMessenger(object):
         self._lock = threading.Lock()
 
     def run(self):
+        self._action_runner_rx_queue.purge()
+        AgentSessionRpc().reset_plugin_sessions(ACTION_MANAGER_PLUGIN_NAME)
         self._action_runner_rx_queue.serve(session_callback = self.on_rx)
+        log.info("AgentRpcMessenger.complete")
+
+    def stop(self):
+        log.info("AgentRpcMessenger.stop")
+        self._action_runner_rx_queue.stop()
+
+    def complete_all(self):
+        log.info("AgentRpcMessenger.complete_all")
+        for session_id, rpc_id_to_rpc in self._session_rpcs.items():
+            for rpc_id, rpc_state in rpc_id_to_rpc.items():
+                log.info("AgentRpcMessenger.complete_all: erroring %s" % rpc_state.id)
+                if not rpc_state.complete.is_set():
+                    rpc_state.exception = "Cancelled due to service shutdown"
+                    rpc_state.complete.set()
 
     def remove(self, fqdn):
         try:
@@ -114,9 +130,13 @@ class AgentRpcMessenger(object):
                 else:
                     self._sessions[fqdn] = session_id
             elif message['type'] == 'SESSION_TERMINATE':
-                # TODO: abort all RPCs within the terminating session (if this is indeed
-                # a session that we are aware of!)
-                pass
+                # An agent has timed out or restarted, we're being told its session is now dead
+                if message['fqdn'] in self._sessions:
+                    abort_session(message['session_id'])
+            elif message['type'] == 'SESSION_TERMINATE_ALL':
+                # The http_agent service has restarted, all sessions are now over
+                for session in self._sessions.values():
+                    abort_session(session)
             else:
                 rpc_response = message['body']
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
@@ -137,9 +157,6 @@ class AgentRpcMessenger(object):
                     # A session I never heard of?
                     AgentSessionRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
 
-    def stop(self):
-        self._action_runner_rx_queue.stop()
-
     def _resend(self, rpc):
         log.debug("AgentRpcMessenger._resend: rpc %s in session %s" % (rpc.id, rpc.session_id))
         self._session_rpcs[rpc.session_id][rpc.id] = rpc
@@ -147,7 +164,7 @@ class AgentRpcMessenger(object):
 
     def _send(self, fqdn, action, args):
         wait_count = 0
-        WAIT_LIMIT = 10
+
         while not fqdn in self._sessions:
             # Allow a short wait for a session to show up, for example
             # when running setup actions on a host we've just added its
@@ -155,7 +172,7 @@ class AgentRpcMessenger(object):
             log.error("AgentRpcMessenger._send: no session for %s" % fqdn)
             wait_count += 1
             time.sleep(1)
-            if wait_count > WAIT_LIMIT:
+            if wait_count > SESSION_WAIT_TIMEOUT:
                 raise AgentException(fqdn, action, args, "No %s session for %s" % (ACTION_MANAGER_PLUGIN_NAME, fqdn))
 
         with self._lock:
@@ -198,9 +215,11 @@ class AgentRpc(object):
         cls.thread.start()
 
     @classmethod
-    def stop(cls):
+    def shutdown(cls):
         if cls.thread is not None:
             cls.thread.stop()
+            cls.thread.join()
+            cls._Messenger.complete_all()
 
     @classmethod
     def call(cls, fqdn, action, args):

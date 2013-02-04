@@ -147,3 +147,6 @@ class SupervisorTestCase(TestCase):
     def assertStopped(self, program):
         info = self._xmlrpc.supervisor.getProcessInfo(program)
         self.assertEqual(info['statename'], "STOPPED")
+
+    def assertResponseOk(self, response):
+        self.assertTrue(response.ok, "%s: %s" % (response.status_code, response.content))

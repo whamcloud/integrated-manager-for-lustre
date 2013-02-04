@@ -122,6 +122,10 @@ class Command(BaseCommand):
             different things to handler
 
             """
+
+            if not options['lightweight_rpc']:
+                RpcClientFactory.shutdown_threads()
+
             for service_thread in service_mains:
                 log.info("Stopping %s" % service_thread.service.name)
                 service_thread.service.stop()
@@ -135,8 +139,10 @@ class Command(BaseCommand):
         if options['gevent']:
             import gevent
             gevent.signal(signal.SIGINT, signal_handler)
+            gevent.signal(signal.SIGTERM, signal_handler)
         else:
             signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGTERM, signal_handler)
 
         service_mains = []
         for service_name in args:
@@ -161,5 +167,7 @@ class Command(BaseCommand):
             # any timeout here, but a pure wait() breaks ctrl-c.
             stopped.wait(10)
 
-        if not options['lightweight_rpc']:
-            RpcClientFactory.shutdown_threads()
+        if len(threading.enumerate()) > 1 and not options['gevent']:
+            log.error("Rogue thread still running, exiting hard")
+            log.error([t.name for t in threading.enumerate()])
+            os._exit(-1)

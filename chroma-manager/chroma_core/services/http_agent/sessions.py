@@ -14,7 +14,7 @@ log = log_register(__name__)
 
 
 class AgentSessionRpc(ServiceRpcInterface):
-    methods = ['reset_session', 'remove_host']
+    methods = ['reset_session', 'remove_host', 'reset_plugin_sessions']
 
 
 class SessionCollection(object):
@@ -51,7 +51,7 @@ class SessionCollection(object):
 
             session = Session(plugin)
             self._sessions[(fqdn, plugin)] = session
-            # Send a message upstream to notify that the previous session is over
+            # Send a message upstream to notify of the new session
             self._queues.receive({
                 'fqdn': fqdn,
                 'type': 'SESSION_CREATE',
@@ -62,24 +62,37 @@ class SessionCollection(object):
             })
             return session
 
+    def _reset_session(self, fqdn, plugin, session_id):
+        log.warning("Terminating session on request %s/%s/%s" % (fqdn, plugin, session_id))
+        del self._sessions[(fqdn, plugin)]
+        self._queues.send({
+            'fqdn': fqdn,
+            'type': 'SESSION_TERMINATE',
+            'plugin': plugin,
+            'session_id': None,
+            'session_seq': None,
+            'body': None
+        })
+
     def reset_session(self, fqdn, plugin, session_id):
         """
         This is a reset in the TX direction, to tell the agent that a session has gone away
         """
         with self._lock:
             if (fqdn, plugin) in self._sessions:
-                log.warning("Terminating session on request %s/%s/%s" % (fqdn, plugin, session_id))
-                del self._sessions[(fqdn, plugin)]
-                self._queues.send({
-                    'fqdn': fqdn,
-                    'type': 'SESSION_TERMINATE',
-                    'plugin': plugin,
-                    'session_id': session_id,
-                    'session_seq': None,
-                    'body': None
-                })
+                self._reset_session(fqdn, plugin, session_id)
             else:
                 log.warning("Ignoring request to terminate unknown session %s/%s/%s" % (fqdn, plugin, session_id))
+
+    def reset_plugin_sessions(self, victim_plugin):
+        """
+        This is a reset for the TX direction, for services to tell all sessions
+        for a particular plugin have gone away.
+        """
+        with self._lock:
+            for (fqdn, plugin), session in self._sessions.items():
+                if plugin == victim_plugin:
+                    self._reset_session(fqdn, plugin, session.id)
 
     def reset_fqdn_sessions(self, victim_fqdn):
         """
@@ -102,8 +115,6 @@ class SessionCollection(object):
 
             for key in remove_keys:
                 del self._sessions[key]
-
-            log.debug("Session count: %s" % len(self._sessions))
 
 
 class Session(object):

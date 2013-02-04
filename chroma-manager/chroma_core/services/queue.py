@@ -51,6 +51,7 @@ class ServiceQueue(object):
         self._stopping = threading.Event()
 
     def stop(self):
+        log.info("Stopping ServiceQueue %s" % self.name)
         self._stopping.set()
 
     def serve(self, callback):

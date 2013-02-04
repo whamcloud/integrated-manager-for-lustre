@@ -212,6 +212,11 @@ class RpcClientResponseHandler(threading.Thread):
                 state.timeout = True
                 state.complete.set()
 
+    def timeout_all(self):
+        for request_id, state in self._response_states.items():
+            state.timeout = True
+            state.complete.set()
+
     def run(self):
         log.debug("ResponseThread.run")
 
@@ -273,6 +278,14 @@ class RpcClient(object):
     def stop(self):
         if not self._lightweight:
             self.response_thread.stop()
+
+    def join(self):
+        if not self._lightweight:
+            self.response_thread.join()
+
+    def timeout_all(self):
+        if not self._lightweight:
+            self.response_thread.timeout_all()
 
     def _send(self, connection, request):
         """
@@ -393,6 +406,11 @@ class RpcClientFactory(object):
         with cls._factory_lock:
             for instance in cls._instances.values():
                 instance.stop()
+            for instance in cls._instances.values():
+                instance.join()
+            for instance in cls._instances.values():
+                instance.timeout_all()
+
             cls._available = False
 
     @classmethod
