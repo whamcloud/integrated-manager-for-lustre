@@ -295,9 +295,6 @@ class ServiceConfig(CommandLine):
         with open(auth_cfg_file, "w") as cfg:
             # Allow our django user to connect with no password
             cfg.write("local\tall\t%s\t\ttrust\n" % database['USER'])
-            # Allow rsyslogd to connect
-            cfg.write("host\tall\t%s\t127.0.0.1/32\ttrust\n" % database['USER'])
-            cfg.write("host\tall\t%s\t::1/128\ttrust\n" % database['USER'])
             # Allow the system superuser (postgres) to connect
             cfg.write("local\tall\tall\t\tident\n")
 
@@ -396,7 +393,6 @@ class ServiceConfig(CommandLine):
             databases = settings.DATABASES
 
             self._setup_pgsql(databases['default'])
-            self._setup_rsyslog(databases['default'])
         else:
             log.info("DB already accessible")
 
