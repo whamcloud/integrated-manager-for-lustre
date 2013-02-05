@@ -7,6 +7,7 @@
 import argparse
 import inspect
 import logging
+from chroma_agent import shell
 import simplejson as json
 import sys
 import traceback
@@ -63,6 +64,8 @@ def main():
     try:
         args = parser.parse_args()
         result = args.func(args)
+        sys.stderr.write(json.dumps(shell.logs.commands, indent = 2))
+        sys.stderr.write("\n\n")
         print json.dumps({'success': True, 'result': result}, indent = 2)
     except SystemExit:
         raise
@@ -71,6 +74,8 @@ def main():
         backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
         sys.stderr.write("%s\n" % backtrace)
 
+        sys.stderr.write(json.dumps(shell.logs.commands, indent = 2))
+        sys.stderr.write("\n\n")
         print json.dumps({'success': False,
                           'backtrace': backtrace}, indent=2)
         # NB having caught the exception, we will finally return 0.  This

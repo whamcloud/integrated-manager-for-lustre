@@ -209,9 +209,6 @@ class ActionPluginManager(object):
     def run(self, cmd, args):
         # FIXME: provide a log object to action plugins that we capture
         # and send back to the caller
-        # FIXME: where shell.run is used while executing this funciton,
-        # capture its output and send back to the caller
-        # -- maybe set a thread-local instance of a logger?
         try:
             fn = self.commands[cmd]
         except KeyError:

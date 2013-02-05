@@ -7,6 +7,7 @@
 import threading
 import traceback
 import sys
+from chroma_agent import shell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
 
@@ -32,22 +33,23 @@ class ActionRunnerPlugin(DevicePlugin):
             thread.stop()
             thread.join()
 
-    def succeed(self, id, result):
+    def succeed(self, id, result, commands):
         daemon_log.info("ActionRunner.succeed %s: %s" % (id, result))
-        self._notify(id, result, None)
+        self._notify(id, result, None, commands)
         del self.running_actions[id]
 
-    def fail(self, id, backtrace):
+    def fail(self, id, backtrace, commands):
         daemon_log.info("ActionRunner.fail %s: %s" % (id, backtrace))
-        self._notify(id, None, backtrace)
+        self._notify(id, None, backtrace, commands)
         del self.running_actions[id]
 
-    def _notify(self, id, result, backtrace):
+    def _notify(self, id, result, backtrace, commands):
         self.send_message(
             {
                 'id': id,
                 'result': result,
-                'exception': backtrace
+                'exception': backtrace,
+                'commands': commands
             })
 
     def on_message(self, body):
@@ -73,6 +75,7 @@ class ActionRunner(threading.Thread):
             result = self.manager._session._client.action_plugins.run(self.action, self.args)
         except Exception:
             backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
-            self.manager.fail(self.id, backtrace)
+
+            self.manager.fail(self.id, backtrace, shell.logs.commands)
         else:
-            self.manager.succeed(self.id, result)
+            self.manager.succeed(self.id, result, shell.logs.commands)
