@@ -13,7 +13,10 @@ from urlparse import urljoin
 class HttpRequests(object):
     def __init__(self, server_http_url = '', *args, **kwargs):
         self.server_http_url = server_http_url
-        self.session = requests.session(headers = {"Accept": "application/json", "Content-type": "application/json"})
+        self.session = requests.session()
+        self.session.headers = {"Accept": "application/json",
+                                "Content-type": "application/json"}
+        self.session.verify = False
 
     def get(self, url, **kwargs):
         response = self.session.get(
