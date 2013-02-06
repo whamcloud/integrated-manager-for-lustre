@@ -62,6 +62,7 @@ def main():
         _register_function(subparsers, command, fn)
 
     try:
+        shell.logs.enable_save()
         args = parser.parse_args()
         result = args.func(args)
         sys.stderr.write(json.dumps(shell.logs.commands, indent = 2))

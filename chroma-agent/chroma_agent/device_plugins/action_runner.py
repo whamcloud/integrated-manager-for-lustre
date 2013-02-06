@@ -72,6 +72,7 @@ class ActionRunner(threading.Thread):
     def run(self):
         daemon_log.info("%s.run: %s %s %s" % (self.__class__.__name__, self.id, self.action, self.args))
         try:
+            shell.logs.enable_save()
             result = self.manager._session._client.action_plugins.run(self.action, self.args)
         except Exception:
             backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))

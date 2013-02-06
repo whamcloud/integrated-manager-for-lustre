@@ -17,27 +17,36 @@ from chroma_agent.log import console_log
 class ThreadLogs(threading.local):
     """Thread-local logs for stdout/stderr from wrapped commands"""
     def __init__(self):
+        self._save = False
         self.commands = []
         self.messages_buf = StringIO()
 
         self.messages = logging.getLogger("%s" % threading.current_thread().ident)
         self.messages.addHandler(logging.StreamHandler(self.messages_buf))
 
+    def enable_save(self):
+        """
+        Enable recording of all subprocesses run in this thread
+        """
+        self._save = True
+
     def get_commands(self):
         """Return a non-thread-local copy of the commands"""
         return deepcopy(self.commands)
 
     def save_result(self, arg_list, rc, stdout, stderr):
-        self.commands.append({
-            'args': arg_list,
-            'rc': rc,
-            'stdout': stdout,
-            'stderr': stderr
-        })
+        if self._save:
+            self.commands.append({
+                'args': arg_list,
+                'rc': rc,
+                'stdout': stdout,
+                'stderr': stderr
+            })
 
-
+# The logging state for this thread
 logs = ThreadLogs()
 
+# A logger which actions can use to emit user-visible messages
 log = logs.messages
 
 
