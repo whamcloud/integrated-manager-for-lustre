@@ -43,7 +43,7 @@ class ActionTestCase(unittest.TestCase):
 
         # Intercept subprocess invocations
         self.old_run = shell._run
-        shell._run = mock.Mock(side_effect = lambda args, shell: subprocesses[tuple(args)])
+        shell._run = mock.Mock(side_effect = lambda args: subprocesses[tuple(args)])
 
     def tearDown(self):
         del ActionPluginManager.commands['action_one']
@@ -140,7 +140,7 @@ class TestActionRunnerPlugin(ActionTestCase):
             'id': id,
             'result': ACTION_ONE_RETVAL,
             'exception': None,
-            'commands': [{
+            'subprocesses': [{
                 'args': ['subprocess_one', 'subprocess_one_arg'],
                 'stdout': 'subprocess_one_stdout',
                 'stderr': 'subprocess_one_stderr',
@@ -158,7 +158,7 @@ class TestActionRunnerPlugin(ActionTestCase):
         self.assertEqual(response['id'], id)
         self.assertIsNone(response['result'])
         self.assertIsNotNone(response['exception'])
-        self.assertListEqual(response['commands'], [
+        self.assertListEqual(response['subprocesses'], [
             {
                 'args': ['subprocess_one', 'subprocess_one_arg'],
                 'stdout': 'subprocess_one_stdout',
@@ -175,7 +175,7 @@ class TestActionRunnerPlugin(ActionTestCase):
 
     def test_two_actions(self):
         """
-        Test running two actions, checking that their 'commands' output is separated
+        Test running two actions, checking that their 'subprocesses' output is separated
         """
         id_1 = self._run_action('action_one', {'arg1': 'arg1_test'})
         id_2 = self._run_action('action_two', {'arg1': 'arg1_test'})
@@ -187,7 +187,7 @@ class TestActionRunnerPlugin(ActionTestCase):
             'id': id_1,
             'result': ACTION_ONE_RETVAL,
             'exception': None,
-            'commands': [{
+            'subprocesses': [{
                              'args': ['subprocess_one', 'subprocess_one_arg'],
                              'stdout': 'subprocess_one_stdout',
                              'stderr': 'subprocess_one_stderr',
@@ -198,7 +198,7 @@ class TestActionRunnerPlugin(ActionTestCase):
         self.assertEqual(response_2['id'], id_2)
         self.assertIsNone(response_2['result'])
         self.assertIsNotNone(response_2['exception'])
-        self.assertListEqual(response_2['commands'], [
+        self.assertListEqual(response_2['subprocesses'], [
             {
                 'args': ['subprocess_one', 'subprocess_one_arg'],
                 'stdout': 'subprocess_one_stdout',

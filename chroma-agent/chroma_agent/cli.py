@@ -65,7 +65,7 @@ def main():
         shell.logs.enable_save()
         args = parser.parse_args()
         result = args.func(args)
-        sys.stderr.write(json.dumps(shell.logs.commands, indent = 2))
+        sys.stderr.write(json.dumps(shell.logs.get_subprocesses(), indent = 2))
         sys.stderr.write("\n\n")
         print json.dumps({'success': True, 'result': result}, indent = 2)
     except SystemExit:
@@ -75,7 +75,7 @@ def main():
         backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
         sys.stderr.write("%s\n" % backtrace)
 
-        sys.stderr.write(json.dumps(shell.logs.commands, indent = 2))
+        sys.stderr.write(json.dumps(shell.logs.get_subprocesses(), indent = 2))
         sys.stderr.write("\n\n")
         print json.dumps({'success': False,
                           'backtrace': backtrace}, indent=2)

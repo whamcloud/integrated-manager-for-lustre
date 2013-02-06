@@ -15,7 +15,7 @@ EXCLUDE_INTERFACES = ['lo']
 class LinuxNetworkDevicePlugin(DevicePlugin):
     def _ifconfig(self):
         result = []
-        text = shell.try_run('ifconfig')
+        text = shell.try_run(['ifconfig'])
         matches = re.finditer("^([\\w]+) .*?RX bytes:(\\d+) .*?TX bytes:(\\d+) .*?^$", text, flags=(re.MULTILINE | re.DOTALL))
         for match in matches:
             name, rx_bytes, tx_bytes = match.groups()

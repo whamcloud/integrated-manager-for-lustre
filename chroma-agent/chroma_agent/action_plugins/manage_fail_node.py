@@ -9,7 +9,9 @@ from chroma_agent.shell import try_run
 
 def fail_node(args):
     # force a manual failover by failing a node
-    try_run("sync; sync; init 0", shell = True)
+    try_run(["sync"])
+    try_run(["sync"])
+    try_run(["init", "0"])
 
 ACTIONS = [fail_node]
 CAPABILITIES = []

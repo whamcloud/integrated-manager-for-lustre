@@ -6,7 +6,7 @@ import tempfile
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.http_agent import AgentSessionRpc
-from chroma_core.services.job_scheduler.agent_rpc import AgentException, AgentRpc
+from chroma_core.services.job_scheduler.agent_rpc import AgentException, ActionInFlight
 from chroma_core.services.log import log_register
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.http_agent import Service as HttpAgentService
@@ -71,7 +71,7 @@ def fake_log_message(message):
     )
 
 
-class MockAgent(object):
+class MockAgentRpc(object):
     mock_servers = {}
     calls = []
     host_calls = defaultdict(list)
@@ -90,34 +90,45 @@ class MockAgent(object):
     version = None
     capabilities = ['manage_targets']
 
-    def __init__(self, host, log = None, console_callback = None, timeout = None):
-        self.host = host
+    @classmethod
+    def remove(cls, fqdn):
+        pass
 
-    def _fail(self):
-        log.error("Synthetic agent error on host %s" % self.host)
-        raise AgentException(self.host.fqdn, "cmd", {'foo': 'bar'}, "Fake backtrace")
+    @classmethod
+    def _fail(cls, fqdn):
+        log.error("Synthetic agent error on host %s" % fqdn)
+        raise AgentException(fqdn, "cmd", {'foo': 'bar'}, "Fake backtrace")
 
-    def invoke(self, cmd, args = {}):
-        self.calls.append((cmd, args))
-        self.host_calls[self.host].append((cmd, args))
+    @classmethod
+    def call(cls, fqdn, cmd, args = {}):
+        host = ManagedHost.objects.get(fqdn = fqdn)
+        result = cls._call(host, cmd, args)
+        action_state = ActionInFlight('foo', fqdn, cmd, args)
+        action_state.subprocesses = []
+        return result, action_state
 
-        if not self.succeed:
-            self._fail()
+    @classmethod
+    def _call(cls, host, cmd, args):
+        cls.calls.append((cmd, args))
+        cls.host_calls[host].append((cmd, args))
 
-        if (cmd, args) in self.fail_commands:
-            self._fail()
+        if not cls.succeed:
+            cls._fail(host.fqdn)
 
-        log.info("invoke_agent %s %s %s" % (self.host, cmd, args))
+        if (cmd, args) in cls.fail_commands:
+            cls._fail(host.fqdn)
+
+        log.info("invoke_agent %s %s %s" % (host, cmd, args))
         if cmd == "lnet_scan":
-            return self.mock_servers[self.host.address]['nids']
+            return cls.mock_servers[host.address]['nids']
         elif cmd == 'host_properties':
             return {
                 'time': datetime.datetime.utcnow().isoformat() + "Z",
-                'fqdn': self.mock_servers[self.host.address]['fqdn'],
-                'nodename': self.mock_servers[self.host.address]['nodename'],
-                'capabilities': self.capabilities,
-                'selinux_enabled': self.selinux_enabled,
-                'agent_version': self.version,
+                'fqdn': cls.mock_servers[host.address]['fqdn'],
+                'nodename': cls.mock_servers[host.address]['nodename'],
+                'capabilities': cls.capabilities,
+                'selinux_enabled': cls.selinux_enabled,
+                'agent_version': cls.version,
             }
         elif cmd == 'format_target':
             import uuid
@@ -148,7 +159,7 @@ class MockAgent(object):
             label = re.search("/mnt/([^\s]+)", mount_point).group(1)
             return {'label': label}
         elif cmd == 'detect_scan':
-            return self.mock_servers[self.host.address]['detect-scan']
+            return cls.mock_servers[host.address]['detect-scan']
         elif cmd == 'device_plugin' and args['plugin'] == 'lustre':
             return {'lustre': {
                 'lnet_up': True,
@@ -160,14 +171,14 @@ class MockAgent(object):
             try:
                 CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
                 api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
-                fqdn = self.mock_servers[self.host]['fqdn']
+                fqdn = cls.mock_servers[host]['fqdn']
 
                 response = api_client.post(args['url'] + "register/%s/" % args['secret'], data = {
-                    'address': self.host,
+                    'address': host,
                     'fqdn': fqdn,
-                    'nodename': self.mock_servers[self.host]['nodename'],
+                    'nodename': cls.mock_servers[host]['nodename'],
                     'capabilities': ['manage_targets'],
-                    'version': MockAgent.version,
+                    'version': cls.version,
                     'csr': generate_csr(fqdn)
                 })
                 assert response.status_code == 201
@@ -178,13 +189,21 @@ class MockAgent(object):
                 CsrfAuthentication.is_authenticated = old_is_authenticated
         elif cmd == 'device_plugin':
             try:
-                data = self.mock_servers[self.host.address]['device-plugin']
+                data = cls.mock_servers[host.address]['device-plugin']
             except KeyError:
                 data = {}
             if args['plugin'] in data:
                 return {args['plugin']: data[args['plugin']]}
             else:
-                raise AgentException(self.host.fqdn, cmd, args, "")
+                raise AgentException(host.fqdn, cmd, args, "")
+
+
+class MockAgentSsh(object):
+    def __init__(self, address, log = None, console_callback = None, timeout = None):
+        self.address = address
+
+    def invoke(self, cmd, args = {}):
+        return MockAgentRpc._call(self.address, cmd, args)
 
 
 class JobTestCase(TestCase):
@@ -200,9 +219,9 @@ class JobTestCase(TestCase):
 
     @contextmanager
     def assertInvokes(self, agent_command, agent_args):
-        initial_call_count = len(MockAgent.calls)
+        initial_call_count = len(MockAgentRpc.calls)
         yield
-        wrapped_calls = MockAgent.calls[initial_call_count:]
+        wrapped_calls = MockAgentRpc.calls[initial_call_count:]
         for cmd, args in wrapped_calls:
             if cmd == agent_command and args == agent_args:
                 return
@@ -254,18 +273,12 @@ class JobTestCase(TestCase):
 
         # Intercept attempts to call out to lustre servers
         import chroma_core.services.job_scheduler.agent_rpc
-        self.old_agent = chroma_core.services.job_scheduler.agent_rpc.Agent
+        self.old_agent_rpc = chroma_core.services.job_scheduler.agent_rpc.AgentRpc
         self.old_agent_ssh = chroma_core.services.job_scheduler.agent_rpc.AgentSsh
-        MockAgent.mock_servers = self.mock_servers
-
-        class MockAgentRpc(AgentRpc):
-            @classmethod
-            def remove(cls, fqdn):
-                pass
+        MockAgentRpc.mock_servers = self.mock_servers
 
         chroma_core.services.job_scheduler.agent_rpc.AgentRpc = MockAgentRpc
-        chroma_core.services.job_scheduler.agent_rpc.Agent = MockAgent
-        chroma_core.services.job_scheduler.agent_rpc.AgentSsh = MockAgent
+        chroma_core.services.job_scheduler.agent_rpc.AgentSsh = MockAgentSsh
 
         # Any RPCs that are going to get called need explicitly overriding to
         # turn into local calls -- self is a catch-all to prevent any RPC classes
@@ -355,7 +368,7 @@ class JobTestCase(TestCase):
 
     def tearDown(self):
         import chroma_core.services.job_scheduler.agent_rpc
-        chroma_core.services.job_scheduler.agent_rpc.Agent = self.old_agent
+        chroma_core.services.job_scheduler.agent_rpc.AgentRpc = self.old_agent_rpc
         chroma_core.services.job_scheduler.agent_rpc.AgentSsh = self.old_agent_ssh
 
 

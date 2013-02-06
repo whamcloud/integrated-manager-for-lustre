@@ -33,23 +33,23 @@ class ActionRunnerPlugin(DevicePlugin):
             thread.stop()
             thread.join()
 
-    def succeed(self, id, result, commands):
+    def succeed(self, id, result, subprocesses):
         daemon_log.info("ActionRunner.succeed %s: %s" % (id, result))
-        self._notify(id, result, None, commands)
+        self._notify(id, result, None, subprocesses)
         del self.running_actions[id]
 
-    def fail(self, id, backtrace, commands):
+    def fail(self, id, backtrace, subprocesses):
         daemon_log.info("ActionRunner.fail %s: %s" % (id, backtrace))
-        self._notify(id, None, backtrace, commands)
+        self._notify(id, None, backtrace, subprocesses)
         del self.running_actions[id]
 
-    def _notify(self, id, result, backtrace, commands):
+    def _notify(self, id, result, backtrace, subprocesses):
         self.send_message(
             {
                 'id': id,
                 'result': result,
                 'exception': backtrace,
-                'commands': commands
+                'subprocesses': subprocesses
             })
 
     def on_message(self, body):
@@ -77,6 +77,6 @@ class ActionRunner(threading.Thread):
         except Exception:
             backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
 
-            self.manager.fail(self.id, backtrace, shell.logs.commands)
+            self.manager.fail(self.id, backtrace, shell.logs.get_subprocesses())
         else:
-            self.manager.succeed(self.id, result, shell.logs.commands)
+            self.manager.succeed(self.id, result, shell.logs.get_subprocesses())

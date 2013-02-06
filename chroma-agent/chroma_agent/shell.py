@@ -6,7 +6,6 @@
 
 from StringIO import StringIO
 from copy import deepcopy
-import logging
 import subprocess
 import threading
 import os
@@ -16,13 +15,11 @@ from chroma_agent.log import console_log
 
 class ThreadLogs(threading.local):
     """Thread-local logs for stdout/stderr from wrapped commands"""
+
     def __init__(self):
         self._save = False
-        self.commands = []
+        self._subprocesses = []
         self.messages_buf = StringIO()
-
-        self.messages = logging.getLogger("%s" % threading.current_thread().ident)
-        self.messages.addHandler(logging.StreamHandler(self.messages_buf))
 
     def enable_save(self):
         """
@@ -30,13 +27,13 @@ class ThreadLogs(threading.local):
         """
         self._save = True
 
-    def get_commands(self):
-        """Return a non-thread-local copy of the commands"""
-        return deepcopy(self.commands)
+    def get_subprocesses(self):
+        """Return a non-thread-local copy of the subprocesses"""
+        return deepcopy(self._subprocesses)
 
     def save_result(self, arg_list, rc, stdout, stderr):
         if self._save:
-            self.commands.append({
+            self._subprocesses.append({
                 'args': arg_list,
                 'rc': rc,
                 'stdout': stdout,
@@ -46,16 +43,13 @@ class ThreadLogs(threading.local):
 # The logging state for this thread
 logs = ThreadLogs()
 
-# A logger which actions can use to emit user-visible messages
-log = logs.messages
 
-
-def _run(arg_list, shell):
+def _run(arg_list):
     """
     Separate the bare inner of running a command, so that tests can
     stub this function while retaining the related behaviour of run()
     """
-    p = subprocess.Popen(arg_list, shell = shell,
+    p = subprocess.Popen(arg_list,
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE,
         close_fds = True)
@@ -65,11 +59,11 @@ def _run(arg_list, shell):
     return rc, stdout_buf, stderr_buf
 
 
-def run(arg_list, shell = False):
+def run(arg_list):
     """Run a subprocess, and return a tuple of rc, stdout, stderr.
-    Record commands run and their results in log.
+    Record subprocesses run and their results in log.
 
-    Note: we buffer all output, so do not run commands with large outputs
+    Note: we buffer all output, so do not run subprocesses with large outputs
     using this function.
     """
 
@@ -79,18 +73,18 @@ def run(arg_list, shell = False):
     console_log.debug("shell.run: %s" % arg_list)
     os.environ["TERM"] = ""
 
-    rc, stdout_buf, stderr_buf = _run(arg_list, shell)
+    rc, stdout_buf, stderr_buf = _run(arg_list)
 
     logs.save_result(arg_list, rc, stdout_buf, stderr_buf)
 
     return rc, stdout_buf, stderr_buf
 
 
-def try_run(arg_list, shell = False):
+def try_run(arg_list):
     """Run a subprocess, and raise an exception if it returns nonzero.  Return
     stdout string."""
 
-    rc, stdout, stderr = run(arg_list, shell)
+    rc, stdout, stderr = run(arg_list)
     if rc != 0:
         raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
 

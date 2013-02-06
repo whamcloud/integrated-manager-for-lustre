@@ -634,7 +634,7 @@ class JobScheduler(object):
         agent = False
         if resolve:
             try:
-                agent_ssh.invoke('lnet_scan')
+                agent_ssh.invoke('test')
                 agent = True
             except Exception, e:
                 log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))

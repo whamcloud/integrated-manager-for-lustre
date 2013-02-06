@@ -430,9 +430,11 @@ def start_target(ha_label):
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % ha_label, shell=True)
+        stdout = shell.try_run(['crm', 'resource', 'status', ha_label])
+
         if stdout.startswith("resource %s is running on:" % ha_label):
             break
+
         sleep(1)
         n += 1
 
@@ -471,9 +473,11 @@ def _stop_target(ha_label):
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run("crm resource status %s 2>&1" % ha_label,
-                               shell=True)
-        if stdout.find("is NOT running") > -1:
+        arg_list = ["crm", "resource", "status", ha_label]
+        rc, stdout, stderr = shell.run(arg_list)
+        if rc != 0:
+            raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
+        if stderr.find("is NOT running") > -1:
             break
         sleep(1)
         n += 1
@@ -485,10 +489,13 @@ def _stop_target(ha_label):
 # common plumbing for failover/failback
 def _move_target(target_label, dest_node):
     from time import sleep
-    stdout = shell.try_run("crm_resource --resource %s --move --node %s 2>&1" % \
-                           (target_label, dest_node), shell = True)
+    arg_list = ["crm_resource", "--resource", target_label, "--move", "--node", dest_node]
+    rc, stdout, stderr = shell.run(arg_list)
 
-    if stdout.find("%s is already active on %s\n" % \
+    if rc != 0:
+        raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
+
+    if stderr.find("%s is already active on %s\n" % \
                    (target_label, dest_node)) > -1:
         return
 

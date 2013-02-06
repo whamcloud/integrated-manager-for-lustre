@@ -3,7 +3,7 @@ from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesy
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread, JobScheduler
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import mock
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgentRpc, freshen
 import datetime
 import django.utils.timezone
 
@@ -36,12 +36,12 @@ class TestStateManager(JobTestCaseWithHost):
     def test_failing_job(self):
         mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         try:
-            MockAgent.succeed = False
+            MockAgentRpc.succeed = False
             self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'mounted', check = False)
             # This is to check that the scheduler doesn't run past the failed job (like in HYD-1572)
             self.assertState(mgt, 'unformatted')
         finally:
-            MockAgent.succeed = True
+            MockAgentRpc.succeed = True
             self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'mounted')
 
     def test_opportunistic_execution(self):
@@ -58,7 +58,7 @@ class TestStateManager(JobTestCaseWithHost):
 
         try:
             # Make it so that an MGS start operation will fail
-            MockAgent.succeed = False
+            MockAgentRpc.succeed = False
 
             import chroma_core.lib.conf_param
             chroma_core.lib.conf_param.set_conf_params(fs, {"llite.max_cached_mb": "32"})
@@ -66,7 +66,7 @@ class TestStateManager(JobTestCaseWithHost):
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
             self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
         finally:
-            MockAgent.succeed = True
+            MockAgentRpc.succeed = True
 
         self.set_state(fs, 'available')
         self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')

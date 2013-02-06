@@ -102,5 +102,11 @@ def register_server(url, ca, secret, address = None):
 
     return registration_result
 
-ACTIONS = [deregister_server, register_server]
+
+def test():
+    """A dummy action used for testing that the agent is available
+    and successfully running actions."""
+    pass
+
+ACTIONS = [deregister_server, register_server, test]
 CAPABILITIES = []

@@ -1,7 +1,7 @@
 from copy import deepcopy
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
-from tests.unit.chroma_core.helper import JobTestCase, MockAgent
+from tests.unit.chroma_core.helper import JobTestCase, MockAgentRpc
 from chroma_core.models.host import NoLNetInfo
 from tests.unit.chroma_core.helper import freshen
 from django.db.utils import IntegrityError
@@ -22,10 +22,10 @@ class TestSetup(JobTestCase):
         """Test that if a host is added and then acquired lnet_up state passively,
         we will go and get the NIDs"""
         try:
-            MockAgent.fail_commands = [('device_plugin', {'plugin': 'lustre'})]
+            MockAgentRpc.fail_commands = [('device_plugin', {'plugin': 'lustre'})]
             host = self._create_host('myaddress')
         finally:
-            MockAgent.fail_commands = []
+            MockAgentRpc.fail_commands = []
         self.assertState(host, 'configured')
         self.assertState(host.lnetconfiguration, 'nids_unknown')
         now = django.utils.timezone.now()
@@ -117,9 +117,9 @@ class TestUpdateNids(NidTestCase):
 
         JobSchedulerClient.command_run_jobs([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test update nids")
         # The -3 looks past the start/stop that happens after writeconf
-        self.assertEqual(MockAgent.host_calls[mgs][-3][0], "writeconf_target")
-        self.assertEqual(MockAgent.host_calls[mds][-3][0], "writeconf_target")
-        self.assertEqual(MockAgent.host_calls[oss][-3][0], "writeconf_target")
+        self.assertEqual(MockAgentRpc.host_calls[mgs][-3][0], "writeconf_target")
+        self.assertEqual(MockAgentRpc.host_calls[mds][-3][0], "writeconf_target")
+        self.assertEqual(MockAgentRpc.host_calls[oss][-3][0], "writeconf_target")
         self.assertState(self.fs, 'stopped')
 
 
@@ -166,11 +166,11 @@ class TestHostAddRemove(JobTestCase):
         self.assertEqual(VolumeNode.objects.count(), 1)
 
         # The host disappears, never to be seen again
-        MockAgent.succeed = False
+        MockAgentRpc.succeed = False
         try:
             JobSchedulerClient.command_run_jobs([{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host.id}}], "Test host force remove")
         finally:
-            MockAgent.succeed = True
+            MockAgentRpc.succeed = True
 
         with self.assertRaises(ManagedHost.DoesNotExist):
             ManagedHost.objects.get(address = 'myaddress')
@@ -196,11 +196,11 @@ class TestHostAddRemove(JobTestCase):
         self.assertEqual(ManagedFilesystem.objects.get(pk = self.fs.pk).state, 'available')
 
         # The host disappears, never to be seen again
-        MockAgent.succeed = False
+        MockAgentRpc.succeed = False
         try:
             JobSchedulerClient.command_run_jobs([{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host.id}}], "Test host force remove")
         finally:
-            MockAgent.succeed = True
+            MockAgentRpc.succeed = True
 
         with self.assertRaises(ManagedHost.DoesNotExist):
             ManagedHost.objects.get(address = 'myaddress')

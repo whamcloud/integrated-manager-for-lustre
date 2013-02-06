@@ -140,26 +140,24 @@ class Step(object):
     def run(self, kwargs):
         raise NotImplementedError
 
-    def retry(self):
-        pass
-        # TODO
-        #steps = self.get_steps()
-        # Which one failed?
-
     def log(self, message):
         job_log.info("Job %s %s: %s" % (self.job_id, self.__class__.__name__, message))
         self.result.log += "%s\n" % message
         self.result.save()
 
     def invoke_agent(self, host, command, args = {}):
-        def console_callback(chunk):
-            self.result.console += chunk
-            self.result.save()
+        """
+        Wrapper around AgentRpc.call which stashes console output in self.result
+        """
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
-        from chroma_core.services.job_scheduler.agent_rpc import Agent
-        job_log.info("invoke_agent on agent %s %s %s" % (Agent, command, args))
-        agent = Agent(host = host, log = job_log, console_callback = console_callback, timeout = self.timeout)
-        return agent.invoke(command, args)
+        job_log.info("invoke_agent on agent %s %s %s" % (host, command, args))
+
+        result, action_state = AgentRpc.call(host.fqdn, command, args)
+        for subprocess in action_state.subprocesses:
+            self.result.console += "%s: %s\n%s\n%s\n" % (" ".join(subprocess['args']), subprocess['rc'], subprocess['stdout'], subprocess['stderr'])
+        self.result.save()
+        return result
 
 
 class IdempotentStep(Step):

@@ -5,7 +5,7 @@ from chroma_core.lib.util import dbperf
 from chroma_core.models.host import Volume, VolumeNode, ManagedHost
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from helper import load_plugins
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgentRpc
 
 
 class ResourceManagerTestCase(JobTestCaseWithHost):
@@ -173,7 +173,7 @@ class TestVirtualMachines(ResourceManagerTestCase):
             'nodename': 'test01.myvm.mycompany.com',
             'nids': ["192.168.0.19@tcp"]
         }}
-        MockAgent.mock_servers = self.mock_servers
+        MockAgentRpc.mock_servers = self.mock_servers
 
     def test_virtual_machine_initial(self):
         """Check that ManagedHosts are created for VirtualMachines when

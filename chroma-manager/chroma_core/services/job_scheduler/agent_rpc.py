@@ -36,11 +36,14 @@ class ActionInFlight(object):
         self.id = uuid.uuid4().__str__()
         self.session_id = session_id
         self.fqdn = fqdn
+
         self.action = action
         self.args = args
+
         self.complete = threading.Event()
         self.exception = None
         self.result = None
+        self.subprocesses = None
 
     def get_msg(self):
         return {
@@ -158,6 +161,7 @@ class AgentRpcMessenger(object):
                     del self._session_rpcs[session_id][rpc_response['id']]
                     rpc.exception = rpc_response['exception']
                     rpc.result = rpc_response['result']
+                    rpc.subprocesses = rpc_response['subprocesses']
                     log.info("AgentRpcMessenger.on_rx: completing rpc %s" % rpc.id)
                     rpc.complete.set()
                 else:
@@ -205,7 +209,7 @@ class AgentRpcMessenger(object):
     def call(self, fqdn, action, args):
         log.debug("AgentRpcMessenger.call: %s %s" % (fqdn, action))
         rpc = self._send(fqdn, action, args)
-        return self._complete(rpc)
+        return self._complete(rpc), rpc
 
 
 class AgentRpc(object):
@@ -236,28 +240,6 @@ class AgentRpc(object):
     @classmethod
     def remove(cls, fqdn):
         return cls._messenger.remove(fqdn)
-
-
-class Agent(object):
-    def invoke(self, action, args = {}):
-        return AgentRpc.call(self.host.fqdn, action, args)
-
-    def __init__(self, host, log = None, console_callback = None, timeout = None):
-        DEFAULT_TIMEOUT = 60
-        if timeout:
-            self.timeout = timeout
-        else:
-            self.timeout = DEFAULT_TIMEOUT
-
-        self.host = host
-
-        self.console_callback = console_callback
-
-        if log:
-            self.log = log
-        else:
-            import logging
-            self.log = logging.getLogger(None)
 
 
 class AgentException(Exception):
@@ -297,11 +279,6 @@ class AgentSsh(object):
         else:
             import logging
             self.log = logging.getLogger(None)
-
-    def remove_host(self, fqdn):
-        """Call during host removal to remove this host
-        from all tables and ensure it has no ongoing
-        long-running requests"""
 
     DEFAULT_USERNAME = 'root'
 

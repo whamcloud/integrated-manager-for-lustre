@@ -97,8 +97,8 @@ def _load(text):
             # FIXME:  FQDN and nodename, which works because this function
             # is actually only used in our test scripts :-/, and dates from when host records
             # were created with just an address.
-            from chroma_core.services.job_scheduler.agent_rpc import Agent
-            mock_host_info = Agent.mock_servers[host_info['address']]
+            from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+            mock_host_info = AgentRpc.mock_servers[host_info['address']]
             ManagedHost.create(mock_host_info['fqdn'], mock_host_info['nodename'], ['manage_targets'], address = host_info['address'])
 
     for mgs_info in data['mgss']:

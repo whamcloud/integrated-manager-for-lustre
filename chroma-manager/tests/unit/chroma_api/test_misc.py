@@ -3,7 +3,7 @@ from chroma_core.models.host import ManagedHost, Volume, VolumeNode
 from chroma_core.models.jobs import StepResult
 from chroma_core.models.target import ManagedTarget
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
-from tests.unit.chroma_core.helper import MockAgent
+from tests.unit.chroma_core.helper import MockAgentRpc
 
 
 class TestMisc(ChromaApiTestCaseHeavy):
@@ -46,7 +46,7 @@ class TestMisc(ChromaApiTestCaseHeavy):
 
         # Create a failed job record
         try:
-            MockAgent.succeed = False
+            MockAgentRpc.succeed = False
 
             self.assertEqual(host['state'], 'lnet_up')
             host['state'] = 'lnet_down'
@@ -55,7 +55,7 @@ class TestMisc(ChromaApiTestCaseHeavy):
             # Check we created an exception
             self.assertNotEqual(StepResult.objects.latest('id').backtrace, "")
         finally:
-            MockAgent.succeed = True
+            MockAgentRpc.succeed = True
 
         # Remove everything
         response = self.api_client.delete(filesystem['resource_uri'])

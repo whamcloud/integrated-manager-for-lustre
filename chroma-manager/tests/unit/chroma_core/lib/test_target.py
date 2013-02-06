@@ -1,6 +1,6 @@
 from chroma_core.models.target import ManagedTargetMount
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgent, freshen
+from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgentRpc, freshen
 
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
 
@@ -14,7 +14,7 @@ class TestMkfsOverrides(JobTestCaseWithHost):
 
         settings.LUSTRE_MKFS_OPTIONS_MDT = "-E block_size=1024"
         self.set_state(self.mdt, "formatted")
-        cmd, args = MockAgent.last_call()
+        cmd, args = MockAgentRpc.last_call()
         self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_MDT}, args)
 
@@ -26,7 +26,7 @@ class TestMkfsOverrides(JobTestCaseWithHost):
 
         settings.LUSTRE_MKFS_OPTIONS_OST = "-E block_size=2048"
         self.set_state(self.ost, "formatted")
-        cmd, args = MockAgent.last_call()
+        cmd, args = MockAgentRpc.last_call()
         self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_OST}, args)
 
@@ -61,7 +61,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
 
         try:
             # Make it so that the mount unconfigure operations will fail
-            MockAgent.succeed = False
+            MockAgentRpc.succeed = False
 
             # -> the TargetMount removal parts of this operation will fail, we
             # want to make sure that this means that Target deletion part
@@ -71,7 +71,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
             ManagedMgs.objects.get(pk = self.mgt.pk)
             self.assertNotEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
         finally:
-            MockAgent.succeed = True
+            MockAgentRpc.succeed = True
 
         # Now let the op go through successfully
         self.set_state(self.mgt, 'removed')
@@ -127,10 +127,10 @@ class TestSharedTarget(JobTestCaseWithHost):
         self.assertEqual(ManagedTarget.objects.get(pk = self.target.pk).state, 'unformatted')
         try:
             # We should need no agent ops to remove something we never formatted
-            MockAgent.succeed = False
+            MockAgentRpc.succeed = False
             self.set_state(self.target, 'removed')
         finally:
-            MockAgent.succeed = True
+            MockAgentRpc.succeed = True
 
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk = self.target.pk)
