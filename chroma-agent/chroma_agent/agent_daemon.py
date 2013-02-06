@@ -56,11 +56,11 @@ def main():
     # could cause trouble (think of a 2 hour mkfs)
 
     if not args.foreground:
-        if os.path.exists(args.pid_file + ".lock") or os.path.exists(args.pid_file):
+        if os.path.exists(args.pid_file):
             try:
                 pid = int(open(args.pid_file).read())
                 os.kill(pid, 0)
-            except (ValueError, OSError):
+            except (ValueError, OSError, IOError):
                 # Not running, delete stale PID file
                 sys.stderr.write("Removing stale PID file\n")
                 try:
@@ -73,6 +73,11 @@ def main():
             else:
                 # Running, we should refuse to run
                 raise RuntimeError("Daemon is already running (PID %s)" % pid)
+        else:
+            if os.path.exists(args.pid_file + ".lock"):
+                sys.stderr.write("Removing stale lock file\n")
+                os.remove(args.pid_file + ".lock")
+
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
         context = DaemonContext(pidfile = PIDLockFile(args.pid_file))
         context.open()
