@@ -22,7 +22,9 @@ start() {
 }
 
 stop() {
-    action "Stopping ${SERVICE_NAME}: " killproc -p ${PID_FILE}
+    # Use -TERM to prevent killproc -KILL'ing supervisord when it doesn't
+    # exit immediately: that would orphan supervisor's children.
+    action "Stopping ${SERVICE_NAME}: " killproc -p ${PID_FILE} ${SERVICE_NAME} -TERM
     echo
 }
 
