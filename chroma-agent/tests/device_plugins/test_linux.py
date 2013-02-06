@@ -2,7 +2,10 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
+
+
 import json
+import mock
 import os
 from django.utils import unittest
 from chroma_agent.device_plugins.linux import DmsetupTable
@@ -13,7 +16,7 @@ class MockDmsetupTable(DmsetupTable):
         self.lvs = devices_data['lvs']
         self.vgs = devices_data['vgs']
         self.mpaths = {}
-        self.block_devices = object()
+        self.block_devices = mock.Mock()
         self.block_devices.node_block_devices = devices_data['node_block_devices']
         self.block_devices.block_device_nodes = devices_data['block_device_nodes']
         self._parse_dm_table(dmsetup_data)
