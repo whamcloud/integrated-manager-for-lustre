@@ -19,8 +19,7 @@ start() {
 }
 
 stop() {
-    echo -n "Stopping the Chroma agent daemon: "
-    kill $(cat ${PID_FILE})
+    action "Stopping ${SVC_NAME}: " killproc -p ${PID_FILE}
     echo
 }
 
