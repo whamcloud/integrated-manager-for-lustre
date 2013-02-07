@@ -56,8 +56,8 @@ class AgentClient(object):
                 verify = False,
                 headers = {"Content-Type": "application/json"},
                 **kwargs)
-        except socket.error, e:
-            daemon_log.error("Error conntecting to %s: %s" % (self.url, e))
+        except (socket.error, requests.exceptions.ConnectionError) as e:
+            daemon_log.error("Error connecting to %s: %s" % (self.url, e))
             raise HttpError()
 
         if response.status_code / 100 != 2:
