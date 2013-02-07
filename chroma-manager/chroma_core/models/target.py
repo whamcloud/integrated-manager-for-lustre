@@ -406,7 +406,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         return True
 
     def get_confirmation_string(self):
-        if issubclass(self.target.downcast_class(), ManagedOst):
+        if issubclass(self.target.downcast_class, ManagedOst):
             return "Remove the OST from the file system. It will no longer be seen in Chroma Manager. Before removing the OST, manually remove all data from the OST. When an OST is removed, files stored on the OST will no longer be accessible."
         else:
             return None
