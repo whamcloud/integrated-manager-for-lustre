@@ -72,7 +72,7 @@ class BaseView(object):
 
         # Lets move the mouse off the button to untrigger any hover that could block
         # the #transition_confirm_button.
-        ActionChains(self.driver).move_to_element_with_offset(button, 0, -5).perform()
+        ActionChains(self.driver).move_by_offset(0, -5).perform()
 
         self.quiesce()
 
