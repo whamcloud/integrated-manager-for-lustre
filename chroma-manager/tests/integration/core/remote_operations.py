@@ -173,7 +173,7 @@ class RealRemoteOperations(RemoteOperations):
         )
         self._test_case.assertRegexpMatches(
             result.stdout.read(),
-            " on /mnt/%s " % filesystem['mount_command']
+            "%s on /mnt/%s " % (filesystem['mount_path'], filesystem['name'])
         )
 
     def _unmount_filesystem(self, client, filesystem_name):
@@ -390,16 +390,16 @@ class RealRemoteOperations(RemoteOperations):
                 # Verify no more targets
                 self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
 
-                # Remove chroma-agent's records of the targets
+                # Stop the agent
+                self._ssh_address(
+                    server['address'],
+                    'service chroma-agent stop'
+                )
+                # Remove all agent configuration
                 self._ssh_address(
                     server['address'],
                     'rm -rf /var/lib/chroma/*',
                     expected_return_code = None  # Keep going if it failed - may be none there.
                 )
-                self._ssh_address(
-                    server['address'],
-                    'service chroma-agent restart'
-                )
-
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
