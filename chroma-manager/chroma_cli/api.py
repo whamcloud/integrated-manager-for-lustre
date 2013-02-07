@@ -43,22 +43,20 @@ class ChromaSessionClient(object):
         self.is_authenticated = False
         self.api_uri = "http://localhost/api/"
 
-        session_headers = {'Accept': "application/json",
-                           'Content-Type': "application/json"}
         import requests
-        self.__session = requests.session(headers=session_headers)
+        self.session = requests.session()
+        self.session.headers = {'Accept': "application/json",
+                                'Content-Type': "application/json"}
+        # FIXME?: Should we be doing CA verification in the CLI?
+        self.session.verify = False
 
     def __getattr__(self, method):
-        return getattr(self.__session, method)
+        return getattr(self.session, method)
 
     @property
     def session_uri(self):
         from urlparse import urljoin
         return urljoin(self.api_uri, "session/")
-
-    @property
-    def session(self):
-        return self.__session
 
     def start_session(self):
         r = self.get(self.session_uri)
