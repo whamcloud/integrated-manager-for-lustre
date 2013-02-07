@@ -284,9 +284,9 @@ class HttpWriter(ExceptionCatchingThread):
             kill_sessions = set()
             for message in messages:
                 if message.type == 'DATA':
-                    kill_sessions.add((message.plugin_name, message.session_id))
-            for plugin_name, session_id in kill_sessions:
-                self._client.sessions.terminate(plugin_name, session_id)
+                    kill_sessions.add(message.plugin_name)
+            for plugin_name in kill_sessions:
+                self._client.sessions.terminate(plugin_name)
 
     def poll(self):
         """
@@ -310,7 +310,7 @@ class HttpWriter(ExceptionCatchingThread):
                 except Exception:
                     backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
                     daemon_log.error("Error in plugin %s: %s" % (plugin_name, backtrace))
-                    self._client.sessions.terminate(plugin_name, session.id)
+                    self._client.sessions.terminate(plugin_name)
                     self._messages.put(Message("SESSION_CREATE_REQUEST", plugin_name))
                 else:
                     if data is not None:
