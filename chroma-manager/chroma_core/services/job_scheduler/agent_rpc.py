@@ -202,7 +202,7 @@ class AgentRpcMessenger(object):
         rpc.complete.wait()
         log.info("AgentRpcMessenger._complete: completed wait for rpc %s" % rpc.id)
         if rpc.exception:
-            raise AgentException(rpc.fqdn, rpc.action, rpc.args, rpc.exception)
+            raise AgentException(rpc.fqdn, rpc.action, rpc.args, rpc.exception, subprocesses = rpc.subprocesses)
         else:
             return rpc.result
 
@@ -243,11 +243,12 @@ class AgentRpc(object):
 
 
 class AgentException(Exception):
-    def __init__(self, fqdn, action, params, backtrace):
+    def __init__(self, fqdn, action, params, backtrace, subprocesses = []):
         self.fqdn = fqdn
         self.action = action
         self.params = params
         self.backtrace = backtrace
+        self.subprocesses = subprocesses
 
     def __str__(self):
         return """AgentException

@@ -145,19 +145,26 @@ class Step(object):
         self.result.log += "%s\n" % message
         self.result.save()
 
+    def _log_subprocesses(self, subprocesses):
+        for subprocess in subprocesses:
+            self.result.console += "%s: %s\n%s\n%s\n" % (" ".join(subprocess['args']), subprocess['rc'], subprocess['stdout'], subprocess['stderr'])
+            self.result.save()
+
     def invoke_agent(self, host, command, args = {}):
         """
         Wrapper around AgentRpc.call which stashes console output in self.result
         """
-        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc, AgentException
 
         job_log.info("invoke_agent on agent %s %s %s" % (host, command, args))
 
-        result, action_state = AgentRpc.call(host.fqdn, command, args)
-        for subprocess in action_state.subprocesses:
-            self.result.console += "%s: %s\n%s\n%s\n" % (" ".join(subprocess['args']), subprocess['rc'], subprocess['stdout'], subprocess['stderr'])
-        self.result.save()
-        return result
+        try:
+            result, action_state = AgentRpc.call(host.fqdn, command, args)
+            self._log_subprocesses(action_state.subprocesses)
+            return result
+        except AgentException as e:
+            self._log_subprocesses(e.subprocesses)
+            raise
 
 
 class IdempotentStep(Step):
