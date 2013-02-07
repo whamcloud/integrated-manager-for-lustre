@@ -4,6 +4,7 @@
 # ========================================================
 
 import logging
+import datetime
 import simplejson as json
 
 from django.utils import unittest
@@ -15,6 +16,23 @@ log = logging.getLogger(__name__)
 
 ONLINE, OFFLINE = 'true', 'false'
 CMD = ['crm_mon', '--one-shot', '--as-xml']
+
+
+class patch_timezone(object):
+    def __init__(self, offset_hours):
+        self._offset = offset_hours * 3600
+
+    def __enter__(self):
+        from dateutil.tz import tzlocal
+        self._old_std_offset = tzlocal._std_offset
+        self._old_dst_offset = tzlocal._dst_offset
+        tzlocal._std_offset = datetime.timedelta(seconds = self._offset)
+        tzlocal._dst_offset = datetime.timedelta(seconds = self._offset)
+
+    def __exit__(self, *exc_info):
+        from dateutil.tz import tzlocal
+        tzlocal._std_offset = self._old_std_offset
+        tzlocal._dst_offset = self._old_dst_offset
 
 
 class TestCorosync(unittest.TestCase):
@@ -40,6 +58,7 @@ class TestCorosync(unittest.TestCase):
         values from crm_mon are tested.
         """
 
+        feed_tz = -8
         feed_local_datetime = "Fri Jan 11 11:04:07 2013"  # PST  (UTC-8)
         feed_utc_datetime = "2013-01-11T19:04:07+00:00"   # UTC
 
@@ -73,26 +92,27 @@ class TestCorosync(unittest.TestCase):
           </resources>
         </crm_mon>""" % (feed_local_datetime,)
 
-        with patch_run(expected_args=CMD, stdout=crm_one_shot_xml):
+        with patch_timezone(feed_tz):
+            with patch_run(expected_args=CMD, stdout=crm_one_shot_xml):
 
-            plugin = CorosyncPlugin(None)
-            result_dict = plugin.start_session()
+                plugin = CorosyncPlugin(None)
+                result_dict = plugin.start_session()
 
-            #  Check it's serializable.
-            try:
-                json.dumps(result_dict)
-            except TypeError:
-                self.fail("payload from plugin can't be serialized")
+                #  Check it's serializable.
+                try:
+                    json.dumps(result_dict)
+                except TypeError:
+                    self.fail("payload from plugin can't be serialized")
 
-            def check_node(node_name, expected_status):
-                tm = result_dict['datetime']
-                self.assertEqual(tm, feed_utc_datetime)
-                node_record = result_dict['nodes'][node_name]
-                self.assertEqual(node_record['name'], node_name)
-                self.assertEqual(node_record['online'], expected_status)
+                def check_node(node_name, expected_status):
+                    tm = result_dict['datetime']
+                    self.assertEqual(tm, feed_utc_datetime)
+                    node_record = result_dict['nodes'][node_name]
+                    self.assertEqual(node_record['name'], node_name)
+                    self.assertEqual(node_record['online'], expected_status)
 
-            check_node('storage0.node', ONLINE)
-            check_node('storage1.node', OFFLINE)
+                check_node('storage0.node', ONLINE)
+                check_node('storage1.node', OFFLINE)
 
     def test_corosync_down(self):
         """Corosync is not running - attempt was tried, but failed.

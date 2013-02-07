@@ -5,7 +5,6 @@
 
 
 import xml.etree.ElementTree as xml
-from pyexpat import ExpatError
 from dateutil.tz import tzutc, tzlocal
 from dateutil.parser import parse
 
@@ -48,7 +47,7 @@ class CorosyncPlugin(DevicePlugin):
         return_dict = {}
         try:
             root = xml.fromstring(raw)
-        except ExpatError:
+        except xml.ParseError:
             # not xml, might be a known error message
             if  CorosyncPlugin.COROSYNC_CONNECTION_FAILURE in raw:
                 return_dict['datetime'] = ''
