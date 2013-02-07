@@ -79,7 +79,9 @@ class SeleniumBaseTestCase(TestCase):
             if browser == 'Chrome':
                 options = webdriver.ChromeOptions()
                 options.add_argument('no-proxy-server')
-            self.driver = getattr(webdriver, browser)(chrome_options=options)
+                self.driver = getattr(webdriver, browser)(chrome_options=options)
+            elif browser == 'Firefox':
+                self.driver = webdriver.Firefox()
 
         self.driver.get(config['chroma_managers']['server_http_url'])
 
