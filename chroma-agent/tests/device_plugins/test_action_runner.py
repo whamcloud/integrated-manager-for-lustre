@@ -10,8 +10,8 @@ ACTION_ONE_RETVAL = 'action_one_return'
 
 
 subprocesses = {
-    ('subprocess_one', 'subprocess_one_arg'): (0, 'subprocess_one_stdout', 'subprocess_one_stderr'),
-    ('subprocess_two', 'subprocess_two_arg'): (-1, 'subprocess_two_stdout', 'subprocess_two_stderr'),
+    ('subprocess_one', 'subprocess_one_arg'): lambda: (0, 'subprocess_one_stdout', 'subprocess_one_stderr'),
+    ('subprocess_two', 'subprocess_two_arg'): lambda: (-1, 'subprocess_two_stdout', 'subprocess_two_stderr')
 }
 
 
@@ -30,25 +30,37 @@ def action_two(arg1):
     return ACTION_ONE_RETVAL
 
 
+def action_three():
+    shell.try_run(['sleep', '10000'])
+    raise AssertionError("subprocess three should last forever!")
+
+ACTIONS = [action_one, action_two, action_three]
+
+
 class ActionTestCase(unittest.TestCase):
+    MOCK_SUBPROCESSES = None
+
     def setUp(self):
         # Register some testing actions
         self.action_plugins = ActionPluginManager()
-        self.action_plugins.commands['action_one'] = action_one
-        self.action_plugins.commands['action_two'] = action_two
+        for action in ACTIONS:
+            self.action_plugins.commands[action.__name__] = action
 
         # Intercept messages sent
         self.old_send_message = DevicePlugin.send_message
         DevicePlugin.send_message = mock.Mock()
 
         # Intercept subprocess invocations
-        self.old_run = shell._run
-        shell._run = mock.Mock(side_effect = lambda args: subprocesses[tuple(args)])
+        if self.MOCK_SUBPROCESSES:
+            self.old_run = shell._run
+            shell._run = mock.Mock(side_effect = lambda args: self.MOCK_SUBPROCESSES[tuple(args)]())
 
     def tearDown(self):
-        del ActionPluginManager.commands['action_one']
-        del ActionPluginManager.commands['action_two']
-        shell._run = self.old_run
+        for action in ACTIONS:
+            del ActionPluginManager.commands[action.__name__]
+
+        if self.MOCK_SUBPROCESSES:
+            shell._run = self.old_run
 
 
 class TestActionPluginManager(ActionTestCase):
@@ -56,6 +68,8 @@ class TestActionPluginManager(ActionTestCase):
     Test running actions directly as a precursor to testing running them
     via ActionRunner.
     """
+    MOCK_SUBPROCESSES = subprocesses
+
     def test_run_direct_success(self):
         """
         Test that we can run an action directly using ActionPluginManager (as the
@@ -72,9 +86,9 @@ class TestActionPluginManager(ActionTestCase):
             ActionPluginManager().run('action_one', {'arg1': "the_wrong_thing"})
 
 
-class TestActionRunnerPlugin(ActionTestCase):
+class ActionRunnerPluginTestCase(ActionTestCase):
     def setUp(self):
-        super(TestActionRunnerPlugin, self).setUp()
+        super(ActionRunnerPluginTestCase, self).setUp()
 
         # counter for generating deterministic action IDs
         self._id_counter = 0
@@ -93,7 +107,7 @@ class TestActionRunnerPlugin(ActionTestCase):
         self.action_runner = ActionRunnerPlugin(self.session)
 
     def tearDown(self):
-        super(TestActionRunnerPlugin, self).tearDown()
+        super(ActionRunnerPluginTestCase, self).tearDown()
 
         DevicePlugin.send_message = self.old_send_message
 
@@ -127,6 +141,11 @@ class TestActionRunnerPlugin(ActionTestCase):
 
         self.assertEqual(DevicePlugin.send_message.call_count, count)
         return [args[0][0] for args in DevicePlugin.send_message.call_args_list]
+
+
+class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
+
+    MOCK_SUBPROCESSES = subprocesses
 
     def test_run_action_runner(self):
         """
@@ -212,3 +231,27 @@ class TestActionRunnerPlugin(ActionTestCase):
                 'rc': -1
             },
             ])
+
+
+class TestActionRunnerPluginCancellation(ActionRunnerPluginTestCase):
+    def test_teardown(self):
+        """Test that tearing down ActionRunnerPlugin interrupts execution of
+        subprocesses.  This is what happens on a session termination."""
+
+        # The action for this test has to be a bit subtle: we can't just override _run
+        # because we need its behaviour
+
+        self._run_action('action_three', {})
+        # Now that something is in flight, try tearing down
+        self.action_runner.teardown()
+        # The main test here is that we actually return rather than blocking indefinitely
+
+        # No messages should have been sent during teardown
+        self.assertEqual(DevicePlugin.send_message.call_count, 0)
+
+    def test_cancellation(self):
+        """Test that sending a cancellation message for a running action interrupts
+        execution of subprocesses.  This is what happens on a particular action
+        being cancelled from the manager"""
+        #TODO
+        pass

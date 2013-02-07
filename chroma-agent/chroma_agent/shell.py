@@ -13,13 +13,14 @@ import os
 from chroma_agent.log import console_log
 
 
-class ThreadLogs(threading.local):
+class ThreadState(threading.local):
     """Thread-local logs for stdout/stderr from wrapped commands"""
 
     def __init__(self):
         self._save = False
         self._subprocesses = []
         self.messages_buf = StringIO()
+        self.abort = threading.Event()
 
     def enable_save(self):
         """
@@ -41,7 +42,11 @@ class ThreadLogs(threading.local):
             })
 
 # The logging state for this thread
-logs = ThreadLogs()
+thread_state = ThreadState()
+
+
+class SubprocessAborted(Exception):
+    pass
 
 
 def _run(arg_list):
@@ -53,10 +58,27 @@ def _run(arg_list):
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE,
         close_fds = True)
-    rc = p.wait()
-    stdout_buf, stderr_buf = p.communicate()
 
-    return rc, stdout_buf, stderr_buf
+    # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
+    # to poll the thread_state.teardown event as well as the completion of the subprocess.
+    # This is done to allow cancelation of subprocesses
+    rc = None
+    min_wait = 1.0E-3
+    max_wait = 1.0
+    wait = min_wait
+    while rc is None:
+        rc = p.poll()
+        if rc is None:
+            thread_state.abort.wait(timeout = wait)
+            if thread_state.abort.is_set():
+                console_log.warning("Teardown: killing subprocess %s (%s)" % (p.pid, arg_list))
+                p.kill()
+                raise SubprocessAborted()
+            elif wait < max_wait:
+                wait *= 2.0
+        else:
+            stdout_buf, stderr_buf = p.communicate()
+            return rc, stdout_buf, stderr_buf
 
 
 def run(arg_list):
@@ -76,7 +98,7 @@ def run(arg_list):
 
     rc, stdout_buf, stderr_buf = _run(arg_list)
 
-    logs.save_result(arg_list, rc, stdout_buf, stderr_buf)
+    thread_state.save_result(arg_list, rc, stdout_buf, stderr_buf)
 
     return rc, stdout_buf, stderr_buf
 

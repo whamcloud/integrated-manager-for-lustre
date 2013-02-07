@@ -20,6 +20,7 @@ class ActionRunnerPlugin(DevicePlugin):
 
     def __init__(self, *args, **kwargs):
         self.running_actions = {}
+        self._tearing_down = False
         super(ActionRunnerPlugin, self).__init__(*args, **kwargs)
 
     def run(self, id, cmd, args):
@@ -29,6 +30,7 @@ class ActionRunnerPlugin(DevicePlugin):
         thread.start()
 
     def teardown(self):
+        self._tearing_down = True
         for action_id, thread in self.running_actions.items():
             thread.stop()
             thread.join()
@@ -44,6 +46,9 @@ class ActionRunnerPlugin(DevicePlugin):
         del self.running_actions[id]
 
     def _notify(self, id, result, backtrace, subprocesses):
+        if self._tearing_down:
+            return
+
         self.send_message(
             {
                 'id': id,
@@ -65,18 +70,25 @@ class ActionRunner(threading.Thread):
         self.action = action
         self.args = cmd_args
 
+        self._subprocess_abort = None
+
     def stop(self):
-        # TODO: provide a way to abort action plugins and their child processes
-        pass
+        # If the action is in a subprocess, this will cause it to raise an exception
+        self._subprocess_abort.set()
 
     def run(self):
+        # Grab a reference to the thread-local state for this thread and put
+        # it somewhere that other threads can see it, so that we can be signalled
+        # to shut down
+        self._subprocess_abort = shell.thread_state.abort
+
         daemon_log.info("%s.run: %s %s %s" % (self.__class__.__name__, self.id, self.action, self.args))
         try:
-            shell.logs.enable_save()
+            shell.thread_state.enable_save()
             result = self.manager._session._client.action_plugins.run(self.action, self.args)
         except Exception:
             backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
 
-            self.manager.fail(self.id, backtrace, shell.logs.get_subprocesses())
+            self.manager.fail(self.id, backtrace, shell.thread_state.get_subprocesses())
         else:
-            self.manager.succeed(self.id, result, shell.logs.get_subprocesses())
+            self.manager.succeed(self.id, result, shell.thread_state.get_subprocesses())
