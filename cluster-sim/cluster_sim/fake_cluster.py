@@ -86,6 +86,7 @@ class FakeCluster(Persisted):
     def leave(self, nodename):
         with self._lock:
             log.debug("leave: %s" % nodename)
+            self.state['nodes'][nodename]['online'] = False
             for ha_label, resource in self.state['resources'].items():
                 if resource['started_on'] == nodename:
                     options = set([resource['primary_node'], resource['secondary_node']]) - set([nodename])
@@ -99,10 +100,13 @@ class FakeCluster(Persisted):
 
             self.save()
 
-    def join(self, nodename):
+    def join(self, nodename, **kwargs):
         with self._lock:
-            if not nodename in self.state['nodes']:
-                self.state['nodes'][nodename] = {}
+            if nodename in self.state['nodes']:
+                self.state['nodes'][nodename]['online'] = True
+            else:
+                self.state['nodes'][nodename] = {'online': True, }
+                self.state['nodes'][nodename].update(**kwargs)
 
             for ha_label, resource in self.state['resources'].items():
                 if resource['started_on'] is None:

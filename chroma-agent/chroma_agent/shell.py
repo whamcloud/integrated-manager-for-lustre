@@ -70,7 +70,8 @@ def run(arg_list):
     # TODO: add a 'quiet' flag and use it from spammy/polling plugins to avoid
     # sending silly amounts of command output back to the manager.
 
-    console_log.debug("shell.run: %s" % arg_list)
+    console_log.debug("shell.run: %s" % repr(arg_list))
+
     os.environ["TERM"] = ""
 
     rc, stdout_buf, stderr_buf = _run(arg_list)

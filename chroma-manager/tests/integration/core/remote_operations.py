@@ -395,7 +395,6 @@ class RealRemoteOperations(RemoteOperations):
                     server['address'],
                     'service chroma-agent stop'
                 )
-                # Remove all agent configuration
                 self._ssh_address(
                     server['address'],
                     'rm -rf /var/lib/chroma/*',

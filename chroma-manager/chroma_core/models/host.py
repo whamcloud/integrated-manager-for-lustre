@@ -91,6 +91,14 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # The last known boot time
     boot_time = models.DateTimeField(null = True, blank = True)
 
+    # Up from the point of view of a peer in the corosync cluster for this node
+    corosync_reported_up = models.BooleanField(default=False,
+                                               help_text="True if corosync "
+                                                         "on a node in "
+                                                         "this node's cluster "
+                                                         "reports that this "
+                                                         "node is online")
+
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
@@ -1131,6 +1139,34 @@ class HostContactAlert(AlertState):
     def end_event(self):
         return AlertEvent(
             message_str = "Re-established contact with host %s" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.INFO)
+
+
+class HostOfflineAlert(AlertState):
+    """Alert should be raised when a Host is known to be down.
+
+    When a corosync agent reports a peer is down in a cluster, the corresponding
+    service will save a HostOfflineAlert.
+    """
+
+    def message(self):
+        return "Host is offline %s" % self.alert_item
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def begin_event(self):
+        return AlertEvent(
+            message_str = "Host is offline %s" % self.alert_item,
+            host = self.alert_item,
+            alert = self,
+            severity = logging.WARNING)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "Host is back online %s" % self.alert_item,
             host = self.alert_item,
             alert = self,
             severity = logging.INFO)
