@@ -27,7 +27,7 @@ simplejson
 behave>=1.1.0
 prettytable
 dse==3.3.0
-selenium
+selenium==2.29.0
 log4tailer
 jsonschema
 supervisor
