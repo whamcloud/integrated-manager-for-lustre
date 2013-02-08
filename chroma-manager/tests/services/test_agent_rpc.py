@@ -130,11 +130,15 @@ class TestAgentRpc(SupervisorTestCase):
         command_id = JobSchedulerClient.command_set_state([(self.host.content_type.natural_key(), self.host.id, state)], "Test")
         return command_id
 
+    def _receive_agent_messages(self):
+        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        return response.json()['messages']
+
     def _handle_action_receive(self, session_id):
         # Listen for the action
-        action_data_response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
-        self.assertEqual(len(action_data_response.json()['messages']), 1)
-        action_rpc_request = action_data_response.json()['messages'][0]
+        messages = self._receive_agent_messages()
+        self.assertEqual(len(messages), 1)
+        action_rpc_request = messages[0]
         self.assertEqual(action_rpc_request['type'], 'DATA')
         self.assertEqual(action_rpc_request['plugin'], self.PLUGIN)
         self.assertEqual(action_rpc_request['session_seq'], None)
@@ -342,3 +346,36 @@ class TestAgentRpc(SupervisorTestCase):
         command = self._wait_for_command(command_id, 5)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
+
+    def test_cancellation(self):
+        """
+        While an agent rpc is in flight, check that issuing a cancellation on the manager
+        results in a cancel message being sent to the agent, and the command completing
+        promptly on the manager.
+        """
+        agent_session_id = self._open_sessions()
+        command_id = self._request_action()
+        rpc_request = self._handle_action_receive(agent_session_id)
+
+        command = self._get_command(command_id)
+        for job in command.jobs.all():
+            JobSchedulerClient.cancel_job(job.id)
+
+        # The command should get cancelled promptly
+        command = self._wait_for_command(command.id, RABBITMQ_GRACE_PERIOD)
+        self.assertTrue(command.cancelled)
+        self.assertFalse(command.errored)
+
+        # A cancellation for the agent rpc should have been sent to the agent
+        messages = self._receive_agent_messages()
+        self.assertEqual(len(messages), 1)
+        cancellation_message = messages[0]
+        self.assertDictEqual(
+            cancellation_message['body'],
+            {
+                'type': 'ACTION_CANCEL',
+                'id': rpc_request['id'],
+                'action': None,
+                'args': None
+            }
+        )
