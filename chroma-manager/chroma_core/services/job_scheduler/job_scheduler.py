@@ -84,7 +84,7 @@ class RunJobThread(threading.Thread):
                 job = self.job)
             result.save()
 
-            step = klass(self.job, args, result)
+            step = klass(self.job, args, result, self._cancel)
 
             from chroma_core.services.job_scheduler.agent_rpc import AgentException
             try:

@@ -43,9 +43,9 @@ class ActionInFlight(object):
         self.complete = threading.Event()
         self.exception = None
         self.result = None
-        self.subprocesses = None
+        self.subprocesses = []
 
-    def get_msg(self):
+    def get_request(self):
         return {
             'fqdn': self.fqdn,
             'type': 'DATA',
@@ -53,9 +53,25 @@ class ActionInFlight(object):
             'session_id': self.session_id,
             'session_seq': None,
             'body': {
+                'type': 'ACTION_START',
                 'id': self.id,
                 'action': self.action,
                 'args': self.args
+            }
+        }
+
+    def get_cancellation(self):
+        return {
+            'fqdn': self.fqdn,
+            'type': 'DATA',
+            'plugin': ACTION_MANAGER_PLUGIN_NAME,
+            'session_id': self.session_id,
+            'session_seq': None,
+            'body': {
+                'type': 'ACTION_CANCEL',
+                'id': self.id,
+                'action': None,
+                'args': None
             }
         }
 
@@ -107,10 +123,11 @@ class AgentRpcMessenger(object):
                     rpc_state.complete.set()
 
     def remove(self, fqdn):
-        try:
-            del self._sessions[fqdn]
-        except KeyError:
-            pass
+        with self._lock:
+            try:
+                del self._sessions[fqdn]
+            except KeyError:
+                pass
 
     def on_rx(self, message):
         with self._lock:
@@ -150,6 +167,10 @@ class AgentRpcMessenger(object):
                     abort_session(session)
             else:
                 rpc_response = message['body']
+                if rpc_response['type'] != 'ACTION_COMPLETE':
+                    log.error("Unexpected type '%s'" % rpc_response['type'])
+                    return
+
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
                     log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
                     abort_session(self._sessions[fqdn])
@@ -172,9 +193,9 @@ class AgentRpcMessenger(object):
     def _resend(self, rpc):
         log.debug("AgentRpcMessenger._resend: rpc %s in session %s" % (rpc.id, rpc.session_id))
         self._session_rpcs[rpc.session_id][rpc.id] = rpc
-        AgentTxQueue().put(rpc.get_msg())
+        AgentTxQueue().put(rpc.get_request())
 
-    def _send(self, fqdn, action, args):
+    def _send_request(self, fqdn, action, args):
         wait_count = 0
 
         while not fqdn in self._sessions:
@@ -194,22 +215,44 @@ class AgentRpcMessenger(object):
             rpc = ActionInFlight(session_id, fqdn, action, args)
 
             self._session_rpcs[session_id][rpc.id] = rpc
-            AgentTxQueue().put(rpc.get_msg())
+            AgentTxQueue().put(rpc.get_request())
             return rpc
 
-    def _complete(self, rpc):
+    def _send_cancellation(self, rpc):
+        with self._lock:
+            try:
+                self._session_rpcs[rpc.session_id][rpc.id]
+            except KeyError:
+                log.warning("Dropping cancellation of RPC %s, it is already complete or aborted" % rpc.id)
+            else:
+                log.warning("Cancelling RPC %s" % rpc.id)
+                AgentTxQueue().put(rpc.get_cancellation())
+                del self._session_rpcs[rpc.session_id][rpc.id]
+
+    def _complete(self, rpc, cancel_event):
         log.info("AgentRpcMessenger._complete: starting wait for rpc %s" % rpc.id)
-        rpc.complete.wait()
+
+        # Wait for rpc.complete, waking up every second to
+        # check cancel_event
+        while True:
+            if cancel_event.is_set():
+                self._send_cancellation(rpc)
+                raise AgentCancellation()
+            else:
+                rpc.complete.wait(timeout = 1.0)
+                if rpc.complete.is_set():
+                    break
+
         log.info("AgentRpcMessenger._complete: completed wait for rpc %s" % rpc.id)
         if rpc.exception:
             raise AgentException(rpc.fqdn, rpc.action, rpc.args, rpc.exception, subprocesses = rpc.subprocesses)
         else:
             return rpc.result
 
-    def call(self, fqdn, action, args):
+    def call(self, fqdn, action, args, cancel_event):
         log.debug("AgentRpcMessenger.call: %s %s" % (fqdn, action))
-        rpc = self._send(fqdn, action, args)
-        return self._complete(rpc), rpc
+        rpc = self._send_request(fqdn, action, args)
+        return self._complete(rpc, cancel_event), rpc
 
 
 class AgentRpc(object):
@@ -234,12 +277,16 @@ class AgentRpc(object):
             cls._messenger.complete_all()
 
     @classmethod
-    def call(cls, fqdn, action, args):
-        return cls._messenger.call(fqdn, action, args)
+    def call(cls, fqdn, action, args, cancel_event):
+        return cls._messenger.call(fqdn, action, args, cancel_event)
 
     @classmethod
     def remove(cls, fqdn):
         return cls._messenger.remove(fqdn)
+
+
+class AgentCancellation(Exception):
+    pass
 
 
 class AgentException(Exception):

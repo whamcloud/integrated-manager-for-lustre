@@ -10,6 +10,7 @@ import sys
 from chroma_agent import shell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
+from chroma_agent.shell import SubprocessAborted
 
 
 class ActionRunnerPlugin(DevicePlugin):
@@ -19,31 +20,47 @@ class ActionRunnerPlugin(DevicePlugin):
     """
 
     def __init__(self, *args, **kwargs):
-        self.running_actions = {}
+        self._running_actions_lock = threading.Lock()
+        self._running_actions = {}
         self._tearing_down = False
         super(ActionRunnerPlugin, self).__init__(*args, **kwargs)
 
     def run(self, id, cmd, args):
         daemon_log.info("ActionRunner.run %s" % id)
         thread = ActionRunner(self, id, cmd, args)
-        self.running_actions[id] = thread
-        thread.start()
+        with self._running_actions_lock:
+            if not self._tearing_down:
+                self._running_actions[id] = thread
+                thread.start()
 
     def teardown(self):
         self._tearing_down = True
-        for action_id, thread in self.running_actions.items():
-            thread.stop()
+
+        wait_threads = []
+        with self._running_actions_lock:
+            for action_id, thread in self._running_actions.items():
+                thread.stop()
+                wait_threads.append(thread)
+
+        for thread in wait_threads:
             thread.join()
 
     def succeed(self, id, result, subprocesses):
         daemon_log.info("ActionRunner.succeed %s: %s" % (id, result))
         self._notify(id, result, None, subprocesses)
-        del self.running_actions[id]
+        with self._running_actions_lock:
+            del self._running_actions[id]
 
     def fail(self, id, backtrace, subprocesses):
         daemon_log.info("ActionRunner.fail %s: %s" % (id, backtrace))
         self._notify(id, None, backtrace, subprocesses)
-        del self.running_actions[id]
+        with self._running_actions_lock:
+            del self._running_actions[id]
+
+    def cancelled(self, id):
+        daemon_log.info("ActionRunner.cancelled %s" % id)
+        with self._running_actions_lock:
+            del self._running_actions[id]
 
     def _notify(self, id, result, backtrace, subprocesses):
         if self._tearing_down:
@@ -51,14 +68,30 @@ class ActionRunnerPlugin(DevicePlugin):
 
         self.send_message(
             {
+                'type': "ACTION_COMPLETE",
                 'id': id,
                 'result': result,
                 'exception': backtrace,
                 'subprocesses': subprocesses
             })
 
+    def cancel(self, id):
+        with self._running_actions_lock:
+            try:
+                thread = self._running_actions[id]
+            except KeyError:
+                # Cannot cancel that which does not exist
+                pass
+            else:
+                thread.stop()
+
     def on_message(self, body):
-        self.run(body['id'], body['action'], body['args'])
+        if body['type'] == 'ACTION_START':
+            self.run(body['id'], body['action'], body['args'])
+        elif body['type'] == 'ACTION_CANCEL':
+            self.cancel(body['id'])
+        else:
+            raise NotImplementedError("Unknown type '%s'" % body['type'])
 
 
 class ActionRunner(threading.Thread):
@@ -86,6 +119,8 @@ class ActionRunner(threading.Thread):
         try:
             shell.thread_state.enable_save()
             result = self.manager._session._client.action_plugins.run(self.action, self.args)
+        except SubprocessAborted:
+            self.manager.cancelled(self.id)
         except Exception:
             backtrace = '\n'.join(traceback.format_exception(*(sys.exc_info())))
 

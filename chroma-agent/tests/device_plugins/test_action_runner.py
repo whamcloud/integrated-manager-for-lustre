@@ -118,6 +118,7 @@ class ActionRunnerPluginTestCase(ActionTestCase):
         id = "%s" % self._id_counter
         self._id_counter += 1
         self.action_runner.on_message({
+            'type': 'ACTION_START',
             'id': id,
             'action': action,
             'args': args
@@ -156,6 +157,7 @@ class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
         id = self._run_action('action_one', {'arg1': 'arg1_test'})
         response = self._get_responses(1)[0]
         self.assertDictEqual(response, {
+            'type': 'ACTION_COMPLETE',
             'id': id,
             'result': ACTION_ONE_RETVAL,
             'exception': None,
@@ -203,6 +205,7 @@ class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
         response_2 = [r for r in responses if r['id'] == id_2][0]
 
         self.assertDictEqual(response_1, {
+            'type': 'ACTION_COMPLETE',
             'id': id_1,
             'result': ACTION_ONE_RETVAL,
             'exception': None,
@@ -253,5 +256,21 @@ class TestActionRunnerPluginCancellation(ActionRunnerPluginTestCase):
         """Test that sending a cancellation message for a running action interrupts
         execution of subprocesses.  This is what happens on a particular action
         being cancelled from the manager"""
-        #TODO
-        pass
+        id = self._run_action('action_three', {})
+
+        # Grab the internal thread so that we can check it completes
+        thread = self.action_runner._running_actions[id]
+
+        self.action_runner.on_message({
+            'type': 'ACTION_CANCEL',
+            'id': id,
+            'action': None,
+            'args': None
+        })
+
+        # The thread should have stopped running
+        thread.join(2.0)
+        self.assertFalse(thread.is_alive())
+
+        # No messages should have been sent during cancellation
+        self.assertEqual(DevicePlugin.send_message.call_count, 0)

@@ -100,7 +100,7 @@ class MockAgentRpc(object):
         raise AgentException(fqdn, "cmd", {'foo': 'bar'}, "Fake backtrace")
 
     @classmethod
-    def call(cls, fqdn, cmd, args = {}):
+    def call(cls, fqdn, cmd, args, cancel_event):
         host = ManagedHost.objects.get(fqdn = fqdn)
         result = cls._call(host, cmd, args)
         action_state = ActionInFlight('foo', fqdn, cmd, args)

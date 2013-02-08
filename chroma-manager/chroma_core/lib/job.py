@@ -114,7 +114,7 @@ class DependAny(MultiDependable):
 class Step(object):
     timeout = None
 
-    def __init__(self, job, args, result):
+    def __init__(self, job, args, result, cancel_event):
         self.args = args
         self.job_id = job.id
 
@@ -123,6 +123,8 @@ class Step(object):
 
         # This step is the final one in the job
         self.final = False
+
+        self._cancel_event = cancel_event
 
     @classmethod
     def describe(cls, kwargs):
@@ -159,7 +161,7 @@ class Step(object):
         job_log.info("invoke_agent on agent %s %s %s" % (host, command, args))
 
         try:
-            result, action_state = AgentRpc.call(host.fqdn, command, args)
+            result, action_state = AgentRpc.call(host.fqdn, command, args, self._cancel_event)
             self._log_subprocesses(action_state.subprocesses)
             return result
         except AgentException as e:
