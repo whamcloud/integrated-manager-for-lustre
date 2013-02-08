@@ -4,11 +4,14 @@
 # ========================================================
 
 
+import hashlib
 import logging
 import getpass
 import socket
 import errno
 import sys
+import xmlrpclib
+import time
 import os
 import json
 import tempfile
@@ -26,6 +29,34 @@ from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
 
 from chroma_core.services.http_agent.crypto import Crypto
+
+from supervisor.xmlrpc import SupervisorTransport
+
+
+class SupervisorStatus(object):
+    def __init__(self):
+        username = None
+        password = None
+
+        if settings.DEBUG:
+            # In development, use inet_http_server set up by django-supervisor
+            username = hashlib.md5(settings.SECRET_KEY).hexdigest()[:7]
+            password = hashlib.md5(username).hexdigest()
+
+            url = "http://localhost:9100/RPC2"
+        else:
+            # In production, use static inet_http_server settings
+            url = "http://localhost:9100/RPC2"
+
+        self._xmlrpc = xmlrpclib.ServerProxy(
+            'http://127.0.0.1',
+            transport = SupervisorTransport(username,
+                password,
+                url)
+        )
+
+    def get_all_process_info(self):
+        return self._xmlrpc.supervisor.getAllProcessInfo()
 
 
 class NTPConfig:
@@ -272,10 +303,50 @@ class ServiceConfig(CommandLine):
         for service in self.CONTROLLED_SERVICES:
             self.try_shell(['service', service, 'start'])
 
+        SUPERVISOR_START_TIMEOUT = 10
+        t = 0
+        while True:
+            if set([p['statename'] for p in SupervisorStatus().get_all_process_info()]) == set(['RUNNING']):
+                break
+            else:
+                time.sleep(1)
+                t += 1
+                if t > SUPERVISOR_START_TIMEOUT:
+                    bad_services = [p['name'] for p in SupervisorStatus().get_all_process_info() if p['statename'] != 'RUNNING']
+                    msg = "Some services failed to start: %s" % ", ".join(bad_services)
+                    log.error(msg)
+                    raise RuntimeError(msg)
+
     def _stop_services(self):
         log.info("Stopping Chroma daemons")
         for service in self.CONTROLLED_SERVICES:
             self.try_shell(['service', service, 'stop'])
+
+        # Wait for supervisord to stop running
+        SUPERVISOR_STOP_TIMEOUT = 10
+        t = 0
+        stopped = False
+        while True:
+            try:
+                SupervisorStatus().get_all_process_info()
+            except socket.error:
+                # No longer up
+                stopped = True
+            except xmlrpclib.Fault, e:
+                if (e.faultCode, e.faultString) == (6, 'SHUTDOWN_STATE'):
+                    # Up but shutting down
+                    pass
+                else:
+                    raise
+
+            if stopped:
+                break
+            else:
+                if t > SUPERVISOR_STOP_TIMEOUT:
+                    raise RuntimeError("chroma-supervisor failed to stop after %s seconds" % SUPERVISOR_STOP_TIMEOUT)
+                else:
+                    t += 1
+                    time.sleep(1)
 
     def _init_pgsql(self, database):
         rc, out, err = self.shell(["service", "postgresql", "initdb"])
@@ -474,6 +545,7 @@ class ServiceConfig(CommandLine):
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
+        # Check init scripts are up
         interesting_services = self.CONTROLLED_SERVICES + ['postgresql', 'rabbitmq-server']
         service_config = self._service_config(interesting_services)
         for s in interesting_services:
@@ -486,7 +558,11 @@ class ServiceConfig(CommandLine):
             except KeyError:
                 errors.append("Service %s not found" % s)
 
-        # TODO: XMLRPC to supervisord to ask it about the status of individual services
+        # Check supervisor-controlled services are up
+        if service_config['chroma-supervisor']['running']:
+            for process in SupervisorStatus().get_all_process_info():
+                if process['statename'] != 'RUNNING':
+                    errors.append("Service %s is not running (status %s)" % (process['name'], process['statename']))
 
         return errors
 

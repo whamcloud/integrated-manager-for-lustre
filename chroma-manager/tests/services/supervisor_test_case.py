@@ -75,12 +75,10 @@ class SupervisorTestCase(TestCase):
                 self.programs.append(progname)
                 cp.set(section, 'autostart', 'false')
 
-        cp.add_section('inet_http_server')
         cp.set("inet_http_server", "port", "127.0.0.1:%s" % self.TEST_PORT)
         cp.set("inet_http_server", "username", self.TEST_USERNAME)
         cp.set("inet_http_server", "password", self.TEST_PASSWORD)
 
-        cp.add_section('supervisorctl')
         cp.set("supervisorctl", "username", self.TEST_USERNAME)
         cp.set("supervisorctl", "password", self.TEST_PASSWORD)
         cp.set("supervisorctl", "serverurl", "http://localhost:%s/" % self.TEST_PORT)

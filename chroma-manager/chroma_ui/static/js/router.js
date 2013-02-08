@@ -102,7 +102,8 @@ var ChromaRouter = Backbone.Router.extend({
     "alert/": "alert",
     "event/": "event",
     "log/": "log",
-    "about/": "about"
+    "about/": "about",
+    "system_status/": "system_status"
   },
   object_detail: function(id, model_class, view_class, title_attr)
   {
@@ -174,6 +175,10 @@ var ChromaRouter = Backbone.Router.extend({
   },
   about:function () {
     this.toplevel('about');
+  },
+  system_status:function() {
+    this.toplevel('system_status');
+    (new SystemStatusView()).render();
   },
   failed_filesystem_admin_check: function() {
     if ( Login.userHasGroup('filesystem_administrators') )

@@ -1,0 +1,38 @@
+
+<script language='text/template' id="system_status_template">
+    <h1>
+        Supervisor
+    </h1>
+    <table class='supervisor_processes'>
+        <thead>
+        <tr>
+            <th>
+                Name
+            </th>
+            <th>
+                Description
+            </th>
+            <th>
+                State
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+
+        </tbody>
+    </table>
+</script>
+
+<script language='text/template' id="system_status_supervisor_process_template">
+  <tr>
+      <td>
+          <%= name %>
+      </td>
+      <td>
+          <%= description %>
+      </td>
+      <td>
+          <%= statename %>
+      </td>
+  </tr>
+</script>

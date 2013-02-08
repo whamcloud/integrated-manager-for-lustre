@@ -73,6 +73,10 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_detail.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/command_detail.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/dashboard.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/system_status.js"></script>
+
+    <!-- Templates -->
+    {% include 'system_status.html' %}
 
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
     {% block scripts %}{% endblock %}
@@ -165,9 +169,13 @@
           <div class="toplevel" id='toplevel-about' style="display: none;">
               {% include 'about.html' %}
           </div>
+          <div class="toplevel" id='toplevel-system_status' style="display: none;">
+          </div>
           <p class='footer'>
               Chroma™ {% if IS_RELEASE %}{{VERSION}} (build {{BUILD}}){%else%}{{BUILD}}{%endif%} is Copyright © 2012 Whamcloud Inc. All rights reserved.
               <a href="/ui/about/" class='navigation'>About Chroma.</a>
+              &nbsp;
+              <a class='superuser_only' href="/ui/system_status/" class='navigation'>System status</a>
           </p>
       </div>
     </div>
