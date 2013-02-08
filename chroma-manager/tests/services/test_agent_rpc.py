@@ -152,9 +152,11 @@ class TestAgentRpc(SupervisorTestCase):
             'session_id': session_id,
             'session_seq': 1,
             'body': {
+                'type': 'ACTION_COMPLETE',
                 'id': rpc_request_body['id'],
                 'exception': None,
-                'result': None
+                'result': None,
+                'subprocesses': []
             }
         }
         action_data_response = requests.post(self.URL, data = json.dumps({'messages': [success_message]}), headers = self.HEADERS)
