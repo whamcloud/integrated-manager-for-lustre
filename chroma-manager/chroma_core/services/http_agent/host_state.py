@@ -7,6 +7,7 @@
 import datetime
 import logging
 import threading
+from chroma_agent_comms.views import MessageView
 from chroma_core.models import ManagedHost, HostContactAlert, HostRebootEvent
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -20,7 +21,9 @@ class HostState(object):
     managing communication sessions, in order to detect and report
     reboots and generate timeouts.
     """
-    CONTACT_TIMEOUT = 30
+
+    # We get an update at the start of every long poll
+    CONTACT_TIMEOUT = MessageView.LONG_POLL_TIMEOUT * 2
 
     def __init__(self, fqdn, boot_time, client_start_time):
         self.last_contact = None
