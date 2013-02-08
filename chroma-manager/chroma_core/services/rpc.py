@@ -55,7 +55,7 @@ RESPONSE_SCHEMA = {
     }
 }
 
-RESPONSE_TIMEOUT = 300
+RESPONSE_TIMEOUT = 30
 
 """
 Max number of lightweight RPCs that can be in flight concurrently.  This must
