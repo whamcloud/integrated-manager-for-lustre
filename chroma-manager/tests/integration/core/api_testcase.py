@@ -1,12 +1,16 @@
-
-
+import datetime
 import logging
+import shutil
+import sys
 import time
 
 from testconfig import config
+from tests.utils.http_requests import AuthorizedHttpRequests
+
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.utility_testcase import UtilityTestCase
-from tests.utils.http_requests import AuthorizedHttpRequests
+from tests.integration.core.remote_operations import  SimulatorRemoteOperations, RealRemoteOperations
+
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -14,10 +18,50 @@ logger.setLevel(logging.DEBUG)
 
 class ApiTestCase(UtilityTestCase):
     """
-    Adds set of convenience functions for interacting with the chroma api.
+    Adds convenience for interacting with the chroma api.
     """
 
     _chroma_manager = None
+
+    def setUp(self):
+        if config.get('simulator', False):
+            try:
+                from cluster_sim.simulator import ClusterSimulator
+            except ImportError:
+                raise ImportError("Cannot import simulator, do you need to do a 'setup.py develop' of it?")
+
+            # The simulator's state directory will be left behind when a test fails,
+            # so make sure it has a unique-per-run name
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
+            state_path = 'simulator_state_%s.%s_%s' % (self.__class__.__name__, self._testMethodName, timestamp)
+
+            # These are sufficient for tests existing at time of writing, could
+            # trivially let tests ask for more by looking for these vars at class scope
+            SIMULATOR_SERVER_COUNT = 4
+            SIMULATOR_VOLUME_COUNT = 8
+            self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
+            self.simulator.setup(SIMULATOR_SERVER_COUNT, SIMULATOR_VOLUME_COUNT)
+            self.remote_operations = SimulatorRemoteOperations(self.simulator)
+        else:
+            self.remote_operations = RealRemoteOperations(self)
+
+        reset = config.get('reset', True)
+        if reset:
+            self.reset_cluster()
+        else:
+            # Reset the manager via the API
+            self.remote_operations.unmount_clients()
+            self.api_force_clear()
+            self.remote_operations.clear_ha()
+
+    def tearDown(self):
+        if hasattr(self, 'simulator'):
+            self.simulator.stop()
+            self.simulator.join()
+
+            passed = sys.exc_info() == (None, None, None)
+            if passed:
+                shutil.rmtree(self.simulator.folder)
 
     @property
     def chroma_manager(self):
