@@ -104,8 +104,12 @@ class ActionRunner(threading.Thread):
         self.args = cmd_args
 
         self._subprocess_abort = None
+        self._started = threading.Event()
 
     def stop(self):
+        # Don't go any further until the run() method has set up its thread local state
+        self._started.wait()
+
         # If the action is in a subprocess, this will cause it to raise an exception
         self._subprocess_abort.set()
 
@@ -114,6 +118,9 @@ class ActionRunner(threading.Thread):
         # it somewhere that other threads can see it, so that we can be signalled
         # to shut down
         self._subprocess_abort = shell.thread_state.abort
+
+        # We are now stoppable
+        self._started.set()
 
         daemon_log.info("%s.run: %s %s %s" % (self.__class__.__name__, self.id, self.action, self.args))
         try:
