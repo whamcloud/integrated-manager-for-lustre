@@ -5,11 +5,8 @@ import subprocess
 import tempfile
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.services.http_agent import AgentSessionRpc
-from chroma_core.services.job_scheduler.agent_rpc import AgentException, ActionInFlight
 from chroma_core.services.log import log_register
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
-from chroma_core.services.http_agent import Service as HttpAgentService
 from dateutil import tz
 from django.test import TestCase
 import mock
@@ -77,6 +74,14 @@ class MockAgentRpc(object):
     host_calls = defaultdict(list)
 
     @classmethod
+    def start(cls):
+        pass
+
+    @classmethod
+    def shutdown(cls):
+        pass
+
+    @classmethod
     def clear_calls(cls):
         cls.calls = []
 
@@ -96,11 +101,14 @@ class MockAgentRpc(object):
 
     @classmethod
     def _fail(cls, fqdn):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
         log.error("Synthetic agent error on host %s" % fqdn)
         raise AgentException(fqdn, "cmd", {'foo': 'bar'}, "Fake backtrace")
 
     @classmethod
     def call(cls, fqdn, cmd, args, cancel_event):
+        from chroma_core.services.job_scheduler.agent_rpc import ActionInFlight
         host = ManagedHost.objects.get(fqdn = fqdn)
         result = cls._call(host, cmd, args)
         action_state = ActionInFlight('foo', fqdn, cmd, args)
@@ -109,6 +117,8 @@ class MockAgentRpc(object):
 
     @classmethod
     def _call(cls, host, cmd, args):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
         cls.calls.append((cmd, args))
         cls.host_calls[host].append((cmd, args))
 
@@ -205,6 +215,9 @@ class MockAgentSsh(object):
     def invoke(self, cmd, args = {}):
         return MockAgentRpc._call(self.address, cmd, args)
 
+    def ssh_params(self):
+        return 'root', self.address, 22
+
 
 class JobTestCase(TestCase):
     mock_servers = None
@@ -260,6 +273,8 @@ class JobTestCase(TestCase):
         self.assertEqual(freshen(obj).state, state)
 
     def setUp(self):
+        from chroma_core.services.http_agent import AgentSessionRpc
+        from chroma_core.services.http_agent import Service as HttpAgentService
         # FIXME: have to do self before every test because otherwise
         # one test will get all the setup of StoragePluginClass records,
         # the in-memory instance of storage_plugin_manager will expect
