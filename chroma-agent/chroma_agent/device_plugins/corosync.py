@@ -13,6 +13,15 @@ from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
 
 
+try:
+    # Python 2.7
+    from xml.etree.ElementTree import ParseError
+    ParseError  # silence pyflakes
+except ImportError:
+    # Python 2.6
+    from xml.parsers.expat import ExpatError as ParseError
+
+
 class CorosyncPlugin(DevicePlugin):
     """ Agent Plugin to read corosync node health status information
 
@@ -47,7 +56,7 @@ class CorosyncPlugin(DevicePlugin):
         return_dict = {}
         try:
             root = xml.fromstring(raw)
-        except xml.ParseError:
+        except ParseError:
             # not xml, might be a known error message
             if  CorosyncPlugin.COROSYNC_CONNECTION_FAILURE in raw:
                 return_dict['datetime'] = ''
