@@ -377,13 +377,10 @@ def configure_ha(primary, device, ha_label, uuid, mount_point):
 
 
 def _get_nvpairid_from_xml(xml_string):
-    try:
-        import xml.etree.ElementTree as et
-        doc = et.fromstring(xml_string)
-        node = doc.find('instance_attributes/nvpair[@name="target"]')
-        return node.get('value')
-    except Exception:
-        return None
+    import xml.etree.ElementTree as et
+    doc = et.fromstring(xml_string)
+    node = doc.find('instance_attributes/nvpair[@name="target"]')
+    return node.get('value')
 
 
 def _query_ha_targets():
