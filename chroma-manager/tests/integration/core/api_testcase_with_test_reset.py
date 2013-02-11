@@ -1,5 +1,4 @@
 import logging
-import re
 
 from testconfig import config
 
@@ -10,7 +9,7 @@ logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
 
-class CleanClusterApiTestCase(ApiTestCase):
+class ApiTestCaseWithTestReset(ApiTestCase):
     """
     Adds a few different ways of cleaning out a test cluster.
     """
@@ -22,9 +21,9 @@ class CleanClusterApiTestCase(ApiTestCase):
           - unmounting any lustre filesystems from the clients
           - unconfiguring any chroma targets in pacemaker
         """
-        self.unmount_filesystems_from_clients()
+        self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
-        self.remove_all_targets_from_pacemaker()
+        self.remote_operations.clear_ha()
 
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:
@@ -41,7 +40,7 @@ class CleanClusterApiTestCase(ApiTestCase):
 
             # Wait for all of the chroma manager services to stop
             running_time = 0
-            services = ['chroma-worker', 'chroma-storage', 'httpd']
+            services = ['chroma-supervisor']
             while services and running_time < TEST_TIMEOUT:
                 for service in services:
                     result = self.remote_command(
@@ -74,87 +73,12 @@ class CleanClusterApiTestCase(ApiTestCase):
                 )
                 self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout.read())
 
-    def has_pacemaker(self, server):
-        result = self.remote_command(
-            server['address'],
-            'which crm',
-            expected_return_code = None
-        )
-        return result.exit_status == 0
-
-    def get_pacemaker_targets(self, server):
-        """
-        Returns a list of chroma targets configured in pacemaker on a server.
-        """
-        result = self.remote_command(
-            server['address'],
-            'crm resource list'
-        )
-        crm_resources = result.stdout.read().split('\n')
-        return [r.split()[0] for r in crm_resources if re.search('chroma:Target', r)]
-
-    def is_pacemaker_target_running(self, server, target):
-        result = self.remote_command(
-            server['address'],
-            "crm resource status %s" % target
-        )
-        return re.search('is running', result.stdout.read())
-
-    def remove_all_targets_from_pacemaker(self):
-        """
-        Stops and deletes all chroma targets for any corosync clusters
-        configured on any of the lustre servers appearing in the cluster config
-        """
-        for server in config['lustre_servers']:
-            if self.has_pacemaker(server):
-                crm_targets = self.get_pacemaker_targets(server)
-
-                # Stop targets and delete targets
-                for target in crm_targets:
-                    self.remote_command(server['address'], 'crm resource stop %s' % target)
-                for target in crm_targets:
-                    self.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                    self.remote_command(server['address'], 'crm configure delete %s' % target)
-                    self.remote_command(server['address'], 'crm resource cleanup %s' % target)
-
-                # Verify no more targets
-                self.wait_until_true(lambda: not self.get_pacemaker_targets(server))
-
-                # Remove chroma-agent's records of the targets
-                self.remote_command(
-                    server['address'],
-                    'rm -rf /var/lib/chroma/*',
-                    expected_return_code = None  # Keep going if it failed - may be none there.
-                )
-                self.remote_command(
-                    server['address'],
-                    'service chroma-agent restart'
-                )
-
-            else:
-                logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
-
-    def unmount_filesystems_from_clients(self):
-        """
-        Unmount all filesystems of type lustre from all clients in the config.
-        """
-        for client in config['lustre_clients'].keys():
-            self.remote_command(
-                client,
-                'umount -t lustre -a'
-            )
-            result = self.remote_command(
-                client,
-                'mount'
-            )
-            self.assertNotRegexpMatches(
-                result.stdout.read(),
-                " type lustre"
-            )
-
     def graceful_teardown(self, chroma_manager):
         """
-        Removes all filesystems, MGSs, and hosts from chroma via the api.
+        Removes all filesystems, MGSs, and hosts from chroma via the api.  This is
+        not guaranteed to work, and should be done at the end of tests in order to
+        verify that the chroma manager instance was in a nice state, rather than
+        in setUp/tearDown hooks to ensure a clean system.
         """
         response = chroma_manager.get(
             '/api/filesystem/',
@@ -163,11 +87,7 @@ class CleanClusterApiTestCase(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         filesystems = response.json['objects']
 
-        if len(filesystems) > 0:
-            # Unmount filesystems
-            for client in config['lustre_clients'].keys():
-                for filesystem in filesystems:
-                    self.unmount_filesystem(client, filesystem['name'])
+        self.remote_operations.unmount_clients()
 
         if len(filesystems) > 0:
             # Remove filesystems
@@ -217,13 +137,42 @@ class CleanClusterApiTestCase(ApiTestCase):
 
             self.wait_for_commands(chroma_manager, remove_host_command_ids)
 
-        self.verify_cluster_has_no_managed_targets(chroma_manager)
+        self.assertDatabaseClear()
 
-    def verify_cluster_has_no_managed_targets(self, chroma_manager):
+    def api_force_clear(self):
         """
-        Checks that the database and the hosts specified in the config
-        do not have (unremoved) targets for the filesystems specified.
+        Clears the Chroma instance via the API (by issuing ForceRemoveHost
+        commands) -- note that this will *not* unconfigure storage servers or
+        remove corosync resources: do that separately.
         """
+
+        response = self.chroma_manager.get(
+            '/api/host/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        hosts = response.json['objects']
+
+        if len(hosts) > 0:
+            remove_host_command_ids = []
+            for host in hosts:
+                command = self.chroma_manager.post("/api/command/", body = {
+                    'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host['id']}}],
+                    'message': "Test force remove hosts"
+                }).json
+                remove_host_command_ids.append(command['id'])
+
+            self.wait_for_commands(self.chroma_manager, remove_host_command_ids)
+
+    def assertDatabaseClear(self, chroma_manager = None):
+        """
+        Checks that the chroma manager API is now clear of filesystems, targets,
+        hosts and volumes.
+        """
+
+        if chroma_manager is None:
+            chroma_manager = self.chroma_manager
+
         # Verify there are zero filesystems
         response = chroma_manager.get(
             '/api/filesystem/',
@@ -251,14 +200,13 @@ class CleanClusterApiTestCase(ApiTestCase):
         self.assertEqual(0, len(hosts))
 
         # Verify there are now zero volumes in the database.
-        # TEMPORARILY COMMENTED OUT DUE TO HYD-1143
-        #response = self.chroma_manager.get(
-        #    '/api/volume/',
-        #    params = {'limit': 0}
-        #)
-        #self.assertTrue(response.successful, response.text)
-        #volumes = response.json['objects']
-        #self.assertEqual(0, len(volumes))
+        response = chroma_manager.get(
+            '/api/volume/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        volumes = response.json['objects']
+        self.assertEqual(0, len(volumes))
 
     def reset_accounts(self, chroma_manager):
         """Remove any user accounts which are not in the config (such as
