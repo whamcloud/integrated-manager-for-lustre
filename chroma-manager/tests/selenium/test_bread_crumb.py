@@ -33,12 +33,14 @@ class TestBreadCrumb(SeleniumBaseTestCase):
 
         # Verify length is 1 with one filesystem.
         self.navigation.go('Configure')
-        filesystem_page = Filesystem(self.driver)
         self.create_filesystem_simple(
             self.test_data.get_test_data_for_server_configuration(),
             self.test_data.get_test_data_for_filesystem_configuration()['name'],
             self.test_data.get_test_data_for_conf_params()['filesystem_conf_params']
         )
+
+        self.navigation.go('Configure')
+        filesystem_page = Filesystem(self.driver)
         filesystem_list = filesystem_page.get_filesystem_list()
 
         self.navigation.go('Dashboard')

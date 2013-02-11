@@ -193,6 +193,7 @@ class SeleniumBaseTestCase(TestCase):
         create_filesystem_page.select_ost_volume(ost_host_name, ost_device_node)
         create_filesystem_page.create_filesystem_button.click()
         create_filesystem_page.quiesce()
+        wait_for_transition(self.driver, self.long_wait)
 
     def create_filesystem_simple(self, host_list, filesystem_name, conf_params = None):
         """Pick some arbitrary hosts and volumes to create a filesystem"""
