@@ -11,23 +11,25 @@ var User = Backbone.Model.extend({
 var UserAlertSubscriptions = function() {
   // Simple caching -- api_cache.js won't work because AlertType is a
   // synthetic resource (no table behind it, so no queryset to cache).
-  var alert_types = _fetch_types();
+  var alert_types = null;
+
+  function init(callback) {
+    if (alert_types == null) {
+      alert_types = {};
+      Api.get("/api/alert_type/", {limit: 0}, function(data) {
+        _.each(data.objects, function(type) {
+          type.safe_name = _safe_name(type.description);
+          alert_types[type.id] = type;
+        });
+        callback();
+      });
+    } else {
+      callback();
+    }
+  }
 
   function _safe_name(description) {
     return description.toLowerCase().replace(/\s+/g,"_");
-  }
-
-  function _fetch_types() {
-    var fetched_types = {};
-
-    Api.get("/api/alert_type/", {limit: 0}, success_callback = function(data) {
-      _.each(data.objects, function(type) {
-        type.safe_name = _safe_name(type.description);
-        fetched_types[type.id] = type;
-      })
-    });
-
-    return fetched_types;
   }
 
   function _subscribed_type_ids(user) {
@@ -87,6 +89,7 @@ var UserAlertSubscriptions = function() {
   }
 
   return {
+    init: init,
     get: get,
     set: set
   }
@@ -96,11 +99,13 @@ var UserDetail = Backbone.View.extend({
   className: 'user_detail',
   template: _.template($('#user_detail_template').html()),
   render: function() {
-    var rendered = this.template({'user': this.model.toJSON()});
     var view = this;
-    $(this.el).find('.ui-dialog-content').html(rendered);
-    $(this.el).find('.tabs').tabs({'show': function(event, ui) {view.tab_select(event, ui)}});
 
+    UserAlertSubscriptions.init(function() {
+      var rendered = view.template({'user': view.model.toJSON()});
+      $(view.el).find('.ui-dialog-content').html(rendered);
+      $(view.el).find('.tabs').tabs({'show': function(event, ui) {view.tab_select(event, ui)}});
+    });
     return this;
   },
   events: {
