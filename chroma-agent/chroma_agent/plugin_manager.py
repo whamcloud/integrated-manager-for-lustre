@@ -112,6 +112,9 @@ class DevicePlugin(object):
         If you need to refer to any data from the start_session call, you can
         store it as an attribute on this DevicePlugin instance.
 
+        This will never be called concurrently with respect to start_session, or
+        before start_session.
+
         :rtype: JSON-serializable object, typically a dict
         """
         raise NotImplementedError()
@@ -124,15 +127,19 @@ class DevicePlugin(object):
 
     def on_message(self, body):
         """
-        Handle a message sent from the manager
+        Handle a message sent from the manager (may be called concurrently with respect to
+        start_session and update_session).
         """
         pass
 
-    def send_message(self, body):
+    def send_message(self, body, callback = None):
         """
-        Send a message to the manager
+        Enqueue a message to be sent to the manager (returns immediately).
+
+        If callback is set, it will be run after an attempt has been made to send the message to
+        the manager.
         """
-        self._session.send_message(body)
+        self._session.send_message(body, callback)
 
 
 class DevicePluginManager(PluginManager):

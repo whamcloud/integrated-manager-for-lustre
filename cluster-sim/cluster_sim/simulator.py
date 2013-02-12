@@ -117,7 +117,8 @@ class ClusterSimulator(object):
         # Have to join the reader explicitly, normal AgentClient code
         # skips it because it's slow to join (waits for long-polling GET to complete)
         self._clients[fqdn].reader.join()
-        del self._clients[fqdn]
+        if fqdn in self._clients:
+            del self._clients[fqdn]
 
         if shutdown:
             self.cluster.leave(self.servers[fqdn].nodename)

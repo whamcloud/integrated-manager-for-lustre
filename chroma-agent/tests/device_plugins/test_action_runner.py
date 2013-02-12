@@ -1,5 +1,5 @@
 from chroma_agent import shell
-from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin
+from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin, CallbackAfterResponse
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePlugin
 from django.utils import unittest
 import mock
@@ -16,6 +16,8 @@ subprocesses = {
 
 
 def action_one(arg1):
+    """An action which invokes subprocess_one"""
+
     assert arg1 == "arg1_test"
     stdout = shell.try_run(['subprocess_one', 'subprocess_one_arg'])
     assert stdout == 'subprocess_one_stdout'
@@ -23,6 +25,8 @@ def action_one(arg1):
 
 
 def action_two(arg1):
+    """An action which invokes subprocess_one and subprocess_two"""
+
     assert arg1 == "arg1_test"
     stdout = shell.try_run(['subprocess_one', 'subprocess_one_arg'])
     assert stdout == 'subprocess_one_stdout'
@@ -31,10 +35,21 @@ def action_two(arg1):
 
 
 def action_three():
+    """An action which runs for a long time unless interrupted"""
+
     shell.try_run(['sleep', '10000'])
     raise AssertionError("subprocess three should last forever!")
 
-ACTIONS = [action_one, action_two, action_three]
+
+def action_four():
+    """An action which raises an CallbackAfterResponse"""
+
+    def action_four_callback():
+        return 'action_four_called_back'
+
+    raise CallbackAfterResponse('result', action_four_callback)
+
+ACTIONS = [action_one, action_two, action_three, action_four]
 
 
 class ActionTestCase(unittest.TestCase):
@@ -274,3 +289,34 @@ class TestActionRunnerPluginCancellation(ActionRunnerPluginTestCase):
 
         # No messages should have been sent during cancellation
         self.assertEqual(DevicePlugin.send_message.call_count, 0)
+
+
+class TestCallbackAfterResponse(ActionRunnerPluginTestCase):
+    def _get_response_and_callback(self):
+        # The ActionRunnerPlugin will run the action in a thread, and call send_message when
+        # it completes
+
+        TIMEOUT = 2
+        i = 0
+        while True:
+            if DevicePlugin.send_message.call_count:
+                break
+            else:
+                time.sleep(1)
+                i += 1
+
+            if i > TIMEOUT:
+                raise AssertionError("Timed out after %ss waiting for responses (got %s)" % (TIMEOUT, DevicePlugin.send_message.call_count))
+
+        self.assertEqual(DevicePlugin.send_message.call_count, 1)
+        return DevicePlugin.send_message.call_args[0][0], DevicePlugin.send_message.call_args[0][1]
+
+    def test_passthrough(self):
+        """Test that when an action raises an CallbackAfterResponse, the
+        ActionRunnerPlugin tags the callback onto the Message that it sends
+        onwards"""
+
+        self._run_action('action_four', {})
+
+        response, callback = self._get_response_and_callback()
+        self.assertEqual(callback(), 'action_four_called_back')

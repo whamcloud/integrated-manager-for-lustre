@@ -13,6 +13,26 @@ from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent.shell import SubprocessAborted
 
 
+class CallbackAfterResponse(Exception):
+    """
+    Action plugins raise this to request that a callback be invoked after
+    an attempt has been made to send their completion to the manager.
+
+     1. Action runs
+     2. Result sent to manager
+     3. Callback runs
+
+    """
+    def __init__(self, result, callback):
+        """
+         :param result: Response to send back to the manager
+         :param callback: To be invoked immediately before terminating the agent process
+        """
+
+        self.result = result
+        self.callback = callback
+
+
 class ActionRunnerPlugin(DevicePlugin):
     """
     This class is responsible for handling requests to run actions: invoking
@@ -42,12 +62,20 @@ class ActionRunnerPlugin(DevicePlugin):
                 thread.stop()
                 wait_threads.append(thread)
 
+            self._running_actions.clear()
+
         for thread in wait_threads:
             thread.join()
 
     def succeed(self, id, result, subprocesses):
         daemon_log.info("ActionRunner.succeed %s: %s" % (id, result))
         self._notify(id, result, None, subprocesses)
+        with self._running_actions_lock:
+            del self._running_actions[id]
+
+    def respond_with_callback(self, id, callback_after_response, subprocesses):
+        daemon_log.info("ActionRunner.respond_with_callback %s: %s" % (id, callback_after_response.result))
+        self._notify(id, callback_after_response.result, None, subprocesses, callback_after_response.callback)
         with self._running_actions_lock:
             del self._running_actions[id]
 
@@ -58,11 +86,16 @@ class ActionRunnerPlugin(DevicePlugin):
             del self._running_actions[id]
 
     def cancelled(self, id):
-        daemon_log.info("ActionRunner.cancelled %s" % id)
-        with self._running_actions_lock:
-            del self._running_actions[id]
+        """
+        Action completed due to SubprocessAborted exception (raise when
+        an action is cancelled)
+        """
+        if not self._tearing_down:
+            daemon_log.info("ActionRunner.cancelled %s" % id)
+            with self._running_actions_lock:
+                del self._running_actions[id]
 
-    def _notify(self, id, result, backtrace, subprocesses):
+    def _notify(self, id, result, backtrace, subprocesses, callback = None):
         if self._tearing_down:
             return
 
@@ -73,7 +106,7 @@ class ActionRunnerPlugin(DevicePlugin):
                 'result': result,
                 'exception': backtrace,
                 'subprocesses': subprocesses
-            })
+            }, callback)
 
     def cancel(self, id):
         with self._running_actions_lock:
@@ -126,6 +159,8 @@ class ActionRunner(threading.Thread):
         try:
             shell.thread_state.enable_save()
             result = self.manager._session._client.action_plugins.run(self.action, self.args)
+        except CallbackAfterResponse, e:
+            self.manager.respond_with_callback(self.id, e, shell.thread_state.get_subprocesses())
         except SubprocessAborted:
             self.manager.cancelled(self.id)
         except Exception:
