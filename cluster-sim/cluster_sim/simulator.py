@@ -16,6 +16,7 @@ from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_client import FakeClient
 from cluster_sim.fake_cluster import FakeCluster
 from cluster_sim.fake_devices import FakeDevices
+from cluster_sim.fake_power_control import FakePowerControl
 from cluster_sim.fake_server import FakeServer
 from cluster_sim.fake_device_plugins import  FakeDevicePlugins
 from cluster_sim.log import log
@@ -38,6 +39,7 @@ class ClusterSimulator(object):
         self.lustre_clients = {}
         self.cluster = FakeCluster(folder)
         self.devices = FakeDevices(folder)
+        self.power = FakePowerControl(folder, self.start_server, self.stop_server)
         self.servers = {}
 
         self._load_servers()
@@ -53,7 +55,7 @@ class ClusterSimulator(object):
                 os.makedirs(crypto_folder)
             server.crypto = Crypto(crypto_folder)
 
-    def setup(self, server_count, volume_count, nid_count):
+    def setup(self, server_count, volume_count, nid_count, psu_count):
         for n in range(0, server_count):
             nids = []
             nodename = "test%.3d" % n
@@ -64,11 +66,16 @@ class ClusterSimulator(object):
 
             FakeServer(self.folder, self.devices, self.cluster, fqdn, nodename, nids)
 
+            self.power.add_server(fqdn)
+
         self._load_servers()
+
+        self.power.setup(psu_count, server_count)
 
         self.devices.setup(volume_count)
 
     def register_all(self, secret):
+        self.power.start()
         for fqdn, server in self.servers.items():
             if server.crypto.certificate_file is None:
                 self.register(fqdn, secret)
@@ -80,6 +87,9 @@ class ClusterSimulator(object):
         if fqdn in self._clients:
             self.stop_server(fqdn)
         server = self.servers[fqdn]
+        if not self.power.server_has_power(fqdn):
+            log.warning("Not registering %s, none of its PSUs are powered" % fqdn)
+            return
         client = AgentClient(
             url = self.url + "register/%s/" % secret,
             action_plugins = FakeActionPlugins(self, server),
@@ -128,6 +138,9 @@ class ClusterSimulator(object):
         log.debug("start %s" % fqdn)
         assert fqdn not in self._clients
         server = self.servers[fqdn]
+        if not self.power.server_has_power(fqdn):
+            log.warning("Not starting %s, none of its PSUs are powered" % fqdn)
+            return
         server.boot_time = datetime.datetime.utcnow()
         if server.crypto.certificate_file is None:
             log.warning("Not starting %s, it is not registered" % fqdn)
@@ -159,6 +172,7 @@ class ClusterSimulator(object):
         log.info("Stopping")
         for client in self._clients.values():
             client.stop()
+        self.power.stop()
 
     def join(self):
         log.info("Joining...")
@@ -169,5 +183,6 @@ class ClusterSimulator(object):
 
     def start_all(self):
         log.debug("start all")
+        self.power.start()
         for fqdn in self.servers.keys():
             self.start_server(fqdn)

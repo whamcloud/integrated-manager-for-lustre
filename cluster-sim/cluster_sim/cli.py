@@ -6,17 +6,19 @@
 
 import argparse
 import json
-import logging
 import signal
-import threading
+from gevent import monkey
 
-from cluster_sim.log import log
+from cluster_sim.fake_power_control import FakePowerControl
 from cluster_sim.simulator import ClusterSimulator
+from cluster_sim.log import log
 import sys
 
 from chroma_agent.agent_daemon import daemon_log
 import os
 import requests
+import threading
+import logging
 
 daemon_log.addHandler(logging.StreamHandler())
 daemon_log.setLevel(logging.DEBUG)
@@ -39,7 +41,8 @@ class SimulatorCli(object):
             volume_count = server_count * 2
 
         self.simulator = ClusterSimulator(args.config, args.url)
-        self.simulator.setup(server_count, volume_count, int(args.nid_count))
+        self.simulator.setup(server_count, volume_count,
+                             int(args.nid_count), int(args.psu_count))
         self.stop()
 
     def _acquire_token(self, url, username, password, credits):
@@ -96,6 +99,7 @@ class SimulatorCli(object):
         self._stopping.set()
 
     def main(self):
+        monkey.patch_all()
         log.addHandler(logging.StreamHandler())
 
         # Usually on our Intel laptops https_proxy is set, and needs to be unset for tests,
@@ -113,6 +117,7 @@ class SimulatorCli(object):
         setup_parser.add_argument('--server_count', required = False, help = "Number of simulated storage servers", default = '8')
         setup_parser.add_argument('--nid_count', required = False, help = "Number of LNet NIDs per storage server, defaults to 1 per server", default = '1')
         setup_parser.add_argument('--volume_count', required = False, help = "Number of simulated storage devices, defaults to twice the number of servers")
+        setup_parser.add_argument('--psu_count', required = False, help = "Number of simulated server Power Supply Units, defaults to one per server", default = '1')
         setup_parser.set_defaults(func = self.setup)
 
         register_parser = subparsers.add_parser("register", help = "Provide a secret for registration, or provide API credentials for the simulator to acquire a token itself")
@@ -143,4 +148,90 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
+    cli.main()
+
+
+class PowerControlCli(object):
+    def _setup(self):
+        # This should all be reasonably thread-safe, since it's just reading
+        # the JSON from disk, but talks to the server to make any changes.
+        self.power = FakePowerControl(self.args.config, None, None)
+
+    def control_server(self, args):
+        self.args = args
+        self._setup()
+
+        pdu_clients = []
+        for pdu in self.power.pdu_sims.values():
+            klassname = "%sClient" % pdu.__class__.__name__
+            pdu_clients.append(getattr(__import__("cluster_sim.fake_power_control", fromlist=[klassname]), klassname)(pdu.address, pdu.port))
+
+        if args.fqdn.lower() == "all":
+            for outlet in self.power.server_outlet_list:
+                for client in pdu_clients:
+                    client.perform_outlet_action(outlet, args.action)
+            return
+
+        outlet = self.power.server_outlet_number(args.fqdn)
+
+        for client in pdu_clients:
+            client.perform_outlet_action(outlet, args.action)
+
+    def control_pdu(self, args):
+        self.args = args
+        self._setup()
+
+        pdu = self.power.pdu_sims[args.name]
+        klassname = "%sClient" % pdu.__class__.__name__
+        client = getattr(__import__("cluster_sim.fake_power_control", fromlist=[klassname]), klassname)(pdu.address, pdu.port)
+        client.perform_outlet_action(args.outlet, args.action)
+
+    def print_server_status(self, args):
+        self.args = args
+        self._setup()
+
+        for outlet in self.power.server_outlet_list:
+            print self.power.outlet_server_name(outlet)
+            for pdu in self.power.pdu_sims.values():
+                print "  %s (%s): %s" % (pdu.name, outlet, pdu.outlet_state(outlet))
+
+    def print_pdu_status(self, args):
+        self.args = args
+        self._setup()
+
+        for pdu in sorted(self.power.pdu_sims.values(), key = lambda x: x.name):
+            print "%s:" % pdu.name
+            for outlet, state in sorted(pdu.all_outlet_states.items(), key = lambda x: x[0]):
+                print "  %s (%s): %s" % \
+                        (self.power.outlet_server_name(outlet), outlet, state)
+
+    def main(self):
+        parser = argparse.ArgumentParser(description = "Cluster Power Control")
+        parser.add_argument('--config', required = False, help = "Simulator configuration/state directory", default = "cluster_sim")
+        subparsers = parser.add_subparsers()
+
+        pdu_parser = subparsers.add_parser('pdu')
+        pdu_parser.add_argument('name', help = "PDU name")
+        pdu_parser.add_argument('outlet', help = "PDU outlet number")
+        pdu_parser.add_argument('action', help = "Action to be performed (off|on|reboot)")
+        pdu_parser.set_defaults(func = self.control_pdu)
+
+        server_parser = subparsers.add_parser('server')
+        server_parser.add_argument('fqdn', help = "Server FQDN")
+        server_parser.add_argument('action', help = "Action to be performed (off|on|reboot)")
+        server_parser.set_defaults(func = self.control_server)
+
+        status_parser = subparsers.add_parser('status')
+        sub_subparsers = status_parser.add_subparsers()
+        server_status = sub_subparsers.add_parser('servers')
+        server_status.set_defaults(func = self.print_server_status)
+        pdu_status = sub_subparsers.add_parser('pdus')
+        pdu_status.set_defaults(func = self.print_pdu_status)
+
+        args = parser.parse_args()
+        args.func(args)
+
+
+def power_main():
+    cli = PowerControlCli()
     cli.main()
