@@ -261,8 +261,8 @@ class RealRemoteOperations(RemoteOperations):
         """
         # TODO: Expand on this. Perhaps use existing lustre client tests.
         if filesystem.get('bytes_free') == None:
-            self.wait_until_true(lambda: self.get_filesystem(filesystem['id']).get('bytes_free') != None)
-            filesystem = self.get_filesystem(filesystem['id'])
+            self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free') is not None)
+            filesystem = self._test_case.get_filesystem(filesystem['id'])
 
         self._ssh_address(
             client_address,
