@@ -1,6 +1,8 @@
 
-REST API for Intel|reg| Manager for Lustre``*`` Software
-====================================================
+.. include:: <isonum.txt>
+
+REST API for Intel® Manager for Lustre* Software
+================================================
 
 Introduction
 ------------
@@ -204,7 +206,7 @@ If you wish to obtain all objects, pass ``limit=0`` as a parameter to the reques
 
 
 Creating, Modifying, and Deleting Objects
-----------------------------------------
+-----------------------------------------
 
 Objects are created using the POST method.  The attributes provided at creation
 time are sent as a JSON-encoded dict in the body of the POST (*not* as URL
@@ -428,6 +430,6 @@ Contact your local Intel sales office or your distributor to obtain the latest s
 Copies of documents which have an order number and are referenced in this document, or other Intel literature, may be obtained by calling 1-800-548-4725, or go to:  http://www.intel.com/design/literature.htm.
 Intel and the Intel logo are trademarks of Intel Corporation in the U.S. and/or other countries. 
 
-``*`` Other names and brands may be claimed as the property of others.
+\* Other names and brands may be claimed as the property of others.
 
-Copyright |copy| 2012-2013 Intel Corporation. All rights reserved. 
+Copyright |copy| 2012-2013 Intel Corporation. All rights reserved.
