@@ -59,7 +59,7 @@ Objects and Relationships
 
 The following objects are required for a running file system:
 MGT, MDT, OST (`target <#target>`_), `filesystem <#filesystem>`_,
-`volume <#volume>`_, `volume node <#volume_node>`_, `host <#host>`_.
+`volume <#volume>`_, `volume node <#volume-node>`_, `host <#host>`_.
 
 The order of construction permitted for consumers of the REST API is:
 
