@@ -1,38 +1,72 @@
 
 <script language='text/template' id="system_status_template">
-    <h1>
-        Supervisor
-    </h1>
-    <table class='supervisor_processes'>
-        <thead>
-        <tr>
-            <th>
-                Name
-            </th>
-            <th>
-                Description
-            </th>
-            <th>
-                State
-            </th>
-        </tr>
-        </thead>
-        <tbody>
+    <div class='content'>
+      <div class='ui-widget'>
+        <div style="margin-top: 20px; padding: 0 .7em;" class="ui-helper-clearfix ui-state-highlight ui-corner-all ui-tabs-panel ui-widget">
+            <p>
+                <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+                <strong>Note:</strong> This page is for use by support personnel. These performance counters relate
+                to the performance of the server hosting this user interface: they do not describe Lustre or storage
+                servers.</p>
+        </div>
+      </div>
 
-        </tbody>
-    </table>
-</script>
+      <table>
+          <tr>
+              <td width="50%" style="vertical-align:top;">
+                  <h4>
+                      Supervisor
+                  </h4>
+                  <table class='supervisor_processes display tight_lines'>
+                      <thead>
+                      <tr>
+                          <th>
+                              Name
+                          </th>
+                          <th>
+                              Description
+                          </th>
+                          <th>
+                              State
+                          </th>
+                      </tr>
+                      </thead>
+                      <tbody>
 
-<script language='text/template' id="system_status_supervisor_process_template">
-  <tr>
-      <td>
-          <%= name %>
-      </td>
-      <td>
-          <%= description %>
-      </td>
-      <td>
-          <%= statename %>
-      </td>
-  </tr>
+                      </tbody>
+                  </table>
+              </td>
+              <td style="vertical-align:top;">
+                  <h4>
+                      RabbitMQ
+                  </h4>
+                  <table class='rabbitmq_queues display tight_lines'>
+                      <thead>
+
+                      </thead>
+                      <tbody>
+
+                      </tbody>
+                  </table>
+              </td>
+          </tr>
+      </table>
+
+      <div class='postgres_table_stats'>
+
+      </div>
+      <h4>
+          PostgreSQL processes
+      </h4>
+      <table class='pg_stat_activity display tight_lines'>
+          <thead>
+          <tr>
+
+          </tr>
+          </thead>
+          <tbody>
+
+          </tbody>
+      </table>
+    </div>
 </script>
