@@ -279,6 +279,18 @@ class RealRemoteOperations(RemoteOperations):
 
         raise RuntimeError("No server config for %s" % fqdn)
 
+    def _host_contactable(self, address):
+        try:
+            #TODO: Better way to check this?
+            self._ssh_address(
+                address,
+                "echo 'Checking if node is ready to receive commands.'"
+            )
+        except socket.error:
+            return False
+        else:
+            return True
+
     def kill_server(self, fqdn):
         # "Pull the plug" on host
         server_config = self._fqdn_to_server_config(fqdn)
@@ -286,6 +298,13 @@ class RealRemoteOperations(RemoteOperations):
             server_config['host'],
             server_config['destroy_command']
         )
+
+        i = 0
+        while self._host_contactable(server_config['address']):
+            i += 1
+            time.sleep(1)
+            if i > TEST_TIMEOUT:
+                raise RuntimeError("Host %s didn't terminate within %s seconds" % (fqdn, TEST_TIMEOUT))
 
     def await_server_boot(self, boot_fqdn, monitor_fqdn = None):
         """
@@ -296,27 +315,24 @@ class RealRemoteOperations(RemoteOperations):
 
         running_time = 0
         while running_time < TEST_TIMEOUT:
-            try:
-                #TODO: Better way to check this?
-                self._ssh_address(
-                    boot_server['address'],
-                    "echo 'Checking if node is ready to receive commands.'"
-                )
-            except socket.error:
-                continue
-            finally:
-                time.sleep(3)
-                running_time += 3
-
-            if monitor_server:
-                # Verify other host knows it is no longer offline
-                result = self._ssh_address(
-                    monitor_server['address'],
-                    "crm node show %s" % boot_server['nodename']
-                )
-                node_status = result.stdout.read()
-                if not re.search('offline', node_status):
+            if self._host_contactable(boot_server['address']):
+                # If we have a peer to check then fall through to that, else
+                # drop out here
+                if monitor_server:
+                    # Verify other host knows it is no longer offline
+                    result = self._ssh_address(
+                        monitor_server['address'],
+                        "crm node show %s" % boot_server['nodename']
+                    )
+                    node_status = result.stdout.read()
+                    if not re.search('offline', node_status):
+                        break
+                else:
+                    # No monitor server, take SSH offline-ness as evidence for being booted
                     break
+
+            time.sleep(3)
+            running_time += 3
 
         self._test_case.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to come back online.")
         if monitor_server:
