@@ -4,16 +4,20 @@
 # ========================================================
 
 
-import threading
-import time
+"""
+Actions for registration and deregistration of a server (adding and removing
+it from chroma manager)
+"""
+
 from chroma_agent import shell
 from chroma_agent.agent_client import AgentClient
 from chroma_agent.agent_daemon import ServerProperties
 from chroma_agent.crypto import Crypto
+from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.log import console_log
-import os
 
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
+import os
 
 
 def _service_is_running():
@@ -40,35 +44,14 @@ def deregister_server():
     from chroma_agent.store import AgentStore
     AgentStore.remove_server_conf()
 
-    console_log.info("Disabling chroma-agent service")
-    _disable_service()
+    def disable_and_kill():
+        console_log.info("Disabling chroma-agent service")
+        _disable_service()
 
-    console_log.info("Terminating")
+        console_log.info("Terminating")
+        os._exit(0)
 
-    KILL_DELAY = 20
-
-    # This is a little bit rude, but this is meant to be a very final shutdown
-    # and it would be a hassle to call all the way back out to the main thread.
-    # This should be at least fairly robust.  To make it a bit cleaner, one could either
-    # provide a way for this acitonplugin to signal a quit to the class executing it, or
-    # provide the deregistration as a special agent protocol operation that doesn't
-    # make it down here into plugin territory.
-    # The functional downside to this approach is that if the communications
-    # are interrupted, we will kill ourselves without sending the completion to
-    # the manager, and the user will have to 'force remove' this host.
-    # FIXME: that's probably annoying enough to justify doing this in
-    # a way that guarantees we won't kill ourselves before sending the response.
-    class KillLater(threading.Thread):
-        def run(self):
-            time.sleep(KILL_DELAY)
-            Crypto().delete()
-            console_log.info("Terminating now")
-            os._exit(0)
-
-    # Delay the quit so that there is time to send the result of this operation
-    # back to the manager.
-    console_log.info("Terminating in %s seconds" % KILL_DELAY)
-    KillLater().start()
+    raise CallbackAfterResponse(None, disable_and_kill)
 
 
 def register_server(url, ca, secret, address = None):

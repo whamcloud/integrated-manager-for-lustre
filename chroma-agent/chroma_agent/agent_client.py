@@ -116,7 +116,7 @@ MESSAGE_TYPES = ["SESSION_CREATE_REQUEST",
 
 
 class Message(object):
-    def __init__(self, type = None, plugin_name = None, body = None, session_id = None, session_seq = None):
+    def __init__(self, type = None, plugin_name = None, body = None, session_id = None, session_seq = None, callback = None):
         if type is not None:
             assert type in MESSAGE_TYPES
             self.type = type
@@ -124,6 +124,7 @@ class Message(object):
             self.body = body
             self.session_id = session_id
             self.session_seq = session_seq
+            self.callback = callback
 
     def parse(self, data):
         assert data['type'] in MESSAGE_TYPES
@@ -133,13 +134,14 @@ class Message(object):
         self.session_id = data['session_id']
         self.session_seq = data['session_seq']
 
-    def dump(self):
+    def dump(self, fqdn):
         return {
             'type': self.type,
             'plugin': self.plugin_name,
             'session_id': self.session_id,
             'session_seq': self.session_seq,
-            'body': self.body
+            'body': self.body,
+            'fqdn': fqdn
         }
 
 
@@ -169,9 +171,9 @@ class Session(object):
             except NotImplementedError:
                 return None
 
-    def send_message(self, body):
+    def send_message(self, body, callback = None):
         daemon_log.info("Session.send_message %s/%s" % (self._plugin_name, self.id))
-        self._writer.put(Message("DATA", self._plugin_name, body, self.id, self._seq))
+        self._writer.put(Message("DATA", self._plugin_name, body, self.id, self._seq, callback = callback))
         self._seq += 1
 
     def receive_message(self, body):
@@ -263,19 +265,19 @@ class HttpWriter(ExceptionCatchingThread):
 
     def send(self):
         messages = []
+        completion_callbacks = []
+
         while True:
             try:
-                messages.append(self._messages.get_nowait())
+                message = self._messages.get_nowait()
+                if message.callback:
+                    completion_callbacks.append(message.callback)
+                messages.append(message)
             except Queue.Empty:
                 break
 
         try:
-            def prepare(message):
-                dict = message.dump()
-                dict['fqdn'] = self._client._fqdn
-                return dict
-
-            self._client.post({'messages': [prepare(m) for m in messages]})
+            self._client.post({'messages': [m.dump(self._client._fqdn) for m in messages]})
         except HttpError:
             # Terminate any sessions which we've just lost messages for
             # FIXME: up to a point, we should keep these messages around
@@ -287,6 +289,9 @@ class HttpWriter(ExceptionCatchingThread):
                     kill_sessions.add(message.plugin_name)
             for plugin_name in kill_sessions:
                 self._client.sessions.terminate(plugin_name)
+        finally:
+            for callback in completion_callbacks:
+                callback()
 
     def poll(self):
         """

@@ -5,7 +5,8 @@
 
 
 import threading
-import time
+
+from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.log import log
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
 
@@ -47,17 +48,18 @@ class FakeActionPlugins():
                 sim = self._simulator
                 server = self._server
 
-                # This is going to try to join() me, so call it from a different thread
-                class KillLater(threading.Thread):
+                class StopServer(threading.Thread):
                     def run(self):
-                        # FIXME race, hoping that this is long enough for the job response
-                        # to make it home
-                        time.sleep(10)
-                        server.crypto.delete()
                         sim.stop_server(server.fqdn)
-                KillLater().start()
 
-                return
+                def kill():
+                    server.crypto.delete()
+                    # Got to go and run stop_server in another thread, because it will try
+                    # to join all the agent threads (including the one that is running this
+                    # callback)
+                    StopServer().start()
+
+                raise CallbackAfterResponse(None, kill)
             elif cmd == 'unconfigure_ntp':
                 return
             elif cmd == 'unconfigure_rsyslog':
