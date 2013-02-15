@@ -24,11 +24,11 @@ class CorosyncRxQueue(AgentRxQueue):
 
 
 class Service(ChromaService):
-    """Corosync host offline detection service.
+    """Corosync host offline detection service
 
     The corosync agent will report host status for all nodes in it's
-    peer group.  Any node that is down will be recorded here, and in the DB,
-    and and alert will be saved.
+    peer group.  Any node that is down according to corosync
+    will be recorded here, and in the DB, and and alert will be saved.
 
     Be sure to have all nodes on the exact same time - ntp.  This service will
     drop older reports that come in late, so correct timing is critical.
@@ -47,8 +47,8 @@ class Service(ChromaService):
 
         self._queue = CorosyncRxQueue()
 
-    # Using transaction decorator to ensure that subsequent calls see fresh data
-    # when polling the ManagedHost model.
+    # Using transaction decorator to ensure that subsequent calls
+    # see fresh data when polling the ManagedHost model.
     @transaction.commit_on_success()
     def on_data(self, fqdn, body):
         """Process all incoming messages from the Corosync agent plugin
@@ -75,39 +75,37 @@ class Service(ChromaService):
                             "corosync plugin: %s" % dt)
                 raise
 
-        log.debug("Process corosync peers:  %s" % body['nodes'].items())
+        def is_new(peer_fqdn):
+            return (peer_fqdn not in self._host_status or
+                    self._host_status[peer_fqdn].datetime < dt)
+
+        peers_str = "; ".join(["%s: online=%s, new=%s" %
+                                (peer_fqdn, data['online'], is_new(peer_fqdn))
+                                for peer_fqdn, data in body['nodes'].items()])
+        log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
+
         #  Consider all nodes in the peer group for this reporting agent
         #  Note:  reported nodes are not necessarily managed by chroma
         for peer_fqdn, data in body['nodes'].items():
 
-            if peer_fqdn in self._host_status:
-                log.debug("Node %s is back for more:  %s < %s" % (peer_fqdn, self._host_status[peer_fqdn].datetime, dt))
-            else:
-                log.debug("First time seeing:  %s" % peer_fqdn)
-            if  (peer_fqdn not in self._host_status or
-                                self._host_status[peer_fqdn].datetime < dt):
+            if is_new(peer_fqdn):
                 incoming_status = data['online'] == 'true'
 
                 try:
-#                    peer_host = ManagedHost.objects.get(nodename=peer_fqdn)
                     peer_host = ManagedHost.objects.get(fqdn=peer_fqdn)
-                    log.debug("GOT HOST:  %s" % peer_host.pk)
                 except ManagedHost.DoesNotExist:
-                    log.info("Corosync reported a peer "
-                             "that is not managed: %s" % peer_fqdn)
+#                    log.info("Corosync reported a peer "
+#                             "that is not managed: %s" % peer_fqdn)
+                    pass
                 else:
-                    log.info("Corosync processing "
-                             "peer %s of %s " % (peer_fqdn, fqdn))
+#                    log.info("Corosync processing "
+#                             "peer %s of %s " % (peer_fqdn, fqdn))
 
-                    #  Raise an Alert - the Alert system will not re-alert
-                    #  if this is a duplicate for this host object
-                    log.debug("ALERTING:  %s: %s" % (peer_host, not incoming_status))
+                    #  Raise an Alert - system supresses dups
+                    log.debug("Alert notify on %s: active=%s" % (peer_host, not incoming_status))
                     HostOfflineAlert.notify(peer_host, not incoming_status)
 
-                    #  Attempt to save the state.  Setting this value is
-                    #  non-deterministic, and may results it the field not being
-                    #  set, or set inaccurately, so do not rely on it being in
-                    #  any specific state.
+                    #  Attempt to save the state.
                     attrs = {'corosync_reported_up': incoming_status}
                     if peer_host.corosync_reported_up != incoming_status:
                         JobSchedulerClient.notify(peer_host, now(), attrs)

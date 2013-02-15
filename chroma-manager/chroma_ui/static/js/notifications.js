@@ -152,17 +152,23 @@ var LiveObject = function()
       unconfigured  : { icon: 'plug--exclamation',  label: 'Unconfigured' }
     };
 
+    // When peers think the host is down, lnet can't be up.
+    // It is down or will be fenced
+    var host_state = obj.state;
+    if(!obj.corosync_reported_up)
+        host_state = 'lnet_down';
+
     // host status is the Lnet Status which we convert into an icon
     if ( resourceType(obj) === 'host' ) {
       return UIHelper.help_hover(
-        "server_status_" + obj.state,
+        "server_status_" + host_state,
         UIHelper.fugue_icon(
-          server_status_map[obj.state]['icon'],
-          { style: 'padding-right: 5px;', 'data-state': obj.state }
-        ) + server_status_map[obj.state]['label']
+          server_status_map[host_state]['icon'],
+          { style: 'padding-right: 5px;', 'data-state': host_state }
+        ) + server_status_map[host_state]['label']
       );
     }
-    return obj.state;
+    return host_state;
   }
 
   function spanMarkup(obj, classes, content) {
@@ -577,6 +583,7 @@ var CommandNotification = function() {
       return;
     }
 
+    //  Polling for commands to see if complete, then updating ui
     Api.get("/api/command/", {id__in: command_ids, limit: 0}, success_callback = function(data) {
       var commands = data.objects;
       var busy = true;
@@ -783,7 +790,8 @@ var CommandNotification = function() {
   return {
     init: init,
     begin: begin,
-    updateIcons: updateIcons
+    updateIcons: updateIcons,
+    updateObject: updateObject
   }
 }();
 
@@ -891,6 +899,7 @@ var AlertNotification = function() {
       $(".alert_indicator[data-resource_uri='" + effectee.resource_uri + "']").each(function() {
         updateIcon($(this));
       });
+      CommandNotification.updateObject(effectee.resource_uri);
     });
 
     updateSidebar();
@@ -908,7 +917,9 @@ var AlertNotification = function() {
       $(".alert_indicator[data-resource_uri='" + effectee.resource_uri + "']").each(function() {
         updateIcon($(this));
       });
+      CommandNotification.updateObject(effectee.resource_uri);
     });
+
 
     updateSidebar();
 
