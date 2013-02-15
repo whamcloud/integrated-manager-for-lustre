@@ -230,7 +230,7 @@ class RealRemoteOperations(RemoteOperations):
         # Check pacemaker thinks it's running on the right host.
         expected_resource_status = "%s is running on: %s" % (ha_label, host['nodename'])
 
-        return bool(re.match(resource_status, expected_resource_status))
+        return bool(re.search(expected_resource_status, resource_status))
 
     def check_ha_config(self, hosts, filesystem):
         for host in hosts:

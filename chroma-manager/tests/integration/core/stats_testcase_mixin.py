@@ -24,7 +24,7 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         without exception and that a few are updated as expected when
         corresponding actions are taken. Far from exhaustive.
         """
-        if config['simulator']:
+        if config.get('simulator', False):
             # Simulator doesn't know how to map client writes to decrementing
             # OST stats
             return
