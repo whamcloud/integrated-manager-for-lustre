@@ -25,7 +25,7 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import job_log
-from chroma_core.lib.job import  DependOn, DependAll, Step
+from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
 import settings
@@ -398,6 +398,40 @@ class ConfigureLNetJob(StateChangeJob):
         ordering = ['id']
 
 
+class ConfigureCorosyncStep(Step):
+    idempotent = True
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, "configure_corosync")
+
+
+class ConfigurePacemakerStep(Step):
+    idempotent = True
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, "configure_pacemaker")
+
+
+class ConfigureFencingStep(Step):
+    idempotent = True
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, "configure_fencing",
+                              {'fence_agent': 'xvm'})
+
+
 class ConfigureRsyslogStep(Step):
     idempotent = True
 
@@ -420,6 +454,55 @@ class ConfigureNTPStep(Step):
         host = kwargs['host']
         if not host.immutable_state:
             self.invoke_agent(host, "configure_ntp", {'ntp_server': ntp_server})
+
+
+class UnconfigureFencingStep(Step):
+    idempotent = True
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, 'unconfigure_fencing')
+
+
+class UnconfigurePacemakerStep(Step):
+    idempotent = True
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, 'unconfigure_pacemaker')
+
+
+class UnconfigureCorosyncStep(Step):
+    idempotent = True
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.models import ManagedHost
+        host = ManagedHost.objects.get(id = kwargs['host_id'])
+        if not host.immutable_state:
+            self.invoke_agent(host, 'unconfigure_corosync')
+        # now need to remove it from the CIB -- this needs to be done
+        # on a different host in the cluster
+        othername = ""
+        if host.nodename == "mds1":
+            othername == "mds2"
+        elif host.nodename == "mds2":
+            othername == "mds1"
+        elif host.nodename == "oss1":
+            othername == "oss2"
+        elif host.nodename == "oss2":
+            othername == "oss1"
+        try:
+            otherhost = ManagedHost.objects.get(nodename = othername)
+        except ManagedHost.DoesNotExist:
+            return
+        self.invoke_agent(otherhost, 'delete_node', {'nodename': host.nodename})
 
 
 class UnconfigureRsyslogStep(Step):
@@ -536,7 +619,10 @@ class SetupHostJob(StateChangeJob):
     def get_steps(self):
         return [(ConfigureNTPStep, {'host': self.managed_host}),
                (ConfigureRsyslogStep, {'host': self.managed_host}),
-                (LearnDevicesStep, {'host': self.managed_host})]
+                (LearnDevicesStep, {'host': self.managed_host}),
+                (ConfigureCorosyncStep, {'host_id': self.managed_host.pk}),
+                (ConfigurePacemakerStep, {'host_id': self.managed_host.pk}),
+                (ConfigureFencingStep, {'host_id': self.managed_host.pk})]
 
     class Meta:
         app_label = 'chroma_core'
@@ -760,7 +846,10 @@ class RemoveHostJob(StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        return [(UnconfigureNTPStep, {'host': self.host}),
+        return [(UnconfigureFencingStep, {'host_id': self.host.id}),
+                (UnconfigurePacemakerStep, {'host_id': self.host.id}),
+                (UnconfigureCorosyncStep, {'host_id': self.host.id}),
+                (UnconfigureNTPStep, {'host': self.host}),
                 (UnconfigureRsyslogStep, {'host': self.host}),
                 (RemoveServerConfStep, {'host': self.host}),
                 (DeleteHostStep, {'host': self.host, 'force': False})]
