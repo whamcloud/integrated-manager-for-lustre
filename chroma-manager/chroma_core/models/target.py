@@ -994,26 +994,23 @@ class TargetOfflineAlert(AlertState):
 
 class TargetFailoverAlert(AlertState):
     def message(self):
-        return "Target %s failed over to server %s" % (self.alert_item.target, self.alert_item.host)
+        return "Target %s running on secondary server" % self.alert_item
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
 
     def begin_event(self):
-        # FIXME: reporting this event against the primary server
-        # of a target because we don't have enough information
-        # to
         return AlertEvent(
-            message_str = "%s failover mounted" % self.alert_item.target,
-            host = self.alert_item.host,
+            message_str = "%s failover mounted" % self.alert_item,
+            host = self.alert_item.primary_server(),
             alert = self,
             severity = logging.WARNING)
 
     def end_event(self):
         return AlertEvent(
-            message_str = "%s failover unmounted" % self.alert_item.target,
-            host = self.alert_item.host,
+            message_str = "%s failover unmounted" % self.alert_item,
+            host = self.alert_item.primary_server(),
             alert = self,
             severity = logging.INFO)
 
