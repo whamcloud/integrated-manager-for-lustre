@@ -48,12 +48,10 @@ class ClusterSimulator(object):
             conf = json.load(open(server_conf))
             server = self.servers[conf['fqdn']] = FakeServer(self.folder, self.devices, self.cluster, conf['fqdn'], conf['nodename'], conf['nids'])
 
-            class FakeCrypto(Crypto):
-                FOLDER = os.path.join(self.folder, "%s_crypto" % server.fqdn)
-
-            if not os.path.exists(FakeCrypto.FOLDER):
-                os.makedirs(FakeCrypto.FOLDER)
-            server.crypto = FakeCrypto()
+            crypto_folder = os.path.join(self.folder, "%s_crypto" % server.fqdn)
+            if not os.path.exists(crypto_folder):
+                os.makedirs(crypto_folder)
+            server.crypto = Crypto(crypto_folder)
 
     def setup(self, server_count, volume_count, nid_count):
         for n in range(0, server_count):

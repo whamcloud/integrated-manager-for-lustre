@@ -11,12 +11,10 @@ import os
 
 
 class Crypto(object):
-    FOLDER = "/var/lib/chroma"
-
-    def __init__(self):
-        self.PRIVATE_KEY_FILE = os.path.join(self.FOLDER, "private.pem")
-        self.CERTIFICATE_FILE = os.path.join(self.FOLDER, "self.crt")
-        self.AUTHORITY_FILE = os.path.join(self.FOLDER, "authority.crt")
+    def __init__(self, folder):
+        self.PRIVATE_KEY_FILE = os.path.join(folder, "private.pem")
+        self.CERTIFICATE_FILE = os.path.join(folder, "self.crt")
+        self.AUTHORITY_FILE = os.path.join(folder, "authority.crt")
 
     @property
     def private_key_file(self):

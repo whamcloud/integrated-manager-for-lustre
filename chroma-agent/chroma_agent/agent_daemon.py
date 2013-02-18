@@ -104,7 +104,7 @@ def main():
             ActionPluginManager(),
             DevicePluginManager(),
             ServerProperties(),
-            Crypto())
+            Crypto(AgentStore.libdir()))
 
         def teardown_callback(*args, **kwargs):
             agent_client.stop()

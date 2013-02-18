@@ -61,7 +61,7 @@ def register_server(url, ca, secret, address = None):
         console_log.warning("chroma-agent service was running before registration, stopping.")
         shell.try_run(["/sbin/service", "chroma-agent", "stop"])
 
-    crypto = Crypto()
+    crypto = Crypto(AgentStore.libdir())
     # Call delete in case we are over-writing a previous configuration that wasn't removed properly
     crypto.delete()
     crypto.install_authority(ca)
