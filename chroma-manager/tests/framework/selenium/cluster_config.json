@@ -1,0 +1,51 @@
+{
+    "headless": false,
+    "screenshots": false,
+    "clean_up_on_failure" : true,
+    "chroma_managers":
+        {   
+            "server_http_url": "https://kp-selenium-chroma-manager-1/ui/",
+            "browser": "Chrome",
+            "users": [
+               {"username": "debug", "is_superuser": true, "password": "chr0m4_d3bug"}
+            ]   
+        },  
+    "volumes": [
+        {   
+            "label": "1IET 00010001",
+            "servers": {
+                "kp-ss-storage-appliance-1": {"path": "/dev/disk/by-id/scsi-1IET_00010001"},
+                "kp-ss-storage-appliance-2": {"path": "/dev/disk/by-id/scsi-1IET_00010001"}
+            }   
+        },  
+        {   
+            "label": "1IET 00020001",
+            "servers": {
+                "kp-ss-storage-appliance-1": {"path": "/dev/disk/by-id/scsi-1IET_00020001"},
+                "kp-ss-storage-appliance-2": {"path": "/dev/disk/by-id/scsi-1IET_00020001"}
+            }   
+        },  
+        {   
+            "label": "1IET 00030001",
+            "servers": {
+                "kp-ss-storage-appliance-1": {"path": "/dev/disk/by-id/scsi-1IET_00030001"},
+                "kp-ss-storage-appliance-2": {"path": "/dev/disk/by-id/scsi-1IET_00030001"}
+            }   
+        },  
+        {   
+            "label": "1IET 00040001",
+            "servers": {
+                "kp-ss-storage-appliance-1": {"path": "/dev/disk/by-id/scsi-1IET_00040001"},
+                "kp-ss-storage-appliance-2": {"path": "/dev/disk/by-id/scsi-1IET_00040001"}
+            }
+        }
+    ],
+    "hosts": [
+        {
+                "address": "kp-ss-storage-appliance-1"
+        },
+        {
+                "address": "kp-ss-storage-appliance-2"
+        }
+    ]
+}
