@@ -208,10 +208,33 @@ var CommandDetail = Backbone.View.extend({
 var JobDetail = Backbone.View.extend({
   className: 'job_dialog',
   template: _.template($('#job_detail_template').html()),
+  openStepIndex: function(job_steps) {
+    // returns the first indexed job.step that isn't in state "success"
+    // ie errors and currently running steps
+    // defaults to 0 on not found
+
+    // no more than one element
+    if ( job_steps.length < 2 ) {
+      return 0;
+    }
+    var open_index;
+
+    // _.each sadly does not let you break execution
+    _.each(job_steps, function(step, index) {
+        if (_.isUndefined(open_index)) {
+          if ( step.state !== 'success')  {
+            open_index = index;
+          }
+        }
+    });
+
+    return (_.isUndefined(open_index) ? 0 : open_index);
+  },
   render: function() {
     var el = $(this.el);
     var model = this.model;
     var template = this.template;
+    var openStepIndex = this.openStepIndex; // 'this' changes context later, save the ref
 
     var steps = new StepCollection();
     steps.fetch_uris(model.attributes.steps, function() {
@@ -228,8 +251,15 @@ var JobDetail = Backbone.View.extend({
         if (job.wait_for.length == 0) {
           el.find('.dialog_tabs').tabs('disable', 'dependencies');
         }
+
+        // make an accordian if there's more than once step
+        // open the first step if all steps successful
+        // open the first non-successful step otherwise
         if (job.steps.length > 1) {
-          el.find('.job_step_list').accordion({collapsible: true});
+          el.find('.job_step_list').accordion({
+            collapsible : true,
+            active      : openStepIndex(job.steps)
+          });
         }
       });
     });
