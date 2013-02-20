@@ -52,9 +52,9 @@ class Crypto(object):
         open(self.CERTIFICATE_FILE, 'w').write(cert)
 
     def delete(self):
-        for file in [self.PRIVATE_KEY_FILE, self.CERTIFICATE_FILE, self.AUTHORITY_FILE]:
+        for path in [self.PRIVATE_KEY_FILE, self.CERTIFICATE_FILE, self.AUTHORITY_FILE]:
             try:
-                os.unlink(self.PRIVATE_KEY_FILE)
+                os.unlink(path)
             except OSError, e:
                 if e.errno == errno.ENOENT:
                     pass
