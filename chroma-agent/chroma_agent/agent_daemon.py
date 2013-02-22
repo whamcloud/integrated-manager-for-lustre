@@ -4,8 +4,9 @@
 # ========================================================
 
 
+import time
 import datetime
-from chroma_agent.crypto import Crypto
+import errno
 import os
 import logging
 import sys
@@ -18,6 +19,7 @@ from daemon.daemon import set_signal_handlers
 from daemon import DaemonContext
 from daemon.pidlockfile import PIDLockFile
 
+from chroma_agent.crypto import Crypto
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 from chroma_agent.agent_client import AgentClient
 from chroma_agent.log import  daemon_log, daemon_log_setup, console_log_setup
@@ -42,6 +44,51 @@ class ServerProperties(object):
                 return datetime.datetime.fromtimestamp(int(val))
 
 
+def kill_orphans_of(parent_pid, timeout = 5):
+    """
+    If a previous instance of the service left its PID file behind (unclean stop) then
+    we will see if there are any subprocesses hanging around, and kill them.  This is done
+    to avoid e.g. a mkfs from a previous agent instance still being in progress when we
+    start another one (imagine restarting chroma-agent during a long format and then clicking
+    the format button again in the GUI).
+
+    :param parent_pid: Find orphans from this PID
+    :param timeout: Wait this long for orphan processes to respond to SIGKILL
+    :return: None
+    """
+    victims = []
+    for pid in [int(pid) for pid in os.listdir('/proc') if pid.isdigit()]:
+        try:
+            stat = open("/proc/%s/stat" % pid).read().strip()
+            pgid = int(stat.split()[4])
+            ppid = int(stat.split()[3])
+        except OSError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        else:
+            if int(pgid) == int(parent_pid) and ppid == 1:
+                sys.stderr.write("Killing orphan process %s from previous instance %s\n" % (pid, parent_pid))
+                victims.append(pid)
+                os.kill(pid, signal.SIGKILL)
+
+    n = 0
+    while True:
+        for pid in victims:
+            if not os.path.exists("/proc/%s" % pid):
+                sys.stderr.write("Process %s terminated successfully\n")
+                victims.remove(pid)
+
+        if victims:
+            n += 1
+
+            if n > timeout:
+                raise RuntimeError("Failed to kill orphan processes %s after %s seconds" % (victims, timeout))
+
+            time.sleep(1)
+        else:
+            break
+
+
 def main():
     """Daemonize and handle unexpected exceptions"""
     parser = argparse.ArgumentParser(description="Whamcloud Chroma Agent")
@@ -57,6 +104,7 @@ def main():
 
     if not args.foreground:
         if os.path.exists(args.pid_file):
+            pid = None
             try:
                 pid = int(open(args.pid_file).read())
                 os.kill(pid, 0)
@@ -70,6 +118,9 @@ def main():
                     import errno
                     if e.errno != errno.ENOENT:
                         raise e
+
+                if pid is not None:
+                    kill_orphans_of(pid)
             else:
                 # Running, we should refuse to run
                 raise RuntimeError("Daemon is already running (PID %s)" % pid)
