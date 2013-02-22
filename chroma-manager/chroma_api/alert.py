@@ -68,6 +68,10 @@ class AlertSubscriptionResource(ModelResource):
 
 
 class AlertTypeResource(Resource):
+    """
+    A list of possible alert types.  Use for
+    populating alert subscriptions.
+    """
     id = fields.CharField()
     description = fields.CharField()
 
@@ -118,9 +122,9 @@ class AlertTypeResource(Resource):
 
 class AlertResource(ModelResource):
     """
-    A bad health state.  Alerts refer to particular objects (such as
-    servers or targets), and can either be active (this is a current
-    problem) or inactive (this is a historical record of a problem).
+    Notification of a bad health state.  Alerts refer to particular objects (such as
+    servers or targets), and can either be active (indicating this is a current
+    problem) or inactive (indicating this is a historical record of a problem).
 
     The ``alert_item_content_type_id`` and ``alert_item_id`` attributes
     together provide a unique reference to the object to which the
@@ -128,15 +132,17 @@ class AlertResource(ModelResource):
     """
     message = fields.CharField(readonly = True, help_text = "Human readable description\
             of the alert, about one sentence")
-    alert_item_content_type_id = fields.IntegerField()
-    alert_item = fields.CharField()
+    alert_item_content_type_id = fields.IntegerField(help_text = "ID of affected item")
+    alert_item_content_id = fields.IntegerField(help_text = "Content type ID of affected item")
+    alert_item = fields.CharField(help_text = "URI of affected item")
     active = fields.BooleanField(attribute = 'active', null = True,
-            help_text = "True if the alert is a current issue, false\
-            if it is historical")
+                                 help_text = "``true`` if the alert is a current issue, ``false`` if it is historical")
 
     affected = fields.ListField(null = True, help_text = "List of objects which\
             are affected by the alert (e.g. a target alert also affects the\
-            filesystem to which the target belongs)")
+            file system to which the target belongs)")
+
+    dismissed = fields.BooleanField(help_text = "If ``true``, the alert should not be presented for operator attention")
 
     def dehydrate_alert_item(self, bundle):
         from chroma_api.urls import api
@@ -155,7 +161,7 @@ class AlertResource(ModelResource):
 
         from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
         from chroma_core.models import Volume
-        from chroma_core.models import  ManagedMgs
+        from chroma_core.models import ManagedMgs
         from chroma_core.models import FilesystemMember
         from chroma_core.models import TargetOfflineAlert, TargetRecoveryAlert, TargetFailoverAlert, HostContactAlert
 
@@ -194,7 +200,7 @@ class AlertResource(ModelResource):
                 "id": ao.pk,
                 "content_type_id": ct.pk,
                 "resource_uri": api.get_resource_uri(ao)
-                })
+            })
 
         return result
         # <<
@@ -215,8 +221,8 @@ class AlertResource(ModelResource):
         return bundle.obj.alert_item_type.id
 
     alert_item_str = fields.CharField(readonly = True,
-            help_text = "A human readable noun describing the object\
-            that is the subject of the alert")
+                                      help_text = "A human readable noun describing the object\
+                                      that is the subject of the alert")
 
     class Meta:
         queryset = AlertState.objects.all()

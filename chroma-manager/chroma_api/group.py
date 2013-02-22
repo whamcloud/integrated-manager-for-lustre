@@ -16,7 +16,7 @@ class GroupResource(ModelResource):
     A user group.  Users inherit the permissions
     of groups of which they are a member.
 
-    Chroma groups are used internally to refer
+    Groups are used internally to refer
     to factory-configured profiles, so this resource
     is read-only.
     """

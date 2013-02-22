@@ -13,6 +13,10 @@ class MessageClass:
     LUSTRE_ERROR = 2
 
     @classmethod
+    def strings(cls):
+        return [cls.to_string(i) for i in [cls.NORMAL, cls.LUSTRE, cls.LUSTRE_ERROR]]
+
+    @classmethod
     def to_string(cls, n):
         """Convert a MessageClass ID to a string"""
         if not hasattr(cls, '_to_string'):
@@ -38,9 +42,11 @@ class LogMessage(models.Model):
     #    the relational ID of a host is a less sound ID than its name
     #  * It is efficient to avoid looking up fqdn to host ID on insert (log messages
     #    are inserted much more than they are queried).
-    fqdn = models.CharField(max_length = 255)
-    severity = models.SmallIntegerField()
-    facility = models.SmallIntegerField()
+    fqdn = models.CharField(max_length = 255,
+                            help_text = "FQDN of the host from which the message was received.  Note that this host may"
+                            "no longer exist or its FQDN may have changed since.")
+    severity = models.SmallIntegerField(help_text = "Integer data. `RFC5424 severity <http://tools.ietf.org/html/rfc5424#section-6.2.1>`_")
+    facility = models.SmallIntegerField(help_text = "Integer data. `RFC5424 facility <http://tools.ietf.org/html/rfc5424#section-6.2.1>`_")
     tag = models.CharField(max_length = 63)
     message = models.TextField()
     message_class = models.SmallIntegerField()

@@ -91,7 +91,7 @@ class JobResource(ModelResource):
             locked_item_content_type_id: 4,
         }
 
-    The ``id`` and ``content_type_id`` of the locked object form a unique identify
+    The ``id`` and ``content_type_id`` of the locked object form a unique identifier
     which can be compared with API-readable objects which have such attributes.
     """
 

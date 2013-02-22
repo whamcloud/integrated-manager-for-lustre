@@ -27,7 +27,7 @@ class Session:
 
 class SessionResource(Resource):
     """
-    The current user session.  This resources exposes only list-style methods,
+    The current user session.  This resource exposes only list-style methods,
     all of which implicitly operate on the current session (determined from
     HTTP headers).
 
@@ -35,14 +35,15 @@ class SessionResource(Resource):
     session resource are a useful way of obtaining ``sessionid`` and ``csrftoken``
     values (see `Access control <#access-control>`_)
 
-    Sessions are authenticated by POSTing credentials, and logged out using DELETE.
+    Authenticate a session by using POST to send credentials. Use DELETE to log out from a session.
     """
     user = fields.ToOneField('chroma_api.user.UserResource', 'user', full = True, null = True,
-            help_text = "A user object")
-    read_enabled = fields.BooleanField(attribute = 'read_enabled',
-            help_text = "Whether the current session is permitted to do GET operations\
-            on other API resources.  Always true for authenticated users, depends on \
-            settings for anonymous users.")
+                             help_text = "A user object")
+    read_enabled = fields.BooleanField(
+        attribute = 'read_enabled',
+        help_text = "If ``true``, the current session is permitted to do GET operations\
+        on other API resources.  Always true for authenticated users, depends on \
+        settings for anonymous users.")
 
     class Meta:
         object_class = Session

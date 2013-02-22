@@ -17,10 +17,10 @@ class StepResource(ModelResource):
     A given Job may have multiple 'step 1' records if retries have occurred, in which
     case they may be distinguished by their ``created_at`` attributes.
 
-    The details of a Job's steps are usually only interesting if something has gone wrong,
+    The details of the steps for a job are usually only interesting if something has gone wrong
     and the user is interested in any captured exceptions or console output.
 
-    Don't load steps for a job unless they're really needed: the console output may be
+    Don't load steps for a job unless they're really needed; the console output may be
     large.
     """
     class Meta:
@@ -39,7 +39,7 @@ class StepResource(ModelResource):
     def dehydrate_description(self, bundle):
         return bundle.obj.describe()
 
-    class_name = fields.CharField(help_text = "For debugging: Name of the class representing this step")
+    class_name = fields.CharField(help_text = "Name of the class representing this step")
 
     def dehydrate_class_name(self, bundle):
         return bundle.obj.step_klass_name()

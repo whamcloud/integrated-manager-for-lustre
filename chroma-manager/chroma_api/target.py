@@ -133,40 +133,44 @@ class TargetValidation(Validation):
 
 class TargetResource(MetricResource, ConfParamResource):
     """
-    Lustre targets: MGTs, OSTs and MDTs.
+    A Lustre target.
 
-    Typically used for retrieving targets for a particular filesystem (filter on
-    filesystem_id) and/or of a particular type (filter on kind).
+    Typically used for retrieving targets for a particular file system (by filtering on
+    ``filesystem_id``) and/or of a particular type (by filtering on ``kind``).
+
+    A Lustre target may be a management target (MGT), a metadata target (MDT), or an
+    object store target (OST).
+
     """
-    filesystems = fields.ListField(null = True, help_text = "For MGTs, the list of filesystems\
+    filesystems = fields.ListField(null = True, help_text = "For MGTs, the list of file systems\
             belonging to this MGT.  Null for other targets.")
     filesystem = fields.CharField('chroma_api.filesystem.FilesystemResource', 'filesystem',
-        help_text = "For OSTs and MDTs, the owning filesystem.  Null for MGTs.", null = True)
+        help_text = "For OSTs and MDTs, the owning file system.  Null for MGTs.", null = True)
     filesystem_id = fields.IntegerField(help_text = "For OSTs and MDTs, the ``id`` attribute of\
-            the owning filesystem.  Null for MGTs.", null = True)
+            the owning file system.  Null for MGTs.", null = True)
     filesystem_name = fields.CharField(help_text = "For OSTs and MDTs, the ``name`` attribute \
-            of the owning filesystem.  Null for MGTs.")
+            of the owning file system.  Null for MGTs.")
 
     kind = fields.CharField(help_text = "Type of target, one of %s" % KIND_TO_KLASS.keys())
 
     volume_name = fields.CharField(attribute = 'volume__label',
-            help_text = "The ``label`` attribute of the Volume on which this target exists")
+            help_text = "The ``label`` attribute of the volume on which this target exists")
 
     primary_server = fields.ToOneField('chroma_api.host.HostResource', 'primary_host')
-    primary_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
+    primary_server_name = fields.CharField(help_text = "Human\
             readable label for the primary server for this target")
     failover_servers = fields.ToManyField('chroma_api.host.HostResource', 'failover_hosts', null = True)
-    failover_server_name = fields.CharField(help_text = "Presentation convenience.  Human\
+    failover_server_name = fields.CharField(help_text = "Human\
             readable label for the secondary server for this target")
 
-    active_host_name = fields.CharField(help_text = "Presentation convenience. Human \
+    active_host_name = fields.CharField(help_text = "Human \
         readable label for the host on which this target is currently started")
     active_host = fields.ToOneField('chroma_api.host.HostResource', 'active_host',
-        null = True, help_text = "The server on which this target is currently started, or null if" \
+        null = True, help_text = "The server on which this target is currently started, or null if "
                                  "the target is not currently started")
 
     volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = True, help_text = "\
-                             The Volume on which this target is stored.")
+                             The volume on which this target is stored.")
 
     def content_type_id_to_kind(self, id):
         if not hasattr(self, 'CONTENT_TYPE_ID_TO_KIND'):

@@ -102,16 +102,13 @@ class Configuration(object):
 
 class ConfigurationResource(Resource):
     """
-    By default this will give a configuration dump that is suitable
-    for re-creating a Chroma server managing the same targets that
-    are managed by this Chroma server.
-
-    Pass the 'template=True' as a parameter to a GET in order to receive
-    a template suitable for creating a new filesystem on identically named
-    hosts/devices.
+    A configuration dump that is suitable
+    for re-creating a Command Center server managing the same targets that
+    are managed by this Command Center server.
     """
-    mgts = fields.ListField()
-    hosts = fields.ListField()
+    mgts = fields.ListField(help_text = "List of MGTs (see ``target`` resource)")
+    hosts = fields.ListField(help_text = "List of hosts (see ``host`` resource)."
+                                         "Only the ``address`` attribute is populated.")
 
     class Meta:
         resource_name = 'configuration'

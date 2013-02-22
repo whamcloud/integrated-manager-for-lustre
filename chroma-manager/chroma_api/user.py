@@ -101,16 +101,22 @@ class UserResource(ModelResource):
     """
     A user account
     """
-    groups = fields.ToManyField('chroma_api.group.GroupResource', attribute = 'groups',
-        full = True, null = True, help_text = "List of groups that this user is a member \
-                of.  May only be modified by superusers")
-    alert_subscriptions = fields.ToManyField('chroma_api.alert.AlertSubscriptionResource', attribute = 'alert_subscriptions', null = True, full = True)
+    groups = fields.ToManyField('chroma_api.group.GroupResource',
+                                attribute = 'groups',
+                                full = True, null = True,
+                                help_text = "List of groups that this user is a member of.  May "
+                                            "only be modified by superusers")
+    alert_subscriptions = fields.ToManyField('chroma_api.alert.AlertSubscriptionResource',
+                                             attribute = 'alert_subscriptions', null = True, full = True,
+                                             help_text = "List of alert subscriptions (alerts for which this user"
+                                                         "will be sent emails.  See alert_subscription resource"
+                                                         "for format")
     full_name = fields.CharField(help_text = "Human readable form derived from ``first_name`` and ``last_name``")
 
-    password1 = fields.CharField(help_text = "Used in creating a user (request must be made by a superuser")
+    password1 = fields.CharField(help_text = "Used when creating a user (request must be made by a superuser)")
     password2 = fields.CharField(help_text = "Password confirmation, must match ``password1``")
     new_password1 = fields.CharField(help_text = "Used for modifying password (request must be\
-            made by the same user or by a superuser")
+            made by the same user or by a superuser)")
     new_password2 = fields.CharField(help_text = "Password confirmation, must match ``new_password1``")
 
     def hydrate_groups(self, bundle):

@@ -49,7 +49,11 @@ class HostValidation(Validation):
 
 class HostResource(MetricResource, StatefulModelResource):
     """
-    Represents a Lustre server which Chroma server is monitoring or managing.  When PUTing, requires the ``state`` field.  When POSTing, requires the ``address`` field.
+    Represents a Lustre server that is being monitored and managed from the Command Center.
+
+    PUTs to this resource must have the ``state`` attribute set.
+
+    POSTs to this resource must have the ``address`` attribute set.
     """
     nids = fields.ListField(null = True)
 
@@ -71,7 +75,7 @@ class HostResource(MetricResource, StatefulModelResource):
 
         filtering = {'id': ['exact'],
                      'fqdn': ['exact', 'startswith'],
-                    'role': ['exact']}
+                     'role': ['exact']}
 
     def obj_create(self, bundle, request = None, **kwargs):
 

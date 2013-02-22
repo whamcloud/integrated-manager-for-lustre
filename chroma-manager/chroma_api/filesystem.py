@@ -29,7 +29,7 @@ class FilesystemValidation(Validation):
     def _validate_put(self, bundle, request):
         errors = defaultdict(list)
 
-        if 'conf_params' in bundle.data and bundle.data['conf_params'] != None:
+        if 'conf_params' in bundle.data and bundle.data['conf_params'] is not None:
             try:
                 fs = ManagedFilesystem.objects.get(pk = bundle.data['id'])
             except ManagedFilesystem.DoesNotExist:
@@ -265,28 +265,29 @@ class FilesystemValidation(Validation):
 
 class FilesystemResource(MetricResource, ConfParamResource):
     """
-    A Lustre filesystem, consisting of one or mode MDTs, and one or more OSTs.
+    A Lustre file system, associated with exactly one MGT and consisting of
+    one or mode MDTs and one or more OSTs.
 
-    When POSTing to create a filesystem, specify volumes to use like this:
+    When using POST to create a file system, specify volumes to use like this:
     ::
 
         {osts: [{volume_id: 22}],
         mdt: {volume_id: 23},
         mgt: {volume_id: 24}}
 
-    To create a filesystem using an existing MGT instead of creating a new
+    To create a file system using an existing MGT instead of creating a new
     MGT, set the `id` attribute instead of the `volume_id` attribute for
     that target (i.e. `mgt: {id: 123}`).
 
-    Note: Lustre filesystems are owned by an MGT, and the ``name`` of a filesystem
+    Note: A Lustre file system is owned by an MGT, and the ``name`` of the file system
     is unique within that MGT.  Do not use ``name`` as a globally unique identifier
-    for filesystems in your application.
+    for a file system in your application.
     """
     bytes_free = fields.IntegerField()
     bytes_total = fields.IntegerField()
     files_free = fields.IntegerField()
     files_total = fields.IntegerField()
-    client_count = fields.IntegerField()
+    client_count = fields.IntegerField(help_text = "Number of Lustre clients which are connected to this file system")
 
     mount_command = fields.CharField(null = True, help_text = "Example command for\
             mounting this file system on a Lustre client, e.g. \"mount -t lustre 192.168.0.1:/testfs /mnt/testfs\"")
@@ -295,16 +296,16 @@ class FilesystemResource(MetricResource, ConfParamResource):
             on a Lustre client, e.g. \"192.168.0.1:/testfs\"")
 
     osts = fields.ToManyField('chroma_api.target.TargetResource', null = True,
-            attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj),
-            help_text = "List of OSTs which belong to this file system")
+                              attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj),
+                              help_text = "List of OSTs which belong to this file system")
     # NB a filesystem must always report an MDT, although it may be deleted just before
     # the filesystem is deleted, so use _base_manager
-    mdts = fields.ToManyField('chroma_api.target.TargetResource',
-            attribute = lambda bundle: ManagedMdt._base_manager.filter(filesystem = bundle.obj), full = True,
-            help_text = "List of MDTs in this file system, should be at least 1 unless the file system\
-            is in the process of being deleted")
+    mdts = fields.ToManyField('chroma_api.target.TargetResource', full = True,
+                              attribute = lambda bundle: ManagedMdt._base_manager.filter(filesystem = bundle.obj),
+                              help_text = "List of MDTs in this file system, should be at least 1 unless the "
+                                          "file system is in the process of being deleted")
     mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
-            help_text = "The MGT on which this file system is registered")
+                            help_text = "The MGT on which this file system is registered")
 
     def _get_stat_simple(self, bundle, klass, stat_name, factor = 1):
         try:
@@ -402,5 +403,7 @@ class FilesystemResource(MetricResource, ConfParamResource):
         filesystem_data = self.full_dehydrate(self.build_bundle(obj = fs)).data
 
         raise custom_response(self, request, http.HttpAccepted,
-                {'command': dehydrate_command(command),
-                 'filesystem': filesystem_data})
+                              {
+                                  'command': dehydrate_command(command),
+                                  'filesystem': filesystem_data
+                              })
