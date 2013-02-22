@@ -39,17 +39,19 @@ class ManagedTarget(StatefulObject):
             if the target has not yet been registered.")
 
     uuid = models.CharField(max_length = 64, null = True, blank = True,
-            help_text = "UUID of the target's internal filesystem.  May be null\
+            help_text = "UUID of the target's internal file system.  May be null\
                     if the target has not yet been formatted")
 
     ha_label = models.CharField(max_length = 64, null = True, blank = True,
-            help_text = "Label used for HA layer: human readable but unique")
+            help_text = "Label used for HA layer; human readable but unique")
 
     volume = models.ForeignKey('Volume')
 
-    inode_size = models.IntegerField(null = True, blank = True)
-    bytes_per_inode = models.IntegerField(null = True, blank = True)
-    inode_count = models.IntegerField(null = True, blank = True)
+    inode_size = models.IntegerField(null = True, blank = True, help_text = "Size in bytes per inode")
+    bytes_per_inode = models.IntegerField(null = True, blank = True, help_text = "Constant used during formatting to "
+                                          "determine inode count by dividing the volume size by ``bytes_per_inode``")
+    inode_count = models.IntegerField(null = True, blank = True, help_text = "The number of inodes in this target's"
+                                      "backing store")
 
     def primary_server(self):
         return self.managedtargetmount_set.get(primary = True).host

@@ -364,12 +364,12 @@ class VolumeNode(models.Model):
 
     storage_resource = models.ForeignKey('StorageResourceRecord', blank = True, null = True)
 
-    primary = models.BooleanField(default = False, help_text = "Whether this node should\
+    primary = models.BooleanField(default = False, help_text = "If ``true``, this node will\
             be used for the primary Lustre server when creating a target")
 
-    use = models.BooleanField(default = True, help_text = "Whether this node should \
+    use = models.BooleanField(default = True, help_text = "If ``true``, this node will \
             be used as a Lustre server when creating a target (if primary is not set,\
-            this node will be used as a secondary server")
+            this node will be used as a secondary server)")
 
     class Meta:
         unique_together = ('host', 'path')

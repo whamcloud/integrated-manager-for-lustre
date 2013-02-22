@@ -43,35 +43,57 @@ class StorageResourceValidation(Validation):
 
 class StorageResourceResource(MetricResource, ModelResource):
     """
-    Storage resources are objects within Chroma's storage plugin
-    framework.  Note: the term 'resource' is overloaded, used
-    both in the API and in the storage plugin framework.
+    Storage resources are objects within the storage plugin
+    framework.  Note: the term 'resource' is used to refer to
+    REST API resources and also in this context to refer to the
+    separate concept of a storage resource.
 
     A storage resource is of a class defined by the
     ``storage_resource_class`` resource.
 
-    This resource has a special ancestor_of filter argument, which may be set to
-    the ID of a storage resource to retrieve all resources which its ancestors.
+    This resource has a special ``ancestor_of`` filter argument, which may be set to
+    the ID of a storage resource to retrieve all the resources that are its ancestors.
     """
     #FIXME: document this fully when the storage plugin API freezes
 
-    content_type_id = fields.IntegerField()
-    attributes = fields.DictField()
-    alias = fields.CharField()
+    attributes = fields.DictField(help_text = "Dictionary of attributes as defined by the storage plugin")
+    alias = fields.CharField(help_text = "The human readable name of the resource (may be set by user)")
 
-    alerts = fields.ListField()
-    stats = fields.DictField()
-    charts = fields.ListField()
-    propagated_alerts = fields.ListField()
+    alerts = fields.ListField(help_text = "List of active ``alert`` objects which are associated with this resource")
+    stats = fields.DictField(help_text = """List of statistics defined by the plugin, with recent data for each.
+    Each statistic has the format:
+    ::
 
-    default_alias = fields.CharField()
+        {'name': <internal name of the statistic>,
+         'label': <human readable name of the statistic>,
+         'type': <'histogram' or 'timeseries'>,
+         'unit_name': <human readable unit>,
+         'data': <for histograms only>}
 
-    plugin_name = fields.CharField(attribute='resource_class__storage_plugin__module_name')
-    class_name = fields.CharField(attribute='resource_class__class_name')
+    The data format for histograms is:
+    ::
 
-    parent_classes = fields.ListField(blank = True, null = True)
+        {'bin_labels': <list of strings>,
+         'values': <list of floats>}
 
-    deletable = fields.BooleanField()
+    For time series statistics, fetch the data separately with a call for the ``/metrics/`` sub-URL of the resource.
+
+    """)
+    charts = fields.ListField(help_text = "List of charts for this resource (defined by the plugin as Meta.charts)")
+    propagated_alerts = fields.ListField(help_text = "List of active ``alert`` objects which are associated with "
+                                                     "ancestors of this resource")
+
+    default_alias = fields.CharField(help_text = "The default human readable name of the resource")
+
+    plugin_name = fields.CharField(attribute='resource_class__storage_plugin__module_name',
+                                   help_text = "Name of the storage plugin which defines this resource")
+    class_name = fields.CharField(attribute='resource_class__class_name',
+                                  help_text = "Name of a ``storage_resource_class``")
+
+    parent_classes = fields.ListField(blank = True, null = True, help_text = "List of strings, parent classes of"
+                                                                             "this object's class.")
+
+    deletable = fields.BooleanField(help_text = "If ``true``, this object may be removed with a DELETE operation")
 
     def dehydrate_parent_classes(self, bundle):
         def find_bases(klass, bases = set()):
@@ -172,10 +194,10 @@ class StorageResourceResource(MetricResource, ModelResource):
                 label = s.name
 
             stat_data = {'name': s.name,
-                    'label': label,
-                    'type': type_name,
-                    'unit_name': stat_props.get_unit_name(),
-                    'data': data}
+                         'label': label,
+                         'type': type_name,
+                         'unit_name': stat_props.get_unit_name(),
+                         'data': data}
             stats[s.name] = stat_data
 
         return stats
@@ -302,7 +324,7 @@ class StorageResourceResource(MetricResource, ModelResource):
         return bundle
 
     def override_urls(self):
-        from django.conf.urls.defaults import url
+        from django.conf.urls import url
         return super(StorageResourceResource, self).override_urls() + [
             url(r"^(?P<resource_name>%s)/(?P<plugin_name>\D\w+)/(?P<class_name>\D\w+)/$" % self._meta.resource_name, self.wrap_view('dispatch_list'), name="dispatch_list"),
-]
+        ]

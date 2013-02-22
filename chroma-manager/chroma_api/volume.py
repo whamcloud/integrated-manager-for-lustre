@@ -36,6 +36,11 @@ class VolumeResource(ModelResource):
                    this volume.  Either it has no nodes, or none of the nodes is
                    marked for use as the primary server.
 
+    To configure the high availability for a volume before creating a Lustre target,
+    you must update the ``use`` and ``primary`` attributes of the volume nodes. To update the
+    ``use`` and ``primary`` attributes of a node, use PUT to the volume to access the volume_node
+    attribute for the node. Only one node can be identified as primary.
+
     PUT to a volume with the volume_nodes attribute populated to update the
     ``use`` and ``primary`` attributes of the nodes (i.e. to configure the high
     availability for this volume before creating a Lustre target).  You may

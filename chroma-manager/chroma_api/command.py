@@ -50,17 +50,20 @@ class CommandValidation(Validation):
 
 class CommandResource(ModelResource):
     """
-    Commands are created for asynchronous user actions (202 ACCEPTED responses
-    contain command objects).  The command resource can be used to query the details
-    and state of these asynchronous operations.
+    Asynchronous user-initiated operations which create, remove or modify resources are
+    represented by ``command`` objects.  When a PUT, POST, PATCH or DELETE to
+    a resource returns a 202 ACCEPTED response, the response body contains
+    a command identifier.  The ``command`` resource is used to query the status
+    of these asynchronous operations.
 
     Typically this is used to poll a command for completion and find out whether it
     succeeded.
     """
     jobs = fields.ToManyField("chroma_api.job.JobResource", 'jobs',
-            help_text = "Jobs belonging to this command")
+                              help_text = "Jobs belonging to this command")
 
-    logs = fields.CharField()
+    logs = fields.CharField(help_text = "String.  Concatentation of all user-visible logs from the"
+                            "``job`` objects associated with this command.")
 
     def dehydrate_logs(self, bundle):
         command = bundle.obj
@@ -77,7 +80,7 @@ class CommandResource(ModelResource):
         validation = CommandValidation()
         always_return_data = True
 
-    def obj_create(self, bundle, request = None):
+    def obj_create(self, bundle, request = None, **kwargs):
         for job in bundle.data['jobs']:
             # FIXME: HYD-1367: This is a hack to work around the inability of
             # the Job class to handle m2m references properly, serializing hosts

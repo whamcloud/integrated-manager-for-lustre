@@ -18,15 +18,16 @@ class HelpResource(Resource):
     """
     This resource provides contextual help for use in user interfaces.
 
-    ``/conf_param/`` sub-url provides help for Lustre configuration parameters.  GET
-    this resource in one of two ways:
+    GETs to the ``/conf_param/`` sub-url respond with help for Lustre configuration
+    parameters.  There are two ways to do this GET:
 
     * Set the ``keys`` parameter to a comma-separated list of configuration parameter
       names to get help for particular parameters.
     * Set the ``kind`` parameter to one of 'OST', 'MDT' or 'FS' to get all possible
       configuration parameters for this type of object.
 
-    The response is a dictionary of configuration parameter name to help string.
+    The response is a dictionary where the key is a configuration parameter name
+    and the value is a help string.
     """
     class Meta:
         object_class = dict
@@ -37,7 +38,7 @@ class HelpResource(Resource):
         authentication = AnonymousAuthentication()
 
     def override_urls(self):
-        from django.conf.urls.defaults import url
+        from django.conf.urls import url
         return [
             url(r"^(?P<resource_name>%s)/conf_param/$" % self._meta.resource_name, self.wrap_view('conf_param_help'), name="api_conf_param_help"),
         ]

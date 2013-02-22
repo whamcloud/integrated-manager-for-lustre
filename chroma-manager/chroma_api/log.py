@@ -23,7 +23,7 @@ class LogAuthorization(DjangoAuthorization):
     """
     def apply_limits(self, request, object_list):
         if (request.user.is_authenticated() and
-            request.user.groups.filter(name__in=['filesystem_administrators', 'superusers']).exists()):
+                request.user.groups.filter(name__in=['filesystem_administrators', 'superusers']).exists()):
             return object_list
         else:
             # Lustre messages have a leading space
@@ -32,17 +32,16 @@ class LogAuthorization(DjangoAuthorization):
 
 class LogResource(ModelResource):
     """
-    syslog messages collected by Chroma server.  The fields in this table
-    correspond to the default ``rsyslog`` MySQL output.
+    syslog messages collected by the Command Center.
 
-    You are probably mainly interested in ``fromhost``, ``devicereportedtime`` and
-    ``message``.  Note that ``fromhost`` is a hostname rather than a reference to
-    the ``host`` resource -- it is not guaranteed that a host mentioned in the
-    syslog is configured as a host in Chroma server.
+
+
     """
-    substitutions = fields.ListField(null = True, help_text = """List of dictionaries describing
-substrings which may be used to decorate the `message` attribute with hyperlinks.  Each substitution
+    substitutions = fields.ListField(null = True, help_text = """List of dictionaries describing \
+substrings which may be used to decorate the `message` attribute by adding hyperlinks.  Each substitution \
 has `start`, `end`, `label` and `resource_uri` attributes.""")
+
+    message_class = fields.CharField(help_text = "Unicode string.  One of %s" % MessageClass.strings())
 
     def dehydrate_substitutions(self, bundle):
         return self._substitutions(bundle.obj)
@@ -50,11 +49,12 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
     class Meta:
         queryset = LogMessage.objects.all()
         filtering = {
-                'fqdn': ['exact', 'startswith'],
-                'datetime': ['gte', 'lte'],
-                'message': ['icontains', 'startswith', 'contains'],
-                'message_class': ['in', 'exact']
-                }
+            'fqdn': ['exact', 'startswith'],
+            'datetime': ['gte', 'lte'],
+            'message': ['icontains', 'startswith', 'contains'],
+            'message_class': ['in', 'exact']
+        }
+
         authorization = LogAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['datetime', 'fqdn']
@@ -91,12 +91,12 @@ has `start`, `end`, `label` and `resource_uri` attributes.""")
 
         substitutions = []
 
-        def substitute(object, match, group = 1):
-            resource_uri = api.get_resource_uri(object)
+        def substitute(obj, match, group = 1):
+            resource_uri = api.get_resource_uri(obj)
             substitutions.append({
                 'start': match.start(group),
                 'end': match.end(group),
-                'label': object.get_label(),
+                'label': obj.get_label(),
                 'resource_uri': resource_uri})
 
         # TODO: detect other NID types (cray?)

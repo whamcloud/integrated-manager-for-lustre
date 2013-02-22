@@ -76,10 +76,15 @@ class TastyDirective(Directive):
                     field_meta['help_text'] = "Integer type identifier"
                 elif field == 'state' and field_meta['help_text'] == tastypie.fields.CharField.help_text:
                     field_meta['help_text'] = "Unicode string, may be set based on ``available_transitions`` field"
+                elif field == 'immutable_state' and field_meta['help_text'] == tastypie.fields.BooleanField.help_text:
+                    field_meta['help_text'] = "If ``true``, this object may not have its state modified by the user (monitoring only)"
                 elif field == 'resource_uri':
                     field_meta['help_text'] = "URL for this object"
                 elif field == 'available_transitions':
-                    field_meta['help_text'] = "List of {'verb':"", 'state':""} for possible states"
+                    field_meta['help_text'] = "List of {'verb':"", 'state':""} for possible states (for use with POST)"
+                elif field == 'available_jobs':
+                    field_meta['help_text'] = "List of {'args':{}, 'class_name':"", 'confirmation':"", verb: ""} for possible " \
+                                              "non-state-change jobs (for use with the ``command`` resource)"
                 elif field == 'label':
                     field_meta['help_text'] = "Non-unique human readable name for presentation"
 

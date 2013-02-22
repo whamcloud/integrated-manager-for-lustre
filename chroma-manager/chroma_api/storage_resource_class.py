@@ -35,23 +35,18 @@ def filter_class_ids():
 
 class StorageResourceClassResource(ModelResource):
     """
-    A type of ``storage_resource`` which may be created.
+    Defines a type of ``storage_resource`` that can be created.
 
-    Storage resource classes belong to a particular plugin (``plugin_name``)
-    attribute.  The name (``class_name``) is unique within that plugin
-    They provide the ``columns`` attribute to suggest which
-    resource attributes should be displayed in a tabular view, and the
-    ``fields`` attribute to describe the resource class's attributes in
-    enough to detail to present an input form.
-
-    The ``label`` attribute is a presentation helper which gives
-    a plugin-qualified name like "TestPlugin-ResourceOne".
+    Storage resource classes belong to a particular plugin (``plugin_name`` attribute)
+    . The name of the storage resource class (``class_name`` attribute)
+    is unique within the plugin.
     """
     plugin_name = fields.CharField(attribute='storage_plugin__module_name')
     plugin_internal = fields.BooleanField(attribute='storage_plugin__internal')
-    columns = fields.ListField()
-    label = fields.CharField()
-    fields = fields.DictField()
+    label = fields.CharField(help_text = "A unique human-readable name for the resource class, including"
+                                         "the plugin name.  e.g. \"TestPlugin-ResourceOne\"")
+    columns = fields.ListField(help_text = "List of resource attributes to be used when presenting resource in tabular form")
+    fields = fields.DictField(help_text = "List of resource attributes which should be presented in an input form")
 
     def dehydrate_columns(self, bundle):
         properties = bundle.obj.get_class().get_all_attribute_properties()

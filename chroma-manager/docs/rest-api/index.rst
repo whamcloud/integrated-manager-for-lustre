@@ -1,14 +1,14 @@
 
 .. include:: <isonum.txt>
 
-REST API for Intel® Manager for Lustre* Software
+REST API for Intel\ |reg| Manager for Lustre* Software
 ================================================
 
 Introduction
 ------------
 
 The Command Center web interface and command line interface (CLI) included with the 
-Intel|reg| Manager for Lustre``*`` software are built on the REST API, which is accessed
+Intel\ |reg| Manager for Lustre* software are built on the REST API, which is accessed
 via HTTP.  This API is available for integration with third party applications.  The 
 types of operations possible using the API include creating a file system, checking
 the system for alert conditions, and downloading performance metrics.  All functionality
@@ -78,8 +78,8 @@ The following cardinality rules are observed:
 * A file system has one or most OSTs, each OST belongs to one file system.
   *(exception: a file system that is in the process of being deleted passes
   through a stage where it has zero OSTs)*
-* MDTs, MGTs and OSTs are targets.  Targets are associated with one or more
-  primary volume nodes, and zero or more secondary volume nodes.  Targets
+* MDTs, MGTs and OSTs are targets.  Targets are associated with one
+  primary volume node, and zero or more secondary volume nodes.  Targets
   are associated with exactly one volume, and each volume is associated with
   zero or one targets.
 * Volume nodes are associated with zero or one targets, exactly one volume,
@@ -96,9 +96,8 @@ of the object using an HTTP PUT operation to the same URL.  The PUT verb tells t
 that you want to modify something, the URL tells the server which object you want to modify,
 and the payload contains the updated fields.  
 
-Operations using a URL for a specific object 
-are referred to in this document as _detail_ operations.  These operations usually 
-return a single serialized object in the response.
+Operations using a URL for a specific object are referred to in this document as _detail_ operations.
+These operations usually return a single serialized object in the response.
 
 To see all the file systems, omit the /1/ in the URL and do a ``GET /api/filesystem/``.
 This type of operation is referred to in this document as a _list_ operation. 
@@ -136,8 +135,7 @@ are shown in the following list:
 :__endswith: Ends with the string
 
 For example, an object that supports ``id__in`` filtering allows an "If its ID is in this list" query.  Note that 
-to pass lists as URL 
-parameters, the argument must be repeated. So, to get a list of targets 1 and 2, the
+to pass lists as URL parameters, the argument must be repeated. So, to get a list of targets 1 and 2, the
 URL is ``/api/target/?id__in=1&id__in=2``.  
 
 See the `API Reference`_ for details about which attributes are permitted for ordering and
@@ -165,7 +163,7 @@ Detail Responses
 Detail GET requests (e.g. ``GET /api/host/1/``) return a dict representing a single object.
 
 Most serialized objects have at least ``resource_uri`` and ``id`` fields.  Where an object 
-has a 'human' name that is useful for presentation, it is called a ``label``.
+has a human readable name that is useful for presentation, it is in an attribute called ``label``.
 
 Note that in some cases it may be necessary to manually compose the URL for an object
 based on its type and integer ID. Usually when an object is provided by the server, it
@@ -299,13 +297,13 @@ For example, consider this host object:
 The host is in state ``lnet_up``.  To stop LNet, the host state can be transitioned to the appropriate available 
 transition 'lnet_down'/'Stop LNet' by executing a PUT ``{"state": "lnet_down"}`` to ``/api/host/10/``.
 
-Assuming the transition sent is a valid one, this PUT will result in a response with status code 204,
+Assuming the transition sent is a valid one, this PUT will result in a response with status code 202,
 and a ``command`` will be included in the response (see `Asynchronous actions`_)
 
 Access Control
 --------------
 
-If your application requires write access to the storage server, or if the server
+If your application requires write access (methods other than GET) to the API, or if the server
 is configured to prevent anonymous users from reading, then your application must
 authenticate itself to the server.
 
@@ -313,7 +311,7 @@ User accounts and credentials can be created and managed using the Command Cente
 interface -- we assume here that a suitable account has already been created.  Create
 an account for your application with the lowest possible privilege level.
 
-For a complete example of how to authenticate with a storage server, see the `Example client`_.
+For a complete example of how to authenticate with the API, see the `Example client`_.
 
 Sessions
 ~~~~~~~~
@@ -327,13 +325,13 @@ in subsequent responses.
 CSRF
 ~~~~
 
-Cross Site Request Forgery (CSRF) only applies when authenticating by username and password.
+Cross Site Request Forgery (CSRF) protection only applies when authenticating by username and password.
 
 Because the API is accessed directly from a web browser, it requires CSRF
-protection.  Thus, when authenticating by username+password,
-you must accept and maintain the ``csrftoken`` cookie that is returned
+protection.  When authenticating by username+password,
+the client must accept and maintain the ``csrftoken`` cookie that is returned
 from the  ``/api/session/`` resource used to establish the session and 
-set the X-CSRFToken request header to the value of that cookie.
+set the X-CSRFToken request header in each request to the value of that cookie.
 
 Note that an absent or incorrect CSRF token only causes an error on POST requests.
 
