@@ -1,0 +1,81 @@
+TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
+include $(TOP)/include/Makefile.meta
+
+# there's probably a better way to do this directly in make but I couldn't
+# find any suitable string handling functions
+RPM_NAME     := $(shell a="$(LOCATION)"; a=$${a\#\#*/}; a=$${a/.src.rpm/}; echo $$a)
+RPM_RELEASE  := $(shell a="$(RPM_NAME)"; a=$${a\#\#*-}; echo $$a)
+RPM_NAME     := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_RELEASE)/}; echo $$a)
+RPM_VERSION  := $(shell a="$(RPM_NAME)"; a=$${a\#\#*-}; echo $$a)
+RPM_NAME     := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_VERSION)/}; echo $$a)
+SRPM         := $(RPM_NAME)-$(RPM_VERSION)-$(RPM_RELEASE).src.rpm
+LAST_BUILT   := $(shell [ -f .last_built ] && cat .last_built)
+SRPMS        := $(SRPM)
+ifneq ($(SRPM),$(LAST_BUILT))
+SRPMS        += $(LAST_BUILT)
+endif
+
+rpms: $(RPM_NAME).spec
+	$(MAKE) -f ../include/Makefile.rpmbuild $@
+
+install: rpms
+	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@
+
+cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
+	$(MAKE) -f ../include/Makefile.rpmbuild $@
+
+$(SRPMS):
+	if [ -f ../$@ ]; then      \
+		ln ../$@ .;        \
+		touch $@;          \
+	else                            \
+		CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
+		cache_get $(LOCATION); \
+	fi
+
+$(RPM_NAME).spec: $(SRPM) spec.ed
+	# if we are building a different version than last time, clean
+	# everything up
+	if [ -n "$(LAST_BUILT)" -a                                      \
+		     "$(LAST_BUILT)" != "$(SRPM)" ]; then               \
+	    make -f ../include/Makefile.rpm LOCATION=$(LOCATION) clean; \
+	fi
+	rm -f $@
+	rpm2cpio < $(SRPM) | cpio -id
+	cp $(RPM_NAME).spec{,.orig}
+	(cat spec.ed ; echo -e "w\nq") | ed $(RPM_NAME).spec
+
+spec.ed:
+	# make an empty one if it doesn't exist already
+	touch spec.ed
+
+clean: $(LAST_BUILT) $(RPM_NAME).spec
+	cp $(RPM_NAME).spec.last_built $(RPM_NAME).spec || true
+	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS cleanSRPM \
+						cleanBUILDDIR cleanTMPDIR \
+						cleanPLATTREE
+	# clean the stuff from the last built one, not necessarily the one
+	# being built
+	rpm -qlp $(LAST_BUILT) | while read f; do \
+		rm -f $$f;                        \
+	done
+	rm -f $(LAST_BUILT) $(RPM_NAME).spec.last_built
+
+distclean: clean
+	rm -rf $(RPM_TOP)
+	rm -f $(SRPM) $(RPM_NAME).spec{,.orig} $(LAST_BUILT)
+	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
+		rm -f spec.ed; \
+	fi
+
+# it would be nice to do this, but it doesn't work since we need to be
+# sure the spec file exists before being able to use rules like this.
+# let's keep this here to remind us of what nirvana is and see if we
+# can achieve it some day.
+#$(RPM_DIR)/x86_64/%.x86_64.rpm: rpms
+#	;
+#
+#$(RPM_DIR)/noarch/%.noarch.rpm: rpms
+#	;
+#
+#include $(TOP)/include/Makefile.install

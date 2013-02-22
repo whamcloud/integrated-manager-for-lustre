@@ -31,3 +31,8 @@ $(SUBDIRS): dist agent
 	fi
 
 rpms: $(SUBDIRS)
+
+repo: rpms
+	$(MAKE) -C chroma-dependencies repo
+
+deps: repo

@@ -1,0 +1,22 @@
+TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
+include $(TOP)/include/Makefile.meta
+
+SPECFILE ?= $(RPM_NAME).spec
+
+# only try to determine the RPMs if the caller did not specify them
+ifeq ($(origin ALL_RPMS), undefined)
+ALL_RPMS = $(shell match="$(INSTALL_PKGS)" RPM_OPTS="$(RPM_OPTS)" $(TOP)/include/parse_spec -s $(SPECFILE))
+endif
+
+REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
+
+install: $(REPO_TARGETS)
+
+$(REPO):
+	mkdir $^
+
+$(REPO)/%.noarch.rpm: $(RPM_DIR)/noarch/%.noarch.rpm
+	ln -f $^ $(REPO)/
+
+$(REPO)/%.x86_64.rpm: $(RPM_DIR)/x86_64/%.x86_64.rpm
+	ln -f $^ $(REPO)/

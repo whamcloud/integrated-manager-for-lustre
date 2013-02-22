@@ -1,0 +1,33 @@
+TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
+include $(TOP)/include/Makefile.meta
+
+rpms: $(ALL_RPMS)
+
+REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
+
+install: $(REPO_TARGETS)
+
+uninstall:
+	rm -f $(REPO_TARGETS)
+
+clean:
+	rm -f $(ALL_RPMS)
+
+distclean:
+	rm -f $(ALL_RPMS)
+
+# should be able to just do this rather than having to explicitly ask for
+# a make of $*.rpm ($* == %)
+#$(REPO)/%.rpm: %.rpm
+#	ln $^ $(REPO)/
+# but instead, it seems we have to do this:
+$(REPO)/%.rpm:
+	make $*.rpm
+	ln $*.rpm $(REPO)/
+
+# and!!! the order of the above rule and this rule matter!  this is fixed
+# in gnu make 3.82 to always prefer rules that yeild a shorter stem
+%.rpm:
+	rm -f $$(echo $@ | sed -e 's/-[^-]*-[^-]*\.rpm$$//')-[0-9]*
+	CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
+	cache_get $(SRC_REPO)/$@

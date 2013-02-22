@@ -1,0 +1,4 @@
+/^%define version 1.0rc/s/1.0rc/0.99./
+/^Url:/a
+Requires: python-greenlet
+.

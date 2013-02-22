@@ -1,0 +1,5 @@
+/^Url: /a
+BuildRequires: python-devel
+BuildRequires: python-setuptools
+BuildRequires: gcc
+.

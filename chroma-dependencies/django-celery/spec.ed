@@ -1,0 +1,7 @@
+/%define name /s/ python-/ /
+/^Vendor: /a
+BuildRequires: python-setuptools-devel
+BuildRequires: python-devel
+Requires: Django
+.
+/^Requires: celery/s/celery/python-celery/

@@ -1,0 +1,81 @@
+TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
+include $(TOP)/include/Makefile.meta
+
+TARBALL_EXT      ?= tar.gz
+USES_DISTUTILS   ?= false
+# there's probably a better way to do this directly in make but I couldn't
+# find any suitable string handling functions
+TARBALL_NAME     := $(shell a="$(LOCATION)"; a=$${a\#\#*/}; a=$${a/.$(TARBALL_EXT)/}; echo $$a)
+TARBALL_VERSION  := $(shell a="$(TARBALL_NAME)"; a=$${a\#\#*-}; echo $$a)
+TARBALL_NAME     := $(shell a="$(TARBALL_NAME)"; a=$${a/-$(TARBALL_VERSION)/}; echo $$a)
+TARBALL          := $(TARBALL_NAME)-$(TARBALL_VERSION).$(TARBALL_EXT)
+# can be overridden in the caller Makefile
+SPECNAME         ?= $(TARBALL_NAME).spec
+
+rpms: $(SPECNAME) $(TARBALL)
+	$(MAKE) -f ../include/Makefile.rpmbuild $@
+
+install: rpms
+	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE="$(SPECNAME)" $@
+
+# only create a spec if one was not checked into git
+ifeq ($(shell git ls-files --error-unmatch $(SPECNAME) >/dev/null 2>&1; echo $$?), 0)
+$(SPECNAME):
+	touch $(SPECNAME)
+else
+$(SPECNAME): $(TARBALL) spec.ed Makefile
+	# for now we will just assume that if there is no spec, it's a
+	# python package
+	rm -rf tmp
+	mkdir tmp
+	cd tmp &&                                \
+	if [ $(TARBALL_EXT) = zip ]; then        \
+	    unzip ../$(TARBALL);                 \
+	else                                     \
+	    tar xzvf ../$(TARBALL);              \
+	fi
+	# seriously?  where do these people get their software packaging
+	# licenses from?
+	if [ ! -d tmp/$(TARBALL_NAME)-$(TARBALL_VERSION) -a \
+	     -d tmp/$(TARBALL_NAME) ]; then \
+	    mv tmp/$(TARBALL_NAME) tmp/$(TARBALL_NAME)-$(TARBALL_VERSION); \
+	fi
+	cd tmp/$(TARBALL_NAME)-$(TARBALL_VERSION) && \
+	python setup.py bdist_rpm --spec-only &&     \
+	mv dist/$(SPECNAME) ../..
+	cp $(SPECNAME){,.orig}
+	ed $(SPECNAME) < ../include/pypi-rpm_spec.ed 2>/dev/null
+	echo -e "/^Source0:/c\nSource0: %{tgz_name}-%{unmangled_version}.$(TARBALL_EXT)\n.\nw\nq" | ed $(SPECNAME) 2>/dev/null
+	if ! $(USES_DISTUTILS) &&                                           \
+	   grep setuptools tmp/$(TARBALL_NAME)-$(TARBALL_VERSION)/setup.py; \
+	   then                                                             \
+	    ed $(SPECNAME) < ../include/setuptools-pypi-rpm_spec.ed         \
+	        2>/dev/null;                                                \
+	fi
+	(cat spec.ed ; echo -e "w\nq") | ed $(SPECNAME) 2>/dev/null
+	rm -rf tmp
+endif
+
+spec.ed:
+	# make an empty one if it doesn't exist already
+	touch spec.ed
+
+$(TARBALL):
+	if [ -f "$(RPM_TOP)/SOURCES/$(TARBALL)" ]; then \
+		ln "$(RPM_TOP)/SOURCES/$(TARBALL)" .; \
+	else \
+		CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
+		cache_get $(LOCATION); \
+	fi
+
+clean:
+	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS cleanSRPM \
+						cleanBUILDDIR cleanTMPDIR \
+						cleanPLATTREE
+
+distclean:
+	rm -rf $(RPM_TOP)
+	rm -f $(TARBALL) $(SPECNAME){,.{orig,last_built}} .last_built
+	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
+		rm -f spec.ed; \
+	fi

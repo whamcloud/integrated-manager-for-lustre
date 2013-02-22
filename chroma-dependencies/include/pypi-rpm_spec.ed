@@ -1,0 +1,12 @@
+1,s/ name / tgz_name /
+a
+%define name python-%{tgz_name}
+.
+/^Source0:/c
+Source0: %{tgz_name}-%{unmangled_version}.tar.gz
+.
+/^%setup/c
+%setup -n %{tgz_name}-%{unmangled_version} -n %{tgz_name}-%{unmangled_version}
+.
+w
+q

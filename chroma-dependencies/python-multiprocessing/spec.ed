@@ -1,0 +1,9 @@
+/BuildRequires:  python-sphinx/c
+BuildRequires:  python-sphinx10
+BuildRequires:  python-ctypes
+.
+/make doc PYTHON=python%{py_ver}/s/\(.*\)/#\1/
+/^%check/;/^make test/c
+# disabled check macro due to:
+# python2.4: Objects/obmalloc.c:953: PyObject_Free: Assertion `pool->ref.count > 0' failed.
+.

@@ -1,0 +1,19 @@
+/^Release:        2%{?dist}/c
+Release:        2.wc1%{?dist}
+.
+/^BuildRequires:[   ][  ]python-sphinx/s/\(BuildRequires:[  ][  ]*python-sphinx\)/\110/
+g/^%find_lang/d
+/^cat djangojs.lang/c
+# forward-port %find_lang workaround
+(cd $RPM_BUILD_ROOT && find . -name 'django*.mo') | %{__sed} -e 's|^.||' | %{__sed} -e \
+  's:\(.*/locale/\)\([^/_]\+\)\(.*\.mo$\):%lang(\2) \1\2\3:' \
+      >> django.lang
+.
+/cd docs && mkdir djangohtml/c
+    (cd docs && mkdir djangohtml && mkdir -p _build/{doctrees,html} && make html SPHINXBUILD=sphinx-1.0-build)
+.
+/%changelog/a
+* Mon Jan 07 2013 Michael MacDonald <michael.macdonal@intel.com> - 1.4.2-2.wc1
+- Backported to EL6
+
+.
