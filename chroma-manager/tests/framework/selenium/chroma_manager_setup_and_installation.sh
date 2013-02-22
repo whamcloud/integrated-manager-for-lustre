@@ -50,6 +50,8 @@ source = /usr/share/chroma-manager/
 echo "import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
 
 chroma-config setup debug chr0m4_d3bug localhost > /root/chroma_config.log 2>&1

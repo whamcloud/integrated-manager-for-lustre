@@ -14,10 +14,10 @@ for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1; do
 done
 
 # Remove test results and coverate reports from previous run
-rm -rf ~/ss_test_reports/*
-rm -rf ~/ss_coverage_reports/.coverage*
-mkdir -p ~/ss_test_reports/*
-mkdir -p ~/ss_coverage_reports/.coverage*
+rm -rfv ~/ss_test_reports/*
+rm -rfv ~/ss_coverage_reports/.coverage*
+mkdir -p ss_test_reports
+mkdir -p ss_coverage_reports
 
 # Copy rpms to each of the machines
 scp $(ls ~/ss_rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager-*| grep -v integration-tests) $CHROMA_MANAGER:~/rpms/
@@ -45,6 +45,15 @@ EOF
 for storage_appliance in ${STORAGE_APPLIANCES[@]}; do
     ssh $storage_appliance <<EOF
     service chroma-agent stop
+echo "compress
+
+/var/log/chroma*.log {
+        missingok
+        rotate 10
+        nocreate
+        size=10M
+}" > /etc/logrotate.d/chroma-agent
+    logrotate -fv /etc/logrotate.d/chroma-agent
     logrotate -fv /etc/logrotate.d/syslog
     set -xe
     yum remove -y chroma-agent*
@@ -59,6 +68,8 @@ source = /usr/lib/python2.6/site-packages/chroma_agent/
     echo "import coverage
 cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
 cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
     service chroma-agent restart
 EOF
@@ -70,12 +81,11 @@ chroma-config stop
 rm -f /var/run/chroma*
 logrotate -fv /etc/logrotate.d/chroma-manager
 logrotate -fv /etc/logrotate.d/syslog
+logrotate -fv /etc/logrotate.d/rabbitmq-server
 
 yum remove -y chroma-manager*
 rm -rf /usr/share/chroma-manager/
-
-# this is a big hammer, but it's good because it allows full
-# testing of chroma-config setup
+echo "drop database chroma; create database chroma;" | mysql -u root
 service postgresql stop
 rm -fr /var/lib/pgsql/data/*
 
@@ -95,6 +105,8 @@ source = /usr/share/chroma-manager/
 echo "import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
 EOF
 

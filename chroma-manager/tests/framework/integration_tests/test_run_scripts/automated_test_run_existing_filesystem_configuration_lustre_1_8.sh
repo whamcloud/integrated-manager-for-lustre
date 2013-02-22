@@ -10,7 +10,7 @@ echo "Beginning installation and setup..."
 rm -rf ~/lustre_1_8_test_reports/*
 rm -rf ~/lustre_1_8_coverage_reports/.coverage*
 mkdir -p ~/lustre_1_8_test_reports/*
-mkdir -p ~/lustre_1_8_coverage_reports/.coverage*
+mkdir -p  ~/lustre_1_8_coverage_reports/.coverage*
 
 # Remove all old rpms from previous run
 for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1; do
@@ -32,6 +32,16 @@ done
 for storage_appliance in ${STORAGE_APPLIANCES[@]}; do
     ssh $storage_appliance <<EOF
     service chroma-agent stop
+echo "compress
+
+/var/log/chroma*.log {
+        missingok
+        rotate 10
+        nocreate
+        size=10M
+}" > /etc/logrotate.d/chroma-agent
+    logrotate -fv /etc/logrotate.d/chroma-agent
+    logrotate -fv /etc/logrotate.d/syslog
     set -xe
     yum remove -y chroma-agent*
     yum install -y --nogpgcheck ~/rpms/chroma-agent-*
@@ -40,12 +50,14 @@ for storage_appliance in ${STORAGE_APPLIANCES[@]}; do
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
-source = /usr/lib/python2.6/site-packages/chroma_agent/
-" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
+source = /usr/lib/python2.4/site-packages/chroma_agent/
+" > /usr/lib/python2.4/site-packages/chroma_agent/.coveragerc
     echo "import coverage
-cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
+cov = coverage.coverage(config_file='/usr/lib/python2.4/site-packages/chroma_agent/.coveragerc', auto_data=True)
 cov.start()
-" > /usr/lib/python2.6/site-packages/sitecustomize.py
+cov._warn_no_data = False
+cov._warn_unimported_source = False
+" > /usr/lib/python2.4/site-packages/sitecustomize.py
     service chroma-agent start < /dev/null > /dev/null
 EOF
 done
@@ -55,8 +67,14 @@ ssh $CHROMA_MANAGER <<"EOF"
 chroma-config stop
 
 logrotate -fv /etc/logrotate.d/chroma-manager
+logrotate -fv /etc/logrotate.d/syslog
+logrotate -fv /etc/logrotate.d/rabbitmq-server
+
 yum remove -y chroma-manager*
 rm -rf /usr/share/chroma-manager/
+
+service postgresql stop
+rm -fr /var/lib/pgsql/data/*
 
 pip install --force-reinstall -r ~/requirements.txt
 yum install -y ~/rpms/chroma-manager-*
@@ -73,6 +91,8 @@ source = /usr/share/chroma-manager/
 echo "import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
 EOF
 
@@ -95,11 +115,12 @@ echo "End running tests."
 scp $CHROMA_MANAGER:/root/test_report.xml ~/lustre_1_8_test_reports/
 
 ssh $CHROMA_MANAGER chroma-config stop
+ssh $CHROMA_MANAGER rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
 
 for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
 ssh $machine <<"EOC"
     set -x
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    rm -f /usr/lib/python2.4/site-packages/sitecustomize.py*
     cd /var/tmp/
     coverage combine
 EOC
