@@ -95,5 +95,6 @@ docs: version
 	pip install -r ../requirements.txt; \
 	cd ../docs; \
 	make SPHINXBUILD="$$PWD/../myenv/bin/sphinx-build"
+	cp docs/dist/* dist/
 
 .PHONY: docs
