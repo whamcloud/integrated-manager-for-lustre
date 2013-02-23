@@ -32,7 +32,7 @@ This is the Whamcloud monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker python-dateutil libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker python-dateutil libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket system-config-firewall-base
 %if 0%{?rhel} > 5
 Requires: fence-agents
 %endif

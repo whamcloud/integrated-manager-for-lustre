@@ -357,6 +357,21 @@ def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = 
 
     _render_config_file("/etc/corosync/corosync.conf",
                         conf_template.render(interfaces=interfaces))
+
+    # install a firewall rule for this port
+    shell.try_run(['/usr/sbin/lokkit', '-n', '-p', '%s:udp' %
+                   interfaces[0].mcastport])
+    # XXX using -n above and installing the rule manually here is a
+    #     dirty hack due to restarting the firewall interrupting our
+    #     comms with the manager
+    #     can we re-initiate somehow?
+    shell.try_run(['/sbin/iptables', '-I', 'INPUT', '-m', 'state', '--state',
+                   'new', '-p', 'udp', '--dport',
+                   str(interfaces[0].mcastport), '-j', 'ACCEPT'])
+    # XXX - need to fix AgentStore needs an "add key" functionality
+    url = AgentStore.get_server_conf()['url']
+    AgentStore.set_server_conf({'url': url, 'mcastport': interfaces[0].mcastport})
+
     # pacemaker MUST be stopped before doing this or this will spin
     # forever
     unconfigure_pacemaker()
@@ -471,6 +486,22 @@ def unconfigure_corosync():
             raise RuntimeError("Failed to remove corosync.conf")
     except:
         raise RuntimeError("Failed to remove corosync.conf")
+
+    mcastport = AgentStore.get_server_conf()['mcastport']
+    # it really bites that lokkit has no "delete" functionality
+    shell.try_run(['/sbin/iptables', '-D', 'INPUT', '-m', 'state', '--state',
+                   'new', '-p', 'udp', '--dport', str(mcastport), '-j',
+                   'ACCEPT'])
+    import os
+    from tempfile import mkstemp
+    import shutil
+    tmp = mkstemp(dir = "/etc/sysconfig")
+    with os.fdopen(tmp[0], "w") as tmpf:
+        for line in open("/etc/sysconfig/iptables").readlines():
+            if line.rstrip() != "-A INPUT -m state --state NEW -m udp -p udp --dport %s -j ACCEPT" % mcastport:
+                tmpf.write(line)
+        tmpf.flush()
+    shutil.move(tmp[1], "/etc/sysconfig/iptables")
 
 
 def unconfigure_pacemaker():
