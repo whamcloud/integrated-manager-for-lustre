@@ -28,6 +28,8 @@
     "lustre_servers": [
         {
             "distro": "el6.4",
+            "selinux_enabled": true,
+            "firewall_enabled": true,
             "root_password": "lustre",
             "bridges": ["a"],
             "repos": ["chroma"],
@@ -38,6 +40,8 @@
         },
        {
             "distro": "el6.4",
+            "selinux_enabled": true,
+            "firewall_enabled": true,
             "root_password": "lustre",
             "bridges": ["a"],
             "repos": ["chroma"],
@@ -48,6 +52,8 @@
         },
        {
             "distro": "el6.4",
+            "selinux_enabled": true,
+            "firewall_enabled": true,
             "root_password": "lustre",
             "bridges": ["b"],
             "repos": ["chroma"],
@@ -58,6 +64,8 @@
         },
        {
             "distro": "el6.4",
+            "selinux_enabled": true,
+            "firewall_enabled": true,
             "root_password": "lustre",
             "bridges": ["b"],
             "repos": ["chroma"],

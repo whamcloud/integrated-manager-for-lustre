@@ -29,6 +29,7 @@ from netaddr.core import AddrFormatError
 from chroma_agent import shell, node_admin
 from chroma_agent.store import AgentStore
 from chroma_agent.log import console_log
+from chroma_agent.lib.system import iptables
 
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
@@ -51,8 +52,8 @@ def generate_ring1_network(ring0):
     # find a good place for the ring1 network
     subnet = find_subnet(ring0.ipv4_network, ring0.ipv4_prefixlen)
     address = str(IPAddress((int(IPAddress(ring0.ipv4_hostmask)) &
-                                   int(IPAddress(ring0.ipv4_address))) |
-                                  int(subnet.ip)))
+                             int(IPAddress(ring0.ipv4_address))) |
+                            int(subnet.ip)))
     console_log.info("Chose %s/%d for ring1 address" % (address, subnet.prefixlen))
     return address, str(subnet.prefixlen)
 
@@ -153,28 +154,36 @@ def find_unused_port(ring0, timeout = 10):
     dest_addr = ring0.mcastaddr
     ports = range(1, 65535, 2)
 
-    subscribe_multicast(ring0)
-    console_log.debug("Sniffing for packets to %s on %s" % (dest_addr, ring0.name))
-    cap = start_cap(ring0, timeout, "host %s and udp" % dest_addr)
+    iptables("add", "INPUT", ["4", "-m", "state", "--state", "NEW", "-m", "tcp",
+             "-p", "tcp", "-d", ring0.mcastaddr, "-j", "ACCEPT"])
 
-    def recv_packets(header, data):
-        tgt_port = get_dport_from_packet(data)
+    try:
+        subscribe_multicast(ring0)
+        console_log.debug("Sniffing for packets to %s on %s" % (dest_addr, ring0.name))
+        cap = start_cap(ring0, timeout, "host %s and udp" % dest_addr)
 
-        try:
-            ports.remove(tgt_port)
-        except ValueError:
-            # already removed
-            pass
+        def recv_packets(header, data):
+            tgt_port = get_dport_from_packet(data)
 
-    packet_count = 0
-    start = time.time()
-    while time.time() - start < timeout:
-        try:
-            packet_count += cap.dispatch(-1, recv_packets)
-        except Exception, e:
-            raise RuntimeError("Error reading from the network: %s" % str(e))
+            try:
+                ports.remove(tgt_port)
+            except ValueError:
+                # already removed
+                pass
 
-    console_log.debug("Finished after %d seconds, sniffed: %d" % (timeout, packet_count))
+        packet_count = 0
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                packet_count += cap.dispatch(-1, recv_packets)
+            except Exception, e:
+                raise RuntimeError("Error reading from the network: %s" % str(e))
+
+        console_log.debug("Finished after %d seconds, sniffed: %d" % (timeout, packet_count))
+    finally:
+        iptables("del", "INPUT", ["-m", "state", "--state", "NEW", "-m", "tcp",
+                 "-p", "tcp", "-d", ring0.mcastaddr, "-j", "ACCEPT"])
+
     return choice(ports)
 
 
@@ -249,8 +258,7 @@ def subscribe_multicast(interface):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('', 52122))
-    mreq = socket.inet_aton(interface.mcastaddr) + \
-           socket.inet_aton(interface.ipv4_address)
+    mreq = socket.inet_aton(interface.mcastaddr) + socket.inet_aton(interface.ipv4_address)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
     return sock
 

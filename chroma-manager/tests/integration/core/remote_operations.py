@@ -672,6 +672,7 @@ class RealRemoteOperations(RemoteOperations):
         Stops and deletes all chroma targets for any corosync clusters
         configured on any of the lustre servers appearing in the cluster config
         """
+
         for server in server_list:
             if self.has_pacemaker(server):
                 if config.get('pacemaker_hard_reset', False):
@@ -703,8 +704,29 @@ class RealRemoteOperations(RemoteOperations):
                         rm -f /etc/sysconfig/network-scripts/ifcfg-eth1
                         rm -f /etc/corosync/corosync.conf
                         rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*;
-                        ! grep lustre /proc/mounts
-                        '''
+                        cat << EOF > /etc/sysconfig/system-config-firewall
+--enabled
+--port=22:tcp
+--port=988:tcp
+EOF
+                        lokkit -n >&2
+                        service iptables restart >&2
+                        if grep lustre /proc/mounts >&2; then
+                            if ! service pacemaker status >&2; then
+                                rc=${PIPESTATUS[0]}
+                            else
+                                rc=0
+                            fi
+                            echo $rc >&2
+                            if [ $rc = 3 ]; then
+                                # pacemaker is actually stopped, stop lustre targets
+                                umount -t lustre -a >&2
+                            else
+                                ps axf >&2
+                                exit $rc
+                            fi
+                        fi
+                        ''', None
                     )
                     logger.info(result.stderr.read())
                     self._test_case.assertEqual(result.exit_status, 0)
@@ -721,6 +743,11 @@ class RealRemoteOperations(RemoteOperations):
 
                     # Verify no more targets
                     self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
+
+                    # remove firewall rules added for corosync
+                    mcastport = self.get_corosync_port(server)
+                    if mcastport:
+                        self.del_firewall_rule(server, mcastport, "udp")
 
                 rpm_q_result = self._ssh_address(server['address'], "rpm -q chroma-agent", expected_return_code=None)
                 if rpm_q_result.exit_status == 0:
@@ -745,3 +772,55 @@ class RealRemoteOperations(RemoteOperations):
 
     def get_package_version(self, fqdn, package):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")
+
+    def get_iptables_rules(self, server):
+        rules = []
+        for line in self._ssh_address(server['address'],
+                                      "iptables -L INPUT -nv").stdout.readlines()[2:]:
+            logger.info(line.rstrip())
+            rule = {}
+            try:
+                # 0 0 ACCEPT udp  -- * * 0.0.0.0/0 0.0.0.0/0 state NEW udp dpt:123
+                (rule["pkts"], rule["bytes"], rule["target"], rule["prot"],
+                 rule["opt"], rule["in"], rule["out"], rule["source"],
+                 rule["destination"], rule["details"]) = line.rstrip().split(None, 9)
+            except ValueError:
+                # 0 0 ACCEPT icmp -- * * 0.0.0.0/0 0.0.0.0/0
+                (rule["pkts"], rule["bytes"], rule["target"], rule["prot"],
+                 rule["opt"], rule["in"], rule["out"], rule["source"],
+                 rule["destination"]) = line.rstrip().split()
+            rules.append(rule)
+
+        return rules
+
+    def get_corosync_port(self, server):
+        mcastport = None
+        for line in self._ssh_address(server['address'],
+                                      "cat /etc/corosync/corosync.conf || true").stdout.readlines():
+            match = re.match("\s*mcastport:\s*(\d+)", line)
+            if match:
+                mcastport = match.group(1)
+                break
+
+        return mcastport
+
+    def grep_file(self, server, string, file):
+        result = self._ssh_address(server['address'],
+                                   "grep -e \"%s\" %s || true" %
+                                   (string, file)).stdout.read()
+        return result
+
+    def get_file_content(self, server, file):
+        result = self._ssh_address(server['address'], "cat \"%s\" || true" %
+                                                      file).stdout.read()
+        return result
+
+    def del_firewall_rule(self, server, port, proto):
+        # it really bites that lokkit has no "delete" functionality
+        self._ssh_address(server['address'], """set -ex
+if service iptables status && iptables -L INPUT -nv | grep 'state NEW %s dpt:%s'; then
+    iptables -D INPUT -m state --state new -p %s --dport %s -j ACCEPT
+fi
+sed -i -e '/-A INPUT -m state --state NEW -m %s -p %s --dport %s -j ACCEPT/d' /etc/sysconfig/iptables
+sed -i -e '/--port=%s:%s/d' /etc/sysconfig/system-config-firewall""" %
+                          (proto, port, proto, port, proto, proto, port, port, proto))

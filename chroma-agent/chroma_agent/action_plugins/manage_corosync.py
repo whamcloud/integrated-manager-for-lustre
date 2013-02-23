@@ -28,6 +28,7 @@ from netaddr import IPNetwork
 from time import sleep
 
 from chroma_agent import shell
+from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 
 # The window of time in which we count resource monitor failures
 RSRC_FAIL_WINDOW = "20m"
@@ -61,6 +62,9 @@ def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = 
 
     config = render_config(interfaces)
     write_config_to_file("/etc/corosync/corosync.conf", config)
+
+    add_firewall_rule(interfaces[0].mcastport, "udp", "corosync")
+
     # pacemaker MUST be stopped before doing this or this will spin
     # forever
     unconfigure_pacemaker()
@@ -181,9 +185,21 @@ def set_node_online(node):
 def unconfigure_corosync():
     from os import remove
     import errno
+    import re
 
     shell.try_run(['service', 'corosync', 'stop'])
     shell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
+    mcastport = None
+
+    with open("/etc/corosync/corosync.conf") as f:
+        for line in f.readlines():
+            match = re.match("\s*mcastport:\s*(\d+)", line)
+            if match:
+                mcastport = match.group(1)
+                break
+    if mcastport is None:
+        raise RuntimeError("Failed to find mcastport in corosync.conf")
+
     try:
         remove("/etc/corosync/corosync.conf")
     except OSError, e:
@@ -191,6 +207,8 @@ def unconfigure_corosync():
             raise RuntimeError("Failed to remove corosync.conf")
     except:
         raise RuntimeError("Failed to remove corosync.conf")
+
+    del_firewall_rule(mcastport, "udp", "corosync")
 
 
 def unconfigure_pacemaker():

@@ -32,7 +32,7 @@ This is the Whamcloud monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents yum-utils
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents yum-utils system-config-firewall-base
 %if 0%{?rhel} > 5
 Requires: fence-agents
 %endif
@@ -88,7 +88,28 @@ echo 0 > /selinux/enforce
 
 %post management
 chkconfig rsyslog on
+if [ $1 -lt 2 ]; then
+    # open ports in the firewall for access to Lustre
+    for port in 988; do
+        lokkit -p $port:tcp
+    done
+fi
 
+%postun management
+if [ $1 -lt 1 ]; then
+    # close previously opened ports in the firewall for access to Lustre
+    ed /etc/sysconfig/iptables <<EOF
+/-A INPUT -m state --state NEW -m tcp -p udp --dport 988 -j ACCEPT/d
+w
+q
+EOF
+    ed /etc/sysconfig/system-config-firewall <<EOF
+/--port=988:tcp/d
+w
+q
+EOF
+
+fi
 %files -f base.files
 %defattr(-,root,root)
 %attr(0755,root,root)/etc/init.d/chroma-agent
