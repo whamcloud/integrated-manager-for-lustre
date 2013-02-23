@@ -11,7 +11,7 @@ from chroma_core.lib.cache import ObjectCache
 from django.contrib.contenttypes.models import ContentType
 
 from django.db import models, transaction
-from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
+from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
@@ -186,7 +186,7 @@ class ManagedTarget(StatefulObject):
             'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
             'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
             'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id)
-            }
+    }
 
     @classmethod
     def create_for_volume(cls, volume_id, create_target_mounts = True, **kwargs):
@@ -520,7 +520,7 @@ class ConfigurePacemakerStep(Step):
 
         assert(target_mount.volume_node is not None)
 
-        self.invoke_agent(target_mount.host, "configure_ha", {
+        self.invoke_agent(target_mount.host, "configure_target_ha", {
                                     'device': target_mount.volume_node.path,
                                     'ha_label': target_mount.target.ha_label,
                                     'uuid': target_mount.target.uuid,
@@ -534,7 +534,7 @@ class UnconfigurePacemakerStep(Step):
     def run(self, kwargs):
         target_mount = kwargs['target_mount']
 
-        self.invoke_agent(target_mount.host, "unconfigure_ha",
+        self.invoke_agent(target_mount.host, "unconfigure_target_ha",
             {
                 'ha_label': target_mount.target.ha_label,
                 'uuid': target_mount.target.uuid,
@@ -566,7 +566,7 @@ class ConfigureTargetJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
-        prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary == True and mtm.target_id == self.target.id)
+        prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary is True and mtm.target_id == self.target.id)
         deps.append(DependOn(prim_mtm.host, 'lnet_up'))
 
         return DependAll(deps)
@@ -696,7 +696,7 @@ class MkfsStep(Step):
             ManagedMgs: "mgs",
             ManagedMdt: "mdt",
             ManagedOst: "ost"
-            }[target.__class__]
+        }[target.__class__]
 
         if isinstance(target, FilesystemMember):
             kwargs['fsname'] = target.filesystem.name

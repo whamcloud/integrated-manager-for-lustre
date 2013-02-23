@@ -93,7 +93,7 @@ Target_stop() {
 
 Target_status() {
     # call the agent to see if it's running
-    if chroma-agent target_running --uuid $TARGET; then
+    if chroma-agent target_running --uuid $TARGET >/dev/null 2>&1; then
         rc=$OCF_SUCCESS
         msg="$TARGET is started (running)"
     else

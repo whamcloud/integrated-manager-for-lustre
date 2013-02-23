@@ -31,7 +31,7 @@ This is the Whamcloud monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker python-dateutil
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker python-dateutil libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket
 %if 0%{?rhel} > 5
 Requires: fence-agents
 %endif
@@ -47,6 +47,8 @@ This package layers on management capabilities for Whamcloud Chroma Agent.
 %install
 rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --install-scripts=%{_bindir} --root=%{buildroot}
+mkdir -p $RPM_BUILD_ROOT/usr/sbin/
+mv $RPM_BUILD_ROOT/usr/{,s}bin/fence_chroma
 mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
@@ -54,7 +56,9 @@ cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 touch management.files
 cat <<EndOfList>>management.files
 %{python_sitelib}/chroma_agent/action_plugins/manage_*
+%{python_sitelib}/chroma_agent/templates/
 /usr/lib/ocf/resource.d/chroma/Target
+%{_sbindir}/fence_chroma
 EndOfList
 
 touch base.files
@@ -81,7 +85,6 @@ echo 0 > /selinux/enforce
 
 %post management
 chkconfig rsyslog on
-chkconfig corosync on
 
 %files -f base.files
 %defattr(-,root,root)

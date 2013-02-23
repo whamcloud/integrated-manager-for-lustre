@@ -12,12 +12,14 @@ import tempfile
 from chroma_agent.log import daemon_log, console_log
 from chroma_agent.store import AgentStore
 from chroma_agent import shell
+from chroma_agent.action_plugins.manage_corosync import cibadmin
 
 
-def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None, failnode=(),
-           servicenode=(), param={}, index=None, comment=None, mountfsoptions=None,
-           network=(), erase_params=False, nomgs=False, writeconf=False,
-           dryrun=False, verbose=False, quiet=False):
+def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
+                     failnode=(), servicenode=(), param={}, index=None,
+                     comment=None, mountfsoptions=None, network=(),
+                     erase_params=False, nomgs=False, writeconf=False,
+                     dryrun=False, verbose=False, quiet=False):
     # freeze a view of the namespace before we start messing with it
     args = dict(locals())
 
@@ -63,7 +65,7 @@ def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None, fail
         'dryrun': '--dryrun',
         'verbose': '--verbose',
         'quiet': '--quiet',
-        }
+    }
     for arg in flag_options:
         if args[arg]:
             options.append("%s" % flag_options[arg])
@@ -158,27 +160,6 @@ def get_resource_locations():
     return locations
 
 
-def _cibadmin(command_args):
-    from time import sleep
-
-    # try at most, 100 times
-    n = 100
-    rc = 10
-
-    while rc == 10 and n > 0:
-        rc, stdout, stderr = shell.run(['cibadmin'] + command_args)
-        if rc == 0:
-            break
-        sleep(1)
-        n -= 1
-
-    if rc != 0:
-        raise RuntimeError("Error (%s) running 'cibadmin %s': '%s' '%s'" % \
-                           (rc, command_args, stdout, stderr))
-
-    return rc, stdout, stderr
-
-
 def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnode=(),
          servicenode=(), param={}, index=None, comment=None, mountfsoptions=None,
          network=(), backfstype=None, device_size=None, mkfsoptions=None,
@@ -213,7 +194,7 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnod
         'iam_dir': '--iam-dir',
         'verbose': '--verbose',
         'quiet': '--quiet',
-        }
+    }
 
     for arg in flag_options:
         if args[arg]:
@@ -247,7 +228,7 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnod
             'uuid': uuid,
             'inode_size': inode_size,
             'inode_count': inode_count
-            }
+    }
 
 
 def _mkdir_p_concurrent(path):
@@ -293,31 +274,33 @@ def register_target(mount_point, device):
     return {'label': blkid_output.strip()}
 
 
-def unconfigure_ha(primary, ha_label, uuid):
-    _unconfigure_ha(primary, ha_label, uuid)
-
-
-def _unconfigure_ha(primary, ha_label, uuid):
+def unconfigure_target_ha(primary, ha_label, uuid):
     if get_resource_location(ha_label):
-        raise RuntimeError("cannot unconfigure-ha: %s is still running " % \
+        raise RuntimeError("cannot unconfigure-ha: %s is still running " %
                            ha_label)
 
     if primary:
-        rc, stdout, stderr = _cibadmin(["-D", "-X", "<rsc_location id=\"%s-primary\">" % ha_label])
-        rc, stdout, stderr = _cibadmin(["-D", "-X", "<primitive id=\"%s\">" % ha_label])
-        rc, stdout, stderr = shell.run(['crm_resource', '--cleanup', '--resource',
-                       ha_label])
+        rc, stdout, stderr = cibadmin(["-D", "-X",
+                                       "<rsc_location id=\"%s-primary\">" %
+                                       ha_label])
+        rc, stdout, stderr = cibadmin(["-D", "-X", "<primitive id=\"%s\">" %
+                                       ha_label])
+        rc, stdout, stderr = shell.run(['crm_resource', '--cleanup',
+                                        '--resource', ha_label])
 
         if rc != 0 and rc != 234:
-            raise RuntimeError("Error %s trying to cleanup resource %s" % (rc, ha_label))
+            raise RuntimeError("Error %s trying to cleanup resource %s" % (rc,
+                               ha_label))
 
     else:
-        rc, stdout, stderr = _cibadmin(["-D", "-X", "<rsc_location id=\"%s-secondary\">" % ha_label])
+        rc, stdout, stderr = cibadmin(["-D", "-X",
+                                       "<rsc_location id=\"%s-secondary\">" %
+                                       ha_label])
 
     AgentStore.remove_target_info(uuid)
 
 
-def configure_ha(primary, device, ha_label, uuid, mount_point):
+def configure_target_ha(primary, device, ha_label, uuid, mount_point):
     if primary:
         # If the target already exists with the same params, skip.
         # If it already exists with different params, that is an error
@@ -338,7 +321,7 @@ def configure_ha(primary, device, ha_label, uuid, mount_point):
     <nvpair name=\"target-role\" id=\"%s-meta_attributes-target-role\" value=\"Stopped\"/>\
   </meta_attributes>\
   <operations id=\"%s-operations\">\
-    <op id=\"%s-monitor-120\" interval=\"120\" name=\"monitor\" timeout=\"60\"/>\
+    <op id=\"%s-monitor-5\" interval=\"5\" name=\"monitor\" timeout=\"60\"/>\
     <op id=\"%s-start-0\" interval=\"0\" name=\"start\" timeout=\"300\"/>\
     <op id=\"%s-stop-0\" interval=\"0\" name=\"stop\" timeout=\"300\"/>\
   </operations>\
@@ -349,7 +332,7 @@ def configure_ha(primary, device, ha_label, uuid, mount_point):
             ha_label, ha_label, ha_label, ha_label, uuid))
         os.close(tmp_f)
 
-        _cibadmin(["-o", "resources", "-C", "-x", "%s" % tmp_name])
+        cibadmin(["-o", "resources", "-C", "-x", "%s" % tmp_name])
         score = 20
         preference = "primary"
     else:
@@ -371,7 +354,9 @@ def configure_ha(primary, device, ha_label, uuid, mount_point):
         else:
             raise RuntimeError("A constraint with the name %s-%s already exists" % (ha_label, preference))
 
-    rc, stdout, stderr = _cibadmin(["-o", "constraints", "-C", "-X", "<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>" % (ha_label,
+    rc, stdout, stderr = cibadmin(["-o", "constraints", "-C", "-X",
+                                   "<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>" %
+                                  (ha_label,
                                   preference,
                                   node,
                                   ha_label, score)])
@@ -495,7 +480,7 @@ def _move_target(target_label, dest_node):
     if rc != 0:
         raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
 
-    if stderr.find("%s is already active on %s\n" % \
+    if stderr.find("%s is already active on %s\n" %
                    (target_label, dest_node)) > -1:
         return
 
@@ -532,7 +517,6 @@ def failback_target(ha_label):
     stdout = shell.try_run(["crm", "configure", "show", "%s-primary" % ha_label])
     primary = stdout[stdout.rfind(' ') + 1:-1]
     return _move_target(ha_label, primary)
-
 
 # FIXME: these appear to be unused, remove?
 #def migrate_target(ha_label, node):
@@ -599,7 +583,7 @@ def clear_targets(force = False):
         console_log.info("Stopping %s" % resource)
         _stop_target(attrs['ha_label'])
         console_log.info("Unconfiguring %s" % resource)
-        _unconfigure_ha(True, attrs['ha_label'], attrs['uuid'])
+        unconfigure_target_ha(True, attrs['ha_label'], attrs['uuid'])
 
 
 def purge_configuration(device, filesystem_name):
@@ -621,8 +605,8 @@ def purge_configuration(device, filesystem_name):
         shell.try_run(["debugfs", "-w", "-R", "rm CONFIGS/%s" % victim, device])
 
 
-ACTIONS = [purge_configuration, register_target, configure_ha,
-           unconfigure_ha, mount_target, unmount_target,
+ACTIONS = [purge_configuration, register_target, configure_target_ha,
+           unconfigure_target_ha, mount_target, unmount_target,
            start_target, stop_target, format_target,
            writeconf_target, failback_target,
            failover_target, target_running,

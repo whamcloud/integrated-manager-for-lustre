@@ -1,2 +1,4 @@
 include LICENSE.txt
 include Target
+include chroma_agent/templates/corosync.conf
+include chroma_agent/templates/ifcfg-nic

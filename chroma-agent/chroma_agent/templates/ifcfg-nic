@@ -1,0 +1,10 @@
+# Autoconfigured by Intel Manager for Lustre
+DEVICE="{{ device }}"
+BOOTPROTO="STATIC"
+HWADDR="{{ mac_address }}"
+IPADDR="{{ ipv4_address }}"
+NETMASK="{{ ipv4_netmask }}"
+IPV6INIT="no"
+NM_CONTROLLED="no"
+ONBOOT="yes"
+TYPE="Ethernet"

@@ -22,7 +22,7 @@ from daemon.pidlockfile import PIDLockFile
 from chroma_agent.crypto import Crypto
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 from chroma_agent.agent_client import AgentClient
-from chroma_agent.log import  daemon_log, daemon_log_setup, console_log_setup
+from chroma_agent.log import daemon_log, daemon_log_setup, console_log_setup
 
 from chroma_agent.store import AgentStore
 
