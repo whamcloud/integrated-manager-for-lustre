@@ -8,7 +8,6 @@ import hashlib
 import logging
 import getpass
 import socket
-import errno
 import sys
 import xmlrpclib
 import time
@@ -123,8 +122,6 @@ class ServiceConfig(CommandLine):
          * that the hostname is not localhost
          * that the FQDN can be looked up from hostname
          * that an IP can be looked up from the hostname
-         * that reverse lookup on the IP gives the FQDN
-         * that the host can connect to its own external IP address
 
         This check is done ahead of configuring RabbitMQ, which fails unobviously if the
         name resolution is bad.
@@ -144,45 +141,18 @@ class ServiceConfig(CommandLine):
             return False
 
         try:
-            fqdn = socket.getfqdn(hostname)
+            socket.getfqdn(hostname)
         except socket.error:
             log.error("Error: Unable to get the FQDN for the server name '%s'. "
                       "Please correct the hostname resolution.", hostname)
             return False
 
         try:
-            ip_address = socket.gethostbyname(hostname)
+            socket.gethostbyname(hostname)
         except socket.error:
             log.error("Error: Unable to get the ip address for the server name '%s'. "
                       "Please correct the hostname resolution.", hostname)
             return False
-
-        try:
-            hostname_from_ip, aliaslist, ipaddr = socket.gethostbyaddr(ip_address)
-        except socket.error:
-            log.error("Error: Unable to get the host name for ip address: %s. "
-                      "Please correct the hostname resolution.", ip_address)
-            return False
-
-        if fqdn != hostname_from_ip:
-            log.error("Need to correctly setup hostname resolution. Currently the hostname is: "
-                      "%s and the ip address hostname is: %s.", fqdn, hostname_from_ip)
-            return False
-
-        SSH_PORT = 22
-
-        # Make sure that the ip address is on the machine. Using port 22 to verify since all machines should
-        # have sshd running.
-        try:
-            tst_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tst_socket.bind((ip_address, SSH_PORT))
-            tst_socket.close()
-        except socket.error, err:
-            (err_num, err_msg) = err
-            if err_num != errno.EADDRINUSE:
-                log.error("Error: Unable to connect to IP address: %s. "
-                          "Please correct hostname resolution.", ip_address)
-                return False
 
         return True
 
