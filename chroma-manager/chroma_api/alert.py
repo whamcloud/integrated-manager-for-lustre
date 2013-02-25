@@ -184,7 +184,7 @@ class AlertResource(ModelResource):
                     for tm in tms:
                         affect_target(tm.target)
         elif isinstance(a, TargetFailoverAlert):
-            affect_target(a.alert_item.target)
+            affect_target(a.alert_item)
         elif isinstance(a, TargetOfflineAlert) or isinstance(a, TargetRecoveryAlert):
             affect_target(a.alert_item)
         elif isinstance(a, HostContactAlert):

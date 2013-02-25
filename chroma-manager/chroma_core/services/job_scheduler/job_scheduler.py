@@ -441,8 +441,8 @@ class JobScheduler(object):
 
             # Update TargetFailoverAlert from .active_mount
             from chroma_core.models import TargetFailoverAlert
-            for tm in changed_item.managedtargetmount_set.filter(primary = False):
-                TargetFailoverAlert.notify(tm, changed_item.active_mount == tm)
+            failed_over = changed_item.active_mount is not None and changed_item.active_mount != changed_item.managedtargetmount_set.get(primary = True)
+            TargetFailoverAlert.notify(changed_item, failed_over)
 
     @transaction.commit_on_success
     def complete_job(self, job, errored = False, cancelled = False):
