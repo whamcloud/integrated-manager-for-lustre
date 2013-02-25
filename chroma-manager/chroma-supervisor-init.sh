@@ -17,6 +17,13 @@ export SUPERVISOR_CONFIG=${PROJECT_PATH}/production_supervisord.conf
 
 
 start() {
+    if [ -f $PID_FILE ] ; then
+        ps -p `cat $PID_FILE` > /dev/null 2>&1
+        if [ "$?" = 0 ] ; then
+            echo "Already running"
+            exit 0
+        fi
+    fi
     action "Starting ${SERVICE_NAME}" supervisord --pidfile=${PID_FILE} -c ${SUPERVISOR_CONFIG} -d ${PROJECT_PATH} -l ${LOG_DIR}/supervisord.log
     echo
 }
