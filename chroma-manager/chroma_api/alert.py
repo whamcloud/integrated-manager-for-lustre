@@ -5,6 +5,7 @@
 
 
 from collections import defaultdict
+from chroma_api.utils import SeverityResource
 
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.alert import AlertState, AlertSubscription
@@ -120,7 +121,7 @@ class AlertTypeResource(Resource):
         detail_allowed_methods = ['get']
 
 
-class AlertResource(ModelResource):
+class AlertResource(SeverityResource):
     """
     Notification of a bad health state.  Alerts refer to particular objects (such as
     servers or targets), and can either be active (indicating this is a current
@@ -130,24 +131,48 @@ class AlertResource(ModelResource):
     together provide a unique reference to the object to which the
     alert refers.
     """
-    message = fields.CharField(readonly = True, help_text = "Human readable description\
-            of the alert, about one sentence")
-    alert_item_content_type_id = fields.IntegerField(help_text = "ID of affected item")
-    alert_item_content_id = fields.IntegerField(help_text = "Content type ID of affected item")
+
+    message = fields.CharField(readonly = True,
+        help_text = ("Human readable description "
+                     "of the alert, about one sentence"))
+
+    alert_item_content_type_id = fields.IntegerField(
+        help_text = "ID of affected item")
+
+    alert_item_content_id = fields.IntegerField(
+        help_text = "Content type ID of affected item")
+
     alert_item = fields.CharField(help_text = "URI of affected item")
+
     active = fields.BooleanField(attribute = 'active', null = True,
-                                 help_text = "``true`` if the alert is a current issue, ``false`` if it is historical")
+        help_text = "``true`` if the alert is a current issue, "
+                    "``false`` if it is historical")
 
-    affected = fields.ListField(null = True, help_text = "List of objects which\
-            are affected by the alert (e.g. a target alert also affects the\
-            file system to which the target belongs)")
+    affected = fields.ListField(null = True,
+        help_text = ("List of objects which are affected by the alert "
+                     "(e.g. a target alert also affects the file system to "
+                     "which the target belongs)"))
 
-    dismissed = fields.BooleanField(attribute = 'dismissed',
-                                    help_text = "If ``true``, the alert should not be presented for operator attention")
+    alert_item_str = fields.CharField(readonly = True,
+        help_text = ("A human readable noun describing the object "
+                     "that is the subject of the alert"))
 
     def dehydrate_alert_item(self, bundle):
         from chroma_api.urls import api
         return api.get_resource_uri(bundle.obj.alert_item)
+
+    def dehydrate_alert_item_str(self, bundle):
+        return str(bundle.obj.alert_item)
+
+    def dehydrate_active(self, bundle):
+        # Map False to None for ``active`` field
+        return bool(bundle.obj.active)
+
+    def dehydrate_alert_item_content_type_id(self, bundle):
+        return bundle.obj.alert_item_type.id
+
+    def dehydrate_message(self, bundle):
+        return bundle.obj.message()
 
     def dehydrate_affected(self, bundle):
         from chroma_api.urls import api
@@ -207,38 +232,29 @@ class AlertResource(ModelResource):
         # <<
 
     def build_filters(self, filters = None):
-        # Map False to None for ``active`` field
+
         filters = super(AlertResource, self).build_filters(filters)
+
+        # Map False to None for ``active`` field
         if 'active__exact' in filters:
             if not filters['active__exact']:
                 filters['active__exact'] = None
+
         return filters
-
-    def dehydrate_active(self, bundle):
-        # Map False to None for ``active`` field
-        return bool(bundle.obj.active)
-
-    def dehydrate_alert_item_content_type_id(self, bundle):
-        return bundle.obj.alert_item_type.id
-
-    alert_item_str = fields.CharField(readonly = True,
-                                      help_text = "A human readable noun describing the object\
-                                      that is the subject of the alert")
 
     class Meta:
         queryset = AlertState.objects.all()
         resource_name = 'alert'
-        fields = ['begin', 'end', 'message', 'active', 'dismissed', 'alert_item_id', 'alert_item_content_type_id', 'id']
-        filtering = {'active': ['exact'], 'dismissed': ['exact']}
+        fields = ['begin', 'end', 'message', 'active', 'dismissed',
+                  'alert_item_id', 'alert_item_content_type_id', 'id',
+                  'severity']
+        filtering = {'active': ['exact'],
+                     'dismissed': ['exact'],
+                     'severity': ['in'],
+                     'begin': ['gte']}
         ordering = ['begin', 'end', 'active']
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ['get']
-        detail_allowed_methods = ['get', 'put']
+        detail_allowed_methods = ['get', 'patch', 'put']
         always_return_data = True
-
-    def dehydrate_message(self, bundle):
-        return bundle.obj.message()
-
-    def dehydrate_alert_item_str(self, bundle):
-        return str(bundle.obj.alert_item)

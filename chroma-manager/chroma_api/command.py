@@ -72,9 +72,13 @@ class CommandResource(ModelResource):
     class Meta:
         queryset = Command.objects.all()
         list_allowed_methods = ['get', 'post']
-        detail_allowed_methods = ['get']
+        detail_allowed_methods = ['get', 'patch']
         ordering = ['created_at']
-        filtering = {'complete': ['exact'], 'id': ['exact', 'in']}
+        filtering = {'complete': ['exact'],
+                     'id': ['exact', 'in'],
+                     'dismissed': ['exact'],
+                     'errored': ['exact'],
+                     'created_at': ['gte']}
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         validation = CommandValidation()

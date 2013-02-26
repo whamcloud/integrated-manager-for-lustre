@@ -4,11 +4,20 @@
 # ========================================================
 
 
+import logging
 import operator
 from django.db import models, transaction
 
 from polymorphic.models import DowncastManager
 from polymorphic.models import PolymorphicMetaclass
+
+#  Convert dict used by models and apis
+STR_TO_SEVERITY = dict([(logging.getLevelName(level), level) for level in [
+    logging.INFO,
+    logging.ERROR,
+    logging.CRITICAL,
+    logging.WARNING,
+    logging.DEBUG]])
 
 
 class DeletableDowncastableManager(DowncastManager):

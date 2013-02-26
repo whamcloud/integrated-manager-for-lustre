@@ -4,11 +4,16 @@
 # ========================================================
 
 
-from django.db import models
+import logging
+
 from polymorphic.models import DowncastMetaclass
+
+from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
 from django.utils.timezone import now as django_now
+
+from chroma_core.models import utils as conversion_util
 
 
 class AlertState(models.Model):
@@ -34,7 +39,15 @@ class AlertState(models.Model):
     active = models.NullBooleanField()
 
     # whether a user has manually dismissed alert
-    dismissed = models.BooleanField()
+    dismissed = models.BooleanField(default=False,
+                                    help_text = "True denotes that the user "
+                                                "has acknowledged this alert.")
+
+    severity = models.IntegerField(default=logging.INFO,
+                                   help_text = ("String indicating the "
+                                                "severity of the alert, "
+                                                "one of %s") %
+                                        conversion_util.STR_TO_SEVERITY.keys())
 
     def to_dict(self):
         from chroma_core.lib.util import time_str

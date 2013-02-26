@@ -44,6 +44,11 @@ class Command(models.Model):
             the action being done by the command")
     created_at = models.DateTimeField(auto_now_add = True)
 
+    dismissed = models.BooleanField(default=False,
+                                    help_text = "``true``  denotes that the "
+                                                "user has acknowledged this "
+                                                "command's failure.")
+
     @classmethod
     def set_state(cls, objects, message = None, **kwargs):
         """The states argument must be a collection of 2-tuples

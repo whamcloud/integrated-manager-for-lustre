@@ -4,6 +4,7 @@
 # ========================================================
 
 
+import logging
 import datetime
 from chroma_core.models.jobs import SchedulingError
 import dateutil.parser
@@ -16,6 +17,7 @@ from chroma_core.models.target import ManagedMgs
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import settings
 import chroma_core.lib.conf_param
+from chroma_core.models import utils as conversion_util
 
 from tastypie.resources import ModelDeclarativeMetaclass, Resource, ModelResource, ResourceOptions
 from tastypie import fields
@@ -522,3 +524,54 @@ class MetricResource:
                 for datapoint in datapoints:
                     datapoint['ts'] = self._format_timestamp(datapoint['ts'])
             return self.create_response(request, result)
+
+
+class SeverityResource(ModelResource):
+    """Handles serverity for subclasses
+
+    The basis for this Resource is to add the Severity field and support for
+    converting it to and from it's FE form (string) and db form (int)
+    """
+
+    severity = fields.CharField(
+        attribute='severity',
+        help_text = ("String indicating the severity "
+                     "one of %s") % conversion_util.STR_TO_SEVERITY.keys())
+
+    def dehydrate_severity(self, bundle):
+        """Convert from int in DB to String for FE"""
+
+        return logging.getLevelName(bundle.obj.severity)
+
+    def hydrate_severity(self, bundle):
+        """Convert servitity name to int value for saving to DB
+
+        NB:  Needed for Patch
+        """
+
+        severity_val = str(conversion_util.STR_TO_SEVERITY[
+                           bundle.data['severity']])
+        bundle.data['severity'] = severity_val
+        return bundle
+
+    def build_filters(self, filters=None):
+        """FE will send severity strings which are converted to int here"""
+
+        severity = filters.get('severity', None)
+        if severity is not None:
+            #  Handle single string rep of severity values. (numeric in DB)
+            del filters['severity']
+            if severity:
+                filters['severity'] = conversion_util.STR_TO_SEVERITY[severity]
+        else:
+            #  Handle list of string reps of severity values (numeric in DB)
+            severity_list = filters.getlist('severity__in', None)
+            if severity_list:
+                del filters['severity__in']
+                converted_list = []
+                for severity_str in severity_list:
+                    converted_list.append(
+                        str(conversion_util.STR_TO_SEVERITY[severity_str]))
+                filters.setlist('severity__in', converted_list)
+
+        return super(SeverityResource, self).build_filters(filters)

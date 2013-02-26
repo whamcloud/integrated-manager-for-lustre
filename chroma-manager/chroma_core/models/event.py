@@ -4,18 +4,29 @@
 # ========================================================
 
 
-from django.db import models
 from polymorphic.models import DowncastMetaclass
+
+from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
+
+from chroma_core.models import utils as conversion_util
 
 
 class Event(models.Model):
     __metaclass__ = DowncastMetaclass
 
     created_at = models.DateTimeField(auto_now_add = True)
-    severity = models.IntegerField()
+    severity = models.IntegerField(help_text = ("String indicating the "
+                                                "severity of the event, "
+                                                "one of %s") %
+                                        conversion_util.STR_TO_SEVERITY.keys())
+
     host = models.ForeignKey('chroma_core.ManagedHost', blank = True, null = True)
+    dismissed = models.BooleanField(default=False,
+                                    help_text = "``true`` denotes that the "
+                                                "user has acknowledged this "
+                                                "event.")
 
     class Meta:
         app_label = 'chroma_core'

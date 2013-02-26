@@ -340,7 +340,7 @@ class ResourceTestCase(TestCase):
         """
         Ensures the response is returning a HTTP 200.
         """
-        return self.assertEqual(resp.status_code, 200)
+        return self.assertEqual(resp.status_code, 200, resp.content)
 
     def assertHttpCreated(self, resp):
         """
@@ -352,7 +352,7 @@ class ResourceTestCase(TestCase):
         """
         Ensures the response is returning either a HTTP 202 or a HTTP 204.
         """
-        return self.assertTrue(resp.status_code in [202, 204])
+        return self.assertTrue(resp.status_code in [202, 204], resp.content)
 
     def assertHttpMultipleChoices(self, resp):
         """
