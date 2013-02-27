@@ -48,6 +48,8 @@ class RunJobThread(threading.Thread):
         log.info("Job %s: cancelling" % self.job.id)
         self._cancel.set()
         log.info("Job %s: waiting %ss for run to complete" % (self.job.id, self.CANCEL_TIMEOUT))
+
+    def cancel_complete(self):
         self._complete.wait(self.CANCEL_TIMEOUT)
         if self._complete.is_set():
             log.info("Job %s: cancel completed" % self.job.id)
@@ -68,7 +70,6 @@ class RunJobThread(threading.Thread):
             log.error("Job %d: exception in get_steps" % self.job.id)
             exc_info = sys.exc_info()
             log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
-            self._complete.set()
             return
 
         step_index = 0
@@ -104,7 +105,6 @@ class RunJobThread(threading.Thread):
                 result.save()
 
                 return
-
             except Exception:
                 log.error("Job %d step %d encountered an error" % (self.job.id, step_index))
                 exc_info = sys.exc_info()
@@ -547,6 +547,8 @@ class JobScheduler(object):
 
     @transaction.commit_on_success
     def cancel_job(self, job_id):
+        cancelled_thread = None
+
         with self._lock:
             try:
                 job = self._job_collection.get(job_id)
@@ -561,8 +563,8 @@ class JobScheduler(object):
                 return
             elif job.state == 'tasked':
                 try:
-                    thread = self._run_threads[job_id]
-                    thread.cancel()
+                    cancelled_thread = self._run_threads[job_id]
+                    cancelled_thread.cancel()
                 except KeyError:
                     pass
                 self._job_collection.update(job, 'complete', cancelled = True)
@@ -571,8 +573,14 @@ class JobScheduler(object):
                 self._job_collection.update(job, 'complete', cancelled = True)
                 self._job_collection.update_commands(job)
 
-            # So that anything waiting on this job can be cancelled too
-            self._run_next()
+        # Drop self._lock while the thread completes - it will need
+        # this lock to send back its completion
+        if cancelled_thread is not None:
+            cancelled_thread.cancel_complete()
+        else:
+            with self._lock:
+                # So that anything waiting on this job can be cancelled too
+                self._run_next()
 
     @transaction.commit_on_success
     def create_host_ssh(self, address):
