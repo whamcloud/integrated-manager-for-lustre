@@ -15,7 +15,7 @@ South==0.7.6
 sphinx==1.1.3
 werkzeug
 psycopg2==2.0.14
-coverage
+http://github.com/kprantis/coverage/tarball/master#egg=coverage
 python-daemon==1.5.2
 lockfile==0.8
 django-tastypie==0.9.11

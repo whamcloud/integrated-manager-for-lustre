@@ -28,6 +28,9 @@ rm -f /usr/bin/chroma*
 echo "drop database chroma; create database chroma;" | mysql -u root
 
 source ~/.bash_profile
+pip uninstall coverage <<EOC
+y
+EOC
 pip install --force-reinstall -r requirements.txt <<EOC
 s
 

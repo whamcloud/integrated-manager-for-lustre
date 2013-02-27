@@ -1,31 +1,31 @@
 #!/bin/sh -xe
 
-CHROMA_MANAGER=hydra-2-lustre-1-8-chroma-manager-1
-STORAGE_APPLIANCES=(hydra-2-lustre-1-8-mgs-mds hydra-2-lustre-1-8-oss1 hydra-2-lustre-1-8-oss2 hydra-2-lustre-1-8-oss3 hydra-2-lustre-1-8-oss4)
-CLIENT_1=hydra-2-lustre-1-8-client
-LUSTRE_SERVER_DISTRO=el5
+CHROMA_MANAGER=${CHROMA_MANAGER:-'hydra-2-lustre-1-8-chroma-manager-1'}
+STORAGE_APPLIANCES=${STORAGE_APPLIANCES:-'hydra-2-lustre-1-8-mgs-mds hydra-2-lustre-1-8-oss1 hydra-2-lustre-1-8-oss2 hydra-2-lustre-1-8-oss3 hydra-2-lustre-1-8-oss4'}
+CLIENT_1=${CLIENT_1:-'hydra-2-lustre-1-8-client'}
+LUSTRE_SERVER_DISTRO=${LUSTRE_SERVER_DISTRO:-'el5'}
+PYTHON_VERSION=${PYTHON_VERSION:-'2.4'}
+TEST_RUNNER=${TEST_RUNNER:-'hydra-2-lustre-1-8-chroma-manager-1'}
 
 echo "Beginning installation and setup..."
 
-rm -rf ~/lustre_1_8_test_reports/*
-rm -rf ~/lustre_1_8_coverage_reports/.coverage*
-mkdir -p ~/lustre_1_8_test_reports/*
-mkdir -p  ~/lustre_1_8_coverage_reports/.coverage*
+rm -rf ~/efs/test_reports/*
+rm -rf ~/efs/coverage_reports/.coverage*
+mkdir -p ~/efs/test_reports/*
+mkdir -p  ~/efs/coverage_reports/
 
 # Remove all old rpms from previous run
 for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1; do
-    ssh $machine "rm -rvf ~/rpms/*"
+    ssh $machine "mkdir -p ~/rpms/; rm -rvf ~/rpms/*"
 done
 
 # Copy rpms to each of the machines
-scp ~/lustre_1_8_rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager* $CHROMA_MANAGER:~/rpms/
-scp ~/lustre_1_8_requirements/requirements.txt $CHROMA_MANAGER:~/requirements.txt
+scp $(ls ~/efs/rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager-*| grep -v integration-tests) $CHROMA_MANAGER:~/rpms/
+scp ~/efs/requirements.txt $CHROMA_MANAGER:~/requirements.txt
+scp ~/efs/rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager-integration-tests* $TEST_RUNNER:~/rpms/
+scp ~/efs/requirements.txt $TEST_RUNNER:~/requirements.txt
 for storage_appliance in ${STORAGE_APPLIANCES[@]}; do
-    if [ "$LUSTRE_SERVER_DISTRO"="el5" ]; then
-        scp $(ls ~/lustre_1_8_rpms/arch\=x86_64\,distro\=$LUSTRE_SERVER_DISTRO/dist/chroma-agent-* | grep -v management) $storage_appliance:~/rpms/
-    else
-        scp ~/lustre_1_8_rpms/arch\=x86_64\,distro\=$LUSTRE_SERVER_DISTRO/dist/chroma-agent-* $storage_appliance:~/rpms/
-    fi
+    scp $(ls ~/efs/rpms/arch\=x86_64\,distro\=$LUSTRE_SERVER_DISTRO/dist/chroma-agent-* | grep -v management) $storage_appliance:~/rpms/
 done
 
 # Install and setup chroma software storage appliances
@@ -42,22 +42,32 @@ echo "compress
 }" > /etc/logrotate.d/chroma-agent
     logrotate -fv /etc/logrotate.d/chroma-agent
     logrotate -fv /etc/logrotate.d/syslog
+
     set -xe
     yum remove -y chroma-agent*
     yum install -y --nogpgcheck ~/rpms/chroma-agent-*
+
     rm -f /var/tmp/.coverage*
+    set +e
+    yum install -y python-pip
+    pip-python install --upgrade pip
+    pip-python uninstall coverage <<EOC
+y
+EOC
+    pip-python install --force-reinstall http://github.com/kprantis/coverage/tarball/master#egg=coverage
+    set -e
     echo "
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
-source = /usr/lib/python2.4/site-packages/chroma_agent/
-" > /usr/lib/python2.4/site-packages/chroma_agent/.coveragerc
+source = /usr/lib/python$PYTHON_VERSION/site-packages/chroma_agent/
+" > /usr/lib/python$PYTHON_VERSION/site-packages/chroma_agent/.coveragerc
     echo "import coverage
-cov = coverage.coverage(config_file='/usr/lib/python2.4/site-packages/chroma_agent/.coveragerc', auto_data=True)
+cov = coverage.coverage(config_file='/usr/lib/python$PYTHON_VERSION/site-packages/chroma_agent/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
-" > /usr/lib/python2.4/site-packages/sitecustomize.py
+" > /usr/lib/python$PYTHON_VERSION/site-packages/sitecustomize.py
     service chroma-agent start < /dev/null > /dev/null
 EOF
 done
@@ -73,10 +83,17 @@ logrotate -fv /etc/logrotate.d/rabbitmq-server
 yum remove -y chroma-manager*
 rm -rf /usr/share/chroma-manager/
 
+echo "drop database chroma; create database chroma" | mysql -u root
 service postgresql stop
 rm -fr /var/lib/pgsql/data/*
 
-pip install --force-reinstall -r ~/requirements.txt
+pip-python uninstall coverage <<EOC
+y
+EOC
+pip install --force-reinstall -r ~/requirements.txt <<EOC
+s
+
+EOC
 yum install -y ~/rpms/chroma-manager-*
 echo "import logging 
 LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
@@ -96,12 +113,26 @@ cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
 EOF
 
+ssh $TEST_RUNNER <<EOF
+yum remove -y chroma-manager-integration-tests*
+
+echo "drop database test_chroma;" | mysql -u root
+
+pip install --force-reinstall -r ~/requirements.txt <<EOC
+s
+
+EOC
+yum install -y ~/rpms/chroma-manager-integration-tests*
+echo "import logging 
+LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
+EOF
+
 echo "End installation and setup."
 echo "Begin running tests..."
 
 set +e
 
-ssh $CHROMA_MANAGER <<EOF
+ssh $TEST_RUNNER <<EOF
 rm -f /root/test_report.xml
 cd /usr/share/chroma-manager/
 set -x
@@ -112,7 +143,7 @@ integration_test_status=$?
 
 echo "End running tests."
 
-scp $CHROMA_MANAGER:/root/test_report.xml ~/lustre_1_8_test_reports/
+scp $TEST_RUNNER:/root/test_report.xml ~/efs/test_reports/
 
 ssh $CHROMA_MANAGER chroma-config stop
 ssh $CHROMA_MANAGER rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
@@ -120,11 +151,11 @@ ssh $CHROMA_MANAGER rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
 for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
 ssh $machine <<"EOC"
     set -x
-    rm -f /usr/lib/python2.4/site-packages/sitecustomize.py*
+    rm -f /usr/lib/python$PYTHON_VERSION/site-packages/sitecustomize.py*
     cd /var/tmp/
     coverage combine
 EOC
-scp $machine:/var/tmp/.coverage lustre_1_8_coverage_reports/.coverage.$machine
+scp $machine:/var/tmp/.coverage efs/coverage_reports/.coverage.$machine
 done
 
 ssh $CHROMA_MANAGER chroma-config start

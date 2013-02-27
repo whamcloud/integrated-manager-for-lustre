@@ -59,6 +59,14 @@ echo "compress
     yum remove -y chroma-agent*
     yum install -y ~/rpms/chroma-agent-*
     rm -f /var/tmp/.coverage*
+    set +e
+    yum install -y python-pip
+    pip-python install --upgrade pip
+    pip-python uninstall coverage <<EOC
+y
+EOC
+    pip-python install --force-reinstall http://github.com/kprantis/coverage/tarball/master#egg=coverage
+    set -e
     echo "
 [run]
 data_file = /var/tmp/.coverage
@@ -89,6 +97,9 @@ echo "drop database chroma; create database chroma;" | mysql -u root
 service postgresql stop
 rm -fr /var/lib/pgsql/data/*
 
+pip uninstall coverage <<EOC
+y
+EOC
 pip install --force-reinstall -r ~/requirements.txt
 yum install -y ~/rpms/chroma-manager-*
 
