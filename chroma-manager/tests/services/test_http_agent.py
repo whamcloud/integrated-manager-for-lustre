@@ -258,6 +258,8 @@ class TestHttpAgent(SupervisorTestCase):
         first_session_id = self._open_session()
 
         self.restart('http_agent')
+        for port in self.PORTS:
+            self._wait_for_port(port)
 
         # If we try to continue our session, it will tell us to terminate
         response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)

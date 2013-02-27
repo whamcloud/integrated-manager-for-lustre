@@ -90,6 +90,8 @@ class TestAgentRpc(SupervisorTestCase):
                 state = 'lnet_down',
                 state_modified_at = datetime.datetime.now(tz = dateutil.tz.tzutc())
             )
+        else:
+            self.host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
 
     def tearDown(self):
         super(TestAgentRpc, self).tearDown()
