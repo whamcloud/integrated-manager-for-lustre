@@ -139,7 +139,11 @@ class AgentRpcMessenger(object):
             def abort_session(old_session_id, new_session_id = None):
                 log.warning("AgentRpcMessenger.on_rx: aborting session %s" % old_session_id)
                 old_rpcs = self._session_rpcs[old_session_id]
-                self._sessions[fqdn] = new_session_id
+                if new_session_id is not None:
+                    self._sessions[fqdn] = new_session_id
+                else:
+                    del self._sessions[fqdn]
+
                 for rpc in old_rpcs.values():
                     if new_session_id:
                         log.warning("AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s)" % (
@@ -209,8 +213,14 @@ class AgentRpcMessenger(object):
                 raise AgentException(fqdn, action, args, "No %s session for %s" % (ACTION_MANAGER_PLUGIN_NAME, fqdn))
 
         with self._lock:
-            session_id = self._sessions[fqdn]
-            log.debug("AgentRpcMessenger._send: using session %s" % session_id)
+            try:
+                session_id = self._sessions[fqdn]
+                log.debug("AgentRpcMessenger._send: using session %s" % session_id)
+            except KeyError:
+                # This could happen in spite of the earlier check, as that was
+                # outside the lock.
+                log.warning("AgentRpcMessenger._send: no session for %s" % fqdn)
+                raise AgentException(fqdn, action, args, "Could not contact server %s" % fqdn)
 
             rpc = ActionInFlight(session_id, fqdn, action, args)
 

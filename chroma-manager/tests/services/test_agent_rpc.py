@@ -185,6 +185,7 @@ class TestAgentRpc(SupervisorTestCase):
                 return command
             else:
                 time.sleep(1)
+                i += 1
         raise AssertionError("Command didn't complete")
 
     def test_run_action(self):
@@ -346,6 +347,23 @@ class TestAgentRpc(SupervisorTestCase):
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
         command = self._wait_for_command(command_id, 5)
+        self.assertTrue(command.errored)
+        self.assertFalse(command.cancelled)
+
+    def test_timeout_while_idle(self):
+        """
+        While a session is idle, allow it to time out, and check that a subsequent action is failed.
+        """
+        self._open_sessions()
+
+        # Allow session to time out
+        time.sleep(HostState.CONTACT_TIMEOUT + HostStatePoller.POLL_INTERVAL + RABBITMQ_GRACE_PERIOD)
+
+        command_id = self._request_action()
+
+        # The job_scheduler should have been messaged a termination of the session, and
+        # in response to that should have errored the commands
+        command = self._wait_for_command(command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 
