@@ -8,7 +8,7 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
-class TestFilesystemDetection(ChromaIntegrationTestCase, StatsTestCaseMixin):
+class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
     def setUp(self):
         ChromaIntegrationTestCase.setUp(self)
 
