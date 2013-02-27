@@ -142,7 +142,8 @@ class AlertResource(ModelResource):
             are affected by the alert (e.g. a target alert also affects the\
             file system to which the target belongs)")
 
-    dismissed = fields.BooleanField(help_text = "If ``true``, the alert should not be presented for operator attention")
+    dismissed = fields.BooleanField(attribute = 'dismissed',
+                                    help_text = "If ``true``, the alert should not be presented for operator attention")
 
     def dehydrate_alert_item(self, bundle):
         from chroma_api.urls import api
