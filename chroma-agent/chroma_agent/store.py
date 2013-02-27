@@ -69,26 +69,6 @@ class AgentStore(object):
         return j
 
     @classmethod
-    def server_conf_changed(cls):
-        if bool(cls.server_conf_mtime) != os.path.exists(cls._json_path(cls.SERVER_CONF_FILE)):
-            # If it's come into or out of existence
-            return True
-
-        if cls.server_conf_mtime:
-            # If it existed last time we checked, is it modified?
-            try:
-                mtime = os.path.getmtime(cls._json_path(cls.SERVER_CONF_FILE))
-            except IOError, e:
-                # It ceased to exist during this function
-                if e.errno == errno.ENOENT:
-                    return True
-
-            if mtime != cls.server_conf_mtime:
-                return True
-            else:
-                return False
-
-    @classmethod
     def remove_server_conf(cls):
         cls._unlink_if_exists(cls._json_path(cls.SERVER_CONF_FILE))
 
