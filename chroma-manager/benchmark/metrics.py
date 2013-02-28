@@ -66,7 +66,10 @@ class ServerGenerator(Generator):
             self.stats['cpustats'][cpu_stat] = 0
 
     def create_entity(self, fs):
-        self.entity = ManagedHost.objects.create(address=self.name)
+        self.entity = ManagedHost.objects.create(
+                address=self.name,
+                fqdn=self.name,
+                nodename=self.name)
         self.entity.metrics
 
 
@@ -232,7 +235,10 @@ class Benchmark(GenericBenchmark):
 
         self.do_db_mangling()
 
-        mgs_host = ManagedHost.objects.create(address="mgs")
+        mgs_host = ManagedHost.objects.create(
+                address="mgs",
+                fqdn="mgs",
+                nodename="mgs")
         mgs_vol = Volume.objects.create(label="mgs")
         VolumeNode.objects.create(host = mgs_host,
                                   path = uuid.uuid4(),
