@@ -26,6 +26,8 @@ yum remove -y chroma-manager*
 rm -rf /usr/share/chroma-manager/
 rm -f /usr/bin/chroma*
 echo "drop database chroma; create database chroma;" | mysql -u root
+service postgresql stop
+rm -fr /var/lib/pgsql/data/*
 
 source ~/.bash_profile
 pip uninstall coverage <<EOC
