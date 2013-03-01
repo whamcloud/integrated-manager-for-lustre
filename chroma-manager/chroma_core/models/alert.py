@@ -114,13 +114,6 @@ class AlertState(models.Model):
                 alert_item_type__app_label = item_class._meta.app_label)
 
     @classmethod
-    def filter_by_item_ids(cls, item_class, item_ids):
-        return cls.objects.filter(active = True,
-                alert_item_id__in = item_ids,
-                alert_item_type__model = item_class.__name__.lower(),
-                alert_item_type__app_label = item_class._meta.app_label)
-
-    @classmethod
     def notify(cls, alert_item, active, **kwargs):
         return cls._notify(alert_item, active, False, **kwargs)
 
