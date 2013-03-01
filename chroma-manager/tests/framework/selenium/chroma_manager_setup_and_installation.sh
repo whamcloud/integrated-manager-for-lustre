@@ -1,6 +1,7 @@
 set -x
 
 CHROMA_MANAGER=${CHROMA_MANAGER:='hydra-2-selenium-chroma-manager-1'}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 
 echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
@@ -46,7 +47,8 @@ cp -r ~/mock_agent/tests/ /usr/share/chroma-manager/tests/
 cp ~/mock_agent/*.json /usr/share/chroma-manager/
 
 rm -f /var/tmp/.coverage*
-echo "
+if $MEASURE_COVERAGE; then
+  echo "
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
@@ -58,6 +60,10 @@ cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
+else
+  # Ensure that coverage is disabled
+  rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*   
+fi
 
 chroma-config setup debug chr0m4_d3bug localhost > /root/chroma_config.log 2>&1
 cat /root/chroma_config.log

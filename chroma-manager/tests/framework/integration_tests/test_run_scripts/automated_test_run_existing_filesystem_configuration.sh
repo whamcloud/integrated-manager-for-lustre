@@ -6,6 +6,7 @@ CLIENT_1=${CLIENT_1:-'hydra-2-lustre-1-8-client'}
 LUSTRE_SERVER_DISTRO=${LUSTRE_SERVER_DISTRO:-'el5'}
 PYTHON_VERSION=${PYTHON_VERSION:-'2.4'}
 TEST_RUNNER=${TEST_RUNNER:-'hydra-2-lustre-1-8-chroma-manager-1'}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 
 echo "Beginning installation and setup..."
 
@@ -48,15 +49,16 @@ echo "compress
     yum install -y --nogpgcheck ~/rpms/chroma-agent-*
 
     rm -f /var/tmp/.coverage*
-    set +e
-    yum install -y python-pip
-    pip-python install --upgrade pip
-    pip-python uninstall coverage <<EOC
+    if $MEASURE_COVERAGE; then
+      set +e
+      yum install -y python-pip
+      pip-python install --upgrade pip
+      pip-python uninstall coverage <<EOC
 y
 EOC
-    pip-python install --force-reinstall http://github.com/kprantis/coverage/tarball/master#egg=coverage
-    set -e
-    echo "
+      pip-python install --force-reinstall http://github.com/kprantis/coverage/tarball/master#egg=coverage
+      set -e
+      echo "
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
@@ -68,6 +70,10 @@ cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 " > /usr/lib/python$PYTHON_VERSION/site-packages/sitecustomize.py
+    else
+        # Ensure that coverage is disabled
+        rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+    fi
     service chroma-agent start < /dev/null > /dev/null
 EOF
 done
@@ -99,7 +105,8 @@ echo "import logging
 LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
 
 rm -f /var/tmp/.coverage*
-echo "
+if $MEASURE_COVERAGE; then
+  echo "
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
@@ -111,6 +118,10 @@ cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
+else
+  # Ensure that coverage is disabled
+  rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+fi
 EOF
 
 ssh $TEST_RUNNER <<EOF
@@ -143,22 +154,24 @@ integration_test_status=$?
 
 echo "End running tests."
 
-scp $TEST_RUNNER:/root/test_report.xml ~/efs/test_reports/
+if $MEASURE_COVERAGE; then
+  scp $TEST_RUNNER:/root/test_report.xml ~/efs/test_reports/
 
-ssh $CHROMA_MANAGER chroma-config stop
-ssh $CHROMA_MANAGER rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+  ssh $CHROMA_MANAGER chroma-config stop
+  ssh $CHROMA_MANAGER rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
 
-for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
-ssh $machine <<"EOC"
-    set -x
-    rm -f /usr/lib/python$PYTHON_VERSION/site-packages/sitecustomize.py*
-    cd /var/tmp/
-    coverage combine
+  for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
+    ssh $machine <<"EOC"
+      set -x
+      rm -f /usr/lib/python$PYTHON_VERSION/site-packages/sitecustomize.py*
+      cd /var/tmp/
+      coverage combine
 EOC
-scp $machine:/var/tmp/.coverage efs/coverage_reports/.coverage.$machine
-done
+    scp $machine:/var/tmp/.coverage efs/coverage_reports/.coverage.$machine
+  done
 
-ssh $CHROMA_MANAGER chroma-config start
+  ssh $CHROMA_MANAGER chroma-config start
+fi
 
 if [ $integration_test_status -ne 0 ]; then
     echo "AUTOMATED TEST RUN FAILED."

@@ -2,9 +2,10 @@
 
 set +x
 
-CHROMA_MANAGER=hydra-2-ss2-chroma-manager-1
-STORAGE_APPLIANCES=(hydra-2-ss2-storage-appliance-1 hydra-2-ss2-storage-appliance-2 hydra-2-ss2-storage-appliance-3 hydra-2-ss2-storage-appliance-4)
-CLIENT_1=hydra-2-ss2-client-1
+CHROMA_MANAGER=${CHROMA_MANAGER:-'hydra-2-ss2-chroma-manager-1'}
+STORAGE_APPLIANCES=${STORAGE_APPLIANCES:-'hydra-2-ss2-storage-appliance-1 hydra-2-ss2-storage-appliance-2 hydra-2-ss2-storage-appliance-3 hydra-2-ss2-storage-appliance-4'}
+CLIENT_1=${CLIENT_1:-'hydra-2-ss2-client-1'}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 
 echo "Beginning installation and setup..."
 
@@ -59,15 +60,16 @@ echo "compress
     yum remove -y chroma-agent*
     yum install -y ~/rpms/chroma-agent-*
     rm -f /var/tmp/.coverage*
-    set +e
-    yum install -y python-pip
-    pip-python install --upgrade pip
-    pip-python uninstall coverage <<EOC
+    if $MEASURE_COVERAGE; then
+      set +e
+      yum install -y python-pip
+      pip-python install --upgrade pip
+      pip-python uninstall coverage <<EOC
 y
 EOC
-    pip-python install --force-reinstall http://github.com/kprantis/coverage/tarball/master#egg=coverage
-    set -e
-    echo "
+      pip-python install --force-reinstall http://github.com/kprantis/coverage/tarball/master#egg=coverage
+      set -e
+      echo "
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
@@ -79,7 +81,11 @@ cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
-    service chroma-agent restart
+    else
+        # Ensure that coverage is disabled
+        rm -f /usr/lib/python2.6/site-packages/sitecustomize.py* 
+    fi
+    service chroma-agent start
 EOF
 done
 
@@ -107,18 +113,23 @@ echo "import logging
 LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
 
 rm -f /var/tmp/.coverage*
-echo "
+if $MEASURE_COVERAGE; then
+  echo "
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
 source = /usr/share/chroma-manager/
 " > /usr/share/chroma-manager/.coveragerc
-echo "import coverage
+  echo "import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 " > /usr/lib/python2.6/site-packages/sitecustomize.py
+else
+    # Ensure that coverage is disabled
+    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py* 
+fi
 EOF
 
 echo "End installation and setup."
@@ -138,19 +149,22 @@ scp $CLIENT_1:~/test_report.xml ss_test_reports/
 
 echo "End running tests."
 
-ssh $CHROMA_MANAGER chroma-config stop
+if $MEASURE_COVERAGE; then
+  ssh $CHROMA_MANAGER chroma-config stop
 
-for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
-ssh $machine <<"EOC"
-    set -x
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-    cd /var/tmp/
-    coverage combine
+  for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
+    ssh $machine <<"EOC"
+      set -x
+      rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+      find / -name ".coverage*"
+      cd /var/tmp/
+      coverage combine
 EOC
-scp $machine:/var/tmp/.coverage ss_coverage_reports/.coverage.$machine
-done
+    scp $machine:/var/tmp/.coverage ss_coverage_reports/.coverage.$machine
+  done
 
-ssh $CHROMA_MANAGER chroma-config start
+  ssh $CHROMA_MANAGER chroma-config start
+fi
 
 if [ $integration_test_status -ne 0 ]; then
     echo "AUTOMATED TEST RUN FAILED"
