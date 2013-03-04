@@ -250,10 +250,10 @@ class FakeServer(Persisted):
 
         return {'label': target['label']}
 
-    def configure_ha(self, device, ha_label, uuid, primary, mount_point):
+    def configure_target_ha(self, primary, device, ha_label, uuid, mount_point):
         self._cluster.configure(self.nodename, device, ha_label, uuid, primary, mount_point)
 
-    def unconfigure_ha(self, ha_label, uuid, primary):
+    def unconfigure_target_ha(self, primary, ha_label, uuid):
         self._cluster.unconfigure(self.nodename, ha_label, primary)
 
     def purge_configuration(self, device, filesystem_name):
