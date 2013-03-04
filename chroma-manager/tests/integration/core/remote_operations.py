@@ -21,10 +21,26 @@ class RemoteOperations(object):
     than going via the chroma manager API.
     """
 
+    def _address2server(self, address):
+        for server in config['lustre_servers']:
+            if server['address'] == address:
+                return server
+
+        raise RuntimeError('Unable to resolve %s as a server fqdn' % address)
+
 
 class SimulatorRemoteOperations(RemoteOperations):
-    def __init__(self, simulator):
+    def __init__(self, test_case, simulator):
+        self._test_case = test_case
         self._simulator = simulator
+
+    def host_contactable(self, address):
+        cfg_server = self._address2server(address)
+        sim_server = self._simulator.servers[cfg_server['fqdn']]
+        if sim_server.running:
+            return not sim_server.starting_up and not sim_server.shutting_down
+        else:
+            return False
 
     def stop_target(self, fqdn, ha_label):
         self._simulator.get_cluster(fqdn).stop(ha_label)
@@ -82,7 +98,25 @@ class SimulatorRemoteOperations(RemoteOperations):
         self._simulator.stop_server(fqdn, shutdown = True)
 
     def await_server_boot(self, boot_fqdn, monitor_fqdn = None, restart = True):
-        self._simulator.start_server(boot_fqdn)
+        server = self._simulator.servers[boot_fqdn]
+        if not server.registered:
+            logger.warn("Can't start %s; not registered" % boot_fqdn)
+            return
+
+        restart_attempted = False
+        running_time = 0
+        while not self.host_contactable(boot_fqdn) and running_time < TEST_TIMEOUT:
+            # Restart signals that a stopped server should be restarted here.
+            # Otherwise, we'll just wait for it to (re-)boot, hoping that this
+            # was initiated elsewhere.
+            if restart and not restart_attempted:
+                restart_attempted = True
+                self._simulator.start_server(boot_fqdn)
+
+            running_time += 1
+            time.sleep(1)
+
+        self._test_case.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for %s to boot" % boot_fqdn)
 
     def unmount_clients(self):
         self._simulator.unmount_lustre_clients()
@@ -279,7 +313,7 @@ class RealRemoteOperations(RemoteOperations):
 
         raise RuntimeError("No server config for %s" % fqdn)
 
-    def _host_contactable(self, address):
+    def host_contactable(self, address):
         try:
             #TODO: Better way to check this?
             self._ssh_address(
@@ -302,7 +336,7 @@ class RealRemoteOperations(RemoteOperations):
         )
 
         i = 0
-        while self._host_contactable(server_config['address']):
+        while self.host_contactable(server_config['address']):
             i += 1
             time.sleep(1)
             if i > TEST_TIMEOUT:
@@ -318,7 +352,7 @@ class RealRemoteOperations(RemoteOperations):
 
         running_time = 0
         while running_time < TEST_TIMEOUT:
-            if self._host_contactable(boot_server['address']):
+            if self.host_contactable(boot_server['address']):
                 # If we have a peer to check then fall through to that, else
                 # drop out here
                 if monitor_server:

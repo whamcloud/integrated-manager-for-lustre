@@ -880,6 +880,88 @@ also be removed without any attempt to unconfigure them. This action should only
 be used if the server is permanently unavailable."""
 
 
+class RebootHostJob(AdvertisedJob):
+    host = models.ForeignKey(ManagedHost)
+
+    requires_confirmation = True
+
+    classes = ['ManagedHost']
+
+    verb = "Reboot"
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host_id': host.id}
+
+    def description(self):
+        return "Initiate a reboot on host %s" % self.host
+
+    def get_deps(self):
+        return DependOn(self.host, 'configured', acceptable_states=self.host.not_states(['removed', 'unconfigured']))
+
+    def get_steps(self):
+        return [(RebootHostStep, {'host': self.host})]
+
+    @classmethod
+    def get_confirmation(cls, instance):
+        return """Initiate a reboot on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has finished rebooting."""
+
+
+class RebootHostStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        self.invoke_agent(host, "reboot_server")
+
+        self.log("Rebooted host %s" % host)
+
+
+class ShutdownHostJob(AdvertisedJob):
+    host = models.ForeignKey(ManagedHost)
+
+    requires_confirmation = True
+
+    classes = ['ManagedHost']
+
+    verb = "Shutdown"
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host_id': host.id}
+
+    def description(self):
+        return "Initiate an orderly shutdown on host %s" % self.host
+
+    def get_deps(self):
+        return DependOn(self.host, 'configured', acceptable_states=self.host.not_states(['removed', 'unconfigured']))
+
+    def get_steps(self):
+        return [(ShutdownHostStep, {'host': self.host})]
+
+    @classmethod
+    def get_confirmation(cls, instance):
+        return """Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted."""
+
+
+class ShutdownHostStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        self.invoke_agent(host, "shutdown_server")
+
+        self.log("Shut down host %s" % host)
+
+
 class RemoveUnconfiguredHostJob(StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'removed')
     stateful_object = 'host'

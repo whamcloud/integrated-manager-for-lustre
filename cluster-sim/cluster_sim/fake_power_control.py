@@ -9,6 +9,7 @@ import json
 import threading
 import sys
 import socket
+import time
 from gevent.server import StreamServer
 from cluster_sim.utils import Persisted
 from cluster_sim.log import log
@@ -27,6 +28,9 @@ WONT_TIMING_MARK = [chr(255), chr(252), chr(6)]
 # 23xx looks pretty clear on OS X
 BASE_PDU_SERVER_PORT = 2300
 PDU_SERVER_ADDRESS = '0.0.0.0'
+
+# on a real PDU, there is a brief pause between off and on when cycled
+OUTLET_CYCLE_TIME = 3
 
 
 class PDUSimulatorServer(ExceptionCatchingThread):
@@ -110,22 +114,19 @@ class PDUSimulator(Persisted):
 
     def set_outlet_on(self, outlet):
         self.toggle_outlet(outlet, True)
+
         if self.poweron_hook:
             self.poweron_hook(outlet)
 
     def set_outlet_off(self, outlet):
         self.toggle_outlet(outlet, False)
+
         if self.poweroff_hook:
             self.poweroff_hook(outlet)
 
     def cycle_outlet(self, outlet):
-        import time
-        from chroma_agent.agent_client import Session
         self.set_outlet_off(outlet)
-        # FIXME: We want to simulate a server reboot, hence the long sleep.
-        # However, we want to return control quickly.  Maybe set a
-        # rebooting_until time which is checked by server_has_power()?
-        time.sleep(Session.POLL_PERIOD * 6)
+        time.sleep(OUTLET_CYCLE_TIME)
         self.set_outlet_on(outlet)
 
 
@@ -521,32 +522,21 @@ class FakePowerControl(Persisted):
         When an outlet has been turned off, checks to see if the associated
         server has lost all powered outlets. If so, the server is stopped.
         """
-        for fqdn, number in self.state['server_outlets'].items():
-            if outlet == number:
-                if not self.server_has_power(fqdn):
-                    log.debug("stopping %s in poweroff_hook" % fqdn)
-                    # TODO: It would be nice to be able to simulate a true
-                    # poweroff, rather than this "nice" shutdown. Since we're
-                    # politely asking the client to stop, we have to wait around
-                    # for the reader's current long-poll session to complete.
-                    # I'm not sure how we'd do it properly, though. Killing
-                    # a thread from another thread is complicated at best,
-                    # and has potentially nasty side-effects like leaked
-                    # resources.
-                    self.stop_server_fn(fqdn, shutdown = True)
+        fqdn = self.state['outlet_servers'][outlet]
+
+        if not self.server_has_power(fqdn):
+            log.debug("stopping %s in poweroff_hook" % fqdn)
+            self.stop_server_fn(fqdn)
 
     def server_poweron_hook(self, outlet):
         """
         When an outlet has been turned on, attempts to start the associated
         server. If the server has already been started, this is a no-op.
         """
-        for fqdn, number in self.state['server_outlets'].items():
-            if outlet == number:
-                try:
-                    log.debug("starting %s in poweron_hook" % fqdn)
-                    self.start_server_fn(fqdn)
-                except AssertionError:
-                    log.debug("%s was already started" % fqdn)
+        fqdn = self.state['outlet_servers'][outlet]
+
+        log.debug("starting %s in poweron_hook" % fqdn)
+        self.start_server_fn(fqdn)
 
     def start_sim_server(self, pdu_name):
         log.debug("starting server for %s" % pdu_name)

@@ -6,9 +6,7 @@
 
 import glob
 import json
-import datetime
 import traceback
-from cluster_sim.fake_controller import FakeController
 import os
 import threading
 import time
@@ -18,6 +16,7 @@ from chroma_agent.agent_client import AgentClient, HttpError, Session
 
 from cluster_sim.utils import Persisted
 from cluster_sim.fake_action_plugins import FakeActionPlugins
+from cluster_sim.fake_controller import FakeController
 from cluster_sim.fake_client import FakeClient
 from cluster_sim.fake_cluster import FakeCluster
 from cluster_sim.fake_devices import FakeDevices
@@ -45,13 +44,12 @@ class ClusterSimulator(Persisted):
 
         self.lustre_clients = {}
         self.devices = FakeDevices(folder)
-        self.power = FakePowerControl(folder, self.start_server, self.stop_server)
+        self.power = FakePowerControl(folder, self.poweron_server, self.poweroff_server)
         self.servers = {}
         self.clusters = {}
         self.controllers = {}
 
         self._load_servers()
-        self._clients = {}
 
     def _get_cluster_for_server(self, server_id):
         cluster_id = server_id / self.state['cluster_size']
@@ -68,10 +66,9 @@ class ClusterSimulator(Persisted):
         for server_conf in glob.glob("%s/fake_server_*.json" % self.folder):
             conf = json.load(open(server_conf))
             self.servers[conf['fqdn']] = FakeServer(
-                conf['id'],
-                self.folder,
-                self.devices,
+                self,
                 self._get_cluster_for_server(conf['id']),
+                conf['id'],
                 conf['fqdn'],
                 conf['nodename'],
                 conf['nids'])
@@ -86,7 +83,7 @@ class ClusterSimulator(Persisted):
 
         log.info("_create_server: %s" % fqdn)
 
-        server = FakeServer(i, self.folder, self.devices, self._get_cluster_for_server(i), fqdn, nodename, nids)
+        server = FakeServer(self, self._get_cluster_for_server(i), i, fqdn, nodename, nids)
         self.servers[fqdn] = server
 
         self.power.add_server(fqdn)
@@ -115,8 +112,8 @@ class ClusterSimulator(Persisted):
         log.info("remove_server %s" % fqdn)
 
         self.stop_server(fqdn, shutdown = True)
-        assert fqdn not in self._clients
         server = self.servers[fqdn]
+        assert not server.agent_is_running
 
         self.devices.remove_presentations(fqdn)
 
@@ -129,8 +126,8 @@ class ClusterSimulator(Persisted):
     def remove_all_servers(self):
         # Ask them all to stop
         for fqdn, server in self.servers.items():
-            if fqdn in self._clients:
-                self._clients[fqdn].stop()
+            if server.agent_is_running:
+                server.shutdown_agent()
 
         # Wait for them to stop and complete removal
         for fqdn in self.servers.keys():
@@ -176,9 +173,9 @@ class ClusterSimulator(Persisted):
     def register(self, fqdn, secret):
         try:
             log.debug("register %s" % fqdn)
-            if fqdn in self._clients:
-                self.stop_server(fqdn)
             server = self.servers[fqdn]
+            if server.agent_is_running:
+                server.shutdown_agent()
             if not self.power.server_has_power(fqdn):
                 log.warning("Not registering %s, none of its PSUs are powered" % fqdn)
                 return
@@ -232,50 +229,38 @@ class ClusterSimulator(Persisted):
 
         return [t.result for t in threads]
 
-    def stop_server(self, fqdn, shutdown = False):
+    def poweroff_server(self, fqdn):
+        self.stop_server(fqdn, shutdown = True, simulate_shutdown = True)
+
+    def poweron_server(self, fqdn):
+        self.start_server(fqdn, simulate_bootup = True)
+
+    def stop_server(self, fqdn, shutdown = False, simulate_shutdown = False):
         """
         :param shutdown: Whether to treat this like a server shutdown (leave the
          HA cluster) rather than just an agent shutdown.
+        :param simulate_shutdown: Whether to simulate a shutdown, delays and all
         """
         log.debug("stop %s" % fqdn)
-        if not fqdn in self._clients:
+        server = self.servers[fqdn]
+        if not server.running:
             log.debug("not running")
             return
 
-        self._clients[fqdn].stop()
-        self._clients[fqdn].join()
-        # Have to join the reader explicitly, normal AgentClient code
-        # skips it because it's slow to join (waits for long-polling GET to complete)
-        self._clients[fqdn].reader.join()
-        if fqdn in self._clients:
-            del self._clients[fqdn]
-
         if shutdown:
-            cluster = self._get_cluster_for_server(self.servers[fqdn].id)
-            cluster.leave(self.servers[fqdn].nodename)
+            server.shutdown(simulate_shutdown)
+        else:
+            server.shutdown_agent()
 
-    def start_server(self, fqdn):
+    def start_server(self, fqdn, simulate_bootup = False):
+        """
+        :param simulate_bootup: Whether to simulate a bootup, delays and all
+        """
         log.debug("start %s" % fqdn)
-        assert fqdn not in self._clients
         server = self.servers[fqdn]
-        if not self.power.server_has_power(fqdn):
-            log.warning("Not starting %s, none of its PSUs are powered" % fqdn)
-            return
-        server.boot_time = datetime.datetime.utcnow()
-        if server.crypto.certificate_file is None:
-            log.warning("Not starting %s, it is not registered" % fqdn)
-            return
-        client = AgentClient(
-            url = self.url + "message/",
-            action_plugins = FakeActionPlugins(server, self),
-            device_plugins = FakeDevicePlugins(server),
-            server_properties = server,
-            crypto = server.crypto)
-        client.start()
-        self._clients[fqdn] = client
-
-        cluster = self._get_cluster_for_server(server.id)
-        cluster.join(self.servers[fqdn].nodename)
+        if server.running and not simulate_bootup:
+            raise RuntimeError("Can't start %s, it is already running" % fqdn)
+        server.startup(simulate_bootup)
 
     def get_lustre_client(self, client_address):
         try:
@@ -291,15 +276,14 @@ class ClusterSimulator(Persisted):
     def stop(self):
         log.debug("stop me")
         log.info("Stopping")
-        for client in self._clients.values():
-            client.stop()
+        for server in self.servers.values():
+            server.stop()
         self.power.stop()
 
     def join(self):
         log.info("Joining...")
-        for client in self._clients.values():
-            client.join()
-        self._clients.clear()
+        for server in self.servers.values():
+            server.join()
         log.info("Joined")
 
     def start_all(self):

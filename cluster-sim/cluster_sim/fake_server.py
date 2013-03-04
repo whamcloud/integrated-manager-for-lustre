@@ -4,14 +4,30 @@
 # ========================================================
 
 
+import time
 import datetime
 import json
 import random
 import uuid
-from chroma_agent.crypto import Crypto
 import os
+import threading
+
+from chroma_agent.crypto import Crypto
+from chroma_agent.agent_client import AgentClient
+
 from cluster_sim.log import log
 from cluster_sim.utils import Persisted, perturb
+from cluster_sim.fake_action_plugins import FakeActionPlugins
+from cluster_sim.fake_device_plugins import FakeDevicePlugins
+
+# Simulated duration, in seconds, from the time a server shutdown is issued
+# until it's stopped. When simulating a shutdown, it will always take at
+# least this long.
+MIN_SHUTDOWN_DURATION = 10
+# Simulated duration, in seconds, from the time a server is started until
+# it's running. When simulating a startup, it will always take at least
+# this long.
+MIN_STARTUP_DURATION = 20
 
 
 class FakeServer(Persisted):
@@ -19,15 +35,17 @@ class FakeServer(Persisted):
     hostname and NIDs, subsequently manages/modifies its own /proc/ etc.
     """
     default_state = {
+        'shutting_down': False,
+        'starting_up': False,
         'lnet_loaded': False,
         'lnet_up': False,
         'stats': None
     }
 
-    def __init__(self, server_id, folder, fake_devices, fake_cluster, fqdn, nodename, nids):
+    def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nids):
         self.fqdn = fqdn
 
-        super(FakeServer, self).__init__(folder)
+        super(FakeServer, self).__init__(simulator.folder)
 
         self.nodename = nodename
         self.nids = nids
@@ -36,12 +54,16 @@ class FakeServer(Persisted):
 
         self.log_rate = 0
         self._log_messages = []
-        self._devices = fake_devices
+        self._simulator = simulator
+        self._devices = simulator.devices
         self._cluster = fake_cluster
+
+        self._lock = threading.Lock()
+        self._agent_client = None
 
         self._cluster.join(nodename, fqdn=fqdn)
 
-        crypto_folder = os.path.join(folder, "%s_crypto" % self.fqdn)
+        crypto_folder = os.path.join(simulator.folder, "%s_crypto" % self.fqdn)
         if not os.path.exists(crypto_folder):
             os.makedirs(crypto_folder)
         self.crypto = Crypto(crypto_folder)
@@ -202,6 +224,199 @@ class FakeServer(Persisted):
     @property
     def filename(self):
         return "fake_server_%s.json" % self.fqdn
+
+    @property
+    def has_power(self):
+        return self._simulator.power.server_has_power(self.fqdn)
+
+    @property
+    def registered(self):
+        try:
+            return self.crypto.certificate_file is not None
+        except AttributeError:
+            return False
+
+    @property
+    def agent_is_running(self):
+        with self._lock:
+            if self._agent_client:
+                return not self._agent_client.stopped.is_set()
+            else:
+                return False
+
+    @property
+    def starting_up(self):
+        with self._lock:
+            return self.state['starting_up']
+
+    @property
+    def shutting_down(self):
+        with self._lock:
+            return self.state['shutting_down']
+
+    @property
+    def running(self):
+        return self.starting_up or self.shutting_down or self.agent_is_running
+
+    def join(self):
+        if self._agent_client:
+            self._agent_client.join()
+
+    def stop(self):
+        if self._agent_client:
+            self._agent_client.stop()
+
+    def shutdown_agent(self):
+        if not self._agent_client:
+            # Already stopped?
+            return
+
+        self._agent_client.stop()
+        self._agent_client.join()
+        # Have to join the reader explicitly, normal AgentClient code
+        # skips it because it's slow to join (waits for long-polling GET
+        # to complete)
+        self._agent_client.reader.join()
+
+        with self._lock:
+            self._agent_client = None
+
+    def start_agent(self):
+        with self._lock:
+            self._agent_client = AgentClient(
+                url = self._simulator.url + "message/",
+                action_plugins = FakeActionPlugins(self, self._simulator),
+                device_plugins = FakeDevicePlugins(self),
+                server_properties = self,
+                crypto = self.crypto)
+        self._agent_client.start()
+
+    def _enter_shutdown(self):
+        with self._lock:
+            self.state['shutting_down'] = True
+            self.save()
+
+    def _exit_shutdown(self):
+        with self._lock:
+            self.state['shutting_down'] = False
+            self.save()
+
+    def shutdown(self, simulate_shutdown = False):
+        """
+        Shutdown the simulated server.
+        :param simulate_shutdown: Simulate a server shutdown, delays and all.
+        """
+        def blocking_shutdown():
+            log.info("%s beginning shutdown" % self.fqdn)
+            self._enter_shutdown()
+
+            shutdown_start_time = datetime.datetime.utcnow()
+            self.shutdown_agent()
+            self._cluster.leave(self.nodename)
+            shutdown_end_time = datetime.datetime.utcnow()
+
+            shutdown_time = (shutdown_end_time - shutdown_start_time).seconds
+            while shutdown_time < MIN_SHUTDOWN_DURATION:
+                if not simulate_shutdown:
+                    break
+
+                remaining_delay = MIN_SHUTDOWN_DURATION - shutdown_time
+                log.info("%s, sleeping for %d seconds on shutdown" % (self.fqdn, remaining_delay))
+
+                shutdown_time += remaining_delay
+                time.sleep(remaining_delay)
+
+            self._exit_shutdown()
+            log.info("%s shutdown complete" % self.fqdn)
+
+        class NonBlockingShutdown(threading.Thread):
+            def run(self):
+                try:
+                    blocking_shutdown()
+                except IOError:
+                    # Sometimes the cluster state dir gets nuked from under
+                    # the thread that's shutting down, which is OK. If there
+                    # are truly IOErrors to worry about, they'll show up
+                    # elsewhere.
+                    pass
+
+        if simulate_shutdown:
+            NonBlockingShutdown().start()
+        else:
+            blocking_shutdown()
+
+    def _enter_startup(self):
+        with self._lock:
+            self.state['starting_up'] = True
+            self.save()
+
+    def _exit_startup(self):
+        with self._lock:
+            self.state['starting_up'] = False
+            self.save()
+
+    def startup(self, simulate_bootup = False):
+        """
+        Start the simulated server.
+        :param simulate_bootup: Simulate a server bootup, delays and all.
+        """
+        if not self.has_power:
+            log.warning("%s can't start; no PSUs have power" % self.fqdn)
+            return
+        if not self.registered:
+            log.warning("%s can't start; not registered" % self.fqdn)
+            return
+
+        def blocking_startup():
+            log.info("%s beginning startup" % self.fqdn)
+
+            startup_time = 0
+            # Mixing shutdown/startup state here is a little weird, but
+            # this only happens when it's explicitly requested by a caller
+            # that wants full server simulation. The end result is that
+            # simulating a reboot is easier if we deal with waiting for
+            # the shutdown to finish here before moving on to startup.
+            while simulate_bootup and self.shutting_down:
+                log.info("%s, waiting for shutdown (%d)" % (self.fqdn, startup_time))
+                startup_time += 1
+                time.sleep(1)
+
+            if self.running:
+                raise RuntimeError("startup() called on running self")
+
+            self._enter_startup()
+            self.boot_time = datetime.datetime.utcnow()
+
+            while startup_time < MIN_STARTUP_DURATION:
+                if not simulate_bootup:
+                    break
+
+                remaining_delay = MIN_STARTUP_DURATION - startup_time
+                log.info("%s, sleeping for %d seconds on boot" % (self.fqdn, remaining_delay))
+
+                startup_time += remaining_delay
+                time.sleep(remaining_delay)
+
+            self.start_agent()
+            self._cluster.join(self.nodename)
+
+            self._exit_startup()
+            log.info("%s startup complete" % self.fqdn)
+
+        class NonBlockingStartup(threading.Thread):
+            def run(self):
+                blocking_startup()
+
+        if simulate_bootup:
+            NonBlockingStartup().start()
+        else:
+            blocking_startup()
+
+    def reboot(self, simulate_reboot = False):
+        if self.running:
+            self.shutdown(simulate_reboot)
+
+        self.startup(simulate_reboot)
 
     def start_lnet(self):
         self.state['lnet_loaded'] = True

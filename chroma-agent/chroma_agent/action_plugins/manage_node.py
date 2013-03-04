@@ -8,6 +8,7 @@ import socket
 import chroma_agent.fence_agent
 from chroma_agent.shell import try_run
 from chroma_agent.log import console_log
+from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 
 
 def _power(node, state):
@@ -28,12 +29,8 @@ def ssi(runlevel):
     try_run(["init", runlevel])
 
 
-def shutdown():
-    ssi("0")
-
-
 def fail_node():
-    shutdown()
+    ssi("0")
 
 
 def stonith(node):
@@ -48,4 +45,24 @@ def stonith(node):
     agent(node).fence()
 
 
-ACTIONS = [fail_node, stonith]
+def shutdown_server(halt = True, at_time = "now"):
+    def _shutdown():
+        from chroma_agent.shell import try_run
+        console_log.info("Initiating server shutdown per manager request")
+        # This will initiate a "nice" shutdown with a wall from root, etc.
+        try_run(["shutdown", "-H" if halt else "-h", at_time])
+
+    raise CallbackAfterResponse(None, _shutdown)
+
+
+def reboot_server(at_time = "now"):
+    def _reboot():
+        from chroma_agent.shell import try_run
+        console_log.info("Initiating server reboot per manager request")
+        # reboot(8) just calls shutdown anyhow.
+        try_run(["shutdown", "-r", at_time])
+
+    raise CallbackAfterResponse(None, _reboot)
+
+
+ACTIONS = [reboot_server, shutdown_server, fail_node, stonith]

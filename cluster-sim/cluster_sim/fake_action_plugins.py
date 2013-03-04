@@ -67,6 +67,21 @@ class FakeActionPlugins():
                     StopServer().start()
 
                 raise CallbackAfterResponse(None, kill)
+            elif cmd == 'shutdown_server':
+                server = self._server
+
+                def _shutdown():
+                    server.shutdown(simulate_shutdown = True)
+
+                raise CallbackAfterResponse(None, _shutdown)
+            elif cmd == 'reboot_server':
+                server = self._server
+
+                def _reboot():
+                    server.shutdown(simulate_shutdown = True)
+                    server.startup(simulate_bootup = True)
+
+                raise CallbackAfterResponse(None, _reboot)
             elif cmd == 'unconfigure_ntp':
                 return
             elif cmd == 'unconfigure_rsyslog':

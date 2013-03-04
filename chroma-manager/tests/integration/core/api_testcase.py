@@ -52,8 +52,9 @@ class ApiTestCase(UtilityTestCase):
             SIMULATOR_CLUSTER_SIZE = 4
             self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
             self.simulator.setup(SIMULATOR_SERVER_COUNT, SIMULATOR_VOLUME_COUNT,
-                                 SIMULATOR_NID_COUNT, SIMULATOR_CLUSTER_SIZE, SIMULATOR_SERVER_PSU_COUNT)
-            self.remote_operations = SimulatorRemoteOperations(self.simulator)
+                                 SIMULATOR_NID_COUNT, SIMULATOR_CLUSTER_SIZE,
+                                 SIMULATOR_SERVER_PSU_COUNT)
+            self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
         else:
             self.remote_operations = RealRemoteOperations(self)
 
@@ -76,7 +77,7 @@ class ApiTestCase(UtilityTestCase):
         # Check that all servers are up and available after the test
         down_nodes = []
         for server in config['lustre_servers']:
-            if not self.remote_operations._host_contactable(server['fqdn']):
+            if not self.remote_operations.host_contactable(server['fqdn']):
                 down_nodes.append(server['fqdn'])
 
         if len(down_nodes):
