@@ -41,7 +41,7 @@ class LogResource(ModelResource):
 substrings which may be used to decorate the `message` attribute by adding hyperlinks.  Each substitution \
 has `start`, `end`, `label` and `resource_uri` attributes.""")
 
-    message_class = fields.CharField(help_text = "Unicode string.  One of %s" % MessageClass.strings())
+    message_class = fields.CharField(attribute = 'message_class', help_text = "Unicode string.  One of %s" % MessageClass.strings())
 
     def dehydrate_substitutions(self, bundle):
         return self._substitutions(bundle.obj)
