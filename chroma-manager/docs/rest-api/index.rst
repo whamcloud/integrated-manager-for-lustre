@@ -430,4 +430,6 @@ Intel and the Intel logo are trademarks of Intel Corporation in the U.S. and/or 
 
 \* Other names and brands may be claimed as the property of others.
 
+This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
+
 Copyright |copy| 2012-2013 Intel Corporation. All rights reserved.
