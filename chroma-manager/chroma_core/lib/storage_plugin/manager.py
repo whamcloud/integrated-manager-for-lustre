@@ -8,6 +8,9 @@
 access to StoragePlugins and their StorageResources"""
 import sys
 import traceback
+
+from django.conf import settings
+
 from chroma_core.lib.storage_plugin.api import relations
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource, BaseScannableResource, ResourceProgrammingError
 
@@ -24,6 +27,21 @@ class PluginNotFound(Exception):
 
 
 class PluginProgrammingError(Exception):
+    pass
+
+
+class VersionMismatchError(PluginProgrammingError):
+    """Raised when a plugin is loaded that declares a different version.
+
+    The version requested by the plugin is saved to the Error.
+    """
+
+    def __init__(self, version):
+        self.version = version
+
+
+class VersionNotFoundError(PluginProgrammingError):
+    """Raised when a plugin doesn't declare a version attribute."""
     pass
 
 
@@ -93,9 +111,9 @@ class StoragePluginManager(object):
         for plugin in INSTALLED_STORAGE_PLUGINS:
             try:
                 self.load_plugin(plugin)
-            except (ImportError, SyntaxError, ResourceProgrammingError, PluginProgrammingError):
+            except (ImportError, SyntaxError, ResourceProgrammingError, PluginProgrammingError), e:
                 storage_plugin_log.error("Failed to load plugin '%s': %s" % (plugin, traceback.format_exc()))
-                self.errored_plugins.append(plugin)
+                self.errored_plugins.append((plugin, e))
 
         for id, klass in self.resource_class_id_to_class.items():
             klass._meta.relations = list(klass._meta.orig_relations)
@@ -136,7 +154,7 @@ class StoragePluginManager(object):
         return self.loaded_plugins.keys()
 
     def get_errored_plugins(self):
-        return self.errored_plugins
+        return [e[0] for e in self.errored_plugins]
 
     def get_resource_class_id(self, klass):
         try:
@@ -220,6 +238,17 @@ class StoragePluginManager(object):
             self.load_plugin(module)
         except ResourceProgrammingError, e:
             errors.append(e.__str__())
+        except VersionNotFoundError, e:
+            errors.append("Add version=<int> to your plugin module. Consult "
+                          "Comand Center documentation for API version "
+                          "supported.")
+        except VersionMismatchError, e:
+            plugin_version = e.version
+            command_center_version = settings.STORAGE_API_VERSION
+            errors.append("The plugin declares version %s. "
+                          "However, this Command Center version supports "
+                          "version %s of the Plugin API." % (plugin_version,
+                                                     command_center_version))
         except PluginProgrammingError, e:
             errors.append(e.__str__())
         except SyntaxError, e:
@@ -228,6 +257,15 @@ class StoragePluginManager(object):
             errors.append(e.__str__())
 
         return errors
+
+    def _validate_api_version(self, module):
+
+        if not hasattr(module, 'version'):
+            raise VersionNotFoundError()
+
+        if (type(module.version) != int or
+            settings.STORAGE_API_VERSION != module.version):
+            raise VersionMismatchError(module.version)
 
     def _load_plugin(self, module, module_name, plugin_klass):
         storage_plugin_log.debug("_load_plugin %s %s" % (module_name, plugin_klass))
@@ -241,6 +279,7 @@ class StoragePluginManager(object):
            returns, caller is responsible for instantiating it.
 
            @return A subclass of BaseStoragePlugin"""
+
         if module in self.loaded_plugins:
             raise PluginProgrammingError("Duplicate storage plugin module %s" % module)
 
@@ -256,11 +295,14 @@ class StoragePluginManager(object):
                 raise
 
         components = module.split('.')
+
         plugin_name = module
         for comp in components[1:]:
             mod = getattr(mod, comp)
             plugin_name = comp
         plugin_module = mod
+
+        self._validate_api_version(plugin_module)
 
         # Find all BaseStoragePlugin subclasses in the module
         from chroma_core.lib.storage_plugin.api.plugin import Plugin

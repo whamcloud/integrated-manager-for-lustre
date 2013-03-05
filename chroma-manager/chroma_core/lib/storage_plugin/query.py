@@ -105,7 +105,7 @@ class ResourceQuery(object):
                 return self._pk_to_resource[record.pk]
 
         plugin_module = record.resource_class.storage_plugin.module_name
-        if plugin_module in self._errored_plugins:
+        if plugin_module in [e for e in self._errored_plugins]:
             return None
 
         resource = record.to_resource()

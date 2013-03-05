@@ -9,6 +9,8 @@ from chroma_core.lib.storage_plugin.api.identifiers import ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
+version = 1
+
 
 class NetworkInterface(resources.Resource):
     class Meta:

@@ -1,5 +1,7 @@
 from chroma_core.lib.storage_plugin.api import attributes, identifiers, plugin, relations, resources, statistics
 
+version = 1
+
 
 class Couplet(resources.ScannableResource):
     class Meta:

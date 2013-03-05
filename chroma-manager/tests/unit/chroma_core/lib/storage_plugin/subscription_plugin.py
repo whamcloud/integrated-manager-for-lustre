@@ -4,6 +4,8 @@ from chroma_core.lib.storage_plugin.api.plugin import Plugin
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api import relations
 
+version = 1
+
 
 class Controller(resources.ScannableResource):
     class Meta:

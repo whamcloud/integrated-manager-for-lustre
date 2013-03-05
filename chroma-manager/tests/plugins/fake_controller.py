@@ -6,6 +6,8 @@ from chroma_core.lib.storage_plugin.api import statistics
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api import relations
 
+version = 1
+
 
 def crypt(password):
     return password.upper()

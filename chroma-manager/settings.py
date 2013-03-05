@@ -251,6 +251,8 @@ EMAIL_SENDER = "noreply@%s" % socket.getfqdn()
 _plugins_path = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'chroma_core', 'plugins')
 sys.path.append(_plugins_path)
 INSTALLED_STORAGE_PLUGINS = ["linux", "linux_network"]
+STORAGE_API_VERSION = 1
+
 #: Whether to enable debug-level logging across chroma_core.lib.storage_plugin
 STORAGE_PLUGIN_DEBUG = DEBUG
 #: List of plugins to enable debug-level logging for

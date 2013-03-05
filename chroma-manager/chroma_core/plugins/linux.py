@@ -16,6 +16,8 @@ from chroma_core.models import ManagedHost
 from settings import SERIAL_PREFERENCE
 import re
 
+version = 1
+
 
 class PluginAgentResources(resources.Resource, HostsideResource):
     class Meta:

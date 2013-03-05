@@ -18,6 +18,7 @@ class Command(BaseCommand):
         filename = args[0]
         if not os.path.exists(filename):
             raise CommandError('File not found %s' % filename)
+        filename = os.path.abspath(filename)
 
         parts = filename.strip(os.path.sep).split(os.path.sep)
         module_dir = os.path.sep + os.path.join(*parts[0:-1])

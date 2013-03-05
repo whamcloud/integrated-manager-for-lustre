@@ -46,6 +46,16 @@ a physical disk affects the health of its pool, and the health of a pool affects
 in that pool.  These relationships allow the effects of issues to be traced all the 
 way up to the Lustre file system level and an appropriate drill-down user interface to be provided.
 
+The API may change over time.  To ensure plugins are able to run against a particular
+version of the API, each plugin module must declare the version of the API it intends to use.
+The Command Center will check the version of each plugin when loading and write a message to
+the log if there is a problem.  The Command Center supports version |api_version| of the API.
+The plugin needs to declare the version in the top level module file where the
+plugins and resources are defined.  Note, that if you have Python errors that prevent the plugin module
+from importing, the version is not checked.  The version is only validated on cleanly imported plugins.
+See the example plugin below for details on how to specify the version in your plugins.
+
+
 Terminology
 ~~~~~~~~~~~
 
