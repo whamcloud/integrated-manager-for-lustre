@@ -367,8 +367,9 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
 def _get_nvpairid_from_xml(xml_string):
     import xml.etree.ElementTree as et
     doc = et.fromstring(xml_string)
-    node = doc.find('instance_attributes/nvpair[@name="target"]')
-    return node.get('value')
+    nodes = doc.findall('instance_attributes/nvpair')
+    node = [x for x in nodes if x.attrib.get('name') == 'target']
+    return node[0].get('value')
 
 
 def _query_ha_targets():
