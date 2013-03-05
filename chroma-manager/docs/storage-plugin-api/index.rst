@@ -104,7 +104,7 @@ Statistics
 ~~~~~~~~~~
 
 The ``temperature`` attribute of the HardDrive class is an example of
-a resource statistic.  Resource statistics differ from resource
+a resource statistic. Resource statistics differ from resource
 attributes in the way they are presented to the user.  See :ref:`storage_plugin_statistic_classes`
 for more on statistics.
 
