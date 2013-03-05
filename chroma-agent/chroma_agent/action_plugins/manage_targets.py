@@ -12,7 +12,6 @@ import tempfile
 from chroma_agent.log import daemon_log, console_log
 from chroma_agent.store import AgentStore
 from chroma_agent import shell
-from chroma_agent.action_plugins.manage_corosync import cibadmin
 
 
 def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
@@ -275,6 +274,8 @@ def register_target(mount_point, device):
 
 
 def unconfigure_target_ha(primary, ha_label, uuid):
+    from chroma_agent.action_plugins.manage_corosync import cibadmin
+
     if get_resource_location(ha_label):
         raise RuntimeError("cannot unconfigure-ha: %s is still running " %
                            ha_label)
@@ -301,6 +302,8 @@ def unconfigure_target_ha(primary, ha_label, uuid):
 
 
 def configure_target_ha(primary, device, ha_label, uuid, mount_point):
+    from chroma_agent.action_plugins.manage_corosync import cibadmin
+
     if primary:
         # If the target already exists with the same params, skip.
         # If it already exists with different params, that is an error
