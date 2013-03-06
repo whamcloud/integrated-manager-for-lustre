@@ -10,7 +10,7 @@ from tests.utils.http_requests import AuthorizedHttpRequests
 
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.utility_testcase import UtilityTestCase
-from tests.integration.core.remote_operations import  SimulatorRemoteOperations, RealRemoteOperations
+from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
 
 
 logger = logging.getLogger('test')
@@ -72,7 +72,9 @@ class ApiTestCase(UtilityTestCase):
             # Reset the manager via the API
             self.remote_operations.unmount_clients()
             self.api_force_clear()
-            self.remote_operations.clear_ha()
+            # this requires that pacemaker be up which it no longer is until a
+            # host is added
+            #self.remote_operations.clear_ha()
 
     def _check_for_down_servers(self):
         # Check that all servers are up and available after the test

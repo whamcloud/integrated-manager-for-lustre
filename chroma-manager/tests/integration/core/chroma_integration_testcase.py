@@ -112,13 +112,15 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.add_hosts([config['lustre_servers'][0]['address']])
 
         ha_volumes = self.get_usable_volumes()
+        # TODO: if there are not enough real disks, loopback mounted block
+        #       devices could be used
         self.assertGreaterEqual(len(ha_volumes), 3)
 
         mgt_volume = ha_volumes[0]
         mdt_volume = ha_volumes[1]
         ost_volumes = [ha_volumes[2]]
         return self.create_filesystem(
-                {
+            {
                 'name': name,
                 'mgt': {'volume_id': mgt_volume['id']},
                 'mdt': {
