@@ -1,169 +1,257 @@
 #!/bin/sh -e
 
-set +x
+set -x
 
-CHROMA_MANAGER=${CHROMA_MANAGER:-'hydra-2-ss2-chroma-manager-1'}
-STORAGE_APPLIANCES=${STORAGE_APPLIANCES:-'hydra-2-ss2-storage-appliance-1 hydra-2-ss2-storage-appliance-2 hydra-2-ss2-storage-appliance-3 hydra-2-ss2-storage-appliance-4'}
-CLIENT_1=${CLIENT_1:-'hydra-2-ss2-client-1'}
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+[ -r localenv ] && . localenv
+
+# Remove test results and coverate reports from previous run
+rm -rfv ~/ss/test_reports/*
+rm -rfv ~/ss/coverage_reports/.coverage*
+mkdir -p ~/ss/test_reports
+mkdir -p ~/ss/coverage_reports
+
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"`ls ~/ss/shared_storage_configuration_cluster_cfg.json`"}
+CHROMA_DIR=${CHROMA_DIR:-$PWD}
+set +x
+CHROMA_REPO=${CHROMA_REPO:-"https://jenkins-pull:Aitahd9u@build.whamcloudlabs.com/job/chroma/lastSuccessfulBuild/arch=x86_64%2Cdistro=el6/artifact/chroma-dependencies/repo/"}
+
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+
+set -x
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
 echo "Beginning installation and setup..."
 
-# Remove all old rpms from previous run
-for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1; do
-    ssh $machine "rm -rvf ~/rpms/*"
-done
+# Configure repos on test nodes
+trap "pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) 'rm -rf /etc/yum.repos.d
+mv /etc/yum.repos.d{.bak,}' | dshbak -c" EXIT
 
-# Remove test results and coverate reports from previous run
-rm -rfv ~/ss_test_reports/*
-rm -rfv ~/ss_coverage_reports/.coverage*
-mkdir -p ss_test_reports
-mkdir -p ss_coverage_reports
+set +x
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) "
+mv /etc/yum.repos.d{,.bak}
+mkdir /etc/yum.repos.d/
+cat <<\"EOF1\" > /etc/yum.repos.d/test-run.repo
+[chroma-jenkins]
+name=chroma-jenkins
+baseurl=$CHROMA_REPO
+gpgcheck=0
+sslverify=0
+enable=1
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-WhamOS-6
 
-# Copy rpms to each of the machines
-scp $(ls ~/ss_rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager-*| grep -v integration-tests) $CHROMA_MANAGER:~/rpms/
-scp ss_requirements/requirements.txt $CHROMA_MANAGER:~/requirements.txt
-scp ss_requirements/requirements.txt $CLIENT_1:~/requirements.txt
-scp ~/ss_rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager-integration-tests* $CLIENT_1:~/rpms/
-for storage_appliance in ${STORAGE_APPLIANCES[@]}; do
-    scp ~/ss_rpms/arch\=x86_64\,distro\=el6/dist/chroma-agent-* $storage_appliance:~/rpms/
-done
+# CentOS-Base.repo
+#
+# The mirror system uses the connecting IP address of the client and the
+# update status of each mirror to pick mirrors that are updated to and
+# geographically close to the client.  You should use this for CentOS updates
+# unless you are manually picking other mirrors.
+#
+# If the mirrorlist= does not work for you, as a fall back you can try the
+# remarked out baseurl= line instead.
+#
+#
+
+[base]
+name=CentOS-\$releasever - Base
+mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=os
+#baseurl=http://mirror.centos.org/centos/\$releasever/os/\$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#released updates
+[updates]
+name=CentOS-\$releasever - Updates
+mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=updates
+#baseurl=http://mirror.centos.org/centos/\$releasever/updates/\$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#additional packages that may be useful
+[extras]
+name=CentOS-\$releasever - Extras
+mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=extras
+#baseurl=http://mirror.centos.org/centos/\$releasever/extras/\$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#additional packages that extend functionality of existing packages
+[centosplus]
+name=CentOS-\$releasever - Plus
+mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=centosplus
+#baseurl=http://mirror.centos.org/centos/\$releasever/centosplus/\$basearch/
+gpgcheck=1
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+#contrib - packages by Centos Users
+[contrib]
+name=CentOS-\$releasever - Contrib
+mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=contrib
+#baseurl=http://mirror.centos.org/centos/\$releasever/contrib/\$basearch/
+gpgcheck=1
+enabled=0
+EOF1
+$PROXY yum clean all
+$PROXY yum -y install pdsh" | dshbak -c
+set -x
 
 # Install and setup integration tests on integration test runner
+scp $CLUSTER_CONFIG $CLIENT_1:/root/cluster_cfg.json
 ssh $CLIENT_1 <<EOF
-cd /usr/share/chroma-manager/
-nosetests --verbosity=2 tests/integration/utils/full_cluster_reset.py --tc-format=json --tc-file=/root/shared_storage_configuration_cluster_cfg.json
+$PROXY yum -y install python-requests python-{nose-testconfig,paramiko,django}
+cd /usr/share/chroma-manager
+unset http_proxy; unset https_proxy
+nosetests --verbosity=2 tests/integration/utils/full_cluster_reset.py --tc-format=json --tc-file=/root/cluster_cfg.json
 cd
-yum remove -y chroma-manager*
+$PROXY yum remove -y chroma-manager*
 rm -rf /usr/share/chroma-manager/
-pip install --force-reinstall -r ~/requirements.txt
 logrotate -fv /etc/logrotate.d/syslog
 rm -f /var/log/chroma_test.log
-yum install -y ~/rpms/chroma-manager-integration-tests*
+$PROXY yum install -y chroma-manager-integration-tests
 EOF
 
 # Install and setup chroma software storage appliances
-for storage_appliance in ${STORAGE_APPLIANCES[@]}; do
-    ssh $storage_appliance <<EOF
-    service chroma-agent stop
-echo "compress
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "service chroma-agent stop
+cat <<\"EOF\"  > /etc/logrotate.d/chroma-agent
+compress
 
 /var/log/chroma*.log {
         missingok
         rotate 10
         nocreate
         size=10M
-}" > /etc/logrotate.d/chroma-agent
-    logrotate -fv /etc/logrotate.d/chroma-agent
-    logrotate -fv /etc/logrotate.d/syslog
-    set -xe
-    yum remove -y chroma-agent*
-    yum install -y ~/rpms/chroma-agent-*
-    rm -f /var/tmp/.coverage*
-    if $MEASURE_COVERAGE; then
-      set +e
-      yum install -y python-pip
-      pip-python install --upgrade pip
-      pip-python uninstall coverage <<EOC
-y
-EOC
-      pip-python install --force-reinstall http://github.com/kprantis/coverage/tarball/master#egg=coverage
-      set -e
-      echo "
+}
+EOF
+logrotate -fv /etc/logrotate.d/chroma-agent
+logrotate -fv /etc/logrotate.d/syslog
+
+set -xe
+$PROXY yum remove -y chroma-agent*
+$PROXY yum install -y chroma-agent-management
+rm -f /var/tmp/.coverage*
+if $MEASURE_COVERAGE; then
+    $PROXY yum install -y python-coverage
+    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
 source = /usr/lib/python2.6/site-packages/chroma_agent/
-" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
-    echo "import coverage
+EOF
+    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+import coverage
 cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
-" > /usr/lib/python2.6/site-packages/sitecustomize.py
-    else
-        # Ensure that coverage is disabled
-        rm -f /usr/lib/python2.6/site-packages/sitecustomize.py* 
-    fi
-    service chroma-agent start
 EOF
+else
+    # Ensure that coverage is disabled
+    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+fi
+
+# could have installed a new kernel, so see if we need a reboot
+default_kernel=\"\$(grubby --default-kernel | sed -e 's/^.*vmlinuz-//')\"
+if [ -z \"\$default_kernel\" ]; then
+    echo \"failed to determine default kernel\"
+    exit 1
+fi
+if [ \"\$default_kernel\" != \"\$(uname -r)\" ]; then
+    sync
+    sync
+    init 6
+fi" 2>&1 | dshbak -c
+
+# give nodes shutting down time to be down
+sleep 5
+
+# wait for any rebooted nodes
+nodes="${STORAGE_APPLIANCES[@]}"
+while [ -n "$nodes" ]; do
+    for node in $nodes; do
+        if ssh $node id; then
+            nodes=$(echo "$nodes" | sed -e "s/$node//" -e 's/^ *//' -e 's/ *$//')
+        fi
+    done
+    sleep 1
 done
 
 # Install and setup chroma manager
 ssh $CHROMA_MANAGER <<"EOF"
 chroma-config stop
-rm -f /var/run/chroma*
+$PROXY yum remove -y chroma-manager*
+service postgresql stop
+rm -fr /var/lib/pgsql/data/*
+
 logrotate -fv /etc/logrotate.d/chroma-manager
 logrotate -fv /etc/logrotate.d/syslog
 logrotate -fv /etc/logrotate.d/rabbitmq-server
 
-yum remove -y chroma-manager*
-rm -rf /usr/share/chroma-manager/
-echo "drop database chroma; create database chroma;" | mysql -u root
-service postgresql stop
-rm -fr /var/lib/pgsql/data/*
+$PROXY yum install -y chroma-manager
 
-pip uninstall coverage <<EOC
-y
-EOC
-pip install --force-reinstall -r ~/requirements.txt
-yum install -y ~/rpms/chroma-manager-*
-
-echo "import logging 
-LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
+cat <<"EOF1" > /usr/share/chroma-manager/local_settings.py
+import logging
+LOG_LEVEL = logging.DEBUG
+EOF1
 
 rm -f /var/tmp/.coverage*
 if $MEASURE_COVERAGE; then
-  echo "
+    $PROXY yum install -y python-coverage
+    cat <<"EOF1" > /usr/share/chroma-manager/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
 source = /usr/share/chroma-manager/
-" > /usr/share/chroma-manager/.coveragerc
-  echo "import coverage
+EOF1
+    cat <<"EOF1" > /usr/lib/python2.6/site-packages/sitecustomize.py
+import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
-" > /usr/lib/python2.6/site-packages/sitecustomize.py
+EOF1
 else
     # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py* 
+    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
 fi
 EOF
 
 echo "End installation and setup."
-echo "Begin running tests..."
 
 set +e
 set -x
 
+echo "Begin running tests..."
+
 ssh $CLIENT_1 <<EOF
 rm -f /root/test_report.xml
 cd /usr/share/chroma-manager/
-./tests/integration/run_tests -f -c ~/shared_storage_configuration_cluster_cfg.json -x ~/test_report.xml tests/integration/shared_storage_configuration/
+unset http_proxy; unset https_proxy
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS
 EOF
 integration_test_status=$?
 
-scp $CLIENT_1:~/test_report.xml ss_test_reports/
-
 echo "End running tests."
+echo "Collecting logs and reports..."
+
+scp $CLIENT_1:~/test_report.xml ~/ss/test_reports/
 
 if $MEASURE_COVERAGE; then
-  ssh $CHROMA_MANAGER chroma-config stop
+    ssh $CHROMA_MANAGER chroma-config stop
 
-  for machine in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
-    ssh $machine <<"EOC"
-      set -x
+    pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "set -x
       rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-      find / -name ".coverage*"
       cd /var/tmp/
-      coverage combine
-EOC
-    scp $machine:/var/tmp/.coverage ss_coverage_reports/.coverage.$machine
-  done
+      coverage combine" | dshbak -c
 
-  ssh $CHROMA_MANAGER chroma-config start
+    rpdcp -l root -R ssh -w $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} /var/tmp/.coverage ~/ss/coverage_reports/
+
+    ssh $CHROMA_MANAGER chroma-config start
 fi
 
 if [ $integration_test_status -ne 0 ]; then

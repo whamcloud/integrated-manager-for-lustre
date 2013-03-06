@@ -42,7 +42,7 @@ class ChromaLogCollector(object):
 
     def fetch_log(self, source_address, source_log_path, destination_log_filename):
         #print "Fetching %s from %s to %s/%s" % (source_log_path, source_address, self.destination_path, destination_log_filename)
-        subprocess.check_call(['scp', "%s:%s" % (source_address, source_log_path), "%s/%s" % (self.destination_path, destination_log_filename)])
+        subprocess.call(['scp', "%s:%s" % (source_address, source_log_path), "%s/%s" % (self.destination_path, destination_log_filename)])
 
     def fetch_pacemaker_configuration(self, lustre_server):
         # Only attempt to fetch if pacemaker exists on the lustre server
