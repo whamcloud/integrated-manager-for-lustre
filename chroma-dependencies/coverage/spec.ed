@@ -1,0 +1,21 @@
+/^Release:/s/^\(.*\)\(%{?dist}\)$/\1.wc1\2/
+/BuildRequires: /i
+Patch10001:	patches/0001-simplified-trace-function-force-its-use.patch
+Patch10002:	patches/0002-show-version-with-newer-patch-level.patch
+Patch10003:	patches/0003-Add-ability-to-silence-warnings-on-unimported-source.patch
+Patch10004:	patches/0004-Update-patch-version.patch
+.
+/find . -type f -exec chmod 0644/
+-1i
+%patch10001 -p1
+%patch10002 -p1
+%patch10003 -p1
+%patch10004 -p1
+.
+/^%changelog/a
+* Thu Mar 07 2013 Brian J. Murrell <brian.murrell@intel.com> - 3.5.3-2.wc1
+- Repackage
+  - apply patches from Kelsey's Github clone
+    - https://github.com/kprantis/coverage
+
+.

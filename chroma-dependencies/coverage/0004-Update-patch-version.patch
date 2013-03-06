@@ -1,0 +1,25 @@
+From 2a95d7779bea8986da98e54db49d1832dd3facf8 Mon Sep 17 00:00:00 2001
+From: Kelsey Prantis <kelsey.prantis@intel.com>
+Date: Thu, 28 Feb 2013 12:00:43 -0800
+Subject: [PATCH 4/4] Update patch version.
+
+---
+ coverage/__init__.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/coverage/__init__.py b/coverage/__init__.py
+index 7cf890c..f13e8b1 100644
+--- a/coverage/__init__.py
++++ b/coverage/__init__.py
+@@ -5,7 +5,7 @@ http://nedbatchelder.com/code/coverage
+ 
+ """
+ 
+-__version__ = "3.5.3p1"     # see detailed history in CHANGES.txt
++__version__ = "3.5.3p2"     # see detailed history in CHANGES.txt
+ 
+ __url__ = "http://nedbatchelder.com/code/coverage"
+ if max(__version__).isalpha():
+-- 
+1.8.1.4
+

@@ -1,0 +1,137 @@
+From 2fa6300e1ce8d01c959de2253ac1c8452bd1d5da Mon Sep 17 00:00:00 2001
+From: Jonathan Newbrough <jonathan.newbrough@gyregroup.com>
+Date: Tue, 24 Jul 2012 12:24:32 -0700
+Subject: [PATCH 1/4] simplified trace function, force its use
+
+---
+ coverage/collector.py | 99 ++++++++++++++++-----------------------------------
+ 1 file changed, 31 insertions(+), 68 deletions(-)
+
+diff --git a/coverage/collector.py b/coverage/collector.py
+index 3fdedaa..f156617 100644
+--- a/coverage/collector.py
++++ b/coverage/collector.py
+@@ -51,65 +51,8 @@ class PyTracer(object):
+         self.last_exc_back = None
+         self.last_exc_firstlineno = 0
+         self.arcs = False
+-
+-    def _trace(self, frame, event, arg_unused):
+-        """The trace function passed to sys.settrace."""
+-
+-        #print("trace event: %s %r @%d" % (
+-        #           event, frame.f_code.co_filename, frame.f_lineno),
+-        #      file=sys.stderr)
+-
+-        if self.last_exc_back:
+-            if frame == self.last_exc_back:
+-                # Someone forgot a return event.
+-                if self.arcs and self.cur_file_data:
+-                    pair = (self.last_line, -self.last_exc_firstlineno)
+-                    self.cur_file_data[pair] = None
+-                self.cur_file_data, self.last_line = self.data_stack.pop()
+-            self.last_exc_back = None
+-
+-        if event == 'call':
+-            # Entering a new function context.  Decide if we should trace
+-            # in this file.
+-            self.data_stack.append((self.cur_file_data, self.last_line))
+-            filename = frame.f_code.co_filename
+-            tracename = self.should_trace_cache.get(filename)
+-            if tracename is None:
+-                tracename = self.should_trace(filename, frame)
+-                self.should_trace_cache[filename] = tracename
+-            #print("called, stack is %d deep, tracename is %r" % (
+-            #               len(self.data_stack), tracename))
+-            if tracename:
+-                if tracename not in self.data:
+-                    self.data[tracename] = {}
+-                self.cur_file_data = self.data[tracename]
+-            else:
+-                self.cur_file_data = None
+-            # Set the last_line to -1 because the next arc will be entering a
+-            # code block, indicated by (-1, n).
+-            self.last_line = -1
+-        elif event == 'line':
+-            # Record an executed line.
+-            if self.cur_file_data is not None:
+-                if self.arcs:
+-                    #print("lin", self.last_line, frame.f_lineno)
+-                    self.cur_file_data[(self.last_line, frame.f_lineno)] = None
+-                else:
+-                    #print("lin", frame.f_lineno)
+-                    self.cur_file_data[frame.f_lineno] = None
+-            self.last_line = frame.f_lineno
+-        elif event == 'return':
+-            if self.arcs and self.cur_file_data:
+-                first = frame.f_code.co_firstlineno
+-                self.cur_file_data[(self.last_line, -first)] = None
+-            # Leaving this function, pop the filename stack.
+-            self.cur_file_data, self.last_line = self.data_stack.pop()
+-            #print("returned, stack is %d deep" % (len(self.data_stack)))
+-        elif event == 'exception':
+-            #print("exc", self.last_line, frame.f_lineno)
+-            self.last_exc_back = frame.f_back
+-            self.last_exc_firstlineno = frame.f_code.co_firstlineno
+-        return self._trace
++        self.previous_file = None
++        self.previous_covered_lines = None
+ 
+     def start(self):
+         """Start this Tracer.
+@@ -120,12 +63,36 @@ class PyTracer(object):
+         sys.settrace(self._trace)
+         return self._trace
+ 
++    def _get_covered_lines(self, frame):
++        filename = frame.f_code.co_filename
++        if filename==self.previous_file:
++            return self.previous_covered_lines
++        self.previous_file = filename
++        tracename = self.should_trace_cache.get(filename)
++        if tracename is None:
++            tracename = self.should_trace(filename, frame)
++            self.should_trace_cache[filename] = tracename
++        if tracename:
++            if tracename not in self.data:
++                self.data[tracename] = {}
++            self.previous_covered_lines = self.data[tracename]
++        else:
++            self.previous_covered_lines = None
++        return self.previous_covered_lines
++
++    def _trace(self, frame, event, arg_unused):
++        if event=='line':
++            covered_lines = self._get_covered_lines(frame)
++            if covered_lines is not None:
++                covered_lines[frame.f_lineno] = None
++        return self._trace
++
+     def stop(self):
+         """Stop this Tracer."""
+-        if hasattr(sys, "gettrace") and self.warn:
+-            if sys.gettrace() != self._trace:
+-                msg = "Trace function changed, measurement is likely wrong: %r"
+-                self.warn(msg % sys.gettrace())
++#        if hasattr(sys, "gettrace") and self.warn:
++#            if sys.gettrace() != self._trace:
++#                msg = "Trace function changed, measurement is likely wrong: %r"
++#                self.warn(msg % sys.gettrace())
+         sys.settrace(None)
+ 
+     def get_stats(self):
+@@ -179,13 +146,7 @@ class Collector(object):
+         self.branch = branch
+         self.reset()
+ 
+-        if timid:
+-            # Being timid: use the simple Python trace function.
+-            self._trace_class = PyTracer
+-        else:
+-            # Being fast: use the C Tracer if it is available, else the Python
+-            # trace function.
+-            self._trace_class = CTracer or PyTracer
++        self._trace_class = PyTracer
+ 
+     def __repr__(self):
+         return "<Collector at 0x%x>" % id(self)

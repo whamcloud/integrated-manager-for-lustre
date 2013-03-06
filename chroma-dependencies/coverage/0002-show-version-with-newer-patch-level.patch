@@ -1,0 +1,25 @@
+From bb5a28dd7c8048d6e456429a1f5f421071a3afe1 Mon Sep 17 00:00:00 2001
+From: Jonathan Newbrough <jonathan.newbrough@gyregroup.com>
+Date: Mon, 6 Aug 2012 16:15:13 -0700
+Subject: [PATCH 2/4] show version with newer patch level
+
+---
+ coverage/__init__.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/coverage/__init__.py b/coverage/__init__.py
+index b3e79c8..7cf890c 100644
+--- a/coverage/__init__.py
++++ b/coverage/__init__.py
+@@ -5,7 +5,7 @@ http://nedbatchelder.com/code/coverage
+ 
+ """
+ 
+-__version__ = "3.5.3"       # see detailed history in CHANGES.txt
++__version__ = "3.5.3p1"     # see detailed history in CHANGES.txt
+ 
+ __url__ = "http://nedbatchelder.com/code/coverage"
+ if max(__version__).isalpha():
+-- 
+1.8.1.4
+
