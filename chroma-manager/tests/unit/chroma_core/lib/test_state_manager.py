@@ -111,6 +111,42 @@ class TestStateManager(JobTestCaseWithHost):
         JobSchedulerClient.notify(freshen(self.host), awhile_ago, {'state': 'lnet_down'}, ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_up')
 
+    def test_buffered_notification(self):
+        """Test that notifications for locked items are buffered and
+        replayed when the locking Job has completed."""
+        self.assertState(self.host, 'lnet_up')
+
+        # Set boot_time to something that should change.
+        now = django.utils.timezone.now()
+        JobSchedulerClient.notify(freshen(self.host), now, {'boot_time': now})
+        self.assertEqual(freshen(self.host).boot_time, now)
+
+        # Not much later, but later enough (fastest boot EVAR).
+        later = django.utils.timezone.now()
+        self.assertNotEqual(later, now)
+
+        # This is more direct than fooling around with trying to get the
+        # timing right. Contrive a locking event on the host we want to
+        # notify, and the notification should be buffered.
+        self.job_scheduler._lock_cache.all_by_item[self.host] = ["fake lock"]
+        JobSchedulerClient.notify(freshen(self.host), later, {'boot_time': later})
+
+        # Now, remove the lock and make sure that the second notification
+        # didn't get through during the lock.
+        del(self.job_scheduler._lock_cache.all_by_item[self.host])
+        self.assertEqual(freshen(self.host).boot_time, now)
+
+        # Run any job, doesn't matter -- we just want to ensure that the
+        # notification buffer is drained after the job completes.
+        self.set_state(self.host, 'lnet_down')
+        self.assertEqual(freshen(self.host).boot_time, later)
+
+        # Just for completeness, check that the notification buffer for this
+        # host was completely drained and removed.
+        buffer_key = (tuple(self.host.content_type.natural_key()), self.host.pk)
+        self.assertEqual([], self.job_scheduler._notification_buffer.drain_notifications_for_key(buffer_key))
+        self.assertEqual([], self.job_scheduler._notification_buffer.notification_keys)
+
     def test_2steps(self):
         from chroma_core.models import ManagedHost
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')

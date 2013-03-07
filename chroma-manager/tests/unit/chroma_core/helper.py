@@ -365,6 +365,7 @@ class JobTestCase(TestCase):
         def complete_job(job, errored = False, cancelled = False):
             ObjectCache.clear()
             self.job_scheduler._complete_job(job, errored, cancelled)
+            self.job_scheduler._drain_notification_buffer()
 
         JobScheduler.complete_job = mock.Mock(side_effect=complete_job)
 

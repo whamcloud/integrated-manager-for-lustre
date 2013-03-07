@@ -13,6 +13,7 @@ import threading
 import sys
 import traceback
 import urlparse
+from Queue import Queue
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
 import dateutil.parser
@@ -32,6 +33,37 @@ import settings
 
 
 log = log_register(__name__.split('.')[-1])
+
+
+class NotificationBuffer(object):
+    """
+    Provides a simple buffer for notifications which would otherwise be
+    dropped due to lock contention on the notified item.
+    """
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._notifications = defaultdict(Queue)
+
+    def add_notification_for_key(self, key, notification):
+        with self._lock:
+            self._notifications[key].put(notification)
+
+    @property
+    def notification_keys(self):
+        with self._lock:
+            return self._notifications.keys()
+
+    def clear_notifications_for_key(self, key):
+        with self._lock:
+            del(self._notifications[key])
+
+    def drain_notifications_for_key(self, key):
+        notifications = []
+        with self._lock:
+            while not self._notifications[key].empty():
+                notifications.append(self._notifications[key].get())
+            del(self._notifications[key])
+        return notifications
 
 
 class RunJobThread(threading.Thread):
@@ -284,6 +316,7 @@ class JobScheduler(object):
 
         self._lock_cache = LockCache()
         self._job_collection = JobCollection()
+        self._notification_buffer = NotificationBuffer()
 
         self._run_threads = {}  # Map of job ID to RunJobThread
 
@@ -444,6 +477,28 @@ class JobScheduler(object):
             failed_over = changed_item.active_mount is not None and changed_item.active_mount != changed_item.managedtargetmount_set.get(primary = True)
             TargetFailoverAlert.notify(changed_item, failed_over)
 
+    def _drain_notification_buffer(self):
+        # Give any buffered notifications a chance to drain out
+        for buffer_key in self._notification_buffer.notification_keys:
+            content_type, object_id = buffer_key
+            model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
+            try:
+                instance = model_klass.objects.get(pk = object_id).downcast()
+            except model_klass.DoesNotExist:
+                log.warning("_drain_notification_buffer: Dropping buffered notifications for not-found object %s/%s" % buffer_key)
+                self._notification_buffer.clear_notifications_for_key(buffer_key)
+                continue
+
+            # Try again later if the instance is still locked
+            if self._lock_cache.get_by_locked_item(instance):
+                continue
+
+            notifications = self._notification_buffer.drain_notifications_for_key(buffer_key)
+            log.info("Replaying %d buffered notifications for %s-%s" % (len(notifications), model_klass.__name__, instance.pk))
+            for notification in notifications:
+                log.debug("Replaying buffered notification: %s" % (notification,))
+                self._notify(*notification)
+
     @transaction.commit_on_success
     def complete_job(self, job, errored = False, cancelled = False):
         with self._lock:
@@ -456,6 +511,7 @@ class JobScheduler(object):
 
             self._complete_job(job, errored, cancelled)
             self._run_next()
+            self._drain_notification_buffer()
 
     @transaction.commit_on_success
     def set_state(self, object_ids, message, run):
@@ -469,7 +525,6 @@ class JobScheduler(object):
 
     def _notify(self, content_type, object_id, notification_time, update_attrs, from_states):
         # Get the StatefulObject
-        from django.contrib.contenttypes.models import ContentType
         model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
         try:
             # FIXME: this works because although may get() and save() an independent
@@ -491,17 +546,26 @@ class JobScheduler(object):
             log.info("_notify: Dropping update to %s because %s is not in %s" % (instance, instance.state, from_states))
             return
 
-        # Drop if it's outdated
+        # Drop state-modifying updates if outdated
         modified_at = instance.state_modified_at
-        if notification_time <= modified_at:
+        if 'state' in update_attrs and notification_time <= modified_at:
             log.info("notify: Dropping update of %s (%s) because it has been updated since" % (instance.id, instance))
             return
 
-        # Drop if it's locked
+        # Buffer updates on locked instances, except for state changes. By the
+        # time a buffered state change notification would be replayed, the
+        # state change would probably not make any sense.
         if self._lock_cache.get_by_locked_item(instance):
-            log.info("_notify: Dropping update to %s because of locks" % instance)
+            if 'state' in update_attrs:
+                return
+
+            log.info("_notify: Buffering update to %s because of locks" % instance)
             for lock in self._lock_cache.get_by_locked_item(instance):
                 log.info("  %s" % lock)
+
+            buffer_key = (tuple(content_type), object_id)
+            notification = (content_type, object_id, notification_time, update_attrs, from_states)
+            self._notification_buffer.add_notification_for_key(buffer_key, notification)
             return
 
         for attr, value in update_attrs.items():
