@@ -6,11 +6,25 @@ SPECFILE ?= $(RPM_NAME).spec
 # only try to determine the RPMs if the caller did not specify them
 ifeq ($(origin ALL_RPMS), undefined)
 ALL_RPMS = $(shell match="$(INSTALL_PKGS)" RPM_OPTS="$(RPM_OPTS)" $(TOP)/include/parse_spec -s $(SPECFILE))
+PKG_INSTALL_RPMS = $(shell match="$(PKG_INSTALL_PKGS)" RPM_OPTS="$(RPM_OPTS)" $(TOP)/include/parse_spec -s $(SPECFILE))
 endif
 
 REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
 
 install: $(REPO_TARGETS)
+
+pkg_install:
+	for rpm in $(PKG_INSTALL_RPMS); do                           \
+		base=$${rpm##*/};                                    \
+		name=$${base%-*};                                    \
+		name=$${name%-*};                                    \
+		if [ "$$(rpm -q $$name).rpm" != "$$base" ]; then     \
+			echo $$base $$name;                          \
+			arch=$${rpm%.rpm};                           \
+			arch=$${arch##*.};                           \
+			sudo yum -y install $(RPM_DIR)/$$arch/$$rpm; \
+		fi;                                                  \
+	done
 
 $(REPO):
 	mkdir $^

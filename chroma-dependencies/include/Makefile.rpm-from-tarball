@@ -15,7 +15,7 @@ SPECNAME         ?= $(TARBALL_NAME).spec
 rpms: $(SPECNAME) $(TARBALL)
 	$(MAKE) -f ../include/Makefile.rpmbuild $@
 
-install: rpms
+install pkg_install: rpms
 	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE="$(SPECNAME)" $@
 
 # only create a spec if one was not checked into git

@@ -16,9 +16,12 @@ SRPMS        += $(LAST_BUILT)
 endif
 
 rpms: $(RPM_NAME).spec
+	for dep in $(DEPS); do                 \
+		$(MAKE) -C ../$$dep pkg_install; \
+	done
 	$(MAKE) -f ../include/Makefile.rpmbuild $@
 
-install: rpms
+install pkg_install: rpms
 	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@
 
 cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
