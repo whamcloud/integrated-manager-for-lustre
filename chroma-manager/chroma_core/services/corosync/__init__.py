@@ -94,12 +94,12 @@ class Service(ChromaService):
                 try:
                     peer_host = ManagedHost.objects.get(fqdn=peer_fqdn)
                 except ManagedHost.DoesNotExist:
-#                    log.info("Corosync reported a peer "
-#                             "that is not managed: %s" % peer_fqdn)
+                    log.debug("Corosync reported a peer "
+                              "that is not managed: %s" % peer_fqdn)
                     pass
                 else:
-#                    log.info("Corosync processing "
-#                             "peer %s of %s " % (peer_fqdn, fqdn))
+                    log.debug("Corosync processing "
+                              "peer %s of %s " % (peer_fqdn, fqdn))
 
                     #  Raise an Alert - system supresses dups
                     log.debug("Alert notify on %s: active=%s" % (peer_host, not incoming_status))
