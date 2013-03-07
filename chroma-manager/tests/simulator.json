@@ -18,11 +18,11 @@
             "fqdn": "test000.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
-                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
-                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
-                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
-                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
-                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ]
         },
         {
@@ -31,11 +31,11 @@
             "fqdn": "test001.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
-                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
-                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
-                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
-                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
-                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ]
         },
         {
@@ -44,11 +44,11 @@
             "fqdn": "test002.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
-                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
-                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
-                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
-                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
-                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ]
         },
         {
@@ -57,11 +57,11 @@
             "fqdn": "test003.localdomain",
             "device_paths": [
                 "/dev/disk/by-id/scsi-FAKEDEVICE000-scsi0-0-0",
-                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-1",
-                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-2",
-                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-3",
-                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-4",
-                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-5"
+                "/dev/disk/by-id/scsi-FAKEDEVICE001-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE002-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
+                "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ]
         }
     ],

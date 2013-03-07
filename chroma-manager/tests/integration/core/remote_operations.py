@@ -27,10 +27,10 @@ class SimulatorRemoteOperations(RemoteOperations):
         self._simulator = simulator
 
     def stop_target(self, fqdn, ha_label):
-        self._simulator.cluster.stop(ha_label)
+        self._simulator.get_cluster(fqdn).stop(ha_label)
 
     def start_target(self, fqdn, ha_label):
-        self._simulator.cluster.start(ha_label)
+        self._simulator.get_cluster(fqdn).start(ha_label)
 
     def start_lnet(self, fqdn):
         self._simulator.servers[fqdn].start_lnet()
@@ -63,13 +63,13 @@ class SimulatorRemoteOperations(RemoteOperations):
         client.unmount(mgsnode, fsname)
 
     def get_resource_running(self, host, ha_label):
-        actual = self._simulator.cluster.resource_locations()[ha_label]
+        actual = self._simulator.get_cluster(host['fqdn']).resource_locations()[ha_label]
         expected = host['nodename']
         logger.debug("get_resource_running: %s %s %s" % (ha_label, actual, expected))
         return actual == expected
 
     def check_ha_config(self, hosts, filesystem):
-        # TODO check self._simulator.cluster for some resources
+        # TODO check self._simulator.get_cluster(fqdn) for some resources
         # configured on these hosts withthe filesystem name in them
         pass
 
@@ -88,7 +88,7 @@ class SimulatorRemoteOperations(RemoteOperations):
         self._simulator.unmount_lustre_clients()
 
     def clear_ha(self):
-        self._simulator.cluster.clear_resources()
+        self._simulator.clear_clusters()
 
     def inject_log_message(self, fqdn, message):
         self._simulator.servers[fqdn].inject_log_message(message)
