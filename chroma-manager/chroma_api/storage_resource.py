@@ -30,6 +30,9 @@ from chroma_core.services.plugin_runner.scan_daemon_interface import ScanDaemonR
 
 class StorageResourceValidation(Validation):
     def is_valid(self, bundle, request = None):
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        from chroma_core.lib.storage_plugin.manager import PluginNotFound
+
         errors = defaultdict(list)
         if 'alias' in bundle.data and bundle.data['alias'] is not None:
             alias = bundle.data['alias']
@@ -37,6 +40,18 @@ class StorageResourceValidation(Validation):
                 errors['alias'].append("May not be blank")
             elif alias != alias.strip():
                 errors['alias'].append("No trailing whitespace allowed")
+
+        if 'plugin_name' in bundle.data:
+            try:
+                storage_plugin_manager.get_plugin_class(bundle.data['plugin_name'])
+            except PluginNotFound, e:
+                errors['plugin_name'].append(e.__str__())
+            else:
+                if 'class_name' in bundle.data:
+                    try:
+                        storage_plugin_manager.get_plugin_resource_class(bundle.data['plugin_name'], bundle.data['class_name'])
+                    except PluginNotFound, e:
+                        errors['class_name'].append(e.__str__())
 
         return errors
 
