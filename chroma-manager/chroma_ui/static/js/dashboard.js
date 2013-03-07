@@ -37,6 +37,10 @@ var Dashboard = (function() {
     }
   }
 
+  function targetSort(a, b) {
+    return a.name > b.name ? 1 : -1;
+  }
+
   function init() {
 
     var intervals = {
@@ -239,7 +243,7 @@ var Dashboard = (function() {
       success_callback = function(data)
       {
         var targets = data.objects;
-        targets = targets.sort(function(a,b) {return a.label > b.label;});
+        targets = targets.sort(targetSort);
 
         var count = 0;
         $.each(targets, function(i, target_info)
@@ -287,7 +291,7 @@ var Dashboard = (function() {
       success_callback = function(data)
       {
         var targets = data.objects;
-        targets = targets.sort(function(a,b) {return a.label > b.label;});
+        targets = targets.sort(targetSort);
 
         var count = 0;
         $.each(targets, function(i, target_info)
@@ -402,7 +406,7 @@ var Dashboard = (function() {
       success_callback = function(data)
       {
         var targets = data.objects;
-        targets = targets.sort(function(a,b) {return a.label > b.label;});
+        targets.sort(targetSort);
 
         var count = 0;
         $.each(targets, function(i, target_info)
