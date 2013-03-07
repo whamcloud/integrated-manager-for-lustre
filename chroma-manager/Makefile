@@ -86,15 +86,12 @@ rpms: cleandist tarball
 	rm -rf _topdir
 
 docs: version
-	virtualenv myenv
-	cd myenv; \
-	. bin/activate; \
-	if grep -q "^Version: 4.0.0-pre" build/dse/PKG-INFO; then \
-	    pip uninstall dse; \
-	fi; \
-	pip install -r ../requirements.txt; \
-	cd ../docs; \
-	make SPHINXBUILD="$$PWD/../myenv/bin/sphinx-build"
-	cp docs/dist/* dist/
+	set -e ; \
+	if [ -z $(VIRTUAL_ENV) ] ; then \
+		virtualenv myenv ; \
+		. myenv/bin/activate; \
+		pip install -r ./requirements.txt; \
+	fi ; \
+	make -C docs/ && cp docs/dist/*.tar.gz dist/
 
 .PHONY: docs
