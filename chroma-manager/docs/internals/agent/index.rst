@@ -15,6 +15,10 @@ These are modules which follow the interface in chroma_agent.plugin_manager.Devi
 .. autoclass:: chroma_agent.plugin_manager.DevicePlugin
   :members:
 
+.. autoclass:: chroma_agent.plugin_manager.DevicePluginMessage
+
+.. autoclass:: chroma_agent.plugin_manager.DevicePluginMessageCollection
+
 action_plugins
 _______________
 

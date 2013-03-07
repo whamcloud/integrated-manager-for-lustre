@@ -100,7 +100,7 @@ class DevicePlugin(object):
         Return information needed to start a manager-agent session, i.e. a full
         listing of all available information.
 
-        :rtype: JSON-serializable object, typically a dict
+        :rtype: JSON-serializable object, DevicePluginMessage, or DevicePluginMessageCollection
         """
         raise NotImplementedError()
 
@@ -115,7 +115,7 @@ class DevicePlugin(object):
         This will never be called concurrently with respect to start_session, or
         before start_session.
 
-        :rtype: JSON-serializable object, typically a dict
+        :rtype: JSON-serializable object, DevicePluginMessage, or DevicePluginMessageCollection
         """
         raise NotImplementedError()
 
@@ -139,7 +139,48 @@ class DevicePlugin(object):
         If callback is set, it will be run after an attempt has been made to send the message to
         the manager.
         """
-        self._session.send_message(body, callback)
+        if isinstance(body, DevicePluginMessage):
+            self._session.send_message(body, callback)
+        else:
+            self._session.send_message(DevicePluginMessage(body), callback)
+
+
+# For use with Queue.PriorityQueue (lower number is higher priority)
+PRIO_LOW = 2
+PRIO_NORMAL = 1
+PRIO_HIGH = 0
+
+
+class DevicePluginMessageCollection(list):
+    """
+    Zero or more messages from a device plugin, to be consumed one by one by a service on
+    the manager server.
+
+    Return this instead of a naked {} or a DevicePluginMessage if you need to return
+    multiple messages from one callback.
+    """
+    def __init__(self, messages, priority = PRIO_NORMAL):
+        """
+        :param messages: An iterable of JSON-serializable objects
+        :param priority: One of PRIO_LOW, PRIO_NORMAL, PRIO_HIGH
+        """
+        super(DevicePluginMessageCollection, self).__init__(messages)
+        self.priority = priority
+
+
+class DevicePluginMessage(object):
+    """
+    A single message from a device plugin, to be consumed by a service on the manager server.
+
+    Return this instead of a naked {} if you need to set the priority.
+    """
+    def __init__(self, message, priority = PRIO_NORMAL):
+        """
+        :param message: A JSON-serializable object
+        :param priority: One of PRIO_LOW, PRIO_NORMAL, PRIO_HIGH
+        """
+        self.message = message
+        self.priority = priority
 
 
 class DevicePluginManager(PluginManager):

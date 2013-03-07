@@ -16,7 +16,6 @@ import math
 import datetime
 import requests
 
-from chroma_agent.agent_client import Session
 from cluster_sim.cli import SIMULATOR_PORT, SimulatorCli
 
 log = logging.getLogger('benchmark')
@@ -463,11 +462,6 @@ class LogIngestRate(Benchmark):
                 saturated_samples = []
                 log_rate *= 2
 
-        avg_publish_rate = sum(saturated_samples) / float(len(saturated_samples))
-        log_message_rate = (log_rate / Session.POLL_PERIOD) * server_count
-        log_msg_per_amqp_msg = log_message_rate / avg_publish_rate
-        log.debug(log_msg_per_amqp_msg)
-
         log.debug("Stopping log generation")
         for n in range(0, 8):
             self.simulator.set_log_rate('test%.3d.localdomain' % n, 0)
@@ -491,11 +485,15 @@ class LogIngestRate(Benchmark):
         std_err = std_dev / math.sqrt(len(rate_samples))
 
         log.info("%s +/- %s" % (avg, std_err))
-        log.info("%s +/- %s" % (avg * log_msg_per_amqp_msg, std_err * log_msg_per_amqp_msg))
+        # Convert message rate to log line rate
+        from chroma_agent.device_plugins.syslog import MAX_LOG_LINES_PER_MESSAGE
+        log.info("%s +/- %s" % (avg * MAX_LOG_LINES_PER_MESSAGE, std_err * MAX_LOG_LINES_PER_MESSAGE))
 
         # FIXME: try running this with syslog DB writing disabled, such that rabbitmq is the bottleneck, and you
         # can get messages to back up on the agent side, using up unbounded memory: the rabbitmq part never backs up
         # so the benchmark never stops!
+
+        # FIXME: populate the db with some targets and NIDs and include them in the incoming log messages
 
 
 def main():

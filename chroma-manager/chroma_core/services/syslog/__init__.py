@@ -9,11 +9,14 @@ import os
 
 from chroma_core.services.syslog.parser import LogMessageParser
 from chroma_core.models.log import LogMessage
-from chroma_core.services import ChromaService
+from chroma_core.services import ChromaService, log_register
 from chroma_core.services.queue import AgentRxQueue
 
 from django.db import transaction
 import settings
+
+
+log = log_register('syslog')
 
 
 SYSLOG_PLUGIN_NAME = 'syslog'
@@ -29,6 +32,9 @@ class Service(ChromaService):
         self._queue = SyslogRxQueue()
         self._table_size = LogMessage.objects.count()
         self._parser = LogMessageParser()
+
+        import dse
+        dse.patch_models()
 
     def _check_size(self):
         """Apply a size limit to the table of log messages"""
@@ -65,22 +71,27 @@ class Service(ChromaService):
         return removed_num_entries
 
     def on_data(self, fqdn, body):
-        for msg in body['messages']:
-            try:
-                log_message = LogMessage.objects.create(
-                    fqdn = fqdn,
-                    message = msg['message'],
-                    severity = msg['severity'],
-                    facility = msg['facility'],
-                    tag = msg['source'],
-                    datetime = dateutil.parser.parse(msg['datetime']))
+        with transaction.commit_on_success():
+            with LogMessage.delayed as log_messages:
+                for msg in body['log_lines']:
+                    try:
+                        log_messages.insert(dict(
+                            fqdn = fqdn,
+                            message = msg['message'],
+                            severity = msg['severity'],
+                            facility = msg['facility'],
+                            tag = msg['source'],
+                            datetime = dateutil.parser.parse(msg['datetime']),
+                            message_class = LogMessage.get_message_class(msg['message'])
+                        ))
+                        self._table_size += 1
 
-                self._parser.parse(log_message)
-                self._table_size += 1
-            except Exception, e:
-                self.log.error("Error %s parsing syslog entry: %s" % (e, msg))
+                        self._parser.parse(fqdn, msg)
+                    except Exception, e:
+                        self.log.error("Error %s ingesting syslog entry: %s" % (e, msg))
 
     def run(self):
+        self._queue.purge()
         self._queue.serve(data_callback = self.on_data)
 
     def stop(self):

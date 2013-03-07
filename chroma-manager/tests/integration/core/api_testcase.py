@@ -3,6 +3,7 @@ import logging
 import shutil
 import sys
 import time
+import os
 
 from testconfig import config
 from tests.utils.http_requests import AuthorizedHttpRequests
@@ -34,6 +35,13 @@ class ApiTestCase(UtilityTestCase):
             # so make sure it has a unique-per-run name
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
             state_path = 'simulator_state_%s.%s_%s' % (self.__class__.__name__, self._testMethodName, timestamp)
+
+            # Hook up the agent log to a file
+            from chroma_agent.agent_daemon import daemon_log
+            handler = logging.FileHandler(os.path.join(config.get('log_dir', '/var/log/'), 'chroma_test_agent.log'))
+            handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+            daemon_log.addHandler(handler)
+            daemon_log.setLevel(logging.DEBUG)
 
             # These are sufficient for tests existing at time of writing, could
             # trivially let tests ask for more by looking for these vars at class scope

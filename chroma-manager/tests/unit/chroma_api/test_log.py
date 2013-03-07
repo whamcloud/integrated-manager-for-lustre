@@ -26,7 +26,7 @@ class TestLogResource(ChromaApiTestCaseHeavy):
         # some basic log entries
         # all Lustre log entries have a leading space.
         self.messages = ['Plain old log message', 'Lustre: Normal Lustre Message', 'LustreError: Lustre Error Message']
-        self.lustre_messages = [message for message in self.messages if message.startswith(' Lustre')]
+        self.lustre_messages = [message for message in self.messages if message.startswith('Lustre')]
         for message in self.messages:
             fake_log_message(message)
 
@@ -36,7 +36,7 @@ class TestLogResource(ChromaApiTestCaseHeavy):
         for client_key in ['filesystem_user', 'unauthenticated']:
             client = self.clients[client_key]
             log_entries = [log_entry['message'] for log_entry in self.deserialize(client.get('/api/log/'))['objects']]
-            self.assertListEqual(self.lustre_messages, log_entries, 'log entries do not match')
+            self.assertListEqual(self.lustre_messages, log_entries)
 
     def test_get_logs_all(self):
         """Verifies superusers and filesystem_administrators gets all log entries"""
