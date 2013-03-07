@@ -200,7 +200,7 @@ class TestQueryScaling(ChromaApiTestCase):
         fs = None
         for i, volume in enumerate(Volume.objects.all()):
             if i == 0:
-                mgt = ManagedMgs.create_for_volume(volume.id)
+                mgt, mounts = ManagedMgs.create_for_volume(volume.id)
                 fs = ManagedFilesystem.objects.create(name = 'foo', mgs = mgt)
             elif i == 1:
                 ManagedMdt.create_for_volume(volume.id, filesystem = fs)

@@ -194,6 +194,8 @@ class MessageView(View):
 @csrf_exempt
 @log_exception
 def register(request, key):
+    from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+
     if request.method != "POST":
         return HttpResponseNotAllowed(['POST'])
 
@@ -256,7 +258,7 @@ def register(request, key):
     # some logic during the second addition to revoke
     # the first (should never be used) host cert.
 
-    host, command = ManagedHost.create(
+    host, command = JobSchedulerClient.create_host(
         address = host_attributes['address'],
         fqdn = host_attributes['fqdn'],
         nodename = host_attributes['nodename'],

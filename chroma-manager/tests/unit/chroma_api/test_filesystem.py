@@ -1,22 +1,29 @@
-
+from chroma_core.models import Command
 from chroma_core.models.target import ManagedMgs
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
+import mock
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_core.helper import synthetic_host, synthetic_volume_full
 
 
-class TestFilesystemResource(ChromaApiTestCaseHeavy):
+class TestFilesystemResource(ChromaApiTestCase):
+    def setUp(self):
+        super(TestFilesystemResource, self).setUp()
+
+        self.host = synthetic_host('myserver')
+
     def test_spider(self):
         self.spider_api()
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         self.spider_api()
 
     def test_HYD1483(self):
         """Test that adding a second MGS to a host emits a useful error."""
-        mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.host).id, name = "MGS")
         mgt.save()
 
-        new_mgt_volume = self._test_lun(self.host)
-        mdt_volume = self._test_lun(self.host)
-        ost_volume = self._test_lun(self.host)
+        new_mgt_volume = synthetic_volume_full(self.host)
+        mdt_volume = synthetic_volume_full(self.host)
+        ost_volume = synthetic_volume_full(self.host)
 
         response = self.api_client.post("/api/filesystem/",
              data = {
@@ -39,7 +46,7 @@ class TestFilesystemResource(ChromaApiTestCaseHeavy):
 
     def test_HYD424(self):
         """Test that filesystems can't be created using unmanaged MGSs"""
-        mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.host).id, name = "MGS")
         mgt.immutable_state = True
         mgt.save()
 
@@ -49,8 +56,8 @@ class TestFilesystemResource(ChromaApiTestCaseHeavy):
         mgts = self.deserialize(response)['objects']
         self.assertEqual(len(mgts), 0)
 
-        mdt_volume = self._test_lun(self.host)
-        ost_volume = self._test_lun(self.host)
+        mdt_volume = synthetic_volume_full(self.host)
+        ost_volume = synthetic_volume_full(self.host)
 
         # Shouldn't accept the MGS for FS creation
         response = self.api_client.post("/api/filesystem/",
@@ -76,18 +83,18 @@ class TestFilesystemResource(ChromaApiTestCaseHeavy):
             'osts': [{}],
         })
 
-    def test_start_stop_partial(self):
+    def test_set_state_partial(self):
         """Test operations using partial PUT containing only the state attribute, as used in Chroma 1.0.0.0 GUI"""
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         fs_uri = "/api/filesystem/%s/" % self.fs.id
-        self.api_set_state_partial(fs_uri, 'stopped')
-        self.api_set_state_partial(fs_uri, 'available')
-        self.api_set_state_partial(fs_uri, 'stopped')
+        with mock.patch("chroma_core.models.Command.set_state", mock.Mock(return_value=None)):
+            self.api_set_state_partial(fs_uri, 'stopped')
+            Command.set_state.assert_called_once()
 
-    def test_start_stop_full(self):
+    def test_set_state_full(self):
         """Test operations using fully populated PUTs"""
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         fs_uri = "/api/filesystem/%s/" % self.fs.id
-        self.api_set_state_full(fs_uri, 'stopped')
-        self.api_set_state_full(fs_uri, 'available')
-        self.api_set_state_full(fs_uri, 'stopped')
+        with mock.patch("chroma_core.models.Command.set_state", mock.Mock(return_value=None)):
+            self.api_set_state_full(fs_uri, 'stopped')
+            Command.set_state.assert_called_once()

@@ -1,19 +1,21 @@
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.target import ManagedTargetMount
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgentRpc, freshen
-
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
+
+from tests.unit.chroma_core.helper import MockAgentRpc, freshen
+from tests.unit.services.job_scheduler.job_test_case import JobTestCaseWithHost
 
 
 class TestMkfsOverrides(JobTestCaseWithHost):
     def test_mdt_override(self):
         import settings
 
-        self.create_simple_filesystem(start = False)
-        self.set_state(self.mgt, "mounted")
+        self.create_simple_filesystem(self.host, start = False)
+        self.set_state(self.mgt.managedtarget_ptr, "mounted")
 
         settings.LUSTRE_MKFS_OPTIONS_MDT = "-E block_size=1024"
-        self.set_state(self.mdt, "formatted")
+        self.set_state(self.mdt.managedtarget_ptr, "formatted")
         cmd, args = MockAgentRpc.last_call()
         self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_MDT}, args)
@@ -21,11 +23,11 @@ class TestMkfsOverrides(JobTestCaseWithHost):
     def test_ost_override(self):
         import settings
 
-        self.create_simple_filesystem(start = False)
-        self.set_state(self.mgt, "mounted")
+        self.create_simple_filesystem(self.host, start = False)
+        self.set_state(self.mgt.managedtarget_ptr, "mounted")
 
         settings.LUSTRE_MKFS_OPTIONS_OST = "-E block_size=2048"
-        self.set_state(self.ost, "formatted")
+        self.set_state(self.ost.managedtarget_ptr, "formatted")
         cmd, args = MockAgentRpc.last_call()
         self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_OST}, args)
@@ -35,21 +37,24 @@ class TestTargetTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestTargetTransitions, self).setUp()
 
-        self.mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        self.mgt, mgt_tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        ObjectCache.add(ManagedTarget, self.mgt.managedtarget_ptr)
+        for tm in mgt_tms:
+            ObjectCache.add(ManagedTargetMount, tm)
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
-        self.set_state(self.mgt, 'mounted')
+        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
 
     def test_start_stop(self):
         from chroma_core.models import ManagedMgs
-        self.set_state(freshen(self.mgt), 'unmounted')
+        self.set_state(freshen(self.mgt.managedtarget_ptr), 'unmounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unmounted')
-        self.set_state(freshen(self.mgt), 'mounted')
+        self.set_state(freshen(self.mgt.managedtarget_ptr), 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
 
     def test_removal(self):
         from chroma_core.models import ManagedMgs
-        self.set_state(freshen(self.mgt), 'removed')
+        self.set_state(freshen(self.mgt.managedtarget_ptr), 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
             ManagedMgs.objects.get(pk = self.mgt.pk)
         self.assertEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
@@ -66,7 +71,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
             # -> the TargetMount removal parts of this operation will fail, we
             # want to make sure that this means that Target deletion part
             # fails as well
-            self.set_state(self.mgt, 'removed', check = False)
+            self.set_state(self.mgt.managedtarget_ptr, 'removed', check = False)
 
             ManagedMgs.objects.get(pk = self.mgt.pk)
             self.assertNotEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
@@ -74,7 +79,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
             MockAgentRpc.succeed = True
 
         # Now let the op go through successfully
-        self.set_state(self.mgt, 'removed')
+        self.set_state(self.mgt.managedtarget_ptr, 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
             ManagedMgs.objects.get(pk = self.mgt.pk)
         self.assertEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
@@ -86,8 +91,6 @@ class TestTargetTransitions(JobTestCaseWithHost):
         self.assertState(self.mgt, 'mounted')
         self.assertState(self.host, 'lnet_up')
         consequences = JobSchedulerClient.get_transition_consequences(freshen(self.host), 'lnet_down')
-        import json
-        print json.dumps(consequences, indent=4)
         self.assertEqual(len(consequences['dependency_jobs']), 1)
         self.assertEqual(consequences['dependency_jobs'][0]['class'], 'StopTargetJob')
 
@@ -109,58 +112,61 @@ class TestSharedTarget(JobTestCaseWithHost):
     def setUp(self):
         super(TestSharedTarget, self).setUp()
 
-        self.target = ManagedMgs.create_for_volume(
+        self.mgt, tms = ManagedMgs.create_for_volume(
             self._test_lun(
                 ManagedHost.objects.get(address='pair1'),
                 ManagedHost.objects.get(address='pair2')
             ).id,
             name = "MGS")
-        self.assertEqual(ManagedMgs.objects.get(pk = self.target.pk).state, 'unformatted')
+        ObjectCache.add(ManagedTarget, self.mgt.managedtarget_ptr)
+        for tm in tms:
+            ObjectCache.add(ManagedTargetMount, tm)
+        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unformatted')
 
     def test_clean_setup(self):
         # Start it normally the way the API would on creation
-        self.set_state(self.target, 'mounted')
-        self.assertEqual(ManagedTarget.objects.get(pk = self.target.pk).state, 'mounted')
-        self.assertEqual(ManagedTarget.objects.get(pk = self.target.pk).active_mount, ManagedTargetMount.objects.get(host = self.hosts[0], target = self.target))
+        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.assertEqual(ManagedTarget.objects.get(pk = self.mgt.pk).state, 'mounted')
+        self.assertEqual(ManagedTarget.objects.get(pk = self.mgt.pk).active_mount, ManagedTargetMount.objects.get(host = self.hosts[0], target = self.mgt))
 
     def test_teardown_unformatted(self):
-        self.assertEqual(ManagedTarget.objects.get(pk = self.target.pk).state, 'unformatted')
+        self.assertEqual(ManagedTarget.objects.get(pk = self.mgt.pk).state, 'unformatted')
         try:
             # We should need no agent ops to remove something we never formatted
             MockAgentRpc.succeed = False
-            self.set_state(self.target, 'removed')
+            self.set_state(self.mgt.managedtarget_ptr, 'removed')
         finally:
             MockAgentRpc.succeed = True
 
         with self.assertRaises(ManagedTarget.DoesNotExist):
-            ManagedTarget.objects.get(pk = self.target.pk)
+            ManagedTarget.objects.get(pk = self.mgt.pk)
 
     def test_teardown_remove_primary_host(self):
-        self.set_state(self.target, 'mounted')
-        self.set_state(self.target.primary_server(), 'removed')
+        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.set_state(self.mgt.primary_server(), 'removed')
 
         # Removing the primary server removes the target
         with self.assertRaises(ManagedTarget.DoesNotExist):
-            ManagedTarget.objects.get(pk = self.target.pk)
+            ManagedTarget.objects.get(pk = self.mgt.pk)
 
     def test_teardown_remove_secondary_host(self):
-        self.set_state(self.target, 'mounted')
-        self.set_state(self.target.secondary_servers()[0], 'removed')
+        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.set_state(self.mgt.secondary_servers()[0], 'removed')
 
         # Removing the secondary server removes the target
         with self.assertRaises(ManagedTarget.DoesNotExist):
-            ManagedTarget.objects.get(pk = self.target.pk)
+            ManagedTarget.objects.get(pk = self.mgt.pk)
 
     def test_teardown_friendly_user(self):
-        self.set_state(self.target, 'mounted')
+        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
 
         # Friendly user stops the target
-        self.set_state(self.target, 'unmounted')
+        self.set_state(self.mgt.managedtarget_ptr, 'unmounted')
 
         # Friendly user removes the target
-        self.set_state(self.target, 'removed')
+        self.set_state(self.mgt.managedtarget_ptr, 'removed')
         with self.assertRaises(ManagedTarget.DoesNotExist):
-            ManagedTarget.objects.get(pk = self.target.pk)
+            ManagedTarget.objects.get(pk = self.mgt.pk)
 
         # Friendly user removes the secondary host
         self.set_state(self.hosts[1], 'removed')

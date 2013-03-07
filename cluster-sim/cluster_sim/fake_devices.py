@@ -119,6 +119,10 @@ class FakeDevices(Persisted):
         serial = self.state['presentations'][fqdn][path]
         return self.state['devices'][serial]
 
+    def get_target_by_path(self, fqdn, path):
+        serial = self.state['presentations'][fqdn][path]
+        return self.state['targets'][serial]
+
     def get_targets_by_server(self, fqdn):
         if fqdn not in self.state['presentations']:
             return []
@@ -182,6 +186,11 @@ class FakeDevices(Persisted):
                 'targets': {},
                 'conf_params': {}
             }
+            self.save()
+
+    def mgt_writeconf(self, mgsnode):
+        with self._lock:
+            self.state['mgts'][mgsnode]['conf_params'] = {}
             self.save()
 
     def mgt_purge_fs(self, mgsnode, filesystem_name):

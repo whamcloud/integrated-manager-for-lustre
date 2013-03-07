@@ -1,16 +1,26 @@
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 from django.db import connection
 from django.db.models.query_utils import Q
 from chroma_core.lib.util import dbperf
-from chroma_core.models.host import Volume, VolumeNode, ManagedHost
+from chroma_core.models.host import Volume, VolumeNode, ManagedHost, LNetConfiguration
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from helper import load_plugins
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgentRpc
+import mock
+from tests.unit.chroma_core.helper import MockAgentRpc
+from django.test import TestCase
 
 
-class ResourceManagerTestCase(JobTestCaseWithHost):
+class ResourceManagerTestCase(TestCase):
     def setUp(self):
         super(ResourceManagerTestCase, self).setUp()
+
+        self.host = ManagedHost.objects.create(
+            fqdn = 'myaddress.mycompany.com',
+            nodename = 'myaddress.mycompany.com',
+            immutable_state = False,
+            address = 'myaddress.mycompany.com')
+        LNetConfiguration.objects.create(host = self.host, state = 'nids_known')
 
         self.manager = load_plugins([
             'example_plugin',
@@ -92,6 +102,10 @@ class TestSessions(ResourceManagerTestCase):
 
 
 class TestManyObjects(ResourceManagerTestCase):
+    """
+    This test is not for correctness: mainly useful as a way of tuning/measuring the number of queries
+    being done by the resource manager & how it varies with the number of devices in play
+    """
     def setUp(self):
         super(TestManyObjects, self).setUp()
 
@@ -105,7 +119,7 @@ class TestManyObjects(ResourceManagerTestCase):
         self.couplet_resource_pk = couplet_record.pk
 
         # luns
-        self.N = 32
+        self.N = 4
         # drives per lun
         self.M = 10
         self.host_resources = [scannable_resource]
@@ -175,6 +189,20 @@ class TestVirtualMachines(ResourceManagerTestCase):
         }}
         MockAgentRpc.mock_servers = self.mock_servers
 
+        def create_host_ssh(address):
+            host = ManagedHost.objects.create(
+                fqdn = address,
+                nodename = address,
+                address = address
+            )
+            return host, None
+
+        self.old_create_host_ssh = JobSchedulerClient.create_host_ssh
+        JobSchedulerClient.create_host_ssh = mock.Mock(side_effect=create_host_ssh)
+
+    def tearDown(self):
+        JobSchedulerClient.create_host_ssh = self.old_create_host_ssh
+
     def test_virtual_machine_initial(self):
         """Check that ManagedHosts are created for VirtualMachines when
         present in the initial resource set"""
@@ -186,7 +214,7 @@ class TestVirtualMachines(ResourceManagerTestCase):
         resource_manager = ResourceManager()
         # Session for host resources
         resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
-        self.assertEqual(ManagedHost.objects.count(), 2)
+        JobSchedulerClient.create_host_ssh.assert_called_once_with('myvm')
 
     def test_virtual_machine_update(self):
         """Check that ManagedHosts are created for VirtualMachines when
@@ -201,18 +229,20 @@ class TestVirtualMachines(ResourceManagerTestCase):
         resource_manager.session_open(controller_record.pk, [controller_resource], 60)
         self.assertEqual(ManagedHost.objects.count(), 1)
         resource_manager.session_add_resources(controller_record.pk, [controller_resource, vm_resource])
+        JobSchedulerClient.create_host_ssh.assert_called_once_with('myvm')
         self.assertEqual(ManagedHost.objects.count(), 2)
 
     def test_virtual_machine_existing(self):
         """Check that a virtual machine with the same address
         as an existing host gets linked to that host"""
         controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller', {'address': '192.168.0.1'})
-        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = 'myaddress')
+        vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = self.host.address)
 
         resource_manager = ResourceManager()
         # Session for host resources
         self.assertEqual(ManagedHost.objects.count(), 1)
         resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
+        self.assertEqual(JobSchedulerClient.create_host_ssh.call_count, 0)
         self.assertEqual(ManagedHost.objects.count(), 1)
 
 
@@ -427,13 +457,12 @@ class TestVolumeBalancing(ResourceManagerTestCase):
         hosts = []
         for i in range(0, 3):
             address = "host_%d" % i
-            self.mock_servers[address] = {
-                'fqdn': "%s.mycompany.com" % address,
-                'nodename': "%s.mycompany.com" % address,
-                'nids': ["192.168.0.%d@tcp" % i]
-            }
 
-            host, command = ManagedHost.create(self.mock_servers[address]['fqdn'], self.mock_servers[address]['nodename'], ['manage_targets'], address = address)
+            host = ManagedHost.objects.create(
+                fqdn = address,
+                nodename = address,
+                address = address
+            )
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})
             hosts.append({'host': host, 'record': resource_record, 'resource': scannable_resource})
 

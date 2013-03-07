@@ -1,7 +1,7 @@
-
 from chroma_core.services.syslog.parser import admin_client_eviction_handler, client_connection_handler, server_security_flavor_handler, client_eviction_handler
 from chroma_core.models.event import ClientConnectEvent
-from tests.unit.chroma_core.helper import JobTestCaseWithHost
+from django.test import TestCase
+from tests.unit.chroma_core.helper import synthetic_host
 
 
 examples = {
@@ -42,7 +42,10 @@ examples = {
 }
 
 
-class TestHandlers(JobTestCaseWithHost):
+class TestHandlers(TestCase):
+    def setUp(self):
+        self.host = synthetic_host('myaddress')
+
     def test_server_security_flavor_handler(self):
         ssfh_examples = [
             {'message': " Lustre: 5629:0:(sec.c:1474:sptlrpc_import_sec_adapt()) import lustre-MDT0000->NET_0x20000c0a87ada_UUID netid 20000: select flavor null"},

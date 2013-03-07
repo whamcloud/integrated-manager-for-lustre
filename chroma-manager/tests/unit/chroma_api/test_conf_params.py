@@ -1,15 +1,22 @@
+from chroma_core.models import Command
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.target import ManagedOst
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+import mock
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_core.helper import synthetic_volume_full, synthetic_host, create_target_patch, create_filesystem_patch
 
 
-class TestTargetPostValidation(ChromaApiTestCaseHeavy):
+class TestTargetPostValidation(ChromaApiTestCase):
     def setUp(self):
         super(TestTargetPostValidation, self).setUp()
-        self.create_simple_filesystem()
 
+        self.host = synthetic_host('myserver')
+        self.create_simple_filesystem(self.host)
+
+    @create_target_patch
     def _new_ost_with_params(self, params):
-        spare_volume = self._test_lun(self.host)
+        spare_volume = synthetic_volume_full(self.host)
 
         return self.api_client.post("/api/target/", data = {
             'kind': 'OST',
@@ -18,11 +25,12 @@ class TestTargetPostValidation(ChromaApiTestCaseHeavy):
             'conf_params': params
         })
 
+    @create_target_patch
     def test_missing(self):
         """Test that POSTs without conf_params are OK -- this
         is for backwards compatability with respect to Chroma 1.0.0.0
         which didn't have conf_params on POSTs at all"""
-        spare_volume = self._test_lun(self.host)
+        spare_volume = synthetic_volume_full(self.host)
 
         response = self.api_client.post("/api/target/", data = {
             'kind': 'OST',
@@ -81,10 +89,11 @@ class TestTargetPostValidation(ChromaApiTestCaseHeavy):
         self.assertEqual(errors['conf_params']['lov.qos_prio_free'], ["Only valid for MDT"])
 
 
-class TestTargetPutValidation(ChromaApiTestCaseHeavy):
+class TestTargetPutValidation(ChromaApiTestCase):
     def setUp(self):
         super(TestTargetPutValidation, self).setUp()
-        self.create_simple_filesystem()
+        self.host = synthetic_host('myserver')
+        self.create_simple_filesystem(self.host)
 
         self.filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))['objects'][0]
         self.mgt = self.filesystem['mgt']
@@ -118,11 +127,23 @@ class TestTargetPutValidation(ChromaApiTestCaseHeavy):
         self.assertEqual(errors['conf_params'], ["Cannot modify conf_params on immutable_state objects"])
 
 
-class TestFilesystemConfParamValidation(ChromaApiTestCaseHeavy):
+class TestFilesystemConfParamValidation(ChromaApiTestCase):
+    def setUp(self):
+        super(TestFilesystemConfParamValidation, self).setUp()
+        self.host = synthetic_host('myserver')
+
+        # For PUTs
+        self.old_command_run_jobs = JobSchedulerClient.command_run_jobs
+        JobSchedulerClient.command_run_jobs = mock.Mock(side_effect = lambda jobs, msg: Command.objects.create().id)
+
+    def tearDown(self):
+        JobSchedulerClient.command_run_jobs = self.old_command_run_jobs
+
+    @create_filesystem_patch
     def _post_filesystem(self, fs_params, mgt_params, mdt_params, ost_params):
-        mgt_volume = self._test_lun(self.host)
-        mdt_volume = self._test_lun(self.host)
-        ost_volume = self._test_lun(self.host)
+        mgt_volume = synthetic_volume_full(self.host)
+        mdt_volume = synthetic_volume_full(self.host)
+        ost_volume = synthetic_volume_full(self.host)
 
         return self.api_client.post("/api/filesystem/",
             data = {
@@ -178,7 +199,7 @@ class TestFilesystemConfParamValidation(ChromaApiTestCaseHeavy):
 
     def test_put_immutable_state_fs(self):
         """Check that conf param edits to an immutable_state FS are rejected"""
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         fs_record = ManagedFilesystem.objects.get()
         fs_record.immutable_state = True
         fs_record.save()
@@ -191,7 +212,7 @@ class TestFilesystemConfParamValidation(ChromaApiTestCaseHeavy):
 
     def test_put_fs_valid(self):
         """Check that valid conf params for a filesystem are accepted"""
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))['objects'][0]
         filesystem['conf_params']['sys.at_history'] = '1'
         response = self.api_client.put(filesystem['resource_uri'], data = filesystem)
@@ -199,7 +220,7 @@ class TestFilesystemConfParamValidation(ChromaApiTestCaseHeavy):
 
     def test_put_fs_invalid(self):
         """Check that invalid conf params for a filesystem are rejected"""
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))['objects'][0]
         filesystem['conf_params']['sys.at_history'] = 'rhubarb'
         response = self.api_client.put(filesystem['resource_uri'], data = filesystem)
@@ -208,7 +229,7 @@ class TestFilesystemConfParamValidation(ChromaApiTestCaseHeavy):
 
     def test_put_nones(self):
         """Check that existing values can be cleared"""
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))['objects'][0]
         filesystem['conf_params']['sys.at_history'] = '10'
         response = self.api_client.put(filesystem['resource_uri'], data = filesystem)
@@ -223,7 +244,7 @@ class TestFilesystemConfParamValidation(ChromaApiTestCaseHeavy):
 
     def test_put_spaces(self):
         """Check that values with trailing or leading spaces are rejected"""
-        self.create_simple_filesystem()
+        self.create_simple_filesystem(self.host)
         filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))['objects'][0]
         filesystem['conf_params']['sys.at_history'] = ' 10'
         response = self.api_client.put(filesystem['resource_uri'], data = filesystem)

@@ -19,7 +19,7 @@ from django.db.models.query_utils import Q
 
 from chroma_core.lib.util import normalize_nid
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import StateChangeJob
+from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
@@ -146,35 +146,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                 return ['removed']
         else:
             return super(ManagedHost, self).get_available_states(begin_state)
-
-    @classmethod
-    def create(cls, fqdn, nodename, capabilities, **kwargs):
-        # Single transaction for creating Host and related database objects
-        # * Firstly because we don't want any of these unless they're all setup
-        # * Secondly because we want them committed before creating any Jobs which
-        #   will try to use them.
-        immutable_state = not any("manage_" in c for c in capabilities)
-
-        # The address of a host isn't something we can learn from it (the
-        # address is specifically how the host is to be reached from the manager
-        # for outbound connections, not just its FQDN).  If during creation we know
-        # the address, then great, accept it.  Else default to FQDN, it's a reasonable guess.
-        if not 'address' in kwargs or kwargs['address'] is None:
-            kwargs['address'] = fqdn
-
-        with transaction.commit_on_success():
-            host = ManagedHost.objects.create(
-                fqdn = fqdn,
-                nodename = nodename,
-                immutable_state = immutable_state,
-                **kwargs)
-            lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
-
-        # Attempt some initial setup jobs
-        from chroma_core.models.jobs import Command
-        command = Command.set_state([(host, 'configured')], "Setting up host %s" % host)
-
-        return host, command
 
     @classmethod
     def get_by_nid(cls, nid_string):
@@ -380,6 +351,7 @@ class Nid(models.Model):
 
 class LearnNidsStep(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         from chroma_core.models import Nid
@@ -468,6 +440,10 @@ class UnconfigureNTPStep(Step):
 class GetLNetStateStep(Step):
     idempotent = True
 
+    # FIXME: using database=True to do the alerting update inside .set_state but
+    # should do it in a completion
+    database = True
+
     def run(self, kwargs):
         host = kwargs['host']
 
@@ -523,6 +499,9 @@ class RemoveServerConfStep(Step):
 
 class LearnDevicesStep(Step):
     idempotent = True
+
+    # Require database to talk to storage_plugin_manager
+    database = True
 
     def run(self, kwargs):
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
@@ -581,7 +560,10 @@ class EnableLNetJob(StateChangeJob):
 
 
 class DetectTargetsStep(Step):
-    idempotent = True
+    database = True
+
+    def is_dempotent(self):
+        return True
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
@@ -721,6 +703,7 @@ class StopLNetJob(StateChangeJob):
 
 class DeleteHostStep(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         from chroma_core.services.http_agent import HttpAgentRpc
@@ -781,26 +764,28 @@ class RemoveHostJob(StateChangeJob):
 
 
 def _get_host_dependents(host):
-    from chroma_core.models.target import ManagedTarget
+    from chroma_core.models.target import ManagedTarget, ManagedMgs, FilesystemMember
 
     targets = set(list(ManagedTarget.objects.filter(managedtargetmount__host = host).distinct()))
     filesystems = set()
     for t in targets:
-        t = t.downcast()
-        if hasattr(t, 'filesystem'):
-            filesystems.add(t.filesystem)
-        elif hasattr(t, 'managedfilesystem_set'):
-            for f in t.managedfilesystem_set.all():
+        if not t.__class__ == ManagedTarget:
+            job_log.debug("objects=%s %s" % (ManagedTarget.objects, ManagedTarget.objects.__class__))
+            raise RuntimeError("Seems to have given DowncastMetaClass behaviour")
+        if issubclass(t.downcast_class, FilesystemMember):
+            filesystems.add(t.downcast().filesystem)
+        elif issubclass(t.downcast_class, ManagedMgs):
+            for f in t.downcast().managedfilesystem_set.all():
                 filesystems.add(f)
     for f in filesystems:
-        for t in f.get_targets():
-            targets.add(t)
+        targets |= set(list(f.get_targets()))
 
     return targets, filesystems
 
 
 class DeleteHostDependents(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         host = kwargs['host']
@@ -842,6 +827,7 @@ class ForceRemoveHostJob(AdvertisedJob):
         targets, filesystems = _get_host_dependents(self.host)
         # Take a write lock on get_stateful_object if this is a StateChangeJob
         for object in itertools.chain(targets, filesystems):
+            job_log.debug("Creating StateLock on %s/%s" % (object.__class__, object.id))
             locks.append(StateLock(
                 job = self,
                 locked_item = object,
@@ -998,23 +984,24 @@ class WriteConfStep(Step):
         from chroma_core.models.target import FilesystemMember
 
         target = args['target']
-        primary_tm = target.managedtargetmount_set.get(primary = True)
 
         agent_args = {
             'writeconf': True,
             'erase_params': True,
-            'device': primary_tm.volume_node.path}
+            'device': args['path']}
 
         if issubclass(target.downcast_class, FilesystemMember):
-            agent_args['mgsnode'] = target.filesystem.mgs.nids()
+            agent_args['mgsnode'] = args['mgsnode']
 
-        fail_nids = target.get_failover_nids()
+        fail_nids = args['fail_nids']
         if fail_nids:
             agent_args['failnode'] = fail_nids
-        self.invoke_agent(primary_tm.host, "writeconf_target", agent_args)
+        self.invoke_agent(args['host'], "writeconf_target", agent_args)
 
 
 class ResetConfParamsStep(Step):
+    database = True
+
     def run(self, args):
         # Reset version to zero so that next time the target is started
         # it will write all its parameters from chroma to lustre.
@@ -1032,18 +1019,22 @@ class UpdateNidsJob(Job, HostListMixin):
 
     def _targets_on_hosts(self):
         from chroma_core.models.target import ManagedMgs, ManagedTarget, FilesystemMember
+        from chroma_core.models.filesystem import ManagedFilesystem
 
         filesystems = set()
         targets = []
         for target in ManagedTarget.objects.filter(managedtargetmount__host__in = self.hosts.all()):
-            target = target.downcast()
             targets.append(target)
             if issubclass(target.downcast_class, FilesystemMember):
-                filesystems.add(target.filesystem)
+                # FIXME: N downcasts :-(
+                filesystems.add(target.downcast().filesystem)
 
-            if isinstance(target.downcast_class, ManagedMgs):
-                for fs in target.managedfilesystem_set.all():
+            if issubclass(target.downcast_class, ManagedMgs):
+                for fs in target.downcast().managedfilesystem_set.all():
                     filesystems.add(fs)
+
+        targets = [ObjectCache.get_by_id(ManagedTarget, t.id) for t in targets]
+        filesystems = [ObjectCache.get_by_id(ManagedFilesystem, f.id) for f in filesystems]
 
         return filesystems, targets
 
@@ -1084,6 +1075,7 @@ class UpdateNidsJob(Job, HostListMixin):
         from chroma_core.models.target import ManagedMgs
         from chroma_core.models.target import MountStep
         from chroma_core.models.target import UnmountStep
+        from chroma_core.models.target import FilesystemMember
 
         filesystems, targets = self._targets_on_hosts()
         all_targets = set()
@@ -1094,27 +1086,34 @@ class UpdateNidsJob(Job, HostListMixin):
         steps = []
         for target in all_targets:
             target = target.downcast()
-            steps.append((WriteConfStep, {'target': target}))
+            primary_tm = target.managedtargetmount_set.get(primary = True)
+            steps.append((WriteConfStep, {
+                'target': target,
+                'path': primary_tm.volume_node.path,
+                'mgsnode': target.filesystem.mgs.nids() if issubclass(target.downcast_class, FilesystemMember) else None,
+                'host': primary_tm.host,
+                'fail_nids': target.get_failover_nids()
+            }))
 
         mgs_targets = [t for t in targets if issubclass(t.downcast_class, ManagedMgs)]
         fs_targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
 
         for target in mgs_targets:
-            steps.append((ResetConfParamsStep, {'mgt': target}))
+            steps.append((ResetConfParamsStep, {'mgt': target.downcast()}))
 
         for target in mgs_targets:
-            steps.append((MountStep, {'target': target}))
+            steps.append((MountStep, {'target': target, "host": target.best_available_host()}))
 
         # FIXME: HYD-1133: when doing this properly these should
         # be run as parallel jobs
         for target in fs_targets:
-            steps.append((MountStep, {'target': target}))
+            steps.append((MountStep, {'target': target, "host": target.best_available_host()}))
 
         for target in fs_targets:
-            steps.append((UnmountStep, {'target': target}))
+            steps.append((UnmountStep, {'target': target, "host": target.best_available_host()}))
 
         for target in mgs_targets:
-            steps.append((UnmountStep, {'target': target}))
+            steps.append((UnmountStep, {'target': target, "host": target.best_available_host()}))
 
         # FIXME: HYD-1133: should be marking targets as unregistered
         # so that they get started in the correct order next time

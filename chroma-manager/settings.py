@@ -151,7 +151,7 @@ for app in OPTIONAL_APPS:
 
 if 'django_nose' in INSTALLED_APPS:
     TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-    NOSE_ARGS = ['--exclude=.*(integration|selenium|services).*', '--logging-filter=-south']
+    NOSE_ARGS = ['--logging-filter=-south']
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',

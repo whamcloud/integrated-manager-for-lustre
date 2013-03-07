@@ -6,6 +6,7 @@
 
 import json
 from collections import defaultdict
+import django.db.models
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
@@ -20,6 +21,7 @@ log = log_register(__name__.split('.')[-1])
 
 class Transition(object):
     def __init__(self, stateful_object, old_state, new_state):
+        assert isinstance(stateful_object, django.db.models.Model)
         self.stateful_object = stateful_object
         self.old_state = old_state
         self.new_state = new_state
@@ -123,10 +125,12 @@ class CommandPlan(object):
             self._create_dependencies(job, locks)
             with transaction.commit_on_success():
                 job.save()
+
+            log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
+
             for l in locks:
                 self._lock_cache.add(l)
 
-            log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
             command.jobs.add(job)
 
         self._job_collection.add_command(command, jobs)
@@ -154,11 +158,11 @@ class CommandPlan(object):
             self.get_expected_state(instance),
             new_state))
 
-        #log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
-        #for d in self.deps:
-        #    log.debug("  dep %s" % (d,))
-        #for e in self.edges:
-        #    log.debug("  edge [%s]->[%s]" % (e))
+        log.debug("Transition %s %s->%s:" % (instance, self.get_expected_state(instance), new_state))
+        for d in self.deps:
+            log.debug("  dep %s" % (d,))
+        for e in self.edges:
+            log.debug("  edge [%s]->[%s]" % e)
         self.deps = self._sort_graph(self.deps, self.edges)
 
         depended_jobs = []
@@ -360,7 +364,7 @@ class CommandPlan(object):
             from chroma_core.lib.job import DependOn
             assert(isinstance(dependency, DependOn))
             old_state = self.get_expected_state(dependency.stateful_object)
-            log.debug("cd %s/%s %s %s" % (dependency.stateful_object.__class__, dependency.stateful_object.id, old_state, dependency.acceptable_states))
+            log.debug("cd %s/%s %s %s %s" % (dependency.stateful_object.__class__, dependency.stateful_object.id, old_state, dependency.acceptable_states, id(dependency.stateful_object)))
 
             if not old_state in dependency.acceptable_states:
                 dep_transition = self._emit_transition_deps(Transition(
@@ -399,6 +403,7 @@ class CommandPlan(object):
         for dependent in root_transition.stateful_object.get_dependent_objects():
             if dependent in transition_stack:
                 continue
+
             # What state do we expect the dependent to be in?
             dependent_state = get_mid_transition_expected_state(dependent)
             for dependency in self._dep_cache.get(dependent, dependent_state).all():
@@ -411,8 +416,8 @@ class CommandPlan(object):
                     else:
                         fix_state = dependency.fix_state
 
-                    log.debug("Reverse dependency: %s-%s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
-                        dependent, dependent_state, root_transition.stateful_object.__class__,
+                    log.debug("Reverse dependency: %s in state %s required %s to be in state %s (but will be %s), fixing by setting it to state %s" % (
+                        dependent, dependent_state,
                         root_transition.stateful_object.id, dependency.acceptable_states, root_transition.new_state,
                         fix_state))
 

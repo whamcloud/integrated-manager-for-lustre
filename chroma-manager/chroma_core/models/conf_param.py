@@ -9,12 +9,13 @@ from chroma_core.lib.job import DependOn, Step, DependAll
 from polymorphic.models import DowncastMetaclass
 
 from chroma_core.models.jobs import Job
-from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst
+from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget
 from chroma_core.models.filesystem import ManagedFilesystem
 
 
 class ConfParamStep(Step):
     idempotent = False
+    database = True
 
     def run(self, kwargs):
         conf_param = ConfParam.objects.get(pk = kwargs['conf_param_id']).downcast()
@@ -25,6 +26,7 @@ class ConfParamStep(Step):
 
 class ConfParamVersionStep(Step):
     idempotent = True
+    database = True
 
     def run(self, kwargs):
         from chroma_core.models import ManagedMgs
@@ -34,7 +36,7 @@ class ConfParamVersionStep(Step):
 
 
 class ApplyConfParams(Job):
-    mgs = models.ForeignKey(ManagedMgs)
+    mgs = models.ForeignKey(ManagedTarget)
 
     class Meta:
         app_label = 'chroma_core'
@@ -46,7 +48,8 @@ class ApplyConfParams(Job):
     def get_steps(self):
         from chroma_core.models import ConfParam
         from chroma_core.lib.job import job_log
-        new_params = ConfParam.objects.filter(version__gt = self.mgs.conf_param_version_applied, mgs = self.mgs).order_by('version')
+        mgs = self.mgs.downcast()
+        new_params = ConfParam.objects.filter(version__gt = mgs.conf_param_version_applied, mgs = mgs).order_by('version')
         steps = []
 
         new_param_count = new_params.count()
@@ -60,22 +63,23 @@ class ApplyConfParams(Job):
             steps.append((ConfParamVersionStep, {"mgs_id": self.mgs.id, "version": highest_version}))
         else:
             # If we have no new params, no-op
-            job_log.warning("ApplyConfParams %d, mgs %d has no params newer than %d" % (self.id, self.mgs.id, self.mgs.conf_param_version_applied))
+            job_log.warning("ApplyConfParams %d, mgs %d has no params newer than %d" % (self.id, mgs.id, mgs.conf_param_version_applied))
 
         return steps
 
     def get_deps(self):
+        mgs = self.mgs.downcast()
         deps = [DependOn(self.mgs, 'mounted')]
-        new_params = ConfParam.objects.filter(version__gt = self.mgs.conf_param_version_applied, mgs = self.mgs).order_by('version')
+        new_params = ConfParam.objects.filter(version__gt = mgs.conf_param_version_applied, mgs = mgs).order_by('version')
         targets = set()
         for param in new_params:
             param = param.downcast()
             if hasattr(param, 'mdt'):
-                targets.add(param.mdt)
+                targets.add(param.mdt.managedtarget_ptr)
             if hasattr(param, 'ost'):
-                targets.add(param.ost)
+                targets.add(param.ost.managedtarget_ptr)
             if hasattr(param, 'filesystem'):
-                targets.add(ManagedMdt._base_manager.get(filesystem = param.filesystem))
+                targets.add(ManagedMdt._base_manager.get(filesystem = param.filesystem).managedtarget_ptr)
 
         for target in targets:
             deps.append(DependOn(target, 'mounted', acceptable_states = target.not_states(['unformatted', 'formatted'])))

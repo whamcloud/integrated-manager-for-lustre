@@ -5,6 +5,10 @@
 
 
 from collections import defaultdict
+from chroma_core.services import log_register
+
+
+log = log_register(__name__)
 
 
 class ObjectCache(object):
@@ -13,33 +17,72 @@ class ObjectCache(object):
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration
         from chroma_core.models.target import ManagedTarget, ManagedTargetMount
-        objects = defaultdict(list)
-        targets = {}
+        self.objects = defaultdict(dict)
         filter_args = {
             ManagedTargetMount: {"target__not_deleted": True},
             LNetConfiguration: {"host__not_deleted": True}
         }
-        for klass in [ManagedTarget, ManagedFilesystem, ManagedHost, ManagedTargetMount, LNetConfiguration]:
-            args = filter_args.get(klass, {})
-            for object in klass.objects.select_related().filter(**args):
-                objects[klass].append(object)
-                if hasattr(object, 'content_type'):
-                    object = object.downcast()
-                    if object.__class__ != klass:
-                        objects[object.__class__].append(object)
-                        if isinstance(object, ManagedTarget):
-                            targets[object.id] = object
 
-        self.targets = targets
-        self.objects = objects
+        self._cached_models = [ManagedTarget, ManagedFilesystem, ManagedHost, ManagedTargetMount, LNetConfiguration]
+
+        for klass in self._cached_models:
+            args = filter_args.get(klass, {})
+            for obj in klass.objects.filter(**args):
+                self._add(klass, obj)
+
+    def _add(self, klass, instance):
+        assert instance.__class__ in self._cached_models
+
+        log.debug("_add %s %s %s" % (instance.__class__, instance.id, id(instance)))
+
+        self.objects[klass][instance.pk] = instance
+
+    @classmethod
+    def add(cls, klass, instance):
+        cls.getInstance()._add(klass, instance)
 
     @classmethod
     def get(cls, klass, filter = None):
-        return [o for o in cls.getInstance().objects[klass] if not filter or filter(o)]
+        assert klass in cls.getInstance()._cached_models
+        return [o for o in cls.getInstance().objects[klass].values() if not filter or filter(o)]
+
+    @classmethod
+    def get_by_id(cls, klass, instance_id):
+        assert klass in cls.getInstance()._cached_models
+        try:
+            return cls.getInstance().objects[klass][instance_id]
+        except KeyError:
+            raise klass.DoesNotExist()
+
+    @classmethod
+    def get_targets_by_filesystem(cls, filesystem_id):
+        return cls.getInstance()._get_targets_by_filesystem(filesystem_id)
+
+    @classmethod
+    def fs_targets(cls, fs_id):
+        from chroma_core.models import ManagedMgs
+        targets = cls.getInstance()._get_targets_by_filesystem(fs_id)
+        targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
+        #log.debug("fs_targets: %s" % targets)
+        return targets
+
+    def _get_targets_by_filesystem(self, filesystem_id):
+        from chroma_core.models import ManagedTarget, ManagedMdt, ManagedOst, ManagedFilesystem
+
+        # FIXME: This is reasonably efficient but could be improved further by caching the filesystem membership of targets.
+        targets = []
+        mgs_id = self.objects[ManagedFilesystem][filesystem_id].mgs_id
+        targets.append(self.objects[ManagedTarget][mgs_id])
+
+        targets.extend([self.objects[ManagedTarget][mdt['id']] for mdt in ManagedMdt.objects.filter(filesystem = filesystem_id).values('id')])
+        targets.extend([self.objects[ManagedTarget][ost['id']] for ost in ManagedOst.objects.filter(filesystem = filesystem_id).values('id')])
+
+        return targets
 
     @classmethod
     def get_one(cls, klass, filter = None):
-        r = [o for o in cls.getInstance().objects[klass] if not filter or filter(o)]
+        assert klass in cls.getInstance()._cached_models
+        r = [o for o in cls.getInstance().objects[klass].values() if not filter or filter(o)]
         if len(r) > 1:
             raise klass.MultipleObjectsReturned
         elif not r:
@@ -61,40 +104,42 @@ class ObjectCache(object):
 
     @classmethod
     def clear(cls):
+        log.info('clear')
         cls.instance = None
 
     @classmethod
     def host_targets(cls, host_id):
-        from chroma_core.models.target import ManagedTargetMount
+        from chroma_core.models.target import ManagedTargetMount, ManagedTarget
         mtms = cls.get(ManagedTargetMount, lambda mtm: mtm.host_id == host_id)
-        target_ids = set([mtm.target_id for mtm in mtms])
-        return [cls.getInstance().targets[i] for i in target_ids]
+
+        # FIXME: We have to explicitly restrict to non-deleted targets because ManagedTargetMount
+        # instances aren't cleaned up on target deletion.
+        target_ids = set([mtm.target_id for mtm in mtms]) & set(cls.getInstance().objects[ManagedTarget].keys())
+        return [cls.getInstance().objects[ManagedTarget][i] for i in target_ids]
 
     @classmethod
     def purge(cls, klass, filter):
-        cls.getInstance().objects[klass] = [o for o in cls.getInstance().objects[klass] if not filter(o)]
+        cls.getInstance().objects[klass] = dict([(o.pk, o) for o in cls.getInstance().objects[klass].values() if not filter(o)])
+
+    def _update(self, obj):
+        assert obj.__class__ in self._cached_models
+        log.debug("update: %s %s" % (obj.__class__, obj.id))
+        class_collection = self.objects[obj.__class__]
+        if obj.pk in class_collection:
+            try:
+                fresh_instance = obj.__class__.objects.get(pk = obj.pk)
+            except obj.__class__.DoesNotExist:
+                pass
+            else:
+                class_collection[obj.pk] = fresh_instance
+            return
 
     @classmethod
-    def update(cls, object):
-        class_collection = cls.getInstance().objects[object.__class__]
-        for instance in class_collection:
-            if instance.id == object.id:
-                class_collection.remove(instance)
-                try:
-                    fresh_instance = object.__class__.objects.get(pk = object.pk)
-                except object.__class__.DoesNotExist:
-                    pass
-                else:
-                    class_collection.append(fresh_instance)
-                return
+    def update(cls, obj):
+        cls.getInstance()._update(obj)
 
     @classmethod
     def mtm_targets(cls, mtm_id):
-        from chroma_core.models.target import ManagedTargetMount
+        from chroma_core.models.target import ManagedTargetMount, ManagedTarget
         mtms = cls.get(ManagedTargetMount, lambda mtm: mtm.id == mtm_id)
-        return [cls.getInstance().targets[mtm.target_id] for mtm in mtms]
-
-    @classmethod
-    def fs_targets(cls, fs_id):
-        from chroma_core.models.target import ManagedMdt, ManagedOst
-        return cls.get(ManagedMdt, lambda mdt: mdt.filesystem_id == fs_id) + cls.get(ManagedOst, lambda mdt: mdt.filesystem_id == fs_id)
+        return [cls.getInstance().objects[ManagedTarget][mtm.target_id] for mtm in mtms]

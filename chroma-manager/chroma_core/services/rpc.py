@@ -19,6 +19,7 @@ management command.
 import socket
 import threading
 import uuid
+import django
 import os
 import time
 import jsonschema
@@ -114,6 +115,8 @@ class RunOneRpc(threading.Thread):
                 'exception': backtrace
             }
             log.error("RunOneRpc: exception calling %s: %s" % (self.body['method'], backtrace))
+
+        django.db.connection.close()
 
         with self._response_conn_pool[_amqp_connection()].acquire(block=True) as connection:
             with Producer(connection) as producer:

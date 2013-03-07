@@ -1,14 +1,15 @@
 import glob
 import json
+from django.test import TestCase
+import mock
 import os
 from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.host import ManagedHost, Volume, VolumeNode
+from chroma_core.models.host import ManagedHost, Volume, VolumeNode, DetectTargetsJob
 from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from tests.unit.chroma_core.helper import JobTestCase
+from tests.unit.chroma_core.helper import synthetic_host, synchronous_run_job
 
 
-class TestDetection(JobTestCase):
+class TestDetection(TestCase):
     mock_servers = {}
 
     def test_combined_mgs_mdt(self):
@@ -17,23 +18,14 @@ class TestDetection(JobTestCase):
 
         for path in fixture_glob("*_nid.txt"):
             address = os.path.basename(path).split("_")[0]
-            nids = open(path).readlines()
-
-            nids = [n.strip() for n in nids if n]
-            self.mock_servers[address] = {
-                'fqdn': address,
-                'nodename': address,
-                'nids': nids
-            }
-
-            ManagedHost.create(address, address, ['manage_targets'], address = address)
+            nids = [l.strip() for l in open(path).readlines()]
+            synthetic_host(address, nids)
 
         host_data = {}
         for path in fixture_glob("*detect_scan_output.txt"):
             address = os.path.basename(path).split("_")[0]
             data = json.load(open(path))['result']
             host_data[ManagedHost.objects.get(address = address)] = data
-            self.mock_servers[address]['detect-scan'] = data
 
         # Simplified volume construction:
         #  * Assume all device paths referenced in detection exist
@@ -49,7 +41,14 @@ class TestDetection(JobTestCase):
                         for host in host_data.keys():
                             VolumeNode.objects.create(volume = volume, path = d, host = host)
 
-        JobSchedulerClient.command_run_jobs([{'class_name': 'DetectTargetsJob', 'args': {}}], "Test detect targets")
+        def _detect_scan(host, command, args = None):
+            self.assertEqual(command, 'detect_scan')
+            return host_data[host]
+
+        job = DetectTargetsJob.objects.create()
+
+        with mock.patch("chroma_core.lib.job.Step.invoke_agent", new = mock.Mock(side_effect = _detect_scan)):
+            synchronous_run_job(job)
 
         self.assertEqual(ManagedFilesystem.objects.count(), 1)
         self.assertEqual(ManagedFilesystem.objects.get().name, "test18fs")
@@ -77,4 +76,4 @@ class TestDetection(JobTestCase):
         assertMount('test18fs-OST0006', 'kp-lustre-1-8-oss-4')
         assertMount('test18fs-OST0007', 'kp-lustre-1-8-oss-4')
 
-        self.assertState(ManagedFilesystem.objects.get(), 'available')
+        self.assertEqual(ManagedFilesystem.objects.get().state, 'available')

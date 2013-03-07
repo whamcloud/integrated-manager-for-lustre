@@ -600,7 +600,7 @@ class ResourceManager(object):
                         try:
                             volume_node = VolumeNode.objects.get(storage_resource = nr)
                             if not ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node).exists():
-                                VolumeNode.delete(volume_node.id)
+                                volume_node.mark_deleted()
                         except VolumeNode.DoesNotExist:
                             pass
             else:
@@ -660,7 +660,7 @@ class ResourceManager(object):
             log.info("Removing Volume %s" % volume.id)
             volume.storage_resource = None
             volume.save()
-            Volume.delete(volume.id)
+            volume.mark_deleted()
             return True
         elif targets.count():
             log.warn("Leaving Volume %s, used by Target %s" % (volume.id, targets[0]))
@@ -673,7 +673,7 @@ class ResourceManager(object):
         targets = ManagedTarget.objects.filter(managedtargetmount__volume_node = volume_node)
         if targets.count() == 0:
             log.info("Removing VolumeNode %s" % volume_node.id)
-            VolumeNode.delete(volume_node.id)
+            volume_node.mark_deleted()
             self._try_removing_volume(volume_node.volume)
             return True
         else:

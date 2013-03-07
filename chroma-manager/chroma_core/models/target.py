@@ -8,14 +8,13 @@ import json
 import logging
 import uuid
 from chroma_core.lib.cache import ObjectCache
-from django.contrib.contenttypes.models import ContentType
 
 from django.db import models, transaction
-from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, AnyTargetMountStep, job_log
+from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
-from chroma_core.models.host import ManagedHost, LNetConfiguration, VolumeNode, Volume
+from chroma_core.models.host import ManagedHost, LNetConfiguration, VolumeNode, Volume, HostContactAlert
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 import settings
@@ -96,13 +95,13 @@ class ManagedTarget(StatefulObject):
         """Set the active_mount attribute from the nodename of a host, raising
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""
         try:
-            started_on = ManagedHost.objects.get(nodename = nodename)
+            started_on = ObjectCache.get_one(ManagedHost, lambda mh: mh.nodename == nodename)
         except ManagedHost.DoesNotExist:
             raise RuntimeError("Target %s (%s) found on host %s, which is not a ManagedHost" % (self, self.id, nodename))
         try:
             job_log.debug("Started %s on %s" % (self.ha_label, started_on))
-            self.active_mount = self.managedtargetmount_set.get(host = started_on)
-            self.save()
+            target_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == self.id and mtm.host_id == started_on.id)
+            self.active_mount = target_mount
         except ManagedTargetMount.DoesNotExist:
             job_log.error("Target %s (%s) found on host %s (%s), which has no ManagedTargetMount for this self" % (self, self.id, started_on, started_on.pk))
             raise RuntimeError("Target %s reported as running on %s, but it is not configured there" % (self, started_on))
@@ -148,6 +147,17 @@ class ManagedTarget(StatefulObject):
     def __str__(self):
         return self.name
 
+    def best_available_host(self):
+        """
+        :return: A host which is available for actions, preferably the primary.
+        """
+        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.id)
+        for mount in sorted(mounts, lambda a, b: cmp(b.primary, a.primary)):
+            if HostContactAlert.filter_by_item(mount.host).count() == 0:
+                return mount.host
+
+        raise ManagedHost.DoesNotExist("No hosts online for %s" % self)
+
     # unformatted: I exist in theory in the database
     # formatted: I've been mkfs'd
     # registered: I've registered with the MGS, I'm not setup in HA yet
@@ -188,27 +198,30 @@ class ManagedTarget(StatefulObject):
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
 
-        if isinstance(self, FilesystemMember) and state not in ['removed', 'forgotten']:
+        if issubclass(self.downcast_class, FilesystemMember) and state not in ['removed', 'forgotten']:
             # Make sure I follow if filesystem goes to 'removed'
             # or 'forgotten'
-            filesystem = ObjectCache.get_one(ManagedFilesystem, lambda fs: fs.id == self.filesystem_id)
+            # FIXME: should get filesystem membership from objectcache
+            filesystem_id = self.downcast().filesystem_id
+            filesystem = ObjectCache.get_by_id(ManagedFilesystem, filesystem_id)
             deps.append(DependOn(filesystem, 'available',
                 acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
             target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
             for tm in target_mounts:
+                host = ObjectCache.get_by_id(ManagedHost, tm.host_id)
                 if self.immutable_state:
-                    deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                    deps.append(DependOn(host, 'lnet_up', acceptable_states = list(set(host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
                 else:
-                    deps.append(DependOn(tm.host, 'lnet_up', acceptable_states = list(set(tm.host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
+                    deps.append(DependOn(host, 'lnet_up', acceptable_states = list(set(host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
 
         return DependAll(deps)
 
     reverse_deps = {
-            'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
-            'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
-            'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id)
+        'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
+        'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
+        'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id)
     }
 
     @classmethod
@@ -238,6 +251,8 @@ class ManagedTarget(StatefulObject):
 
         target.save()
 
+        target_mounts = []
+
         def create_target_mount(volume_node):
             mount = ManagedTargetMount(
                 volume_node = volume_node,
@@ -246,6 +261,7 @@ class ManagedTarget(StatefulObject):
                 mount_point = target.default_mount_point,
                 primary = volume_node.primary)
             mount.save()
+            target_mounts.append(mount)
 
         if create_target_mounts:
             try:
@@ -259,7 +275,7 @@ class ManagedTarget(StatefulObject):
             for secondary_volume_node in volume.volumenode_set.filter(use = True, primary = False, host__not_deleted = True):
                 create_target_mount(secondary_volume_node)
 
-        return target
+        return target, target_mounts
 
 
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
@@ -391,24 +407,20 @@ class TargetRecoveryInfo(models.Model):
     #        return "N/A"
 
 
-class DeleteTargetStep(Step):
-    idempotent = True
+def _delete_target(target):
+    if issubclass(target.downcast_class, ManagedMgs):
+        from chroma_core.models.filesystem import ManagedFilesystem
+        assert ManagedFilesystem.objects.filter(mgs = target).count() == 0
+    target.mark_deleted()
+    job_log.debug("_delete_target: %s %s" % (target, id(target)))
 
-    def run(self, kwargs):
-        target = kwargs['target']
-
-        if issubclass(target.downcast_class, ManagedMgs):
-            from chroma_core.models.filesystem import ManagedFilesystem
-            assert ManagedFilesystem.objects.filter(mgs = target).count() == 0
-        target.mark_deleted()
-
-        if target.volume.storage_resource is None:
-            # If a LogicalDrive storage resource goes away, but the
-            # volume is in use by a target, then the volume is left behind.
-            # Check if this is the case, and clean up any remaining volumes.
-            for vn in VolumeNode.objects.filter(volume = target.volume):
-                vn.mark_deleted()
-            target.volume.mark_deleted()
+    if target.volume.storage_resource is None:
+        # If a LogicalDrive storage resource goes away, but the
+        # volume is in use by a target, then the volume is left behind.
+        # Check if this is the case, and clean up any remaining volumes.
+        for vn in VolumeNode.objects.filter(volume = target.volume):
+            vn.mark_deleted()
+        target.volume.mark_deleted()
 
 
 class RemoveConfiguredTargetJob(StateChangeJob):
@@ -442,9 +454,16 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         # TODO: actually do something with Lustre before deleting this from our DB
         steps = []
         for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
-            steps.append((UnconfigurePacemakerStep, {'target_mount': target_mount}))
-        steps.append((DeleteTargetStep, {'target': self.target}))
+            steps.append((UnconfigurePacemakerStep, {
+                'target_mount': target_mount,
+                'target': target_mount.target,
+                'host': target_mount.host
+            }))
         return steps
+
+    def on_success(self):
+        _delete_target(self.target)
+        super(RemoveConfiguredTargetJob, self).on_success()
 
 
 # HYD-832: when transitioning from 'registered' to 'removed', do something to
@@ -462,9 +481,6 @@ class RemoveTargetJob(StateChangeJob):
     def description(self):
         return "Remove target %s from configuration" % (self.target)
 
-    def get_steps(self):
-        return [(DeleteTargetStep, {'target': self.target})]
-
     def get_confirmation_string(self):
         if issubclass(self.target.downcast_class, ManagedOst):
             if self.target.state == 'registered':
@@ -477,6 +493,11 @@ class RemoveTargetJob(StateChangeJob):
     def get_requires_confirmation(self):
         return True
 
+    def on_success(self):
+        _delete_target(self.target)
+
+        super(RemoveTargetJob, self).on_success()
+
 
 class ForgetTargetJob(StateChangeJob):
     class Meta:
@@ -486,11 +507,13 @@ class ForgetTargetJob(StateChangeJob):
     def description(self):
         return "Remove unmanaged target %s" % self.target
 
-    def get_steps(self):
-        return [(DeleteTargetStep, {'target': self.target})]
-
     def get_requires_confirmation(self):
         return True
+
+    def on_success(self):
+        _delete_target(self.target)
+
+        super(ForgetTargetJob, self).on_success()
 
     state_transition = (ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
     stateful_object = 'target'
@@ -503,25 +526,15 @@ class RegisterTargetStep(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        target_mount = target.managedtargetmount_set.get(primary = True)
 
-        mgs_id = target.downcast().filesystem.mgs.id
-        mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == mgs_id)
+        result = self.invoke_agent(kwargs['primary_host'], "register_target",
+                                   {'device': kwargs['device_path'],
+                                    'mount_point': kwargs['mount_point']})
 
-        # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
-        if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
-            raise RuntimeError("Cannot register target while MGS is not started on its primary server")
-
-        result = self.invoke_agent(target_mount.host, "register_target",
-            {'device': target_mount.volume_node.path,
-             'mount_point': target_mount.mount_point})
-
-        target = target_mount.target
         if not result['label'] == target.name:
             # We synthesize a target name (e.g. testfs-OST0001) when creating targets, then
             # pass --index to mkfs.lustre, so our name should match what is set after registration
             raise RuntimeError("Registration returned unexpected target name '%s' (expected '%s')" % (result['label'], target.name))
-        target.save()
         job_log.debug("Registration complete, updating target %d with name=%s, ha_label=%s" % (target.id, target.name, target.ha_label))
 
 
@@ -531,7 +544,6 @@ class GenerateHaLabelStep(Step):
     def run(self, kwargs):
         target = kwargs['target']
         target.ha_label = "%s_%s" % (target.name, uuid.uuid4().__str__()[0:6])
-        target.save()
         job_log.debug("Generated ha_label=%s for target %s (%s)" % (target.ha_label, target.id, target.name))
 
 
@@ -539,28 +551,32 @@ class ConfigurePacemakerStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        target = kwargs['target']
         target_mount = kwargs['target_mount']
+        volume_node = kwargs['volume_node']
+        host = kwargs['host']
 
-        assert(target_mount.volume_node is not None)
+        assert(volume_node is not None)
 
-        self.invoke_agent(target_mount.host, "configure_target_ha", {
-                                    'device': target_mount.volume_node.path,
-                                    'ha_label': target_mount.target.ha_label,
-                                    'uuid': target_mount.target.uuid,
-                                    'primary': target_mount.primary,
-                                    'mount_point': target_mount.mount_point})
+        self.invoke_agent(host, "configure_target_ha", {
+            'device': volume_node.path,
+            'ha_label': target.ha_label,
+            'uuid': target.uuid,
+            'primary': target_mount.primary,
+            'mount_point': target_mount.mount_point})
 
 
 class UnconfigurePacemakerStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        target = kwargs['target']
         target_mount = kwargs['target_mount']
 
-        self.invoke_agent(target_mount.host, "unconfigure_target_ha",
+        self.invoke_agent(kwargs['host'], "unconfigure_target_ha",
             {
-                'ha_label': target_mount.target.ha_label,
-                'uuid': target_mount.target.uuid,
+                'ha_label': target.ha_label,
+                'uuid': target.uuid,
                 'primary': target_mount.primary
             })
 
@@ -582,7 +598,12 @@ class ConfigureTargetJob(StateChangeJob):
         steps = []
 
         for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
-            steps.append((ConfigurePacemakerStep, {'target_mount': target_mount}))
+            steps.append((ConfigurePacemakerStep, {
+                'host': target_mount.host,
+                'target': target_mount.target,
+                'target_mount': target_mount,
+                'volume_node': target_mount.volume_node
+            }))
 
         return steps
 
@@ -615,8 +636,26 @@ class RegisterTargetJob(StateChangeJob):
         target_class = self.target.downcast_class
         if issubclass(target_class, ManagedMgs):
             steps = []
-        if issubclass(target_class, FilesystemMember):
-            steps = [(RegisterTargetStep, {'target': self.target})]
+        elif issubclass(target_class, FilesystemMember):
+            primary_mount = self.target.managedtargetmount_set.get(primary = True)
+            path = primary_mount.volume_node.path
+
+            mgs_id = self.target.downcast().filesystem.mgs.id
+            mgs = ObjectCache.get_by_id(ManagedTarget, mgs_id)
+
+            # Check that the active mount of the MGS is its primary mount (HYD-233 Lustre limitation)
+            if not mgs.active_mount == mgs.managedtargetmount_set.get(primary = True):
+                raise RuntimeError("Cannot register target while MGS is not started on its primary server")
+
+            steps = [(RegisterTargetStep, {
+                'primary_host': primary_mount.host,
+                'target': self.target,
+                'device_path': path,
+                'mount_point': primary_mount.mount_point,
+                'mgs_id': mgs_id
+            })]
+        else:
+            raise NotImplementedError(target_class)
 
         steps.append((GenerateHaLabelStep, {'target': self.target}))
 
@@ -625,16 +664,19 @@ class RegisterTargetJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
-        target = ObjectCache.get_one(self.target.downcast_class, lambda t: t.id == self.target.id)
-        deps.append(DependOn(ObjectCache.target_primary_server(target), 'lnet_up'))
+        deps.append(DependOn(ObjectCache.target_primary_server(self.target), 'lnet_up'))
 
-        if isinstance(target, FilesystemMember):
-            mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == target.filesystem.mgs_id)
+        if issubclass(self.target.downcast_class, FilesystemMember):
+            # FIXME: spurious downcast, should cache filesystem associaton in objectcache
+            mgs = ObjectCache.get_by_id(ManagedTarget, self.target.downcast().filesystem.mgs_id)
 
             deps.append(DependOn(mgs, "mounted"))
 
-        if isinstance(target, ManagedOst):
-            mdts = ObjectCache.get(ManagedMdt, lambda mdt: mdt.filesystem_id == target.filesystem_id)
+        if issubclass(self.target.downcast_class, ManagedOst):
+            # FIXME: spurious downcast, should cache filesystem associaton in objectcache
+            filesystem_id = self.target.downcast().filesystem_id
+            mdts = ObjectCache.get(ManagedTarget, lambda target: issubclass(target.downcast_class,
+                                                                            ManagedMdt) and target.downcast().filesystem_id == filesystem_id)
 
             for mdt in mdts:
                 deps.append(DependOn(mdt, "mounted"))
@@ -642,13 +684,13 @@ class RegisterTargetJob(StateChangeJob):
         return DependAll(deps)
 
 
-class MountStep(AnyTargetMountStep):
+class MountStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         target = kwargs['target']
 
-        result = self._run_agent_command(target, "start_target", {'ha_label': target.ha_label})
+        result = self.invoke_agent(kwargs['host'], "start_target", {'ha_label': target.ha_label})
         target.update_active_mount(result['location'])
 
 
@@ -670,20 +712,21 @@ class StartTargetJob(StateChangeJob):
         # Depend on at least one targetmount having lnet up
         mtms = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id)
         for tm in mtms:
-            lnet_deps.append(DependOn(tm.host, 'lnet_up', fix_state = 'unmounted'))
+            host = ObjectCache.get_by_id(ManagedHost, tm.host_id)
+            lnet_deps.append(DependOn(host, 'lnet_up', fix_state = 'unmounted'))
         return DependAny(lnet_deps)
 
     def get_steps(self):
-        return [(MountStep, {"target": self.target})]
+        return [(MountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
-class UnmountStep(AnyTargetMountStep):
+class UnmountStep(Step):
     idempotent = True
 
     def run(self, kwargs):
         target = kwargs['target']
 
-        self._run_agent_command(target, "stop_target", {'ha_label': target.ha_label})
+        self.invoke_agent(kwargs['host'], "stop_target", {'ha_label': target.ha_label})
         target.active_mount = None
 
 
@@ -704,55 +747,54 @@ class StopTargetJob(StateChangeJob):
         return "Stop target %s" % self.target
 
     def get_steps(self):
-        return [(UnmountStep, {"target": self.target})]
+        return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
 class MkfsStep(Step):
     timeout = 3600
 
-    def _mkfs_args(self, target):
+    def _mkfs_args(self, kwargs):
+        target = kwargs['target']
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
-        kwargs = {}
-        primary_mount = target.managedtargetmount_set.get(primary = True)
+        mkfs_args = {}
 
-        kwargs['target_types'] = {
+        mkfs_args['target_types'] = {
             ManagedMgs: "mgs",
             ManagedMdt: "mdt",
             ManagedOst: "ost"
-        }[target.__class__]
+        }[target.downcast_class]
 
-        if isinstance(target, FilesystemMember):
-            kwargs['fsname'] = target.filesystem.name
-            kwargs['mgsnode'] = target.filesystem.mgs.nids()
+        if issubclass(target.downcast_class, FilesystemMember):
+            mkfs_args['fsname'] = target.downcast().filesystem.name
+            mkfs_args['mgsnode'] = kwargs['mgs_nids']
 
         # FIXME: HYD-266
-        kwargs['reformat'] = True
+        mkfs_args['reformat'] = True
 
-        fail_nids = target.get_failover_nids()
-        if fail_nids:
-            kwargs['failnode'] = fail_nids
+        if kwargs['failover_nids']:
+            mkfs_args['failnode'] = kwargs['failover_nids']
 
-        kwargs['device'] = primary_mount.volume_node.path
-        if isinstance(target, FilesystemMember):
-            kwargs['index'] = target.index
+        mkfs_args['device'] = kwargs['device_path']
+        if issubclass(target.downcast_class, FilesystemMember):
+            mkfs_args['index'] = target.downcast().index
 
         mkfsoptions = []
         if target.inode_size:
-            mkfsoptions.append("-I %s" % (target.inode_size))
+            mkfsoptions.append("-I %s" % target.inode_size)
         if target.bytes_per_inode:
-            mkfsoptions.append("-i %s" % (target.bytes_per_inode))
+            mkfsoptions.append("-i %s" % target.bytes_per_inode)
         if target.inode_count:
-            mkfsoptions.append("-N %s" % (target.inode_count))
+            mkfsoptions.append("-N %s" % target.inode_count)
         if mkfsoptions:
-            kwargs['mkfsoptions'] = " ".join(mkfsoptions)
+            mkfs_args['mkfsoptions'] = " ".join(mkfsoptions)
 
         # HYD-1089 should supercede these settings
-        if isinstance(target, ManagedOst) and settings.LUSTRE_MKFS_OPTIONS_OST:
-            kwargs['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_OST
-        elif isinstance(target, ManagedMdt) and settings.LUSTRE_MKFS_OPTIONS_MDT:
-            kwargs['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_MDT
+        if issubclass(target.downcast_class, ManagedOst) and settings.LUSTRE_MKFS_OPTIONS_OST:
+            mkfs_args['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_OST
+        if issubclass(target.downcast_class, ManagedMdt) and settings.LUSTRE_MKFS_OPTIONS_MDT:
+            mkfs_args['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_MDT
 
-        return kwargs
+        return mkfs_args
 
     @classmethod
     def describe(cls, kwargs):
@@ -762,10 +804,9 @@ class MkfsStep(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        target_mount = target.managedtargetmount_set.get(primary = True)
 
-        args = self._mkfs_args(target)
-        result = self.invoke_agent(target_mount.host, "format_target", args)
+        args = self._mkfs_args(kwargs)
+        result = self.invoke_agent(kwargs['primary_host'], "format_target", args)
         target.uuid = result['uuid']
 
         # Check that inode_size was applied correctly
@@ -783,8 +824,6 @@ class MkfsStep(Step):
         # NB cannot check that bytes_per_inode was applied correctly as that setting is not stored in the FS
         target.inode_count = result['inode_count']
         target.inode_size = result['inode_size']
-
-        target.save()
 
 
 class FormatTargetJob(StateChangeJob):
@@ -804,18 +843,18 @@ class FormatTargetJob(StateChangeJob):
     def get_deps(self):
         from chroma_core.models import ManagedFilesystem
 
-        ct = ContentType.objects.get_for_id(self.target.content_type_id)
-        target = ObjectCache.get_one(ct.model_class(), lambda t: t.id == self.target.id)
         deps = []
 
         hosts = set()
-        for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == target.id):
+        for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id):
             hosts.add(tm.host_id)
         for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in hosts):
             deps.append(DependOn(lnc, 'nids_known'))
 
-        if isinstance(target, FilesystemMember):
-            filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == target.filesystem_id)
+        if issubclass(self.target.downcast_class, FilesystemMember):
+            # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
+            # which filesystem
+            filesystem = ObjectCache.get_by_id(ManagedFilesystem, self.target.downcast().filesystem_id)
             mgt_id = filesystem.mgs_id
 
             mgs_hosts = set()
@@ -828,7 +867,22 @@ class FormatTargetJob(StateChangeJob):
         return DependAll(deps)
 
     def get_steps(self):
-        return [(MkfsStep, {'target': self.target})]
+        primary_mount = self.target.managedtargetmount_set.get(primary = True)
+        path = primary_mount.volume_node.path
+        if issubclass(self.target.downcast_class, FilesystemMember):
+            # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
+            # which filesystem
+            mgs_nids = self.target.downcast().filesystem.mgs.nids()
+        else:
+            mgs_nids = None
+
+        return [(MkfsStep, {
+            'primary_host': primary_mount.host,
+            'target': self.target,
+            'device_path': path,
+            'failover_nids': self.target.get_failover_nids(),
+            'mgs_nids': mgs_nids
+        })]
 
 
 class MigrateTargetJob(AdvertisedJob):
@@ -869,10 +923,8 @@ class FailbackTargetStep(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        primary = target.primary_host
-        self.invoke_agent(primary, "failback_target", {'ha_label': target.ha_label})
-        target.active_mount = target.managedtargetmount_set.get(primary = True)
-        target.save()
+        self.invoke_agent(kwargs['host'], "failback_target", {'ha_label': kwargs['target'].ha_label})
+        target.active_mount = kwargs['primary_mount']
 
 
 class FailbackTargetJob(MigrateTargetJob):
@@ -902,7 +954,11 @@ class FailbackTargetJob(MigrateTargetJob):
         )
 
     def get_steps(self):
-        return [(FailbackTargetStep, {'target': self.target})]
+        return [(FailbackTargetStep, {
+            'target': self.target,
+            'host': self.target.primary_host,
+            'primary_mount': self.target.managedtargetmount_set.get(primary = True)
+        })]
 
 
 class FailoverTargetStep(Step):
@@ -910,10 +966,8 @@ class FailoverTargetStep(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        secondary = target.failover_hosts[0]
-        self.invoke_agent(secondary, "failover_target", {'ha_label': target.ha_label})
-        target.active_mount = target.managedtargetmount_set.get(primary = False)
-        target.save()
+        self.invoke_agent(kwargs['host'], "failover_target", {'ha_label': kwargs['target'].ha_label})
+        target.active_mount = kwargs['secondary_mount']
 
 
 class FailoverTargetJob(MigrateTargetJob):
@@ -942,7 +996,11 @@ class FailoverTargetJob(MigrateTargetJob):
         )
 
     def get_steps(self):
-        return [(FailoverTargetStep, {'target': self.target})]
+        return [(FailoverTargetStep, {
+            'target': self.target,
+            'host': self.target.failover_hosts[0],
+            'secondary_mount': self.target.managedtargetmount_set.get(primary = False)
+        })]
 
 
 class ManagedTargetMount(models.Model):

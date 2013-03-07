@@ -5,6 +5,7 @@
 
 
 from chroma_core.services import log_register
+import django.db.models
 
 job_log = log_register('job')
 
@@ -44,6 +45,9 @@ class DependOn(Dependable):
            it is not already in one of acceptable_states.
            fix_state: what we will try to put the depender into if his
            dependency can no longer be satisfied."""
+
+        assert isinstance(stateful_object, django.db.models.Model)
+
         if not acceptable_states:
             self.acceptable_states = [preferred_state]
         else:
@@ -64,6 +68,9 @@ class DependOn(Dependable):
         # fix_state.
         self.fix_state = fix_state
         self.stateful_object = stateful_object
+
+    def __str__(self):
+        return "%s %s %s %s" % (self.stateful_object, self.preferred_state, self.acceptable_states, self.fix_state)
 
     def get_stateful_object(self):
         return self.stateful_object.__class__._base_manager.get(pk = self.stateful_object.pk)
@@ -114,12 +121,12 @@ class DependAny(MultiDependable):
 class Step(object):
     timeout = None
 
-    def __init__(self, job, args, result, cancel_event):
+    def __init__(self, job, args, log_callback, console_callback, cancel_event):
         self.args = args
         self.job_id = job.id
 
-        # A StepResult object
-        self.result = result
+        self._log_callback = log_callback
+        self._console_callback = console_callback
 
         # This step is the final one in the job
         self.final = False
@@ -139,22 +146,24 @@ class Step(object):
     # override this attribute.
     idempotent = False
 
+    # If true, this step may use the database (limits concurrency to number of
+    # database connections)
+    database = False
+
     def run(self, kwargs):
         raise NotImplementedError
 
     def log(self, message):
         job_log.info("Job %s %s: %s" % (self.job_id, self.__class__.__name__, message))
-        self.result.log += "%s\n" % message
-        self.result.save()
+        self._log_callback("%s\n" % message)
 
     def _log_subprocesses(self, subprocesses):
         for subprocess in subprocesses:
-            self.result.console += "%s: %s\n%s\n%s\n" % (" ".join(subprocess['args']), subprocess['rc'], subprocess['stdout'], subprocess['stderr'])
-            self.result.save()
+            self._console_callback("%s: %s\n%s\n%s\n" % (" ".join(subprocess['args']), subprocess['rc'], subprocess['stdout'], subprocess['stderr']))
 
     def invoke_agent(self, host, command, args = {}):
         """
-        Wrapper around AgentRpc.call which stashes console output in self.result
+        Wrapper around AgentRpc.call which provides logging
         """
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc, AgentException
 
@@ -171,35 +180,3 @@ class Step(object):
 
 class IdempotentStep(Step):
     idempotent = True
-
-
-class AnyTargetMountStep(Step):
-    def _run_agent_command(self, target, command, args):
-        # There is a set of hosts that we can try to contact to start the target: assume
-        # that anything with a TargetMount on is part of the corosync cluster and can be
-        # used to issue a command to start this resource.
-
-        # Try and use each targetmount, the one with the most recent successful audit first
-        from chroma_core.models import ManagedTargetMount
-        # FIXME: HYD-1238: use an authentic online/offline state to select where to run
-        available_tms = ManagedTargetMount.objects.filter(target = target)
-        if available_tms.count() == 0:
-            raise RuntimeError("No hosts are available for target %s" % target)
-        available_tms = list(available_tms)
-
-        for tm in available_tms:
-            job_log.debug("command '%s' on target %s trying targetmount %s" % (command, target, tm))
-
-            try:
-                return self.invoke_agent(tm.host, command, args)
-                # Success!
-            except Exception:
-                job_log.warning("Cannot run '%s' on %s." % (command, tm.host))
-                if tm == available_tms[-1]:
-                    job_log.error("No targetmounts of target %s could run '%s'." % (target, command))
-                    # Re-raise the exception if there are no further TMs to try on
-                    raise
-
-        # Should never fall through, if succeeded then returned, if failed all then
-        # re-raise exception on last failure
-        assert False

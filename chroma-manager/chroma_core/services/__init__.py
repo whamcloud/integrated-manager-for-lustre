@@ -69,7 +69,7 @@ class ServiceThread(threading.Thread):
         except Exception:
             exc_info = sys.exc_info()
             backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-            self.log.warning("Exception in main loop.  backtrace: %s" % backtrace)
+            self.log.error("Exception in main loop.  backtrace: %s" % backtrace)
             os._exit(-1)
 
     def stop(self):

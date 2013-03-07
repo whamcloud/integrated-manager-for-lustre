@@ -5,12 +5,13 @@
 
 
 from django.db import models
-from chroma_core.lib.job import  DependOn, DependAll, Step
-from chroma_core.models.target import ManagedTargetMount, ManagedMgs, FilesystemMember
+from chroma_core.lib.job import DependOn, DependAll, Step, job_log
+from chroma_core.models.target import ManagedTargetMount, ManagedMgs, FilesystemMember, ManagedTarget
 from chroma_core.models.host import NoLNetInfo
 from chroma_core.models.jobs import StatefulObject, StateChangeJob, StateLock
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
+from django.db.models import Q
 
 
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
@@ -44,16 +45,15 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
             return available_states
 
     class Meta:
+        app_label = 'chroma_core'
         unique_together = ('name', 'mgs')
         ordering = ['id']
 
     def get_targets(self):
-        return [self.mgs] + self.get_filesystem_targets()
+        return ManagedTarget.objects.filter((Q(managedmdt__filesystem = self) | Q(managedost__filesystem = self)) | Q(id = self.mgs_id))
 
     def get_filesystem_targets(self):
-        from chroma_core.models import ManagedOst, ManagedMdt
-        osts = list(ManagedOst.objects.filter(filesystem = self).all())
-        return list(ManagedMdt.objects.filter(filesystem = self).all()) + osts
+        return ManagedTarget.objects.filter((Q(managedmdt__filesystem = self) | Q(managedost__filesystem = self)))
 
     def get_servers(self):
         from collections import defaultdict
@@ -80,17 +80,13 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     def __str__(self):
         return self.name
 
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
     def get_deps(self, state = None):
         if not state:
             state = self.state
 
         deps = []
 
-        mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == self.mgs_id)
+        mgs = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.mgs_id)
 
         remove_state = 'forgotten' if self.immutable_state else 'removed'
 
@@ -105,47 +101,40 @@ class ManagedFilesystem(StatefulObject, MeasuredEntity):
     @classmethod
     def filter_by_target(cls, target):
         if issubclass(target.downcast_class, ManagedMgs):
-            return ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.mgs_id == target.id)
+            result = ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.mgs_id == target.id)
+            return result
         elif issubclass(target.downcast_class, FilesystemMember):
             return ObjectCache.get(ManagedFilesystem, lambda mfs: mfs.id == target.downcast().filesystem_id)
         else:
             raise NotImplementedError(target.__class__)
 
     reverse_deps = {
-                'ManagedTarget': lambda mt: ManagedFilesystem.filter_by_target(mt)
-                }
-
-
-class DeleteFilesystemStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        from chroma_core.models.target import ManagedMdt, ManagedOst
-        assert ManagedMdt.objects.filter(filesystem = kwargs['filesystem'].id).count() == 0
-        assert ManagedOst.objects.filter(filesystem = kwargs['filesystem'].id).count() == 0
-        kwargs['filesystem'].mark_deleted()
+        'ManagedTarget': lambda mt: ManagedFilesystem.filter_by_target(mt)
+    }
 
 
 class PurgeFilesystemStep(Step):
     idempotent = True
 
     def run(self, kwargs):
+        host = kwargs['host']
+        mgs_device_path = kwargs['path']
         fs = kwargs['filesystem']
-        mgs = ObjectCache.get_one(ManagedMgs, lambda t: t.id == fs.mgs_id)
-        mgs_primary_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == mgs.id and mtm.primary == True)
+        mgs = ObjectCache.get_one(ManagedTarget, lambda t: t.id == fs.mgs_id)
 
         initial_mgs_state = mgs.state
 
         # Whether the MGS was officially up or not, try stopping it (idempotent so will
         # succeed either way
-        self.invoke_agent(mgs_primary_mount.host, "stop_target", {'ha_label': mgs.ha_label})
-        self.invoke_agent(mgs_primary_mount.host, "purge_configuration", {
-            'device': mgs_primary_mount.volume_node.path,
+        if initial_mgs_state in ['mounted', 'unmounted']:
+            self.invoke_agent(host, "stop_target", {'ha_label': mgs.ha_label})
+        self.invoke_agent(host, "purge_configuration", {
+            'device': mgs_device_path,
             'filesystem_name': fs.name
         })
 
         if initial_mgs_state == 'mounted':
-            result = self.invoke_agent(mgs_primary_mount.host, "start_target", {'ha_label': mgs.ha_label})
+            result = self.invoke_agent(host, "start_target", {'ha_label': mgs.ha_label})
             # Update active_mount because it won't necessarily start the same place it was started to
             # begin with
             mgs.update_active_mount(result['location'])
@@ -171,7 +160,7 @@ class RemoveFilesystemJob(StateChangeJob):
         locks = super(RemoveFilesystemJob, self).create_locks()
         locks.append(StateLock(
             job = self,
-            locked_item = self.filesystem.mgs,
+            locked_item = self.filesystem.mgs.managedtarget_ptr,
             begin_state = None,
             end_state = None,
             write = True))
@@ -186,9 +175,26 @@ class RemoveFilesystemJob(StateChangeJob):
         mgt_setup = self.filesystem.mgs.state not in ['unformatted', 'formatted']
 
         if (not self.filesystem.immutable_state) and mgt_setup:
-            steps.append((PurgeFilesystemStep, {'filesystem': self.filesystem}))
-        steps.append((DeleteFilesystemStep, {'filesystem': self.filesystem}))
+            mgs = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
+            mgs_primary_mount = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.target_id == mgs.id and mtm.primary is True)
+
+            steps.append((PurgeFilesystemStep, {
+                'filesystem': self.filesystem,
+                'path': mgs_primary_mount.volume_node.path,
+                'host': mgs_primary_mount.host
+            }))
+
         return steps
+
+    def on_success(self):
+        job_log.debug("on_success: mark_deleted on filesystem %s" % id(self.filesystem))
+
+        from chroma_core.models.target import ManagedMdt, ManagedOst
+        assert ManagedMdt.objects.filter(filesystem = self.filesystem).count() == 0
+        assert ManagedOst.objects.filter(filesystem = self.filesystem).count() == 0
+        self.filesystem.mark_deleted()
+
+        super(RemoveFilesystemJob, self).on_success()
 
 
 class FilesystemJob():
@@ -213,11 +219,7 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     def get_deps(self):
         deps = []
 
-        from chroma_core.models import ManagedMgs, ManagedOst, ManagedMdt
-        targets = (ObjectCache.get(ManagedMgs, lambda t: t.id == self.filesystem.mgs_id) +
-            ObjectCache.get(ManagedMdt, lambda t: t.filesystem_id == self.filesystem_id) +
-            ObjectCache.get(ManagedOst, lambda o: o.filesystem_id == self.filesystem_id))
-        for t in targets:
+        for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             deps.append(DependOn(t,
                 'mounted',
                 fix_state = 'unavailable'))
@@ -234,12 +236,7 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
 
     def get_deps(self):
         deps = []
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst
-        targets = (ObjectCache.get(ManagedMgs, lambda t: t.id == self.filesystem.mgs_id) +
-                   ObjectCache.get(ManagedMdt, lambda t: t.filesystem_id == self.filesystem_id) +
-                   ObjectCache.get(ManagedOst, lambda o: o.filesystem_id == self.filesystem_id))
-
-        for t in targets:
+        for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             deps.append(DependOn(t,
                 'mounted',
                 fix_state = 'unavailable'))
@@ -256,7 +253,9 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
 
     def get_deps(self):
         deps = []
-        for t in self.filesystem.get_filesystem_targets():
+        targets = ObjectCache.get_targets_by_filesystem(self.filesystem_id)
+        targets = [t for t in targets if not issubclass(t.downcast_class, ManagedMgs)]
+        for t in targets:
             deps.append(DependOn(t,
                 'unmounted',
                 acceptable_states = t.not_state('mounted'),
@@ -285,7 +284,12 @@ class ForgetFilesystemJob(StateChangeJob):
     requires_confirmation = True
 
     def description(self):
-        return "Remove unmanaged file system %s" % (self.filesystem.name)
+        return "Remove unmanaged file system %s" % self.filesystem.name
 
-    def get_steps(self):
-        return [(DeleteFilesystemStep, {'filesystem': self.filesystem})]
+    def on_success(self):
+        super(ForgetFilesystemJob, self).on_success()
+
+        from chroma_core.models.target import ManagedMdt, ManagedOst
+        assert ManagedMdt.objects.filter(filesystem = self.filesystem).count() == 0
+        assert ManagedOst.objects.filter(filesystem = self.filesystem).count() == 0
+        self.filesystem.mark_deleted()

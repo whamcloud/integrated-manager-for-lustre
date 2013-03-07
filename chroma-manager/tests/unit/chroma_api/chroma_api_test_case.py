@@ -1,6 +1,6 @@
 import mock
 from tests.unit.chroma_api.tastypie_test import ResourceTestCase
-from tests.unit.chroma_core.helper import JobTestCaseWithHost
+from tests.unit.chroma_core.helper import synthetic_volume_full
 
 
 class ChromaApiTestCase(ResourceTestCase):
@@ -13,6 +13,13 @@ class ChromaApiTestCase(ResourceTestCase):
         self.old_is_authenticated = CsrfAuthentication.is_authenticated
         CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
         self.api_client.client.login(username = 'debug', password = 'chr0m4_d3bug')
+
+        # If the test that just ran imported storage_plugin_manager, it will
+        # have instantiated its singleton, and created some DB records.
+        # Django TestCase rolls back the database, so make sure that we
+        # also roll back (reset) this singleton.
+        import chroma_core.lib.storage_plugin.manager
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
 
     def tearDown(self):
         from chroma_api.authentication import CsrfAuthentication
@@ -28,18 +35,12 @@ class ChromaApiTestCase(ResourceTestCase):
             raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
         self.assertHttpAccepted(response)
 
-        modified_object = self.api_get(uri)
-        self.assertEqual(modified_object['state'], state)
-
     def api_set_state_partial(self, uri, state):
         response = self.api_client.put(uri, data = {'state': state})
         try:
             self.assertHttpAccepted(response)
         except AssertionError:
             raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
-
-        modified_object = self.api_get(uri)
-        self.assertEqual(modified_object['state'], state)
 
     def api_get(self, uri):
         response = self.api_client.get(uri)
@@ -48,6 +49,13 @@ class ChromaApiTestCase(ResourceTestCase):
         except AssertionError:
             raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
         return self.deserialize(response)
+
+    def create_simple_filesystem(self, host):
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+        self.mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(host).id, name = "MGS")
+        self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
+        self.mdt, _ = ManagedMdt.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
+        self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
 
     def spider_api(self):
         from chroma_api.urls import api
@@ -62,20 +70,3 @@ class ChromaApiTestCase(ResourceTestCase):
                     for o in objects:
                         response = self.api_client.get(o['resource_uri'])
                         self.assertEqual(response.status_code, 200, "%s: %s %s" % (o['resource_uri'], response.status_code, self.deserialize(response)))
-
-
-class ChromaApiTestCaseHeavy(JobTestCaseWithHost, ChromaApiTestCase):
-    """
-    LEGACY.  DO NOT USE THIS FOR NEW TESTS.
-
-    Variant of ChromaApiTestCase which pulls in JobTestCaseWithHost (does
-    heavy-handed patching of JobScheduler et al).
-
-    """
-    def setUp(self):
-        JobTestCaseWithHost.setUp(self)
-        ChromaApiTestCase.setUp(self)
-
-    def tearDown(self):
-        ChromaApiTestCase.tearDown(self)
-        JobTestCaseWithHost.tearDown(self)

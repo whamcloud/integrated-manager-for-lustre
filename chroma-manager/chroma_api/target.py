@@ -7,16 +7,16 @@
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.target import FilesystemMember, NotAFileSystemMember
 import chroma_core.lib.conf_param
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 import settings
 from collections import defaultdict
 
 from django.shortcuts import get_object_or_404, Http404
-from django.db import transaction
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
-from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget, ManagedFilesystem, Command
+from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget, ManagedFilesystem
 
 import tastypie.http as http
 from tastypie import fields
@@ -377,31 +377,18 @@ class TargetResource(MetricResource, ConfParamResource):
             if method:
                 bundle = method(bundle)
 
-        volume_id = bundle.data['volume_id']
-        filesystem_id = bundle.data.get('filesystem_id', None)
+        bundle.data['content_type'] = ContentType.objects.get_for_model(KIND_TO_KLASS[bundle.data['kind']]).natural_key()
 
         # Should really only be doing one validation pass, but this works
         # OK for now.  It's better than raising a 404 or duplicating the
         # filesystem validation failure if it doesn't exist, anyhow.
         self.is_valid(bundle, request)
 
-        kind = bundle.data['kind']
-        if KIND_TO_KLASS[kind] == ManagedOst:
-            fs = ManagedFilesystem.objects.get(id=filesystem_id)
-            create_kwargs = {'filesystem': fs}
-        elif kind == "MGT":
-            create_kwargs = {}
+        target, command = JobSchedulerClient.create_target(bundle.data)
 
-        self.is_valid(bundle, request)
-
-        with transaction.commit_on_success():
-            target_klass = KIND_TO_KLASS[kind]
-            target = target_klass.create_for_volume(volume_id, **create_kwargs)
-
-        command = Command.set_state([(target, 'mounted')], "Creating %s" % kind)
         raise custom_response(self, request, http.HttpAccepted,
-                {'command': dehydrate_command(command),
-                 'target': self.full_dehydrate(self.build_bundle(obj = target)).data})
+                              {'command': dehydrate_command(command),
+                               'target': self.full_dehydrate(self.build_bundle(obj=target)).data})
 
     def get_resource_graph(self, request, **kwargs):
         target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))

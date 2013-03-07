@@ -1,9 +1,9 @@
 
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
+from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
 
 
-class TestStorageResourceResource(ChromaApiTestCaseHeavy):
+class TestStorageResourceResource(ChromaApiTestCase):
     def setUp(self):
         super(TestStorageResourceResource, self).setUp()
 

@@ -4,8 +4,6 @@
 # ========================================================
 
 
-from collections import defaultdict
-
 import json
 import socket
 import subprocess
@@ -13,10 +11,15 @@ import threading
 import sys
 import traceback
 import urlparse
-from Queue import Queue
+import os
+from collections import defaultdict
+import Queue
+import dateutil.parser
+from copy import deepcopy
+
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
-import dateutil.parser
+
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
@@ -24,11 +27,12 @@ from django.db.models import Q
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult, StateChangeJob
+from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
 from chroma_core.services.log import log_register
+import chroma_core.lib.conf_param
 import settings
 
 
@@ -42,7 +46,7 @@ class NotificationBuffer(object):
     """
     def __init__(self):
         self._lock = threading.Lock()
-        self._notifications = defaultdict(Queue)
+        self._notifications = defaultdict(Queue.Queue)
 
     def add_notification_for_key(self, key, notification):
         with self._lock:
@@ -66,15 +70,110 @@ class NotificationBuffer(object):
         return notifications
 
 
+class DisabledConnection(object):
+    def __getattr__(self, item):
+        raise RuntimeError("Attempted to use database from a step which does not have database=True")
+
+DISABLED_CONNECTION = DisabledConnection()
+
+
+class JobProgress(threading.Thread, Queue.Queue):
+    """
+    A thread and a queue for handling progress/completion information
+    from RunJobThread
+    """
+
+    def __init__(self, job_scheduler):
+        threading.Thread.__init__(self)
+        Queue.Queue.__init__(self)
+
+        self._job_scheduler = job_scheduler
+
+        self._stopping = threading.Event()
+        self._job_to_result = {}
+
+    def run(self):
+        while not self._stopping.is_set():
+            try:
+                self._handle(self.get(block = True, timeout = 1))
+            except Queue.Empty:
+                pass
+
+        for msg in self.queue:
+            self._handle(msg)
+
+    def _handle(self, msg):
+        fn = getattr(self, "_%s" % msg[0])
+        fn(*msg[1], **msg[2])
+
+    def stop(self):
+        self._stopping.set()
+
+    def complete_job(self, job_id, errored):
+        if django.db.connection.connection and django.db.connection.connection != DISABLED_CONNECTION:
+            log.info("Job %d: open DB connection during completion" % job_id)
+            # Ensure that any changes made by this thread are visible to other threads before
+            # we ask job_scheduler to advance
+            with transaction.commit_manually():
+                transaction.commit()
+
+        self.put(('complete_job', (job_id, errored), {}))
+
+    def __getattr__(self, name):
+        if not name.startswith('_'):
+            # Throw an exception if there isn't an underscored method to
+            # handle this
+            self.__getattr__("_%s" % name)
+            return lambda *args, **kwargs: self.put(deepcopy((name, args, kwargs)))
+
+    def _complete_job(self, job_id, errored):
+        self._job_scheduler.complete_job(job_id, errored=errored)
+
+    def _advance(self):
+        self._job_scheduler.advance()
+
+    def _start_step(self, job_id, **kwargs):
+        with transaction.commit_on_success():
+            result = StepResult(job_id=job_id, **kwargs)
+            result.save()
+        self._job_to_result[job_id] = result
+
+    def _log(self, job_id, log_string):
+        result = self._job_to_result[job_id]
+        with transaction.commit_on_success():
+            result.log += log_string
+            result.save()
+
+    def _console(self, job_id, log_string):
+        result = self._job_to_result[job_id]
+        with transaction.commit_on_success():
+            result.console += log_string
+            result.save()
+
+    def _step_failure(self, job_id, backtrace):
+        result = self._job_to_result[job_id]
+        with transaction.commit_on_success():
+            result.state = 'failed'
+            result.backtrace = backtrace
+            result.save()
+
+    def _step_success(self, job_id):
+        result = self._job_to_result[job_id]
+        with transaction.commit_on_success():
+            result.state = 'success'
+            result.save()
+
+
 class RunJobThread(threading.Thread):
     CANCEL_TIMEOUT = 30
 
-    def __init__(self, job_scheduler, job):
+    def __init__(self, job_scheduler, job, steps):
         super(RunJobThread, self).__init__()
         self.job = job
         self._job_scheduler = job_scheduler
         self._cancel = threading.Event()
         self._complete = threading.Event()
+        self.steps = steps
 
     def cancel(self):
         log.info("Job %s: cancelling" % self.job.id)
@@ -90,34 +189,52 @@ class RunJobThread(threading.Thread):
             log.error("Job %s: cancel timed out, will continue as zombie thread!" % self.job.id)
 
     def run(self):
-        self._run()
-        self._complete.set()
+        if django.db.connection.connection:
+            log.error("RunJobThread started with a DB connection!")
+
+        try:
+            self._run()
+            self._complete.set()
+        except Exception:
+            log.critical("Unhandled exception in RunJobThread: %s" % traceback.format_exc())
+            # Better to die clean than live on dirty (an unhandled exception
+            # could mean that we will leave Command/Job/StepResult objects in
+            # a bad/never-completing state).
+            os._exit(-1)
+
+        if django.db.connection.connection and django.db.connection.connection != DISABLED_CONNECTION:
+            django.db.connection.close()
+
+    def _disable_database(self):
+        if django.db.connection.connection is not None and django.db.connection.connection != DISABLED_CONNECTION:
+            django.db.connection.close()
+        django.db.connection.connection = DISABLED_CONNECTION
 
     def _run(self):
         log.info("Job %d: %s.run" % (self.job.id, self.__class__.__name__))
 
-        try:
-            steps = self.job.get_steps()
-        except Exception, e:
-            log.error("Job %d: exception in get_steps" % self.job.id)
-            exc_info = sys.exc_info()
-            log.error('\n'.join(traceback.format_exception(*(exc_info or sys.exc_info()))))
-            return
-
         step_index = 0
         finish_step = -1
-        while step_index < len(steps) and not self._cancel.is_set():
-            klass, args = steps[step_index]
+        while step_index < len(self.steps) and not self._cancel.is_set():
+            klass, args = self.steps[step_index]
+            self._job_scheduler.progress.start_step(
+                self.job.id,
+                step_klass=klass,
+                args=args,
+                step_index=step_index,
+                step_count=len(self.steps))
 
-            result = StepResult(
-                step_klass = klass,
-                args = args,
-                step_index = step_index,
-                step_count = len(steps),
-                job = self.job)
-            result.save()
+            step = klass(self.job,
+                         args,
+                         lambda l: self._job_scheduler.progress.log(self.job.id, l),
+                         lambda c: self._job_scheduler.progress.console(self.job.id, c),
+                         self._cancel)
 
-            step = klass(self.job, args, result, self._cancel)
+            if not step.database:
+                self._disable_database()
+            else:
+                if django.db.connection.connection == DISABLED_CONNECTION:
+                    django.db.connection.connection = None
 
             from chroma_core.services.job_scheduler.agent_rpc import AgentException
             try:
@@ -125,32 +242,22 @@ class RunJobThread(threading.Thread):
                 step.run(args)
                 log.debug("Job %d step %d successful" % (self.job.id, step_index))
 
-                result.state = 'success'
+                self._job_scheduler.progress.step_success(self.job.id)
             except AgentException, e:
-                log.error("Job %d step %d encountered an agent error" % (self.job.id, step_index))
-                self._job_scheduler.complete_job(self.job, errored = True)
+                log.error("Job %d step %d encountered an agent error: %s" % (self.job.id, step_index, e.backtrace))
 
-                result.backtrace = e.backtrace
                 # Don't bother storing the backtrace to invoke_agent, the interesting part
                 # is the backtrace inside the AgentException
-                result.state = 'failed'
-                result.save()
-
+                self._job_scheduler.progress.step_failure(self.job.id, e.backtrace)
+                self._job_scheduler.progress.complete_job(self.job.id, errored = True)
                 return
             except Exception:
-                log.error("Job %d step %d encountered an error" % (self.job.id, step_index))
-                exc_info = sys.exc_info()
-                backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
-                log.error(backtrace)
-                self._job_scheduler.complete_job(self.job, errored = True)
+                backtrace = traceback.format_exc()
+                log.error("Job %d step %d encountered an error: %s" % (self.job.id, step_index, backtrace))
 
-                result.backtrace = backtrace
-                result.state = 'failed'
-                result.save()
-
+                self._job_scheduler.progress.step_failure(self.job.id, backtrace)
+                self._job_scheduler.progress.complete_job(self.job.id, errored = True)
                 return
-            finally:
-                result.save()
 
             finish_step = step_index
             step_index += 1
@@ -158,42 +265,9 @@ class RunJobThread(threading.Thread):
         if self._cancel.is_set():
             return
 
-        # TODO: document the rules here: jobs may only modify objects that they
-        # have taken out a writelock on, and they may only modify instances obtained
-        # via ObjectCache, or via their stateful_object attribute.  Jobs may not
-        # modify objects via .update() calls, all changes must be done on loaded instances.
-        # They do not have to .save() their stateful_object, but they do have to .save()
-        # any other objects that they modify (having obtained their from ObjectCache and
-        # held a writelock on them)
-
-        # For StateChangeJobs, set update the state of the affected object
-        if isinstance(self.job, StateChangeJob):
-            obj = self.job.get_stateful_object()
-            new_state = self.job.state_transition[2]
-            obj.set_state(new_state, intentional = True)
-            obj.save()
-            log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.job.pk, new_state, obj))
-            if isinstance(obj, DeletableStatefulObject):
-                log.info("Job %d: StateChangeJob complete, not_deleted = %s" % (self.job.pk, obj.not_deleted))
-
-        # Freshen cached information about anything that this job held a writelock on
-        locks = json.loads(self.job.locks_json)
-        for lock in locks:
-            if lock['write']:
-                lock = StateLock.from_dict(self.job, lock)
-                if isinstance(lock.locked_item, DeletableStatefulObject) and not lock.locked_item.not_deleted:
-                    ObjectCache.purge(lock.locked_item.__class__, lambda o: o.id == lock.locked_item.id)
-                else:
-                    ObjectCache.update(lock.locked_item)
-
         log.info("Job %d finished %d steps successfully" % (self.job.id, finish_step + 1))
 
-        # Ensure that any changes made by this thread are visible to other threads before
-        # we ask job_scheduler to advance
-        with transaction.commit_manually():
-            transaction.commit()
-
-        self._job_scheduler.complete_job(self.job, errored = False)
+        self._job_scheduler.progress.complete_job(self.job.id, errored = False)
 
         return
 
@@ -320,6 +394,13 @@ class JobScheduler(object):
 
         self._run_threads = {}  # Map of job ID to RunJobThread
 
+        self.progress = JobProgress(self)
+
+    def join_run_threads(self):
+        for job_id, thread in self._run_threads.items():
+            log.info("Joining thread for job %s" % job_id)
+            thread.join()
+
     def _run_next(self):
         ready_jobs = self._job_collection.ready_jobs
 
@@ -362,19 +443,43 @@ class JobScheduler(object):
                     cancel_jobs.append(job)
                     # TODO: tell someone WHICH dependency
                 else:
-                    ok_jobs.append(job)
+                    try:
+                        job.steps = job.get_steps()
+                    except Exception:
+                        log.error("Job %d: exception in get_steps: %s" % (job.id, traceback.format_exc()))
+                        cancel_jobs.append(job)
+                    else:
+                        ok_jobs.append(job)
 
         return ok_jobs, cancel_jobs
 
     def _spawn_job(self, job):
-        thread = RunJobThread(self, job)
-        assert not job.id in self._run_threads
-        self._run_threads[job.id] = thread
-        thread.start()
+        # NB job.steps was decorated onto job in _check_jobs, because that's where we need to handle any exceptions from it
+        # NB we call get_steps in here rather than RunJobThread so that steps can be composed using DB operations
+        # without having a database connection for each RunJobThread
+
+        if job.steps:
+            thread = RunJobThread(self, job, job.steps)
+            assert not job.id in self._run_threads
+            self._run_threads[job.id] = thread
+
+            # Make sure the thread doesn't spawn a new DB connection by default
+            django.db.connection.close()
+
+            thread.start()
+            log.debug('_spawn_job: %s threads in flight' % len(self._run_threads))
+        else:
+            log.debug('_spawn_job: No steps for %s, completing' % job.pk)
+            # No steps: skip straight to completion
+            self.progress.complete_job(job.id, False)
 
     def _complete_job(self, job, errored, cancelled):
-        if job.state == 'tasked':
+        try:
             del self._run_threads[job.id]
+        except KeyError:
+            pass
+
+        log.debug('_complete_job: %s threads in flight' % len(self._run_threads))
 
         log.info("Job %s completing (errored=%s, cancelled=%s)" %
                      (job.id, errored, cancelled))
@@ -411,9 +516,6 @@ class JobScheduler(object):
         :param command: If set, any created jobs are added
         to this command object.
         """
-        if hasattr(changed_item, 'content_type'):
-            changed_item = changed_item.downcast()
-
         log.debug("_completion_hooks command %s, %s (%s) state=%s" % (
             None if command is None else command.id, changed_item, changed_item.__class__, changed_item.state))
 
@@ -427,18 +529,23 @@ class JobScheduler(object):
 
             return bool(count)
 
-        if isinstance(changed_item, FilesystemMember):
-            fs = changed_item.filesystem
-            members = list(ManagedMdt.objects.filter(filesystem = fs)) + list(ManagedOst.objects.filter(filesystem = fs))
-            states = set([t.state for t in members])
-            now = django.utils.timezone.now()
+        if isinstance(changed_item, ManagedTarget):
+            if issubclass(changed_item.downcast_class, FilesystemMember):
+                affected_filesystems = [changed_item.downcast().filesystem]
+            else:
+                affected_filesystems = changed_item.downcast().managedfilesystem_set.all()
 
-            if not fs.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
-                self._notify(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, {'state': 'available'}, ['stopped', 'unavailable'])
-            if changed_item.state == 'unmounted' and fs.state != 'stopped' and states == set(['unmounted']):
-                self._notify(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, {'state': 'stopped'}, ['stopped', 'unavailable'])
-            if changed_item.state == 'unmounted' and fs.state == 'available' and states != set(['mounted']):
-                self._notify(ContentType.objects.get_for_model(fs).natural_key(), fs.id, now, {'state': 'unavailable'}, ['available'])
+            for filesystem in affected_filesystems:
+                members = filesystem.get_targets()
+                states = set([t.state for t in members])
+                now = django.utils.timezone.now()
+
+                if not filesystem.state == 'available' and changed_item.state in ['mounted', 'removed'] and states == set(['mounted']):
+                    self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'available'}, ['stopped', 'unavailable'])
+                if changed_item.state == 'unmounted' and filesystem.state != 'stopped' and states == set(['unmounted']):
+                    self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'stopped'}, ['stopped', 'unavailable'])
+                if changed_item.state == 'unmounted' and filesystem.state == 'available' and states != set(['mounted']):
+                    self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'unavailable'}, ['available'])
 
         if isinstance(changed_item, ManagedHost):
             if changed_item.state == 'lnet_up' and changed_item.lnetconfiguration.state != 'nids_known':
@@ -459,14 +566,14 @@ class JobScheduler(object):
 
         if isinstance(changed_item, ManagedTarget):
             # See if any MGS conf params need applying
-            if isinstance(changed_item, FilesystemMember):
-                mgs = changed_item.filesystem.mgs
+            if issubclass(changed_item.downcast_class, FilesystemMember):
+                mgs = changed_item.downcast().filesystem.mgs
             else:
-                mgs = changed_item
+                mgs = changed_item.downcast()
 
             if mgs.conf_param_version != mgs.conf_param_version_applied:
-                if not running_or_failed(ApplyConfParams, mgs = mgs):
-                    job = ApplyConfParams(mgs = mgs)
+                if not running_or_failed(ApplyConfParams, mgs = mgs.managedtarget_ptr):
+                    job = ApplyConfParams(mgs = mgs.managedtarget_ptr)
                     if DepCache().get(job).satisfied():
                         if not command:
                             command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
@@ -499,47 +606,27 @@ class JobScheduler(object):
                 log.debug("Replaying buffered notification: %s" % (notification,))
                 self._notify(*notification)
 
-    @transaction.commit_on_success
-    def complete_job(self, job, errored = False, cancelled = False):
-        with self._lock:
-            if job.state != 'tasked':
-                # This happens if a Job is cancelled while it's calling this
-                log.info("Job %s has state %s in complete_job" % (job.id, job.state))
-                return
-
-            ObjectCache.clear()
-
-            self._complete_job(job, errored, cancelled)
-            self._run_next()
-            self._drain_notification_buffer()
-
-    @transaction.commit_on_success
     def set_state(self, object_ids, message, run):
         with self._lock:
-            ObjectCache.clear()
             with transaction.commit_on_success():
                 command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(object_ids, message)
             if run:
-                self._run_next()
+                self.progress.advance()
         return command.id
+
+    @transaction.commit_on_success
+    def advance(self):
+        with self._lock:
+            self._run_next()
 
     def _notify(self, content_type, object_id, notification_time, update_attrs, from_states):
         # Get the StatefulObject
         model_klass = ContentType.objects.get_by_natural_key(*content_type).model_class()
         try:
-            # FIXME: this works because although may get() and save() an independent
-            # instance here, it gets loaded to ObjectCache on the next set_state
-            # when the cache is flushed.  The cache shouldn't need to be flushed
-            # on every op, and when that's the case, this code will need to
-            # operate on an ObjectCache instance instead of a fresh one.
-            instance = model_klass.objects.get(pk = object_id).downcast()
+            instance = ObjectCache.get_by_id(model_klass, object_id)
         except model_klass.DoesNotExist:
             log.warning("_notify: Dropping update for not-found object %s/%s" % (content_type, object_id))
             return
-
-        # We only operate on StatefulObjects
-        from chroma_core.models import StatefulObject
-        assert(isinstance(instance, StatefulObject))
 
         # Drop if it's not in an allowed state
         if from_states and not instance.state in from_states:
@@ -566,6 +653,7 @@ class JobScheduler(object):
             buffer_key = (tuple(content_type), object_id)
             notification = (content_type, object_id, notification_time, update_attrs, from_states)
             self._notification_buffer.add_notification_for_key(buffer_key, notification)
+
             return
 
         for attr, value in update_attrs.items():
@@ -578,23 +666,20 @@ class JobScheduler(object):
             if attr == 'state':
                 # If setting the special 'state' attribute then maybe schedule some jobs
                 instance.set_state(value)
-                ObjectCache.update(instance)
-
-                # FIXME: should check the new state against reverse dependencies
-                # and apply any fix_states
-                self._completion_hooks(instance)
             else:
                 # If setting a normal attribute just write it straight away
                 setattr(instance, attr, value)
                 instance.save()
                 log.info("_notify: Set %s=%s on %s (%s-%s) and saved" % (attr, value, instance, model_klass.__name__, instance.id))
-                self._completion_hooks(instance)
+
+        instance.save()
+        # FIXME: should check the new state against reverse dependencies
+        # and apply any fix_states
+        self._completion_hooks(instance)
 
     @transaction.commit_on_success
     def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):
         with self._lock:
-            ObjectCache.clear()
-
             notification_time = dateutil.parser.parse(time_serialized)
             self._notify(content_type, object_id, notification_time, update_attrs, from_states)
 
@@ -603,11 +688,9 @@ class JobScheduler(object):
     @transaction.commit_on_success
     def run_jobs(self, job_dicts, message):
         with self._lock:
-            ObjectCache.clear()
-
             result = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs(job_dicts, message)
-            self._run_next()
-        return result
+            self.progress.advance()
+            return result
 
     @transaction.commit_on_success
     def cancel_job(self, job_id):
@@ -642,9 +725,59 @@ class JobScheduler(object):
         if cancelled_thread is not None:
             cancelled_thread.cancel_complete()
         else:
-            with self._lock:
-                # So that anything waiting on this job can be cancelled too
+            # So that anything waiting on this job can be cancelled too
+            self.progress.advance()
+
+    def complete_job(self, job_id, errored = False, cancelled = False):
+        # TODO: document the rules here: jobs may only modify objects that they
+        # have taken out a writelock on, and they may only modify instances obtained
+        # via ObjectCache, or via their stateful_object attribute.  Jobs may not
+        # modify objects via .update() calls, all changes must be done on loaded instances.
+        # They do not have to .save() their stateful_object, but they do have to .save()
+        # any other objects that they modify (having obtained their from ObjectCache and
+        # held a writelock on them)
+
+        job = self._job_collection.get(job_id)
+        with self._lock:
+            with transaction.commit_on_success():
+                if not errored and not cancelled:
+                    try:
+                        job.on_success()
+                    except Exception:
+                        log.error("Error in Job %s on_success:%s" % (job.id, traceback.format_exc()))
+                        errored = True
+
+                log.info("Job %d: complete_job: Updating cache" % job.pk)
+                # Freshen cached information about anything that this job held a writelock on
+                for lock in self._lock_cache.get_by_job(job):
+                    if lock.write:
+                        if hasattr(lock.locked_item, 'not_deleted'):
+                            log.info("Job %d: locked_item %s %s %s %s" % (
+                                job.id,
+                                id(lock.locked_item),
+                                lock.locked_item.__class__,
+                                isinstance(lock.locked_item, DeletableStatefulObject),
+                                lock.locked_item.not_deleted
+                            ))
+                        if hasattr(lock.locked_item, 'not_deleted') and lock.locked_item.not_deleted is None:
+                            log.debug("Job %d: purging %s/%s" %
+                                     (job.id, lock.locked_item.__class__, lock.locked_item.id))
+                            ObjectCache.purge(lock.locked_item.__class__, lambda o: o.id == lock.locked_item.id)
+                        else:
+                            log.debug("Job %d: updating write-locked %s/%s" %
+                                     (job.id, lock.locked_item.__class__, lock.locked_item.id))
+                            ObjectCache.update(lock.locked_item)
+
+                if job.state != 'tasked':
+                    # This happens if a Job is cancelled while it's calling this
+                    log.info("Job %s has state %s in complete_job" % (job.id, job.state))
+                    return
+
+                self._complete_job(job, errored, cancelled)
+
+            with transaction.commit_on_success():
                 self._run_next()
+                self._drain_notification_buffer()
 
     @transaction.commit_on_success
     def create_host_ssh(self, address):
@@ -720,3 +853,115 @@ class JobScheduler(object):
             'reverse_resolve': reverse_resolve,
             'reverse_ping': reverse_ping
         }
+
+    def create_filesystem(self, fs_data):
+        # FIXME: HYD-970: check that the MGT or hosts aren't being removed while
+        # creating the filesystem
+
+        def _target_kwargs(attrs):
+            result = {}
+            for attr in ['inode_count', 'inode_size', 'bytes_per_inode']:
+                try:
+                    result[attr] = attrs[attr]
+                except KeyError:
+                    pass
+            return result
+
+        with self._lock:
+            mounts = []
+            mgt_data = fs_data['mgt']
+            if 'volume_id' in mgt_data:
+                mgt, mgt_mounts = ManagedMgs.create_for_volume(mgt_data['volume_id'], **_target_kwargs(mgt_data))
+                mounts.extend(mgt_mounts)
+                ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
+                mgt_id = mgt.pk
+            else:
+                mgt_id = mgt_data['id']
+
+            from django.db import transaction
+            with transaction.commit_on_success():
+                mgs = ManagedMgs.objects.get(id = mgt_id)
+                fs = ManagedFilesystem(mgs=mgs, name = fs_data['name'])
+                fs.save()
+
+                chroma_core.lib.conf_param.set_conf_params(fs, fs_data['conf_params'])
+
+                mdt_data = fs_data['mdt']
+                mdt, mdt_mounts = ManagedMdt.create_for_volume(mdt_data['volume_id'], filesystem = fs, **_target_kwargs(mdt_data))
+                mounts.extend(mdt_mounts)
+                chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
+                osts = []
+                for ost_data in fs_data['osts']:
+                    ost, ost_mounts = ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **_target_kwargs(ost_data))
+                    osts.append(ost)
+                    mounts.extend(ost_mounts)
+                    chroma_core.lib.conf_param.set_conf_params(ost, ost_data['conf_params'])
+
+            # Now that the creation has committed, update ObjectCache
+            ObjectCache.add(ManagedFilesystem, fs)
+            for ost in osts:
+                ObjectCache.add(ManagedTarget, ost.managedtarget_ptr)
+            ObjectCache.add(ManagedTarget, mdt.managedtarget_ptr)
+            for mount in mounts:
+                ObjectCache.add(ManagedTargetMount, mount)
+
+            with transaction.commit_on_success():
+                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                    [(ContentType.objects.get_for_model(fs).natural_key(), fs.id, 'available')],
+                    "Creating filesystem %s" % fs_data['name'])
+
+        self.progress.advance()
+
+        return fs.id, command.id
+
+    def create_target(self, target_data):
+        # FIXME: HYD-970: check that the filesystem or hosts aren't being removed while
+        # creating the target
+
+        target_class = ContentType.objects.get_by_natural_key(*(target_data['content_type'])).model_class()
+        if target_class == ManagedOst:
+            fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
+            create_kwargs = {'filesystem': fs}
+        elif target_class == ManagedMgs:
+            create_kwargs = {}
+        else:
+            raise NotImplementedError(target_class)
+
+        with transaction.commit_on_success():
+            target, target_mounts = target_class.create_for_volume(target_data['volume_id'], **create_kwargs)
+
+        ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
+        for mount in target_mounts:
+            ObjectCache.add(ManagedTargetMount, mount)
+
+        with transaction.commit_on_success():
+            command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), target.id, 'mounted')],
+                "Creating %s" % target)
+
+        self.progress.advance()
+
+        return target.id, command.id
+
+    def create_host(self, fqdn, nodename, capabilities, address):
+        immutable_state = not any("manage_" in c for c in capabilities)
+
+        with transaction.commit_on_success():
+            host = ManagedHost.objects.create(
+                fqdn = fqdn,
+                nodename = nodename,
+                immutable_state = immutable_state,
+                address = address)
+            lnet_configuration = LNetConfiguration.objects.create(host = host)
+
+        ObjectCache.add(LNetConfiguration, lnet_configuration)
+        ObjectCache.add(ManagedHost, host)
+
+        with transaction.commit_on_success():
+            command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
+                "Setting up host %s" % host)
+
+        self.progress.advance()
+
+        return host.id, command.id

@@ -1,11 +1,13 @@
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import SchedulingError, Job, Command
-from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, ManagedHost
+from chroma_core.models import ManagedMgs, ManagedHost, ManagedTarget, ManagedTargetMount
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread, JobScheduler
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import mock
-from tests.unit.chroma_core.helper import JobTestCaseWithHost, MockAgentRpc, freshen
+from tests.unit.chroma_core.helper import MockAgentRpc, freshen
 import datetime
 import django.utils.timezone
+from tests.unit.services.job_scheduler.job_test_case import JobTestCaseWithHost
 
 
 class TestTransitionsWithCommands(JobTestCaseWithHost):
@@ -15,6 +17,8 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 
         # This tests a state transition which is done by a single job
         command_id = Command.set_state([(freshen(self.host), 'lnet_down')]).id
+        self.drain_progress()
+
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 1)
 
@@ -27,6 +31,8 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 
         # This tests a state transition which requires two jobs acting on the same object
         command_id = Command.set_state([(freshen(self.host), 'lnet_unloaded')]).id
+        self.drain_progress()
+
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 2)
@@ -34,45 +40,47 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 
 class TestStateManager(JobTestCaseWithHost):
     def test_failing_job(self):
-        mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        mgt, tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
+        ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
+        for tm in tms:
+            ObjectCache.add(ManagedTargetMount, tm)
+
         try:
             MockAgentRpc.succeed = False
-            self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'mounted', check = False)
+            self.set_state(ManagedTarget.objects.get(pk = mgt.pk), 'mounted', check = False)
             # This is to check that the scheduler doesn't run past the failed job (like in HYD-1572)
             self.assertState(mgt, 'unformatted')
         finally:
             MockAgentRpc.succeed = True
-            self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'mounted')
+            self.set_state(ManagedTarget.objects.get(pk = mgt.pk), 'mounted')
 
     def test_opportunistic_execution(self):
         # Set up an MGS, leave it offline
-        mgt = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
-        fs = ManagedFilesystem.objects.create(mgs = mgt, name = "testfs")
-        ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem = fs)
-        ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem = fs)
+        self.create_simple_filesystem(self.host)
 
-        self.set_state(ManagedMgs.objects.get(pk = mgt.pk), 'unmounted')
-        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'unmounted')
-        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 0)
-        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
+        self.set_state(ManagedTarget.objects.get(pk = self.mgt.pk), 'unmounted')
+        self.assertState(self.mgt, 'unmounted')
+        self.assertState(self.fs, 'unavailable')
+        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version, 0)
+        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version_applied, 0)
 
         try:
             # Make it so that an MGS start operation will fail
             MockAgentRpc.succeed = False
 
             import chroma_core.lib.conf_param
-            chroma_core.lib.conf_param.set_conf_params(fs, {"llite.max_cached_mb": "32"})
+            chroma_core.lib.conf_param.set_conf_params(self.fs, {"llite.max_cached_mb": "32"})
 
-            self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
-            self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 0)
+            self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version, 1)
+            self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version_applied, 0)
         finally:
             MockAgentRpc.succeed = True
 
-        self.set_state(fs, 'available')
-        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).state, 'mounted')
+        self.set_state(freshen(self.fs), 'available')
+        self.assertState(self.mgt, 'mounted')
 
-        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version, 1)
-        self.assertEqual(ManagedMgs.objects.get(pk = mgt.pk).conf_param_version_applied, 1)
+        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version, 1)
+        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version_applied, 1)
 
     def test_invalid_state(self):
         with self.assertRaisesRegexp(SchedulingError, "is invalid for"):
@@ -171,6 +179,7 @@ class TestStateManager(JobTestCaseWithHost):
         consequentially_cancelled_job = pending_jobs[1]
 
         JobSchedulerClient.cancel_job(pending_jobs[0].id)
+        self.drain_progress()
         cancelled_job = freshen(cancelled_job)
         consequentially_cancelled_job = freshen(consequentially_cancelled_job)
 
@@ -214,12 +223,15 @@ class TestStateManager(JobTestCaseWithHost):
         cancel_bak = RunJobThread.cancel
         RunJobThread.cancel = mock.Mock()
 
+        from tests.unit.chroma_core.helper import log
+
         def spawn_job(job):
+            log.debug("neutered spawn_job")
             thread = mock.Mock()
             self.job_scheduler._run_threads[job.id] = thread
 
         spawn_bak = JobScheduler._spawn_job
-        JobScheduler._spawn_job = mock.Mock(side_effect=spawn_job)
+        self.job_scheduler._spawn_job = mock.Mock(side_effect=spawn_job)
 
         try:
             self.set_state_delayed([(self.host, 'lnet_down')])

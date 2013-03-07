@@ -438,6 +438,12 @@ class FakeServer(Persisted):
         self.state['lnet_up'] = False
         self.save()
 
+    def writeconf_target(self, writeconf, erase_params, device, mgsnode=None, failnode=None):
+        if mgsnode is None:
+            # When writeconfing an MGS, erase its simulated conf params
+            target = self._devices.get_target_by_path(self.fqdn, device)
+            self._devices.mgt_writeconf(target['mgsnode'])
+
     def format_target(self, device = None, target_types = None, mgsnode = None, fsname = None, failnode = None, reformat = None, mkfsoptions = None, index = None):
         if 'mgs' in target_types:
             label = "MGS"

@@ -84,13 +84,14 @@ class Service(ChromaService):
         Command.objects.filter(complete = False).update(complete = True, cancelled = True)
         Job.objects.filter(~Q(state = 'complete')).update(state = 'complete', cancelled = True)
 
-        job_scheduler = JobScheduler()
-        self._queue_thread = ServiceThread(QueueHandler(job_scheduler))
-        self._rpc_thread = ServiceThread(JobSchedulerRpc(job_scheduler))
-
+        self._job_scheduler = JobScheduler()
+        self._queue_thread = ServiceThread(QueueHandler(self._job_scheduler))
+        self._rpc_thread = ServiceThread(JobSchedulerRpc(self._job_scheduler))
+        self._progress_thread = ServiceThread(self._job_scheduler.progress)
         AgentRpc.start()
         self._queue_thread.start()
         self._rpc_thread.start()
+        self._progress_thread.start()
 
         self._complete.wait()
 
@@ -100,7 +101,7 @@ class Service(ChromaService):
         with transaction.commit_manually():
             transaction.commit()
         for job in Job.objects.filter(~Q(state = 'complete')).order_by('-id'):
-            job_scheduler.cancel_job(job.id)
+            self._job_scheduler.cancel_job(job.id)
 
     def stop(self):
         AgentRpc.shutdown()
@@ -108,10 +109,13 @@ class Service(ChromaService):
         self.log.info("Stopping...")
         self._rpc_thread.stop()
         self._queue_thread.stop()
+        self._progress_thread.stop()
 
         self.log.info("Joining...")
         self._rpc_thread.join()
         self._queue_thread.join()
+        self._job_scheduler.join_run_threads()
+        self._progress_thread.join()
         self.log.info("Complete.")
 
         self._complete.set()

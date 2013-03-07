@@ -71,7 +71,7 @@ class UpdateScan(object):
                 (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
                                           self.host_data['lnet_up'])]
 
-        JobSchedulerClient.notify(self.host.downcast(),
+        JobSchedulerClient.notify(self.host,
                                   self.started_at,
                                   {'state': lnet_state},
                                   ['lnet_unloaded', 'lnet_down', 'lnet_up', 'configured'])
@@ -140,7 +140,7 @@ class UpdateScan(object):
 
         for resource_name, node_name in self.host_data['resource_locations'].items():
             try:
-                target = ManagedTarget.objects.get(ha_label = resource_name).downcast()
+                target = ManagedTarget.objects.get(ha_label = resource_name)
             except ManagedTarget.DoesNotExist:
                 #audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
                 continue

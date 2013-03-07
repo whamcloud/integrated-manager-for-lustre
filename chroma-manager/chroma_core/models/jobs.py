@@ -115,12 +115,9 @@ class StatefulObject(models.Model):
             self.state_modified_at = now()
 
     def set_state(self, state, intentional = False):
-        job_log.info("StatefulObject.set_state %s %s->%s (intentional=%s)" % (self, self.state, state, intentional))
+        job_log.info("StatefulObject.set_state %s %s->%s (intentional=%s) %s" % (self, self.state, state, intentional, id(self)))
         self.state = state
         self.state_modified_at = now()
-        self.__class__._base_manager.filter(pk = self.id).update(
-            state = self.state,
-            state_modified_at = self.state_modified_at)
 
     def not_state(self, state):
         return list(set(self.states) - set([state]))
@@ -381,7 +378,7 @@ class Job(models.Model):
         return DependAll()
 
     def get_steps(self):
-        raise NotImplementedError()
+        return []
 
     def all_deps(self, dep_cache):
         # This is not necessarily 100% consistent with the dependencies used by StateManager
@@ -423,6 +420,9 @@ class Job(models.Model):
 
     def description(self):
         raise NotImplementedError
+
+    def on_success(self):
+        pass
 
     def __str__(self):
         if self.id:
@@ -494,14 +494,18 @@ class StateChangeJob(Job):
 
     def get_stateful_object(self):
         if not self._so_cache:
-            stateful_object = getattr(self, self.stateful_object)
-            # Get a fresh instance every time, we don't want one hanging around in the job
-            # run procedure because steps might be modifying it
-            stateful_object = stateful_object.__class__._base_manager.get(pk = stateful_object.pk)
-            if hasattr(stateful_object, 'content_type'):
-                stateful_object = stateful_object.downcast()
-            self._so_cache = stateful_object
+            raise RuntimeError("Using get_stateful_object outside of job_scheduler?")
         return self._so_cache
+
+    def on_success(self):
+        obj = self.get_stateful_object()
+        new_state = self.state_transition[2]
+        obj.set_state(new_state, intentional = True)
+        obj.save()
+        job_log.info("Job %d: StateChangeJob complete, setting state %s on %s" % (self.pk, new_state, obj))
+        if hasattr(obj, 'not_deleted'):
+            job_log.debug("Job %d: %s" % (self.id, id(obj)))
+            job_log.info("Job %d: not_deleted=%s" % (self.id, obj.not_deleted))
 
 
 class AdvertisedJob(Job):

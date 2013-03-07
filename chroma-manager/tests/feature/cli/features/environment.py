@@ -51,7 +51,7 @@ def before_feature(context, feature):
     context.old_db_config = context.runner.setup_databases()
     context.cli_failure_expected = False
 
-    from tests.unit.chroma_core.helper import JobTestCase
+    from tests.unit.services.job_scheduler.job_test_case import JobTestCase
 
     class BehaveFeatureTest(JobTestCase):
         mock_servers = {}

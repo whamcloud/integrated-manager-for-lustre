@@ -5,14 +5,13 @@
 
 
 from collections import defaultdict
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 from django.db.models import Q
 from chroma_core.models import ManagedFilesystem, ManagedTarget
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs
 from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import Command
-import chroma_core.lib.conf_param
-import chroma_core.lib.util
 
 import tastypie.http as http
 from tastypie import fields
@@ -20,7 +19,6 @@ from tastypie.validation import Validation
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
-from chroma_api import api_log
 from chroma_core.lib import conf_param
 
 
@@ -352,55 +350,11 @@ class FilesystemResource(MetricResource, ConfParamResource):
         validation = FilesystemValidation()
         always_return_data = True
 
-    def _format_attrs(self, target_data):
-        """Map API target attributes to kwargs suitable for model construction"""
-        # Exploit that these attributes happen to have the same name in
-        # the API and in the ManagedTarget model
-        result = {}
-        for attr in ['inode_count', 'inode_size', 'bytes_per_inode']:
-            try:
-                result[attr] = target_data[attr]
-            except KeyError:
-                pass
-        return result
-
     def obj_create(self, bundle, request = None, **kwargs):
-        # Set up an errors dict in the bundle to allow us to carry
-        # hydration errors through to validation.
-        mgt_data = bundle.data['mgt']
-        if 'volume_id' in mgt_data:
-            mgt = ManagedMgs.create_for_volume(mgt_data['volume_id'], **self._format_attrs(mgt_data))
-            mgt_id = mgt.pk
-        else:
-            mgt_id = mgt_data['id']
-
-        api_log.debug("fsname: %s" % bundle.data['name'])
-        api_log.debug("MGS: %s" % mgt_id)
-        api_log.debug("MDT: %s" % bundle.data['mdt'])
-        api_log.debug("OSTs: %s" % bundle.data['osts'])
-        api_log.debug("conf_params: %s" % bundle.data['conf_params'])
-
-        from django.db import transaction
-        with transaction.commit_on_success():
-            mgs = ManagedMgs.objects.get(id = mgt_id)
-            fs = ManagedFilesystem(mgs=mgs, name = bundle.data['name'])
-            fs.save()
-
-            chroma_core.lib.conf_param.set_conf_params(fs, bundle.data['conf_params'])
-
-            mdt_data = bundle.data['mdt']
-            mdt = ManagedMdt.create_for_volume(mdt_data['volume_id'], filesystem = fs, **self._format_attrs(mdt_data))
-            chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
-            osts = []
-            for ost_data in bundle.data['osts']:
-                ost = ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **self._format_attrs(ost_data))
-                osts.append(ost)
-                chroma_core.lib.conf_param.set_conf_params(ost, ost_data['conf_params'])
-        # Important that a commit happens here so that the targets
-        # land in DB before the set_state jobs act upon them.
-
-        command = Command.set_state([(fs, 'available')], "Creating filesystem %s" % bundle.data['name'])
-        filesystem_data = self.full_dehydrate(self.build_bundle(obj = fs)).data
+        filesystem_id, command_id = JobSchedulerClient.create_filesystem(bundle.data)
+        filesystem = ManagedFilesystem.objects.get(pk = filesystem_id)
+        command = Command.objects.get(pk = command_id)
+        filesystem_data = self.full_dehydrate(self.build_bundle(obj = filesystem)).data
 
         raise custom_response(self, request, http.HttpAccepted,
                               {

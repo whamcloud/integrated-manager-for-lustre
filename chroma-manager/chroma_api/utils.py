@@ -143,10 +143,7 @@ class StatefulModelResource(CustomModelResource):
     def obj_update(self, bundle, request, **kwargs):
         bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
 
-        if hasattr(bundle.obj, 'content_type'):
-            stateful_object = bundle.obj.downcast()
-        else:
-            stateful_object = bundle.obj
+        stateful_object = bundle.obj
 
         dry_run = bundle.data.get('dry_run', False)
         if 'state' in bundle.data:

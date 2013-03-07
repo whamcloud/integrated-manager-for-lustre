@@ -32,7 +32,15 @@ class NotificationQueue(ServiceQueue):
 
 
 class JobSchedulerRpc(ServiceRpcInterface):
-    methods = ['set_state', 'run_jobs', 'cancel_job', 'create_host_ssh', 'test_host_contact']
+    methods = ['set_state',
+               'run_jobs',
+               'cancel_job',
+               'create_host_ssh',
+               'test_host_contact',
+               'create_filesystem',
+               'create_host',
+               'create_target'
+               ]
 
 
 class JobSchedulerClient(object):
@@ -118,7 +126,7 @@ class JobSchedulerClient(object):
 
             time_serialized = time.isoformat()
             NotificationQueue().put({
-                'instance_natural_key': instance.content_type.natural_key(),
+                'instance_natural_key': ContentType.objects.get_for_model(instance).natural_key(),
                 'instance_id': instance.id,
                 'time': time_serialized,
                 'update_attrs': encoded_attrs,
@@ -256,3 +264,29 @@ class JobSchedulerClient(object):
     @classmethod
     def test_host_contact(cls, address):
         return JobSchedulerRpc().test_host_contact(address)
+
+    @classmethod
+    def create_filesystem(cls, fs_data):
+        return JobSchedulerRpc().create_filesystem(fs_data)
+
+    @classmethod
+    def create_host(cls, fqdn, nodename, capabilities, address = None):
+        from chroma_core.models import ManagedHost, Command
+        # The address of a host isn't something we can learn from it (the
+        # address is specifically how the host is to be reached from the manager
+        # for outbound connections, not just its FQDN).  If during creation we know
+        # the address, then great, accept it.  Else default to FQDN, it's a reasonable guess.
+        if address is None:
+            address = fqdn
+
+        host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, capabilities, address)
+
+        return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
+
+    @classmethod
+    def create_target(cls, target_data):
+        from chroma_core.models import ManagedTarget, Command
+
+        target_id, command_id = JobSchedulerRpc().create_target(target_data)
+
+        return ManagedTarget.objects.get(pk = target_id), Command.objects.get(pk = command_id)

@@ -12,6 +12,7 @@ from chroma_core.models.event import LearnEvent
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode, Nid
 from chroma_core.models.target import ManagedMgs, ManagedTargetMount, ManagedTarget, FilesystemMember, ManagedMdt, ManagedOst
+from chroma_core.lib.cache import ObjectCache
 
 log = log_register(__name__)
 
@@ -60,6 +61,7 @@ class DetectScan(object):
 
         for mgt in self.created_mgts:
             self.log("Discovered MGT on server %s" % (mgt.primary_server()))
+            ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
 
         # Remove any Filesystems with zero MDTs or zero OSTs, or set state
         # of a valid filesystem
@@ -227,6 +229,7 @@ class DetectScan(object):
                             tm.save()
                             log.info("Learned association %d between %s and host %s" % (tm.id, local_info['name'], host))
                             self._learn_event(host, tm)
+                            ObjectCache.add(ManagedTargetMount, tm)
 
                         if local_info['mounted']:
                             target.state = 'mounted'
@@ -297,6 +300,7 @@ class DetectScan(object):
                     log.info("%s %s %s" % (mgs.id, name, device_node_paths))
                     log.info("Learned %s %s" % (klass.__name__, name))
                     self._learn_event(host, target)
+                    ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
 
     def _learn_event(self, host, learned_item):
         from logging import INFO
@@ -338,3 +342,4 @@ class DetectScan(object):
                     fs.save()
                     log.info("Learned filesystem '%s'" % fs_name)
                     self._learn_event(host, fs)
+                    ObjectCache.add(ManagedFilesystem, fs)

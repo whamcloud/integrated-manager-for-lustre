@@ -1,15 +1,22 @@
+import json
 from chroma_core.models.registration_token import RegistrationToken
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from django.test import Client, TestCase
+import mock
 import settings
-from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCaseHeavy
-from tests.unit.chroma_core.helper import MockAgentRpc, generate_csr
+from tests.unit.chroma_core.helper import MockAgentRpc, generate_csr, synthetic_host
 
 
-# FIXME: this stuff shouldn't really be in chroma_api as it's testing
-# other HTTP-accessed things
-
-
-class TestRegistration(ChromaApiTestCaseHeavy):
+class TestRegistration(TestCase):
     """API unit tests for functionality used only by the agent"""
+
+    def setUp(self):
+        super(TestRegistration, self).setUp()
+        self.old_create_host = JobSchedulerClient.create_host
+        JobSchedulerClient.create_host = mock.Mock(return_value=(synthetic_host('mynewhost'), mock.Mock(id='bar')))
+
+    def tearDown(self):
+        JobSchedulerClient.create_host = self.old_create_host
 
     def test_version(self):
         versions = settings.VERSION, MockAgentRpc.version
@@ -24,29 +31,30 @@ class TestRegistration(ChromaApiTestCaseHeavy):
         try:
             token = RegistrationToken.objects.create()
 
+            # Try with a mis-matched version
             host_info = self.mock_servers['mynewhost']
-            response = self.api_client.post("/agent/register/%s/" % token.secret, data = {
+            response = Client().post("/agent/register/%s/" % token.secret, data=json.dumps({
                 'fqdn': host_info['fqdn'],
                 'nodename': host_info['nodename'],
                 'version': MockAgentRpc.version,
                 'capabilities': ['manage_targets'],
                 'address': 'mynewhost',
                 'csr': generate_csr(host_info['fqdn'])
-            })
-            self.assertHttpBadRequest(response)
+            }), content_type="application/json")
+            self.assertEqual(response.status_code, 400)
 
+            # Try with a matching version
             token = RegistrationToken.objects.create()
-
             settings.VERSION = '1.1'
-            response = self.api_client.post("/agent/register/%s/" % token.secret, data = {
+            response = Client().post("/agent/register/%s/" % token.secret, data=json.dumps({
                 'fqdn': host_info['fqdn'],
                 'nodename': host_info['nodename'],
                 'version': MockAgentRpc.version,
                 'capabilities': ['manage_targets'],
                 'address': 'mynewhost',
                 'csr': generate_csr(host_info['fqdn'])
-            })
-            self.assertHttpCreated(response)
+            }), content_type="application/json")
+            self.assertEqual(response.status_code, 201)
 
         finally:
             settings.VERSION, MockAgentRpc.version = versions

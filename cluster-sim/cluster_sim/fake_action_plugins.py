@@ -94,12 +94,8 @@ class FakeActionPlugins():
             elif cmd == 'failover_target':
                 return self._server._cluster.failover(kwargs['ha_label'])
             elif cmd == 'failback_target':
-                log.debug(">>failback")
                 rc = self._server._cluster.failback(kwargs['ha_label'])
-                log.debug("<<failback %s" % rc)
                 return rc
-            elif cmd == 'writeconf_target':
-                pass
             elif cmd == 'set_conf_param':
                 self._server.set_conf_param(kwargs['key'], kwargs.get('value', None))
             else:
