@@ -142,7 +142,10 @@ class AgentRpcMessenger(object):
                 if new_session_id is not None:
                     self._sessions[fqdn] = new_session_id
                 else:
-                    del self._sessions[fqdn]
+                    try:
+                        del self._sessions[fqdn]
+                    except KeyError:
+                        pass
 
                 for rpc in old_rpcs.values():
                     if new_session_id:
@@ -206,11 +209,12 @@ class AgentRpcMessenger(object):
             # Allow a short wait for a session to show up, for example
             # when running setup actions on a host we've just added its
             # session may not yet have been fully established
-            log.error("AgentRpcMessenger._send: no session for %s" % fqdn)
+            log.info("AgentRpcMessenger._send: no session yet for %s" % fqdn)
             wait_count += 1
             time.sleep(1)
             if wait_count > SESSION_WAIT_TIMEOUT:
-                raise AgentException(fqdn, action, args, "No %s session for %s" % (ACTION_MANAGER_PLUGIN_NAME, fqdn))
+                log.error("No %s session for %s" % (ACTION_MANAGER_PLUGIN_NAME, fqdn))
+                raise AgentException(fqdn, action, args, "Could not contact server %s" % fqdn)
 
         with self._lock:
             try:
