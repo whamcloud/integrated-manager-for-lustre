@@ -156,7 +156,7 @@ class MessageView(View):
                 'body': None
             })
 
-        log.info("MessageView.get: composing messages for %s" % fqdn)
+        log.debug("MessageView.get: composing messages for %s" % fqdn)
         queue = self.queues.get(fqdn).tx
 
         try:
@@ -174,7 +174,7 @@ class MessageView(View):
 
         messages = self._filter_valid_messages(fqdn, messages)
 
-        log.info("MessageView.get: responding to %s with %s messages" % (fqdn, len(messages)))
+        log.debug("MessageView.get: responding to %s with %s messages" % (fqdn, len(messages)))
         return HttpResponse(json.dumps({'messages': messages}), mimetype = "application/json")
 
 
@@ -200,8 +200,6 @@ def register(request, key):
     else:
         now = datetime.datetime.utcnow()
         now = now.replace(tzinfo = dateutil.tz.tzutc())
-        log.info("now.tzinfo= %s" % now.tzinfo)
-        log.info("expiry.tzinfo = %s" % token.expiry)
 
         if token.expiry < now:
             log.warning("Attempt to register with expired token %s (now %s, expired at %s)" % (key, now, token.expiry))
