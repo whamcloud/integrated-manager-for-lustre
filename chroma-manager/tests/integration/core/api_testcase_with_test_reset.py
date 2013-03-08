@@ -1,4 +1,5 @@
 import logging
+import time
 
 from testconfig import config
 
@@ -50,6 +51,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                     )
                     if result.exit_status == 3:
                         services.remove(service)
+                time.sleep(1)
                 running_time += 1
             self.assertEqual(services, [], "Not all services were stopped by chroma-config before timeout: %s" % services)
 
