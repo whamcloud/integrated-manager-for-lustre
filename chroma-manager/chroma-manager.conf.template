@@ -17,6 +17,9 @@ LoadModule rewrite_module {{module_path}}mod_rewrite.so
 LoadModule headers_module {{module_path}}mod_headers.so
 LoadModule log_config_module {{module_path}}mod_log_config.so
 LoadModule ssl_module {{module_path}}mod_ssl.so
+LoadModule status_module {{module_path}}mod_status.so
+ExtendedStatus on
+
 
 LogFormat "%h %l %u %t \"%r\" %>s %b" common
 CustomLog {{log}}/access_log common
@@ -29,7 +32,6 @@ Listen {{HTTPS_FRONTEND_PORT}}
 Listen {{HTTP_FRONTEND_PORT}}
 
 </IfDefine>
-
 
 DocumentRoot .
 
@@ -58,6 +60,13 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
     SSLCACertificateFile {{ssl}}/authority.crt
 
     RedirectMatch permanent ^/$ /ui/
+
+    <Location /server-status>
+        SetHandler server-status
+        Order deny,allow
+        Deny from all
+        Allow from localhost 127.0.0.1 ::1
+    </Location>
 
     # TODO: put something here to disallow all access other than
     # the whitelisted directories

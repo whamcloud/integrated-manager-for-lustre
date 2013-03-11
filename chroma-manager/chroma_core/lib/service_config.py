@@ -227,7 +227,7 @@ class ServiceConfig(CommandLine):
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
         self.try_shell(["chkconfig", "rabbitmq-server", "on"])
-        # FIXME: there's really no sane reason to have to set the stderr and
+        # FIXME: HYD_640: there's really no sane reason to have to set the stderr and
         #        stdout to None here except that subprocess.PIPE ends up
         #        blocking subprocess.communicate().
         #        we need to figure out why
@@ -252,6 +252,9 @@ class ServiceConfig(CommandLine):
             self.try_shell(["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
 
         self.try_shell(["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
+
+        # Enable use of the management plugin if its available, else this tag is just ignored.
+        self.try_shell(["rabbitmqctl", "set_user_tags", RABBITMQ_USER, "management"])
 
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):
