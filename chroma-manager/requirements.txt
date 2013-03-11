@@ -1,5 +1,5 @@
 python>=2.6.5
-Django==1.4.1
+Django<1.5
 nose>=1.1.2
 django-nose
 django-extensions
