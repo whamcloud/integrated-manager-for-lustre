@@ -1,4 +1,6 @@
 
+.. include:: <isonum.txt>
+
 Storage Plugin Developer's Guide for Intel® Manager for Lustre* Software
 ========================================================================
 
@@ -125,7 +127,7 @@ controller), use ``chroma_core.lib.storage_plugin.api.identifiers.GlobalId``.  F
 in the ``HardDrive`` class described above, each drive has a unique factory-assigned ID.
 
 If a resource has an identifier that is scoped to a *scannable* storage resource or
-that always belongs to a particular scannable storage resource, use
+a resource always belongs to a particular scannable storage resource, use
 ``chroma_core.lib.storage_plugin.api.identifiers.ScopedId``.
 
 Either of the above classes is initialized with a list of attributes which
@@ -367,7 +369,7 @@ using the `validate_storage_plugin` command:
 Installing
 ~~~~~~~~~~
 
-Plugins are loaded that are specified by the ``settings.INSTALLED_STORAGE_PLUGINS``.  This variable
+Plugins are loaded according to the ``settings.INSTALLED_STORAGE_PLUGINS`` variable.  This variable
 is a list of module names within the Python import path.  If your plugin is located
 at ``/home/developer/project/my_plugin.py``, create a ``local_settings.py`` file
 in the ``chroma-manager`` directory (``/usr/share/chroma-manager`` when installed
@@ -386,16 +388,16 @@ increase the verbosity of the log output (by default only WARN and above
 is output), add your plugin to ``settings.STORAGE_PLUGIN_DEBUG_PLUGINS``.
 Changes to these settings take effect when the Chroma Manager services are restarted.
 
-Running a Host Process Separately
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Running the Plugin Process Separately
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The process that hosts storage plugins can be run separately, 
+During development, the process that hosts storage plugins can be run separately,
 so that it can be stopped and started quickly by plugin developers:
 
 ::
 
-    service chroma-storage stop
     cd /usr/share/chroma-manager
+    supervisorctl -c production_supervisord.conf stop plugin_runner
     ./manage.py chroma_service --verbose plugin_runner
 
 Correlating Controller Resources with Linux Devices Using Relations
@@ -570,7 +572,7 @@ A given device node (i.e. presentation of a LUN) may be a more or less preferabl
 of access to a storage device.  For example:
 
 * If a single LUN is presented on two controller ports, a device node on a host connected to one port 
-may be preferable to a device node on a host connected to the other port.
+  may be preferable to a device node on a host connected to the other port.
 * If a LUN is accessible via two device nodes on a single server, one may be preferable to the other.
 
 This type of information allows the Command Center to make an intelligent selection of primary/secondary Lustre servers.
