@@ -34,7 +34,11 @@ $(SUBDIRS): dist agent
 repo: rpms
 	$(MAKE) -C chroma-dependencies repo
 
+bundles: repo
+	$(MAKE) -C chroma-bundles
+
 deps: repo
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
 chroma-dependencies: chroma-agent chroma-manager
+chroma-bundles: chroma-dependencies
