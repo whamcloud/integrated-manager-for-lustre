@@ -19,7 +19,7 @@ from functools import wraps
 import settings
 from tastypie.http import HttpForbidden
 
-from chroma_core.models import ManagedHost
+from chroma_core.models import ManagedHost, ClientCertificate
 from chroma_core.models.utils import Version
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services import log_register
@@ -48,12 +48,22 @@ class MessageView(View):
 
     LONG_POLL_TIMEOUT = 30
 
+    def _check_cert_revokation(self, request):
+        revoked = request.META['HTTP_X_SSL_CLIENT_SERIAL'] in self.revoked_certs
+        if revoked:
+            log.warning("Rejecting certificate %s" % request.META['HTTP_X_SSL_CLIENT_SERIAL'])
+        return revoked
+
     @log_exception
     def post(self, request):
         """
         Receive messages FROM the agent.
         Handle a POST containing messages from the agent
         """
+
+        if self._check_cert_revokation(request):
+            return HttpForbidden()
+
         body = json.loads(request.body)
         fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
 
@@ -128,6 +138,9 @@ class MessageView(View):
         Send messages TO the agent.
         Handle a long-polling GET for messages to the agent
         """
+
+        if self._check_cert_revokation(request):
+            return HttpForbidden()
 
         fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
         server_boot_time = dateutil.parser.parse(request.GET['server_boot_time'])
@@ -228,6 +241,8 @@ def register(request, key):
         return HttpResponse(status = 400, content = "")
 
     certificate_str = Crypto().sign(csr)
+    certificate_serial = Crypto().get_serial(certificate_str)
+    log.info("Generated certificate %s:%s" % (host_attributes['fqdn'], certificate_serial))
 
     # FIXME: handle the case where someone registers,
     # and then dies before saving their certificate:
@@ -247,6 +262,9 @@ def register(request, key):
         nodename = host_attributes['nodename'],
         capabilities = host_attributes['capabilities']
     )
+
+    with transaction.commit_on_success():
+        ClientCertificate.objects.create(host = host, serial = certificate_serial)
 
     # TODO: document this return format
     return HttpResponse(status = 201, content = json.dumps({

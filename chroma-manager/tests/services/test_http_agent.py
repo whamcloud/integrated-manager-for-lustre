@@ -3,20 +3,23 @@
 Tests for the inter-service interactions that occur through the lifetime of an agent device_plugin session
 """
 
-from chroma_core.lib.util import chroma_settings
 
+from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
 from Queue import Empty
+import string
+import random
 import json
 import time
 import datetime
 import requests
 from django.db import transaction
 
-from chroma_core.models import ManagedHost, HostContactAlert
+from chroma_core.models import ManagedHost, HostContactAlert, ClientCertificate
 from chroma_core.services import _amqp_connection
 from chroma_core.services.http_agent.host_state import HostState, HostStatePoller
+from chroma_core.services.http_agent import HttpAgentRpc
 
 from tests.services.supervisor_test_case import SupervisorTestCase
 
@@ -37,10 +40,7 @@ class TestHttpAgent(SupervisorTestCase):
     RX_QUEUE_NAME = "agent_test_messaging_rx"
     TX_QUEUE_NAME = 'agent_tx'
     CLIENT_NAME = 'myserver'
-    HEADERS = {
-        "Accept": "application/json",
-        "Content-type": "application/json",
-        "X-SSL-Client-Name": 'myserver'}
+
     URL = "http://localhost:%s/agent/message/" % settings.HTTP_AGENT_PORT
 
     def __init__(self, *args, **kwargs):
@@ -48,6 +48,16 @@ class TestHttpAgent(SupervisorTestCase):
         self.client_start_time = datetime.datetime.now().isoformat()
         self.server_boot_time = datetime.datetime.now().isoformat()
         self.get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
+
+        # Serial must be different every time because once we use it in a test it is permanently
+        # revoked.
+        self.CLIENT_CERT_SERIAL = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(16))
+        self.headers = {
+            "Accept": "application/json",
+            "Content-type": "application/json",
+            "X-SSL-Client-Name": self.CLIENT_NAME,
+            "X-SSL-Client-Serial": self.CLIENT_CERT_SERIAL
+        }
 
     def _open_session(self, expect_termination = None, expect_initial = True):
         """
@@ -67,11 +77,11 @@ class TestHttpAgent(SupervisorTestCase):
         }
 
         # Send a session create request on the RX channel
-        response = requests.post(self.URL, data = json.dumps({'messages': [message]}), headers = self.HEADERS)
+        response = requests.post(self.URL, data = json.dumps({'messages': [message]}), headers = self.headers)
         self.assertResponseOk(response)
 
         # Read from the TX channel
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
 
         if expect_initial:
@@ -149,6 +159,7 @@ class TestHttpAgent(SupervisorTestCase):
                 nodename = self.CLIENT_NAME,
                 address = self.CLIENT_NAME
             )
+            ClientCertificate.objects.create(host = self.host, serial = self.CLIENT_CERT_SERIAL)
 
     def tearDown(self):
         super(TestHttpAgent, self).tearDown()
@@ -184,7 +195,7 @@ class TestHttpAgent(SupervisorTestCase):
             'session_seq': 0,
             'body': None
         }
-        response = requests.post(self.URL, data = json.dumps({'messages': [sent_data_message]}), headers = self.HEADERS)
+        response = requests.post(self.URL, data = json.dumps({'messages': [sent_data_message]}), headers = self.headers)
         self.assertResponseOk(response)
 
         forwarded_data_message = self._receive_one_amqp()
@@ -205,7 +216,7 @@ class TestHttpAgent(SupervisorTestCase):
         }
         self._send_one_amqp(sent_fresh_message)
 
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
@@ -244,7 +255,7 @@ class TestHttpAgent(SupervisorTestCase):
         }
         self._send_one_amqp(sent_fresh_message)
 
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
@@ -262,7 +273,7 @@ class TestHttpAgent(SupervisorTestCase):
             self._wait_for_port(port)
 
         # If we try to continue our session, it will tell us to terminate
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
@@ -306,3 +317,16 @@ class TestHttpAgent(SupervisorTestCase):
             transaction.commit()
         alerts = HostContactAlert.filter_by_item(self.host)
         self.assertEqual(alerts.count(), 1)
+
+    def test_revoked_cert(self):
+        """Check that I'm bounced if my certificate is revoked"""
+
+        # Initially should be able to to operations like open a session
+        self._open_session()
+        HttpAgentRpc().remove_host(self.host.fqdn)
+
+        # After revokation any access should be bounced
+        response = requests.post(self.URL, data = json.dumps({'messages': []}), headers = self.headers)
+        self.assertEqual(response.status_code, 403)
+        response = requests.get(self.URL, headers = self.headers)
+        self.assertEqual(response.status_code, 403)

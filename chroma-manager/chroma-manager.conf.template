@@ -115,6 +115,10 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
         RewriteRule .* - [E=SSLC_NAME:%1]
         RequestHeader add X-SSL-Client-Name %{SSLC_NAME}e
 
+        RewriteCond %{SSL:SSL_CLIENT_M_SERIAL} (.*)
+        RewriteRule .* - [E=SSLC_SERIAL:%1]
+        RequestHeader add X-SSL-Client-Serial %{SSLC_SERIAL}e
+
         RewriteEngine on
         RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/message/ [P,L]
     </Location>

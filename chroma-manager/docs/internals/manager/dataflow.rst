@@ -100,8 +100,8 @@ All RPCs and Queues
        job_scheduler -> http_agent [label="AgentTxQueue",color=red]
        http_agent -> job_scheduler [label="JobPluginRxQueue",color=red]
 
-       plugin_runner -> http_agent [label="AgentSessionRpc",color=blue]
-       job_scheduler -> http_agent [label="AgentSessionRpc",color=blue]
+       plugin_runner -> http_agent [label="HttpAgentRpc",color=blue]
+       job_scheduler -> http_agent [label="HttpAgentRpc",color=blue]
        "Apache (chroma_api)" -> job_scheduler [label="JobSchedulerRpc",color=blue]
        job_scheduler -> plugin_runner [label="AgentDaemonRpcInterface",color=blue]
        job_scheduler -> plugin_runner [label="ScanDaemonRpcInterface",color=blue]

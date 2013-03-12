@@ -85,3 +85,8 @@ class Crypto(CommandLine):
 
         rc, out, err = self.try_shell(["openssl", "x509", "-req", "-days", self.CERTIFICATE_DAYS, "-CAkey", self.authority_key, "-CA", self.authority_cert, "-CAcreateserial"], stdin_text = csr_string)
         return out.strip()
+
+    def get_serial(self, cert_str):
+        rc, out, err = self.try_shell(['openssl', 'x509', '-serial', '-noout'], stdin_text = cert_str)
+        # Output like "serial=foo"
+        return out.strip().split("=")[1]

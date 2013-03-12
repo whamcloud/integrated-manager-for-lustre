@@ -5,11 +5,14 @@
 
 
 from django.core.handlers.wsgi import WSGIHandler
+from django.db import transaction
 import gevent.wsgi
 
+from chroma_core.models import ClientCertificate
+from chroma_core.services.rpc import ServiceRpcInterface
 from chroma_core.services.http_agent.host_state import HostStateCollection, HostStatePoller
 from chroma_core.services.http_agent.queues import HostQueueCollection, AmqpRxForwarder, AmqpTxForwarder
-from chroma_core.services.http_agent.sessions import SessionCollection, AgentSessionRpc
+from chroma_core.services.http_agent.sessions import SessionCollection
 from chroma_core.services import ChromaService, ServiceThread, log_register
 from chroma_agent_comms.views import MessageView
 
@@ -19,28 +22,16 @@ from settings import HTTP_AGENT_PORT
 log = log_register(__name__)
 
 
-# TODO: get a firm picture of whether upgrades from 1.0.x will be done -- if so then
-# a script is needed to set up an existing SSH-based system with certificates.
+class HttpAgentRpc(ServiceRpcInterface):
+    methods = ['reset_session', 'remove_host', 'reset_plugin_sessions']
+
 
 # TODO: interesting tests:
-# * All permutations of startup order (with some meaningful delay between startups) of service, http_agent, agent
-# * Restarting each component in the chain and checking the system recovers to a sensible state
-# * The above for each of the different sets of message handling logic on the service side (plugin_runner, job_scheduler, one of lustre/logs)
-# * For all services, check they terminate with SIGTERM in a timely manner (including when they are
-#   doing something).  Check this in dev mode and in production (init scripts/supervisor) mode.
 # * Run through some error-less scenarios and grep the logs for WARN and ERROR
 # * Modify some client and server certificates slightly and check they are rejected (i.e.
 #   check that we're really verifying the signatures and not just believing certificates)
-#
 # * remove a host and then try connecting with that host's old certificate
-# * For all the calls to security_log, reproduce the situation and check they hit
-#
-# * check that service stop and start on the agent works
 # * check that after adding and removing a host, no chroma-agent or chroma-agent-daemon services are running
-
-
-# TODO: on the agent side, check that we still have a nice way to get a dump of the
-# device detection JSON output *and* the corresponding outputs from the wrapped commands
 
 
 class Service(ChromaService):
@@ -51,9 +42,17 @@ class Service(ChromaService):
         return self.sessions.reset_plugin_sessions(plugin)
 
     def remove_host(self, fqdn):
+        log.info("remove_host: %s" % fqdn)
+
         self.sessions.remove_host(fqdn)
         self.queues.remove_host(fqdn)
         self.hosts.remove_host(fqdn)
+
+        with transaction.commit_on_success():
+            for cert in ClientCertificate.objects.filter(host__fqdn = fqdn, revoked = False):
+                log.info("Revoking %s:%s" % (fqdn, cert.serial))
+                self.revoked_certs.add(cert.serial)
+            ClientCertificate.objects.filter(host__fqdn = fqdn, revoked = False).update(revoked = True)
 
         # TODO: ensure there are no GETs left in progress after this completes
         # TODO: drain plugin_rx_queue so that anything we will send to AMQP has been sent before this returns
@@ -64,6 +63,10 @@ class Service(ChromaService):
         self.queues = HostQueueCollection()
         self.sessions = SessionCollection(self.queues)
         self.hosts = HostStateCollection()
+        self.revoked_certs = set()
+
+        for cert in ClientCertificate.objects.filter(revoked = True):
+            self.revoked_certs.add(cert.serial)
 
     def run(self):
         self.amqp_tx_forwarder = AmqpTxForwarder(self.queues)
@@ -97,13 +100,14 @@ class Service(ChromaService):
 
         # This thread services session management RPCs, so that other
         # services can explicitly request a session reset
-        session_rpc_thread = ServiceThread(AgentSessionRpc(self))
+        session_rpc_thread = ServiceThread(HttpAgentRpc(self))
         session_rpc_thread.start()
 
         # Hook up the request handler
         MessageView.queues = self.queues
         MessageView.sessions = self.sessions
         MessageView.hosts = self.hosts
+        MessageView.revoked_certs = self.revoked_certs
 
         # The thread for generating HostOfflineAlerts
         host_checker_thread = ServiceThread(HostStatePoller(self.hosts, self.sessions))

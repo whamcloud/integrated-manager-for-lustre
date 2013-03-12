@@ -7,14 +7,9 @@
 import threading
 import uuid
 from chroma_core.services import log_register
-from chroma_core.services.rpc import ServiceRpcInterface
 
 
 log = log_register(__name__)
-
-
-class AgentSessionRpc(ServiceRpcInterface):
-    methods = ['reset_session', 'remove_host', 'reset_plugin_sessions']
 
 
 class SessionCollection(object):

@@ -10,7 +10,7 @@ import threading
 import time
 import uuid
 from chroma_core.services import log_register, ServiceThread
-from chroma_core.services.http_agent.sessions import AgentSessionRpc
+from chroma_core.services.http_agent import HttpAgentRpc
 from chroma_core.services.http_agent.queues import AgentTxQueue
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.rpc import RpcTimeout
@@ -98,7 +98,7 @@ class AgentRpcMessenger(object):
 
     def run(self):
         try:
-            AgentSessionRpc().reset_plugin_sessions(ACTION_MANAGER_PLUGIN_NAME)
+            HttpAgentRpc().reset_plugin_sessions(ACTION_MANAGER_PLUGIN_NAME)
         except RpcTimeout:
             # Assume this means that the http_agent service isn't running: this
             # is acceptable, as our goal of there not being any sessions is
@@ -181,7 +181,7 @@ class AgentRpcMessenger(object):
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
                     log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
                     abort_session(self._sessions[fqdn])
-                    AgentSessionRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
+                    HttpAgentRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
                 elif fqdn in self._sessions:
                     log.info("AgentRpcMessenger.on_rx: good session %s/%s" % (fqdn, session_id))
                     # Find this RPC and complete it
@@ -195,7 +195,7 @@ class AgentRpcMessenger(object):
                 else:
                     log.info("AgentRpcMessenger.on_rx: unknown session %s/%s" % (fqdn, session_id))
                     # A session I never heard of?
-                    AgentSessionRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
+                    HttpAgentRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
 
     def _resend(self, rpc):
         log.debug("AgentRpcMessenger._resend: rpc %s in session %s" % (rpc.id, rpc.session_id))

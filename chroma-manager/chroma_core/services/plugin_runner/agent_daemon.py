@@ -7,7 +7,7 @@
 import sys
 import traceback
 import threading
-from chroma_core.services.http_agent import AgentSessionRpc
+from chroma_core.services.http_agent import HttpAgentRpc
 from chroma_core.services.queue import AgentRxQueue
 
 from django.db import transaction
@@ -143,7 +143,7 @@ class AgentPluginHandler(object):
                 else:
                     # Partway through a session, reset it
                     log.info("Nonzero counter for new (to me) session, resetting")
-                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
+                    HttpAgentRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
                     return
 
             elif existing_session.id != message['session_id']:
@@ -156,7 +156,7 @@ class AgentPluginHandler(object):
                     # Existing session is dead, new session is not at zero, must send a reset
                     log.info("Nonzero counter for new (to me) replacement session, resetting")
                     del self._sessions[host.id]
-                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
+                    HttpAgentRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
                     return
             else:
                 if message['session_seq'] == existing_session.seq + 1:
@@ -166,7 +166,7 @@ class AgentPluginHandler(object):
                     # Got out of sequence, reset it
                     log.info("Out of sequence message (seq %s, expected %s), resetting" % (message['session_seq'], existing_session.seq + 1))
                     del self._sessions[host.id]
-                    AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
+                    HttpAgentRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
                     return
 
             session = self._sessions.get(host.id, None)
@@ -183,4 +183,4 @@ class AgentPluginHandler(object):
                     self._plugin_name, host, backtrace))
                 log.error("Data: %s" % message['body'])
 
-                AgentSessionRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
+                HttpAgentRpc().reset_session(fqdn, self._plugin_name, message['session_id'])
