@@ -29,3 +29,6 @@ repo: install
 	createrepo --pretty .
 
 FORCE:
+
+docs:
+	@echo "Nothing to do here"

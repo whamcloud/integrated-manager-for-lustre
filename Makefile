@@ -1,7 +1,7 @@
 BUILDER_IS_EL6 = $(shell rpm --eval '%{?el6:true}%{!?el6:false}')
 
 # Top-level Makefile
-SUBDIRS ?= $(shell find . -maxdepth 1 -mindepth 1 -type d -not -name '.*' -not -name dist -not -name scripts  -not -name '*.egg-info')
+SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
 .PHONY: subdirs $(SUBDIRS)
 
