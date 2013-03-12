@@ -41,6 +41,7 @@ $(RPM_NAME).spec: $(SRPM) spec.ed
 	# everything up
 	if [ -n "$(LAST_BUILT)" -a                                      \
 		     "$(LAST_BUILT)" != "$(SRPM)" ]; then               \
+	    touch $(RPM_NAME).spec;                                     \
 	    make -f ../include/Makefile.rpm LOCATION=$(LOCATION) clean; \
 	fi
 	rm -f $@
@@ -62,11 +63,12 @@ clean: $(LAST_BUILT) $(RPM_NAME).spec
 	rpm -qlp $(LAST_BUILT) | while read f; do \
 		rm -f $$f;                        \
 	done
-	rm -f $(LAST_BUILT) $(RPM_NAME).spec.last_built
+	rm -f $(LAST_BUILT) $(RPM_NAME).spec.last_built \
+	      $(RPM_NAME).spec{,.orig} .last_built 
 
 distclean: clean
 	rm -rf $(RPM_TOP)
-	rm -f $(SRPM) $(RPM_NAME).spec{,.orig} $(LAST_BUILT)
+	rm -f $(SRPM) $(LAST_BUILT)
 	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
 		rm -f spec.ed; \
 	fi
