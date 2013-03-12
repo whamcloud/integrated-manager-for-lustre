@@ -21,7 +21,6 @@ agent:
 
 $(SUBDIRS): dist agent
 	set -e; \
-	# We only do a full build on EL6
 	if $(BUILDER_IS_EL6); then \
 		$(MAKE) -C $@ rpms; \
 		$(MAKE) -C $@ docs; \
