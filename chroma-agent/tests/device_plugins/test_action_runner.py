@@ -143,10 +143,12 @@ class ActionRunnerPluginTestCase(ActionTestCase):
     def _get_responses(self, count):
         # The ActionRunnerPlugin will run the action in a thread, and call send_message when
         # it completes
+        # NB: when polling a Mock() from another thread, we rely on call_count being set before call_args_list: it
+        # is safe to poll on call_args_list and then assume call_count is set, but not vice versa.
         TIMEOUT = 2
         i = 0
         while True:
-            if DevicePlugin.send_message.call_count >= count:
+            if len(DevicePlugin.send_message.call_args_list) >= count:
                 break
             else:
                 time.sleep(1)
@@ -295,11 +297,13 @@ class TestCallbackAfterResponse(ActionRunnerPluginTestCase):
     def _get_response_and_callback(self):
         # The ActionRunnerPlugin will run the action in a thread, and call send_message when
         # it completes
+        # NB: when polling a Mock() from another thread, we rely on call_count being set before call_args_list: it
+        # is safe to poll on call_args_list and then assume call_count is set, but not vice versa.
 
         TIMEOUT = 2
         i = 0
         while True:
-            if DevicePlugin.send_message.call_count:
+            if DevicePlugin.send_message.call_args is not None:
                 break
             else:
                 time.sleep(1)
