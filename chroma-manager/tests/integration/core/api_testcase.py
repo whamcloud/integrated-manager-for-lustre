@@ -57,6 +57,12 @@ class ApiTestCase(UtilityTestCase):
         else:
             self.remote_operations = RealRemoteOperations(self)
 
+        # Ensure that all servers are up and available
+        for server in config['lustre_servers']:
+            logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
+            self.remote_operations.await_server_boot(server['fqdn'], restart = True)
+            logger.info("%s is running" % server['fqdn'])
+
         reset = config.get('reset', True)
         if reset:
             self.reset_cluster()
@@ -74,6 +80,17 @@ class ApiTestCase(UtilityTestCase):
             passed = sys.exc_info() == (None, None, None)
             if passed:
                 shutil.rmtree(self.simulator.folder)
+        else:
+            # Check that all servers are up and available after the test
+            down_nodes = []
+            for server in config['lustre_servers']:
+                if not self.remote_operations._host_contactable(server['fqdn']):
+                    down_nodes.append(server['fqdn'])
+
+            if len(down_nodes):
+                logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
+                if not getattr(self, 'down_node_expected', False):
+                    raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
 
     @property
     def chroma_manager(self):

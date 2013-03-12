@@ -288,6 +288,8 @@ class RealRemoteOperations(RemoteOperations):
             )
         except socket.error:
             return False
+        except paramiko.AuthenticationException:
+            return False
         else:
             return True
 
@@ -306,12 +308,13 @@ class RealRemoteOperations(RemoteOperations):
             if i > TEST_TIMEOUT:
                 raise RuntimeError("Host %s didn't terminate within %s seconds" % (fqdn, TEST_TIMEOUT))
 
-    def await_server_boot(self, boot_fqdn, monitor_fqdn = None):
+    def await_server_boot(self, boot_fqdn, monitor_fqdn = None, restart = False):
         """
         Wait for the stonithed server to come back online
         """
         boot_server = self._fqdn_to_server_config(boot_fqdn)
         monitor_server = None if monitor_fqdn is None else self._fqdn_to_server_config(monitor_fqdn)
+        restart_attempted = False
 
         running_time = 0
         while running_time < TEST_TIMEOUT:
@@ -330,6 +333,25 @@ class RealRemoteOperations(RemoteOperations):
                 else:
                     # No monitor server, take SSH offline-ness as evidence for being booted
                     break
+            else:
+                if restart and not restart_attempted:
+                    logger.info("attempting to restart %s" % boot_fqdn)
+                    result = self._ssh_address(
+                        boot_server['host'],
+                        boot_server['status_command']
+                    )
+                    node_status = result.stdout.read()
+                    if re.search('running', node_status):
+                        logger.info("%s seems to be running, but unresponsive" % boot_fqdn)
+                        self.kill_server(boot_fqdn)
+                    result = self._ssh_address(
+                        boot_server['host'],
+                        boot_server['start_command']
+                    )
+                    node_status = result.stdout.read()
+                    if re.search('started', node_status):
+                        logger.info("%s started successfully" % boot_fqdn)
+                    restart_attempted = True
 
             time.sleep(3)
             running_time += 3
