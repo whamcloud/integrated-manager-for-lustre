@@ -454,19 +454,3 @@ class NidsHandler(Handler):
                       'host_id': host['id']
         }}]}
         self.output(self.api.endpoints['command'].create(**kwargs))
-
-
-class ConfigHandler(Handler):
-    nouns = ["configuration", "cfg"]
-    verbs = ["dump", "load"]
-    intransitive_verbs = ["dump"]
-
-    def dump(self, ns):
-        import json
-        response = self.api.endpoints['configuration'].get_decoded()
-        print json.dumps(response, indent=4)
-
-    def load(self, ns):
-        import json
-        config = json.load(open(ns.subject, "r"))
-        self.api.endpoints['configuration'].create(**config)

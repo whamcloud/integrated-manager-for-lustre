@@ -38,7 +38,6 @@ import chroma_api.job
 import chroma_api.step
 import chroma_api.command
 import chroma_api.help
-import chroma_api.configuration
 import chroma_api.system_status
 
 import chroma_api.session
@@ -75,7 +74,6 @@ api.register(chroma_api.step.StepResource())
 api.register(chroma_api.log.LogResource())
 api.register(chroma_api.command.CommandResource())
 api.register(chroma_api.help.HelpResource())
-api.register(chroma_api.configuration.ConfigurationResource())
 api.register(chroma_api.system_status.SystemStatusResource())
 
 urlpatterns = patterns('',
