@@ -4,10 +4,11 @@ REPO = $(TOP)/repo/
 
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
-.PHONY: all rpms clean distclean install
-all rpms clean distclean install:: $(SUBDIRS)
+all: repo
 
-all: TARGET=all
+.PHONY: rpms clean distclean install
+rpms clean distclean install:: $(SUBDIRS)
+
 rpms: TARGET=rpms
 clean: TARGET=clean
 distclean: TARGET=distclean
