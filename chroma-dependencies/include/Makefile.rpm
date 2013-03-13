@@ -14,6 +14,8 @@ SRPMS        := $(SRPM)
 ifneq ($(SRPM),$(LAST_BUILT))
 SRPMS        += $(LAST_BUILT)
 endif
+NAME         ?= $(patsubst python-%,%,$(RPM_NAME))
+REQUIREMENT  ?= $(NAME)==$(RPM_VERSION)
 
 rpms: $(RPM_NAME).spec
 	for dep in $(DEPS); do                 \
@@ -73,6 +75,7 @@ distclean: clean
 		rm -f spec.ed; \
 	fi
 
+include ../include/Makefile.requirements
 # it would be nice to do this, but it doesn't work since we need to be
 # sure the spec file exists before being able to use rules like this.
 # let's keep this here to remind us of what nirvana is and see if we

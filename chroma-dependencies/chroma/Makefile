@@ -1,4 +1,5 @@
-rpms clean distclean:;
+rpms clean distclean requirements:;
+
 
 install::
 	ln ../../dist/*.rpm $(REPO)

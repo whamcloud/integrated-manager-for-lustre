@@ -13,6 +13,7 @@ ALL_TARGETS  = $(patsubst %, $(RPM_DIR)/%,$(ALL_ARCH_RPMS))
 # XXX - what happens when the version is updated across two make runs?
 #       the RPMS that were built before the update won't get cleaned out
 CLEAN_RPMS  = $(shell if [ -f $(SPECFILE).last_built ]; then with_arch=true $(TOP)/include/parse_spec -c $(SPECFILE).last_built; else echo ""; fi)
+REQUIREMENT  ?= $(RPM_NAME)==$(RPM_VERSION)
 
 rpms: $(ALL_TARGETS)
 
@@ -75,3 +76,4 @@ distclean: clean
 
 # this doesn't work here
 #include $(TOP)/include/Makefile.install
+include ../include/Makefile.requirements

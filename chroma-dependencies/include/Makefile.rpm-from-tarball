@@ -11,6 +11,7 @@ TARBALL_NAME     := $(shell a="$(TARBALL_NAME)"; a=$${a/-$(TARBALL_VERSION)/}; e
 TARBALL          := $(TARBALL_NAME)-$(TARBALL_VERSION).$(TARBALL_EXT)
 # can be overridden in the caller Makefile
 SPECNAME         ?= $(TARBALL_NAME).spec
+REQUIREMENT      ?= $(TARBALL_NAME)==$(TARBALL_VERSION)
 
 rpms: $(SPECNAME) $(TARBALL)
 	for dep in $(DEPS); do                 \
@@ -82,3 +83,5 @@ distclean:
 	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
 		rm -f spec.ed; \
 	fi
+
+include ../include/Makefile.requirements

@@ -3,6 +3,25 @@ include $(TOP)/include/Makefile.meta
 
 rpms: $(ALL_RPMS)
 
+requirements:
+	for rpm in $(ALL_RPMS); do                \
+		base=$${rpm##*/};                 \
+		name=$${base%-*};                 \
+		version=$${name##*-};             \
+		name=$${name%-*};                 \
+		for p in $(NO_REQUIREMENT); do    \
+			if [ $$name = $$p ]; then \
+				continue 2;       \
+			fi;                       \
+		done;                             \
+		name=$${name#python-};            \
+		echo "$$name==$$version";         \
+	done
+	if [ -n "$(REQUIREMENTS)" ]; then           \
+		echo $(REQUIREMENTS) | tr ' ' '\n'; \
+	fi;                                         \
+		
+
 REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
 
 install: $(REPO_TARGETS)

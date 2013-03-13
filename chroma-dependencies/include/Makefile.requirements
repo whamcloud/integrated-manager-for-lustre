@@ -1,0 +1,8 @@
+requirements:
+	if [ -n "$(REQUIREMENT)" ]; then                          \
+		if [[ a$(REQUIREMENT) == ahttp://* ]]; then       \
+			echo "$(patsubst %==*,%,$(REQUIREMENT))"; \
+		else                                              \
+			echo "$(REQUIREMENT)";                    \
+		fi;                                               \
+	fi

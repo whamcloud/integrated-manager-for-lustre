@@ -6,13 +6,24 @@ SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\
 
 all: repo
 
-.PHONY: rpms clean distclean install
-rpms clean distclean install:: $(SUBDIRS)
+.PHONY: rpms clean distclean install requirements
+rpms clean distclean install requirements:: $(SUBDIRS)
 
 rpms: TARGET=rpms
 clean: TARGET=clean
 distclean: TARGET=distclean
 install: TARGET=install
+requirements: TARGET=requirements
+
+requirements::
+	# these are the ones provided by EL
+	echo "netaddr==0.7.5"
+	echo "paramiko==1.7.5"
+	echo "pycrypto==2.0.1"
+	echo "psycopg2==2.0.14"
+	echo "python==2.6.6"
+	echo "simplejson==2.0.9"
+	sed -e '/^#/d' < ../chroma-manager/requirements.dev
 
 $(SUBDIRS): cleanrepo force
 	$(MAKE) TOP=$(TOP) REPO=$(REPO) -C $@ $(TARGET)

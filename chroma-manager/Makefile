@@ -84,13 +84,26 @@ rpms: cleandist tarball
 	mv _topdir/RPMS/noarch/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).noarch.rpm dist/
 	rm -rf _topdir
 
-docs: version
+requirements:
+	(echo "# DO NOT UPDATE THIS FILE MANUALLY.";                \
+	echo "# This file is generated automatically.";             \
+	echo "# If you want to add a new requirement please see:";  \
+	echo "# http://wiki.whamcloud.com/display/HYD/Adding+and+Updating+IML+Requirements"; \
+	$(MAKE) -s -C ../chroma-dependencies requirements | sort;   \
+	echo "# DO NOT UPDATE THIS FILE MANUALLY.  See the warning at the top of this file.")          \
+		> requirements.txt
+	if grep ^make requirements.txt; then                      \
+		echo "why is this not quiet like it should be?";  \
+		sed -i -e '/^make\[[0-9]\]: /d' requirements.txt; \
+	fi
+	
+docs: requirements version
 	set -e ; \
 	if [ -z $(VIRTUAL_ENV) ] ; then \
 		virtualenv --system-site-packages myenv ; \
 		. myenv/bin/activate; \
 		pip install -r ./requirements.txt; \
 	fi ; \
-	make -C docs/ && cp docs/dist/*.tar.gz dist/
+	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
 .PHONY: docs
