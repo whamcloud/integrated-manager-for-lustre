@@ -24,6 +24,8 @@ else
 	NOSE_ARGS ?=
 endif
 
+all: rpms docs
+
 cleandist:
 	rm -rf  dist
 	mkdir dist

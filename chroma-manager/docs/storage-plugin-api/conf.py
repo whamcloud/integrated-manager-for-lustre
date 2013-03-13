@@ -27,3 +27,6 @@ from docs.conf_common import *
 
 project = u'Chroma Storage Plugin API'
 master_doc = 'index'
+
+from django.conf import settings
+rst_epilog = '.. |api_version| replace:: %d' % settings.STORAGE_API_VERSION

@@ -5,7 +5,10 @@ from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
 import random
 
+
 DRIVE_COUNT = 1000
+
+version = 1
 
 
 class Controller(resources.ScannableResource):

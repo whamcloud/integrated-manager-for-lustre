@@ -13,6 +13,9 @@ TARBALL          := $(TARBALL_NAME)-$(TARBALL_VERSION).$(TARBALL_EXT)
 SPECNAME         ?= $(TARBALL_NAME).spec
 
 rpms: $(SPECNAME) $(TARBALL)
+	for dep in $(DEPS); do                 \
+		$(MAKE) -C ../$$dep pkg_install; \
+	done
 	$(MAKE) -f ../include/Makefile.rpmbuild $@
 
 install pkg_install: rpms

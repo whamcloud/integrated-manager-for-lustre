@@ -1,18 +1,1 @@
-/^%define release/s/ 1/ 2/
 /^License: UNKNOWN/s/UNKNOWN/BSD/
-/%setup/a
-cat dse/__init__.py
-patch -p1 <<PEOF
---- dse-3.2.0/dse/__init__.py	2012-04-15 21:51:52.000000000 +0100
-+++ dse-3.2.0_django13/dse/__init__.py	2012-06-06 18:34:27.697728459 +0100
-@@ -442,7 +442,7 @@ def patch_models(specific_models=None):
-         logging.warning("DSE has not monkey-patched any models because more than one database has been configured.")
-         return
- 
--    for model in get_models(only_installed=False):
-+    for model in get_models():
-         #if not model._meta.managed:
-         #    continue
-         if specific_models and model not in specific_models:
-PEOF
-.
