@@ -25,13 +25,13 @@ class TestHttpWriter(unittest.TestCase):
             TIMEOUT = 2
             i = 0
             while True:
-                if client.post.call_count:
+                if client.post.call_count and callback.call_count:
                     break
                 else:
                     time.sleep(1)
                     i += 1
                     if i > TIMEOUT:
-                        raise RuntimeError("Timeout waiting for .post()")
+                        raise RuntimeError("Timeout waiting for .post() and callback (%s %s)" % (client.post.call_count, callback.call_count))
 
             # Should have sent back the result
             self.assertEqual(client.post.call_count, 1)
