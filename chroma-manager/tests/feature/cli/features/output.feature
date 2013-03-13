@@ -21,7 +21,7 @@ Scenario: Tab-separated output
 Scenario: JSON output
   When I run chroma --output json server-list
   Then I should see output containing "[{"
-  And I should see output containing ""address": ""
+  And I should see output containing ""address":"
   And I should see output containing "}]"
 
 Scenario: YAML output
