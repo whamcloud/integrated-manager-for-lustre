@@ -15,7 +15,7 @@ from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler import agent_rpc
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.models import ManagedHost, HostContactAlert, Command
+from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration
 
 RABBITMQ_GRACE_PERIOD = 1
 
@@ -90,6 +90,7 @@ class TestAgentRpc(SupervisorTestCase):
                 state = 'lnet_down',
                 state_modified_at = datetime.datetime.now(tz = dateutil.tz.tzutc())
             )
+            LNetConfiguration.objects.create(host = self.host, state = 'nids_known')
         else:
             self.host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
 
@@ -178,8 +179,9 @@ class TestAgentRpc(SupervisorTestCase):
         return Command.objects.get(pk = command_id)
 
     def _wait_for_command(self, command_id, timeout):
+        """Wait for at least timeout"""
         i = 0
-        while i < timeout:
+        while i < timeout + 1:
             command = self._get_command(command_id)
             if command.complete:
                 return command
