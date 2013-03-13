@@ -18,6 +18,39 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 
+class WrappedAll(object):
+    """Hack to prevent 1 extra query (exact dup) for EVERY volume from executing
+
+    TastyPie will take a callable in as an attribute in a ToManyField.
+    During dehydration  ToManyField.dehydrate is called and this is where
+    TastyPie grabs the callable and tries to get some objects from it.
+    But, in that method, the queryset is forced to a bool, which causes it's
+    query to be executed.  Unfortunately, then it is forced to execute again
+    to iterate through the list of volumenodes.  It seems the first one
+    isn't cached.
+
+    I'm not sure if this is a bug, and if it is one, if it is with TastyPie
+    or with Django's ORM.
+
+    This Hacky class is just a workaround.
+
+    This class returns True, but does NOT execute any queries.  This allows
+    the hydrate to continue.  Then, when all() is called, it will return
+    what it should in that one single select_related query.
+    """
+
+    def __call__(self, bundle):
+        self.bundle = bundle
+        return self
+
+    def all(self):
+        return self.bundle.obj.volumenode_set.all().select_related('host')
+
+    def __bool__(self):
+        return True
+    __nonzero__ = __bool__  # for python 2 and 3 compatibility
+
+
 class VolumeResource(ModelResource):
     """
     A volume represents a unit of storage suitable for use as a Lustre target.  This
@@ -47,25 +80,60 @@ class VolumeResource(ModelResource):
     only identify one node as primary.
     """
 
-    status = fields.CharField(help_text = "A string representing the high-availability \
-            configuration status of the volume.")
-    kind = fields.CharField(help_text = "A human readable noun representing the \
-            type of storage, e.g. 'Linux partition', 'LVM LV', 'iSCSI LUN'")
-    volume_nodes = fields.ToManyField("chroma_api.volume_node.VolumeNodeResource",
-            lambda bundle: bundle.obj.volumenode_set.filter(host__not_deleted = True),
-            null = True, full = True, help_text = "Device nodes which point to this volume")
-    storage_resource = fields.ToOneField("chroma_api.storage_resource.StorageResourceResource",
-            'storage_resource', null = True, blank = True, full = False, help_text = "The \
-            `storage_resource` corresponding to the device which this Volume represents")
+    status = fields.CharField(help_text = "A string representing the "
+                                          "high-availability configuration "
+                                          "status of the volume.")
+
+    kind = fields.CharField(help_text = "A human readable noun representing "
+                                        "thetype of storage, e.g. 'Linux "
+                                        "partition', 'LVM LV', 'iSCSI LUN'")
+
+    # See notes above about how hacking the attribute saves 1 query / volume
+    volume_nodes = fields.ToManyField(
+        "chroma_api.volume_node.VolumeNodeResource",
+        WrappedAll(), null = True, full = True,
+        help_text = "Device nodes which point to this volume")
+
+    storage_resource = fields.ToOneField(
+        "chroma_api.storage_resource.StorageResourceResource",
+        'storage_resource', null = True, blank = True, full = False,
+        help_text = "The `storage_resource` corresponding to the "
+                    "device which this Volume represents")
 
     def dehydrate_kind(self, bundle):
+        #  Kind comes from the related storage_resource.
         return bundle.obj.get_kind()
 
-    def dehydrate_status(self, bundle):
-        return bundle.obj.ha_status()
+    def alter_list_data_to_serialize(self, request, data):
+        """Impl to pull out the node's primary and use counts to set status
+
+        Since the query gets this data, it made sense to aggregate it here
+        instead of doing another query to do it for each Volume.
+
+        This might only be a marginal speed up.
+        """
+
+        for vol_bndl in data['objects']:
+            volumenode_count = len(vol_bndl.data['volume_nodes'])
+            primary_count = 0
+            failover_count = 0
+            for vol_node_bndl in vol_bndl.data['volume_nodes']:
+                primary = vol_node_bndl.data['primary']
+                use = vol_node_bndl.data['use']
+                # True == 1, False = 0
+                primary_count += int(primary)
+                failover_count += int(not primary and use)
+            vol_bndl.data['status'] = Volume.ha_status_label(
+                            volumenode_count, primary_count, failover_count)
+
+        return data
 
     class Meta:
-        queryset = Volume.objects.all()
+        #  Join in these three models to dehydrate_kind without big penalties
+        queryset = Volume.objects.all().select_related('storage_resource',
+            'storage_resource__resource_class',
+            'storage_resource__resource_class__storage_plugin'
+        ).prefetch_related('volumenode_set', 'volumenode_set__host')
         resource_name = 'volume'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()

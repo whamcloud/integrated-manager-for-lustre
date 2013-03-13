@@ -135,7 +135,7 @@ class StatefulModelResource(CustomModelResource):
 
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, 'content_type'):
-            return bundle.obj.content_type.pk
+            return bundle.obj.content_type_id
         else:
             return ContentType.objects.get_for_model(bundle.obj.__class__).pk
 

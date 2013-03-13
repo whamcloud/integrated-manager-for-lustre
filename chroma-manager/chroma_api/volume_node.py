@@ -22,6 +22,8 @@ class VolumeNodeResource(ModelResource):
     This resource cannot be written to directly.  To update
     ``use`` and ``primary``, PUT to the volume that the
     node belongs to.
+
+    This resource is used by the CLI
     """
 
     volume_id = fields.IntegerField(attribute = 'volume_id',
@@ -40,7 +42,7 @@ class VolumeNodeResource(ModelResource):
         return bundle.obj.host.get_label()
 
     class Meta:
-        queryset = VolumeNode.objects.filter(host__not_deleted = True)
+        queryset = VolumeNode.objects.all().select_related("host")
         resource_name = 'volume_node'
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()

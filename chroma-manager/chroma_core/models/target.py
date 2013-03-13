@@ -21,6 +21,10 @@ from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMe
 import settings
 
 
+class NotAFileSystemMember(Exception):
+    pass
+
+
 class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as
        MDT, OST or Client"""
@@ -53,8 +57,36 @@ class ManagedTarget(StatefulObject):
     inode_count = models.IntegerField(null = True, blank = True, help_text = "The number of inodes in this target's"
                                       "backing store")
 
+    def get_hosts(self, primary=True):
+        """Getting all the hosts, and filtering in python is less db hits"""
+
+        mounts = self.managedtargetmount_set.all()
+
+        failovers = []
+        for mount in mounts:
+            if primary:
+                if mount.primary:
+                    return mount.host
+            else:
+                failovers.append(mount.host)
+
+        return failovers
+
     def primary_server(self):
-        return self.managedtargetmount_set.get(primary = True).host
+        return self.get_hosts(primary=True)
+
+    @property
+    def full_volume(self):
+        """Used in API Resource that want the Volume and all related objects
+
+        This results in a join query to get data with fewer DB hits
+        """
+
+        return Volume.objects.all().select_related('storage_resource',
+            'storage_resource__resource_class',
+            'storage_resource__resource_class__storage_plugin'
+        ).prefetch_related('volumenode_set',
+            'volumenode_set__host').get(pk=self.volume.pk)
 
     def secondary_servers(self):
         return [tm.host for tm in self.managedtargetmount_set.filter(primary = False)]
@@ -96,11 +128,11 @@ class ManagedTarget(StatefulObject):
 
     @property
     def primary_host(self):
-        return ManagedTargetMount.objects.get(target = self, primary = True).host
+        return self.get_hosts(primary=True)
 
     @property
     def failover_hosts(self):
-        return ManagedHost.objects.filter(managedtargetmount__target = self, managedtargetmount__primary = False)
+        return self.get_hosts(primary=False)
 
     @property
     def active_host(self):

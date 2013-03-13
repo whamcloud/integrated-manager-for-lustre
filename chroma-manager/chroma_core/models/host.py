@@ -273,14 +273,18 @@ class Volume(models.Model):
                 ).filter((Q(num_volumenodes = 1) | Q(has_primary = True)) & Q(any_targets = None))
 
     def get_kind(self):
+        if not hasattr(self, 'kind'):
+            self.kind = self._get_kind()
+
+        return self.kind
+
+    def _get_kind(self):
         """:return: A string or unicode string which is a human readable noun corresponding
         to the class of storage e.g. LVM LV, Linux partition, iSCSI LUN"""
-        if not self.storage_resource_id:
+        if not self.storage_resource:
             return "Unknown"
 
-        from chroma_core.models import StorageResourceRecord
-        record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
-        resource_klass = record.to_resource_class()
+        resource_klass = self.storage_resource.to_resource_class()
         return resource_klass._meta.label
 
     def _get_label(self):
@@ -297,27 +301,16 @@ class Volume(models.Model):
         # TODO: this is a link to the local e.g. ScsiDevice resource: to get the
         # best possible name, we should follow back to VirtualDisk ancestors, and
         # if there is only one VirtualDisk in the ancestry then use its name
-        from chroma_core.models import StorageResourceRecord
-        record = StorageResourceRecord.objects.get(pk = self.storage_resource_id)
-        resource = record.to_resource()
-        if record.alias:
-            return record.alias
-        else:
-            return resource.get_label()
+
+        return self.storage_resource.alias_or_name()
 
     def save(self, *args, **kwargs):
         self.label = self._get_label()
+        self.kind = self._get_kind()
         super(Volume, self,).save(*args, **kwargs)
 
-    def ha_status(self):
-        """Tell the caller two things:
-         * is the Volume configured enough for use as a target?
-         * is the configuration (if present) HA?
-         by returning one of 'unconfigured', 'configured-ha', 'configured-noha'
-        """
-        volumenode_count = self.volumenode_set.count()
-        primary_count = self.volumenode_set.filter(primary = True).count()
-        failover_count = self.volumenode_set.filter(primary = False, use = True).count()
+    @staticmethod
+    def ha_status_label(volumenode_count, primary_count, failover_count):
         if volumenode_count == 1 and primary_count == 0:
             return 'configured-noha'
         elif volumenode_count == 1 and primary_count > 0:

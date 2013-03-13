@@ -58,10 +58,12 @@ class HostResource(MetricResource, StatefulModelResource):
     nids = fields.ListField(null = True)
 
     def dehydrate_nids(self, bundle):
-        return [n.nid_string for n in Nid.objects.filter(lnet_configuration = bundle.obj.lnetconfiguration)]
+        return [n.nid_string for n in Nid.objects.filter(
+            lnet_configuration = bundle.obj.lnetconfiguration)]
 
     class Meta:
-        queryset = ManagedHost.objects.all()
+        queryset = ManagedHost.objects.select_related(
+            'lnetconfiguration').prefetch_related('lnetconfiguration__nid_set')
         resource_name = 'host'
         excludes = ['not_deleted']
         authentication = AnonymousAuthentication()

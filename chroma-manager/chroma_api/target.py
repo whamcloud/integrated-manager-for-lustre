@@ -5,7 +5,7 @@
 
 
 from chroma_core.models.host import Volume, VolumeNode
-from chroma_core.models.target import FilesystemMember
+from chroma_core.models.target import FilesystemMember, NotAFileSystemMember
 import chroma_core.lib.conf_param
 
 import settings
@@ -16,7 +16,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
-from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTargetMount, ManagedTarget, ManagedFilesystem, Command
+from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget, ManagedFilesystem, Command
 
 import tastypie.http as http
 from tastypie import fields
@@ -156,10 +156,10 @@ class TargetResource(MetricResource, ConfParamResource):
     volume_name = fields.CharField(attribute = 'volume__label',
             help_text = "The ``label`` attribute of the volume on which this target exists")
 
-    primary_server = fields.ToOneField('chroma_api.host.HostResource', 'primary_host')
+    primary_server = fields.ToOneField('chroma_api.host.HostResource', 'primary_host', full=False)
     primary_server_name = fields.CharField(help_text = "Human\
             readable label for the primary server for this target")
-    failover_servers = fields.ToManyField('chroma_api.host.HostResource', 'failover_hosts', null = True)
+    failover_servers = fields.ListField(null=True)
     failover_server_name = fields.CharField(help_text = "Human\
             readable label for the secondary server for this target")
 
@@ -169,7 +169,7 @@ class TargetResource(MetricResource, ConfParamResource):
         null = True, help_text = "The server on which this target is currently started, or null if "
                                  "the target is not currently started")
 
-    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'volume', full = True, help_text = "\
+    volume = fields.ToOneField('chroma_api.volume.VolumeResource', 'full_volume', full = True, help_text = "\
                              The volume on which this target is stored.")
 
     def content_type_id_to_kind(self, id):
@@ -178,8 +178,27 @@ class TargetResource(MetricResource, ConfParamResource):
 
         return self.CONTENT_TYPE_ID_TO_KIND[id]
 
+    def full_dehydrate(self, bundle):
+        """The first call in the dehydrate cycle.
+
+        The ui, calls this directly, in addition to calling through the
+        normal api path.  So, use it to initialize the fs cache.
+        """
+
+        self._init_cached_fs()
+
+        return super(TargetResource, self).full_dehydrate(bundle)
+
     class Meta:
-        queryset = ManagedTarget.objects.all()
+        # ManagedTarget is a Polymorphic Model which gets related
+        # to content_type in the __metaclass__
+        queryset = ManagedTarget.objects.select_related(
+            'content_type', 'volume',
+            'volume__storage_resource__resource_class',
+            'volume__storage_resource__resource_class__storage_plugin',
+            'managedost', 'managedmdt', 'managedmgs').prefetch_related(
+            'managedtargetmount_set', 'managedtargetmount_set__host',
+            'managedtargetmount_set__host__lnetconfiguration')
         resource_name = 'target'
         excludes = ['not_deleted', 'bytes_per_inode']
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'host_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}
@@ -205,38 +224,80 @@ class TargetResource(MetricResource, ConfParamResource):
         return urls
 
     def dehydrate_filesystems(self, bundle):
-        if hasattr(bundle.obj, 'managedmgs'):
-            return [{'id': fs.id, 'name': fs.name} for fs in bundle.obj.managedmgs.managedfilesystem_set.all()]
+
+        #  Limit this to one db hit per mgs, caching might help
+        mgs = bundle.obj.downcast()
+        if type(mgs) == ManagedMgs:
+            return [{'id': fs.id, 'name': fs.name} for fs in
+                    bundle.obj.managedmgs.managedfilesystem_set.all()]
         else:
             return None
 
     def dehydrate_kind(self, bundle):
         return self.content_type_id_to_kind(bundle.obj.content_type_id)
 
-    def dehydrate_filesystem(self, bundle):
-        from chroma_api.filesystem import FilesystemResource
-        filesystem = getattr(bundle.obj.downcast(), 'filesystem', None)
-        if filesystem:
-            return FilesystemResource().get_resource_uri(filesystem)
-        else:
-            return None
-
     def dehydrate_filesystem_id(self, bundle):
+
+        #  The ID is free - no db hit
         return getattr(bundle.obj.downcast(), 'filesystem_id', None)
 
-    def dehydrate_filesystem_name(self, bundle):
+    def _init_cached_fs(self):
+
+        # Object to hold seen filesystems, to preventing multiple
+        # db hits for the same filesystem.
+        self._fs_cache = defaultdict(ManagedFilesystem)
+
+    def _get_cached_fs(self, bundle):
+        """Cache the ManagedFilesystem as they are seen.
+
+        The ManageFile can be accessed many times.  Use this method to get
+        it and the number of DB hits is reduced.
+
+        """
+
+        #  Only OST and MDT are FS members.  Those subclass are joined in above
+        #  So this lookup is free accept for intial ManageFilesystem lookup
+        ost_or_mdt = bundle.obj.downcast()
+        if (type(ost_or_mdt) == ManagedOst or
+            type(ost_or_mdt) == ManagedMdt):
+            val = getattr(ost_or_mdt, 'filesystem_id', None)
+            if val not in self._fs_cache:
+                #  Only DB hit in this method.
+                self._fs_cache[val] = ost_or_mdt.filesystem
+
+            return self._fs_cache[val]  # a ManagedFilesystem
+        else:
+            raise NotAFileSystemMember(type(ost_or_mdt))
+
+    def dehydrate_filesystem(self, bundle):
+        """Get the URL to load a ManagedFileSystem"""
+
         try:
-            return bundle.obj.downcast().filesystem.name
-        except AttributeError:
+            from chroma_api.filesystem import FilesystemResource
+
+            filesystem = self._get_cached_fs(bundle)
+            return FilesystemResource().get_resource_uri(filesystem)
+        except NotAFileSystemMember:
+            return None
+
+    def dehydrate_filesystem_name(self, bundle):
+
+        try:
+            filesystem = self._get_cached_fs(bundle)
+            return filesystem.name
+        except NotAFileSystemMember:
             return None
 
     def dehydrate_primary_server_name(self, bundle):
-        return bundle.obj.primary_server().get_label()
+        return bundle.obj.primary_host.get_label()
+
+    def dehydrate_failover_servers(self, bundle):
+        return bundle.obj.failover_hosts
 
     def dehydrate_failover_server_name(self, bundle):
         try:
-            return bundle.obj.managedtargetmount_set.get(primary = False).host.get_label()
-        except ManagedTargetMount.DoesNotExist:
+            return bundle.obj.failover_hosts[0].get_label()
+        except IndexError:
             return "---"
 
     def dehydrate_active_host_name(self, bundle):

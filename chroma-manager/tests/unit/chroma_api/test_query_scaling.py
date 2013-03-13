@@ -21,9 +21,9 @@ OrderBad = namedtuple('OrderBad', [])
 # then think about whether you meant to do that, and grudgingly
 # update this number upwards if necessary, or go back and
 # revise the API change.
-QUERIES_PER_TARGET = 31  # queries per target accessing that resource directly
+QUERIES_PER_TARGET = 8  # queries per target accessing that resource directly
 QUERIES_PER_FILESYSTEM_TARGET = 4  # queries per target when included in a filesystem resource
-QUERIES_PER_VOLUME = 9  # queries per volume object when reading volumes
+QUERIES_PER_VOLUME = 1  # queries per volume object when reading volumes
 QUERIES_PER_VOLUME_HOST = 1  # additional queries per-volume per-host
 QUERIES_TOTAL_UNDECORATED_LOGS = 5  # total queries to get all log messages (when they don't have any NIDs or targets)
 
@@ -160,8 +160,7 @@ class TestQueryScaling(ChromaApiTestCase):
         # Creating N volumes with a fixed number of volumes visible to each host
         host_pairs_scaling = self._measure_scaling(self._create_n_volumes_host_pairs, VolumeResource)
         self.assertIsInstance(host_pairs_scaling, OrderN)
-
-        self.assertEqual(host_pairs_scaling.queries_per_object, QUERIES_PER_VOLUME + 2 * QUERIES_PER_VOLUME_HOST)
+        self.assertEqual(host_pairs_scaling.queries_per_object, QUERIES_PER_VOLUME)
 
         # Creating N volumes with all volumes visible to a fixed number of hosts
         fixed_host_count = 8
@@ -170,14 +169,14 @@ class TestQueryScaling(ChromaApiTestCase):
             self._create_san_volumes(fixed_host_count, N)
         fixed_hosts_scaling = self._measure_scaling(create_n_volumes_fixed_hosts, VolumeResource)
         self.assertIsInstance(fixed_hosts_scaling, OrderN)
-        self.assertEqual(fixed_hosts_scaling.queries_per_object, QUERIES_PER_VOLUME + fixed_host_count * QUERIES_PER_VOLUME_HOST)
+        self.assertEqual(fixed_hosts_scaling.queries_per_object, QUERIES_PER_VOLUME_HOST)
 
         # Creating N volumes with a proportional number of hosts, with all volumes visible to all hosts
         def create_n_volumes_proportional_hosts(N):
             self._create_san_volumes(N, N)
         proportional_hosts_scaling = self._measure_scaling(create_n_volumes_proportional_hosts, VolumeResource)
-        # FIXME: really bad!  A per-volumenode, per-volume cost
-        self.assertIsInstance(proportional_hosts_scaling, OrderBad)
+        self.assertIsInstance(proportional_hosts_scaling, OrderN)
+        self.assertEqual(proportional_hosts_scaling.queries_per_object, QUERIES_PER_VOLUME_HOST)
 
         # With a fixed number of volumes, increasing the number of hosts that can see the volumes
         fixed_volume_count = 8
@@ -185,8 +184,10 @@ class TestQueryScaling(ChromaApiTestCase):
         def create_n_hosts_fixed_volumes(N):
             self._create_san_volumes(N, fixed_volume_count)
         scaling_with_hosts = self._measure_scaling(create_n_hosts_fixed_volumes, VolumeResource, HostResource)
-        self.assertIsInstance(scaling_with_hosts, OrderN)
-        self.assertEqual(scaling_with_hosts.queries_per_object, fixed_volume_count * QUERIES_PER_VOLUME_HOST)
+
+        self.assertIsInstance(scaling_with_hosts, Order1)
+        PAGING_AND_AUTH_QUERIES = 5
+        self.assertEqual(scaling_with_hosts.query_count, PAGING_AND_AUTH_QUERIES + QUERIES_PER_VOLUME + (fixed_volume_count * QUERIES_PER_VOLUME_HOST))
 
     def _create_filesystem_n_osts(self, n_targets):
         assert n_targets >= 3
