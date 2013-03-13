@@ -32,17 +32,17 @@ class PathWeight(BaseStorageResource):
 
 
 class LogicalDriveOccupier(BaseStorageResource):
-    """When a subclass of this is the descendent of a LogicalDrive, that LogicalDrive
+    """When a subclass of this class is the descendent of a LogicalDrive, that LogicalDrive
     is considered unavailable.  This is used for marking LUNs/partitions/LVs which are
-    in use, for example those which are mounted in existing filesystems."""
+    in use, for example those which are mounted in existing file systems."""
     pass
 
 
 class VirtualMachine(BaseStorageResource):
-    """A linux host provided by a plugin.  This resource has a special behaviour when
-    created: Chroma will add this (by the ``address`` attribute) as a Lustre server and
-    attempt to invoke the Chroma agent on it.  The ``host_id`` attribute is used internally
-    by Chroma and must not be assigned to by plugins."""
+    """A Linux* host provided by a plugin.  This resource has a special behaviour when
+    created: the Command Center will add this (by the ``address`` attribute) as a Lustre server and
+    attempt to configure the ``chroma-agent`` service on it.  The ``host_id`` attribute is used internally
+    by the Command Center and must not be assigned to by plugins."""
     # NB address is used to cue the creation of a ManagedHost, once that is set up
     # this address is not used.
     address = attributes.String()
@@ -72,7 +72,7 @@ class DeviceNode(BaseStorageResource):
 
 
 class LogicalDrive(BaseStorageResource):
-    """A storage device with a fixed size that could be used for installing Lustre"""
+    """A storage device with a fixed size that could be used for installing the Lustre software"""
     class Meta:
         icon = 'virtual_disk'
 

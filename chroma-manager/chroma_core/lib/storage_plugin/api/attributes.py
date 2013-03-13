@@ -5,7 +5,7 @@
 
 
 """The following classes allow plugin authors to specify type and bound information
-for the attributes of their resources.  Plugin authors are encouraged to be specific
+for the attributes of their resources.  Plugin authors are encouraged to be as specific
 as possible in their choice of attribute class, and avoid using generic types like
 String as much as possible.
 
@@ -31,9 +31,9 @@ class String(BaseResourceAttribute):
 
 class Password(String):
     """A password.  Plugins must provide their own obfuscation function.
-    The encryption function will be called by Chroma when processing user input (e.g.
+    The encryption function will be called by the Command Center when processing user input (e.g.
     when a resource is added in the UI).  The obfuscated text will be seen by
-    the plugin when the resource is retreived.
+    the plugin when the resource is retrieved.
 
     ::
 
@@ -77,7 +77,7 @@ class Integer(BaseResourceAttribute):
 class Bytes(BaseResourceAttribute):
     """An exact size in bytes.  This will be formatted with appropriate units
     and rounding when presented to the user, and should be used in preference to
-    storing values in kilobytes/megabytes etc whereever possible."""
+    storing values in kilobytes/megabytes, etc., wherever possible."""
     def to_markup(self, value):
         from chroma_core.lib.util import sizeof_fmt
         return sizeof_fmt(int(value))

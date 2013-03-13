@@ -14,14 +14,14 @@ class Gauge(BaseStatistic):
 
 
 class Counter(BaseStatistic):
-    """A monotonicall increasing time series."""
+    """A monotonically increasing time series."""
     def r3d_type(self):
         return 'Counter'
 
 
 class BytesHistogram(BaseStatistic):
     """A fixed-length array of integers used for representing histogram data.  The number of
-    bins and the value range of each bin is specified in the ``bins`` constructor argument:
+    bins and the value range of each bin are specified in the ``bins`` constructor argument:
 
     ::
 

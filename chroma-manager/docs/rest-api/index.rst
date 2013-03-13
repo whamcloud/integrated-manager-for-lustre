@@ -425,11 +425,11 @@ The products described in this document may contain design defects or errors kno
 
 Contact your local Intel sales office or your distributor to obtain the latest specifications and before placing your product order.
 
-Copies of documents which have an order number and are referenced in this document, or other Intel literature, may be obtained by calling 1-800-548-4725, or go to:  http://www.intel.com/design/literature.htm.
+Copies of documents which have an order number and are referenced in this document, or other Intel literature, may be obtained by calling 1-800-548-4725, or go to:  http\://www.intel.com/design/literature.htm.
 Intel and the Intel logo are trademarks of Intel Corporation in the U.S. and/or other countries. 
 
 \* Other names and brands may be claimed as the property of others.
 
-This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/)
+This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http\://www.openssl.org/)
 
 Copyright |copy| 2012-2013 Intel Corporation. All rights reserved.

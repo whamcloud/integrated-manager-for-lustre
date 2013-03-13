@@ -98,7 +98,7 @@ class BaseStoragePlugin(object):
         """Start a session based on information sent from an agent plugin.
 
         :param host_id: ID of the host from which the agent information was sent -- this is
-          a chroma-specific identifier which is mainly useful for constructing DeviceNode
+          a database identifier which is mainly useful for constructing DeviceNode
           resources.
         :param data: Arbitrary JSON-serializable data sent by plugin.
         :rtype: None
@@ -112,7 +112,7 @@ class BaseStoragePlugin(object):
         already been called.
 
         :param host_id: ID of the host from which the agent information was sent -- this is
-          a chroma-specific identifier which is mainly useful for constructing DeviceNode
+          a database identifier which is mainly useful for constructing DeviceNode
           resources.
         :param data: Arbitrary JSON-serializable data sent by plugin.
         :rtype: None
@@ -124,7 +124,7 @@ class BaseStoragePlugin(object):
            required before terminating.  Guaranteed not to be called
            concurrently with initial_scan or update_scan.  Guaranteed
            that initial_scan or update_scan will not be called after this.
-           Guaranteed that once initial_scan has been entered this will
+           Guaranteed that once initial_scan has been entered this function will
            later be called unless the whole process terminates
            prematurely.  This function will be called even if initial_scan
            or update_scan raises an exception."""
@@ -310,7 +310,7 @@ class BaseStoragePlugin(object):
                 return resource, True
 
     def remove(self, resource):
-        """Note: this does not immediately unregister the resource, rather marks it
+        """Note: this does not immediately unregister the resource, but rather marks it
         for removal at the next periodic update"""
         with self._resource_lock:
             self._index.remove(resource)
