@@ -1,0 +1,34 @@
+REPO := $(patsubst %/,%,$(REPO))
+RPMS := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
+NAME := $(notdir $(CURDIR))
+
+all: $(NAME)-bundle.tar.gz install
+
+$(NAME)-bundle.tar.gz: $(patsubst %,stamps/%.rpm,$(RPMS))
+	cd repo && createrepo --pretty .
+	echo "{'name': '$(NAME)'}" > repo/meta
+	tar -C repo -czf $@ .
+
+stamps/%.rpm: $(REPO)/%.rpm Makefile
+	# can't trust the contents of the repo if even one thing is out
+	# of date, so just nuke it and recreate it
+	rm -rf repo stamps
+	mkdir repo stamps
+	ln $(patsubst %,$(REPO)/%.rpm,$(RPMS)) repo
+	touch $(patsubst %,stamps/%.rpm,$(RPMS))
+
+$(TOP)/../artifacts/$(NAME)-bundle.tar.gz: $(NAME)-bundle.tar.gz
+	mkdir -p $(TOP)/../artifacts
+	rm -f $@
+	ln $^ $@
+
+install: $(TOP)/../artifacts/$(NAME)-bundle.tar.gz
+
+clean:
+	rm -rf repo stamps $(NAME)-bundle.tar.gz
+
+list:
+	@echo "$(RPMS)" | tr ' ' '\n'
+
+name:
+	@echo "$(NAME)"
