@@ -9,6 +9,8 @@ import random
 
 SIMULATOR_PORT = 8743
 
+version = 1
+
 
 """
 This storage plugin interacts with the cluster simulator.
