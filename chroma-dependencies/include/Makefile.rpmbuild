@@ -26,8 +26,8 @@ $(CURDIR)/$(PLAT_VERSION)/RPMS/%.rpm: $(SPECFILE)
 		   --define '%_tmppath $(RPM_TOP)/TMP'                     \
 		   --define '%debug_package %{nil}'                        \
 		   $(RPM_OPTS)                                             \
-		   $(RPMBUILD_OPTS)                                        \
-		   -ba $(SPECFILE) &&                                      \
+		   -ba $(RPMBUILD_OPTS)                                    \
+                   $(SPECFILE) &&                                          \
 	  touch $(RPM_LAST_BUILT);                                         \
 	else                                                               \
 	  true;                                                            \
