@@ -59,16 +59,6 @@ class ManagedTarget(StatefulObject):
     def secondary_servers(self):
         return [tm.host for tm in self.managedtargetmount_set.filter(primary = False)]
 
-    def role(self):
-        if self.downcast_class == ManagedMdt:
-            return "MDT"
-        elif self.downcast_class == ManagedOst:
-            return "OST"
-        elif self.downcast_class == ManagedMgs:
-            return "MGT"
-        else:
-            raise NotImplementedError()
-
     def update_active_mount(self, nodename):
         """Set the active_mount attribute from the nodename of a host, raising
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""

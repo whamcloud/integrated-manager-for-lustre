@@ -457,10 +457,6 @@ class StepResult(models.Model):
     modified_at = models.DateTimeField(auto_now = True)
     created_at = models.DateTimeField(auto_now_add = True)
 
-    def step_number(self):
-        """Template helper"""
-        return self.step_index + 1
-
     def step_klass_name(self):
         """Template helper"""
         return self.step_klass.__name__
@@ -495,13 +491,6 @@ class StateChangeJob(Job):
 
     class Meta:
         abstract = True
-
-    def get_stateful_object_id(self):
-        stateful_object = getattr(self, self.stateful_object)
-        return stateful_object.pk
-
-    def get_stateful_object_class(self):
-        return self._meta._fields[self.stateful_object].rel.to
 
     def get_stateful_object(self):
         if not self._so_cache:

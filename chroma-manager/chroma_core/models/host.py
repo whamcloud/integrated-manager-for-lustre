@@ -167,39 +167,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         return host, command
 
-    def _role_strings(self):
-        roles = set()
-        for mountable in self.managedtargetmount_set.all():
-            target = mountable.target.downcast()
-            roles.add("%sS" % target.role()[:-1])
-
-        return roles
-
-    def is_unused(self):
-        return (len(self._role_strings()) == 0)
-
-    def is_mgs(self):
-        from chroma_core.models.target import ManagedMgs
-        try:
-            ManagedMgs.objects.get(managedtargetmount__host = self)
-            return True
-        except ManagedMgs.DoesNotExist:
-            return False
-
-    def available_lun_nodes(self):
-        from chroma_core.models import ManagedTargetMount
-        used_luns = [i['block_device__lun'] for i in ManagedTargetMount.objects.all().values('volume_node__volume')]
-        return VolumeNode.objects.filter(
-                ~Q(lun__in = used_luns),
-                host = self)
-
-    def role(self):
-        roles = self._role_strings()
-        if len(roles) == 0:
-            return "Unused"
-        else:
-            return "/".join(roles)
-
     @classmethod
     def get_by_nid(cls, nid_string):
         """Resolve a NID string to a ManagedHost (best effort).  Not guaranteed to work:
@@ -378,47 +345,6 @@ class VolumeNode(models.Model):
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
-
-    def pretty_string(self):
-        from chroma_core.lib.util import sizeof_fmt
-        volume_label = self.volume.get_label()
-        if volume_label:
-            short_name = volume_label
-        elif self.path.startswith('/dev/disk/by-path/'):
-            short_name = self.path.replace('/dev/disk/by-path/', '', 1)
-
-            # e.g. ip-192.168.122.1:3260-iscsi-iqn.2011-08.com.whamcloud.lab.hydra-1.sdb-lun-0
-            if short_name.startswith("ip-") and short_name.find("-iscsi-") != -1:
-                iscsi_iqn = "".join(short_name.split("-iscsi-")[1:])
-                short_name = "iSCSI %s" % iscsi_iqn
-
-            # e.g. /dev/disk/by-path/pci-0000:00:06.0-scsi-0:0:3:0
-            if short_name.startswith("pci-") and short_name.find("-scsi-") != -1:
-                scsi_id = "".join(short_name.split("-scsi-")[1:])
-                short_name = "SCSI %s" % scsi_id
-
-            # e.g. /dev/disk/by-path/pci-0000:0a:00.0-fc-0x21000001ff040a42:0x0006000000000000
-            if short_name.startswith("pci-") and short_name.find("-fc-") != -1:
-                fc_id = "".join(short_name.split("-fc-")[1:])
-                short_name = "FC %s" % fc_id
-
-        elif self.path.startswith('/dev/mapper/'):
-            # e.g. /dev/mapper/VolGroup00-blob0
-            short_name = self.path.replace('/dev/mapper/', '', 1)
-            short_name = "DM %s" % short_name
-        elif self.path.startswith('/dev/'):
-            # e.g. /dev/sda
-            short_name = self.path.replace('/dev/', '', 1)
-        else:
-            short_name = self.path
-
-        size = self.volume.size
-        if size:
-            human_size = sizeof_fmt(size)
-        else:
-            human_size = "[size unknown]"
-
-        return "%s (%s)" % (short_name, human_size)
 
 
 class LNetConfiguration(StatefulObject):
@@ -653,8 +579,7 @@ class EnableLNetJob(StateChangeJob):
 
 
 class DetectTargetsStep(Step):
-    def is_dempotent(self):
-        return True
+    idempotent = True
 
     def run(self, kwargs):
         from chroma_core.models import ManagedHost
