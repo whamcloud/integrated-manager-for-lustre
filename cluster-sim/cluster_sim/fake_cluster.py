@@ -16,8 +16,6 @@ class FakeCluster(Persisted):
     * The cluster membership of nodes (online/offline)
     * The configuration of a resource (primary/secondary locations)
     * The state of a resource (where it is running)
-
-    This represents a simple environment where all nodes are in the same cluster.
     """
     filename = 'cluster.json'
     default_state = {
@@ -25,9 +23,14 @@ class FakeCluster(Persisted):
         'resources': {}
     }
 
-    def __init__(self, path):
+    def __init__(self, path, cluster_id):
+        self.id = cluster_id
         super(FakeCluster, self).__init__(path)
         self._lock = threading.Lock()
+
+    @property
+    def filename(self):
+        return "fake_cluster_%s" % self.id
 
     def get_by_uuid(self, uuid):
         with self._lock:

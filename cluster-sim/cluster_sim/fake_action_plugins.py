@@ -5,6 +5,7 @@
 
 
 import threading
+from chroma_agent import shell
 
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.log import log
@@ -28,6 +29,12 @@ class FakeActionPlugins():
         return ['manage_targets']
 
     def run(self, cmd, kwargs):
+
+        # This is a little hackish: we don't actually separate the thread_state for
+        # each simulated agent (they mostly don't even shell out when simulated) but
+        # do this to avoid the subprocess log building up indefinitely.
+        shell.thread_state = shell.ThreadState()
+
         log.debug("FakeActionPlugins: %s %s" % (cmd, kwargs))
         with self._lock:
             if cmd == 'device_plugin':

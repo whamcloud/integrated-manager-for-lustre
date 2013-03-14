@@ -17,10 +17,10 @@ class FakeClient(Persisted):
         'mounts': []
     }
 
-    def __init__(self, path, address, fake_devices, fake_cluster):
+    def __init__(self, path, address, fake_devices, fake_clusters):
         self.address = address
         self._devices = fake_devices
-        self._cluser = fake_cluster
+        self._clusters = fake_clusters
 
         super(FakeClient, self).__init__(path)
 

@@ -66,6 +66,11 @@ class PDUSimulator(Persisted):
         self.state['port'] = port
         self.save()
 
+    def add_outlet(self, outlet):
+        with self._lock:
+            self.state['outlets'][outlet] = True
+            self.save()
+
     def handle_client(self, sock, address):
         log.info("%s: received connection from %s:%s" % (self.__class__.__name__,
                                                          address[0], address[1]))

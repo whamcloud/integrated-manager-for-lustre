@@ -8,6 +8,8 @@ import datetime
 import json
 import random
 import uuid
+from chroma_agent.crypto import Crypto
+import os
 from cluster_sim.log import log
 from cluster_sim.utils import Persisted, perturb
 
@@ -22,7 +24,7 @@ class FakeServer(Persisted):
         'stats': None
     }
 
-    def __init__(self, folder, fake_devices, fake_cluster, fqdn, nodename, nids):
+    def __init__(self, server_id, folder, fake_devices, fake_cluster, fqdn, nodename, nids):
         self.fqdn = fqdn
 
         super(FakeServer, self).__init__(folder)
@@ -30,13 +32,21 @@ class FakeServer(Persisted):
         self.nodename = nodename
         self.nids = nids
         self.boot_time = datetime.datetime.utcnow()
+        self.id = server_id
 
+        self.log_rate = 0
         self._log_messages = []
         self._devices = fake_devices
         self._cluster = fake_cluster
 
         self._cluster.join(nodename, fqdn=fqdn)
 
+        crypto_folder = os.path.join(folder, "%s_crypto" % self.fqdn)
+        if not os.path.exists(crypto_folder):
+            os.makedirs(crypto_folder)
+        self.crypto = Crypto(crypto_folder)
+
+        self.state['id'] = server_id
         self.state['nids'] = nids
         self.state['nodename'] = nodename
         self.state['fqdn'] = fqdn
@@ -44,7 +54,8 @@ class FakeServer(Persisted):
 
     def inject_log_message(self, message):
         log.debug("Injecting log message %s/%s" % (self.fqdn, message))
-        self._log_messages.append({
+        self._log_messages.append(
+            {
                 'source': 'cluster_sim',
                 'severity': 1,
                 'facility': 1,
@@ -54,6 +65,17 @@ class FakeServer(Persisted):
 
     def pop_log_messages(self):
         messages = self._log_messages
+
+        d = datetime.datetime.now()
+        messages.extend([
+            {
+                'source': 'cluster_sim',
+                'severity': 1,
+                'facility': 1,
+                'message': "%s %s %s" % (self.fqdn, d, a),
+                'datetime': datetime.datetime.utcnow().isoformat() + 'Z'
+            } for a in range(0, self.log_rate)])
+
         self._log_messages = []
         return messages
 
@@ -124,8 +146,8 @@ class FakeServer(Persisted):
             log.info("targets: %s: %s %s" % (serial, target['label'], target['uuid']))
         for ha_label, resource in self._cluster.state['resources'].items():
             log.info("cluster: %s %s %s" % (ha_label, resource['uuid'], resource['device_path']))
-        for serial, target in self._devices.state['targets'].items():
-            dev = self._devices.state['devices'][serial]['path']
+
+        for (target, path) in self._devices.get_targets_by_server(self.fqdn):
             try:
                 ha_resource = self._cluster.get_by_uuid(target['uuid'])
             except KeyError:
@@ -136,7 +158,7 @@ class FakeServer(Persisted):
             local_targets.append({"name": target['label'],
                                   "uuid": target['uuid'],
                                   "params": {},
-                                  "devices": [dev],
+                                  "devices": [path],
                                   "mounted": mounted})
 
             if target['label'] == 'MGS':
@@ -155,8 +177,8 @@ class FakeServer(Persisted):
                 })
 
         result = {"local_targets": local_targets,
-                "mgs_targets": mgs_targets,
-                "mgs_conf_params": {}}
+                  "mgs_targets": mgs_targets,
+                  "mgs_conf_params": {}}
         log.debug("detect_scan: %s" % json.dumps(result, indent = 2))
 
         return result
@@ -226,9 +248,7 @@ class FakeServer(Persisted):
             'primary_nid': None
         }
 
-        serial = self._devices.get_by_path(device)['serial_80']
-        self._devices.state['targets'][serial] = target
-        self._devices.save()
+        self._devices.format(self.fqdn, device, target)
 
         return {
             'uuid': tgt_uuid,
@@ -237,18 +257,15 @@ class FakeServer(Persisted):
         }
 
     def register_target(self, device = None, mount_point = None):
-        serial = self._devices.get_by_path(device)['serial_80']
-        target = self._devices.state['targets'][serial]
 
         # FIXME: arbitrary choice of which NID to use, correctly this should be
         # whichever NID LNet uses to route to the MGS, or what is set
         # with servicenode.
-        self._devices.state['targets'][serial]['primary_nid'] = self.nids[0]
-        self._devices.save()
+        nid = self.nids[0]
 
-        self._devices.mgt_register_target(target['mgsnode'], target['label'])
+        label = self._devices.register(self.fqdn, device, nid)
 
-        return {'label': target['label']}
+        return {'label': label}
 
     def configure_target_ha(self, primary, device, ha_label, uuid, mount_point):
         self._cluster.configure(self.nodename, device, ha_label, uuid, primary, mount_point)
@@ -257,7 +274,7 @@ class FakeServer(Persisted):
         self._cluster.unconfigure(self.nodename, ha_label, primary)
 
     def purge_configuration(self, device, filesystem_name):
-        serial = self._devices.get_by_path(device)['serial_80']
+        serial = self._devices.get_by_path(self.fqdn, device)['serial_80']
         mgsnode = self._devices.state['targets'][serial]['mgsnode']
         self._devices.mgt_purge_fs(mgsnode, filesystem_name)
 
@@ -275,16 +292,17 @@ class FakeServer(Persisted):
         for ha_label, resource in self._cluster.state['resources'].items():
             uuid_started_on[resource['uuid']] = resource['started_on']
 
-        for serial, target in self._devices.state['targets'].items():
+        for (target, path) in self._devices.get_targets_by_server(self.fqdn):
             try:
                 started_on = uuid_started_on[target['uuid']]
             except KeyError:
-                # lustre target not known to cluster
-                log.debug("Lustre target %s %s not known to cluster %s" % (target['label'], target['uuid'],
-                                                                        json.dumps(self._cluster.state['resources'], indent=2)))
+                # lustre target not known to cluster, not yet ha-configured
+                # log.debug("Lustre target %s %s not known to cluster %s" % (target['label'], target['uuid'],
+                #                                                            json.dumps(self._cluster.state['resources'], indent=2)))
+                pass
             else:
                 if started_on == self.nodename:
-                    yield self._devices.state['targets'][serial]
+                    yield target
 
     def get_lustre_stats(self):
         result = {
@@ -349,6 +367,8 @@ class FakeServer(Persisted):
         self.state['stats']['cpustats']['user'] += user_inc
         self.state['stats']['cpustats']['idle'] += idle_inc
         self.state['stats']['cpustats']['total'] += (idle_inc + user_inc)
-        self.save()
+        # This is necessary to stop and start the simulator and avoid a big judder on the charts,
+        # but in other circumstances it's a gratuitous amount of IO
+        #self.save()
 
         return self.state['stats']

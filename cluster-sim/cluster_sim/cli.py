@@ -8,23 +8,46 @@ import argparse
 import json
 import signal
 from gevent import monkey
+import threading
+import datetime
+import dateutil.tz
+import os
+import sys
+from SimpleXMLRPCServer import SimpleXMLRPCServer
+import logging
+import requests
+
 
 from cluster_sim.fake_power_control import FakePowerControl
 from cluster_sim.simulator import ClusterSimulator
 from cluster_sim.log import log
-import sys
 
 from chroma_agent.agent_daemon import daemon_log
-import os
-import requests
-import threading
-import logging
+
 
 daemon_log.addHandler(logging.StreamHandler())
 daemon_log.setLevel(logging.DEBUG)
 handler = logging.FileHandler("chroma-agent.log")
 handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
 daemon_log.addHandler(handler)
+
+SIMULATOR_PORT = 8743
+
+
+class RpcThread(threading.Thread):
+    def __init__(self, simulator):
+        super(RpcThread, self).__init__()
+        self.simulator = simulator
+
+    def run(self):
+        self.server = SimpleXMLRPCServer(('localhost', SIMULATOR_PORT), allow_none = True)
+        self.server.register_instance(self.simulator)
+
+        log.info("Listening on %s" % SIMULATOR_PORT)
+        self.server.serve_forever()
+
+    def stop(self):
+        self.server.shutdown()
 
 
 class SimulatorCli(object):
@@ -40,12 +63,10 @@ class SimulatorCli(object):
         else:
             volume_count = server_count * 2
 
-        self.simulator = ClusterSimulator(args.config, args.url)
-        self.simulator.setup(server_count, volume_count,
-                             int(args.nid_count), int(args.psu_count))
-        self.stop()
+        simulator = ClusterSimulator(args.config, args.url)
+        simulator.setup(server_count, volume_count, int(args.nid_count), int(args.cluster_size), int(args.psu_count))
 
-    def _acquire_token(self, url, username, password, credits):
+    def _acquire_token(self, url, username, password, credit_count, duration = None):
         """
         Localised use of the REST API to acquire a server registration token.
         """
@@ -61,12 +82,16 @@ class SimulatorCli(object):
         session.cookies['sessionid'] = response.cookies['sessionid']
 
         response = session.post("%sapi/session/" % url,
-            data = json.dumps({'username': username, 'password': password}),
-            headers = {"Content-type": "application/json"})
+                                data = json.dumps({'username': username, 'password': password}),
+                                headers = {"Content-type": "application/json"})
         if not response.ok:
             raise RuntimeError("Failed to authenticate")
 
-        response = session.post("%sapi/registration_token/" % url, data = json.dumps({'credits': credits}))
+        args = {'credits': credit_count}
+        if duration is not None:
+            args['expiry'] = (datetime.datetime.now(dateutil.tz.tzutc()) + duration).isoformat()
+
+        response = session.post("%sapi/registration_token/" % url, data = json.dumps(args))
         if not response.status_code == 201:
             print response.content
             raise RuntimeError("Error %s acquiring token" % response.status_code)
@@ -75,8 +100,8 @@ class SimulatorCli(object):
         return response.json()['secret']
 
     def register(self, args):
-        self.simulator = ClusterSimulator(args.config, args.url)
-        server_count = len(self.simulator.servers)
+        simulator = ClusterSimulator(args.config, args.url)
+        server_count = len(simulator.servers)
 
         if args.secret:
             secret = args.secret
@@ -87,12 +112,16 @@ class SimulatorCli(object):
             sys.exit(-1)
 
         log.info("Registering %s servers in %s/" % (server_count, args.config))
-        self.simulator.register_all(secret)
+        simulator.register_all(secret)
+
+        return simulator
 
     def run(self, args):
-        self.simulator = ClusterSimulator(args.config, args.url)
-        log.info("Running %s servers in %s/" % (len(self.simulator.servers), args.config))
-        self.simulator.start_all()
+        simulator = ClusterSimulator(args.config, args.url)
+        log.info("Running %s servers in %s/" % (len(simulator.servers), args.config))
+        simulator.start_all()
+
+        return simulator
 
     def stop(self):
         self.simulator.stop()
@@ -114,6 +143,7 @@ class SimulatorCli(object):
         parser.add_argument('--url', required = False, help = "Chroma manager URL", default = "https://localhost:8000/")
         subparsers = parser.add_subparsers()
         setup_parser = subparsers.add_parser("setup")
+        setup_parser.add_argument('--cluster_size', required = False, help = "Number of simulated storage servers", default = '4')
         setup_parser.add_argument('--server_count', required = False, help = "Number of simulated storage servers", default = '8')
         setup_parser.add_argument('--nid_count', required = False, help = "Number of LNet NIDs per storage server, defaults to 1 per server", default = '1')
         setup_parser.add_argument('--volume_count', required = False, help = "Number of simulated storage devices, defaults to twice the number of servers")
@@ -130,13 +160,22 @@ class SimulatorCli(object):
         run_parser.set_defaults(func = self.run)
 
         args = parser.parse_args()
-        args.func(args)
+        simulator = args.func(args)
+        if simulator:
+            self.simulator = simulator
 
-        # Wake up periodically to handle signals, instead of going straight into join
-        while not self._stopping.is_set():
-            self._stopping.wait(timeout = 1)
+            rpc_thread = RpcThread(self.simulator)
+            rpc_thread.start()
 
-        self.simulator.join()
+            # Wake up periodically to handle signals, instead of going straight into join
+            while not self._stopping.is_set():
+                self._stopping.wait(timeout = 1)
+            log.info("Running indefinitely.")
+
+            self.simulator.join()
+
+            rpc_thread.stop()
+            rpc_thread.join()
 
 
 def main():

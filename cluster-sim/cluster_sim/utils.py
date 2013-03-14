@@ -7,7 +7,7 @@
 from copy import deepcopy
 import json
 import random
-import threading
+import errno
 import os
 
 
@@ -30,13 +30,19 @@ class Persisted(object):
     def __init__(self, path):
         self.path = path
 
-        self._file_lock = threading.Lock()
         try:
             self.state = json.load(open(os.path.join(self.path, self.filename), 'r'))
         except IOError:
             self.state = deepcopy(self.default_state)
 
     def save(self):
-        output_state = deepcopy(self.state)
-        with self._file_lock:
-            json.dump(output_state, open(os.path.join(self.path, self.filename), 'w'))
+        json.dump(self.state, open(os.path.join(self.path, self.filename), 'w'), indent = 4)
+
+    def delete(self):
+        try:
+            os.unlink(self.filename)
+        except OSError, e:
+            if e.errno == errno.ENOENT:
+                pass
+            else:
+                raise
