@@ -44,7 +44,7 @@ class ApiTestCase(UtilityTestCase):
             SIMULATOR_CLUSTER_SIZE = 4
             self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
             self.simulator.setup(SIMULATOR_SERVER_COUNT, SIMULATOR_VOLUME_COUNT,
-                                 SIMULATOR_NID_COUNT, SIMULATOR_SERVER_PSU_COUNT, SIMULATOR_CLUSTER_SIZE)
+                                 SIMULATOR_NID_COUNT, SIMULATOR_CLUSTER_SIZE, SIMULATOR_SERVER_PSU_COUNT)
             self.remote_operations = SimulatorRemoteOperations(self.simulator)
         else:
             self.remote_operations = RealRemoteOperations(self)
