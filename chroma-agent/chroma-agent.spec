@@ -10,6 +10,7 @@ Release: %{release}
 Source0: %{name}-%{version}.tar.gz
 Source1: chroma-agent-init.sh
 Source2: lustre-modules-init.sh
+Source3: logrotate.cfg
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -49,9 +50,11 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --install-scripts=%{_bindir} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 mv $RPM_BUILD_ROOT/usr/{,s}bin/fence_chroma
-mkdir -p $RPM_BUILD_ROOT/etc/init.d/
+mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
+install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
+
 
 touch management.files
 cat <<EndOfList>>management.files
@@ -92,6 +95,7 @@ chkconfig rsyslog on
 %attr(0755,root,root)/etc/init.d/lustre-modules
 %{_bindir}/chroma-agent*
 %{python_sitelib}/chroma_agent-*.egg-info/*
+%attr(0644,root,root)/etc/logrotate.d/chroma-agent
 
 %files -f management.files management
 %defattr(-,root,root)
