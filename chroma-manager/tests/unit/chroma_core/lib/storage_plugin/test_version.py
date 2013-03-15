@@ -10,14 +10,6 @@ import sys
 from django.test import TestCase
 from django.conf import settings
 
-from chroma_core.lib.storage_plugin.manager import (VersionMismatchError,
-                                                    VersionNotFoundError,
-                                                    StoragePluginManager)
-
-from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
-
-version_exceptions = (VersionNotFoundError, VersionMismatchError)
-
 
 def make_plugin_module(version=None, name="test_plugin_name", extra_body=None):
     """Creates a plugin module with only the version field, optionally
@@ -49,6 +41,7 @@ class TestValidateApiVersion(TestCase):
 
     def test_version_match(self):
         """Test that both the plugin and command center api match versions"""
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
 
         name, mod = make_plugin_module(version=1)
         settings.STORAGE_API_VERSION = 1
@@ -56,6 +49,8 @@ class TestValidateApiVersion(TestCase):
 
     def test_loading_old_version(self):
         """Test that old versions of plugins aren't valid."""
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
+        from chroma_core.lib.storage_plugin.manager import VersionMismatchError
 
         name, mod = make_plugin_module(version=1)
         settings.STORAGE_API_VERSION = 2
@@ -63,6 +58,8 @@ class TestValidateApiVersion(TestCase):
 
     def test_loading_newer_version(self):
         """Test that newer versions of plugins aren't valid."""
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
+        from chroma_core.lib.storage_plugin.manager import VersionMismatchError
 
         name, mod = make_plugin_module(version=2)
         settings.STORAGE_API_VERSION = 1
@@ -70,6 +67,8 @@ class TestValidateApiVersion(TestCase):
 
     def test_version_not_found(self):
         """Test that plugins not delcaring a version aren't loaded."""
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
+        from chroma_core.lib.storage_plugin.manager import VersionNotFoundError
 
         name, mod = make_plugin_module(version=None)
         settings.STORAGE_API_VERSION = 1
@@ -88,6 +87,8 @@ class TestValidateApiVersion(TestCase):
 
     def test_version_with_non_int_value(self):
         """Delaring version without an int value is not allowed"""
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
+        from chroma_core.lib.storage_plugin.manager import VersionMismatchError
 
         for c in [1.2, '"version1"', [1, 2, 3], {'version': 1}]:
             name, mod = make_plugin_module(version=c)
@@ -95,8 +96,8 @@ class TestValidateApiVersion(TestCase):
             #  initialize command center to accept only version 1 plugins
             settings.STORAGE_API_VERSION = 1
 
-            self.assertRaises(VersionMismatchError,
-                mgr._validate_api_version, mod)
+        self.assertRaises(VersionMismatchError,
+            mgr._validate_api_version, mod)
 
 
 class TestValidatedModuleLoading(TestCase):
@@ -111,13 +112,17 @@ class TestValidatedModuleLoading(TestCase):
     """
 
     def _load_plugin(self, name):
+        from chroma_core.lib.storage_plugin.manager import StoragePluginManager
+
         orginal_plugins = sys.modules['settings'].INSTALLED_STORAGE_PLUGINS
         sys.modules['settings'].INSTALLED_STORAGE_PLUGINS = [name]
         self.manager = StoragePluginManager()
         sys.modules['settings'].INSTALLED_STORAGE_PLUGINS = orginal_plugins
 
     def test_version_matches(self):
+        from chroma_core.lib.storage_plugin.manager import VersionMismatchError, VersionNotFoundError
 
+        version_exceptions = (VersionNotFoundError, VersionMismatchError)
         name, mod = make_plugin_module(version=1)
         settings.STORAGE_API_VERSION = 1
         self._load_plugin(name)
@@ -129,6 +134,7 @@ class TestValidatedModuleLoading(TestCase):
         self.assertTrue(error_class not in version_exceptions)
 
     def test_version_mismatch(self):
+        from chroma_core.lib.storage_plugin.manager import VersionMismatchError
 
         name, mod = make_plugin_module(version=1)
         settings.STORAGE_API_VERSION = 2
@@ -139,6 +145,7 @@ class TestValidatedModuleLoading(TestCase):
             VersionMismatchError)
 
     def test_version_not_found(self):
+        from chroma_core.lib.storage_plugin.manager import VersionNotFoundError
 
         name, mod = make_plugin_module(version=None)
         settings.STORAGE_API_VERSION = 1
