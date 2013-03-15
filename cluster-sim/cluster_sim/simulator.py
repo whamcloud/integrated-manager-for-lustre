@@ -102,8 +102,6 @@ class ClusterSimulator(Persisted):
         # SAN-style LUNs visible to all servers
         self.devices.add_presented_luns(volume_count, self.servers.keys())
 
-        self.power.setup(psu_count, 1024)
-
     def clear_clusters(self):
         for cluster in self.clusters.values():
             cluster.clear_resources()
