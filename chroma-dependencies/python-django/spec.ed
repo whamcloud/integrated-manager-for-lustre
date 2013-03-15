@@ -13,7 +13,7 @@ g/^%find_lang/d
     (cd docs && mkdir djangohtml && mkdir -p _build/{doctrees,html} && make html SPHINXBUILD=sphinx-1.0-build)
 .
 /%changelog/a
-* Mon Jan 07 2013 Michael MacDonald <michael.macdonal@intel.com> - 1.4.2-2.wc1
+* Wed Mar 13 2013 Michael MacDonald <michael.macdonal@intel.com> - 1.4.5-2.wc1
 - Backported to EL6
 
 .

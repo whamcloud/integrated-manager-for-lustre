@@ -1,3 +1,3 @@
-LOCATION := http://dl.fedoraproject.org/pub/fedora/linux/releases/18/Fedora/source/SRPMS/p/python-django-1.4.2-2.fc18.src.rpm
+LOCATION := http://dl.fedoraproject.org/pub/fedora/linux/updates/18/SRPMS/python-django-1.4.5-2.fc18.src.rpm
 
 include ../include/Makefile.rpm
