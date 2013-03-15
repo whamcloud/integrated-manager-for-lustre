@@ -78,6 +78,7 @@ class TestSecureUrls(HttpdTestCase):
         sys.stdout.write(stdout)
         sys.stdout.write(stderr)
         self.assertEqual(p.returncode, 0)
+        return p.returncode, stdout, stderr
 
     def _bad_server_credentials(self):
         server_key = tempfile.NamedTemporaryFile(delete = False)
@@ -136,11 +137,6 @@ class TestSecureUrls(HttpdTestCase):
             # And that nothing was proxied to the agent service
             self.assertEqual(len(listener.requests), 0)
 
-    def test_revoked_cert(self):
-        """Check that I'm bounced if my certificate is revoked"""
-        # TODO
-        pass
-
     def test_good_cert(self):
         """Check that I'm allowed in with a valid certificate"""
 
@@ -149,6 +145,9 @@ class TestSecureUrls(HttpdTestCase):
         authority_key = "authority.pem"
         authority_cert = "authority.crt"
         cert, key = self._client_credentials(client_cn, authority_key, authority_cert)
+
+        rc, stdout, stderr = self._openssl(['x509', '-in', cert, '-serial', '-noout'])
+        client_cert_serial = stdout.strip().split("=")[1]
 
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
             response = requests.get(
@@ -161,4 +160,6 @@ class TestSecureUrls(HttpdTestCase):
             self.assertEqual(len(listener.requests), 1)
             self.assertEqual(listener.last_request.path, "/agent/message/")
             # The client name header was set
+            self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-On'), "SUCCESS")
             self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-Name'), client_cn)
+            self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-Serial'), client_cert_serial)

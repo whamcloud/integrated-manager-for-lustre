@@ -273,7 +273,7 @@ class JobTestCase(TestCase):
         self.assertEqual(freshen(obj).state, state)
 
     def setUp(self):
-        from chroma_core.services.http_agent import AgentSessionRpc
+        from chroma_core.services.http_agent import HttpAgentRpc
         from chroma_core.services.http_agent import Service as HttpAgentService
         # FIXME: have to do self before every test because otherwise
         # one test will get all the setup of StoragePluginClass records,
@@ -317,7 +317,7 @@ class JobTestCase(TestCase):
 
         patch_daemon_rpc(AgentDaemonRpcInterface, AgentPluginHandlerCollection(resource_manager))
 
-        patch_daemon_rpc(AgentSessionRpc, HttpAgentService())
+        patch_daemon_rpc(HttpAgentRpc, HttpAgentService())
 
         from chroma_core.services.job_scheduler.dep_cache import DepCache
         from chroma_core.services.job_scheduler.job_scheduler import JobScheduler, RunJobThread

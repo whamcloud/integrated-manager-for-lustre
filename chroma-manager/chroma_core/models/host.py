@@ -79,6 +79,15 @@ class DeletableStatefulObject(StatefulObject):
         app_label = 'chroma_core'
 
 
+class ClientCertificate(models.Model):
+    host = models.ForeignKey('ManagedHost')
+    serial = models.CharField(max_length = 16)
+    revoked = models.BooleanField(default = False)
+
+    class Meta:
+        app_label = 'chroma_core'
+
+
 class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     address = models.CharField(max_length = 255, help_text = "A URI like 'user@myhost.net:22'")
 
@@ -721,7 +730,7 @@ class DeleteHostStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        from chroma_core.services.http_agent import AgentSessionRpc
+        from chroma_core.services.http_agent import HttpAgentRpc
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
         host = kwargs['host']
@@ -730,7 +739,7 @@ class DeleteHostStep(Step):
 
         # Second, terminate any currently open connections and ensure there is nothing in a queue
         # which will be drained into AMQP
-        AgentSessionRpc().remove_host(host.fqdn)
+        HttpAgentRpc().remove_host(host.fqdn)
 
         # Third, for all receivers of AMQP messages from originating from hosts, ask them to
         # drain their queues, discarding any messages from the host being removed

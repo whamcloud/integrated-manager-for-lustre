@@ -10,7 +10,6 @@ import threading
 from chroma_agent_comms.views import MessageView
 from chroma_core.models import ManagedHost, HostContactAlert, HostRebootEvent
 from chroma_core.services import log_register
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 log = log_register("http_agent_host_state")
 
@@ -44,6 +43,8 @@ class HostState(object):
         :return A boolean, true if the agent should be sent a SESSION_TERMINATE_ALL: indicates
                 whether a fresh client run (different start time) is seen.
         """
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+
         self.last_contact = datetime.datetime.utcnow()
         if boot_time is not None and boot_time != self._boot_time:
             self._boot_time = boot_time
