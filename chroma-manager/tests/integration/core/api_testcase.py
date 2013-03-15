@@ -72,6 +72,18 @@ class ApiTestCase(UtilityTestCase):
             self.api_force_clear()
             self.remote_operations.clear_ha()
 
+    def _check_for_down_servers(self):
+        # Check that all servers are up and available after the test
+        down_nodes = []
+        for server in config['lustre_servers']:
+            if not self.remote_operations._host_contactable(server['fqdn']):
+                down_nodes.append(server['fqdn'])
+
+        if len(down_nodes):
+            logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
+            if not getattr(self, 'down_node_expected', False):
+                raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
+
     def tearDown(self):
         if hasattr(self, 'simulator'):
             self.simulator.stop()
@@ -81,16 +93,8 @@ class ApiTestCase(UtilityTestCase):
             if passed:
                 shutil.rmtree(self.simulator.folder)
         else:
-            # Check that all servers are up and available after the test
-            down_nodes = []
-            for server in config['lustre_servers']:
-                if not self.remote_operations._host_contactable(server['fqdn']):
-                    down_nodes.append(server['fqdn'])
-
-            if len(down_nodes):
-                logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
-                if not getattr(self, 'down_node_expected', False):
-                    raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
+            if hasattr(self, 'remote_operations'):
+                self._check_for_down_servers()
 
     @property
     def chroma_manager(self):

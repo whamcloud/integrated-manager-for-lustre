@@ -81,7 +81,7 @@ class SimulatorRemoteOperations(RemoteOperations):
     def kill_server(self, fqdn):
         self._simulator.stop_server(fqdn, shutdown = True)
 
-    def await_server_boot(self, boot_fqdn, monitor_fqdn = None):
+    def await_server_boot(self, boot_fqdn, monitor_fqdn = None, restart = True):
         self._simulator.start_server(boot_fqdn)
 
     def unmount_clients(self):
