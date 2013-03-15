@@ -8,7 +8,8 @@ import logging
 import datetime
 
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin
-from chroma_agent.plugin_manager import DevicePlugin
+from chroma_agent.device_plugins.syslog import MAX_LOG_LINES_PER_MESSAGE
+from chroma_agent.plugin_manager import DevicePlugin, DevicePluginMessageCollection, PRIO_LOW
 
 log = logging.getLogger(__name__)
 
@@ -44,13 +45,13 @@ class BaseFakeSyslogPlugin(DevicePlugin):
 
     def start_session(self):
         return {
-            'messages': [
+            'log_lines': [
                 {
-                'source': 'cluster_sim',
-                'severity': 1,
-                'facility': 1,
-                'message': "Lustre: Cluster simulator syslog session start %s %s" % (self._server.fqdn, datetime.datetime.now()),
-                'datetime': datetime.datetime.utcnow().isoformat() + 'Z'
+                    'source': 'cluster_sim',
+                    'severity': 1,
+                    'facility': 1,
+                    'message': "Lustre: Cluster simulator syslog session start %s %s" % (self._server.fqdn, datetime.datetime.now()),
+                    'datetime': datetime.datetime.utcnow().isoformat() + 'Z'
                 }
             ]
         }
@@ -58,10 +59,13 @@ class BaseFakeSyslogPlugin(DevicePlugin):
     def update_session(self):
         messages = self._server.pop_log_messages()
         if messages:
-            self._server.log_messages = []
-            return {
-                'messages': messages
-            }
+            result = DevicePluginMessageCollection([], priority = PRIO_LOW)
+            for i in range(0, len(messages), MAX_LOG_LINES_PER_MESSAGE):
+                result.append({
+                    'log_lines': messages[i:i + MAX_LOG_LINES_PER_MESSAGE]
+                })
+
+            return result
 
 
 class BaseFakeLustrePlugin(DevicePlugin):
@@ -159,7 +163,7 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
         #  This implementation looks at ALL the servers in the simulator,
         #  and those ones that are also join'ed in the cluster are online.
 
-        log.debug("\n\ncluster nodes:  %s\n\n" % self._server._cluster.state['nodes'])
+        log.debug("cluster nodes:  %s" % self._server._cluster.state['nodes'])
 
         nodes = [(node_dict['fqdn'], node_dict['online']) for node_dict
                             in self._server._cluster.state['nodes'].values()]

@@ -51,16 +51,14 @@ class LogMessage(models.Model):
     message = models.TextField()
     message_class = models.SmallIntegerField()
 
-    def save(self, *args, **kwargs):
-        if self.message_class is None:
-            if self.message.startswith("LustreError:"):
-                self.message_class = MessageClass.LUSTRE_ERROR
-            elif self.message.startswith("Lustre:"):
-                self.message_class = MessageClass.LUSTRE
-            else:
-                self.message_class = MessageClass.NORMAL
-
-        super(LogMessage, self).save(*args, **kwargs)
+    @classmethod
+    def get_message_class(cls, message):
+        if message.startswith("LustreError:"):
+            return MessageClass.LUSTRE_ERROR
+        elif message.startswith("Lustre:"):
+            return MessageClass.LUSTRE
+        else:
+            return MessageClass.NORMAL
 
     def __str__(self):
         return "%s %s %s %s %s" % (self.datetime, self.fqdn, self.priority, self.source, self.message)

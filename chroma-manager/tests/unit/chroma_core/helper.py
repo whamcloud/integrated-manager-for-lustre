@@ -61,10 +61,10 @@ def fake_log_message(message):
     return LogMessage.objects.create(
         datetime = t,
         message = message,
-        message_class = 0,
         severity = 0,
         facility = 0,
-        tag = ""
+        tag = "",
+        message_class = LogMessage.get_message_class(message)
     )
 
 

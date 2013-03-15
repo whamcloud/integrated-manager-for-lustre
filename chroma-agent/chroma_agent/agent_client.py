@@ -12,10 +12,13 @@ import threading
 import traceback
 import datetime
 import sys
+from chroma_agent.plugin_manager import DevicePluginMessageCollection, DevicePluginMessage, PRIO_HIGH
 import requests
 from chroma_agent import version
 from chroma_agent.log import daemon_log, console_log
 
+
+MAX_MESSAGES_PER_POST = 10
 
 # FIXME: this file needs a concurrency review pass
 
@@ -62,6 +65,8 @@ class AgentClient(object):
 
         if response.status_code / 100 != 2:
             daemon_log.error("Bad status %s from %s" % (response.status_code, self.url))
+            if response.status_code == 413:
+                daemon_log.error("Oversized request: %s" % json.dumps(kwargs, indent=2))
             raise HttpError()
         try:
             return response.json()
@@ -116,6 +121,13 @@ MESSAGE_TYPES = ["SESSION_CREATE_REQUEST",
 
 
 class Message(object):
+    def __cmp__(self, other):
+        # If this message has a body, use its priority.  Otherwise it is a
+        # control plane message, set its priority to high.
+        prio_self = self.body.priority if self.body is not None else PRIO_HIGH
+        prio_other = other.body.priority if other.body is not None else PRIO_HIGH
+        return cmp(prio_self, prio_other)
+
     def __init__(self, type = None, plugin_name = None, body = None, session_id = None, session_seq = None, callback = None):
         if type is not None:
             assert type in MESSAGE_TYPES
@@ -135,12 +147,17 @@ class Message(object):
         self.session_seq = data['session_seq']
 
     def dump(self, fqdn):
+        if isinstance(self.body, DevicePluginMessage):
+            body = self.body.message
+        else:
+            body = self.body
+
         return {
             'type': self.type,
             'plugin': self.plugin_name,
             'session_id': self.session_id,
             'session_seq': self.session_seq,
-            'body': self.body,
+            'body': body,
             'fqdn': fqdn
         }
 
@@ -239,7 +256,7 @@ class HttpWriter(ExceptionCatchingThread):
         self._client = client
         self._stopping = threading.Event()
         self._last_poll = defaultdict(lambda: None)
-        self._messages = Queue.Queue()
+        self._messages = Queue.PriorityQueue()
 
     def put(self, message):
         """Called from a different thread context than the main loop"""
@@ -273,9 +290,12 @@ class HttpWriter(ExceptionCatchingThread):
                 if message.callback:
                     completion_callbacks.append(message.callback)
                 messages.append(message)
+                if len(messages) >= MAX_MESSAGES_PER_POST:
+                    break
             except Queue.Empty:
                 break
 
+        daemon_log.debug("HttpWriter sending %s messages" % len(messages))
         try:
             self._client.post({'messages': [m.dump(self._client._fqdn) for m in messages]})
         except HttpError:
@@ -319,7 +339,13 @@ class HttpWriter(ExceptionCatchingThread):
                     self._messages.put(Message("SESSION_CREATE_REQUEST", plugin_name))
                 else:
                     if data is not None:
-                        session.send_message(data)
+                        if isinstance(data, DevicePluginMessageCollection):
+                            for message in data:
+                                session.send_message(DevicePluginMessage(message, priority = data.priority))
+                        elif isinstance(data, DevicePluginMessage):
+                            session.send_message(data)
+                        else:
+                            session.send_message(DevicePluginMessage(data))
 
 
 class HttpReader(ExceptionCatchingThread):

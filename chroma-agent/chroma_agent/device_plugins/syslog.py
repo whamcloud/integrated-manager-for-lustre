@@ -9,12 +9,11 @@ import SocketServer
 import threading
 import signal
 from chroma_agent.log import console_log
-from chroma_agent.plugin_manager import DevicePlugin
+from chroma_agent.plugin_manager import DevicePlugin, DevicePluginMessageCollection, PRIO_LOW
 
-
-# FIXME: shonky scope of this, it should be part of SYslogdeviceplugin and get set up and torn down appropriately
 import os
 
+# FIXME: shonky scope of this, it should be part of SYslogdeviceplugin and get set up and torn down appropriately
 _queue = Queue.Queue()
 
 
@@ -22,6 +21,8 @@ _queue = Queue.Queue()
 # host as a syslog daemon which is listening (not how we configure it, but
 # let's not make assumptions).
 SYSLOG_PORT = 515
+
+MAX_LOG_LINES_PER_MESSAGE = 64
 
 
 def parse_rsyslog(data):
@@ -102,7 +103,7 @@ class SyslogDevicePlugin(DevicePlugin):
 
     def poll(self):
         result = []
-        while True:
+        while True and len(result) < MAX_LOG_LINES_PER_MESSAGE:
             try:
                 result.append(_queue.get_nowait())
             except Queue.Empty:
@@ -114,13 +115,21 @@ class SyslogDevicePlugin(DevicePlugin):
         return self.update_session()
 
     def update_session(self):
-        messages = self.poll()
-        console_log.debug("SyslogDevicePlugin: %s messages" % len(messages))
+        messages = DevicePluginMessageCollection([], priority = PRIO_LOW)
+        total_lines = 0
+        while True:
+            lines = self.poll()
+            if lines:
+                messages.append({'log_lines': lines})
+            else:
+                break
+
+        console_log.debug("SyslogDevicePlugin: %lines in %s messages" % (total_lines, len(messages)))
 
         if messages:
-            return {
-                'messages': messages
-            }
+            return messages
+        else:
+            return None
 
     def teardown(self):
         console_log.debug("SyslogDevicePlugin.teardown")
