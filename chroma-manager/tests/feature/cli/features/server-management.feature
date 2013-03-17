@@ -47,3 +47,14 @@ Scenario: Force addition of a non-pingable server
   And the ping host contact test should fail
   When I run chroma --force server-add setup-mgs
   Then the server count should be 1
+
+Scenario: Reboot a server
+  Given the server count should be 1
+  And the boot_time on setup-mgs has been recorded
+  When I run chroma server-reboot setup-mgs
+  Then the boot_time on setup-mgs should reflect a reboot
+
+Scenario: Shutdown a server
+  Given the server count should be 1
+  When I run chroma server-shutdown setup-mgs
+  Then I should see output containing ": Finished"

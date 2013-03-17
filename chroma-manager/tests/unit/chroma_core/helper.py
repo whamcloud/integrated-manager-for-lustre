@@ -206,6 +206,11 @@ class MockAgentRpc(object):
                 return {args['plugin']: data[args['plugin']]}
             else:
                 raise AgentException(host.fqdn, cmd, args, "")
+        elif cmd == 'reboot_server':
+            from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+            now = datetime.datetime.utcnow()
+            log.info("rebooting %s; updating boot_time to %s" % (host, now))
+            JobSchedulerClient.notify(host, now, {'boot_time': now})
 
 
 class MockAgentSsh(object):

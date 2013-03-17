@@ -76,3 +76,21 @@ def step(context, testkey, result):
     # by the lack of a good place to put these things.  Sigh.
     context._runner.hooks['patch_test_host_contact_task'](context, kwargs)
     context.cli_failure_expected = not value
+
+
+@given('the boot_time on {hostname} has been recorded')
+def step(context, hostname):
+    from chroma_cli.api import ApiHandle
+    ah = ApiHandle()
+    resource = ah.endpoints['host'].show(hostname)
+
+    context.server_boot_time = resource.all_attributes['boot_time']
+
+
+@then('the boot_time on {hostname} should reflect a reboot')
+def step(context, hostname):
+    from chroma_cli.api import ApiHandle
+    ah = ApiHandle()
+    resource = ah.endpoints['host'].show(hostname)
+
+    context.test_case.assertGreater(resource.all_attributes['boot_time'], context.server_boot_time)

@@ -203,6 +203,7 @@ class Handler(object):
 
 class ServerHandler(Handler):
     nouns = ["server", "srv", "mgs", "mds", "oss"]
+    verbs = ["show", "list", "add", "remove", "reboot", "shutdown"]
     contextual_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol"]
     lnet_actions = ["lnet-stop", "lnet-start", "lnet-load", "lnet-unload"]
 
@@ -269,6 +270,24 @@ class ServerHandler(Handler):
         if not ns.force:
             self.test_host(ns, **kwargs)
         self.output(self.api_endpoint.create(**kwargs))
+
+    def reboot(self, ns):
+        host = self.api.endpoints['host'].show(ns.subject)
+        kwargs = {
+            'jobs': [{'class_name': "RebootHostJob",
+                      'args': {'host_id': host.id}}],
+            'message': "Initiating a reboot on host %s" % host.label
+        }
+        self.output(self.api.endpoints['command'].create(**kwargs))
+
+    def shutdown(self, ns):
+        host = self.api.endpoints['host'].show(ns.subject)
+        kwargs = {
+            'jobs': [{'class_name': "ShutdownHostJob",
+                      'args': {'host_id': host.id}}],
+            'message': "Initiating a shutdown on host %s" % host.label
+        }
+        self.output(self.api.endpoints['command'].create(**kwargs))
 
 
 class FilesystemHandler(Handler):
