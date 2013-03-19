@@ -29,7 +29,6 @@ Requires: python-supervisor
 Requires: python-jsonschema
 Requires: python-dateutil
 Requires: python-uuid
-Requires: python-multiprocessing
 Requires: python-paramiko
 Requires: python-kombu >= 2.4.7
 Requires: python-daemon
