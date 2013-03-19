@@ -12,20 +12,22 @@ var StorageResourceDetail = Backbone.View.extend({
   className: 'storage_resource_detail',
   template: _.template($('#storage_resource_detail_template').html()),
   render: function() {
-    var rendered = this.template(this.model.toJSON());
-    $(this.el).find('.ui-dialog-content').html(rendered);
+    var view = this;
 
-    $(this.el).find('.alias_save_button').button();
-    $(this.el).find('.alias_reset_button').button();
-    $(this.el).find('.remove').button();
-    $(this.el).find('.storage_alerts').html(LiveObject.alertList(this.model.toJSON()));
-    $(this.el).find('a.del').button();
+    var rendered = view.template(view.model.toJSON());
+    $(view.el).find('.ui-dialog-content').html(rendered);
+
+    $(view.el).find('.alias_save_button').button();
+    $(view.el).find('.alias_reset_button').button();
+    $(view.el).find('.remove').button();
+    $(view.el).find('.storage_alerts').html(LiveObject.alertList(view.model.toJSON()));
+    $(view.el).find('a.del').button();
 
     var col = 0;
     var row_width = 3;
     var chart_markup = "";
     var chart_element_id = new Array();
-    $.each(this.model.get('charts'), function(i, chart_info) {
+    $.each(view.model.get('charts'), function(i, chart_info) {
       if (col == 0) {
         chart_markup += "<tr>"
       }
@@ -42,14 +44,13 @@ var StorageResourceDetail = Backbone.View.extend({
     if (col != 0) {
       chart_markup += "</tr>";
     }
-    $(this.el).find('table.storage_statistics').html(chart_markup);
+    $(view.el).find('table.storage_statistics').html(chart_markup);
 
     var chart_manager = ChartManager({chart_group: 'storage_resource_detail'});
-    var stats = this.model.get('stats');
-    var resource_uri = this.model.get('resource_uri');
-    var view = this;
+    var stats = view.model.get('stats');
+    var resource_uri = view.model.get('resource_uri');
 
-    $.each(this.model.get('charts'), function(i, chart_info) {
+    $.each(view.model.get('charts'), function(i, chart_info) {
       $('#' + chart_element_id[i]).css("width", "300px");
       $('#' + chart_element_id[i]).css("height", "200px");
 
@@ -121,7 +122,7 @@ var StorageResourceDetail = Backbone.View.extend({
     });
     chart_manager.init();
 
-    return this;
+    return view;
   },
   events: {
     "click button.del": "del",
