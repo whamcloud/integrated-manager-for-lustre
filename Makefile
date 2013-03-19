@@ -3,7 +3,7 @@ BUILDER_IS_EL6 = $(shell rpm --eval '%{?el6:true}%{!?el6:false}')
 # Top-level Makefile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
-.PHONY: all rpms docs subdirs $(SUBDIRS)
+.PHONY: all rpms docs subdirs $(SUBDIRS) tags
 
 all: TARGET=all
 rpms: TARGET=rpms
@@ -38,6 +38,10 @@ bundles: repo
 	$(MAKE) -C chroma-bundles
 
 deps: repo
+
+tags:
+	#find chroma-agent/chroma_agent chroma-manager/{tests,chroma_{agent_comms,api,cli,core,ui}} -type f | ctags -L -
+	ctags --python-kinds=-i -R --exclude=chroma-\*/myenv\* --exclude=chroma-dependencies .
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
 chroma-dependencies: chroma-agent chroma-manager
