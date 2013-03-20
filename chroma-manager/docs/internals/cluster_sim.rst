@@ -35,7 +35,7 @@ __________________
 ::
 
   (virtualenv) chroma$ cluster-sim setup --server_count 8
-  (virtualenv) chroma$ cluster-sim register --username debug --password chr0m4_d3bub
+  (virtualenv) chroma$ cluster-sim register --username debug --password chr0m4_d3bug
 
 After registration, the simulator will continue running to participate in the server
 setup procedure (otherwise you'd see lots of failed jobs in the manager).  You can
