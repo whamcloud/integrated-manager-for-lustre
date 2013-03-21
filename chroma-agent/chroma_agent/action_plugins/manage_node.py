@@ -4,6 +4,7 @@
 # ========================================================
 
 
+import os
 import socket
 import chroma_agent.fence_agent
 from chroma_agent.shell import try_run
@@ -52,6 +53,9 @@ def shutdown_server(halt = True, at_time = "now"):
         # This will initiate a "nice" shutdown with a wall from root, etc.
         try_run(["shutdown", "-H" if halt else "-h", at_time])
 
+        console_log.info("Terminating")
+        os._exit(0)
+
     raise CallbackAfterResponse(None, _shutdown)
 
 
@@ -61,6 +65,9 @@ def reboot_server(at_time = "now"):
         console_log.info("Initiating server reboot per manager request")
         # reboot(8) just calls shutdown anyhow.
         try_run(["shutdown", "-r", at_time])
+
+        console_log.info("Terminating")
+        os._exit(0)
 
     raise CallbackAfterResponse(None, _reboot)
 
