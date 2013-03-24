@@ -45,8 +45,8 @@ class TestHttpAgent(SupervisorTestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestHttpAgent, self).__init__(*args, **kwargs)
-        self.client_start_time = datetime.datetime.now().isoformat()
-        self.server_boot_time = datetime.datetime.now().isoformat()
+        self.client_start_time = datetime.datetime.now().isoformat() + 'Z'
+        self.server_boot_time = datetime.datetime.now().isoformat() + 'Z'
         self.get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
 
         # Serial must be different every time because once we use it in a test it is permanently

@@ -1,5 +1,5 @@
-
-
+import random
+import string
 from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
@@ -32,16 +32,22 @@ class TestAgentRpc(SupervisorTestCase):
     CLIENT_NAME = 'myserver'
     PLUGIN = agent_rpc.ACTION_MANAGER_PLUGIN_NAME
     URL = "http://localhost:%s/agent/message/" % settings.HTTP_AGENT_PORT
-    HEADERS = {
-        "Accept": "application/json",
-        "Content-type": "application/json",
-        "X-SSL-Client-Name": 'myserver'}
 
     def __init__(self, *args, **kwargs):
         super(TestAgentRpc, self).__init__(*args, **kwargs)
-        self.client_start_time = datetime.datetime.now().isoformat()
-        self.server_boot_time = datetime.datetime.now().isoformat()
+        self.client_start_time = datetime.datetime.now().isoformat() + 'Z'
+        self.server_boot_time = datetime.datetime.now().isoformat() + 'Z'
         self.get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
+
+        # Serial must be different every time because once we use it in a test it is permanently
+        # revoked.
+        self.CLIENT_CERT_SERIAL = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(16))
+        self.headers = {
+            "Accept": "application/json",
+            "Content-type": "application/json",
+            "X-SSL-Client-Name": self.CLIENT_NAME,
+            "X-SSL-Client-Serial": self.CLIENT_CERT_SERIAL
+        }
 
     def _open_sessions(self, expect_initial = True, expect_reopen = False):
         message = {
@@ -54,11 +60,11 @@ class TestAgentRpc(SupervisorTestCase):
         }
 
         # Send a session create request on the RX channel
-        response = requests.post(self.URL, data = json.dumps({'messages': [message]}), headers = self.HEADERS)
+        response = requests.post(self.URL, data = json.dumps({'messages': [message]}), headers = self.headers)
         self.assertResponseOk(response)
 
         # Read from the TX channel
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
 
         expected_count = 1
@@ -118,7 +124,7 @@ class TestAgentRpc(SupervisorTestCase):
         time.sleep(RABBITMQ_GRACE_PERIOD)
 
         # Agent should see a termination (this will prompt it to request a new session)
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
         self.assertEqual(len(response.json()['messages']), 1)
         response_message = response.json()['messages'][0]
@@ -134,7 +140,7 @@ class TestAgentRpc(SupervisorTestCase):
         return command_id
 
     def _receive_agent_messages(self):
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         return response.json()['messages']
 
     def _handle_action_receive(self, session_id):
@@ -166,7 +172,7 @@ class TestAgentRpc(SupervisorTestCase):
                 'subprocesses': []
             }
         }
-        action_data_response = requests.post(self.URL, data = json.dumps({'messages': [success_message]}), headers = self.HEADERS)
+        action_data_response = requests.post(self.URL, data = json.dumps({'messages': [success_message]}), headers = self.headers)
         self.assertResponseOk(action_data_response)
 
     def _handle_action(self, session_id):
@@ -273,7 +279,7 @@ class TestAgentRpc(SupervisorTestCase):
         self.start('job_scheduler')
 
         # It should have the http_agent service cancel its sessions
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
         self.assertEqual(len(response.json()['messages']), 1)
         response_message = response.json()['messages'][0]
@@ -296,7 +302,7 @@ class TestAgentRpc(SupervisorTestCase):
         self.restart('http_agent')
 
         # The agent should be told to terminate all
-        response = requests.get(self.URL, headers = self.HEADERS, params = self.get_params)
+        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
         self.assertResponseOk(response)
         self.assertEqual(len(response.json()['messages']), 1)
         response_message = response.json()['messages'][0]
