@@ -23,13 +23,13 @@ tablib
 requests>=1.0.3
 nose-testconfig
 fudge
-simplejson==0.8.0
+simplejson
 behave>=1.1.0
 prettytable
 dse==3.3.0
 selenium==2.29.0
 log4tailer
-jsonschema
+jsonschema==0.8.0
 supervisor
 django-supervisor==0.3.0
 netaddr
