@@ -23,7 +23,7 @@ tablib
 requests>=1.0.3
 nose-testconfig
 fudge
-simplejson
+simplejson==0.8.0
 behave>=1.1.0
 prettytable
 dse==3.3.0
