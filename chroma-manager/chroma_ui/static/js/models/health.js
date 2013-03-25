@@ -16,13 +16,13 @@
    else: green
    */
 
-  function healthFactory (alertModel, commandModel, eventModel, $timeout, $q, $rootScope, ERROR, WARN, GOOD) {
+  function healthFactory (alertModel, commandModel, eventModel, $timeout, $q, $rootScope, STATES) {
     var events, alerts, inactiveAlerts, commands;
 
     $timeout(function timesUp() {
       getHealth();
 
-      $timeout(timesUp, 30000);
+      $timeout(timesUp, 10000);
     }, 0);
 
     $rootScope.$on('checkHealth', getHealth);
@@ -31,34 +31,34 @@
      * Loads the relevant services.
      */
     function getHealth () {
-      events = eventModel.loadAll({dismissed: false, severity__in: [WARN, ERROR], limit: 1});
-      alerts = alertModel.loadAll({active: true, severity__in: [WARN, ERROR]});
-      inactiveAlerts = alertModel.loadAll({active: false, severity__in: [WARN], limit: 1});
-      commands = commandModel.loadAll({errored: true, dismissed: false, limit: 1});
+      events = eventModel.query({dismissed: false, severity__in: [STATES.WARN, STATES.ERROR], limit: 1});
+      alerts = alertModel.query({active: true, severity__in: [STATES.WARN, STATES.ERROR], limit: 0});
+      inactiveAlerts = alertModel.query({active: false, severity__in: [STATES.WARN], limit: 1});
+      commands = commandModel.query({errored: true, dismissed: false, limit: 1});
 
-      $q.all([events.__promise, alerts.__promise, commands.__promise]).then(broadcastHealth);
+      $q.all([events.$promise, alerts.$promise, commands.$promise]).then(broadcastHealth);
     }
 
     /**
      * Checks the relevant services for status and calls broadcast with the results.
      */
     function broadcastHealth () {
-      var states = [GOOD, WARN, ERROR];
-      var health = [states.indexOf(GOOD)];
+      var states = [STATES.GOOD, STATES.WARN, STATES.ERROR];
+      var health = [states.indexOf(STATES.GOOD)];
 
       events.forEach(function () {
-        health.push(states.indexOf(WARN));
+        health.push(states.indexOf(STATES.WARN));
       });
 
       alerts.some(function (alertModel) {
         health.push(states.indexOf(alertModel.severity));
 
-        return alertModel.severity === ERROR;
+        return alertModel.severity === STATES.ERROR;
       });
 
       [inactiveAlerts, commands].forEach(function (group) {
         if (group.length) {
-          health.push(states.indexOf(WARN));
+          health.push(states.indexOf(STATES.WARN));
         }
       });
 
@@ -72,8 +72,7 @@
 
   var deps = [
     'alertModel', 'commandModel', 'eventModel',
-    '$timeout', '$q', '$rootScope',
-    'ERROR', 'WARN', 'GOOD',
+    '$timeout', '$q', '$rootScope', 'STATES',
     healthFactory
   ];
   angular.module('models').factory('healthModel', deps);

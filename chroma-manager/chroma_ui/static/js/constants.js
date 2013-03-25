@@ -7,7 +7,14 @@
   'use strict';
 
   angular.module('constants', [])
-    .constant('ERROR', 'ERROR')
-    .constant('WARN', 'WARNING')
-    .constant('GOOD', 'GOOD');
+    .constant('STATES', {
+      ERROR: 'ERROR',
+      WARN: 'WARNING',
+      GOOD: 'GOOD',
+      INFO: 'INFO',
+      INCOMPLETE: 'INCOMPLETE',
+      CANCELED: 'CANCELED',
+      COMPLETE: 'COMPLETE'
+    })
+    .constant('STATIC_URL', window.STATIC_URL);
 }());

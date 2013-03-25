@@ -1,5 +1,5 @@
 /**
- * @license AngularJS v1.0.5
+ * @license AngularJS v1.1.3
  * (c) 2010-2012 Google, Inc. http://angularjs.org
  * License: MIT
  *
@@ -456,6 +456,7 @@ angular.mock.$LogProvider = function() {
    * newYearInBratislava.getDate() => 1;
    * newYearInBratislava.getHours() => 0;
    * newYearInBratislava.getMinutes() => 0;
+   * newYearInBratislava.getSeconds() => 0;
    * </pre>
    *
    */
@@ -512,6 +513,10 @@ angular.mock.$LogProvider = function() {
       return self.date.getSeconds();
     };
 
+    self.getMilliseconds = function() {
+      return self.date.getMilliseconds();
+    };
+
     self.getTimezoneOffset = function() {
       return offset * 60;
     };
@@ -562,7 +567,7 @@ angular.mock.$LogProvider = function() {
     }
 
     //hide all methods not implemented in this mock that the Date prototype exposes
-    var unimplementedMethods = ['getMilliseconds', 'getUTCDay',
+    var unimplementedMethods = ['getUTCDay',
       'getYear', 'setDate', 'setFullYear', 'setHours', 'setMilliseconds',
       'setMinutes', 'setMonth', 'setSeconds', 'setTime', 'setUTCDate', 'setUTCFullYear',
       'setUTCHours', 'setUTCMilliseconds', 'setUTCMinutes', 'setUTCMonth', 'setUTCSeconds',
@@ -1352,17 +1357,49 @@ function MockXhr() {
  * @description
  *
  * This service is just a simple decorator for {@link ng.$timeout $timeout} service
- * that adds a "flush" method.
+ * that adds a "flush" and "verifyNoPendingTasks" methods.
  */
 
-/**
- * @ngdoc method
- * @name ngMock.$timeout#flush
- * @methodOf ngMock.$timeout
- * @description
- *
- * Flushes the queue of pending tasks.
- */
+angular.mock.$TimeoutDecorator = function($delegate, $browser) {
+
+  /**
+   * @ngdoc method
+   * @name ngMock.$timeout#flush
+   * @methodOf ngMock.$timeout
+   * @description
+   *
+   * Flushes the queue of pending tasks.
+   */
+  $delegate.flush = function() {
+    $browser.defer.flush();
+  };
+
+  /**
+   * @ngdoc method
+   * @name ngMock.$timeout#verifyNoPendingTasks
+   * @methodOf ngMock.$timeout
+   * @description
+   *
+   * Verifies that there are no pending tasks that need to be flushed.
+   */
+  $delegate.verifyNoPendingTasks = function() {
+    if ($browser.deferredFns.length) {
+      throw Error('Deferred tasks to flush (' + $browser.deferredFns.length + '): ' +
+        formatPendingTasksAsString($browser.deferredFns));
+    }
+  };
+
+  function formatPendingTasksAsString(tasks) {
+    var result = [];
+    angular.forEach(tasks, function(task) {
+      result.push('{id: ' + task.id + ', ' + 'time: ' + task.time + '}');
+    });
+
+    return result.join(', ');
+  }
+
+  return $delegate;
+};
 
 /**
  *
@@ -1388,14 +1425,8 @@ angular.module('ngMock', ['ng']).provider({
   $httpBackend: angular.mock.$HttpBackendProvider,
   $rootElement: angular.mock.$RootElementProvider
 }).config(function($provide) {
-    $provide.decorator('$timeout', function($delegate, $browser) {
-      $delegate.flush = function() {
-        $browser.defer.flush();
-      };
-      return $delegate;
-    });
+    $provide.decorator('$timeout', angular.mock.$TimeoutDecorator);
   });
-
 
 /**
  * @ngdoc overview
@@ -1610,14 +1641,20 @@ window.jstestdriver && (function(window) {
 })(window);
 
 
-window.jasmine && (function(window) {
+(window.jasmine || window.mocha) && (function(window) {
+
+  var currentSpec = null;
+
+  beforeEach(function() {
+    currentSpec = this;
+  });
 
   afterEach(function() {
-    var spec = getCurrentSpec();
-    var injector = spec.$injector;
+    var injector = currentSpec.$injector;
 
-    spec.$injector = null;
-    spec.$modules = null;
+    currentSpec.$injector = null;
+    currentSpec.$modules = null;
+    currentSpec = null;
 
     if (injector) {
       injector.get('$rootElement').unbind();
@@ -1639,13 +1676,8 @@ window.jasmine && (function(window) {
     angular.callbacks.counter = 0;
   });
 
-  function getCurrentSpec() {
-    return jasmine.getEnv().currentSpec;
-  }
-
   function isSpecRunning() {
-    var spec = getCurrentSpec();
-    return spec && spec.queue.running;
+    return currentSpec && currentSpec.queue.running;
   }
 
   /**
@@ -1670,11 +1702,10 @@ window.jasmine && (function(window) {
     return isSpecRunning() ? workFn() : workFn;
     /////////////////////
     function workFn() {
-      var spec = getCurrentSpec();
-      if (spec.$injector) {
+      if (currentSpec.$injector) {
         throw Error('Injector already created, can not register a module!');
       } else {
-        var modules = spec.$modules || (spec.$modules = []);
+        var modules = currentSpec.$modules || (currentSpec.$modules = []);
         angular.forEach(moduleFns, function(module) {
           modules.push(module);
         });
@@ -1741,13 +1772,13 @@ window.jasmine && (function(window) {
     return isSpecRunning() ? workFn() : workFn;
     /////////////////////
     function workFn() {
-      var spec = getCurrentSpec();
-      var modules = spec.$modules || [];
+      var modules = currentSpec.$modules || [];
+
       modules.unshift('ngMock');
       modules.unshift('ng');
-      var injector = spec.$injector;
+      var injector = currentSpec.$injector;
       if (!injector) {
-        injector = spec.$injector = angular.injector(modules);
+        injector = currentSpec.$injector = angular.injector(modules);
       }
       for(var i = 0, ii = blockFns.length; i < ii; i++) {
         try {

@@ -6,9 +6,21 @@
 /**
  * A Factory for accessing alerts.
  */
-angular.module('models').factory('alertModel', function ($resource, baseMessageModel) {
+angular.module('models').factory('alertModel', ['baseModel', 'STATES', function (baseModel, STATES) {
   'use strict';
 
-  return baseMessageModel({url: '/api/alert/:alertId'});
-});
+  return baseModel({
+    url: '/api/alert/:alertId',
+    params: {alertId:'@id'},
+    methods: {
+      /**
+       * @description Returns the state of the alert (which is always STATES.ERROR).
+       * @returns {string}
+       */
+      getState: function () {
+        return STATES.ERROR;
+      }
+    }
+  });
+}]);
 

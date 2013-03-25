@@ -1,7 +1,7 @@
 describe('Commands model', function () {
   'use strict';
 
-  beforeEach(module('models', 'ngResource', 'constants'));
+  beforeEach(module('models', 'ngResource', 'services', 'constants'));
 
   afterEach(inject(function ($httpBackend) {
     $httpBackend.verifyNoOutstandingExpectation();
@@ -13,15 +13,22 @@ describe('Commands model', function () {
     expect(commandModel).toEqual(jasmine.any(Function));
   }));
 
-  it('should have a method to load all commands', inject(function (commandModel, $httpBackend) {
-    expect(commandModel.loadAll).toBeDefined();
+  it('should return the state', inject(function (commandModel, $httpBackend, STATES) {
+    var actualExpect = {};
+    actualExpect[STATES.INCOMPLETE] = {complete: false};
+    actualExpect[STATES.ERROR] = {complete: true, errored: true};
+    actualExpect[STATES.CANCELED] = {complete: true, cancelled: true};
+    actualExpect[STATES.COMPLETE] = {complete: true};
 
-    $httpBackend
-      .expectGET('/api/command?limit=0')
-      .respond({});
+    Object.keys(actualExpect).forEach(function (state) {
+      $httpBackend.expectGET('/api/command/')
+        .respond(actualExpect[state]);
 
-    commandModel.loadAll();
+      var model = commandModel.get();
 
-    $httpBackend.flush();
+      $httpBackend.flush();
+
+      expect(model.getState()).toEqual(state);
+    });
   }));
 });

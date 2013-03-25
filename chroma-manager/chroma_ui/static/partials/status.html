@@ -1,0 +1,53 @@
+<div ng-controller="StatusCtrl">
+    <h2 class="section_header">Status</h2>
+
+    <div class="btn-group" data-toggle="buttons-radio" ng-click="status.getPage()">
+        <a class="btn" ng-model="status.state" btn-radio="status.types.collection">All</a>
+        <a class="btn" ng-model="status.state" btn-radio="status.types.alert">Alerts</a>
+        <a class="btn" ng-model="status.state" btn-radio="status.types.command">Commands</a>
+        <a class="btn" ng-model="status.state" btn-radio="status.types.event">Events</a>
+    </div>
+
+    <a class="btn" ng-click="status.dismissAll()">Dismiss all</a>
+
+    <div class="btn-group pull-right" data-toggle="buttons-radio" ng-click="status.getPage()">
+        <a class="btn" ng-model="status.view" btn-radio="'current'">Current</a>
+        <a class="btn" ng-model="status.view" btn-radio="'history'">History</a>
+    </div>
+    <ul class="messages well well-large">
+        <li class="none" ng-show="status.getViewState().models.paging.noOfPages == 0">No messages here.</li>
+        <li ng-repeat="model in status.getViewState().models" ng-show="status.getViewState().models.paging.noOfPages > 0">
+            <div class="message" ng-class="model.getState()">
+                <div class="status">
+                    <i class="icon-"></i>
+                </div>
+                <div class="date">
+                    (( model.created_at || model.begin | isoDate:'MM/dd/yyyy HH:mm' ))
+                </div>
+                <div class="message-body">
+                    <div ng-show="model.alert_item_str || model.host_name"><strong>Host: </strong> ((model.host_name || model.alert_item_str))</div>
+                    <strong>Message:&nbsp;</strong> (( model.message ))
+                </div>
+                <div class="buttons" ng-show="status.view == 'current'">
+                    <a ng-show="status.state.current.name == 'command'" class="navigation" ng-href="/ui/command/((model.id))/">
+                        <i class="icon-info-sign"></i> Detail
+                    </a>
+                    <a ng-click="status.dismiss(model)">
+                        <i class="icon-trash"></i> Dismiss
+                    </a>
+                </div>
+            </div>
+        </li>
+    </ul>
+
+    <div ng-repeat="(key, type) in status.types">
+        <div ng-show="status.getViewState() == data && data.models.paging.noOfPages > 1" ng-repeat="(view, data) in type">
+            <pagination
+              current-page="data.models.paging.currentPage"
+              num-pages="data.models.paging.noOfPages"
+              max-size="((5))"
+              on-select-page="status.getPage(page)"
+            ></pagination>
+        </div>
+    </div>
+</div>

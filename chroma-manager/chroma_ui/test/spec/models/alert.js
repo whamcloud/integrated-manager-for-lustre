@@ -1,7 +1,7 @@
 describe('Alerts model', function () {
   'use strict';
 
-  beforeEach(module('models', 'ngResource', 'constants'));
+  beforeEach(module('models', 'ngResource', 'constants', 'services'));
 
   afterEach(inject(function ($httpBackend) {
     $httpBackend.verifyNoOutstandingExpectation();
@@ -13,14 +13,14 @@ describe('Alerts model', function () {
     expect(alertModel).toEqual(jasmine.any(Function));
   }));
 
-  it('should have a method to load all alerts', inject(function (alertModel, $httpBackend) {
-    expect(alertModel.loadAll).toBeDefined();
-
-    $httpBackend
-      .expectGET('/api/alert?limit=0')
+  it('should return the state', inject(function (alertModel, $httpBackend, STATES) {
+    $httpBackend.expectGET('/api/alert/')
       .respond({});
 
-    alertModel.loadAll();
+    var model = alertModel.get();
+
     $httpBackend.flush();
+
+    expect(model.getState()).toEqual(STATES.ERROR);
   }));
 });

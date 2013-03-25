@@ -8,13 +8,16 @@ describe('Health model', function () {
 
   var $httpBackend, healthSpy, WARN, ERROR, GOOD;
 
-  beforeEach(module('constants', 'models', 'ngResource'));
+  beforeEach(module('constants', 'models', 'ngResource', 'services', 'interceptors', function ($provide) {
+    // Mock out this dep.
+    $provide.value('paging', jasmine.createSpy('paging'));
+  }));
 
   var urls = {
-    event: '/api/event?dismissed=false&limit=1&severity__in=ERROR&severity__in=WARNING',
-    alert: '/api/alert?active=true&limit=0&severity__in=ERROR&severity__in=WARNING',
-    inactiveAlert: '/api/alert?active=false&limit=1&severity__in=WARNING',
-    command: '/api/command?dismissed=false&errored=true&limit=1'
+    event: '/api/event/?dismissed=false&limit=1&severity__in=WARNING&severity__in=ERROR',
+    alert: '/api/alert/?active=true&limit=0&severity__in=WARNING&severity__in=ERROR',
+    inactiveAlert: '/api/alert/?active=false&limit=1&severity__in=WARNING',
+    command: '/api/command/?dismissed=false&errored=true&limit=1'
   };
 
   function expectReqRes(config) {
@@ -23,15 +26,16 @@ describe('Health model', function () {
     Object.keys(urls).forEach(function (url) {
       $httpBackend
         .expectGET(urls[url])
-        .respond(config[url] || []);
+        .respond({meta: {}, objects: config[url] || []});
     });
   }
 
   beforeEach(inject(function ($injector, $rootScope) {
     $httpBackend = $injector.get('$httpBackend');
-    WARN = $injector.get('WARN');
-    ERROR = $injector.get('ERROR');
-    GOOD = $injector.get('GOOD');
+    var STATES = $injector.get('STATES');
+    WARN = STATES.WARN;
+    ERROR = STATES.ERROR;
+    GOOD = STATES.GOOD;
 
     healthSpy = jasmine.createSpy('health');
     var scope = $rootScope.$new();

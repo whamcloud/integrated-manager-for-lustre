@@ -13,10 +13,15 @@ files = [
   'static/js/lib/angular/angular.js',
   'static/js/lib/angular/angular-resource.js',
   'test/lib/angular-mocks.js',
+  'static/js/util/**/*.js',
   'static/js/constants.js',
   'static/js/interceptors/*.js',
   'static/js/models/models_module.js',
   'static/js/models/*.js',
+  'static/js/services/services_module.js',
+  'static/js/services/*.js',
+  'static/js/controllers/controller_module.js',
+  'static/js/controllers/*.js',
   'test/mock/**/*.js',
   'test/spec/**/*.js'
 ];
