@@ -7,10 +7,16 @@ basePath = '';
 files = [
   JASMINE,
   JASMINE_ADAPTER,
+  'static/js/lib/lodash.custom.js',
+  'static/js/lib/underscore-min.js',
+  'static/js/lib/xdate.js',
   'static/js/lib/angular/angular.js',
+  'static/js/lib/angular/angular-resource.js',
   'test/lib/angular-mocks.js',
-  'app/scripts/*.js',
-  'app/scripts/**/*.js',
+  'static/js/constants.js',
+  'static/js/interceptors/*.js',
+  'static/js/models/models_module.js',
+  'static/js/models/*.js',
   'test/mock/**/*.js',
   'test/spec/**/*.js'
 ];
@@ -21,7 +27,7 @@ exclude = [];
 // test results reporter to use
 // possible values: dots, progress, junit, growl, coverage
 
-reporter = ['progress'];
+reporter = ['dots'];
 
 // web server port
 port = 8080;

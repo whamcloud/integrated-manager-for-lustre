@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html ng-app="iml">
   <head>
     {% include 'target_detail.html' %}
     {% include 'server_detail.html' %}
@@ -39,10 +39,24 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-1.6.4.min.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-ui-1.8.16.custom.min.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/highcharts.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/lodash.custom.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/underscore-min.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/backbone-min.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/lib/json2.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/angular/angular.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/angular/angular-resource.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/xdate.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/app.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/constants.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/interceptors/interceptor_module.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/interceptors/tastypie.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/controllers/controller_module.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/models_module.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/base_message_model.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/alert.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/command.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/event.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/health.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/json2.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/misc.js"></script>
     <script type='text/javascript'>
       var TIME_OFFSET = Math.round(XDate(utc = true).diffSeconds(XDate('{{server_time|safe}}', utc = true)));
