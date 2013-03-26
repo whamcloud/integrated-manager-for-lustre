@@ -8,7 +8,8 @@
             "server_http_url": "https://localhost:8000/",
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
-            ]
+            ],
+            "distro": "el6.3"
         }
     ],
     "lustre_servers": [
@@ -23,7 +24,8 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
-            ]
+            ],
+            "distro": "mock"
         },
         {
             "address": "test001.localdomain",
@@ -36,7 +38,8 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
-            ]
+            ],
+            "distro": "mock"
         },
         {
             "address": "test002.localdomain",
@@ -49,7 +52,8 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
-            ]
+            ],
+            "distro": "mock"
         },
         {
             "address": "test003.localdomain",
@@ -62,12 +66,16 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE003-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE004-scsi0-0-0",
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
-            ]
+            ],
+            "distro": "mock"
         }
     ],
     "lustre_clients": {
-        "imaginary_client": {}
+        "imaginary_client": {
+            "distro": "mock"
+        }
     },
     "hosts": {
-    }
+    },
+    "provision": true
 }
