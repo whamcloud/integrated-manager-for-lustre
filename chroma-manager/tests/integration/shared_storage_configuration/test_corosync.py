@@ -46,6 +46,10 @@ class TestCorosync(ChromaIntegrationTestCase):
                                                'dismissed': False})
         self.assertListEqual(alerts, [])
 
+        # Signal to the harness that we're expecting a node to be down
+        # after this test completes.
+        self.down_node_expected = True
+
         # Kill the second host
         self.remote_operations.kill_server(server_config_2['fqdn'])
 
