@@ -81,7 +81,8 @@ if __name__ == '__main__':
 
     lustre_servers = []
     for lustre_server in cluster_cfg['lustre_servers']:
-        lustre_servers.append(lustre_server['address'])
+        if not lustre_server['distro'] == "mock":
+            lustre_servers.append("root@%s" % lustre_server['address'])
 
     log_collector = ChromaLogCollector(destination_path, chroma_managers, lustre_servers)
     log_collector.collect_logs()
