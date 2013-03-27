@@ -1,18 +1,4 @@
-
-# The build number, for dev/test/support
-BUILD := $(shell echo 1.99.0.0.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
-# The A.B.C.D release number for releases, or a build number for test/dev builds
-VERSION := $(BUILD)
-# Flag for whether this is a release build
-IS_RELEASE := False
-
-ifeq ($(IS_RELEASE),True)
-  PACKAGE_VERSION := $(VERSION)
-else
-  PACKAGE_VERSION := $(BUILD)
-endif
-
-PACKAGE_RELEASE := 1
+include ../include/Makefile.version
 
 # In development, we want to stop at first failure, but when running
 # in a Jenkins job we want all the gory details.
@@ -31,10 +17,10 @@ cleandist:
 	mkdir dist
 
 version:
-	echo 'VERSION = "$(VERSION)"' > production_version.py
-	echo 'BUILD = "$(BUILD)"' >> production_version.py
-	echo 'IS_RELEASE = $(IS_RELEASE)' >> production_version.py
-	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> production_version.py
+	echo 'VERSION = "$(VERSION)"' > scm_version.py
+	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> scm_version.py
+	echo 'BUILD = $(BUILD_NUMBER)' >> scm_version.py
+	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
 develop: version
 	python setup.py develop
@@ -76,9 +62,6 @@ tests test: unit_tests agent_tests feature_tests integration_tests
 
 tarball: version
 	rm -f MANIFEST
-	sed -e 's/@VERSION@/$(PACKAGE_VERSION)/g' \
-	    -e 's/@RELEASE@/$(PACKAGE_RELEASE)/g' \
-	< chroma-manager.spec.in > chroma-manager.spec
 	python scripts/production_httpd.py chroma-manager.conf.template > chroma-manager.conf
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
 	# workaround setuptools
@@ -94,7 +77,10 @@ rpms: cleandist tarball
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
 	cp chroma-supervisor-init.sh chroma-host-discover-init.sh chroma-manager.conf production_supervisord.conf logrotate.cfg _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
-	rpmbuild -bb --define "_topdir $$(pwd)/_topdir" _topdir/SPECS/chroma-manager.spec
+	rpmbuild --define "_topdir $$(pwd)/_topdir" \
+		--define "version $(PACKAGE_VERSION)" \
+		--define "release $(PACKAGE_RELEASE)" \
+		-bb _topdir/SPECS/chroma-manager.spec
 	mv _topdir/RPMS/noarch/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).noarch.rpm dist/
 	rm -rf _topdir
 

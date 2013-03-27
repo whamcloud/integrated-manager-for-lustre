@@ -1,0 +1,26 @@
+space :=
+space +=
+SCM_COMMIT_NUMBER	:= $(shell git rev-list HEAD | wc -l)
+SCM_DESCRIPTION		:= $(subst -,$(space),$(shell git describe --match v[0-9]* | sed -e 's/^v//' -e 's/RC[0-9]*$$//'))
+
+# Stable variable names exported to packaging and code
+BUILD_NUMBER		:= $(SCM_COMMIT_NUMBER)
+VERSION			:= $(subst $(space),-,$(SCM_DESCRIPTION))
+PACKAGE_VERSION		:= $(word 1, $(SCM_DESCRIPTION))
+PACKAGE_RELEASE		:= $(subst $(space),.,$(wordlist 2, 10, $(SCM_DESCRIPTION)))
+ifeq ($(strip $(PACKAGE_RELEASE)),)
+	IS_RELEASE := True
+	# We use the build number in a package's release field in
+	# order to distinguish between RCs with identical version fields.
+	# e.g. 2.0.0.0-2983 (RC1), 2.0.0.0-2987 (RC2)
+	# The important thing is that newer RCs must upgrade older ones,
+	# and end-users only really care about the %{version} field.
+	PACKAGE_RELEASE := $(BUILD_NUMBER)
+else
+	IS_RELEASE := False
+	# In development, we embed the rest of the git describe output
+	# in order to easily understand the provenance of a package.
+	# The commits-since-tag number will ensure that newer packages
+	# are preferred, since RPM's version parsing works left-to-right.
+	PACKAGE_RELEASE := $(PACKAGE_RELEASE).$(BUILD_NUMBER)
+endif

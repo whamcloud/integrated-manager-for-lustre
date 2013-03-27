@@ -6,13 +6,13 @@
 
 
 from setuptools import setup, find_packages
-from chroma_agent.production_version import PACKAGE_VERSION
+from chroma_agent import package_version
 
 excludes = ["*tests*"]
 
 setup(
     name = 'chroma-agent',
-    version = PACKAGE_VERSION,
+    version = package_version(),
     author = "Whamcloud, Inc.",
     author_email = "info@whamcloud.com",
     url = 'http://www.whamcloud.com/',

@@ -301,10 +301,11 @@ SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
 LOCAL_SETTINGS_FILE = "local_settings.py"
 
 try:
-    from production_version import BUILD, VERSION, IS_RELEASE
+    from scm_version import PACKAGE_VERSION, VERSION, IS_RELEASE, BUILD
 except ImportError:
-    BUILD = "dev"
-    VERSION = None
+    PACKAGE_VERSION = '0.0.0'
+    VERSION = 'dev'
+    BUILD = 0
     IS_RELEASE = False
 
 try:

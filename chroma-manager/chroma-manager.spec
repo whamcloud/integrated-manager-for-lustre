@@ -1,14 +1,13 @@
-%define name chroma-manager
-%define version @VERSION@
-%define unmangled_version @VERSION@
-%define release @RELEASE@
+%{!?name: %define name chroma-manager}
+%{?!version: %define version %(%{__python} -c "from scm_version import PACKAGE_VERSION; sys.stdout.write(PACKAGE_VERSION)")}
+%{?!release: %define release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 Summary: The Whamcloud Lustre Monitoring and Adminisration Interface
 Name: %{name}
 Version: %{version}
 Release: %{release}
-Source0: %{name}-%{unmangled_version}.tar.gz
+Source0: %{name}-%{version}.tar.gz
 Source1: chroma-manager.conf
 Source2: chroma-supervisor-init.sh
 Source3: chroma-host-discover-init.sh
@@ -77,7 +76,7 @@ This package contains the Chroma Manager integration tests and scripts and is in
 to be used by the Chroma test framework.
 
 %prep
-%setup -n %{name}-%{unmangled_version}
+%setup -n %{name}-%{version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 echo -e "/^HTTPS_FRONTEND_PORT =/s/= .*$/= 443/\nwq" | ed settings.py 2>/dev/null
 

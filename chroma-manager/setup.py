@@ -6,7 +6,7 @@
 
 
 from setuptools import setup, find_packages
-from production_version import PACKAGE_VERSION
+from scm_version import PACKAGE_VERSION
 
 excludes = ["*docs*", "*r3d*tests*"]
 

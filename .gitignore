@@ -6,6 +6,8 @@
 *.log
 *.pid
 local_settings.py
-production_version.py*
+scm_version.py*
 database.db
 .DS_Store
+dist/
+*.egg-info/

@@ -1,5 +1,5 @@
 %{!?name: %define name chroma-agent}
-%{?!version: %define version 0.0.1}
+%{?!version: %define version %(%{__python} -c "from chroma_agent import version; sys.stdout.write(version())")}
 %{?!release: %define release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 

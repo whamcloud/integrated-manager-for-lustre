@@ -102,7 +102,7 @@ CHECKS = [
         ],
         'ignore_files': [
             '.*/chroma-manager/r3d/prettytable.py',
-            '.*production_version.py$',
+            '.*scm_version.py$',
             '.*/chroma-manager/docs/conf.py',
             '.*/chroma-manager/userdocs/conf.py',
             '.*/chroma-manager/docs/lib/tastydoc.py',

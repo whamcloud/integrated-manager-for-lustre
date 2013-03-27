@@ -1,18 +1,4 @@
-
-# The build number, for dev/test/support
-BUILD := $(shell echo 1.99.0.0.`date -u +%Y%m%d%H%M`.`git rev-parse --short HEAD`)
-# The A.B.C.D release number for releases, or a build number for test/dev builds
-VERSION := $(BUILD)
-# Flag for whether this is a release build
-IS_RELEASE := False
-
-ifeq ($(IS_RELEASE),True)
-  PACKAGE_VERSION := $(VERSION)
-else
-  PACKAGE_VERSION := $(BUILD)
-endif
-
-PACKAGE_RELEASE := 1
+include ../include/Makefile.version
 
 # In development, we want to stop at first failure, but when running
 # in a Jenkins job we want all the gory details.
@@ -25,10 +11,10 @@ endif
 all: rpms
 
 version:
-	echo 'VERSION = "$(VERSION)"' > chroma_agent/production_version.py
-	echo 'BUILD = "$(BUILD)"' >> chroma_agent/production_version.py
-	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_agent/production_version.py
-	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> chroma_agent/production_version.py
+	echo 'VERSION = "$(VERSION)"' > chroma_agent/scm_version.py
+	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> chroma_agent/scm_version.py
+	echo 'BUILD = $(BUILD_NUMBER)' >> chroma_agent/scm_version.py
+	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_agent/scm_version.py
 
 cleandist:
 	rm -rf dist
