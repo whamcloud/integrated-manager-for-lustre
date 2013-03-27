@@ -14,6 +14,14 @@ endif
 
 PACKAGE_RELEASE := 1
 
+# In development, we want to stop at first failure, but when running
+# in a Jenkins job we want all the gory details.
+ifdef JENKINS_URL
+    NOSE_ARGS ?= --with-xunit --xunit-file=chroma-agent-unit-test-results.xml --with-coverage
+else
+    NOSE_ARGS ?=
+endif
+
 all: rpms
 
 version:
@@ -47,3 +55,6 @@ rpms: production cleandist tarball
 
 docs:
 	@echo "Nothing to do here"
+
+test:
+	@nosetests $(NOSE_ARGS)

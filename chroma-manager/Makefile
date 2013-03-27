@@ -39,8 +39,11 @@ version:
 develop: version
 	python setup.py develop
 
+agent_tests:
+	@echo "Running agent tests..."
+	@$(MAKE) -C ../chroma-agent test
+
 unit_tests:
-	rm -f unit.log
 	@echo "Running standard unit tests..."
 	@./manage.py test $(NOSE_ARGS) 2>&1 | tee unit.log; \
 	exit $${PIPESTATUS[0]}
@@ -51,7 +54,6 @@ feature_tests:
 		[ -d $$feature ] || continue; \
 		logname=feature-$$(basename $$feature); \
 		stdout=$$logname.stdout; stderr=$$logname.stderr; \
-		rm -f $$stdout $$stderr; \
 		behave $(BEHAVE_ARGS) $${feature}/features 2>$$stderr | tee $$stdout; \
 		brc=$${PIPESTATUS[0]}; \
 		[ $$brc -eq 0 ] || { \
@@ -61,7 +63,7 @@ feature_tests:
 	done; \
 	exit $$brc
 
-test: unit_tests feature_tests
+test: unit_tests agent_tests feature_tests
 
 tarball: version
 	rm -f MANIFEST
