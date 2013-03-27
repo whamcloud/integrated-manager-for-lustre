@@ -1,0 +1,54 @@
+div[ng-controller="BigGreenButtonCtrl"] {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    border-radius: 12px;
+    margin-top: -2px;
+    margin-left: 50px;
+    cursor: pointer;
+
+    -webkit-transition: all 1s ease-in-out;
+    -moz-transition: all 1s ease-in-out;
+    -o-transition: all 1s ease-in-out;
+    -ms-transition: all 1s ease-in-out;
+    transition: all 1s ease-in-out;
+}
+
+@media screen and (max-width: 900px) {
+    div[ng-controller="BigGreenButtonCtrl"] {
+        margin-left: 0;
+    }
+}
+
+div[ng-controller="BigGreenButtonCtrl"] a {
+    height: 20px;
+    width: 20px;
+    display: inline-block;
+}
+
+div[ng-controller="BigGreenButtonCtrl"].GOOD {
+    background-color: #2C9600;
+    box-shadow: 0px 0px 5px 1px #55C624;
+}
+
+div[ng-controller="BigGreenButtonCtrl"].GOOD:hover {
+    background-color: #30A300;
+}
+
+div[ng-controller="BigGreenButtonCtrl"].WARNING {
+    background-color: #FFBF00;
+    box-shadow: 0 0 5px 1px #FFDF80;
+}
+
+div[ng-controller="BigGreenButtonCtrl"].WARNING:hover {
+    background-color: #FFD866;
+}
+
+div[ng-controller="BigGreenButtonCtrl"].ERROR {
+    background-color: #FF362B;
+    box-shadow: 0 0 5px 1px #F44847;
+}
+
+div[ng-controller="BigGreenButtonCtrl"].ERROR:hover {
+    background-color: #F44847;
+}
