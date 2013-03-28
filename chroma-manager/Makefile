@@ -101,7 +101,7 @@ rpms: cleandist tarball
 docs: version
 	set -e ; \
 	if [ -z $(VIRTUAL_ENV) ] ; then \
-		virtualenv myenv ; \
+		virtualenv --system-site-packages myenv ; \
 		. myenv/bin/activate; \
 		pip install -r ./requirements.txt; \
 	fi ; \
