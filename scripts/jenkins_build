@@ -1,0 +1,99 @@
+#!/bin/bash
+#
+# This script should be used instead of configuring build logic in
+# Jenkins job configurations.
+#
+# 2013-03-27, mjmac, first implementation, handles chroma-reviews
+
+set -x # enable xtrace
+set -u # undefined variables are errors
+set -e # errors are fatal
+
+run_repo_maintenance()
+{
+    # This shouldn't cost much to run every time, but if it winds up being
+    # a burden, we could try to randomize it or make it go every N runs.
+    git gc
+}
+
+clean_uncommitted_artifacts()
+{
+    local EXCLUDES=". .git dist include chroma-bundles chroma-dependencies"
+    for subdir in $(find . -maxdepth 1 -type d); do
+        dirname=$(basename $subdir)
+        if [[ $EXCLUDES == *$dirname* ]]; then continue; fi
+        # hacks
+        if [ $dirname == 'chroma-manager' ]; then
+            # it would be better to move myenv somewhere outside of this
+            # directory
+            local MANAGER_EXCLUDES="chroma-manager/myenv/"
+            for cruft in $(git status --porcelain $dirname | awk '/^(!!|\?\?)/ {print $2}'); do
+                if [[ $MANAGER_EXCLUDES == *$cruft* ]]; then continue; fi
+                rm -fr $cruft
+            done
+           # ... upon hacks
+           # git status in 1.7.1 doesn't have have --ignored, so we have to
+           # nuke these by hand
+           rm -f chroma-manager/production_version.py*
+           rm -f chroma-manager/scm_version.py*
+        else
+            git clean -dfx $subdir
+        fi
+    done
+}
+
+run_pre_commit_hook()
+{
+    # only run this on el6 since the el5 builders produce too many failures
+    if [ $distro = el6 ]; then
+        scripts/pre-commit --all-files --exclude myenv --exclude chroma-dependencies
+    fi
+}
+
+pre_build()
+{
+    run_repo_maintenance
+    clean_uncommitted_artifacts
+    run_pre_commit_hook
+}
+
+build_dependencies()
+{
+    if [ -d chroma-dependencies ]; then
+        if [ $distro = el6 ]; then
+            # can only do this on el6 builders for now
+            make -C chroma-dependencies repo
+        fi
+    fi
+}
+
+build()
+{
+    export CACHE=/mnt/lustre/builders/cache/
+    make
+    build_dependencies
+}
+
+create_repository()
+{
+    pushd dist
+    createrepo --pretty .
+    popd
+}
+
+append_docs_to_distribution()
+{
+    if [ $distro = el6 ]; then
+        mv chroma-manager/docs/dist dist/docs
+    fi
+}
+
+post_build()
+{
+    create_repository
+    append_docs_to_distribution
+}
+
+pre_build
+build
+post_build
