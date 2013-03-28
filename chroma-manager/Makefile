@@ -21,7 +21,7 @@ ifdef JENKINS_URL
 	NOSE_ARGS ?= --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml
 else
 	BEHAVE_ARGS ?= -q --stop
-	NOSE_ARGS ?=
+	NOSE_ARGS ?= --stop
 endif
 
 all: rpms docs
@@ -39,9 +39,18 @@ version:
 develop: version
 	python setup.py develop
 
+integration_tests:
+	@echo "Running integration tests against the simulator..."
+	@nosetests $(NOSE_ARGS) --tc-file=tests/simulator.json --tc-format=json \
+		       tests/integration/shared_storage_configuration 2>&1 \
+			   | tee integration.log; \
+	exit $${PIPESTATUS[0]}
+
 agent_tests:
 	@echo "Running agent tests..."
-	@$(MAKE) -C ../chroma-agent test
+	@$(MAKE) -C ../chroma-agent test $(NOSE_ARGS) 2>&1 \
+			| tee ../chroma-agent/unit.log; \
+	exit $${PIPESTATUS[0]}
 
 unit_tests:
 	@echo "Running standard unit tests..."
@@ -63,7 +72,7 @@ feature_tests:
 	done; \
 	exit $$brc
 
-test: unit_tests agent_tests feature_tests
+tests test: unit_tests agent_tests feature_tests integration_tests
 
 tarball: version
 	rm -f MANIFEST
