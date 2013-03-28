@@ -900,3 +900,8 @@ table.layout {
     border-spacing: 0;
     border-collapse: collapse;
 }
+
+div.help_loaded {
+    padding: 0 6px 6px 6px;
+    max-width: 400px;
+}

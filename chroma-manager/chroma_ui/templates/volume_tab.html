@@ -111,7 +111,7 @@
         volume.dirty_ids = volume.original_ids;
 
         volume.status_icon = UIHelper.help_hover(
-          topic = 'volume_status_' + volume.status,
+          topic = '_volume_status_' + volume.status,
           content = UIHelper.fugue_icon(
                       volume_status_map[volume.status]['icon'],
                       { 'data-status': volume.status }
@@ -290,7 +290,7 @@
   }();
 </script>
 <h2 class='section_header'>Volume Configuration</h2>
-<div class='help_loader' style='padding-bottom: 10px;' data-topic="_volume_long"></div>
+<div class='help_loader' style='max-width: none;' data-topic="_volume_long"></div>
 
 <table class="display tight_lines" id="volume_configuration" width="100%">
   <thead>

@@ -161,7 +161,7 @@ var LiveObject = function()
     // host status is the Lnet Status which we convert into an icon
     if ( resourceType(obj) === 'host' ) {
       return UIHelper.help_hover(
-        "server_status_" + host_state,
+        "_server_status_" + host_state,
         UIHelper.fugue_icon(
           server_status_map[host_state]['icon'],
           { style: 'padding-right: 5px;', 'data-state': host_state }

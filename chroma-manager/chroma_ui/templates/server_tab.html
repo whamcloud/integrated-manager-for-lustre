@@ -1,7 +1,7 @@
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/server_configuration.css"/>
 
 <script type="text/template" id="server_command_template">
-    <p class='host_selection_prompt'>Select hosts on which to run this operation:</p>
+    <div class='help_loader' data-topic='<%= help_topic %>' />
     <div class='host_selection_list'>
         <ul class='host_selection_list'>
             <% _.each(hosts, function(host) { %>
@@ -84,9 +84,11 @@
                       {text: "Cancel", class: "host_selection_cancel", click: function() {}},
                       {text: "Run", class: 'host_selection_run', click: function() {}}
                   ],
+                  autoOpen: false,
                   modal: true
               });
               var cd = new ServerCommandView({
+                  help_topic: options.help_topic,
                   message: options.message,
                   job_class: options.job_class,
                   hosts: hosts,
@@ -98,12 +100,14 @@
       $('div#server_list button.detect_button').click(function() {
         ServerCommandPrompt({
             message: "Detecting File Systems",
+            help_topic: '_detect_file_systems-dialog',
             job_class: 'DetectTargetsJob'
         });
       });
 
       $('div#server_list button.rescan_nids_button').click(function() {
         ServerCommandPrompt({
+            help_topic: '_rescan_NIDs-dialog',
             message: "Re-scanning NIDs",
             job_class: 'RelearnNidsJob'
         });
@@ -111,6 +115,7 @@
 
       $('div#server_list button.writeconf_button').click(function() {
         ServerCommandPrompt({
+            help_topic: '_rewrite_target_configuration-dialog',
             message: "Updating filesystem NIDs",
             job_class: 'UpdateNidsJob'
         });
@@ -131,7 +136,10 @@
          "change input[type=checkbox]": 'changed'
      },
      render: function() {
-         $(this.el).find('.ui-dialog-content').html(this.template({hosts: this.options.hosts}));
+        var $el = $(this.el);
+         $el.find('.ui-dialog-content').html(this.template({help_topic: this.options.help_topic, hosts: this.options.hosts}));
+         ContextualHelp.load_snippets($el);
+         $el.find('.server-command-selection').dialog('open');
          this.select_all();
      },
      select_all: function() {
@@ -194,9 +202,9 @@
 
 <h2 class='section_header'>Server Actions</h2>
 
-<button class='detect_button multi_server_button'>Detect File Systems...</button>
-<button class='rescan_nids_button multi_server_button'>Re-scan NIDs...</button>
-<button class='writeconf_button multi_server_button'>Re-write target configuration...</button>
+<button class='detect_button multi_server_button help_hover' data-topic='_detect_file_systems-tooltip'>Detect File Systems...</button>
+<button class='rescan_nids_button multi_server_button help_hover' data-topic='_rescan_NIDs-tooltip'>Re-scan NIDs...</button>
+<button class='writeconf_button multi_server_button help_hover' data-topic='_rewrite_target_configuration-tooltip'>Re-write target configuration...</button>
 
 <script type="text/template" id="add_host_dialog_template">
     <div class="add_host_dialog">
