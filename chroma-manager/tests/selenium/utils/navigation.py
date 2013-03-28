@@ -62,7 +62,7 @@ class Navigation(BaseView):
         if not find_visible_element_by_css_selector(self.driver, '#login_dialog'):
             login_view.open_login_dialog()
         login_view.login_user(username, password)
-        wait_for_element_by_css_selector(self.driver, '#username', 10)
+        wait_for_element_by_css_selector(self.driver, '#username', self.medium_wait)
         self.quiesce()
         self._patch_api()
 

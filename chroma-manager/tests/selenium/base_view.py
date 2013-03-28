@@ -25,7 +25,7 @@ class BaseView(object):
         self.standard_wait = wait_time['standard']
 
     def quiesce(self):
-        for i in xrange(self.standard_wait):
+        for i in xrange(self.long_wait):
             busy = self.driver.execute_script('return ($.active != 0);')
             if not busy:
                 self.log.debug('quiesced in %s iterations' % i)
