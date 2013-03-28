@@ -94,7 +94,7 @@ class ClusterSimulator(Persisted):
         self.state['cluster_size'] = cluster_size
         self.save()
 
-        self.power.setup(psu_count, server_count)
+        self.power.setup(psu_count)
 
         for i in range(0, server_count):
             self._create_server(i, nid_count)

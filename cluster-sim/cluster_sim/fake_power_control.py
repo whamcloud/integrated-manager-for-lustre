@@ -446,9 +446,8 @@ class FakePowerControl(Persisted):
 
         self._load_pdu_sims()
 
-    def setup(self, psu_count, outlets_per_psu):
-        # Set all outlets to ON to start
-        outlets = dict([(i, True) for i in range(1, outlets_per_psu + 1)])
+    def setup(self, psu_count):
+        outlets = {}
         for n in range(0, psu_count):
             name = "pdu%.3d" % n
             port = BASE_PDU_SERVER_PORT + n
@@ -478,10 +477,11 @@ class FakePowerControl(Persisted):
         return groups[0][-1] + 1
 
     def add_server(self, fqdn):
-        # FIXME: Handle the case where next_outlet_index > outlets_per_psu
         assert fqdn not in self.state['server_outlets']
         with self._lock:
             outlet = str(self.next_outlet_index)
+            for pdu in self.pdu_sims.values():
+                pdu.add_outlet(outlet)
             self.state['server_outlets'][fqdn] = outlet
             self.state['outlet_servers'][outlet] = fqdn
             self.save()
