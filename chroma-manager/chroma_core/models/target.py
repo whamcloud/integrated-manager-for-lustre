@@ -68,7 +68,8 @@ class ManagedTarget(StatefulObject):
                 if mount.primary:
                     return mount.host
             else:
-                failovers.append(mount.host)
+                if not mount.primary:
+                    failovers.append(mount.host)
 
         return failovers
 
