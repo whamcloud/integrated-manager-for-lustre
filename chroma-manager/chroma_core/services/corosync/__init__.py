@@ -84,36 +84,43 @@ class Service(ChromaService):
                                 for peer_fqdn, data in body['nodes'].items()])
         log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
 
-        #  Consider all nodes in the peer group for this reporting agent
-        #  Note:  reported nodes are not necessarily managed by chroma
-        for peer_fqdn, data in body['nodes'].items():
+        # NB: This will ignore any unknown peers in the report.
+        cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(fqdn__in = body['nodes'].keys())
 
-            if is_new(peer_fqdn):
+        #  Consider all nodes in the peer group for this reporting agent
+        for host in cluster_nodes:
+            data = body['nodes'][host.fqdn]
+
+            cluster_peer_keys = sorted([node.pk for node in cluster_nodes
+                                            if node is not host])
+
+            if is_new(host.fqdn):
                 incoming_status = data['online'] == 'true'
 
-                try:
-                    peer_host = ManagedHost.objects.get(fqdn=peer_fqdn)
-                except ManagedHost.DoesNotExist:
-                    log.debug("Corosync reported a peer "
-                              "that is not managed: %s" % peer_fqdn)
-                    pass
-                else:
-                    log.debug("Corosync processing "
-                              "peer %s of %s " % (peer_fqdn, fqdn))
+                log.debug("Corosync processing "
+                          "peer %s of %s " % (host.fqdn, fqdn))
 
-                    #  Raise an Alert - system supresses dups
-                    log.debug("Alert notify on %s: active=%s" % (peer_host, not incoming_status))
-                    HostOfflineAlert.notify(peer_host, not incoming_status)
+                #  Raise an Alert - system supresses dups
+                log.debug("Alert notify on %s: active=%s" % (host, not incoming_status))
+                HostOfflineAlert.notify(host, not incoming_status)
 
-                    #  Attempt to save the state.
-                    attrs = {'corosync_reported_up': incoming_status}
-                    if peer_host.corosync_reported_up != incoming_status:
-                        JobSchedulerClient.notify(peer_host, now(), attrs)
+                #  Attempt to save the state.
+                attrs = {}
+                if host.corosync_reported_up != incoming_status:
+                    attrs['corosync_reported_up'] = incoming_status
 
-                    #  Keep internal track of the hosts state.
-                    curr_status = self.HostStatus(status=incoming_status,
-                                                  datetime=dt)
-                    self._host_status[peer_fqdn] = curr_status
+                peer_host_peer_keys = sorted([h.pk for h in
+                                              host.ha_cluster_peers.all()])
+                if peer_host_peer_keys != cluster_peer_keys:
+                    attrs['ha_cluster_peers'] = cluster_peer_keys
+
+                if len(attrs):
+                    JobSchedulerClient.notify(host, now(), attrs)
+
+                #  Keep internal track of the hosts state.
+                curr_status = self.HostStatus(status=incoming_status,
+                                              datetime=dt)
+                self._host_status[host.fqdn] = curr_status
 
     def run(self):
         self._queue.serve(data_callback=self.on_data)

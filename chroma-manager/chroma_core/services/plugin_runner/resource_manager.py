@@ -27,6 +27,7 @@ from chroma_core.models import ManagedHost, ManagedTarget
 from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
+from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
 
 from django.db import transaction
@@ -340,6 +341,10 @@ class ResourceManager(object):
             for vn in vn_list:
                 hosts.add(vn.host_id)
 
+        ha_clusters = [[peer.pk for peer in cluster.peers]
+                                    for cluster in HaCluster.all_clusters()]
+        log.debug("HA clusters: %s" % ha_clusters)
+
         outer_host_to_primary_count = dict([(host_id, 0) for host_id in hosts])
         outer_host_to_used_count = dict([(host_id, 0) for host_id in hosts])
 
@@ -390,6 +395,30 @@ class ResourceManager(object):
                 # Remove the primary host from consideration for the secondary mount
                 del host_to_lun_nodes[primary_lun_node.host_id]
 
+                lun_ha_cluster = None
+                for i, cluster in enumerate(ha_clusters):
+                    log.debug("Checking for %s in %s" % (primary_lun_node.host_id, cluster))
+                    if primary_lun_node.host_id in cluster:
+                        if lun_ha_cluster is not None:
+                            raise RuntimeError("%s found in more than one HA cluster" % primary_lun_node)
+                        else:
+                            lun_ha_cluster = i
+                            log.debug("Found %s in %s" % (primary_lun_node.host_id, ha_clusters[lun_ha_cluster]))
+
+                if lun_ha_cluster is not None:
+                    # Remove any hosts not in the same HA cluster as the
+                    # primary so that we can only assign primary/secondary
+                    # relationships within the same HA cluster.
+                    to_delete = []
+                    for host_id in host_to_lun_nodes:
+                        if host_id not in ha_clusters[lun_ha_cluster]:
+                            to_delete.append(host_id)
+                    for host_id in to_delete:
+                        del host_to_lun_nodes[host_id]
+                else:
+                    log.info("%s was not found in any HA cluster" % primary_lun_node)
+                    host_to_lun_nodes.clear()
+
                 if len(host_to_lun_nodes) > 0:
                     host_to_used_node_count = dict([(h, outer_host_to_used_count[h]) for h in host_to_lun_nodes.keys()])
                     fewest_used_nodes = [host for host, count in sorted(host_to_used_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
@@ -423,7 +452,7 @@ class ResourceManager(object):
     @transaction.commit_on_success
     def _persist_lun_updates(self, scannable_id):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
-        from chroma_core.lib.storage_plugin.api.resources import PathWeight, DeviceNode, LogicalDriveOccupier
+        from chroma_core.lib.storage_plugin.api.resources import DeviceNode, LogicalDriveOccupier
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.lib.storage_plugin.base_resource import HostsideResource
 
@@ -454,46 +483,6 @@ class ResourceManager(object):
         scope_volume_nodes = VolumeNode.objects.filter(storage_resource__storage_id_scope = scannable_id)
 
         log.debug("%s %s %s %s" % (tuple([len(l) for l in [node_resources, usable_node_resources, unassigned_node_resources, scope_volume_nodes]])))
-
-        def affinity_weights(volume, volume_nodes):
-            weights = {}
-            for volume_node in volume_nodes:
-                if not volume_node.storage_resource_id:
-                    log.info("affinity_weights: no storage_resource for VolumeNode %s" % volume_node.id)
-                    return False
-
-                weight_resource_ids = self._record_find_ancestors(volume_node.storage_resource_id, PathWeight)
-                if len(weight_resource_ids) == 0:
-                    log.info("affinity_weights: no PathWeights for VolumeNode %s" % volume_node.id)
-                    return False
-
-                attr_model_class = StorageResourceRecord.objects.get(id = weight_resource_ids[0]).resource_class.get_class().attr_model_class('weight')
-
-                import json
-                ancestor_weights = [json.loads(w['value']) for w in attr_model_class.objects.filter(
-                    resource__in = weight_resource_ids, key = 'weight').values('value')]
-                weight = reduce(lambda x, y: x + y, ancestor_weights)
-                weights[volume_node] = weight
-
-            log.info("affinity_weights: %s" % weights)
-
-            sorted_volume_nodes = [volume_node for volume_node, weight in sorted(weights.items(), lambda x, y: cmp(x[1], y[1]))]
-            sorted_volume_nodes.reverse()
-            primary = sorted_volume_nodes[0]
-            primary.primary = True
-            primary.use = True
-            primary.save()
-            if len(sorted_volume_nodes) > 1:
-                secondary = sorted_volume_nodes[1]
-                secondary.use = True
-                secondary.primary = False
-                secondary.save()
-            for volume_node in sorted_volume_nodes[2:]:
-                volume_node.use = False
-                volume_node.primary = False
-                volume_node.save()
-
-            return True
 
         # For all unattached DeviceNode resources, find or create VolumeNodes
         volumes_for_affinity_checks = set()
@@ -634,14 +623,8 @@ class ResourceManager(object):
         occupied_volumes = set([t['volume_id'] for t in ManagedTarget.objects.filter(volume__in = volumes_for_affinity_checks).values('volume_id')])
         volumes_for_affinity_checks = [v for v in volumes_for_affinity_checks if v.id not in occupied_volumes and volume_to_volume_nodes[v.id]]
 
-        volumes_for_balancing = []
-        for volume in volumes_for_affinity_checks:
-            got_weights = affinity_weights(volume, volume_to_volume_nodes[volume.id])
-            if not got_weights:
-                volumes_for_balancing.append(volume)
-
-        self._balance_volume_nodes(volumes_for_balancing, volume_to_volume_nodes)
-
+        self.balance_unweighted_volume_nodes(volumes_for_affinity_checks,
+                                             volume_to_volume_nodes)
         # For all VolumeNodes, if its storage resource was in this scope, and it
         # was not included in the set of usable DeviceNode resources, remove
         # the VolumeNode
@@ -652,6 +635,61 @@ class ResourceManager(object):
                 if not removed:
                     volume_node.storage_resource = None
                     volume_node.save()
+
+    def _set_affinity_weights(self, volume, volume_nodes):
+        from chroma_core.lib.storage_plugin.api.resources import PathWeight
+
+        weights = {}
+        for volume_node in volume_nodes:
+            if not volume_node.storage_resource_id:
+                log.info("affinity_weights: no storage_resource for VolumeNode %s" % volume_node.id)
+                return False
+
+            weight_resource_ids = self._record_find_ancestors(volume_node.storage_resource_id, PathWeight)
+            if len(weight_resource_ids) == 0:
+                log.info("affinity_weights: no PathWeights for VolumeNode %s" % volume_node.id)
+                return False
+
+            attr_model_class = StorageResourceRecord.objects.get(id = weight_resource_ids[0]).resource_class.get_class().attr_model_class('weight')
+
+            import json
+            ancestor_weights = [json.loads(w['value']) for w in attr_model_class.objects.filter(
+                resource__in = weight_resource_ids, key = 'weight').values('value')]
+            weight = reduce(lambda x, y: x + y, ancestor_weights)
+            weights[volume_node] = weight
+
+        log.info("affinity_weights: %s" % weights)
+
+        sorted_volume_nodes = [volume_node for volume_node, weight in sorted(weights.items(), lambda x, y: cmp(x[1], y[1]))]
+        sorted_volume_nodes.reverse()
+        primary = sorted_volume_nodes[0]
+        primary.primary = True
+        primary.use = True
+        primary.save()
+        if len(sorted_volume_nodes) > 1:
+            secondary = sorted_volume_nodes[1]
+            secondary.use = True
+            secondary.primary = False
+            secondary.save()
+        for volume_node in sorted_volume_nodes[2:]:
+            volume_node.use = False
+            volume_node.primary = False
+            volume_node.save()
+
+        return True
+
+    def balance_unweighted_volume_nodes(self, candidate_volumes, volume_to_volume_nodes=None):
+        if volume_to_volume_nodes is None:
+            volume_to_volume_nodes = defaultdict(list)
+            for vn in VolumeNode.objects.filter(volume__in = candidate_volumes):
+                volume_to_volume_nodes[vn.volume_id].append(vn)
+
+        volumes_for_balancing = []
+        for volume in candidate_volumes:
+            if not self._set_affinity_weights(volume, volume_to_volume_nodes[volume.id]):
+                volumes_for_balancing.append(volume)
+
+        self._balance_volume_nodes(volumes_for_balancing, volume_to_volume_nodes)
 
     def _try_removing_volume(self, volume):
         targets = ManagedTarget.objects.filter(volume = volume)

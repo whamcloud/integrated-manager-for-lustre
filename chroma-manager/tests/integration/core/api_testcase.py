@@ -21,6 +21,11 @@ class ApiTestCase(UtilityTestCase):
     """
     Adds convenience for interacting with the chroma api.
     """
+    # These are sufficient for tests existing at time of writing.
+    # Tests may ask for different values by defining these at class scope.
+    SIMULATOR_NID_COUNT = 1
+    SIMULATOR_SERVER_PSU_COUNT = 1
+    SIMULATOR_CLUSTER_SIZE = 2
 
     _chroma_manager = None
 
@@ -43,17 +48,13 @@ class ApiTestCase(UtilityTestCase):
             daemon_log.addHandler(handler)
             daemon_log.setLevel(logging.DEBUG)
 
-            # These are sufficient for tests existing at time of writing, could
-            # trivially let tests ask for more by looking for these vars at class scope
-            SIMULATOR_SERVER_COUNT = 4
-            SIMULATOR_VOLUME_COUNT = 8
-            SIMULATOR_NID_COUNT = 1
-            SIMULATOR_SERVER_PSU_COUNT = 1
-            SIMULATOR_CLUSTER_SIZE = 4
             self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
-            self.simulator.setup(SIMULATOR_SERVER_COUNT, SIMULATOR_VOLUME_COUNT,
-                                 SIMULATOR_NID_COUNT, SIMULATOR_CLUSTER_SIZE,
-                                 SIMULATOR_SERVER_PSU_COUNT)
+            volume_count = max([len(s['device_paths']) for s in config['lustre_servers']])
+            self.simulator.setup(len(config['lustre_servers']),
+                                 volume_count,
+                                 self.SIMULATOR_NID_COUNT,
+                                 self.SIMULATOR_CLUSTER_SIZE,
+                                 self.SIMULATOR_SERVER_PSU_COUNT)
             self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
         else:
             self.remote_operations = RealRemoteOperations(self)

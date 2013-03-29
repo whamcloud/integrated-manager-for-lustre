@@ -31,6 +31,7 @@ from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
+from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.log import log_register
 import chroma_core.lib.conf_param
 import settings
@@ -511,7 +512,7 @@ class JobScheduler(object):
         # of this job and any new jobs added by completion hooks
         self._job_collection.update_commands(job)
 
-    def _completion_hooks(self, changed_item, command = None):
+    def _completion_hooks(self, changed_item, command = None, updated_attrs = []):
         """
         :param command: If set, any created jobs are added
         to this command object.
@@ -563,6 +564,9 @@ class JobScheduler(object):
                     if not command:
                         command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
                     CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
+
+            if 'ha_cluster_peers' in updated_attrs:
+                AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
 
         if isinstance(changed_item, ManagedTarget):
             # See if any MGS conf params need applying
@@ -675,7 +679,7 @@ class JobScheduler(object):
         instance.save()
         # FIXME: should check the new state against reverse dependencies
         # and apply any fix_states
-        self._completion_hooks(instance)
+        self._completion_hooks(instance, updated_attrs = update_attrs.keys())
 
     @transaction.commit_on_success
     def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):

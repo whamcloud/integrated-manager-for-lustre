@@ -4,7 +4,9 @@
 # ========================================================
 
 
-from chroma_core.models import Volume, VolumeNode, ManagedFilesystem
+from collections import defaultdict
+
+from chroma_core.models import Volume, VolumeNode, ManagedFilesystem, HaCluster
 
 from tastypie.resources import ModelResource
 from tastypie.exceptions import ImmediateHttpResponse
@@ -197,6 +199,12 @@ class VolumeResource(ModelResource):
 
         lun = get_object_or_404(Volume, id = volume['id'])
 
+        ha_clusters = [[p for p in c.peers] for c in HaCluster.all_clusters()]
+
+        def _cluster_index(clusters, node):
+            return [i for i in range(len(clusters)) if node in clusters[i]][0]
+
+        lun_nodes_to_update = defaultdict(list)
         # Apply use,primary values from the request
         for lun_node_params in volume['nodes']:
             primary, use = (lun_node_params['primary'], lun_node_params['use'])
@@ -204,7 +212,15 @@ class VolumeResource(ModelResource):
             lun_node = get_object_or_404(VolumeNode, id = lun_node_params['id'])
             lun_node.primary = primary
             lun_node.use = use
-            lun_node.save()
+            lun_node.cluster_index = _cluster_index(ha_clusters, lun_node.host)
+            lun_nodes_to_update[lun].append(lun_node)
+
+        # Sanity-check the primary/failover relationships and save if OK
+        for lun, lun_nodes in lun_nodes_to_update.items():
+            if len(set([node.cluster_index for node in lun_nodes])) > 1:
+                raise ImmediateHttpResponse(response = HttpBadRequest("Attempt to set primary/secondary VolumeNodes across HA clusters for Volume %s" % lun.id))
+            for lun_node in lun_nodes:
+                lun_node.save()
 
         # Clear use, primary on any nodes not in this request
         from django.db.models import Q

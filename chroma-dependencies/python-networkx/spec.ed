@@ -1,0 +1,5 @@
+/^Release/s/^\(Release:.*\)/\1wc1/
+1;$s/^python/%{__python}/g
+/%defattr/a
+%doc /usr/share/doc/%{tgz_name}-%{unmangled_version}/*
+.

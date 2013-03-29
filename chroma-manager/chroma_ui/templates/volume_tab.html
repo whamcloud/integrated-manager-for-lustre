@@ -98,9 +98,6 @@
               volume.primary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
               volume.secondary_select += "<option value='" + node.id + "' selected='selected'>" + node.host_label + "</option>";
               secondary_node_id = node.id;
-            } else {
-              volume.primary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
-              volume.secondary_select += "<option value='" + node.id + "'>" + node.host_label + "</option>";
             }
           });
           volume.secondary_select += "</select>";

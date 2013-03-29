@@ -8,4 +8,4 @@ from chroma_core.services.rpc import ServiceRpcInterface
 
 
 class AgentDaemonRpcInterface(ServiceRpcInterface):
-    methods = ['setup_host', 'remove_host_resources']
+    methods = ['setup_host', 'remove_host_resources', 'rebalance_host_volumes']

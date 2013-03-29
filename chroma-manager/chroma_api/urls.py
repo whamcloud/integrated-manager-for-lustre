@@ -50,6 +50,7 @@ import chroma_api.storage_resource
 import chroma_api.storage_resource_class
 
 import chroma_api.host
+import chroma_api.ha_cluster
 import chroma_api.registration_token
 import chroma_api.filesystem
 import chroma_api.target
@@ -75,6 +76,7 @@ api.register(chroma_api.log.LogResource())
 api.register(chroma_api.command.CommandResource())
 api.register(chroma_api.help.HelpResource())
 api.register(chroma_api.system_status.SystemStatusResource())
+api.register(chroma_api.ha_cluster.HaClusterResource())
 
 urlpatterns = patterns('',
     (r'^', include(api.urls)),

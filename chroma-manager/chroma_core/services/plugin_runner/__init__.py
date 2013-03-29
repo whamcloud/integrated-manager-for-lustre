@@ -5,6 +5,7 @@
 
 
 import threading
+from django.db import transaction
 from chroma_core.services import ChromaService, ServiceThread
 from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 
@@ -13,6 +14,7 @@ class AgentPluginHandlerCollection(object):
     def __init__(self, resource_manager):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
         from chroma_core.services.plugin_runner.agent_daemon import AgentPluginHandler
+        self.resource_manager = resource_manager
         self.handlers = {}
         for plugin_name in storage_plugin_manager.loaded_plugin_names:
             self.handlers[plugin_name] = AgentPluginHandler(resource_manager, plugin_name)
@@ -24,6 +26,12 @@ class AgentPluginHandlerCollection(object):
     def remove_host_resources(self, host_id):
         for handler in self.handlers.values():
             handler.remove_host_resources(host_id)
+
+    @transaction.commit_on_success
+    def rebalance_host_volumes(self, host_id):
+        from chroma_core.models import Volume
+        candidates = Volume.objects.filter(volumenode__host__id = host_id)
+        self.resource_manager.balance_unweighted_volume_nodes(candidates)
 
 
 class Service(ChromaService):

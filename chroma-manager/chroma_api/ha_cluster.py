@@ -1,0 +1,34 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
+
+from tastypie import fields
+from tastypie.resources import Resource
+from tastypie.authorization import DjangoAuthorization
+from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.host import HostResource
+from chroma_core.models import HaCluster
+
+
+class HaClusterResource(Resource):
+    peers = fields.ListField(attribute = 'peers')
+
+    def dehydrate_peers(self, bundle):
+        hr = HostResource()
+        return [hr.full_dehydrate(hr.build_bundle(p)) for p in bundle.obj.peers]
+
+    def get_object_list(self, request):
+        return HaCluster.all_clusters()
+
+    def obj_get_list(self, request=None, **kwargs):
+        return self.get_object_list(request)
+
+    class Meta:
+        resource_name = 'ha_cluster'
+        authorization = DjangoAuthorization()
+        authentication = AnonymousAuthentication()
+        list_allowed_methods = ['get']
+        detail_allowed_methods = []
+        include_resource_uri = False

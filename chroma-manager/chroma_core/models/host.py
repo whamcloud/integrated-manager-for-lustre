@@ -108,6 +108,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                                                          "reports that this "
                                                          "node is online")
 
+    # Recursive relationship to keep track of corosync cluster peers
+    ha_cluster_peers = models.ManyToManyField('self', null = True, blank = True, help_text = "List of peers in this host's HA cluster")
+
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
