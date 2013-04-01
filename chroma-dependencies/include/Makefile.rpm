@@ -24,7 +24,7 @@ rpms: $(RPM_NAME).spec
 	$(MAKE) -f ../include/Makefile.rpmbuild $@
 
 install pkg_install: rpms
-	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@
+	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE="$(RPM_NAME).spec" SRPM="$(SRPM)" $@
 
 cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
 	$(MAKE) -f ../include/Makefile.rpmbuild $@
