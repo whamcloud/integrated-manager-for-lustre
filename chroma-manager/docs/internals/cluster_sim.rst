@@ -70,6 +70,34 @@ via the REST API and the `RemoteOperations` class.  There are specializations of
 for physical test systems (operating via SSH) and for the simulator.
 
 
+Use in benchmarking
+______________________
+
+To run benchmarking against the simulator, first ensure the simulator_controller plugin is loaded.
+Append 'simulator_controller' to INSTALLED_STORAGE_PLUGINS in {\local_}settings,
+and append 'SITE_ROOT/chroma-manager/tests/plugins' to the python path.
+
+::
+
+  sys.path.append(os.path.join(os.path.dirname(__file__), 'tests/plugins'))
+  INSTALLED_STORAGE_PLUGINS = [..., 'simulator_controller']
+
+Configure the simulator with 0 servers, skipping the register step as there are no servers to register.
+The benchmark process will add servers itself as necesary.
+
+::
+
+  (virtualenv) chroma$ cluster-sim setup --server_count 0
+  (virtualenv) chroma$ cluster-sim run
+
+Then begin the benchmarking in a separate shell.  See the help for various limit commands,
+and note the reset command is also handy for cleaning up the database, e.g., removing hosts.
+
+::
+
+  (virtualenv) chroma$ cluster-sim-benchmark {reset,filesystem_size_limit,...}
+
+
 Implementation details
 ______________________
 
