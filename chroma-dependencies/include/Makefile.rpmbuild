@@ -32,7 +32,7 @@ $(CURDIR)/$(PLAT_VERSION)/RPMS/%.rpm: $(SPECFILE)
 	else                                                               \
 	  true;                                                            \
 	fi
-	(pushd $(PLAT_VERSION)/SRPMS/ >/dev/null && ls $(RPM_NAME)-$(RPM_VERSION)-*.src.rpm) > .last_built
+	echo *.src.rpm > .last_built
 	cp $(SPECFILE) $(SPECFILE).last_built
 
 cleanRPMS:
