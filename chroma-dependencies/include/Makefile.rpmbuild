@@ -32,7 +32,9 @@ $(CURDIR)/$(PLAT_VERSION)/RPMS/%.rpm: $(SPECFILE)
 	else                                                               \
 	  true;                                                            \
 	fi
-	echo "$(SRPM)" > .last_built
+	if [ -n "$(SRPM)" ]; then             \
+		echo "$(SRPM)" > .last_built; \
+	fi
 	cp $(SPECFILE) $(SPECFILE).last_built
 
 cleanRPMS:

@@ -2,7 +2,7 @@ TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo 
 include $(TOP)/include/Makefile.meta
 REPO = $(TOP)/repo/
 
-SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
+SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed -e '/.*\.old/d' -e '/.*\.bak/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
 all: repo
 
