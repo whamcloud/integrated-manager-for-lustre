@@ -14,3 +14,4 @@ from alert import *
 from event import *
 from log import *
 from registration_token import *
+from stats import *

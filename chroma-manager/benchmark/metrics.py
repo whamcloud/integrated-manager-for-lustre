@@ -11,9 +11,8 @@ import time
 import uuid
 
 from django.test.simple import DjangoTestSuiteRunner
-from django.db import transaction
 
-from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, Volume, VolumeNode
+from chroma_core.models import ManagedHost, ManagedOst, ManagedMdt, ManagedFilesystem, ManagedMgs, Volume, VolumeNode, Stats
 from chroma_core.services.lustre_audit.update_scan import UpdateScan
 from benchmark.generic import GenericBenchmark
 
@@ -174,26 +173,6 @@ class Benchmark(GenericBenchmark):
     def prepare_mds_list(self):
         return [MdsGenerator(fs=self.fs_entity)]
 
-    @transaction.commit_on_success
-    def do_db_mangling(self):
-        from django.db import connection
-
-        def drop_constraints(cursor, table):
-            cursor.execute("SHOW CREATE TABLE %s" % table)
-            l = cursor.fetchone()[1].split()
-            constraints = [l[i + 1] for i in range(0, len(l) - 1) if l[i] == 'CONSTRAINT' and l[i + 2] == 'FOREIGN']
-            for constraint in constraints:
-                cursor.execute("ALTER TABLE %s DROP FOREIGN KEY %s" %
-                               (table, constraint.replace('`', '')))
-
-        if options.use_r3d_myisam:
-            cursor = connection.cursor()
-            for table in "archive archiverow database datasource".split():
-                drop_constraints(cursor, "r3d_%s" % table)
-
-            for table in "archive archiverow database datasource".split():
-                cursor.execute("ALTER TABLE r3d_%s ENGINE = MYISAM" % table)
-
     def step_stats(self):
         """Generate stats for all servers in a single step"""
         update_servers = []
@@ -233,8 +212,6 @@ class Benchmark(GenericBenchmark):
         patch_for_test_db_setup()
         self.old_db_config = self.test_runner.setup_databases()
 
-        self.do_db_mangling()
-
         mgs_host = ManagedHost.objects.create(
                 address="mgs",
                 fqdn="mgs",
@@ -254,26 +231,21 @@ class Benchmark(GenericBenchmark):
         if not options.no_precreate:
             self.precreate_stats()
 
-        if options.samples:
-            # Customize the R3D archive layout
-            from chroma_core.lib.metrics import R3dMetricStore
-            import re
-            R3dMetricStore.SAMPLES = tuple([int(s) for s in re.split(r",\s*", options.samples)])
-
     def get_stats_size(self):
         stats_size = LazyStruct()
         from django.db import connection
         cursor = connection.cursor()
-        if 'mysql' in connection.settings_dict['ENGINE']:
-            cursor.execute("select data_length, index_length from information_schema.tables where table_name = 'r3d_archiverow' and table_schema = 'test_chroma'")
-            stats_size.data, stats_size.index = cursor.fetchone()
-        elif 'postgres' in connection.settings_dict['ENGINE']:
-            cursor.execute("select pg_relation_size('r3d_archiverow') as data_length, pg_total_relation_size('r3d_archiverow') - pg_relation_size('r3d_archiverow') as index_length")
-            stats_size.data, stats_size.index = cursor.fetchone()
+        if 'postgres' in connection.settings_dict['ENGINE']:
+            stats_size.row_count = stats_size.data = stats_size.index = 0
+
+            for model in Stats:
+                cursor.execute("select count(id) as rows, pg_relation_size('{0}') as data_length, pg_total_relation_size('{0}') - pg_relation_size('{0}') as index_length from {0}".format(model._meta.db_table))
+                rows, data, index = cursor.fetchone()
+                stats_size.row_count += rows
+                stats_size.data += data
+                stats_size.index += index
         else:
             raise RuntimeError("Unsupported DB: %s" % connection.settings_dict['ENGINE'])
-        from r3d.models import ArchiveRow
-        stats_size.row_count = ArchiveRow.objects.count()
         return stats_size
 
     def server_list(self):
@@ -410,7 +382,6 @@ class Benchmark(GenericBenchmark):
                 mem_info['pct_swap_used'] = 0.0
             return mem_info
 
-        # TODO: Include relevant MySQL tuning params
         profile = LazyStruct()
         cpu_info = _cpu_info()
         profile.cpu_count = cpu_info['count']

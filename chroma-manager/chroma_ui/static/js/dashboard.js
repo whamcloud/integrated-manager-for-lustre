@@ -548,7 +548,7 @@ var Dashboard = (function() {
       series_callbacks: [
         function(timestamp, data, index, chart) {
           var sum_cpu = data.cpu_user + data.cpu_system + data.cpu_iowait;
-          var pct_cpu = (100 * sum_cpu) / data.cpu_total;
+          var pct_cpu = data.cpu_total ? (100 * sum_cpu) / data.cpu_total : 0.0;
           chart.series_data[index].push( [ timestamp, pct_cpu] );
         },
         function( timestamp, data, index, chart ) {

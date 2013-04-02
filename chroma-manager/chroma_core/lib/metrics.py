@@ -4,104 +4,22 @@
 # ========================================================
 
 
+import collections
+from datetime import datetime
 from chroma_core.services import log_register
 from django.contrib.contenttypes.models import ContentType
-from chroma_core.models.storage_plugin import StorageResourceStatistic
-from r3d.models import Average, Database
-from r3d.exceptions import BadUpdateTime
+from django.utils.timezone import utc
+from chroma_core.models import Series, Stats
 from chroma_core.lib.storage_plugin.api import statistics
 import settings
 
 metrics_log = log_register('metrics')
 
 
-class MetricStore(object):
-    """
-    Base class for storage-backend-specific subclasses.
-    """
-    pass
-
-
-def _autocreate_ds(db, key, payload):
-    ct = ContentType.objects.get_by_natural_key('r3d', payload['type'].lower())
-    ds_klass = ct.model_class()
-
-    new_ds = ds_klass.objects.create(name=key,
-                                     heartbeat=db.step * 2,
-                                     database=db)
-    db.datasources.add(new_ds)
-    metrics_log.info("Added new %s to DB (%s -> %s)" % (payload['type'],
-                                                        key, db.name))
-    return new_ds
-
-
-class R3dMetricStore(MetricStore):
+class R3dMetricStore(object):
     """
     Base class for R3D-backed metric stores.
     """
-    # 10s, 1m, 5m, 1h, 1d
-    SAMPLES = 1, 6, 30, 360, 360 * 24
-
-    def _create_r3d(self,
-            measured_object,
-            sample_period,
-            **kwargs):
-        """
-        Creates a new R3D Database and associates it with the given
-        measured object via ContentType.
-        """
-        # FIXME: because of stats storage performance issues,
-        # only store very short period of data for (numerous)
-        # storage resource statistics.
-        if isinstance(measured_object, StorageResourceStatistic):
-            metrics_log.debug('minimal archive for %s' % measured_object)
-            # 60 rows of 1 sample = 10 minutes of 10s samples
-            samples = (1, 60),
-        else:
-            metrics_log.debug('full archive for %s' % measured_object)
-            samples = [(points, points * 10 ** 4) for points in self.SAMPLES]
-
-        # We want our start time to be prior to the first insert, but
-        # not so far back that we waste lots of time with filling in
-        # null data.
-        # FIXME HYD-366: this should be set at first insert.
-        import time
-        start_time = int(time.time()) - 1
-
-        ct = ContentType.objects.get_for_model(measured_object)
-        db_name = "%s-%d" % (ct, measured_object.id)
-        r3d, created = Database.objects.get_or_create(
-                                                name=db_name,
-                                                start=start_time,
-                                                object_id=measured_object.id,
-                                                content_type=ct,
-                                                step=sample_period,
-                                                **kwargs)
-        for cdp_per_row, rows in samples:
-            r3d.archives.add(Average.objects.create(xff=0.5, database=r3d, cdp_per_row=cdp_per_row, rows=rows))
-
-        if created:
-            metrics_log.info("Created R3D: %s (%s)" % (ct, measured_object))
-
-        return r3d
-
-    def clear(self):
-        r3d = self.get_r3d()
-        if r3d:
-            r3d.delete()
-
-    def get_r3d(self, create = False):
-        try:
-            ct = ContentType.objects.get_for_model(self.measured_object)
-            mo_id = self.measured_object.id
-            return Database.objects.get(object_id=mo_id,
-                content_type=ct)
-        except Database.DoesNotExist:
-            if create:
-                return self._create_r3d(self.measured_object, self.sample_period)
-            else:
-                return None
-
     def __init__(self, measured_object, sample_period = None):
         """
         Given an object to wrap with MetricStore capabilities, either
@@ -121,51 +39,51 @@ class R3dMetricStore(MetricStore):
         return int(time.time())
 
     def update_r3d(self, update):
-        try:
-            r3d = self.get_r3d(create = True)
-            r3d.update(update, _autocreate_ds)
-        except BadUpdateTime:
-            metrics_log.warn("Discarding %d update for %s" % (update.keys()[0],
-                                                              self))
+        stats = []
+        for ts, data in update.items():
+            dt = datetime.fromtimestamp(ts, utc)
+            for name, item in data.items():
+                series = Series.get(self.measured_object, name, item['type'])
+                stats.append((series.id, dt, item['value']))
+        Stats.insert(*stats)
 
-    def list(self):
-        """Returns a dict of name:type pairs for this wrapper's database."""
-        r3d = self.get_r3d()
-        if r3d:
-            return dict([[ds.name, ds.__class__.__name__]
-                     for ds in r3d.datasources.all()])
-        else:
-            return {}
+    def clear(self):
+        "Remove all associated series."
+        ct = ContentType.objects.get_for_model(self.measured_object)
+        for series in Series.objects.filter(content_type=ct, object_id=self.measured_object.id):
+            series.delete()
+            Stats.delete(series.id)
 
-    def fetch(self, cfname, **kwargs):
-        """
-        fetch(CFNAME [, fetch_metrics=['name'],
-                      start_time=int, end_time=int])
+    def series(self, *names):
+        "Generate existing series by name for this source."
+        for name in names:
+            try:
+                yield Series.get(self.measured_object, name)
+            except Series.DoesNotExist:
+                pass
 
-        Given a consolidation function (Average, Min, Max, Last),
-        an optional list of desired metrics, an optional start time,
-        and an optinal end time, returns a dict containing rows of
-        datapoints retrieved from the appropriate RRA.
-        """
-        r3d = self.get_r3d()
-        if r3d:
-            return r3d.fetch(cfname, **kwargs)
-        else:
-            return {}
+    def fetch(self, cfname, fetch_metrics, start_time, end_time, max_points=1000, **kwargs):
+        "Return ordered timestamps, dicts of field names and values."
+        assert cfname == 'Average', cfname
+        result = collections.defaultdict(dict)
+        types = set()
+        for series in self.series(*fetch_metrics):
+            types.add(series.type)
+            for point in Stats.select(series.id, start_time, end_time, rate=series.type in ('Counter', 'Derive'), maxlen=max_points):
+                result[point.timestamp][series.name] = point.mean
+        # if absolute and derived values are mixed, the earliest value will be incomplete
+        if result and types > set(['Gauge']) and len(result[min(result)]) < len(fetch_metrics):
+            del result[min(result)]
+        return sorted(result.items())
 
-    def fetch_last(self, fetch_metrics=None):
-        """
-        fetch_last([fetch_metrics=['name'])
-
-        Returns a list containing a single row of datapoints
-        taken from the last reading of each datasource.  Takes
-        an optional list of metrics to filter output.
-        """
-        r3d = self.get_r3d()
-        if r3d:
-            return r3d.fetch_last(fetch_metrics)
-        else:
-            return [0, {}]
+    def fetch_last(self, fetch_metrics=()):
+        "Return latest timestamp and dict of field names and values."
+        timestamp, result = 0, {}
+        for series in self.series(*fetch_metrics):
+            point = Stats.latest(series.id)
+            result[series.name] = point.mean
+            timestamp = max(timestamp, point.timestamp)
+        return timestamp, result
 
 
 class VendorMetricStore(R3dMetricStore):
@@ -192,8 +110,7 @@ class VendorMetricStore(R3dMetricStore):
                     bins_dict[bin_stat_name] = {'value': val[i], 'type': 'Gauge'}
                 r3d_format[ts] = bins_dict
 
-        # Skipping sanitize
-        self.get_r3d(create = True).update(r3d_format, _autocreate_ds)
+        self.update_r3d(r3d_format)
 
 
 class HostMetricStore(R3dMetricStore):

@@ -24,8 +24,6 @@ from tastypie import fields
 from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
 from chroma_core.lib.metrics import R3dMetricStore
-from chroma_api import api_log
-from r3d.exceptions import BadSearchTime
 
 from collections import defaultdict
 
@@ -330,11 +328,7 @@ class MetricResource:
 
         if 'pk' in kwargs:
             return self.get_metric_detail(request, metrics, begin, end, **kwargs)
-        try:
-            return self.get_metric_list(request, metrics, begin, end, **kwargs)
-        except BadSearchTime:
-            api_log.warn("BadSearchTime from client.  begin: %s, end: %s, update: %s" % (begin, end, update))
-        return self.create_response(request, ())
+        return self.get_metric_list(request, metrics, begin, end, **kwargs)
 
     def _format_timestamp(self, ts):
         return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
@@ -453,7 +447,7 @@ class MetricResource:
 
         return reduced_result
 
-    def get_metric_list(self, request, metrics, begin, end, max_points=500, **kwargs):
+    def get_metric_list(self, request, metrics, begin, end, **kwargs):
         errors = {}
 
         reduce_fn = request.GET.get('reduce_fn', None)
@@ -470,30 +464,10 @@ class MetricResource:
             raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
 
         result = {}
-        try:
-            min_step = (end - begin) / max_points / settings.AUDIT_PERIOD
-        except TypeError:
-            min_step = datetime.timedelta()
         for obj in objs:
-            store = R3dMetricStore(obj)
-            for points in store.SAMPLES:
-                step = points * settings.AUDIT_PERIOD
-                if min_step > datetime.timedelta(seconds=step):
-                    continue  # skip if expected number of points is much larger than max_points
-                series = result[obj.id] = []
-                # Assume these come out in chronological order
-                for timestamp, data in self._fetch(store, metrics, begin, end, step=step):
-                    # FIXME
-                    # This branch is necessary because stats which are really zero are sometimes
-                    # populated as None (the ones that Lustre doesn't report until they're nonzero)
-                    # -- None is overloaded to either mean "no data at this timestamp" or "lustre
-                    # didn't report the stat because it's zero"
-                    nones = [key for key, value in data.items() if value is None]
-                    data.update(dict.fromkeys(nones, 0.0))
-                    if len(nones) < len(data):
-                        series.append({'ts': timestamp, 'data': data})
-                if len(series) <= max_points:
-                    break
+            items = self._fetch(R3dMetricStore(obj), metrics, begin, end, **kwargs)
+            # Assume these come out in chronological order
+            result[obj.id] = [{'ts': ts, 'data': data} for ts, data in items]
 
         if reduce_fn and not group_by:
             reduced_result = self._reduce(metrics, result, reduce_fn)
