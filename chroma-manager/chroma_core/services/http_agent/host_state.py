@@ -47,21 +47,22 @@ class HostState(object):
 
         self.last_contact = datetime.datetime.utcnow()
         if boot_time is not None and boot_time != self._boot_time:
-            self._boot_time = boot_time
-            JobSchedulerClient.notify(self._host, self._boot_time, {'boot_time': boot_time})
             if self._boot_time is not None:
                 HostRebootEvent.objects.create(
                     host = self._host,
                     boot_time = boot_time,
                     severity = logging.WARNING)
                 log.warning("Server %s rebooted at %s" % (self.fqdn, boot_time))
+            self._boot_time = boot_time
+            JobSchedulerClient.notify(self._host, self._boot_time, {'boot_time': boot_time})
 
         require_reset = False
         if client_start_time is not None and client_start_time != self._client_start_time:
-            self._client_start_time = client_start_time
             if self._client_start_time is not None:
                 log.warning("Agent restart on server %s at %s" % (self.fqdn, client_start_time))
             require_reset = True
+
+            self._client_start_time = client_start_time
 
         if not self._healthy:
             self.update_health(True)
