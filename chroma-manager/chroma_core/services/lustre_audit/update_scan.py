@@ -13,7 +13,7 @@ from chroma_core.lib.util import normalize_nid
 from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
 from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.models import ManagedTargetMount
+from chroma_core.models import ManagedTargetMount, Stats
 
 
 log = log_register(__name__)
@@ -169,7 +169,7 @@ class UpdateScan(object):
     def store_lustre_target_metrics(self, target_name, metrics):
         # TODO: Re-enable MGS metrics storage if it turns out it's useful.
         if target_name == "MGS":
-            return 0
+            return []
 
         try:
             target = ManagedTarget.objects.get(name=target_name,
@@ -177,16 +177,13 @@ class UpdateScan(object):
         except ManagedTarget.DoesNotExist:
             # Unknown target -- ignore metrics
             log.warning("Discarding metrics for unknown target: %s" % target_name)
-            return 0
+            return []
 
         # Synthesize the 'client_count' metric (assumes one MDT per filesystem)
         if isinstance(target, ManagedMdt):
             metrics['client_count'] = metrics['num_exports'] - 1
 
-        return target.metrics.update(metrics, self.update_time)
-
-    def store_node_metrics(self, metrics):
-        return self.host.downcast().metrics.update(metrics, self.update_time)
+        return target.metrics.serialize(metrics, self.update_time)
 
     @transaction.commit_on_success
     def store_metrics(self):
@@ -194,7 +191,7 @@ class UpdateScan(object):
         Pass the received metrics into the metrics library for storage.
         """
         raw_metrics = self.host_data['metrics']['raw']
-        count = 0
+        samples = []
 
         if not hasattr(self, 'update_time'):
             self.update_time = None
@@ -206,14 +203,15 @@ class UpdateScan(object):
             except KeyError:
                 pass
 
-            count += self.store_node_metrics(node_metrics)
+            samples += self.host.metrics.serialize(node_metrics, self.update_time)
         except KeyError:
             pass
 
         try:
             for target, target_metrics in raw_metrics['lustre']['target'].items():
-                count += self.store_lustre_target_metrics(target, target_metrics)
+                samples += self.store_lustre_target_metrics(target, target_metrics)
         except KeyError:
             pass
 
-        return count
+        Stats.insert(samples)
+        return len(samples)

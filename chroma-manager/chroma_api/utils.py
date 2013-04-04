@@ -15,7 +15,6 @@ from django.http import Http404
 from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-import settings
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
 
@@ -23,7 +22,7 @@ from tastypie.resources import ModelDeclarativeMetaclass, Resource, ModelResourc
 from tastypie import fields
 from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
-from chroma_core.lib.metrics import R3dMetricStore
+from chroma_core.lib.metrics import MetricStore
 
 from collections import defaultdict
 
@@ -370,7 +369,7 @@ class MetricResource:
                     continue
                 result.append({'ts': timestamp, 'data': data})
         else:
-            stats = self._fetch(R3dMetricStore(obj, settings.AUDIT_PERIOD), metrics, begin, end)
+            stats = self._fetch(MetricStore(obj), metrics, begin, end)
 
             for datapoint in stats:
                 # Assume the database was storing UTC
@@ -465,7 +464,7 @@ class MetricResource:
 
         result = {}
         for obj in objs:
-            items = self._fetch(R3dMetricStore(obj), metrics, begin, end, **kwargs)
+            items = self._fetch(MetricStore(obj), metrics, begin, end, **kwargs)
             # Assume these come out in chronological order
             result[obj.id] = [{'ts': ts, 'data': data} for ts, data in items]
 

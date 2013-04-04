@@ -704,7 +704,7 @@ class ResourceManager(object):
             self._edges.remove_parent(record_pk, parent_pk)
             self._resource_modify_parent(record_pk, parent_pk, True)
 
-    def session_update_stats(self, scannable_id, local_resource_id, update_data):
+    def session_get_stats(self, scannable_id, local_resource_id, update_data):
         """Get global ID for a resource, look up the StoreageResourceStatistic for
            each stat in the update, and invoke its .metrics.update with the data"""
        # FIXME: definitely could be doing finer grained locking here as although
@@ -713,11 +713,12 @@ class ResourceManager(object):
         with self._instance_lock:
                 session = self._sessions[scannable_id]
                 record_pk = session.local_id_to_global_id[local_resource_id]
-                self._persist_update_stats(record_pk, update_data)
+                return self._get_stats(record_pk, update_data)
 
     @transaction.autocommit
-    def _persist_update_stats(self, record_pk, update_data):
+    def _get_stats(self, record_pk, update_data):
         record = StorageResourceRecord.objects.get(pk = record_pk)
+        samples = []
         for stat_name, stat_data in update_data.items():
             stat_properties = record.get_statistic_properties(stat_name)
             try:
@@ -731,7 +732,8 @@ class ResourceManager(object):
             except StorageResourceStatistic.DoesNotExist:
                 stat_record = StorageResourceStatistic.objects.create(
                         storage_resource = record, name = stat_name, sample_period = stat_properties.sample_period)
-            stat_record.update(stat_name, stat_properties, stat_data)
+            samples += stat_record.update(stat_name, stat_properties, stat_data)
+        return samples
 
     @transaction.autocommit
     def _resource_modify_parent(self, record_pk, parent_pk, remove):

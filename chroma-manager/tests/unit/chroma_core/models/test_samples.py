@@ -69,7 +69,9 @@ class TestModels(TestCase):
             model.cache.clear()
             self.assertEqual(point, model.latest(id))
         self.assertEqual(point, points[2])
-        self.assertLessEqual(model.floor(point), point.dt)
+        floor = model.floor(point)
+        self.assertLessEqual(floor, point.dt)
+        self.assertFalse(floor.microsecond)
         with assertQueries('SELECT', 'DELETE', 'SELECT'):
             model.expire([id])
             self.assertListEqual(list(model.select(id)), points[:3])
@@ -81,7 +83,7 @@ class TestModels(TestCase):
         self.assertTrue(Stats[-1].start(id))
 
     def test_stats(self):
-        Stats.insert(*((id, point.dt, point.sum) for point in points))
+        Stats.insert((id, point.dt, point.sum) for point in points)
         with assertQueries():
             point = Stats.latest(id)
         self.assertEqual(point, points[-1])

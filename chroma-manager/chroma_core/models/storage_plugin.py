@@ -231,12 +231,12 @@ class StorageResourceStatistic(models.Model):
     sample_period = models.IntegerField()
     name = models.CharField(max_length = 64)
 
-    def __get_metrics(self):
+    @property
+    def metrics(self):
         from chroma_core.lib.metrics import VendorMetricStore
         if not hasattr(self, '_metrics'):
-            self._metrics = VendorMetricStore(self, self.sample_period)
+            self._metrics = VendorMetricStore(self)
         return self._metrics
-    metrics = property(__get_metrics)
 
     def update(self, stat_name, stat_properties, stat_data):
         from chroma_core.lib.storage_plugin.api import statistics
@@ -253,12 +253,10 @@ class StorageResourceStatistic(models.Model):
                         SimpleHistoStoreBin.objects.create(bin_idx = i, value = bin_vals[i], histo_store_time = time)
                     # Only keep latest time
                     SimpleHistoStoreTime.objects.filter(~Q(id = time.id), storage_resource_statistic = self).delete()
-        else:
-            # FIXME: I should be allowed to store integers
-            for i in stat_data:
-                i['value'] = float(i['value'])
-
-            self.metrics.update(stat_name, stat_properties, stat_data)
+            return []
+        for i in stat_data:
+            i['value'] = float(i['value'])
+        return self.metrics.serialize(stat_name, stat_properties, stat_data)
 
 
 class StorageResourceAttribute(models.Model):

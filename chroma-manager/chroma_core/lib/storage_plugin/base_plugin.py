@@ -10,6 +10,7 @@ import settings
 import threading
 
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
+from chroma_core.models import Stats
 
 
 class ResourceNotFound(Exception):
@@ -271,13 +272,13 @@ class BaseStoragePlugin(object):
             self._delta_alerts.clear()
 
     def commit_resource_statistics(self):
-        sent_stats = 0
+        samples = []
         for resource in self._index.all():
             r_stats = resource.flush_stats()
-            if len(r_stats) > 0:
-                if settings.STORAGE_PLUGIN_ENABLE_STATS:
-                    self._resource_manager.session_update_stats(self._scannable_id, resource._handle, r_stats)
-                sent_stats += len(r_stats)
+            if r_stats and settings.STORAGE_PLUGIN_ENABLE_STATS:
+                samples += self._resource_manager.session_get_stats(self._scannable_id, resource._handle, r_stats)
+        Stats.insert(samples)
+        return len(samples)
 
     def update_or_create(self, klass, parents = [], **attrs):
         """Report a storage resource.  If it already exists then

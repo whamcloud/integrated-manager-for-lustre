@@ -8,7 +8,6 @@
 from optparse import make_option
 
 from django.core.management.base import BaseCommand
-from django.conf import settings
 
 from benchmark.metrics import Benchmark
 
@@ -29,7 +28,7 @@ class Command(BaseCommand):
                 help="number of mdt stats"),
             make_option("--duration", type=int, default=300,
                 help="how many seconds' worth of stats to generate (default: 300)"),
-            make_option("--frequency", type=int, default=settings.AUDIT_PERIOD,
+            make_option("--frequency", type=int, default=10,
                 help="audit frequency for generated metrics (default: 10)"),
             make_option("--no_precreate", action='store_true', default=False,
                 help="don't precreate stats (could skew DB perf numbers)"),

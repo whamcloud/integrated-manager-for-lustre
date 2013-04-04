@@ -27,10 +27,10 @@ class TestSeries(TestCase):
 
     def setUp(self):
         self.obj = User.objects.create(username='test', email='test@test.test')
-        self.r3d = metrics.R3dMetricStore(self.obj)
+        self.store = metrics.MetricStore(self.obj)
 
     def tearDown(self):
-        self.r3d.clear()
+        self.store.clear()
         self.obj.delete()
 
     def test_integrity(self):
@@ -43,14 +43,14 @@ class TestSeries(TestCase):
     def test_fast(self):
         "Small data set with short intervals."
         for data in zip(*[gen_series(5, 100)] * 10):
-            self.r3d.update_r3d(dict(data))
+            Stats.insert(self.store.serialize(dict(data)))
         names = [field[0] for field in fields]
-        ts, data = self.r3d.fetch_last(names)
+        ts, data = self.store.fetch_last(names)
         self.assertEqual(ts, 495)
         for name, type, start, stop in fields:
             self.assertGreaterEqual(data[name], start)
             self.assertLessEqual(data[name], stop)
-        items = self.r3d.fetch('Average', fetch_metrics=names[:1], start_time=epoch, end_time=epoch + timedelta(seconds=10))
+        items = self.store.fetch('Average', fetch_metrics=names[:1], start_time=epoch, end_time=epoch + timedelta(seconds=10))
         self.assertEqual(len(items), 2)
         ts, data = items[0]
         self.assertEqual(ts, 0)
@@ -60,7 +60,7 @@ class TestSeries(TestCase):
                 self.assertLessEqual(data[name], stop)
             else:
                 self.assertNotIn(name, data)
-        items = self.r3d.fetch('Average', fetch_metrics=names, start_time=epoch, end_time=epoch + timedelta(seconds=10))
+        items = self.store.fetch('Average', fetch_metrics=names, start_time=epoch, end_time=epoch + timedelta(seconds=10))
         self.assertEqual(len(items), 1)
         ts, data = items[0]
         self.assertEqual(ts, 10)
@@ -77,15 +77,15 @@ class TestSeries(TestCase):
         "Large data set with long intervals."
         rows = 1100
         for data in zip(*[gen_series(100, rows)] * 10):
-            self.r3d.update_r3d(dict(data))
+            Stats.insert(self.store.serialize(dict(data)))
         names = [field[0] for field in fields]
-        ts, data = self.r3d.fetch_last(names)
+        ts, data = self.store.fetch_last(names)
         latest = datetime.fromtimestamp(ts, utc)
         for seconds, model in zip((1e4, 5e4, 1e5, 1e6, 1e7), Stats):
-            items = self.r3d.fetch('Average', fetch_metrics=names, start_time=latest - timedelta(seconds=seconds), end_time=latest)
+            items = self.store.fetch('Average', fetch_metrics=names, start_time=latest - timedelta(seconds=seconds), end_time=latest)
             self.assertLessEqual(len(items), seconds / model.step + 1)
             self.assertFalse(any(ts % model.step for ts, data in items))
-        series, = self.r3d.series(names[0])
+        series, = self.store.series(names[0])
         counts = [model.objects.filter(id=series.id).count() for model in Stats]
         self.assertLess(counts.pop(0), rows)
         self.assertEqual(counts, sorted(counts, reverse=True))

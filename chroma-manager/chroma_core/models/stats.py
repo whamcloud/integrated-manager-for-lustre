@@ -85,7 +85,7 @@ class Series(models.Model):
 class Sample(models.Model):
     """Abstract model for Sample tables.
     Only used for query generation.
-    Subclasses requires 'step', 'expiration', and 'cache' attributes.
+    Subclasses require 'step', 'expiration', and 'cache' attributes.
     """
     id = models.IntegerField(primary_key=True)  # for django only, not really the primary key
     dt = models.DateTimeField()
@@ -99,14 +99,7 @@ class Sample(models.Model):
     @classmethod
     def latest(cls, id):
         "Return most recent data point for series."
-        try:
-            return cls.cache[id][-1]
-        except IndexError:
-            query = cls.objects.filter(id=id).values_list(*Point._fields)
-        try:
-            return Point(*query.latest('dt'))
-        except cls.DoesNotExist:
-            return Point.zero
+        return (cls.cache[id] or list(cls.select(id, order_by='-dt', limit=1)) or [Point.zero])[-1]
 
     @classmethod
     def start(cls, id):
@@ -128,9 +121,9 @@ class Sample(models.Model):
             yield Point(dt, *sum(points, Point.zero)[1:])
 
     @classmethod
-    def select(cls, id, order_by='dt', **filters):
+    def select(cls, id, order_by='dt', limit=None, **filters):
         "Generate points for a series."
-        query = cls.objects.filter(id=id, **filters).order_by(order_by)
+        query = cls.objects.filter(id=id, **filters).order_by(order_by)[:limit]
         return itertools.starmap(Point, query.values_list(*Point._fields))
 
     @classmethod
@@ -164,11 +157,11 @@ class Stats(list):
             namespace = {'__module__': 'chroma_core.models', 'step': sample, 'expiration': timedelta(seconds=rows * sample * sample), 'cache': cache}
             self.append(type('Sample_{0:d}'.format(sample), (Sample,), namespace))
 
-    def insert(self, *items):
-        "Bulk insert new data items (id, dt, value)."
+    def insert(self, samples):
+        "Bulk insert new samples (id, dt, value)."
         # keep stats as Points grouped by id
         stats = collections.defaultdict(list)
-        for id, dt, value in items:
+        for id, dt, value in samples:
             stats[id].append(Point(dt, value, 1))
         # insert stats into first Sample and check the rest
         self[0].insert(stats)
@@ -187,7 +180,7 @@ class Stats(list):
                     points = list(model.reduce(points))
                     if points:
                         stats[id] = points
-                    elif not model.cache[id]:  # ensure query isn't repeated on cache miss
+                    else:  # ensure query isn't repeated on cache miss
                         model.cache[id].append(Point(stop - step, 0.0, 0))
             previous.expire(stats)
             model.insert(stats)
