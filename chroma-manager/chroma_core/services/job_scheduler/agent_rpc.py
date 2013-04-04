@@ -4,7 +4,10 @@
 # ========================================================
 
 
+import paramiko
+from paramiko import SSHException
 from collections import defaultdict
+from io import StringIO
 import json
 import threading
 import time
@@ -362,7 +365,32 @@ class AgentSsh(object):
 
         return user, host, port
 
-    def ssh(self, command):
+    def construct_ssh_auth_args(self, root_pw=None, pkey=None, pkey_pw=None):
+
+        args = {}
+        if root_pw:
+            args.update({"password": root_pw})
+
+        if pkey:
+            try:
+                #  private key to match a public key on the server
+                #  optionally encrypted
+                pkey_filelike = StringIO(str(pkey))
+                if pkey_pw:
+                    pkey_paramiko = paramiko.RSAKey.from_private_key(
+                        pkey_filelike,
+                        pkey_pw)
+                else:
+                    pkey_paramiko = paramiko.RSAKey.from_private_key(pkey_filelike)
+                args.update({"pkey": pkey_paramiko})
+            except SSHException:
+                #  Invalid key, or wrong passphase to enc key
+                #  pass on form of auth
+                pass
+
+        return args
+
+    def ssh(self, command, auth_args=None):
         import paramiko
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -377,8 +405,13 @@ class AgentSsh(object):
 
         args = {"username": user,
                 "timeout": SOCKET_TIMEOUT}
+
+        if auth_args is not None:
+            args.update(auth_args)
+
         if port:
             args["port"] = int(port)
+
         # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
         # successful TCP connection (Transport.banner_timeout).
         ssh.connect(hostname, **args)
@@ -416,11 +449,13 @@ class AgentSsh(object):
             self.log.error(stderr_buf)
         return result_code, stdout_buf, stderr_buf
 
-    def invoke(self, action, args = {}):
+    def invoke(self, action, args = {}, auth_args=None):
         args_str = " ".join(["--%s=\"%s\"" % (k, v) for (k, v) in args.items()])
         cmdline = "chroma-agent %s %s" % (action, args_str)
         self.log.debug("%s.invoke: %s" % (self.__class__.__name__, cmdline))
-        code, out, err = self.ssh(cmdline)
+        log.debug("%s.invoke: %s" % (self.__class__.__name__, cmdline))
+
+        code, out, err = self.ssh(cmdline, auth_args)
 
         if code == 0:
             try:
