@@ -45,12 +45,13 @@ def create_host(self, *args, **kwargs):
 JobScheduler.create_host = create_host
 
 
-def test_host_contact(self, address):
+def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
     ok = address in MockAgentRpc.mock_servers
     return {
         'address': ok,
         'resolve': ok,
         'ping': ok,
+        'auth': ok,
         'agent': ok,
         'reverse_resolve': ok,
         'reverse_ping': ok

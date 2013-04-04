@@ -300,7 +300,10 @@ class MockAgentSsh(object):
     def __init__(self, address, log = None, console_callback = None, timeout = None):
         self.address = address
 
-    def invoke(self, cmd, args = {}):
+    def construct_ssh_auth_args(self, root_pw, pkey, pkey_pw):
+        return {}
+
+    def invoke(self, cmd, args = {}, auth_args=None):
         return MockAgentRpc._call(self.address, cmd, args)
 
     def ssh_params(self):

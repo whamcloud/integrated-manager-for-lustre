@@ -58,6 +58,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 self.assertEqual(response.successful, True, response.text)
                 self.assertTrue(response.json['agent'])
                 self.assertTrue(response.json['ping'])
+                self.assertTrue(response.json['auth'])
                 self.assertTrue(response.json['resolve'])
                 self.assertTrue(response.json['reverse_ping'])
                 self.assertTrue(response.json['reverse_resolve'])
