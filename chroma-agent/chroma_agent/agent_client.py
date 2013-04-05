@@ -20,6 +20,9 @@ from chroma_agent.log import daemon_log, console_log
 
 MAX_MESSAGES_PER_POST = 10
 
+MIN_SESSION_BACKOFF = datetime.timedelta(seconds = 10)
+MAX_SESSION_BACKOFF = datetime.timedelta(seconds = 60)
+
 # FIXME: this file needs a concurrency review pass
 
 
@@ -63,8 +66,8 @@ class AgentClient(object):
             daemon_log.error("Error connecting to %s: %s" % (self.url, e))
             raise HttpError()
 
-        if response.status_code / 100 != 2:
-            daemon_log.error("Bad status %s from %s" % (response.status_code, self.url))
+        if not response.ok:
+            daemon_log.error("Bad status %s from %s to %s" % (response.status_code, method, self.url))
             if response.status_code == 413:
                 daemon_log.error("Oversized request: %s" % json.dumps(kwargs, indent=2))
             raise HttpError()
@@ -208,8 +211,17 @@ class SessionTable(object):
         self._sessions = {}
         self._client = client
 
+        # Map of plugin name to when we last requested a session
+        self._requested_at = {}
+        # Map of plugin name to how long to wait between session requests
+        self._backoffs = defaultdict(lambda: MIN_SESSION_BACKOFF)
+
     def create(self, plugin_name, id):
         daemon_log.info("SessionTable.create %s/%s" % (plugin_name, id))
+        if plugin_name in self._requested_at:
+            del self._requested_at[plugin_name]
+        if plugin_name in self._backoffs:
+            del self._backoffs[plugin_name]
         self._sessions[plugin_name] = Session(self._client, id, plugin_name)
 
     def get(self, plugin_name, id = None):
@@ -248,9 +260,6 @@ class ExceptionCatchingThread(threading.Thread):
 class HttpWriter(ExceptionCatchingThread):
     """Send messages to the manager, and handle control messages received in response"""
 
-    # Interval with which plugins are polled for update messages
-    POLL_INTERVAL = datetime.timedelta(seconds = 10)
-
     def __init__(self, client):
         super(HttpWriter, self).__init__()
         self._client = client
@@ -263,24 +272,26 @@ class HttpWriter(ExceptionCatchingThread):
         self._messages.put(message)
 
     def _run(self):
+        # Ensure that there is a time at least this long between
+        # calls to .poll() (just to avoid spinning)
+        POLL_PERIOD = 1.0
+
         while not self._stopping.is_set():
-            # FIXME: this isn't terribly efficient (waking up every second), because on the one hand
-            # we usually want a delay of at least 10 seconds between polls (so
-            # we should sleep), but on the other hand, when a session is established
-            # we want to get its first message nice and promptly.
+            started_at = datetime.datetime.now()
 
             self.poll()
 
             while not self._messages.empty():
                 self.send()
 
-            if self._messages.empty():
-                self._stopping.wait(timeout = 1)
+            # Ensure that we poll at most every POLL_PERIOD
+            self._stopping.wait(timeout=max(0, POLL_PERIOD - (datetime.datetime.now() - started_at).seconds))
 
     def stop(self):
         self._stopping.set()
 
     def send(self):
+        """Return True if the POST succeeds, else False"""
         messages = []
         completion_callbacks = []
 
@@ -299,16 +310,17 @@ class HttpWriter(ExceptionCatchingThread):
         try:
             self._client.post({'messages': [m.dump(self._client._fqdn) for m in messages]})
         except HttpError:
-            # Terminate any sessions which we've just lost messages for
-            # FIXME: up to a point, we should keep these messages around
-            # and try retransmitting them, to avoid a single failed POST
-            # resetting all the sessions.
+            # Terminate any sessions which we've just droppped messages for
             kill_sessions = set()
             for message in messages:
                 if message.type == 'DATA':
                     kill_sessions.add(message.plugin_name)
             for plugin_name in kill_sessions:
                 self._client.sessions.terminate(plugin_name)
+
+            return False
+        else:
+            return True
         finally:
             for callback in completion_callbacks:
                 callback()
@@ -319,15 +331,26 @@ class HttpWriter(ExceptionCatchingThread):
         For any ongoing sessions, invoke the poll callback
         """
 
+        now = datetime.datetime.now()
+
         for plugin_name, plugin_klass in self._client.device_plugins.get_plugins().items():
             try:
                 session = self._client.sessions.get(plugin_name)
             except KeyError:
                 # Request to open a session
-                # FIXME: don't do this so frequently when we're not getting
-                # successful session creations (either because our requests
-                # aren't getting through or because the session setup is failing)
+                #
+                if plugin_name in self._client.sessions._requested_at:
+                    next_request_at = self._client.sessions._requested_at[plugin_name] + self._client.sessions._backoffs[plugin_name]
+                    if now < next_request_at:
+                        # We're still in our backoff period, skip requesting a session
+                        daemon_log.debug("Delaying session request until %s" % next_request_at)
+                        continue
+                    else:
+                        if self._client.sessions._backoffs[plugin_name] < MAX_SESSION_BACKOFF:
+                            self._client.sessions._backoffs[plugin_name] *= 2
+
                 daemon_log.debug("Requesting session for plugin %s" % plugin_name)
+                self._client.sessions._requested_at[plugin_name] = now
                 self._messages.put(Message("SESSION_CREATE_REQUEST", plugin_name))
             else:
                 try:
@@ -384,8 +407,11 @@ class HttpReader(ExceptionCatchingThread):
                     else:
                         # We have successfully routed the message to the plugin instance
                         # for this session
-                        session.receive_message(m.body)
-                        # TODO: if a plugin throws an exception, kill its session (buggy plugin!)
+                        try:
+                            session.receive_message(m.body)
+                        except:
+                            daemon_log.error("%s/%s raised an exception: %s" % (m.plugin_name, m.session_id, traceback.format_exc()))
+                            self._client.sessions.terminate(m.plugin_name)
                 else:
                     raise NotImplementedError(m.type)
             except Exception:
