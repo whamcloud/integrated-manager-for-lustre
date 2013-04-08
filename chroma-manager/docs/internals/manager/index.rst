@@ -10,6 +10,8 @@ chroma-manager
   dataflow
   job_scheduler
   plugin_runner
+  chroma_ui/style_guide
+  chroma_ui/jshint
   chroma_ui/karma
 
 

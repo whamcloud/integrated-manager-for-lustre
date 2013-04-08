@@ -8,8 +8,8 @@ Karma is an easy way to run your JavaScript tests.
 It allows you to setup and run tests on multiple browsers simultaneously.
 Tests can be repeatedly run on save; or as a single run.
 
-Setup
-_____
+Setup (Steps 1 and 2 can be skipped if already performed)
+_________________________________________________________
 
 1. Install nodejs:
 
