@@ -65,6 +65,57 @@ def before_feature(context, feature):
 
     patch_test_host_contact_task(context)
 
+    from tests.unit.chroma_core.helper import synthetic_host, freshen
+    from chroma_core.lib.cache import ObjectCache
+    from chroma_core.models import ManagedHost, Command
+    from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+
+    def create_host_ssh(address):
+        host_data = AgentRpc.mock_servers[address]
+        host = synthetic_host(address, nids = host_data['nids'], fqdn=host_data['fqdn'], nodename=host_data['nodename'])
+        ObjectCache.add(ManagedHost, host)
+        command = Command.objects.create(complete = True, message = "Mock create_host_ssh")
+        return host, command
+
+    from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+    context.old_create_host_ssh = JobSchedulerClient.create_host_ssh
+    JobSchedulerClient.create_host_ssh = mock.Mock(side_effect=create_host_ssh)
+
+    context.old_create_target = JobSchedulerClient.create_target
+
+    def create_target(*args, **kwargs):
+        target, command = context.old_create_target(*args, **kwargs)
+        context.test_case.drain_progress()
+        return freshen(target), freshen(command)
+    JobSchedulerClient.create_target = mock.Mock(side_effect=create_target)
+
+    context.old_create_filesystem = JobSchedulerClient.create_filesystem
+
+    def create_filesystem(*args, **kwargs):
+        filesystem_id, command_id = context.old_create_filesystem(*args, **kwargs)
+        context.test_case.drain_progress()
+        return filesystem_id, command_id
+    JobSchedulerClient.create_filesystem = mock.Mock(side_effect=create_filesystem)
+
+    context.old_set_state = Command.set_state
+
+    def set_state(objects, message=None, **kwargs):
+        command = context.old_set_state(objects, message = message, **kwargs)
+        context.test_case.drain_progress()
+        if command:
+            return freshen(command)
+        else:
+            return command
+    Command.set_state = mock.Mock(side_effect = set_state)
+
+    context.old_run_jobs = JobSchedulerClient.command_run_jobs
+
+    def command_run_jobs(jobs, message):
+        command_id = context.old_run_jobs(jobs, message)
+        context.test_case.drain_progress()
+        return command_id
+    JobSchedulerClient.command_run_jobs = mock.Mock(side_effect = command_run_jobs)
+
     from chroma_cli.api import ApiHandle
     context.old_api_client = ApiHandle.ApiClient
     from tests.unit.chroma_api.tastypie_test import TestApiClient
@@ -72,12 +123,19 @@ def before_feature(context, feature):
 
     from chroma_api.authentication import CsrfAuthentication
     context.old_is_authenticated = CsrfAuthentication.is_authenticated
-    import mock
     CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
 
 
 def after_feature(context, feature):
     context.test_case.tearDown()
+
+    from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+    from chroma_core.models import Command
+    JobSchedulerClient.create_host_ssh = context.old_create_host_ssh
+    JobSchedulerClient.create_target = context.old_create_target
+    JobSchedulerClient.create_filesystem = context.old_create_filesystem
+    JobSchedulerClient.command_run_jobs = context.old_run_jobs
+    Command.set_state = context.old_set_state
 
     # If one of the steps fails, an exception will be thrown and the
     # transaction rolled back.  In which case, this teardown will cause

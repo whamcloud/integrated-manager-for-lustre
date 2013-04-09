@@ -40,7 +40,7 @@ agent_tests:
 
 unit_tests:
 	@echo "Running standard unit tests..."
-	@./manage.py test $(NOSE_ARGS) 2>&1 | tee unit.log; \
+	@./manage.py test $(NOSE_ARGS) tests/unit 2>&1 | tee unit.log; \
 	exit $${PIPESTATUS[0]}
 
 feature_tests:
