@@ -69,7 +69,7 @@ build_dependencies()
 
 build()
 {
-    export CACHE=/mnt/lustre/builders/cache/
+    export CACHE=/mnt/builder_cache/
     make
     build_dependencies
 }
