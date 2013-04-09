@@ -73,35 +73,23 @@
             id: "ost_ok_button",
 
             click: function(){
-              var ost_lun_ids = $('#new_ost_chooser').volumeChooser('val');
+              var osts = _.map($('#new_ost_chooser').volumeChooser('val'), function(volume_id) {
+                  return {kind: 'OST', filesystem_id: filesystem.id, volume_id: volume_id}
+              });
 
               // HYD-987 - Prevent multiple submissions
               // just close the dialog right away and let the OST run
               $(this).dialog("close");
 
-              function chain_creation(i) {
-                if (i == undefined) {
-                  i = 0;
-                }
-
-                Api.post("target/", {kind: 'OST', filesystem_id: filesystem.id, volume_id: ost_lun_ids[i]},
-                  success_callback = function(data)
-                  {
-                    if (i == ost_lun_ids.length - 1) {
-                      // Last POST succeeded, reload table
-                      $('#ost').dataTable().fnClearTable();
-                      $('#mdt').dataTable().fnClearTable();
-                      $('#mgt_configuration_view').dataTable().fnClearTable();
-                      volume_chooser_store.reload();
-                      loadFilesystem(filesystem.id);
-                    } else {
-                      // POST the next OST creation
-                      chain_creation(i + 1);
-                    }
-                  });
-              }
-
-              chain_creation();
+              Api.patch("target/", {objects: osts, deletions: []},
+                function(data) {
+                  // Reload view
+                  $('#ost').dataTable().fnClearTable();
+                  $('#mdt').dataTable().fnClearTable();
+                  $('#mgt_configuration_view').dataTable().fnClearTable();
+                  volume_chooser_store.reload();
+                  loadFilesystem(filesystem.id);
+              });
             }
           },
           "Cancel": function() {

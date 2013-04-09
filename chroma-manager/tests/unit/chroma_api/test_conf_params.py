@@ -4,7 +4,7 @@ from chroma_core.models.target import ManagedOst
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import synthetic_volume_full, synthetic_host, create_target_patch, create_filesystem_patch
+from tests.unit.chroma_core.helper import synthetic_volume_full, synthetic_host, create_targets_patch, create_filesystem_patch
 
 
 class TestTargetPostValidation(ChromaApiTestCase):
@@ -14,7 +14,7 @@ class TestTargetPostValidation(ChromaApiTestCase):
         self.host = synthetic_host('myserver')
         self.create_simple_filesystem(self.host)
 
-    @create_target_patch
+    @create_targets_patch
     def _new_ost_with_params(self, params):
         spare_volume = synthetic_volume_full(self.host)
 
@@ -25,7 +25,7 @@ class TestTargetPostValidation(ChromaApiTestCase):
             'conf_params': params
         })
 
-    @create_target_patch
+    @create_targets_patch
     def test_missing(self):
         """Test that POSTs without conf_params are OK -- this
         is for backwards compatability with respect to Chroma 1.0.0.0

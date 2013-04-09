@@ -39,7 +39,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'test_host_contact',
                'create_filesystem',
                'create_host',
-               'create_target'
+               'create_targets'
                ]
 
 
@@ -288,9 +288,8 @@ class JobSchedulerClient(object):
         return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
 
     @classmethod
-    def create_target(cls, target_data):
+    def create_targets(cls, targets_data):
         from chroma_core.models import ManagedTarget, Command
 
-        target_id, command_id = JobSchedulerRpc().create_target(target_data)
-
-        return ManagedTarget.objects.get(pk = target_id), Command.objects.get(pk = command_id)
+        target_ids, command_id = JobSchedulerRpc().create_targets(targets_data)
+        return list(ManagedTarget.objects.filter(id__in=target_ids)), Command.objects.get(pk = command_id)

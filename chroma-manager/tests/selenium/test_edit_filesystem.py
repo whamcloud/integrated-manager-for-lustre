@@ -5,6 +5,7 @@
 
 
 from selenium.common.exceptions import NoSuchElementException
+from testconfig import config
 from tests.selenium.base import SeleniumBaseTestCase
 from tests.selenium.views.conf_param_dialog import ConfParamDialog
 from tests.selenium.views.filesystem import Filesystem
@@ -171,25 +172,29 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         ost_conf_params = self.conf_param_test_data['ost_conf_params']
         self._test_conf_params_for_target('%s-OST0000' % self.filesystem_name, ost_conf_params)
 
-    def add_ost_and_verify(self, volume_name, server_address, ost_number):
+    def add_osts_and_verify(self, volumes, ost_index_base):
         """
-        Add an OST - may only be run when on the filesystem detail page already
-        Includes assertions to verify creation
+        Add many OSTs, given that the filesystem detail page is rendered
         """
 
-        # verify the ost label doesn't exist
-        link_text = "%s-OST%04d" % (self.filesystem_name, ost_number)
-        with self.assertRaises(NoSuchElementException):
+        # Check that the OSTs don't already exist
+        osts_to_create = ["%s-OST%04d" % (self.filesystem_name, ost_index) for ost_index in range(ost_index_base, ost_index_base + len(volumes))]
+        for link_text in osts_to_create:
+            with self.assertRaises(NoSuchElementException):
+                self.driver.find_element_by_link_text(link_text)
+
+        self.edit_filesystem_page.add_osts(volumes)
+
+        # Check that the new OSTs are on the page
+        for link_text in osts_to_create:
             self.driver.find_element_by_link_text(link_text)
-        self.edit_filesystem_page.add_ost(server_address, volume_name)
-        self.driver.find_element_by_link_text(link_text)
 
-    def remove_ost_and_verify(self, ost_number):
+    def remove_ost_and_verify(self, ost_index):
         """
         Remove an OST - may only be run when on the filesystem detail page already.
         Also asserts the OST label is removed after completion of removal
         """
-        link_text = "%s-OST%04d" % (self.filesystem_name, ost_number)
+        link_text = "%s-OST%04d" % (self.filesystem_name, ost_index)
         self.edit_filesystem_page.ost_set_state(link_text, "removed")
         with self.assertRaises(NoSuchElementException):
             self.driver.find_element_by_link_text(link_text)
@@ -210,32 +215,36 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         self.navigation.go('Configure', 'Filesystems')
         fs_page = Filesystem(self.driver)
         fs_page.edit(self.filesystem_name)
-        return volume_name, server_address
+        return server_address, volume_name
 
-    def test_add_ost(self):
-        # prep a new volume
-        new_ost_volume_name, new_ost_server_address = self.prepare_volume_for_use(3)
+    def test_add_osts(self):
+        """
+        Test adding multiple OSTs at once
+        """
+        self.assertGreaterEqual(len(config['volumes']), 5)
+        # Prepare two new volumes
+        volumes = [self.prepare_volume_for_use(3 + i) for i in range(0, 2)]
 
         # Check that adding an OST causes the new OST to be shown in the filesystem details
-        self.add_ost_and_verify(new_ost_volume_name, new_ost_server_address, ost_number=1)
+        self.add_osts_and_verify(volumes, ost_index_base=1)
 
     # HYD-1403 for testing HYD-1309 - removed OST not available to re-add
     def test_adding_removed_ost(self):
         # prep a new volume
         # create server uses indices 0 through 2 for the base filesystem
-        new_ost_volume_name, new_ost_server_address = self.prepare_volume_for_use(3)
+        new_ost_server_address, new_ost_volume_name = self.prepare_volume_for_use(3)
 
         # do a cycle of add, remove, add without a page refresh
-        self.add_ost_and_verify(new_ost_volume_name, new_ost_server_address, ost_number=1)
-        self.remove_ost_and_verify(ost_number=1)
-        self.add_ost_and_verify(new_ost_volume_name, new_ost_server_address, ost_number=2)
+        self.add_osts_and_verify([(new_ost_server_address, new_ost_volume_name)], ost_index_base=1)
+        self.remove_ost_and_verify(ost_index=1)
+        self.add_osts_and_verify([(new_ost_server_address, new_ost_volume_name)], ost_index_base=2)
 
     def test_stop_start_ost(self):
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "unmounted")
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "mounted")
 
     def test_remove_ost(self):
-        self.remove_ost_and_verify(ost_number=0)
+        self.remove_ost_and_verify(ost_index=0)
 
     def test_remove_filesystem(self):
         """Test that when removing a filesystem from it's detail page, we are

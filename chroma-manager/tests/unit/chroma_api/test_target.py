@@ -1,11 +1,11 @@
 from chroma_core.models import Command
 import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import fake_log_message, synthetic_host, synthetic_volume_full, create_target_patch
+from tests.unit.chroma_core.helper import fake_log_message, synthetic_host, synthetic_volume_full, create_targets_patch
 
 
 class TestTargetResource(ChromaApiTestCase):
-    @create_target_patch
+    @create_targets_patch
     def test_HYD965(self):
         """Test that targets cannot be added using volumes which are already in use"""
         host = synthetic_host('myserver')
@@ -26,6 +26,47 @@ class TestTargetResource(ChromaApiTestCase):
             'volume_id': spare_volume.id
         })
         self.assertHttpBadRequest(response)
+
+    @create_targets_patch
+    def test_post_creation(self):
+        """Test that creating an OST using POST returns a target and a command"""
+        host = synthetic_host('myserver')
+        self.create_simple_filesystem(host)
+
+        spare_volume = synthetic_volume_full(host)
+
+        response = self.api_client.post("/api/target/", data={
+            'kind': 'OST',
+            'filesystem_id': self.fs.id,
+            'volume_id': spare_volume.id
+        })
+        self.assertHttpAccepted(response)
+
+    @create_targets_patch
+    def test_patch_creation(self):
+        """Test that creating multiple OSTs using PATCH returns a target and a command"""
+        host = synthetic_host('myserver')
+        self.create_simple_filesystem(host)
+
+        spare_volume_1 = synthetic_volume_full(host)
+        spare_volume_2 = synthetic_volume_full(host)
+
+        response = self.api_client.patch("/api/target/", data={
+            'objects': [
+                {
+                    'kind': 'OST',
+                    'filesystem_id': self.fs.id,
+                    'volume_id': spare_volume_1.id
+                },
+                {
+                    'kind': 'OST',
+                    'filesystem_id': self.fs.id,
+                    'volume_id': spare_volume_2.id
+                },
+            ],
+            'deletions': []
+        })
+        self.assertHttpAccepted(response)
 
     def test_set_state_partial(self):
         """Test operations using partial PUT containing only the state attribute, as used in Chroma 1.0.0.0 GUI"""

@@ -101,11 +101,11 @@ def synthetic_host(address, nids = list([]), storage_resource = False, fqdn = No
     return host
 
 
-def _passthrough_create_target(target_data):
+def _passthrough_create_targets(target_data):
     ObjectCache.clear()
-    return JobScheduler().create_target(target_data)
-create_target_patch = mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerRpc.create_target",
-                                 new = mock.Mock(side_effect = _passthrough_create_target), create = True)
+    return JobScheduler().create_targets(target_data)
+create_targets_patch = mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerRpc.create_targets",
+                                 new = mock.Mock(side_effect = _passthrough_create_targets), create = True)
 
 
 def _passthrough_create_filesystem(target_data):

@@ -21,7 +21,9 @@ from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget
 import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
+from tastypie.utils import dict_strip_unicode_keys
 from tastypie.validation import Validation
+from tastypie.resources import BadRequest, ImmediateHttpResponse
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import custom_response, ConfParamResource, MetricResource, dehydrate_command
 
@@ -141,6 +143,16 @@ class TargetResource(MetricResource, ConfParamResource):
     A Lustre target may be a management target (MGT), a metadata target (MDT), or an
     object store target (OST).
 
+    A single target may be created using POST, and many targets may be created using
+    PATCH, with a request body as follows:
+
+    ::
+
+        {
+          objects: [...one or more target objects...],
+          deletions: []
+        }
+
     """
     filesystems = fields.ListField(null = True, help_text = "For MGTs, the list of file systems\
             belonging to this MGT.  Null for other targets.")
@@ -205,7 +217,7 @@ class TargetResource(MetricResource, ConfParamResource):
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ['volume_name', 'name']
-        list_allowed_methods = ['get', 'post']
+        list_allowed_methods = ['get', 'post', 'patch']
         detail_allowed_methods = ['get', 'put', 'delete']
         validation = TargetValidation()
         always_return_data = True
@@ -224,7 +236,6 @@ class TargetResource(MetricResource, ConfParamResource):
         return urls
 
     def dehydrate_filesystems(self, bundle):
-
         #  Limit this to one db hit per mgs, caching might help
         mgs = bundle.obj.downcast()
         if type(mgs) == ManagedMgs:
@@ -362,20 +373,43 @@ class TargetResource(MetricResource, ConfParamResource):
 
         return objects
 
+    def patch_list(self, request, **kwargs):
+        """
+        Specialization of patch_list to do bulk target creation in a single RPC to job_scheduler (and
+        consequently in a single command).
+        """
+        deserialized = self.deserialize(request, request.raw_post_data, format=request.META.get('CONTENT_TYPE', 'application/json'))
+
+        if "objects" not in deserialized:
+            raise BadRequest("Invalid data sent.")
+
+        if len(deserialized["objects"]) and 'put' not in self._meta.detail_allowed_methods:
+            raise ImmediateHttpResponse(response=http.HttpMethodNotAllowed())
+
+        # If any of the included targets is not a creation, then
+        # skip to a normal PATCH instead of this special case one
+        for target_data in deserialized['objects']:
+            if 'id' in target_data or 'resource_uri' in target_data:
+                super(TargetResource, self).patch_list(request, **kwargs)
+
+        # Validate and prepare each target dict for consumption by job_scheduler
+        for target_data in deserialized['objects']:
+            data = self.alter_deserialized_detail_data(request, target_data)
+            bundle = self.build_bundle(data=dict_strip_unicode_keys(data))
+            self.is_valid(bundle, request)
+
+            target_data['content_type'] = ContentType.objects.get_for_model(KIND_TO_KLASS[target_data['kind']]).natural_key()
+
+        targets, command = JobSchedulerClient.create_targets(deserialized['objects'])
+
+        raise custom_response(self, request, http.HttpAccepted,
+                              {'command': dehydrate_command(command),
+                               'targets': [self.get_resource_uri(target) for target in targets]})
+
     def obj_create(self, bundle, request = None, **kwargs):
         # Set up an errors dict in the bundle to allow us to carry
         # hydration errors through to validation.
         setattr(bundle, 'data_errors', defaultdict(list))
-
-        # As with the Filesystem resource, full_hydrate() doesn't make sense
-        # for our customized Target resource.  As a convention, we'll
-        # abstract the logic for mangling the incoming bundle data into
-        # hydrate_FIELD methods and call them by hand.
-        for field in ['volume_id', 'filesystem_id']:
-            method = getattr(self, "hydrate_%s" % field, None)
-
-            if method:
-                bundle = method(bundle)
 
         bundle.data['content_type'] = ContentType.objects.get_for_model(KIND_TO_KLASS[bundle.data['kind']]).natural_key()
 
@@ -384,11 +418,12 @@ class TargetResource(MetricResource, ConfParamResource):
         # filesystem validation failure if it doesn't exist, anyhow.
         self.is_valid(bundle, request)
 
-        target, command = JobSchedulerClient.create_target(bundle.data)
+        targets, command = JobSchedulerClient.create_targets([bundle.data])
 
-        raise custom_response(self, request, http.HttpAccepted,
-                              {'command': dehydrate_command(command),
-                               'target': self.full_dehydrate(self.build_bundle(obj=target)).data})
+        if request.method == 'POST':
+            raise custom_response(self, request, http.HttpAccepted,
+                                  {'command': dehydrate_command(command),
+                                   'target': self.full_dehydrate(self.build_bundle(obj=targets[0])).data})
 
     def get_resource_graph(self, request, **kwargs):
         target = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))

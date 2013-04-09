@@ -974,35 +974,44 @@ class JobScheduler(object):
 
         return fs.id, command.id
 
-    def create_target(self, target_data):
+    def create_targets(self, targets_data):
         # FIXME: HYD-970: check that the filesystem or hosts aren't being removed while
         # creating the target
 
-        target_class = ContentType.objects.get_by_natural_key(*(target_data['content_type'])).model_class()
+        targets = []
         with self._lock:
-            if target_class == ManagedOst:
-                fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
-                create_kwargs = {'filesystem': fs}
-            elif target_class == ManagedMgs:
-                create_kwargs = {}
+            for target_data in targets_data:
+                target_class = ContentType.objects.get_by_natural_key(*(target_data['content_type'])).model_class()
+                if target_class == ManagedOst:
+                    fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
+                    create_kwargs = {'filesystem': fs}
+                elif target_class == ManagedMgs:
+                    create_kwargs = {}
+                else:
+                    raise NotImplementedError(target_class)
+
+                with transaction.commit_on_success():
+                    target, target_mounts = target_class.create_for_volume(target_data['volume_id'], **create_kwargs)
+
+                ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
+                for mount in target_mounts:
+                    ObjectCache.add(ManagedTargetMount, mount)
+
+                targets.append(target)
+
+            if len(targets) == 1:
+                command_description = "Creating %s" % targets[0]
             else:
-                raise NotImplementedError(target_class)
-
-            with transaction.commit_on_success():
-                target, target_mounts = target_class.create_for_volume(target_data['volume_id'], **create_kwargs)
-
-            ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-            for mount in target_mounts:
-                ObjectCache.add(ManagedTargetMount, mount)
+                command_description = "Creating %s targets" % len(targets)
 
             with transaction.commit_on_success():
                 command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
-                    [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), target.id, 'mounted')],
-                    "Creating %s" % target)
+                    [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), target.id, 'mounted') for target in targets],
+                    command_description)
 
         self.progress.advance()
 
-        return target.id, command.id
+        return [target.id for target in targets], command.id
 
     def create_host(self, fqdn, nodename, capabilities, address):
         immutable_state = not any("manage_" in c for c in capabilities)

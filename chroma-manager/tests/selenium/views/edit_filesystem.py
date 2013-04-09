@@ -78,13 +78,21 @@ class EditFilesystem(BaseView):
         wait_for_any_element_by_css_selector(self.driver, self.conf_param_apply_button, self.medium_wait)
 
     def add_ost(self, primary_server_address, volume_name):
-        """Click button to add new OST and select an OST/s from ost chooser"""
+        self.add_osts([(primary_server_address, volume_name)])
+
+    def add_osts(self, volumes):
+        """
+        Open add OST dialog, select some volumes, submit
+
+        :param volumes: list of 2-tuples (primary server address, volume label)
+        """
         # Open the ost chooser pop-up
         self.driver.find_element_by_css_selector('#btnNewOST').click()
         self.quiesce()
 
-        # Click on the row that has the given volume name and primary server address
-        self.volume_chooser_select('new_ost_chooser', primary_server_address, volume_name, True)
+        for primary_server_address, volume_name in volumes:
+            # Click on the row that has the given volume name and primary server address
+            self.volume_chooser_select('new_ost_chooser', primary_server_address, volume_name, True)
 
         # Submit and wait for the add to complete
         self.driver.find_element_by_css_selector('#ost_ok_button').click()
