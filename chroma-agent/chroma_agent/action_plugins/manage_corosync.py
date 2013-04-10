@@ -385,6 +385,10 @@ def get_cluster_size():
     # just count nodes instead (of waiting for the end of the crm configure
     # show output to parse the properties list)
     rc, stdout, stderr = shell.run(["crm_node", "-l"])
+
+    if not stdout:
+        return 0
+
     n = 0
     for line in stdout.rstrip().split('\n'):
         node_id, name, status = line.split(" ")
@@ -504,13 +508,21 @@ def unconfigure_corosync():
     shutil.move(tmp[1], "/etc/sysconfig/iptables")
 
 
+def pacemaker_running():
+    rc, stdout, stderr = shell.run(["crm_mon", "-1"])
+    if rc != 0:
+        return False
+
+    return True
+
+
 def unconfigure_pacemaker():
     # only unconfigure if we are the only node in the cluster
     # but first, see if pacemaker is up to answer this
-    rc, stdout, stderr = shell.run(["crm", "status"])
-    if rc != 0:
+    if not pacemaker_running():
         # and just skip doing this if it's not
         return 0
+
     if get_cluster_size() < 2:
         # last node, nuke the CIB
         cibadmin(["-f", "-E"])
@@ -528,8 +540,7 @@ def _unconfigure_fencing():
 def unconfigure_fencing():
     # only unconfigure if we are the only node in the cluster
     # but first, see if pacemaker is up to answer this
-    rc, stdout, stderr = shell.run(["crm", "status"])
-    if rc != 0:
+    if not pacemaker_running():
         # and just skip doing this if it's not
         return 0
 
@@ -561,7 +572,7 @@ def cibadmin(command_args):
     n = 100
     rc = 10
 
-    while rc == 10 and n > 0:
+    while (rc == 10 or rc == 107) and n > 0:
         rc, stdout, stderr = shell.run(['cibadmin'] + command_args)
         if rc == 0:
             break
