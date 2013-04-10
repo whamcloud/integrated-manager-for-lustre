@@ -57,18 +57,6 @@ class Migration(SchemaMigration):
         # Adding unique constraint on 'Series', fields ['content_type', 'object_id', 'name']
         db.create_unique('chroma_core_series', ['content_type_id', 'object_id', 'name'])
 
-        # Adding model 'Sample_60'
-        db.create_table('chroma_core_sample_60', (
-            ('id', self.gf('django.db.models.fields.IntegerField')()),
-            ('dt', self.gf('django.db.models.fields.DateTimeField')()),
-            ('sum', self.gf('django.db.models.fields.FloatField')()),
-            ('len', self.gf('django.db.models.fields.IntegerField')()),
-        ))
-        db.send_create_signal('chroma_core', ['Sample_60'])
-
-        # Adding unique constraint on 'Sample_60', fields ['id', 'dt']
-        db.create_unique('chroma_core_sample_60', ['id', 'dt'])
-
         # Adding model 'Sample_86400'
         db.create_table('chroma_core_sample_86400', (
             ('id', self.gf('django.db.models.fields.IntegerField')()),
@@ -81,13 +69,25 @@ class Migration(SchemaMigration):
         # Adding unique constraint on 'Sample_86400', fields ['id', 'dt']
         db.create_unique('chroma_core_sample_86400', ['id', 'dt'])
 
+        # Adding model 'Sample_60'
+        db.create_table('chroma_core_sample_60', (
+            ('id', self.gf('django.db.models.fields.IntegerField')()),
+            ('dt', self.gf('django.db.models.fields.DateTimeField')()),
+            ('sum', self.gf('django.db.models.fields.FloatField')()),
+            ('len', self.gf('django.db.models.fields.IntegerField')()),
+        ))
+        db.send_create_signal('chroma_core', ['Sample_60'])
+
+        # Adding unique constraint on 'Sample_60', fields ['id', 'dt']
+        db.create_unique('chroma_core_sample_60', ['id', 'dt'])
+
 
     def backwards(self, orm):
-        # Removing unique constraint on 'Sample_86400', fields ['id', 'dt']
-        db.delete_unique('chroma_core_sample_86400', ['id', 'dt'])
-
         # Removing unique constraint on 'Sample_60', fields ['id', 'dt']
         db.delete_unique('chroma_core_sample_60', ['id', 'dt'])
+
+        # Removing unique constraint on 'Sample_86400', fields ['id', 'dt']
+        db.delete_unique('chroma_core_sample_86400', ['id', 'dt'])
 
         # Removing unique constraint on 'Series', fields ['content_type', 'object_id', 'name']
         db.delete_unique('chroma_core_series', ['content_type_id', 'object_id', 'name'])
@@ -113,11 +113,11 @@ class Migration(SchemaMigration):
         # Deleting model 'Series'
         db.delete_table('chroma_core_series')
 
-        # Deleting model 'Sample_60'
-        db.delete_table('chroma_core_sample_60')
-
         # Deleting model 'Sample_86400'
         db.delete_table('chroma_core_sample_86400')
+
+        # Deleting model 'Sample_60'
+        db.delete_table('chroma_core_sample_60')
 
 
     models = {
@@ -471,9 +471,9 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 3, 18, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 4, 10, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'D756EB96ECA30259915CD5A09F5582C9'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'6ABD9FA6A6BDC88956240B5147A11D78'", 'max_length': '32'})
         },
         'chroma_core.relearnnidsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},

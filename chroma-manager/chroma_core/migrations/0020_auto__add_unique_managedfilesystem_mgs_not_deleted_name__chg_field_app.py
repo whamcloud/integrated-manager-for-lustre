@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 from south.db import db
 from south.v2 import SchemaMigration
@@ -7,16 +8,20 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding field 'ManagedHost.corosync_reported_up'
-        db.add_column('chroma_core_managedhost', 'corosync_reported_up',
-                      self.gf('django.db.models.fields.BooleanField')(default=False),
-                      keep_default=False)
+        # Adding unique constraint on 'ManagedFilesystem', fields ['mgs', 'not_deleted', 'name']
+        db.create_unique('chroma_core_managedfilesystem', ['mgs_id', 'not_deleted', 'name'])
 
+
+        # Changing field 'ApplyConfParams.mgs'
+        db.alter_column('chroma_core_applyconfparams', 'mgs_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedTarget']))
 
     def backwards(self, orm):
-        # Deleting field 'ManagedHost.corosync_reported_up'
-        db.delete_column('chroma_core_managedhost', 'corosync_reported_up')
+        # Removing unique constraint on 'ManagedFilesystem', fields ['mgs', 'not_deleted', 'name']
+        db.delete_unique('chroma_core_managedfilesystem', ['mgs_id', 'not_deleted', 'name'])
 
+
+        # Changing field 'ApplyConfParams.mgs'
+        db.alter_column('chroma_core_applyconfparams', 'mgs_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedMgs']))
 
     models = {
         'auth.group': {
@@ -49,18 +54,18 @@ class Migration(SchemaMigration):
             'username': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '30'})
         },
         'chroma_core.alertemail': {
-            'Meta': {'object_name': 'AlertEmail'},
+            'Meta': {'ordering': "['id']", 'object_name': 'AlertEmail'},
             'alerts': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['chroma_core.AlertState']", 'symmetrical': 'False'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
         },
         'chroma_core.alertevent': {
-            'Meta': {'object_name': 'AlertEvent', '_ormbases': ['chroma_core.Event']},
+            'Meta': {'ordering': "['id']", 'object_name': 'AlertEvent', '_ormbases': ['chroma_core.Event']},
             'alert': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.AlertState']"}),
             'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
             'message_str': ('django.db.models.fields.CharField', [], {'max_length': '512'})
         },
         'chroma_core.alertstate': {
-            'Meta': {'unique_together': "(('alert_item_type', 'alert_item_id', 'alert_type', 'active'),)", 'object_name': 'AlertState'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('alert_item_type', 'alert_item_id', 'alert_type', 'active'),)", 'object_name': 'AlertState'},
             'active': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
             'alert_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
             'alert_item_type': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'alertstate_alert_item_type'", 'to': "orm['contenttypes.ContentType']"}),
@@ -69,49 +74,58 @@ class Migration(SchemaMigration):
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'end': ('django.db.models.fields.DateTimeField', [], {}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'severity': ('django.db.models.fields.IntegerField', [], {'default': '20'})
         },
         'chroma_core.alertsubscription': {
-            'Meta': {'object_name': 'AlertSubscription'},
+            'Meta': {'ordering': "['id']", 'object_name': 'AlertSubscription'},
             'alert_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'alert_subscriptions'", 'to': "orm['auth.User']"})
         },
         'chroma_core.applyconfparams': {
-            'Meta': {'object_name': 'ApplyConfParams', '_ormbases': ['chroma_core.Job']},
+            'Meta': {'ordering': "['id']", 'object_name': 'ApplyConfParams', '_ormbases': ['chroma_core.Job']},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
-            'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMgs']"})
+            'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
+        },
+        'chroma_core.clientcertificate': {
+            'Meta': {'object_name': 'ClientCertificate'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'revoked': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'serial': ('django.db.models.fields.CharField', [], {'max_length': '16'})
         },
         'chroma_core.clientconnectevent': {
-            'Meta': {'object_name': 'ClientConnectEvent', '_ormbases': ['chroma_core.Event']},
+            'Meta': {'ordering': "['id']", 'object_name': 'ClientConnectEvent', '_ormbases': ['chroma_core.Event']},
             'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
             'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
             'message_str': ('django.db.models.fields.CharField', [], {'max_length': '512'})
         },
         'chroma_core.command': {
-            'Meta': {'object_name': 'Command'},
+            'Meta': {'ordering': "['id']", 'object_name': 'Command'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'complete': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'errored': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'jobs': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['chroma_core.Job']", 'symmetrical': 'False'}),
             'message': ('django.db.models.fields.CharField', [], {'max_length': '512'})
         },
         'chroma_core.configurelnetjob': {
-            'Meta': {'object_name': 'ConfigureLNetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureLNetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'lnet_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.configuretargetjob': {
-            'Meta': {'object_name': 'ConfigureTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.confparam': {
-            'Meta': {'object_name': 'ConfParam'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfParam'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'key': ('django.db.models.fields.CharField', [], {'max_length': '512'}),
@@ -120,83 +134,88 @@ class Migration(SchemaMigration):
             'version': ('django.db.models.fields.IntegerField', [], {})
         },
         'chroma_core.detecttargetsjob': {
-            'Meta': {'object_name': 'DetectTargetsJob', '_ormbases': ['chroma_core.Job']},
+            'Meta': {'ordering': "['id']", 'object_name': 'DetectTargetsJob', '_ormbases': ['chroma_core.Job']},
             'host_ids': ('django.db.models.fields.CharField', [], {'max_length': '512'}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.enablelnetjob': {
-            'Meta': {'object_name': 'EnableLNetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'EnableLNetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'managed_host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.event': {
-            'Meta': {'object_name': 'Event'},
+            'Meta': {'ordering': "['id']", 'object_name': 'Event'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'dismissed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']", 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'severity': ('django.db.models.fields.IntegerField', [], {})
         },
         'chroma_core.failbacktargetjob': {
-            'Meta': {'object_name': 'FailbackTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'FailbackTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.failovertargetjob': {
-            'Meta': {'object_name': 'FailoverTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'FailoverTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.filesystemclientconfparam': {
-            'Meta': {'object_name': 'FilesystemClientConfParam', '_ormbases': ['chroma_core.ConfParam']},
+            'Meta': {'ordering': "['id']", 'object_name': 'FilesystemClientConfParam', '_ormbases': ['chroma_core.ConfParam']},
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"})
         },
         'chroma_core.filesystemglobalconfparam': {
-            'Meta': {'object_name': 'FilesystemGlobalConfParam', '_ormbases': ['chroma_core.ConfParam']},
+            'Meta': {'ordering': "['id']", 'object_name': 'FilesystemGlobalConfParam', '_ormbases': ['chroma_core.ConfParam']},
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"})
         },
         'chroma_core.forceremovehostjob': {
-            'Meta': {'object_name': 'ForceRemoveHostJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ForceRemoveHostJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.forgetfilesystemjob': {
-            'Meta': {'object_name': 'ForgetFilesystemJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ForgetFilesystemJob'},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.forgettargetjob': {
-            'Meta': {'object_name': 'ForgetTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ForgetTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.formattargetjob': {
-            'Meta': {'object_name': 'FormatTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'FormatTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.getlnetstatejob': {
-            'Meta': {'object_name': 'GetLNetStateJob', '_ormbases': ['chroma_core.Job']},
+            'Meta': {'ordering': "['id']", 'object_name': 'GetLNetStateJob', '_ormbases': ['chroma_core.Job']},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.hostcontactalert': {
-            'Meta': {'object_name': 'HostContactAlert', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'HostContactAlert', '_ormbases': ['chroma_core.AlertState']},
+            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.hostofflinealert': {
+            'Meta': {'ordering': "['id']", 'object_name': 'HostOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.hostrebootevent': {
-            'Meta': {'object_name': 'HostRebootEvent', '_ormbases': ['chroma_core.Event']},
+            'Meta': {'ordering': "['id']", 'object_name': 'HostRebootEvent', '_ormbases': ['chroma_core.Event']},
             'boot_time': ('django.db.models.fields.DateTimeField', [], {}),
             'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.job': {
-            'Meta': {'object_name': 'Job'},
+            'Meta': {'ordering': "['id']", 'object_name': 'Job'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
@@ -208,13 +227,13 @@ class Migration(SchemaMigration):
             'wait_for_json': ('django.db.models.fields.TextField', [], {})
         },
         'chroma_core.learnevent': {
-            'Meta': {'object_name': 'LearnEvent', '_ormbases': ['chroma_core.Event']},
+            'Meta': {'ordering': "['id']", 'object_name': 'LearnEvent', '_ormbases': ['chroma_core.Event']},
             'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
             'learned_item_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
             'learned_item_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"})
         },
         'chroma_core.lnetconfiguration': {
-            'Meta': {'object_name': 'LNetConfiguration'},
+            'Meta': {'ordering': "['id']", 'object_name': 'LNetConfiguration'},
             'host': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedHost']", 'unique': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
@@ -222,21 +241,21 @@ class Migration(SchemaMigration):
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
         'chroma_core.lnetnidschangedalert': {
-            'Meta': {'object_name': 'LNetNidsChangedAlert', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'LNetNidsChangedAlert', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.lnetofflinealert': {
-            'Meta': {'object_name': 'LNetOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'LNetOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.loadlnetjob': {
-            'Meta': {'object_name': 'LoadLNetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'LoadLNetJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.logmessage': {
-            'Meta': {'object_name': 'LogMessage'},
+            'Meta': {'ordering': "['id']", 'object_name': 'LogMessage'},
             'datetime': ('django.db.models.fields.DateTimeField', [], {}),
             'facility': ('django.db.models.fields.SmallIntegerField', [], {}),
             'fqdn': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
@@ -247,13 +266,13 @@ class Migration(SchemaMigration):
             'tag': ('django.db.models.fields.CharField', [], {'max_length': '63'})
         },
         'chroma_core.makeavailablefilesystemunavailable': {
-            'Meta': {'object_name': 'MakeAvailableFilesystemUnavailable'},
+            'Meta': {'ordering': "['id']", 'object_name': 'MakeAvailableFilesystemUnavailable'},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.managedfilesystem': {
-            'Meta': {'object_name': 'ManagedFilesystem'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('name', 'mgs', 'not_deleted'),)", 'object_name': 'ManagedFilesystem'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
@@ -266,7 +285,7 @@ class Migration(SchemaMigration):
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
         'chroma_core.managedhost': {
-            'Meta': {'unique_together': "(('address', 'not_deleted'),)", 'object_name': 'ManagedHost'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('address', 'not_deleted'),)", 'object_name': 'ManagedHost'},
             'address': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'boot_time': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
@@ -276,30 +295,29 @@ class Migration(SchemaMigration):
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
-            'ssl_fingerprint': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
         'chroma_core.managedmdt': {
-            'Meta': {'object_name': 'ManagedMdt', '_ormbases': ['chroma_core.ManagedTarget']},
+            'Meta': {'ordering': "['id']", 'object_name': 'ManagedMdt', '_ormbases': ['chroma_core.ManagedTarget']},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'index': ('django.db.models.fields.IntegerField', [], {}),
             'managedtarget_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedTarget']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.managedmgs': {
-            'Meta': {'object_name': 'ManagedMgs', '_ormbases': ['chroma_core.ManagedTarget']},
+            'Meta': {'ordering': "['id']", 'object_name': 'ManagedMgs', '_ormbases': ['chroma_core.ManagedTarget']},
             'conf_param_version': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
             'conf_param_version_applied': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
             'managedtarget_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedTarget']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.managedost': {
-            'Meta': {'object_name': 'ManagedOst', '_ormbases': ['chroma_core.ManagedTarget']},
+            'Meta': {'ordering': "['id']", 'object_name': 'ManagedOst', '_ormbases': ['chroma_core.ManagedTarget']},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'index': ('django.db.models.fields.IntegerField', [], {}),
             'managedtarget_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedTarget']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.managedtarget': {
-            'Meta': {'object_name': 'ManagedTarget'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ManagedTarget'},
             'active_mount': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTargetMount']", 'null': 'True', 'blank': 'True'}),
             'bytes_per_inode': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
@@ -316,7 +334,7 @@ class Migration(SchemaMigration):
             'volume': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.Volume']"})
         },
         'chroma_core.managedtargetmount': {
-            'Meta': {'object_name': 'ManagedTargetMount'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ManagedTargetMount'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'mount_point': ('django.db.models.fields.CharField', [], {'max_length': '512', 'null': 'True', 'blank': 'True'}),
@@ -326,107 +344,168 @@ class Migration(SchemaMigration):
             'volume_node': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.VolumeNode']"})
         },
         'chroma_core.mdtconfparam': {
-            'Meta': {'object_name': 'MdtConfParam', '_ormbases': ['chroma_core.ConfParam']},
+            'Meta': {'ordering': "['id']", 'object_name': 'MdtConfParam', '_ormbases': ['chroma_core.ConfParam']},
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'mdt': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMdt']"})
         },
         'chroma_core.nid': {
-            'Meta': {'object_name': 'Nid'},
+            'Meta': {'ordering': "['id']", 'object_name': 'Nid'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'lnet_configuration': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.LNetConfiguration']"}),
             'nid_string': ('django.db.models.fields.CharField', [], {'max_length': '128'})
         },
         'chroma_core.ostconfparam': {
-            'Meta': {'object_name': 'OstConfParam', '_ormbases': ['chroma_core.ConfParam']},
+            'Meta': {'ordering': "['id']", 'object_name': 'OstConfParam', '_ormbases': ['chroma_core.ConfParam']},
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'ost': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedOst']"})
         },
+        'chroma_core.reboothostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'RebootHostJob'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
         'chroma_core.registertargetjob': {
-            'Meta': {'object_name': 'RegisterTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'RegisterTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
+        'chroma_core.registrationtoken': {
+            'Meta': {'object_name': 'RegistrationToken'},
+            'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 4, 10, 0, 0)'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'4705973DB2CBA1BE44C1B3AB7BA866D8'", 'max_length': '32'})
+        },
         'chroma_core.relearnnidsjob': {
-            'Meta': {'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},
+            'Meta': {'ordering': "['id']", 'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},
             'host_ids': ('django.db.models.fields.CharField', [], {'max_length': '512'}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.removeconfiguredtargetjob': {
-            'Meta': {'object_name': 'RemoveConfiguredTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'RemoveConfiguredTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.removefilesystemjob': {
-            'Meta': {'object_name': 'RemoveFilesystemJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'RemoveFilesystemJob'},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.removehostjob': {
-            'Meta': {'object_name': 'RemoveHostJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'RemoveHostJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.removetargetjob': {
-            'Meta': {'object_name': 'RemoveTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'RemoveTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.removeunconfiguredhostjob': {
-            'Meta': {'object_name': 'RemoveUnconfiguredHostJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'RemoveUnconfiguredHostJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
+        'chroma_core.sample_10': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_10'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_300': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_300'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_3600': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_3600'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_60': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_60'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_86400': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_86400'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.series': {
+            'Meta': {'unique_together': "(('content_type', 'object_id', 'name'),)", 'object_name': 'Series'},
+            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'object_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'type': ('django.db.models.fields.CharField', [], {'max_length': '30'})
+        },
         'chroma_core.setuphostjob': {
-            'Meta': {'object_name': 'SetupHostJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'SetupHostJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'managed_host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
+        'chroma_core.shutdownhostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'ShutdownHostJob'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
         'chroma_core.simplehistostorebin': {
-            'Meta': {'object_name': 'SimpleHistoStoreBin'},
+            'Meta': {'ordering': "['id']", 'object_name': 'SimpleHistoStoreBin'},
             'bin_idx': ('django.db.models.fields.IntegerField', [], {}),
             'histo_store_time': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.SimpleHistoStoreTime']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'value': ('django.db.models.fields.PositiveIntegerField', [], {})
         },
         'chroma_core.simplehistostoretime': {
-            'Meta': {'object_name': 'SimpleHistoStoreTime'},
+            'Meta': {'ordering': "['id']", 'object_name': 'SimpleHistoStoreTime'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'storage_resource_statistic': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceStatistic']"}),
             'time': ('django.db.models.fields.PositiveIntegerField', [], {})
         },
         'chroma_core.startlnetjob': {
-            'Meta': {'object_name': 'StartLNetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StartLNetJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.startstoppedfilesystemjob': {
-            'Meta': {'object_name': 'StartStoppedFilesystemJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StartStoppedFilesystemJob'},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.starttargetjob': {
-            'Meta': {'object_name': 'StartTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StartTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.startunavailablefilesystemjob': {
-            'Meta': {'object_name': 'StartUnavailableFilesystemJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StartUnavailableFilesystemJob'},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.stepresult': {
-            'Meta': {'object_name': 'StepResult'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StepResult'},
             'args': ('picklefield.fields.PickledObjectField', [], {}),
             'backtrace': ('django.db.models.fields.TextField', [], {}),
             'console': ('django.db.models.fields.TextField', [], {}),
@@ -441,79 +520,79 @@ class Migration(SchemaMigration):
             'step_klass': ('picklefield.fields.PickledObjectField', [], {})
         },
         'chroma_core.stoplnetjob': {
-            'Meta': {'object_name': 'StopLNetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StopLNetJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.stoptargetjob': {
-            'Meta': {'object_name': 'StopTargetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StopTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.stopunavailablefilesystemjob': {
-            'Meta': {'object_name': 'StopUnavailableFilesystemJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StopUnavailableFilesystemJob'},
             'filesystem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedFilesystem']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.storagealertpropagated': {
-            'Meta': {'unique_together': "(('storage_resource', 'alert_state'),)", 'object_name': 'StorageAlertPropagated'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('storage_resource', 'alert_state'),)", 'object_name': 'StorageAlertPropagated'},
             'alert_state': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceAlert']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'storage_resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']"})
         },
         'chroma_core.storagepluginrecord': {
-            'Meta': {'unique_together': "(('module_name',),)", 'object_name': 'StoragePluginRecord'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('module_name',),)", 'object_name': 'StoragePluginRecord'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'internal': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'module_name': ('django.db.models.fields.CharField', [], {'max_length': '128'})
         },
         'chroma_core.storageresourcealert': {
-            'Meta': {'object_name': 'StorageResourceAlert', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceAlert', '_ormbases': ['chroma_core.AlertState']},
             'alert_class': ('django.db.models.fields.CharField', [], {'max_length': '512'}),
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'}),
             'attribute': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'})
         },
         'chroma_core.storageresourceattributereference': {
-            'Meta': {'object_name': 'StorageResourceAttributeReference'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceAttributeReference'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'key': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']"}),
             'value': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'value_resource'", 'null': 'True', 'on_delete': 'models.PROTECT', 'to': "orm['chroma_core.StorageResourceRecord']"})
         },
         'chroma_core.storageresourceattributeserialized': {
-            'Meta': {'object_name': 'StorageResourceAttributeSerialized'},
+            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceAttributeSerialized'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'key': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']"}),
             'value': ('django.db.models.fields.TextField', [], {})
         },
         'chroma_core.storageresourceclass': {
-            'Meta': {'unique_together': "(('storage_plugin', 'class_name'),)", 'object_name': 'StorageResourceClass'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('storage_plugin', 'class_name'),)", 'object_name': 'StorageResourceClass'},
             'class_name': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'storage_plugin': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StoragePluginRecord']", 'on_delete': 'models.PROTECT'}),
             'user_creatable': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
         },
         'chroma_core.storageresourceclassstatistic': {
-            'Meta': {'unique_together': "(('resource_class', 'name'),)", 'object_name': 'StorageResourceClassStatistic'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('resource_class', 'name'),)", 'object_name': 'StorageResourceClassStatistic'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'resource_class': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceClass']"})
         },
         'chroma_core.storageresourcelearnevent': {
-            'Meta': {'object_name': 'StorageResourceLearnEvent', '_ormbases': ['chroma_core.Event']},
+            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceLearnEvent', '_ormbases': ['chroma_core.Event']},
             'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
             'storage_resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']", 'on_delete': 'models.PROTECT'})
         },
         'chroma_core.storageresourceoffline': {
-            'Meta': {'object_name': 'StorageResourceOffline', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'StorageResourceOffline', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.storageresourcerecord': {
-            'Meta': {'unique_together': "(('storage_id_str', 'storage_id_scope', 'resource_class'),)", 'object_name': 'StorageResourceRecord'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('storage_id_str', 'storage_id_scope', 'resource_class'),)", 'object_name': 'StorageResourceRecord'},
             'alias': ('django.db.models.fields.CharField', [], {'max_length': '64', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parents': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'resource_parent'", 'symmetrical': 'False', 'to': "orm['chroma_core.StorageResourceRecord']"}),
@@ -523,49 +602,49 @@ class Migration(SchemaMigration):
             'storage_id_str': ('django.db.models.fields.CharField', [], {'max_length': '256'})
         },
         'chroma_core.storageresourcestatistic': {
-            'Meta': {'unique_together': "(('storage_resource', 'name'),)", 'object_name': 'StorageResourceStatistic'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('storage_resource', 'name'),)", 'object_name': 'StorageResourceStatistic'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             'sample_period': ('django.db.models.fields.IntegerField', [], {}),
             'storage_resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']", 'on_delete': 'models.PROTECT'})
         },
         'chroma_core.syslogevent': {
-            'Meta': {'object_name': 'SyslogEvent', '_ormbases': ['chroma_core.Event']},
+            'Meta': {'ordering': "['id']", 'object_name': 'SyslogEvent', '_ormbases': ['chroma_core.Event']},
             'event_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Event']", 'unique': 'True', 'primary_key': 'True'}),
             'lustre_pid': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
             'message_str': ('django.db.models.fields.CharField', [], {'max_length': '512'})
         },
         'chroma_core.targetfailoveralert': {
-            'Meta': {'object_name': 'TargetFailoverAlert', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'TargetFailoverAlert', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.targetofflinealert': {
-            'Meta': {'object_name': 'TargetOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'TargetOfflineAlert', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.targetrecoveryalert': {
-            'Meta': {'object_name': 'TargetRecoveryAlert', '_ormbases': ['chroma_core.AlertState']},
+            'Meta': {'ordering': "['id']", 'object_name': 'TargetRecoveryAlert', '_ormbases': ['chroma_core.AlertState']},
             'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.targetrecoveryinfo': {
-            'Meta': {'object_name': 'TargetRecoveryInfo'},
+            'Meta': {'ordering': "['id']", 'object_name': 'TargetRecoveryInfo'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'recovery_status': ('django.db.models.fields.TextField', [], {}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.unloadlnetjob': {
-            'Meta': {'object_name': 'UnloadLNetJob'},
+            'Meta': {'ordering': "['id']", 'object_name': 'UnloadLNetJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.updatenidsjob': {
-            'Meta': {'object_name': 'UpdateNidsJob', '_ormbases': ['chroma_core.Job']},
+            'Meta': {'ordering': "['id']", 'object_name': 'UpdateNidsJob', '_ormbases': ['chroma_core.Job']},
             'host_ids': ('django.db.models.fields.CharField', [], {'max_length': '512'}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.volume': {
-            'Meta': {'unique_together': "(('storage_resource', 'not_deleted'),)", 'object_name': 'Volume'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('storage_resource', 'not_deleted'),)", 'object_name': 'Volume'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
@@ -573,7 +652,7 @@ class Migration(SchemaMigration):
             'storage_resource': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.StorageResourceRecord']", 'null': 'True', 'on_delete': 'models.PROTECT', 'blank': 'True'})
         },
         'chroma_core.volumenode': {
-            'Meta': {'unique_together': "(('host', 'path', 'not_deleted'),)", 'object_name': 'VolumeNode'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('host', 'path', 'not_deleted'),)", 'object_name': 'VolumeNode'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),

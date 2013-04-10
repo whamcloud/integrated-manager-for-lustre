@@ -8,20 +8,32 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding unique constraint on 'ManagedFilesystem', fields ['mgs', 'not_deleted', 'name']
-        db.create_unique('chroma_core_managedfilesystem', ['mgs_id', 'not_deleted', 'name'])
+        # Adding field 'Command.dismissed'
+        db.add_column('chroma_core_command', 'dismissed',
+                      self.gf('django.db.models.fields.BooleanField')(default=False),
+                      keep_default=False)
 
+        # Adding field 'AlertState.severity'
+        db.add_column('chroma_core_alertstate', 'severity',
+                      self.gf('django.db.models.fields.IntegerField')(default=20),
+                      keep_default=False)
 
-        # Changing field 'ApplyConfParams.mgs'
-        db.alter_column('chroma_core_applyconfparams', 'mgs_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedTarget']))
+        # Adding field 'Event.dismissed'
+        db.add_column('chroma_core_event', 'dismissed',
+                      self.gf('django.db.models.fields.BooleanField')(default=False),
+                      keep_default=False)
+
 
     def backwards(self, orm):
-        # Removing unique constraint on 'ManagedFilesystem', fields ['mgs', 'not_deleted', 'name']
-        db.delete_unique('chroma_core_managedfilesystem', ['mgs_id', 'not_deleted', 'name'])
+        # Deleting field 'Command.dismissed'
+        db.delete_column('chroma_core_command', 'dismissed')
 
+        # Deleting field 'AlertState.severity'
+        db.delete_column('chroma_core_alertstate', 'severity')
 
-        # Changing field 'ApplyConfParams.mgs'
-        db.alter_column('chroma_core_applyconfparams', 'mgs_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedMgs']))
+        # Deleting field 'Event.dismissed'
+        db.delete_column('chroma_core_event', 'dismissed')
+
 
     models = {
         'auth.group': {
@@ -86,7 +98,7 @@ class Migration(SchemaMigration):
         'chroma_core.applyconfparams': {
             'Meta': {'ordering': "['id']", 'object_name': 'ApplyConfParams', '_ormbases': ['chroma_core.Job']},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
-            'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
+            'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMgs']"})
         },
         'chroma_core.clientconnectevent': {
             'Meta': {'ordering': "['id']", 'object_name': 'ClientConnectEvent', '_ormbases': ['chroma_core.Event']},
@@ -265,7 +277,7 @@ class Migration(SchemaMigration):
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.managedfilesystem': {
-            'Meta': {'ordering': "['id']", 'unique_together': "(('name', 'mgs', 'not_deleted'),)", 'object_name': 'ManagedFilesystem'},
+            'Meta': {'ordering': "['id']", 'object_name': 'ManagedFilesystem'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
@@ -362,9 +374,9 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 3, 7, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 4, 10, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'EF6B7D767325066D9401FAD5727CE7D3'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'EC1820B8BB3BA8865DC11C6748213F15'", 'max_length': '32'})
         },
         'chroma_core.relearnnidsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},

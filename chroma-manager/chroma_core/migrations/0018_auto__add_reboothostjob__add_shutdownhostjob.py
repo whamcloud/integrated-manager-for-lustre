@@ -8,19 +8,27 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'ClientCertificate'
-        db.create_table('chroma_core_clientcertificate', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+        # Adding model 'RebootHostJob'
+        db.create_table('chroma_core_reboothostjob', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
-            ('serial', self.gf('django.db.models.fields.CharField')(max_length=16)),
-            ('revoked', self.gf('django.db.models.fields.BooleanField')(default=False)),
         ))
-        db.send_create_signal('chroma_core', ['ClientCertificate'])
+        db.send_create_signal('chroma_core', ['RebootHostJob'])
+
+        # Adding model 'ShutdownHostJob'
+        db.create_table('chroma_core_shutdownhostjob', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
+        ))
+        db.send_create_signal('chroma_core', ['ShutdownHostJob'])
 
 
     def backwards(self, orm):
-        # Deleting model 'ClientCertificate'
-        db.delete_table('chroma_core_clientcertificate')
+        # Deleting model 'RebootHostJob'
+        db.delete_table('chroma_core_reboothostjob')
+
+        # Deleting model 'ShutdownHostJob'
+        db.delete_table('chroma_core_shutdownhostjob')
 
 
     models = {
@@ -359,6 +367,11 @@ class Migration(SchemaMigration):
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'ost': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedOst']"})
         },
+        'chroma_core.reboothostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'RebootHostJob'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
         'chroma_core.registertargetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RegisterTargetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
@@ -369,9 +382,9 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 3, 12, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 4, 10, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'1B78ED092BBCB59C8B7405BD7792DD88'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'91624EE27F8552F7084E52B65A9951C1'", 'max_length': '32'})
         },
         'chroma_core.relearnnidsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},
@@ -413,6 +426,11 @@ class Migration(SchemaMigration):
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'managed_host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
+        },
+        'chroma_core.shutdownhostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'ShutdownHostJob'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
         },
         'chroma_core.simplehistostorebin': {
             'Meta': {'ordering': "['id']", 'object_name': 'SimpleHistoStoreBin'},

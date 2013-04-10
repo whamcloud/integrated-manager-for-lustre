@@ -8,27 +8,18 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'RebootHostJob'
-        db.create_table('chroma_core_reboothostjob', (
-            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
-            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
+        # Adding M2M table for field ha_cluster_peers on 'ManagedHost'
+        db.create_table('chroma_core_managedhost_ha_cluster_peers', (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('from_managedhost', models.ForeignKey(orm['chroma_core.managedhost'], null=False)),
+            ('to_managedhost', models.ForeignKey(orm['chroma_core.managedhost'], null=False))
         ))
-        db.send_create_signal('chroma_core', ['RebootHostJob'])
-
-        # Adding model 'ShutdownHostJob'
-        db.create_table('chroma_core_shutdownhostjob', (
-            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
-            ('host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
-        ))
-        db.send_create_signal('chroma_core', ['ShutdownHostJob'])
+        db.create_unique('chroma_core_managedhost_ha_cluster_peers', ['from_managedhost_id', 'to_managedhost_id'])
 
 
     def backwards(self, orm):
-        # Deleting model 'RebootHostJob'
-        db.delete_table('chroma_core_reboothostjob')
-
-        # Deleting model 'ShutdownHostJob'
-        db.delete_table('chroma_core_shutdownhostjob')
+        # Removing M2M table for field ha_cluster_peers on 'ManagedHost'
+        db.delete_table('chroma_core_managedhost_ha_cluster_peers')
 
 
     models = {
@@ -94,7 +85,7 @@ class Migration(SchemaMigration):
         'chroma_core.applyconfparams': {
             'Meta': {'ordering': "['id']", 'object_name': 'ApplyConfParams', '_ormbases': ['chroma_core.Job']},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
-            'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMgs']"})
+            'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.clientcertificate': {
             'Meta': {'object_name': 'ClientCertificate'},
@@ -280,7 +271,7 @@ class Migration(SchemaMigration):
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.managedfilesystem': {
-            'Meta': {'ordering': "['id']", 'object_name': 'ManagedFilesystem'},
+            'Meta': {'ordering': "['id']", 'unique_together': "(('name', 'mgs', 'not_deleted'),)", 'object_name': 'ManagedFilesystem'},
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
@@ -299,6 +290,7 @@ class Migration(SchemaMigration):
             'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']", 'null': 'True'}),
             'corosync_reported_up': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'ha_cluster_peers': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'ha_cluster_peers_rel_+'", 'null': 'True', 'to': "orm['chroma_core.ManagedHost']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
@@ -382,9 +374,9 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 3, 15, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 4, 10, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'224BE652526BEBA827FD4143FD33A6CF'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'BAABAA9E8C4C4DE7538DD97DF29538C4'", 'max_length': '32'})
         },
         'chroma_core.relearnnidsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},
@@ -420,6 +412,49 @@ class Migration(SchemaMigration):
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
             'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
+        },
+        'chroma_core.sample_10': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_10'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_300': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_300'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_3600': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_3600'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_60': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_60'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.sample_86400': {
+            'Meta': {'unique_together': "(('id', 'dt'),)", 'object_name': 'Sample_86400'},
+            'dt': ('django.db.models.fields.DateTimeField', [], {}),
+            'id': ('django.db.models.fields.IntegerField', [], {'primary_key': 'True'}),
+            'len': ('django.db.models.fields.IntegerField', [], {}),
+            'sum': ('django.db.models.fields.FloatField', [], {})
+        },
+        'chroma_core.series': {
+            'Meta': {'unique_together': "(('content_type', 'object_id', 'name'),)", 'object_name': 'Series'},
+            'content_type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'object_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'type': ('django.db.models.fields.CharField', [], {'max_length': '30'})
         },
         'chroma_core.setuphostjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'SetupHostJob'},
