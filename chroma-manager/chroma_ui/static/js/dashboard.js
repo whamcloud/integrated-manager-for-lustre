@@ -7,10 +7,11 @@
 /*jslint indent: 2, newcap: true, nomen:true, sloppy: true, undef: true, vars: true, white: true */
 /*global _,$ */
 
-
 var Dashboard = (function() {
   var initialized = false;
-  var chart_manager = null;
+
+  var chart_manager;
+  var text_updater;
 
   var dashboard_type;
   var dashboard_server;
@@ -20,11 +21,15 @@ var Dashboard = (function() {
   var polling_enabled;
   var time_period;
 
-  function stopCharts() {
+  var MAXIMUM_OST_ON_DASHBOARD_CHART = 128;
+
+  function stopPollingUpdaters() {
     // FIXME: revise when there is a global chart_manager
-    if (chart_manager) {
-      chart_manager.destroy();
-    }
+    [chart_manager, text_updater].forEach(function (polling_updater) {
+      if (polling_updater) {
+        polling_updater.destroy();
+      }
+    });    
   }
 
   function pollingInterval() {
@@ -430,46 +435,22 @@ var Dashboard = (function() {
       });
 
     init_charts('filesystem');
+    init_text_updater('filesystem');
 
     $('#filesystem_name').html(dashboard_filesystem.label);
-    var innerContent = "";
-    innerContent = innerContent +
-      "<tr>" +
-      "<td>Management Server (MGS) :</td>" +
-      "<td>"+dashboard_filesystem.mgt.primary_server_name+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td>Metadata Server (MDS):</td>" +
-      "<td>"+dashboard_filesystem.mdts[0].primary_server_name+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td>Total Object Storage Targets (OST):</td>" +
-      "<td>"+dashboard_filesystem.osts.length+"</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td>Capacity used: </td>" +
-      "<td>"+formatBytes(dashboard_filesystem.bytes_total - dashboard_filesystem.bytes_free)+"/" + formatBytes(dashboard_filesystem.bytes_total) + "</td>" +
-      "</tr>"+
-      "<tr>" +
-      "<td>Files used: </td>" +
-      "<td>"+formatBigNumber(dashboard_filesystem.files_total - dashboard_filesystem.files_free)+"/" + formatBigNumber(dashboard_filesystem.files_total) + "</td>" +
-      "</tr>";
 
-    $('#fileSystemSummaryTbl').html(innerContent);
+    $('#fileSystemSummaryTbl').html(
+      _.template(
+          $('#filesystem_summary_table_template').html(),
+          { dashboard_filesystem: dashboard_filesystem }
+      )
+    );
   }
 
 
   function load_global_page()
   {
     dashboard_page('global');
-
-    var filesystem_rows = "";
-    _.each(ApiCache.list('filesystem'), function(filesystem) {
-      var t = _.template($('#global_filesystem_table_row_template').html());
-      filesystem_rows += t({filesystem: filesystem});
-    });
-    $('#global_filesystem_table').find('tbody').html(filesystem_rows);
-
 
     var breadCrumbHtml = "<ul>" +
     "  <li><a href='dashboard/' class='home_icon navigation'>Home</a></li>" +
@@ -493,6 +474,7 @@ var Dashboard = (function() {
     }
     $(this).find('option:selected').val();
     init_charts('dashboard');
+    init_text_updater('dashboard');
   }
 
   function bytes_rate_formatter() {
@@ -530,15 +512,257 @@ var Dashboard = (function() {
   }
   /*jslint eqeq: false */
 
-  function init_charts(chart_group) {
-    /* helper callbacks */
-    var api_params_add_filesystem = function(api_params,chart) {
-      api_params.filesystem_id = dashboard_filesystem.id;
-      return api_params;
-    };
 
-    if (!_.isNull(chart_manager)) {
+  // TEXT UPDATER
+
+  // helper function to render data to the global filesystem table
+  // - dynamically adds/removes filesystems on creation/deletion
+  // passed as the update arguement to a text updater (orverrides default)
+
+  function global_filesystem_table_update(snapshot_data) {
+
+    // cleanup. Remove filesystem rows that no longer exist
+    $('#global_filesystem_table tr.filesystem_row').each(function() {
+      var $filesystem_row = $(this);
+      var fs_id = $filesystem_row.data('fs_id');
+      if ( fs_id && ! _.has(snapshot_data,fs_id) ) {
+        $filesystem_row.remove();
+      }
+    });
+
+    var template = _.template($('#global_filesystem_table_row_template').html());
+
+    Object.keys(snapshot_data).forEach(function(fs_id) {
+      var fs_data = snapshot_data[fs_id]
+      var row_selector = '#global_filesystem_table tr.filesystem_row[data-fs_id="'+fs_id+'"]';
+
+      // add new filesystem
+      if ( ! $(row_selector).length ) {
+        var filesystem = ApiCache.get('filesystem', fs_id);
+        $('#global_filesystem_table')
+          .find('tbody')
+          .append( template({filesystem: filesystem}) );
+      }
+
+      // process fs_data
+      Object.keys(fs_data).forEach(function (selector) {
+        render_text_or_peity(row_selector + ' ' + selector, fs_data[selector]);
+      });
+    });
+
+  }
+
+  // helper to render peity vs straight text
+  function render_text_or_peity(selector, render_data) {
+    var $selector = $(selector);
+    // text only
+    if ( ! _.isObject(render_data) ) {
+      $selector.text(render_data);
+    }
+    // peity charts
+    else if ( _.has(render_data, 'peity_chart_type') ) {
+      $selector.text(render_data.data).change();
+      // peity adds a sibling <canvas> so check; init peity if it's missing
+      if ( ! $selector.siblings('canvas').length ) {
+        $selector.peity(render_data.peity_chart_type, render_data.peity_config || {});
+      }
+    }
+  }
+
+  /* helper callbacks */
+  function api_params_add_filesystem( api_params ) {
+    api_params.filesystem_id = dashboard_filesystem.id;
+    return api_params;
+  }
+
+  function init_text_updater(consumer_group) {
+    if ( text_updater ) {
+      text_updater.destroy();
+    }
+
+    text_updater = TextUpdater({consumer_group: 'dashboard', default_time_boundary: time_period * 1000,
+                                  interval_seconds: pollingInterval()});
+
+    // updates client_count in dashboard filesystem table
+    text_updater.add_consumer('client_count', 'dashboard', {
+      url:'target/metric/',
+      api_params: { reduce_fn:'sum', kind:'MDT', group_by: 'filesystem'},
+      metrics:["client_count"],
+      update: global_filesystem_table_update,
+      snapshot_callback: function(consumer, snapshot_data) {
+        var filesystem_data = {};
+        Object.keys(snapshot_data).forEach(function(fs_id) {
+          var fs_data = snapshot_data[fs_id];
+          var client_count = fs_data.length ? fs_data[0].data.client_count : '-';
+          filesystem_data[fs_id] = { 'td.client_count': client_count };
+        });
+        return filesystem_data;
+      }
+    });
+    // updates bytes free/total data in dashboard filesystem table + minigraphs!
+    text_updater.add_consumer('bytes_data', 'dashboard', {
+      url:'target/metric/',
+      api_params: { kind: 'OST', reduce_fn:'sum', group_by: 'filesystem'},
+      metrics:["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
+      update: global_filesystem_table_update,
+      snapshot_callback: function(consumer, snapshot_data) {
+        var filesystem_data = {};
+        _.each(snapshot_data, function(fs_data, fs_id) {
+          var result = {};
+          if ( fs_data.length ) {
+            current_data = fs_data[0].data;
+
+            // plain text
+            result['td span.space'] = formatKBytes(current_data.kbytestotal - current_data.kbytesfree) + ' / ' + formatKBytes(current_data.kbytestotal);
+            result['td span.inodes'] = formatBigNumber( current_data.filestotal - current_data.filesfree) + ' / ' + formatBigNumber( current_data.filestotal );
+
+            // peity charts
+            result['td span.peity_space'] = {
+              data: current_data.kbytesfree + '/' + current_data.kbytestotal,
+              peity_chart_type: "pie"
+            };
+            result['td span.peity_inodes'] = {
+              data: current_data.filesfree + '/' + current_data.filestotal,
+              peity_chart_type: "pie"
+            };
+          }
+          filesystem_data[fs_id] = result;
+        });
+
+        return filesystem_data;
+      }
+    });
+
+    text_updater.consumer_group('filesystem');
+    text_updater.add_consumer('client_count', 'filesystem', {
+      url:'target/metric/',
+      api_params: { reduce_fn:'sum', kind:'MDT' },
+      api_params_callback: api_params_add_filesystem,
+      metrics:["client_count"],
+      render_to: { client_count: '#fileSystemSummaryTbl td.client_count' }
+    });
+    text_updater.add_consumer('bytes_data', 'filesystem', {
+      url:'target/metric/',
+      api_params: { kind: 'OST', reduce_fn:'sum' },
+      api_params_callback: api_params_add_filesystem,
+      metrics:["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
+      update: function (snapshot_data) {
+        _.each(snapshot_data, function(value,selector) {
+          render_text_or_peity(selector, value);
+        });
+      },
+      snapshot_callback: function(consumer, snapshot_data) {
+
+        var result = {};
+
+        if ( ! snapshot_data.length ) {
+          return result;
+        }
+
+        var current_data = snapshot_data[0].data;
+
+        // plain text
+        result['#fileSystemSummaryTbl tr td span.space'] =
+          formatKBytes(current_data.kbytestotal - current_data.kbytesfree) + ' / ' + formatKBytes(current_data.kbytestotal);
+        result['#fileSystemSummaryTbl tr td span.inodes'] =
+          formatBigNumber( current_data.filestotal - current_data.filesfree) + ' / ' + formatBigNumber( current_data.filestotal );
+
+        // peity charts
+        result['#fileSystemSummaryTbl tr td span.peity_space'] = {
+          data: current_data.kbytesfree + '/' + current_data.kbytestotal,
+          peity_chart_type: "pie"
+        };
+        result['#fileSystemSummaryTbl tr td span.peity_inodes'] = {
+          data: current_data.filesfree + '/' + current_data.filestotal,
+          peity_chart_type: "pie"
+        };
+
+        return result;
+      }
+    });
+
+
+    // switch back to called group
+    text_updater.consumer_group(consumer_group);
+    text_updater.init();
+    return text_updater;
+
+  }
+
+  // CHART MANAGER
+  function init_charts(chart_group) {
+
+    if ( chart_manager ) {
       chart_manager.destroy();
+    }
+
+    // ost_balance chart needs a pre-compiled template for tooltips
+    // used by both dashboard and filesystem page
+    var ost_balance_tooltip_template = _.template($('#ost_balance_tooltip_template').html());
+
+    // need to know the number of OSTs so we can customize graph settings BEFORE first data callback
+    // will filter if we are on a filesystem detail page
+    var ost_targets = _.filter(
+      _.filter(
+        ApiCache.list('target'),
+        function(target) { return target.kind === 'OST'; }
+      ),
+      function(target) { if( dashboard_filesystem ) { return target.filesystem_id == dashboard_filesystem.id; } else { return 1; } }
+    );
+
+    //used by both dashboard and filesystem OST Balance charts as the snapshot_callback
+    function ost_balance_snapshot_callback(chart,data) {
+      var freeBytes = [];
+      var usedBytes = [];
+      categories = [];
+
+      _.each(data, function(target_data, target_id) {
+
+        var target = ApiCache.get('target', target_id);
+
+        var name = target ? target.attributes.name : target_id;
+
+        // if no data, assume new
+        var free = 100;
+        var used = 0;
+        var tooltip_data = {
+          bytes_free   : '-',
+          bytes_used   : '-',
+          bytes_total  : '-',
+          percent_free : '100%',
+          percent_used : '0%'
+        };
+        tooltip_data.target_name = name;
+
+        // this chart only displays when there's < 128 osts, so we'll nick off
+        // the filesystem part of <filesystem>-OST<index> if we're on the dashboard
+        // or if there's only one filesystem
+        if ( dashboard_filesystem || ApiCache.list('filesystem').length === 1) {
+          name = name.replace(/^[^\-]+-/,'');
+        }
+        categories.push(name);
+
+        if (target_data.length) {
+          var current_data = target_data[0].data;
+
+          free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
+          used = 100 - free;
+
+          tooltip_data.percent_free = Math.round(free) + '%';
+          tooltip_data.percent_used = Math.round(used) + '%';
+          tooltip_data.bytes_free   = formatKBytes(current_data.kbytesfree,1);
+          tooltip_data.bytes_used   = formatKBytes(current_data.kbytestotal - current_data.kbytesfree,1);
+          tooltip_data.bytes_total  = formatKBytes(current_data.kbytestotal,1);
+        }
+
+        // "tooltip_data" will be added to this.point[0].point.config object in the tooltip callback
+        freeBytes.push({ name: name, y: free, tooltip_data: tooltip_data } );
+        usedBytes.push(used);
+      });
+
+      chart.instance.xAxis[0].setCategories(categories);
+      chart.instance.series[0].setData(freeBytes, false);
+      chart.instance.series[1].setData(usedBytes, false);
     }
 
     var cpu_chart_template = {
@@ -612,26 +836,6 @@ var Dashboard = (function() {
           }
         }
       }));
-
-    chart_manager.add_chart('client_count', 'dashboard', {
-      url:'target/metric/',
-      api_params:{ reduce_fn:'sum', kind:'MDT'},
-      metrics:["client_count"],
-      chart_config:{
-        chart:{
-          renderTo:'global_client_count'
-        },
-        title:{ text:'Clients Connected'},
-        xAxis:{ type:'datetime' },
-        yAxis:[
-          {title:null, labels:{formatter:whole_numbers_only_formatter}}
-        ],
-        series:[
-          { type:'line', data:[], name:'Clients Connected' }
-        ]
-      }
-    });
-
 
     chart_manager.add_chart('mdops', 'dashboard', {
       url: 'target/metric/',
@@ -710,88 +914,145 @@ var Dashboard = (function() {
       }
     });
 
-    chart_manager.add_chart('freespace', 'dashboard', {
-      url: 'target/metric/',
-      api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true},
-      metrics: ["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
-      snapshot: true,
-      snapshot_callback: function(chart, data) {
-        var categories = [];
-        var freeBytes = [];
-        var usedBytes = [];
-        var freeFiles = [];
-        var usedFiles = [];
+    // if there's more than one filesystem, we want the old freespace chart
+    if ( ost_targets.length > MAXIMUM_OST_ON_DASHBOARD_CHART ) {
 
-        _.each(data, function(fs_data, fs_id) {
-          var name;
-          var filesystem = ApiCache.get('filesystem', fs_id);
-          if (filesystem) {
-            name = filesystem.attributes.name;
-          } else {
-            name = fs_id;
-          }
-          categories.push('Bytes | <em>' + name + '</em> | Files');
+      chart_manager.add_chart('freespace', 'dashboard', {
+        url: 'target/metric/',
+        api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true},
+        metrics: ["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
+        snapshot: true,
+        snapshot_callback: function(chart, data) {
+          var categories = [];
+          var freeBytes = [];
+          var usedBytes = [];
+          var freeFiles = [];
+          var usedFiles = [];
 
-          if (fs_data.length) {
-            var current_data = fs_data[0].data;
-            var free;
+          _.each(data, function(fs_data, fs_id) {
+            var name;
+            var filesystem = ApiCache.get('filesystem', fs_id);
+            if (filesystem) {
+              name = filesystem.attributes.name;
+            } else {
+              name = fs_id;
+            }
+            categories.push('Bytes | <em>' + name + '</em> | Files');
 
-            free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
-            freeBytes.push(free);
-            usedBytes.push(100 - free);
+            if (fs_data.length) {
+              var current_data = fs_data[0].data;
+              var free;
 
-            free = ((current_data.filesfree)/(current_data.filestotal))*100;
-            freeFiles.push(free);
-            usedFiles.push(100 - free);
-          } else {
-            // No data, assume new
-            freeBytes.push(100);
-            usedBytes.push(0);
-            freeFiles.push(100);
-            usedFiles.push(0);
-          }
-        });
+              free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
+              freeBytes.push(free);
+              usedBytes.push(100 - free);
 
-        chart.instance.xAxis[0].setCategories(categories);
-        chart.instance.series[0].setData(freeBytes, false);
-        chart.instance.series[1].setData(usedBytes, false);
-        chart.instance.series[2].setData(freeFiles, false);
-        chart.instance.series[3].setData(usedFiles, false);
-      },
-      chart_config: {
-        chart: {
-          renderTo: 'global_usage',
-          zoomType: ''
+              free = ((current_data.filesfree)/(current_data.filestotal))*100;
+              freeFiles.push(free);
+              usedFiles.push(100 - free);
+            } else {
+              // No data, assume new
+              freeBytes.push(100);
+              usedBytes.push(0);
+              freeFiles.push(100);
+              usedFiles.push(0);
+            }
+          });
+
+          chart.instance.xAxis[0].setCategories(categories);
+          chart.instance.series[0].setData(freeBytes, false);
+          chart.instance.series[1].setData(usedBytes, false);
+          chart.instance.series[2].setData(freeFiles, false);
+          chart.instance.series[3].setData(usedFiles, false);
         },
-        title: { text: 'Percent Capacity Used'},
-        series: [
-          { type: 'column', stack: 0, name: 'Free bytes'},
-          { type: 'column', stack: 0, name: 'Used bytes'},
-          { type: 'column', stack: 1, name: 'Free files'},
-          { type: 'column', stack: 1, name: 'Used files'}
-        ],
-        plotOptions: {
-          column: {
-            stacking: 'normal',
-            pointWidth: 30.0
-          }
-        },
-        xAxis:{categories: [], labels: {align: 'center', style: {fontSize: '8px', fontWeight: 'regular'}}},
-        yAxis:{
-          max:100, min:0, startOnTick:false,
-          title:null,
-          labels: {formatter: percentage_formatter},
-          plotLines: [ { value: 0,width: 1, color: '#808080' } ]
-        },
-        labels:{ items:[{html: '',style:{left: '40px',top: '8px',color: 'black'}}]},
-        colors: [
-          '#A6C56D',
-          '#C76560',
-          '#A6C56D',
-          '#C76560'
-        ]
-      }
-    });
+        chart_config: {
+          chart: {
+            renderTo: 'global_usage_or_balance',
+            zoomType: ''
+          },
+          title: { text: 'Percent Capacity Used'},
+          series: [
+            { type: 'column', stack: 0, name: 'Free bytes'},
+            { type: 'column', stack: 0, name: 'Used bytes'},
+            { type: 'column', stack: 1, name: 'Free files'},
+            { type: 'column', stack: 1, name: 'Used files'}
+          ],
+          plotOptions: {
+            column: {
+              stacking: 'normal',
+              pointWidth: 30.0
+            }
+          },
+          xAxis:{categories: [], labels: {align: 'center', style: {fontSize: '8px', fontWeight: 'regular'}}},
+          yAxis:{
+            max:100, min:0, startOnTick:false,
+            title:null,
+            labels: {formatter: percentage_formatter},
+            plotLines: [ { value: 0,width: 1, color: '#808080' } ]
+          },
+          labels:{ items:[{html: '',style:{left: '40px',top: '8px',color: 'black'}}]},
+          colors: [
+            '#A6C56D',
+            '#C76560',
+            '#A6C56D',
+            '#C76560'
+          ]
+        }
+      });
+    }
+    // else, we want the OST Balance chart
+    else {
+
+      chart_manager.add_chart('ost_balance', 'dashboard', {
+        url: 'target/metric/',
+        api_params: { kind: 'OST', latest: true},
+        metrics: ["kbytestotal", "kbytesfree"],
+        snapshot: true,
+        snapshot_callback: ost_balance_snapshot_callback,
+        chart_config: {
+          chart: {
+            renderTo: 'global_usage_or_balance',
+            zoomType: ''
+          },
+          title: { text: 'OST Balance'},
+          series: [
+            { type: 'column', stack: 0, name: 'Free bytes'},
+            { type: 'column', stack: 0, name: 'Used bytes'},
+          ],
+          plotOptions: {
+            column: {
+              stacking: 'normal',
+              pointPadding: 0.05,
+              borderWidth: 1,
+              borderRadius: 3
+            }
+          },
+          xAxis:{
+            categories: [],
+            tickmarkPlacement: 'on',
+            // labels get too busy and overlap past 10
+            labels: ost_targets.length > 10 ? false : {
+              align: 'center',
+              style: { fontSize: '8px', fontWeight: 'regular'}
+            }
+          },
+          yAxis:{
+            max:100, min:0, startOnTick:false,
+            title:null,
+            labels: {formatter: percentage_formatter},
+            plotLines: [ { value: 0,width: 1, color: '#808080' } ]
+          },
+          tooltip: {
+            formatter: function() {
+              return ost_balance_tooltip_template(this.points[0].point.config.tooltip_data);
+
+            }
+          },
+          labels:{ items:[{html: '',style:{left: '40px',top: '8px',color: 'black'}}]},
+          colors: [ '#A6C56D', '#C76560' ]
+        }
+      });
+    }
 
     // oss
     chart_manager.chart_group('servers');
@@ -1142,97 +1403,53 @@ var Dashboard = (function() {
     });
 
     chart_manager.chart_group('filesystem');
-    chart_manager.add_chart('freespace','filesystem', {
+    chart_manager.add_chart('ost_balance', 'filesystem', {
       url: 'target/metric/',
-      api_params: {reduce_fn: 'sum', kind: 'OST', group_by: 'filesystem', latest: true },
+      api_params: { kind: 'OST', latest: true},
       api_params_callback: api_params_add_filesystem,
-      metrics: ["kbytestotal", "kbytesfree", "filestotal", "filesfree"],
+      metrics: ["kbytestotal", "kbytesfree"],
       snapshot: true,
-      snapshot_callback: function(chart, data) {
-        var freeBytes  = [];
-        var usedBytes  = [];
-        var freeFiles  = [];
-        var usedFiles  = [];
-
-        _.each(data, function(fs_data, fs_id) {
-
-          if (fs_data.length) {
-            var current_data = fs_data[0].data;
-            var free;
-
-            free = ((current_data.kbytesfree)/(current_data.kbytestotal))*100;
-            freeBytes.push(free);
-            usedBytes.push(100 - free);
-
-            free = ((current_data.filesfree)/(current_data.filestotal))*100;
-            freeFiles.push(free);
-            usedFiles.push(100 - free);
-          } else {
-            // No data, assume new
-            freeBytes.push(100);
-            usedBytes.push(0);
-            freeFiles.push(100);
-            usedFiles.push(0);
-          }
-        });
-
-        chart.instance.series[0].setData(freeBytes, false);
-        chart.instance.series[1].setData(usedBytes, false);
-        chart.instance.series[2].setData(freeFiles, false);
-        chart.instance.series[3].setData(usedFiles, false);
-      },
+      snapshot_callback: ost_balance_snapshot_callback,
       chart_config: {
         chart: {
-          renderTo: 'filesystem_usage',
+          renderTo: 'filesystem_ost_balance',
           zoomType: ''
         },
-        title: { text: 'Percent Capacity Used'},
+        title: { text: 'OST Balance'},
         series: [
           { type: 'column', stack: 0, name: 'Free bytes'},
           { type: 'column', stack: 0, name: 'Used bytes'},
-          { type: 'column', stack: 1, name: 'Free files'},
-          { type: 'column', stack: 1, name: 'Used files'}
         ],
         plotOptions: {
           column: {
             stacking: 'normal',
-            pointWidth: 30.0
+            pointPadding: 0.05,
+            borderWidth: 1,
+            borderRadius: 3
           }
         },
-        xAxis: {categories: ['Bytes | Files'], labels: {align: 'center', style: {fontSize: '8px', fontWeight: 'regular'}}},
-        yAxis:{max:100, min:0, startOnTick:false,
-          title: null,
-          labels: {formatter: percentage_formatter},
-          plotLines: [ { value: 0,width: 1, color: '#808080' } ] },
-        labels:{ items:[{html: '',style:{left: '40px',top: '8px',color: 'black'}}]},
-        colors: [
-          '#A6C56D',
-          '#C76560',
-          '#A6C56D',
-          '#C76560'
-        ]
-      }
-    });
-    chart_manager.add_chart('client_count','filesystem', {
-      url: 'target/metric/',
-      api_params: { reduce_fn: 'sum', kind: 'MDT'},
-      api_params_callback: api_params_add_filesystem,
-      metrics: ["client_count"],
-      chart_config: {
-        chart: {
-          renderTo: 'filesystem_client_count'
+        xAxis:{
+          categories: [],
+          tickmarkPlacement: 'on',
+          // labels get too busy and overlap past 10
+          labels: ost_targets.length > 10 ? false : {
+            align: 'center',
+            style: { fontSize: '8px', fontWeight: 'regular'}
+          }
         },
-        title: { text: 'Clients Connected'},
-        xAxis: { type:'datetime' },
-        yAxis: [{
-          title: { text: 'Clients' },
-          plotLines: [{ value: 0, width: 1, color: '#808080' }]
-        }],
-        yAxis: [
-          {title: null, labels: {formatter: whole_numbers_only_formatter}}],
-        series: [
-          { type: 'line', data: [], name: 'Clients Connected' }
-        ]
+        yAxis:{
+          max:100, min:0, startOnTick:false,
+          title:null,
+          labels: {formatter: percentage_formatter},
+          plotLines: [ { value: 0,width: 1, color: '#808080' } ]
+        },
+        tooltip: {
+          formatter: function() {
+            return ost_balance_tooltip_template(this.points[0].point.config.tooltip_data);
+          }
+        },
+        labels:{ items:[{html: '',style:{left: '40px',top: '8px',color: 'black'}}]},
+        colors: [ '#A6C56D', '#C76560' ]
       }
     });
 
@@ -1393,6 +1610,6 @@ var Dashboard = (function() {
   return {
     init: init,
     setPath: setPath,
-    stopCharts: stopCharts
+    stopPollingUpdaters: stopPollingUpdaters
   };
 }());
