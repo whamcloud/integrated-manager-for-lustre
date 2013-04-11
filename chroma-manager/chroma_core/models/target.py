@@ -953,6 +953,10 @@ class FailbackTargetJob(MigrateTargetJob):
             [DependOn(self.target.primary_host, 'lnet_up')]
         )
 
+    def on_success(self):
+        # Persist the update to active_target_mount
+        self.target.save()
+
     def get_steps(self):
         return [(FailbackTargetStep, {
             'target': self.target,
@@ -994,6 +998,10 @@ class FailoverTargetJob(MigrateTargetJob):
             [DependOn(self.target.primary_host, 'lnet_up')] +
             [DependOn(self.target.failover_hosts[0], 'lnet_up')]
         )
+
+    def on_success(self):
+        # Persist the update to active_target_mount
+        self.target.save()
 
     def get_steps(self):
         return [(FailoverTargetStep, {

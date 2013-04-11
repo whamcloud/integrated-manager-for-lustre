@@ -26,13 +26,13 @@ def synchronous_run_job(job):
         step_klass(job, args, lambda x: None, lambda x: None, mock.Mock()).run(args)
 
 
-def synthetic_volume(serial = None):
+def synthetic_volume(serial=None):
     """
     Create a Volume and an underlying StorageResourceRecord
     """
     volume = Volume.objects.create()
 
-    if serial is None:
+    if not serial:
         serial = "foobar%d" % volume.id
 
     attrs = {'serial_80': None,
@@ -64,16 +64,22 @@ def synthetic_volume_full(primary_host, *args):
     return volume
 
 
-def synthetic_host(address, nids = list([]), storage_resource = False):
+def synthetic_host(address, nids = list([]), storage_resource = False, fqdn = None, nodename = None):
     """
     Create a ManagedHost + paraphernalia, with states set as if configuration happened successfully
 
     :param storage_resource: If true, create a PluginAgentResources (additional overhead, only sometimes required)
     """
+
+    if fqdn is None:
+        fqdn = address
+    if nodename is None:
+        nodename = address
+
     host = ManagedHost.objects.create(
         address = address,
-        fqdn = address,
-        nodename = address,
+        fqdn = fqdn,
+        nodename = nodename,
         state = 'lnet_up' if nids else 'configured'
     )
     if nids:

@@ -122,8 +122,8 @@ class ObjectCache(object):
         cls.getInstance().objects[klass] = dict([(o.pk, o) for o in cls.getInstance().objects[klass].values() if not filter(o)])
 
     def _update(self, obj):
-        assert obj.__class__ in self._cached_models
         log.debug("update: %s %s" % (obj.__class__, obj.id))
+        assert obj.__class__ in self._cached_models
         class_collection = self.objects[obj.__class__]
         if obj.pk in class_collection:
             try:
