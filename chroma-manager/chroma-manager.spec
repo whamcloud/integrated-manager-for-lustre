@@ -34,6 +34,7 @@ Requires: python-daemon
 Requires: python-requests >= 1.0.0
 Requires: python-celery >= 3.0.11
 Requires: python-amqplib
+Requires: python-networkx
 Requires: pygobject2
 Requires: postgresql-server
 Requires: python-psycopg2

@@ -1,0 +1,67 @@
+{
+  // Directives
+  "globals": {
+    "angular": false,
+    "_": false,
+    "module": false,
+    "inject": false,
+    "jasmine": false,
+    "spyOn": false,
+    "it": false,
+    "console": false,
+    "describe": false,
+    "expect": false,
+    "beforeEach": false,
+    "afterEach": false,
+    "waits": false,
+    "waitsFor": false,
+    "runs": false
+  },
+
+  "predef": [
+    "angular",
+    "_",
+    "module",
+    "inject",
+    "jasmine",
+    "spyOn",
+    "it",
+    "console",
+    "describe",
+    "expect",
+    "beforeEach",
+    "afterEach",
+    "waits",
+    "waitsFor",
+    "runs"
+  ],
+
+  // Enforcing Options
+  "bitwise": true,
+  "curly": true,
+  "eqeqeq": true,
+  "forin": true,
+  "immed": true,
+  "indent": 2,
+  "newcap": true,
+  "noarg": true,
+  "noempty": true,
+  "nonew": true,
+  "plusplus": true,
+  "quotmark": "single",
+  "undef": true,
+  "unused": true,
+  "strict": true,
+  "trailing": true,
+  "maxcomplexity": 5,
+  "maxlen": 120,
+
+
+  // Relaxing Options
+  "eqnull": true,
+  "es5" : true,
+
+  //Environments
+  "browser" : true,
+  "jquery": true
+}

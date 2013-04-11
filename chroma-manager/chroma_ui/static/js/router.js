@@ -215,7 +215,7 @@ var ChromaRouter = Backbone.Router.extend({
 
     // FIXME: generalise this once there is a global ChartManager
     if (name != 'dashboard') {
-      Dashboard.stopCharts();
+      Dashboard.stopPollingUpdaters();
     }
   },
   configureTab: function(tab)

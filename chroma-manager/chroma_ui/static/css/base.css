@@ -827,6 +827,14 @@ table#global_filesystem_table th {
     font-style: italic;
 }
 
+table#global_filesystem_table td {
+    text-align: right;
+}
+
+table#global_filesystem_table td.filesystem_name {
+    text-align: left;
+}
+
 .contextual_help_icon {
 	margin: 0.75em 0 0.75em 0.75em;
 	float: left;
@@ -836,6 +844,7 @@ table#global_filesystem_table th {
 	margin: auto;
 	margin-left: 2em;
 }
+
 .contextual_help p {
 	margin: .75em 0.25em .75em .75em;
 }
