@@ -273,7 +273,7 @@ def register_target(mount_point, device):
     return {'label': blkid_output.strip()}
 
 
-def unconfigure_target_ha(primary, ha_label, uuid):
+def unconfigure_target_ha(ha_label, uuid, primary = False):
     from chroma_agent.action_plugins.manage_corosync import cibadmin
 
     if get_resource_location(ha_label):
@@ -301,7 +301,7 @@ def unconfigure_target_ha(primary, ha_label, uuid):
     AgentStore.remove_target_info(uuid)
 
 
-def configure_target_ha(primary, device, ha_label, uuid, mount_point):
+def configure_target_ha(device, ha_label, uuid, mount_point, primary = False):
     from chroma_agent.action_plugins.manage_corosync import cibadmin
 
     if primary:
@@ -342,27 +342,15 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
         score = 10
         preference = "secondary"
 
-    rc, stdout, stderr = shell.run(['crm', '-D', 'plain', 'configure', 'show',
-                                    '%s-%s' % (ha_label, preference)])
-    out = stdout.rstrip("\n")
-
-    node = os.uname()[1]
-
-    if len(out) > 0:
-        compare = "location %s-%s %s %s: %s" % (ha_label, preference,
-                                                ha_label, score,
-                                                node)
-        if out == compare:
-            return
-        else:
-            raise RuntimeError("A constraint with the name %s-%s already exists" % (ha_label, preference))
-
     rc, stdout, stderr = cibadmin(["-o", "constraints", "-C", "-X",
                                    "<rsc_location id=\"%s-%s\" node=\"%s\" rsc=\"%s\" score=\"%s\"/>" %
                                   (ha_label,
                                   preference,
-                                  node,
+                                  os.uname()[1],
                                   ha_label, score)])
+
+    if rc == 76:
+        raise RuntimeError("A constraint with the name %s-%s already exists" % (ha_label, preference))
 
     _mkdir_p_concurrent(mount_point)
 
@@ -410,7 +398,7 @@ def unmount_target(uuid):
 def start_target(ha_label):
     from time import sleep
     # do a cleanup first, just to clear any previously errored state
-    shell.try_run(['crm', 'resource', 'cleanup', ha_label])
+    shell.try_run(['crm_resource', '-r', ha_label, '--cleanup'])
     shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
                    '-m', '-v', 'Started'])
 
@@ -419,7 +407,7 @@ def start_target(ha_label):
     timeout = 100
     n = 0
     while n < timeout:
-        stdout = shell.try_run(['crm', 'resource', 'status', ha_label])
+        stdout = shell.try_run(['crm_resource', '-r', ha_label, '--locate'])
 
         if stdout.startswith("resource %s is running on:" % ha_label):
             break
@@ -428,7 +416,7 @@ def start_target(ha_label):
         n += 1
 
     # and make sure it didn't start but (the RA) fail(ed)
-    stdout = shell.try_run(['crm', 'status'])
+    stdout = shell.try_run(['crm_mon', '-1'])
 
     failed = True
     for line in stdout.split("\n"):
@@ -462,7 +450,7 @@ def _stop_target(ha_label):
     timeout = 100
     n = 0
     while n < timeout:
-        arg_list = ["crm", "resource", "status", ha_label]
+        arg_list = ["crm_resource", "-r", ha_label, "--locate"]
         rc, stdout, stderr = shell.run(arg_list)
         if rc != 0:
             raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
@@ -499,28 +487,46 @@ def _move_target(target_label, dest_node):
         sleep(1)
         n += 1
 
-    # now delete the constraint that crm resource move created
-    shell.try_run(["crm", "configure", "delete", "cli-prefer-%s" % target_label])
+    # now delete the constraint that crm_resource --move created
+    shell.try_run(["crm_resource", "--resource", target_label, "--un-move",
+                   "--node", dest_node])
     if not migrated:
         raise RuntimeError("failed to fail back target %s" % target_label)
+
+
+def find_resource_constraint(ha_label, disp):
+    stdout = shell.try_run(["crm_resource", "-r", ha_label, "-a"])
+
+    for line in stdout.rstrip().split("\n"):
+        match = re.match("\s+:\s+Node\s+([^\s]+)\s+\(score=\d+, id=%s-%s\)" %
+                        (ha_label, disp), line)
+        if match:
+            return match.group(1)
+
+    return None
 
 
 def failover_target(ha_label):
     """
     Fail a target over to its secondary node
     """
-    stdout = shell.try_run(["crm", "configure", "show", "%s-secondary" % ha_label])
-    secondary = stdout[stdout.rfind(' ') + 1:-1]
-    return _move_target(ha_label, secondary)
+    node = find_resource_constraint(ha_label, "secondary")
+    if not node:
+        raise RuntimeError("Unable to find the secondary server for '%s'" %
+                           ha_label)
+
+    return _move_target(ha_label, node)
 
 
 def failback_target(ha_label):
     """
     Fail a target back to its primary node
     """
-    stdout = shell.try_run(["crm", "configure", "show", "%s-primary" % ha_label])
-    primary = stdout[stdout.rfind(' ') + 1:-1]
-    return _move_target(ha_label, primary)
+    node = find_resource_constraint(ha_label, "primary")
+    if not node:
+        raise RuntimeError("Unable to find the primary server for '%s'" %
+                           ha_label)
+    return _move_target(ha_label, node)
 
 # FIXME: these appear to be unused, remove?
 #def migrate_target(ha_label, node):

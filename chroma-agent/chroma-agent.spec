@@ -19,7 +19,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3 lustre
+Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3 lustre pcs
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif

@@ -403,7 +403,7 @@ def configure_pacemaker():
     # need to wait for the CIB to be ready
     timeout = 120
     while timeout > 0:
-        rc, stdout, stderr = shell.run(['crm', 'status'])
+        rc, stdout, stderr = shell.run(['crm_mon', '-1'])
         for line in stdout.split('\n'):
             if line.startswith("Current DC:"):
                 if line[line.find(":") + 2:] != "NONE":
@@ -427,10 +427,10 @@ def configure_pacemaker():
     # this could race with other cluster members to make sure
     # any errors are only due to it already existing
     try:
-        shell.try_run(["crm", "-F", "configure", "primitive",
+        shell.try_run(["pcs", "resource", "create",
                        "st-fencing", "stonith:fence_chroma"])
     except:
-        rc, stdout, stderr = shell.run(["crm", "resource", "show",
+        rc, stdout, stderr = shell.run(["pcs", "resource", "show",
                                         "st-fencing"])
         if rc == 0:
             # no need to do the rest if another member is already doing it
@@ -438,18 +438,18 @@ def configure_pacemaker():
         else:
             raise
 
-    shell.try_run(["crm", "configure", "property",
-                   "no-quorum-policy=\"%s\"" % no_quorum_policy])
-    shell.try_run(["crm", "configure", "property",
-                   "symmetric-cluster=\"true\""])
-    shell.try_run(["crm", "configure", "property",
-                   "cluster-infrastructure=\"openais\""])
-    shell.try_run(["crm", "configure", "property", "stonith-enabled=\"true\""])
-    shell.try_run(["crm", "configure", "rsc_defaults",
+    shell.try_run(["pcs", "property", "set",
+                   "no-quorum-policy=%s" % no_quorum_policy])
+    shell.try_run(["pcs", "property", "set",
+                   "symmetric-cluster=true"])
+    shell.try_run(["pcs", "property", "set",
+                   "cluster-infrastructure=openais"])
+    shell.try_run(["pcs", "property", "set", "stonith-enabled=true"])
+    shell.try_run(["pcs", "resource", "rsc", "defaults",
                    "resource-stickiness=1000"])
-    shell.try_run(["crm", "configure", "rsc_defaults",
+    shell.try_run(["pcs", "resource", "rsc", "defaults",
                    "failure-timeout=%s" % RSRC_FAIL_WINDOW])
-    shell.try_run(["crm", "configure", "rsc_defaults",
+    shell.try_run(["pcs", "resource", "rsc", "defaults",
                    "migration-threshold=%s" % RSRC_FAIL_MIGRATION_COUNT])
 
 
@@ -458,13 +458,17 @@ def configure_fencing(fence_agent, ipaddr = None, login = None,
 
     def set_attribute(name, value):
         print "setting %s = %s" % (name, value)
-        shell.try_run(["crm", "node", "attribute", socket.gethostname(), "set",
-                  name, value])
+        shell.try_run(["crm_attribute", "--node", socket.gethostname(),
+                       "--name", name, "-update", value])
 
     # first clear existing fence_attributes
     for attribute in ["agent", "login", "password", "ipaddr", "plug"]:
-        shell.try_run(["crm", "node", "attribute", socket.gethostname(),
-                       "delete", "fence_%s" % attribute])
+        rc, stdout, stderr = shell.run(["crm_attribute", "--node",
+                                        socket.gethostname(),
+                                        "--name", "fence_%s" % attribute,
+                                        "--delete"])
+    if rc != 0 and rc != 234:
+        raise RuntimeError("Failed to delete node attribute")
 
     set_attribute("fence_agent", "fence_%s" % fence_agent)
     if login:
@@ -533,8 +537,7 @@ def unconfigure_pacemaker():
 
 
 def _unconfigure_fencing():
-    shell.run(["crm", "resource", "stop", "st-fencing"])
-    shell.run(["crm", "configure", "delete", "st-fencing"])
+    shell.run(["pcs", "resource", "delete", "st-fencing"])
 
 
 def unconfigure_fencing():
