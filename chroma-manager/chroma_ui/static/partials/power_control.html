@@ -1,0 +1,54 @@
+<div ng-controller="PowerCtrl">
+  <h2 class="section_header">Power Control</h2>
+
+  <div class="well-large well" ng-show="powerCtrl.powerControlDevices.length == 0">
+    <div class="row">
+      <span>No PDU's.</span>
+      <button ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices)" class="btn"><i class="icon-plus"></i> Add One</button>
+    </div>
+  </div>
+  <div ng-show="powerCtrl.powerControlDevices.length > 0">
+    <div class="button-row">
+      <a class="btn btn-mini" ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices)"><i class="icon-plus"></i> Add PDU</a>
+    </div>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Host</th>
+          <th ng-repeat="device in powerCtrl.powerControlDevices | orderBy: 'name'">
+            ((device.name))
+            <a ng-click="powerCtrl.deletePdu(device)">
+              <i class="icon-remove-circle" tooltip-placement="bottom" tooltip="Delete this PDU"></i>
+            </a>
+            <a ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices, device)">
+              <i class="icon-cog" tooltip-placement="bottom"
+                 tooltip="Edit this PDU: ((device.address)):((device.port))"></i>
+            </a>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="host in powerCtrl.hosts | orderBy: 'nodename'">
+          <td>((host.nodename))</td>
+          <td ng-cloak class="outlets" ng-repeat="device in powerCtrl.powerControlDevices | orderBy: 'name'">
+            <select
+              tabindex="(($index + 1))"
+              ng-init="outletHostIntersection = device.getOutletHostIntersection(host)"
+              ng-model="outletHostIntersection"
+              ng-change="device.reAssignOutletHostIntersection(host, outletHostIntersection)"
+              ui-select2="{formatTagCssClass: powerCtrl.formatTagCssClass, formatResult: powerCtrl.formatResult, dropdownCssClass: 'config-outlets'}"
+              style="width: 100%; display: none;"
+              multiple="true"
+            >
+              <option
+                ng-class="powerCtrl.getOptionClass(outlet)"
+                ng-repeat="outlet in device.outlets | orderBy: 'identifier'"
+                value="((outlet.identifier))">(( outlet.identifier ))
+              </option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

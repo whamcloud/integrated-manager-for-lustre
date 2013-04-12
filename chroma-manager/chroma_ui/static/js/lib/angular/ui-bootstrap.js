@@ -1041,9 +1041,9 @@ angular.module( 'ui.bootstrap.popover', [] )
 
     var template =
       '<popover-popup '+
-        'popover-title="{{tt_title}}" '+
-        'popover-content="{{tt_popover}}" '+
-        'placement="{{tt_placement}}" '+
+        'popover-title="((tt_title))" '+
+        'popover-content="((tt_popover))" '+
+        'placement="((tt_placement))" '+
         'animation="tt_animation()" '+
         'is-open="tt_isOpen"'+
         '>'+
@@ -1272,8 +1272,8 @@ angular.module( 'ui.bootstrap.tooltip', [] )
 
     var template =
       '<tooltip-popup '+
-        'tooltip-title="{{tt_tooltip}}" '+
-        'placement="{{tt_placement}}" '+
+        'tooltip-title="((tt_tooltip))" '+
+        'placement="((tt_placement))" '+
         'animation="tt_animation()" '+
         'is-open="tt_isOpen"'+
         '>'+
@@ -1799,7 +1799,7 @@ angular.module("template/tabs/tabs.html", []).run(["$templateCache", function($t
 
 angular.module("template/tooltip/tooltip-popup.html", []).run(["$templateCache", function($templateCache){
   $templateCache.put("template/tooltip/tooltip-popup.html",
-    "<div class=\"tooltip {{placement}}\" ng-class=\"{ in: isOpen(), fade: animation() }\">" +
+    "<div class=\"tooltip ((placement))\" ng-class=\"{ in: isOpen(), fade: animation() }\">" +
       "  <div class=\"tooltip-arrow\"></div>" +
       "  <div class=\"tooltip-inner\" ng-bind=\"tooltipTitle\"></div>" +
       "</div>" +

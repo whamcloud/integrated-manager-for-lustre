@@ -1,0 +1,104 @@
+div.outlet-info {
+  height: 50px;
+  color: #EEEEEE;
+  border-radius: 5px;
+  width: 168px;
+}
+
+.outlet-info .row {
+  margin-left: -15px;
+}
+
+.span1 {
+  width: 54px;
+  margin-left: 15px;
+}
+
+.outlet-info .state {
+  padding-top: 6px;
+  text-align: center;
+}
+
+.outlet-info .state i {
+  font-size: 20px;
+}
+
+.outlet-info .state .state-text,
+.outlet-info .outlet {
+  font-size: 10px;
+}
+
+.outlet-info.on {
+  background-color: #1AAB47;
+}
+
+.outlet-info.on .state i:before {
+  content : "\f011";
+}
+
+.outlet-info.off {
+  background-color: #555555;
+}
+
+.outlet-info.off .state i:before {
+  content : "\f10c";
+}
+
+.outlet-info.unknown {
+  background-color: #F3B600;
+}
+
+.outlet-info.unknown .state i:before {
+  content : "\f059";
+}
+
+.outlet-info .outlet {
+  line-height: 50px;
+}
+
+.outlet-info .button-action {
+  width: 30px;
+}
+
+.outlet-info .add-btn,
+.outlet-info .remove-btn {
+  width: 20px;
+  margin-right: 5px;
+  height: 50px;
+  line-height: 50px;
+  display: inline-block;
+  position: relative;
+}
+
+.outlet-info .add-btn:before,
+.outlet-info .add-btn:after,
+.outlet-info .remove-btn:before,
+.outlet-info .remove-btn:after {
+  font-family: "FontAwesome";
+  position: absolute;
+  font-weight: normal;
+  -webkit-font-smoothing: antialiased;
+  font-size: 18px;
+}
+
+.outlet-info .add-btn:before,
+.outlet-info .remove-btn:before {
+  content: "\f057";
+  color: #222222;
+  z-index: 1;
+}
+
+.outlet-info .add-btn:before {
+  content: "\f055";
+}
+
+.outlet-info .add-btn:after,
+.outlet-info .remove-btn:after {
+  color: #EEEEEE;
+  content: "\f111";
+}
+
+.outlet-info .add-btn,
+.outlet-info .remove-btn {
+  cursor: pointer;
+}

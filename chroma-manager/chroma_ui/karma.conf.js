@@ -12,6 +12,7 @@ files = [
   'static/js/lib/xdate.js',
   'static/js/lib/angular/angular.js',
   'static/js/lib/angular/angular-resource.js',
+  'static/js/lib/angular/ui-bootstrap.js',
   'test/lib/angular-mocks.js',
   'static/js/util/**/*.js',
   'static/js/constants.js',
@@ -21,7 +22,7 @@ files = [
   'static/js/services/services_module.js',
   'static/js/services/*.js',
   'static/js/controllers/controller_module.js',
-  'static/js/controllers/*.js',
+  'static/js/controllers/**/*.js',
   'test/mock/**/*.js',
   'test/spec/**/*.js'
 ];
@@ -32,7 +33,7 @@ exclude = [];
 // test results reporter to use
 // possible values: dots, progress, junit, growl, coverage
 
-reporter = ['dots'];
+reporters = ['dots', 'growl'];
 
 // web server port
 port = 8080;
@@ -45,7 +46,7 @@ colors = true;
 
 // level of logging
 // possible values: LOG_DISABLE || LOG_ERROR || LOG_WARN || LOG_INFO || LOG_DEBUG
-logLevel = LOG_INFO;
+logLevel = LOG_WARN;
 
 // enable / disable watching file and executing tests whenever any file changes
 autoWatch = true;

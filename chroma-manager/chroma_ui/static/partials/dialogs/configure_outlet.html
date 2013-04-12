@@ -1,0 +1,33 @@
+<div class="add-outlet">
+    <div class="modal-header">
+        <h4>Configure Outlets</h4>
+        <span class="badge-info badge">Host: (( configureOutletCtrl.host.nodename ))</span>
+        <span class="badge-info badge">PDU: (( configureOutletCtrl.device.name ))</span>
+    </div>
+    <div class="modal-body">
+
+      <h4>Available</h4>
+      <div class="well">
+        <div class="row">
+          <div
+            ng-repeat="outlet in configureOutletCtrl.device.outlets | filter:configureOutletCtrl.availableOutletFilter"
+            ng-controller="AddOutletCtrl" onload="host=configureOutletCtrl.host"
+            ng-include="config.asStatic('partials/outlet_info.html')"></div>
+        </div>
+      </div>
+
+      <h4>Assigned</h4>
+      <div class="well">
+        <div class="row">
+          <div
+            ng-repeat="outlet in configureOutletCtrl.device.outlets | filter:configureOutletCtrl.assignedOutletFilter"
+            ng-controller="RemoveOutletCtrl"
+            ng-include="config.asStatic('partials/outlet_info.html')"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+        <a ng-click="configureOutletCtrl.close()" class="btn btn-primary">Done</a>
+    </div>
+</div>

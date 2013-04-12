@@ -25,6 +25,8 @@
     <link href="{{STATIC_URL}}css/datatables.css" rel="stylesheet" type="text/css" />
     <link href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.16.custom.css"  rel="stylesheet" type="text/css" />
     <link href="{{STATIC_URL}}css/BreadCrumb.css" rel="stylesheet" type="text/css" />
+    <link href="{{STATIC_URL}}css/select2.css" rel="stylesheet" type="text/css" />
+    <link href="{{STATIC_URL}}css/bootstrap/select2-bootstrap.css" rel="stylesheet" type="text/css" />
 
     <link href="{{STATIC_URL}}css/resource_graph.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}css/target_detail.css" type='text/css' />
@@ -32,11 +34,15 @@
 
     <link rel="stylesheet" href="{{STATIC_URL}}css/notifications.css" type='text/css' />
     <link rel="stylesheet" href="{{STATIC_URL}}css/jquery.qtip.min.css" type='text/css' />
+
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/bootstrap/bootstrap.css" type="text/css"/>
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/bootstrap/bootstrap-extend.css" type="text/css"/>
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/font-awesome.css" type="text/css"/>
     <link rel="stylesheet" href="{{STATIC_URL}}css/big_green_button.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/power_control.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/outlet_info.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}css/status.css" type="text/css" />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/font-awesome.css" type="text/css" />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/bootstrap/bootstrap.css" type="text/css" />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/bootstrap/bootstrap-extend.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/create_pdu.css" type="text/css" />
 
     {% block css %}{% endblock %}
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
@@ -49,9 +55,12 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/lodash.custom.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/underscore-min.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/backbone-min.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/select2/select2.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/select2/iml-select2-multi-tag-patch.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/angular/angular.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/angular/angular-resource.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/angular/ui-bootstrap.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/lib/angular/angular-ui.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/xdate.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/util/sprintf/sprintf.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/app.js"></script>
@@ -61,6 +70,8 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/controller_module.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/bigGreenButton.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/status.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/controllers/power_control.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/controllers/dialogs/create_pdu.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/models/models_module.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/models/base_model.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/models/alert.js"></script>
@@ -68,10 +79,15 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/models/event.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/models/health.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/models/collection.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/power_control_device.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/power_control_device_outlet.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/power_control_type.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/models/host.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/services_module.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/paging.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/filters/filters_module.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/filters/iso_date.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/filters/capitalize.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/json2.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/misc.js"></script>
     <script type='text/javascript'>

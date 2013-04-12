@@ -1,0 +1,209 @@
+/* Outlets drop-down start */
+
+.config-outlets .select2-result {
+  border-radius: 3px;
+
+  font-size: 12px;
+
+  -webkit-transition: all .2s ease-in-out;
+  -moz-transition: all .2s ease-in-out;
+  -o-transition: all .2s ease-in-out;
+  -ms-transition: all .2s ease-in-out;
+  transition: all .2s ease-in-out;
+}
+
+div.config-outlets .select2-result.select2-highlighted:before {
+  color: #FFFFFF;
+}
+
+.config-outlets .select2-result:before {
+  float: left;
+  padding: 5px 15px 0 5px;
+}
+
+/* Outlets drop-down end */
+
+
+/* General page styles start */
+
+div[ng-controller="PowerCtrl"] .button-row {
+  margin-top: 25px;
+  margin-bottom: 15px;
+}
+
+div[ng-controller="PowerCtrl"] table {
+  table-layout: fixed;
+}
+
+div[ng-controller="PowerCtrl"] th {
+  background-color: #DDDDDD;
+  color: #999999;
+}
+
+div[ng-controller="PowerCtrl"] th a {
+  float: right;
+  cursor: pointer;
+  position: relative;
+  text-decoration: none;
+  color: #777777;
+}
+
+div[ng-controller="PowerCtrl"] th a:first-child {
+  margin-left: 5px;
+}
+
+div[ng-controller="PowerCtrl"] th a:hover {
+  color: #00B0E9;
+}
+
+div[ng-controller="PowerCtrl"] th a .tooltip {
+  top: 20px !important;
+  left: -44px !important;
+  display: block;
+  width: 100px;
+  font-weight: normal;
+  font-size: 10px;
+}
+
+div[ng-controller="PowerCtrl"] tbody td:first-child {
+  vertical-align: middle;
+}
+
+div[ng-controller="PowerCtrl"] .well {
+  text-align: center;
+  height: 300px;
+}
+
+div[ng-controller="PowerCtrl"] .well .row {
+  margin-top: 142px;
+}
+
+div[ng-controller="PowerCtrl"] .well span {
+  color: #AAAAAA;
+  font-size: 20px;
+  vertical-align: middle;
+}
+
+/* General page styles end */
+
+/* General psuedo element start */
+
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:before,
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:after,
+div[ng-controller="PowerCtrl"] .select2-search-choice:before,
+.config-outlets .select2-result:before {
+  font-family: "FontAwesome";
+  font-weight: normal;
+  -webkit-font-smoothing: antialiased;
+
+  -webkit-transition: color .2s ease-in-out;
+  -moz-transition: color .2s ease-in-out;
+  -o-transition: color .2s ease-in-out;
+  -ms-transition: color .2s ease-in-out;
+  transition: color .2s ease-in-out;
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:before,
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:after,
+div[ng-controller="PowerCtrl"] .select2-search-choice:before {
+  position: absolute;
+  font-size: 12px;
+}
+
+/* General psuedo element end */
+
+
+/* Multi select tag start */
+
+div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices .select2-search-choice {
+  background-image: none;
+  box-shadow: none;
+  border: 0;
+  color: #FFFFFF;
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice div {
+  vertical-align: top;
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice div,
+div[ng-controller="PowerCtrl"] .select2-search-choice-close {
+  display: inline-block;
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice-close {
+  background: none;
+  text-decoration: none;
+  position: relative;
+  top: 1px;
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:before,
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:after {
+  left: 0;
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:before {
+  z-index: 2;
+  content: "\f057";
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice-close:after {
+  color: #FFFFFF;
+  content: "\f111";
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice-focus .select2-search-choice-close:before {
+  color: #555555;
+}
+
+div[ng-controller="PowerCtrl"] .select2-search-choice:before {
+  top: 4px;
+  left: 4px;
+}
+
+/* Multi select tag end */
+
+
+/* Power State colors and iconography start */
+
+div[ng-controller="PowerCtrl"] .select2-choices .on {
+  background-color: #1AAB47;
+}
+
+.config-outlets .select2-result.on:before {
+  color: #1AAB47;
+}
+
+.config-outlets .select2-result.on:before,
+div[ng-controller="PowerCtrl"] .select2-search-choice.on:before {
+  content: "\f011";
+}
+
+div[ng-controller="PowerCtrl"] .select2-choices .off {
+  background-color: #555555;
+}
+
+.config-outlets .select2-result.off:before {
+  color: #555555;
+}
+
+div[ng-controller="PowerCtrl"] .select2-choices .unknown {
+  background-color: #F3B600;
+}
+
+.config-outlets .select2-result.unknown:before {
+  color: #F3B600;
+}
+
+.config-outlets .select2-result.unknown:before,
+div[ng-controller="PowerCtrl"] .select2-search-choice.unknown:before {
+  content: "\f059";
+}
+
+.config-outlets .select2-result.off:before,
+div[ng-controller="PowerCtrl"] .select2-search-choice.off:before{
+  content : "\f10c";
+}
+
+/* Power State colors and iconography end */

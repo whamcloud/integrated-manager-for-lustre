@@ -14,7 +14,10 @@
 
     var apply_button = function(selector, icon) {
       $(selector).each(function() {
-        if (!$(this).hasClass('ui-button')) {
+
+        var excludeNewCode = !($(this).hasClass('btn') || $(this).filter('[ng-click]').length > 0);
+
+        if (!$(this).hasClass('ui-button') && excludeNewCode) {
           $(this).button({icons: {primary: icon}});
         }
       });
@@ -25,7 +28,7 @@
     apply_button('button.close', 'ui-icon-closethick');
 
     //for adding smoothness to all table buttons
-    $("button").button();
+    $('button').not('.btn').not('[ng-click]').button();
   });
 
   var ConfigureTabs = function() {
@@ -53,6 +56,7 @@
     <li><a href='#volume-tab' title='volumes'>Volumes</a></li>
     <li><a href='#server-tab' title='servers'>Servers</a></li>
     <li><a href='#storage-tab' title='storage'>Storage</a></li>
+    <li><a href='#power-tab' title='power'>Power Control</a></li>
     <li><a class="superuser_only" href='#user-tab' title='users'>Users</a></li>
   </ul>
   <div id='filesystem-tab'>
@@ -78,6 +82,7 @@
   <div id='storage-tab'>
     {% include "storage_tab.html" %}
   </div>
+  <div id='power-tab'></div>
   <div id='user-tab'>
     {% include "user_tab.html" %}
   </div>

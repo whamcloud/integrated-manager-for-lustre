@@ -226,7 +226,9 @@ var ChromaRouter = Backbone.Router.extend({
   configure: function(tab) {
     if ( this.failed_filesystem_admin_check() )
       return;
+
     this.configureTab(tab);
+
     if (tab == 'filesystem') {
       this.filesystemList();
     } else if (tab == 'server') {
@@ -239,6 +241,22 @@ var ChromaRouter = Backbone.Router.extend({
       StorageView.draw()
     } else if (tab == 'mgt') {
       MgtView.draw()
+    } else if (tab === 'power') {
+      // NOTE: This is only being done because of the Angular in Backbone paradigm.
+      var powerTab = angular.element('#power-tab');
+      var powerTabContents = powerTab.contents();
+      var $scope = angular.element('html').scope().$new();
+      var $compile = $('html').injector().get('$compile');
+
+      $scope.$apply(function () {
+        if (powerTabContents.length > 0) {
+          powerTabContents.scope().$destroy();
+        }
+
+        var link = $compile('<div ng-include="(( config.asStatic(\'partials/power_control.html\') ))"></div>');
+
+        powerTab.html(link($scope));
+      });
     }
   },
   filesystemPage: function(page) {

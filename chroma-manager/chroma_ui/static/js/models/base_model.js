@@ -7,14 +7,21 @@
   'use strict';
 
   angular.module('models').factory('baseModel', ['$resource', 'paging', function ($resource, paging) {
+    /**
+     * @description Represents the base model.
+     * @class baseModel
+     * @returns {baseModel}
+     * @constructor
+     */
     return function getModel(config) {
       var defaults = {
         params: {},
         actions: {
-          get: {method:'GET'},
-          save: {method:'POST'},
-          remove: {method:'DELETE'},
-          delete: {method:'DELETE'},
+          get: {method: 'GET'},
+          save: {method: 'POST'},
+          update: {method: 'PUT'},
+          remove: {method: 'DELETE'},
+          delete: {method: 'DELETE'},
           patch: {method: 'PATCH'},
           query: {
             method: 'GET',

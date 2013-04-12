@@ -13,3 +13,21 @@
     text-decoration: none;
     font-weight: normal;
 }
+
+body form.form .help-block,
+body form.form .help-inline {
+  font-size: 12px;
+}
+
+body form.form .help-inline {
+  margin-bottom: 10px;
+  vertical-align: super;
+}
+
+.tooltip.top,
+.tooltip.bottom,
+.tooltip.left,
+.tooltip.right {
+  border: 0;
+  background-color: transparent;
+}

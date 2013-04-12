@@ -1,0 +1,11 @@
+.create-pdu fieldset legend {
+  font-size: 15px;
+}
+
+.create-pdu .help-block {
+  display: none;
+}
+
+.create-pdu .error .help-block {
+  display: block;
+}
