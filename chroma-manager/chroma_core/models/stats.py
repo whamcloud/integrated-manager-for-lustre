@@ -201,7 +201,8 @@ class Stats(list):
 
     def latest(self, id):
         "Return most recent data point."
-        return self[0].latest(id)
+        point = self[0].latest(id)
+        return Point(self[0].floor(point), *point[1:])
 
     def delete(self, id):
         "Delete all stored points for a series."

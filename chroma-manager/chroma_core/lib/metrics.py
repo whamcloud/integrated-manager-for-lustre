@@ -31,13 +31,6 @@ class MetricStore(object):
                 return cls(measured_object)
         raise NotImplementedError
 
-    def _update_time(self):
-        """
-        Utility method for returning the current time as an int.  Used
-        when constructing R3D updates prior to passing them into R3D.
-        """
-        return int(time.time())
-
     def serialize(self, update):
         "Generate serialized samples (id, dt, value) from a timestamped update dict."
         for ts, data in update.items():
@@ -116,7 +109,7 @@ class HostMetricStore(MetricStore):
         "Return serialized samples (id, dt, value) suitable for bulk stats insertion."
         update = {}
         if update_time is None:
-            update_time = self._update_time()
+            update_time = time.time()
 
         # Define lists of metrics we care about; ignore everything else.
         mem_included = ['mem_SwapTotal',
@@ -167,7 +160,7 @@ class TargetMetricStore(MetricStore):
         "Return serialized samples (id, dt, value) suitable for bulk stats insertion."
         update = {}
         if update_time is None:
-            update_time = self._update_time()
+            update_time = time.time()
 
         stats = {}
         #brw_stats = {}

@@ -86,7 +86,9 @@ class TestModels(TestCase):
         Stats.insert((id, point.dt, point.sum) for point in points)
         with assertQueries():
             point = Stats.latest(id)
-        self.assertEqual(point, points[-1])
+        self.assertEqual(point.timestamp % 10, 0)
+        self.assertGreater(point, points[-2])
+        self.assertLessEqual(point, points[-1])
         count = len(points) + 1
         for offset in {'hours': 1}, {'days': 10}, {'days': 100}, {'days': 10000}:
             timestamps = map(operator.attrgetter('timestamp'), Stats.select(id, point.dt - timedelta(**offset), point.dt))

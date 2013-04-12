@@ -4,6 +4,7 @@
 # ========================================================
 
 
+import time
 from collections import defaultdict
 from exceptions import KeyError, AttributeError, RuntimeError, ValueError
 import threading
@@ -227,10 +228,9 @@ class BaseStorageResource(object):
             stat_obj = self._meta.storage_statistics[key]
             stat_obj.validate(value)
 
-            import time
             with self._delta_stats_lock:
                 self._delta_stats[key].append({
-                            "timestamp": int(time.time()),
+                            "timestamp": time.time(),
                             "value": value})
         else:
             object.__setattr__(self, key, value)

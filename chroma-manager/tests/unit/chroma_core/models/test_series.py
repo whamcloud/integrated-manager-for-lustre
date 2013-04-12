@@ -46,7 +46,7 @@ class TestSeries(TestCase):
             Stats.insert(self.store.serialize(dict(data)))
         names = [field[0] for field in fields]
         ts, data = self.store.fetch_last(names)
-        self.assertEqual(ts, 495)
+        self.assertEqual(ts, 490)
         for name, type, start, stop in fields:
             self.assertGreaterEqual(data[name], start)
             self.assertLessEqual(data[name], stop)
