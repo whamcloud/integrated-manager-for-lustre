@@ -75,7 +75,7 @@ class Volumes(DatatableView):
             row_volume_name = tr.find_elements_by_tag_name('td')[0].text
             primary_select = Select(tr.find_elements_by_tag_name("select")[0])
             failover_select = Select(tr.find_elements_by_tag_name("select")[1])
-            if row_volume_name == volume_name:
+            if row_volume_name == unicode(volume_name):
                 if primary_server_hostname in [option.text for option in primary_select.options]:
                     if primary_select.first_selected_option.text != primary_server_hostname:
                         # Set the desired primary
@@ -99,7 +99,13 @@ class Volumes(DatatableView):
 
                     return
 
-        raise RuntimeError("No row found with volume name '%s'" % volume_name)
+        debug_info = []
+        for tr in self.rows:
+            row_volume_name = tr.find_elements_by_tag_name('td')[0].text
+            primary_select = [o.text for o in Select(tr.find_elements_by_tag_name("select")[0]).options]
+            debug_info.append((row_volume_name, primary_select))
+
+        raise RuntimeError("No row found with volume name '%s' that had server '%s' available to be selected as a primary server. Debug info: '%s'" % (volume_name, primary_server_hostname, debug_info))
 
     def change_volume_config(self):
         """Changing volume configuration"""
