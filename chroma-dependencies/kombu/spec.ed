@@ -5,7 +5,6 @@
 /^Vendor:/a
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
-BuildRequires:  python-nose
 BuildRequires:  python-anyjson
 BuildRequires:  python-amqplib
 BuildRequires:  python-msgpack

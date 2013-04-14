@@ -27,3 +27,12 @@ g/^%find_lang/d
 - Backported to EL6
 
 .
+/^.\/runtests.py --settings=test_sqlite/c
+#./runtests.py --settings=test_sqlite
+.
+/^    (cd docs && mkdir djangohtml && mkdir -p _build\/{doctrees,html} && make html SPHINXBUILD=sphinx-1.0-build)/c
+    #(cd docs && mkdir djangohtml && mkdir -p _build/{doctrees,html} && make html SPHINXBUILD=sphinx-1.0-build)
+.
+/^%doc docs\/_build\/html\/*/c
+#%doc docs/_build/html/*/
+.
