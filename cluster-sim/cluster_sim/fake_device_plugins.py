@@ -165,7 +165,7 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
 
         log.debug("cluster nodes:  %s" % self._server._cluster.state['nodes'])
 
-        nodes = [(node_dict['fqdn'], node_dict['online']) for node_dict
+        nodes = [(node_dict['nodename'], node_dict['online']) for node_dict
                             in self._server._cluster.state['nodes'].values()]
 
         log.debug("Nodes and state:  %s" % nodes)
