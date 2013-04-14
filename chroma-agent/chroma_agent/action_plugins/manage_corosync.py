@@ -51,6 +51,7 @@ from time import sleep
 from chroma_agent import shell
 from chroma_agent.store import AgentStore
 from chroma_agent import node_admin
+import chroma_agent.fence_agent
 
 
 from jinja2 import Environment, PackageLoader
@@ -482,6 +483,9 @@ def configure_fencing(fence_agent, ipaddr = None, login = None,
         set_attribute("fence_ipaddr", ipaddr)
     if plug:
         set_attribute("fence_plug", plug)
+
+    agent = getattr(chroma_agent.fence_agent, fence_agent)
+    agent(node).initialize()
 
 
 def unconfigure_corosync():
