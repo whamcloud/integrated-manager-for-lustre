@@ -103,6 +103,10 @@ class AgentClient(object):
             'csr': self._crypto.generate_csr(self._fqdn)
         }
 
+        if self._fqdn == 'localhost.localdomain':
+            console_log.error("Registration failed, FQDN is localhost.localdomain")
+            raise RuntimeError("Name resolution error, FQDN resolves to localhost.localdomain")
+
         # TODO: during registration, we should already have the authority certificate
         # so we should establish an HTTPS connection (no client cert) with the
         # manager, and verify that the manager's certificate is signed and for
