@@ -108,7 +108,7 @@ class FakeCluster(Persisted):
             if nodename in self.state['nodes']:
                 self.state['nodes'][nodename]['online'] = True
             else:
-                self.state['nodes'][nodename] = {'online': True, }
+                self.state['nodes'][nodename] = {'online': True, 'nodename': nodename}
                 self.state['nodes'][nodename].update(**kwargs)
 
             for ha_label, resource in self.state['resources'].items():
