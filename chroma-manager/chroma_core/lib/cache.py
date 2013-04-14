@@ -129,14 +129,14 @@ class ObjectCache(object):
             try:
                 fresh_instance = obj.__class__.objects.get(pk = obj.pk)
             except obj.__class__.DoesNotExist:
-                pass
+                return None
             else:
                 class_collection[obj.pk] = fresh_instance
-            return
+            return fresh_instance
 
     @classmethod
     def update(cls, obj):
-        cls.getInstance()._update(obj)
+        return cls.getInstance()._update(obj)
 
     @classmethod
     def mtm_targets(cls, mtm_id):

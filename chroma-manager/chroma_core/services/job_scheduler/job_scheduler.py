@@ -682,6 +682,13 @@ class JobScheduler(object):
                 log.info("_notify: Set %s=%s on %s (%s-%s) and saved" % (attr, value, instance, model_klass.__name__, instance.id))
 
         instance.save()
+
+        # Foreign keys: annoyingly, if foo_id was 7, and we assign it to 8, then .foo will still be
+        # the '7' instance, even after a save().  To be safe against any such strangeness, pull a
+        # fresh instance of everything we update (this is safe because earlier we checked that nothing is
+        # locking this object.
+        instance = ObjectCache.update(instance)
+
         # FIXME: should check the new state against reverse dependencies
         # and apply any fix_states
         self._completion_hooks(instance, updated_attrs = update_attrs.keys())
