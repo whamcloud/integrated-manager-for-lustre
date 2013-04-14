@@ -335,7 +335,9 @@ class ResourceManager(object):
                     record.update_attribute('host_id', host.pk)
 
     def _balance_volume_nodes(self, volumes_to_balance, volume_id_to_nodes):
-        volume_ids_to_balance = [v.id for v in volumes_to_balance]
+        # The sort by label is not functionally necessary but makes the list
+        # of volumes look 'right' to a human being.
+        volume_ids_to_balance = [v.id for v in sorted(volumes_to_balance, lambda a, b: cmp(a.label, b.label))]
         hosts = set()
         for vn_list in volume_id_to_nodes.values():
             for vn in vn_list:
@@ -365,6 +367,23 @@ class ResourceManager(object):
                     if not vn.volume_id in volume_ids_to_balance:
                         outer_host_to_used_count[vn.host_id] += 1
 
+        host_id_to_fqdn = dict([(v['id'], v['fqdn']) for v in ManagedHost.objects.all().values("id", "fqdn")])
+
+        def _next_best_host(host_to_primary_count):
+            """
+            Pick the host with fewest primary mounts on it.  If there
+            is more than one candidate, pick the 'first' one sorted
+            by FQDN.
+
+            The sort by FQDN is not functionally necessary but makes
+            the list of volumes look 'right' to a human being.
+            """
+            sorted_hosts_counts = sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))
+            smallest_count = sorted_hosts_counts[0][1]
+            elegible_hosts = [host_id for host_id, count in sorted_hosts_counts if count == smallest_count]
+            elegible_hosts_by_fqdn = sorted(elegible_hosts, lambda a, b: cmp(host_id_to_fqdn[a], host_id_to_fqdn[b]))
+            return elegible_hosts_by_fqdn[0]
+
         with VolumeNode.delayed as vn_writer:
             for volume_id in volume_ids_to_balance:
                 volume_nodes = volume_to_volume_nodes[volume_id]
@@ -381,10 +400,10 @@ class ResourceManager(object):
                     host_to_primary_count[host_id] = primary_count
                     log.info("primary_count %s = %s" % (host_id, primary_count))
 
-                fewest_primaries = [host_id for host_id, count in sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
-                primary_lun_node = host_to_lun_nodes[fewest_primaries][0]
-                outer_host_to_primary_count[fewest_primaries] += 1
-                outer_host_to_used_count[fewest_primaries] += 1
+                chosen_host = _next_best_host(host_to_primary_count)
+                primary_lun_node = host_to_lun_nodes[chosen_host][0]
+                outer_host_to_primary_count[chosen_host] += 1
+                outer_host_to_used_count[chosen_host] += 1
                 vn_writer.update(
                     {'id': primary_lun_node.id,
                      'use': True,
