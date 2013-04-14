@@ -52,6 +52,7 @@ from chroma_agent import shell
 from chroma_agent.store import AgentStore
 from chroma_agent import node_admin
 
+
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
 
@@ -458,13 +459,15 @@ def configure_fencing(fence_agent, ipaddr = None, login = None,
 
     def set_attribute(name, value):
         print "setting %s = %s" % (name, value)
-        shell.try_run(["crm_attribute", "--node", socket.gethostname(),
+        shell.try_run(["crm_attribute", "--node", node,
                        "--name", name, "-update", value])
+
+    node = socket.gethostname()
 
     # first clear existing fence_attributes
     for attribute in ["agent", "login", "password", "ipaddr", "plug"]:
         rc, stdout, stderr = shell.run(["crm_attribute", "--node",
-                                        socket.gethostname(),
+                                        node,
                                         "--name", "fence_%s" % attribute,
                                         "--delete"])
     if rc != 0 and rc != 234:
