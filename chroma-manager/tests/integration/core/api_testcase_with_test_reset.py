@@ -58,7 +58,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # Completely nuke the database to start from a clean state.
             self.remote_command(
                 chroma_manager['address'],
-                'service postgresql stop; rm -fr /var/lib/pgsql/data/*'
+                'service postgresql stop && rm -fr /var/lib/pgsql/data/*'
             )
 
             # Run chroma-config setup to recreate the database and start the chroma manager.

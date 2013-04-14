@@ -362,7 +362,14 @@ class ServiceConfig(CommandLine):
 
         if not self._db_accessible():
             log.info("Creating database owner '%s'...\n" % database['USER'])
-            self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database['USER']])
+
+            # Enumerate existing roles
+            _, roles_str, _ = self.try_shell(["su", "postgres", "-c", "psql -t -c 'select rolname from pg_roles;'"])
+            roles = [line.strip() for line in roles_str.split("\n") if line.strip()]
+
+            # Create database['USER'] role if not found
+            if not database['USER'] in roles:
+                self.try_shell(["su", "postgres", "-c", "psql -c 'CREATE ROLE %s NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;'" % database['USER']])
 
             log.info("Creating database '%s'...\n" % database['NAME'])
             self.try_shell(["su", "postgres", "-c", "createdb -O %s %s;" % (database['USER'], database['NAME'])])
