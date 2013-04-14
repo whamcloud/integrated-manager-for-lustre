@@ -16,6 +16,9 @@ class FenceAgent(object):
         if fence_state:
             self._fence_state = fence_state
 
+    def initialize(self):
+        pass
+
     def set_power_state(self, state):
         raise NotImplementedError()
 
@@ -46,6 +49,10 @@ class fence_xvm(FenceAgent):
             return "on"
         else:
             return "off"
+
+    def initialize():
+        # install a firewall rule for this port
+        try_run(['/usr/sbin/lokkit', '-p', '1229:tcp'])
 
 
 class fence_apc(FenceAgent):
