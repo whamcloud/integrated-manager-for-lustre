@@ -59,6 +59,9 @@ class TestPlugin(Plugin):
     def update_scan(self, root_resource):
         self.update_scan_called = True
 
+    def commit_resource_statistics(self):
+        self.commit_resource_statistics_called = True
+
     def teardown(self):
         self.teardown_called = True
 

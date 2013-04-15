@@ -13,7 +13,8 @@ from chroma_core.lib.util import normalize_nid
 from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
 from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.models import ManagedTargetMount, Stats
+from chroma_core.models import ManagedTargetMount
+from chroma_core.services.stats import StatsQueue
 
 
 log = log_register(__name__)
@@ -213,5 +214,5 @@ class UpdateScan(object):
         except KeyError:
             pass
 
-        Stats.insert(samples)
+        StatsQueue().put(samples)
         return len(samples)

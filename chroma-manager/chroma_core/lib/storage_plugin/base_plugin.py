@@ -10,7 +10,7 @@ import settings
 import threading
 
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
-from chroma_core.models import Stats
+from chroma_core.services.stats import StatsQueue
 
 
 class ResourceNotFound(Exception):
@@ -277,7 +277,7 @@ class BaseStoragePlugin(object):
             r_stats = resource.flush_stats()
             if r_stats and settings.STORAGE_PLUGIN_ENABLE_STATS:
                 samples += self._resource_manager.session_get_stats(self._scannable_id, resource._handle, r_stats)
-        Stats.insert(samples)
+        StatsQueue().put(samples)
         return len(samples)
 
     def update_or_create(self, klass, parents = [], **attrs):
