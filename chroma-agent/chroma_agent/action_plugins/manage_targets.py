@@ -125,7 +125,7 @@ def get_resource_locations():
     cs = CibStatus.getInstance()
     status = cs.get_status()
     if not status:
-        # Corosync not running
+        # Pacemaker not running
         return None
     member_of_cluster = len(status.childNodes) > 0
 
