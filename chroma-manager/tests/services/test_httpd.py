@@ -47,7 +47,7 @@ class TestInsecureUrls(HttpdTestCase):
         response = requests.get("https://localhost:%s/ui/" % settings.HTTPS_FRONTEND_PORT, verify = False)
         self.assertEqual(response.status_code, 200)
 
-        response = requests.get("https://localhost:%s/static/images/logo.png" % settings.HTTPS_FRONTEND_PORT, verify = False)
+        response = requests.get("https://localhost:%s/static/images/intel-logo-white-trans-80x31.png" % settings.HTTPS_FRONTEND_PORT, verify = False)
         self.assertEqual(response.status_code, 200)
 
         response = requests.get("https://localhost:%s/api/session/" % settings.HTTPS_FRONTEND_PORT, verify = False)

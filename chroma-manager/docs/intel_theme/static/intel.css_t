@@ -66,7 +66,7 @@ div.related {
     color: #fff;
     text-shadow: 0px 1px 0 #444;
     font-size: 0.9em;
-    background-image: url('logo.png');
+    background-image: url('intel-logo-white-trans-80x31.png');
     height: 35px;
     background-repeat: no-repeat;
 }

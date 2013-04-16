@@ -1,7 +1,7 @@
 
 .. include:: <isonum.txt>
 
-Storage Plugin Developer's Guide for Intel® Manager for Lustre* Software
+Storage Plugin Developer's Guide for Intel® Manager for Lustre* software
 ========================================================================
 
 Introduction
@@ -396,7 +396,8 @@ Errors from the storage plugin subsystem, including any errors output
 from your plugin can be found in `/var/log/chroma/storage_plugin.log`. To
 increase the verbosity of the log output (by default only WARN and above
 is output), add your plugin to ``settings.STORAGE_PLUGIN_DEBUG_PLUGINS``.
-Changes to these settings take effect when the Chroma Manager services are restarted.
+Changes to these settings take effect when the Command Center services are
+restarted.
 
 Running the Plugin Process Separately
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

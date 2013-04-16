@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
@@ -28,7 +29,7 @@ sys.path.append(simulator_dir)
 
 from docs.conf_common import *
 
-project = u'Chroma Internals'
+project = u'Intel® Manager for Lustre* software Internals'
 master_doc = 'index'
 
 graphviz_dot_args = [

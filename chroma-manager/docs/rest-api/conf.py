@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
@@ -25,5 +26,5 @@ sys.path.append(agent_dir)
 
 from docs.conf_common import *
 
-project = u'Chroma Manager REST API'
+project = u'Intel® Manager for Lustre* software REST API'
 master_doc = 'index'

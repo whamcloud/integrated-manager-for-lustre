@@ -808,9 +808,9 @@ div.about_box {
 }
 
 div.about_box_logo {
-    background-image: url(../images/chroma_logo.png);
-    width: 300px;
-    height: 168px;
+    background-image: url(../images/intel-logo-blue-trans-160x62.png);
+    width: 160px;
+    height: 62px;
     margin: 12px auto 12px auto;
 }
 

@@ -1,7 +1,7 @@
 
 .. include:: <isonum.txt>
 
-REST API for Intel\ |reg| Manager for Lustre* Software
+REST API for Intel\ |reg| Manager for Lustre* software
 ======================================================
 
 Introduction
@@ -105,8 +105,8 @@ This type of operation is referred to in this document as a _list_ operation.
 Use of HTTPS
 ~~~~~~~~~~~~
 
-By default, Chroma manager uses a server certificate signed by its built-in CA.  To verify this
-certificate in an API client, you must download the Chroma manager CA.  The CA is available for
+By default, the Command Center uses a server certificate signed by its built-in CA.  To verify this
+certificate in an API client, you must download the Command Center CA.  The CA is available for
 download from the manager server at the ``/certificate/`` path.
 
 Filtering and Ordering
@@ -153,7 +153,7 @@ for dates and times, with the caveat that the timezone must be specified in valu
 
 You may find it useful to browse the API using a web browser.  To do this on a running
 system, first log into the Command Center web interface, and then point your browser at
-``http://my-chroma-manager/api/host/?format=json``.  The resulting output is best browsed
+``http://my-command-center/api/host/?format=json``.  The resulting output is best browsed
 using a plugin like ``JSONView`` for the Google``*`` Chrome``*`` browser.  Note that using ``format=json`` is
 only necessary when using a browser: your own client will set the ``Accept`` header instead.
 

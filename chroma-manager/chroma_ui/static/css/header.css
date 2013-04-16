@@ -20,8 +20,9 @@
 }
 
 .logo{
-    background-image:url(../images/logo.png);
+    background-image:url(../images/intel-logo-white-trans-80x31.png);
     background-repeat:no-repeat;
+    background-size: 80px 31px;
     width:80px;
     height:31px;
     float:left;
@@ -29,6 +30,16 @@
     margin-bottom:3px;
     margin-right:50px;
 }
+
+@media only screen and (min--moz-device-pixel-ratio: 2),
+    only screen and (-o-min-device-pixel-ratio: 2/1),
+    only screen and (-webkit-min-device-pixel-ratio: 2),
+    only screen and (min-device-pixel-ratio: 2) {
+    .logo {
+        background-image:url(../images/intel-logo-white-trans-160x62.png);
+    }
+}
+
 
 span#user_info{
     float:right;

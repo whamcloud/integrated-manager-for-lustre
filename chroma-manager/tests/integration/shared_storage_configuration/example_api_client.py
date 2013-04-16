@@ -16,7 +16,7 @@ LOCAL_CA_FILE = "chroma.ca"
 def setup_ca(url):
     """
     To verify the server's identity on subsequent connections, first
-    download the Chroma Manager server's local CA.
+    download the Command Center server's local CA.
     """
 
     if os.path.exists(LOCAL_CA_FILE):

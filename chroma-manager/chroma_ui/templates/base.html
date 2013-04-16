@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="{{STATIC_URL}}css/create_pdu.css" type="text/css" />
 
     {% block css %}{% endblock %}
-    <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
+    <link rel="icon" href="{{STATIC_URL}}images/intel.ico" />
 
     <!-- Frameworks -->
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-1.6.4.min.js"></script>
@@ -127,7 +127,7 @@
 
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />
     {% block scripts %}{% endblock %}
-    <title>Chroma</title>
+    <title>Intel&reg; Manager for Lustre* software</title>
   </head>
 
   <div style="display:none">
@@ -222,8 +222,8 @@
             <div ng-include="(( config.asStatic('partials/status.html') ))"></div>
           </div>
           <p class='footer'>
-              Chroma™ {% if IS_RELEASE %}{{VERSION}} (build {{BUILD}}){%else%}{{BUILD}}{%endif%} is Copyright © 2012 Whamcloud Inc. All rights reserved.
-              <a href="/ui/about/" class='navigation'>About Chroma.</a>
+              Intel&reg; Manager for Lustre* software {% if IS_RELEASE %}{{VERSION}} (build {{BUILD}}){%else%}{{BUILD}}{%endif%} is Copyright &copy; {{server_time.year|safe}} Intel Corporation. All rights reserved.
+              <a href="/ui/about/" class='navigation'>About Intel&reg; Manager for Lustre* software</a>
               &nbsp;
               <a class='superuser_only' href="/ui/system_status/" class='navigation'>System status</a>
           </p>
