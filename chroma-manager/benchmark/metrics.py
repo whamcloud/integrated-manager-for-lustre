@@ -95,7 +95,7 @@ class OstGenerator(TargetGenerator):
 
     def create_entity(self, fs):
         self.create_volume()
-        self.entity = ManagedOst.create_for_volume(self.volume.pk,
+        self.entity, mounts = ManagedOst.create_for_volume(self.volume.pk,
                                                    name=self.name,
                                                    filesystem=fs)
         self.entity.metrics
@@ -126,7 +126,7 @@ class MdtGenerator(TargetGenerator):
 
     def create_entity(self, fs):
         self.create_volume()
-        self.entity = ManagedMdt.create_for_volume(self.volume.pk,
+        self.entity, mounts = ManagedMdt.create_for_volume(self.volume.pk,
                                                    name=self.name,
                                                    filesystem=fs)
         self.entity.metrics
@@ -222,7 +222,7 @@ class Benchmark(GenericBenchmark):
                                   primary = True,
                                   use = True,
                                   volume = mgs_vol)
-        self.mgs = ManagedMgs.create_for_volume(mgs_vol.pk, name="MGS")
+        self.mgs, mounts = ManagedMgs.create_for_volume(mgs_vol.pk, name="MGS")
         self.fs_entity = ManagedFilesystem.objects.create(name=options.fsname,
                                                           mgs=self.mgs)
         self.oss_list = self.prepare_oss_list()

@@ -83,9 +83,12 @@ class TestModels(TestCase):
         self.assertTrue(Stats[-1].start(id))
 
     def test_stats(self):
-        Stats.insert((id, point.dt, point.sum) for point in points)
+        outdated = Stats.insert((id, point.dt, point.sum) for point in points)
+        self.assertEqual(outdated, [])
         with assertQueries():
             point = Stats.latest(id)
+        sample = id, point.dt, point.sum
+        self.assertEqual(Stats.insert([sample]), [sample])
         self.assertEqual(point.timestamp % 10, 0)
         self.assertGreater(point, points[-2])
         self.assertLessEqual(point, points[-1])

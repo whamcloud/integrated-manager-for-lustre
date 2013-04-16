@@ -28,9 +28,12 @@ class Service(ChromaService):
 
     def insert(self, samples):
         try:
-            Stats.insert((id, dateparse.parse_datetime(dt), value) for id, dt, value in samples)
+            outdated = Stats.insert((id, dateparse.parse_datetime(dt), value) for id, dt, value in samples)
         except:
             log.error("Error handling stats insert: " + traceback.format_exc())
+        else:
+            if outdated:
+                log.warn("Outdated samples ignored: {0}".format(outdated))
 
     def stop(self):
         self.queue.stop()

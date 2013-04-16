@@ -158,11 +158,14 @@ class Stats(list):
             self.append(type('Sample_{0:d}'.format(sample), (Sample,), namespace))
 
     def insert(self, samples):
-        "Bulk insert new samples (id, dt, value)."
+        "Bulk insert new samples (id, dt, value).  Skip and return outdated samples."
         # keep stats as Points grouped by id
-        stats = collections.defaultdict(list)
+        outdated, stats = [], collections.defaultdict(list)
         for id, dt, value in samples:
-            stats[id].append(Point(dt, value, 1))
+            if dt > self[0].latest(id).dt:
+                stats[id].append(Point(dt, value, 1))
+            else:
+                outdated.append((id, dt, value))
         # insert stats into first Sample and check the rest
         self[0].insert(stats)
         for previous, model in zip(self, self[1:]):
@@ -185,6 +188,7 @@ class Stats(list):
             previous.expire(stats)
             model.insert(stats)
         model.expire(stats)
+        return outdated
 
     def select(self, id, start, stop, rate=False, maxlen=float('inf')):
         """Return points for a series within inclusive interval of most granular samples.
