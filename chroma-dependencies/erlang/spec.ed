@@ -18,8 +18,9 @@
 /# GNU Emacs\/XEmacs related stuff/
 -2;/^%endif/d
 .
+/^%{_libdir}\/erlang\/lib\/wx-\*\/examples/s/^/#/
 /%files wx/
-/^%{_libdir}\/erlang\/lib\/wx-\*\/priv$/d
+/^%{_libdir}\/erlang\/lib\/wx-\*\/ebin$/;/^%{_libdir}\/erlang\/lib\/wx-\*\/src$/d
 /%files -n emacs-erlang/
 -2;/^%endif/d
 /^%changelog/a
