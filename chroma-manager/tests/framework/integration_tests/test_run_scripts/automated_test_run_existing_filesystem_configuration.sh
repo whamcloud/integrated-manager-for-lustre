@@ -46,6 +46,7 @@ echo "compress
 
     set -xe
     yum remove -y chroma-agent*
+    yum makecache
     yum install -y --nogpgcheck ~/rpms/chroma-agent-*
 
     rm -f /var/tmp/.coverage*
@@ -100,6 +101,7 @@ pip install --force-reinstall -r ~/requirements.txt <<EOC
 s
 
 EOC
+yum makecache
 yum install -y ~/rpms/chroma-manager-*
 echo "import logging 
 LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
