@@ -134,7 +134,8 @@ class RealRemoteOperations(RemoteOperations):
 
     # TODO: reconcile this with the one in UtilityTestCase, ideally all remote
     # operations would flow through here to avoid rogue SSH calls
-    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT):
+    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT,
+                     ssh_key_file=None):
         """
         Executes a command on a remote server over ssh.
 
@@ -142,10 +143,10 @@ class RealRemoteOperations(RemoteOperations):
         stderr, and exit status. It will verify that the exit status of the
         command matches expected_return_code unless expected_return_code=None.
         """
-        logger.debug("remote_command[%s]: %s" % (address, command))
+        logger.debug("remote_command[%s, keyfile=%s]: %s" % (address, ssh_key_file, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(address, **{'username': 'root'})
+        ssh.connect(address, **{'username': 'root', 'key_filename': ssh_key_file})
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
@@ -294,7 +295,7 @@ class RealRemoteOperations(RemoteOperations):
         sanity check that it was configured correctly.
         """
         # TODO: Expand on this. Perhaps use existing lustre client tests.
-        if filesystem.get('bytes_free') == None:
+        if filesystem.get('bytes_free') is None:
             self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free') is not None)
             filesystem = self._test_case.get_filesystem(filesystem['id'])
 
@@ -303,7 +304,7 @@ class RealRemoteOperations(RemoteOperations):
             "dd if=/dev/zero of=/mnt/%s/exercisetest.dat bs=1000 count=%s" % (
                 filesystem['name'],
                 min((filesystem.get('bytes_free') * 0.4), 512000) / 1000
-                )
+            )
         )
 
     def _fqdn_to_server_config(self, fqdn):
@@ -332,7 +333,9 @@ class RealRemoteOperations(RemoteOperations):
         server_config = self._fqdn_to_server_config(fqdn)
         self._ssh_address(
             server_config['host'],
-            server_config['destroy_command']
+            server_config['destroy_command'],
+            ssh_key_file = None if not server_config['ssh_key_file']
+                                else server_config['ssh_key_file']
         )
 
         i = 0
@@ -372,7 +375,9 @@ class RealRemoteOperations(RemoteOperations):
                     logger.info("attempting to restart %s" % boot_fqdn)
                     result = self._ssh_address(
                         boot_server['host'],
-                        boot_server['status_command']
+                        boot_server['status_command'],
+                        ssh_key_file = None if not boot_server['ssh_key_file']
+                                            else boot_server['ssh_key_file']
                     )
                     node_status = result.stdout.read()
                     if re.search('running', node_status):
@@ -380,7 +385,9 @@ class RealRemoteOperations(RemoteOperations):
                         self.kill_server(boot_fqdn)
                     result = self._ssh_address(
                         boot_server['host'],
-                        boot_server['start_command']
+                        boot_server['start_command'],
+                        ssh_key_file = None if not boot_server['ssh_key_file']
+                                            else boot_server['ssh_key_file']
                     )
                     node_status = result.stdout.read()
                     if re.search('started', node_status):
