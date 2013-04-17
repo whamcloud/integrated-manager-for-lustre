@@ -201,24 +201,11 @@ var VolumeChooserStore = function ()
     var table_id = element.attr('id') + "_table";
 
     expander_div.html(
-        "<table class='display tight_lines' id='" + table_id + "'>" +
-          "<thead>" +
-          "  <tr>" +
-          "    <th></th>" +
-          "    <th></th>" +
-          "    <th>Name</th>" +
-          "    <th>Capacity</th>" +
-          "    <th><a data-topic='_type' class='help_hover'>Type</a></th>" +
-          "    <th><a data-topic='_status' class='help_hover'>Status</a></th>" +
-          "    <th>Primary server</th>" +
-          "    <th>Failover server</th>" +
-         "   </tr>" +
-        "  </thead>" +
-       "   <tbody>" +
-      "    </tbody>" +
-     "   </table>"
-        );
-
+      _.template(
+        $('#volume_chooser_template').html(),
+        { table_id: table_id }
+      )
+    );
 
     var table_element = expander_div.children('table');
 
@@ -243,9 +230,29 @@ var VolumeChooserStore = function ()
     opts.data_table = volumeTable;
 
     volumeTable.fnSetColumnVis(0, false);
-    if (!opts.multi_select) {
+
+    if (opts.multi_select) {
+      // add buttons to multi_select only (top and bottom)
+      expander_div.find('div.fg-toolbar')
+        .append( $('#volume_chooser_buttons_template').html() );
+    }
+    else {
       volumeTable.fnSetColumnVis(1, false);
     }
+
+    /* Select All/None and Inverse buttons */
+    expander_div.delegate('a.volume_chooser_all_btn,a.volume_chooser_none_btn','click',function(event) {
+      var value = $(this).hasClass('volume_chooser_all_btn') ? true : false;
+      table_element.find('input[type=checkbox]').attr('checked', value).first().change();
+      event.preventDefault();
+    });
+    expander_div.delegate("a.volume_chooser_invert_btn","click",function(event) {
+      table_element.find('input[type=checkbox]').each(function() {
+        var $checkbox = $(this);
+        $checkbox.attr('checked', ! $checkbox.attr('checked') );
+      }).first().change();
+      event.preventDefault();
+    });
 
     table_element.delegate("td", "mouseenter", function() {
       $(this).parent().children().each(function() {
@@ -259,13 +266,7 @@ var VolumeChooserStore = function ()
     });
 
     function update_multi_select_value() {
-      var selected = [];
-      table_element.find('input').each(function() {
-        if ($(this).attr('checked')) {
-          selected.push ($(this).attr('name'));
-        }
-      });
-
+      var selected = table_element.find('input:checked').map(function() { return this.name; }).get();
       opts.store.select(element, selected);
       opts.selected_lun_ids = selected;
 
@@ -295,29 +296,22 @@ var VolumeChooserStore = function ()
         if (opts.change) {
           opts.change.apply(element);
         }
-      } else {
-        var input_element =$(tr_element).find('input');
-
-
-        var checked = input_element.attr('checked');
-        if (checked) {
-          input_element.get(0).checked = "";
-        } else {
-          input_element.get(0).checked = "checked";
-        }
-        input_element.change();
+      }
+      else {
+        var $input = $(tr_element).find('input');
+        $input.attr('checked', ! $input.attr('checked') ).change();
       }
     }
 
-    table_element.delegate("input[type=checkbox]", "change", function(event) {
+    table_element.delegate('input[type=checkbox]', 'change', function(event) {
       update_multi_select_value();
     });
 
-    table_element.delegate("input[type=checkbox]", "click", function(event) {
+    table_element.delegate('input[type=checkbox]', 'click', function(event) {
       event.stopPropagation();
     });
 
-    table_element.delegate("tr", "click", function(event) {
+    table_element.delegate('tr.odd, tr.even', 'click', function(event) {
       row_clicked(this);
     });
 

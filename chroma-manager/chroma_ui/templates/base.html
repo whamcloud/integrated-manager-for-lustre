@@ -6,6 +6,7 @@
     {% include 'user_detail.html' %}
     {% include 'command_detail.html' %}
     {% include 'storage_resource_detail.html' %}
+    {% include 'volume_chooser_templates.html' %}
     <script type='text/javascript'>
       // Take a javascript copy of the STATIC_URL variable
       // so that we can access it from static .js code
@@ -35,6 +36,7 @@
     <link rel="stylesheet" href="{{STATIC_URL}}css/status.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}css/font-awesome.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}css/bootstrap/bootstrap.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/bootstrap/bootstrap-extend.css" type="text/css" />
 
     {% block css %}{% endblock %}
     <link rel="icon" href="{{STATIC_URL}}images/whamcloud.ico" />

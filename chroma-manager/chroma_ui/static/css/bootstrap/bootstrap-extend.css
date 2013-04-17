@@ -1,0 +1,15 @@
+/* This file is intended to fix conflicts between base.css and boostrap.css
+ * as well as extentions to some classes
+*/
+
+.btn {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* override anchor styles that get put on buttons */
+    text-decoration: none;
+    font-weight: normal;
+}
