@@ -247,23 +247,27 @@ class JobSchedulerClient(object):
         JobSchedulerRpc().cancel_job(job_id)
 
     @classmethod
-    def create_host_ssh(cls, address):
+    def create_host_ssh(cls, address, root_pw=None, pkey=None, pkey_pw=None):
         """
         Set up a host using SSH
 
-        FIXME: determine whether this is really the right place, is this an insane
-        flow of remote calls?
+        FIXME: determine whether this is really the right place,
+        is this an insane flow of remote calls?
 
         :param address: SSH address
         :return: (<ManagedHost instance>, <Command instance>)
         """
         from chroma_core.models import ManagedHost, Command
-        host_id, command_id = JobSchedulerRpc().create_host_ssh(address)
-        return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
+        host_id, command_id = JobSchedulerRpc().create_host_ssh(address,
+            root_pw, pkey, pkey_pw)
+        host = ManagedHost.objects.get(pk = host_id)
+        command = Command.objects.get(pk = command_id)
+        return  host, command
 
     @classmethod
-    def test_host_contact(cls, address):
-        return JobSchedulerRpc().test_host_contact(address)
+    def test_host_contact(cls, address, root_pw=None, pkey=None, pkey_pw=None):
+        return JobSchedulerRpc().test_host_contact(
+            address, root_pw, pkey, pkey_pw)
 
     @classmethod
     def create_filesystem(cls, fs_data):
