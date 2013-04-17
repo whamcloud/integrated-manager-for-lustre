@@ -8,31 +8,18 @@ spacelist_to_commalist() {
 
 [ -r localenv ] && . localenv
 
-# Remove test results and coverate reports from previous run
-rm -rfv ~/ss/test_reports/*
-rm -rfv ~/ss/coverage_reports/.coverage*
-mkdir -p ~/ss/test_reports
-mkdir -p ~/ss/coverage_reports
-
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"`ls ~/ss/shared_storage_configuration_cluster_cfg.json`"}
 CHROMA_DIR=${CHROMA_DIR:-$PWD}
-set +x
-CHROMA_REPO=${CHROMA_REPO:-"https://jenkins-pull:Aitahd9u@build.whamcloudlabs.com/job/chroma/lastSuccessfulBuild/arch=x86_64%2Cdistro=el6/artifact/chroma-dependencies/repo/"}
-
-eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
-
 set -x
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
-TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+CHROMA_REPO=${CHROMA_REPO:-"https://jenkins-pull:Aitahd9u@build.whamcloudlabs.com/job/chroma/lastSuccessfulBuild/arch=x86_64%2Cdistro=el6/artifact/chroma-dependencies/repo/"}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
-echo "Beginning installation and setup..."
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 # Configure repos on test nodes
 trap "pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) 'rm -rf /etc/yum.repos.d
 mv /etc/yum.repos.d{.bak,}' | dshbak -c" EXIT
 
-set +x
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) "
 mv /etc/yum.repos.d{,.bak}
 mkdir /etc/yum.repos.d/
@@ -58,49 +45,60 @@ enable=1
 #
 
 [base]
-name=CentOS-\$releasever - Base
-mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=os
-#baseurl=http://mirror.centos.org/centos/\$releasever/os/\$basearch/
+name=CentOS-6.3 - Base
+mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=os
+#baseurl=http://mirror.centos.org/centos/6.3/os/\$basearch/
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #released updates
 [updates]
-name=CentOS-\$releasever - Updates
-mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=updates
-#baseurl=http://mirror.centos.org/centos/\$releasever/updates/\$basearch/
+name=CentOS-6.3 - Updates
+mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=updates
+#baseurl=http://mirror.centos.org/centos/6.3/updates/\$basearch/
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #additional packages that may be useful
 [extras]
-name=CentOS-\$releasever - Extras
-mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=extras
-#baseurl=http://mirror.centos.org/centos/\$releasever/extras/\$basearch/
+name=CentOS-6.3 - Extras
+mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=extras
+#baseurl=http://mirror.centos.org/centos/6.3/extras/\$basearch/
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #additional packages that extend functionality of existing packages
 [centosplus]
-name=CentOS-\$releasever - Plus
-mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=centosplus
-#baseurl=http://mirror.centos.org/centos/\$releasever/centosplus/\$basearch/
+name=CentOS-6.3 - Plus
+mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=centosplus
+#baseurl=http://mirror.centos.org/centos/6.3/centosplus/\$basearch/
 gpgcheck=1
 enabled=0
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #contrib - packages by Centos Users
 [contrib]
-name=CentOS-\$releasever - Contrib
-mirrorlist=http://mirrorlist.centos.org/?release=\$releasever&arch=\$basearch&repo=contrib
-#baseurl=http://mirror.centos.org/centos/\$releasever/contrib/\$basearch/
+name=CentOS-6.3 - Contrib
+mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=contrib
+#baseurl=http://mirror.centos.org/centos/6.3/contrib/\$basearch/
 gpgcheck=1
 enabled=0
 EOF1
-$PROXY yum clean all
-$PROXY yum -y install pdsh" | dshbak -c
-set -x
+$PROXY yum --disablerepo=chroma-jenkins clean all
+$PROXY yum -y --disablerepo=chroma-jenkins install pdsh || true" | dshbak -c
 
+[ -r localenv ] && . localenv init
+
+# Remove test results and coverate reports from previous run
+rm -rfv ~/ss/test_reports/*
+rm -rfv ~/ss/coverage_reports/.coverage*
+mkdir -p ~/ss/test_reports
+mkdir -p ~/ss/coverage_reports
+
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+
+echo "Beginning installation and setup..."
 # Install and setup integration tests on integration test runner
 scp $CLUSTER_CONFIG $CLIENT_1:/root/cluster_cfg.json
 ssh $CLIENT_1 <<EOF
