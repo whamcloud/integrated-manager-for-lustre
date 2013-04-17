@@ -49,7 +49,7 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile
 	mv dist/$(SPECNAME) ../..
 	cp $(SPECNAME){,.orig}
 	ed $(SPECNAME) < ../include/pypi-rpm_spec.ed 2>/dev/null
-	echo -e "/^Source0:/c\nSource0: %{tgz_name}-%{unmangled_version}.$(TARBALL_EXT)\n.\nw\nq" | ed $(SPECNAME) 2>/dev/null
+	echo -e "/^Source0:/c\nSource0: %{tgz_name}-%{unmangled_version}.$(TARBALL_EXT)\n.\n1;\$$s/^python/%{__python}/g\n.\nw\nq" | ed $(SPECNAME) 2>/dev/null
 	if ! $(USES_DISTUTILS) &&                                           \
 	   grep setuptools tmp/$(TARBALL_NAME)-$(TARBALL_VERSION)/setup.py; \
 	   then                                                             \
