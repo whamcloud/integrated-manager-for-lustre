@@ -10,21 +10,22 @@ spacelist_to_commalist() {
 
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"`ls ~/ss/shared_storage_configuration_cluster_cfg.json`"}
 CHROMA_DIR=${CHROMA_DIR:-$PWD}
-set -x
+set +x
 CHROMA_REPO=${CHROMA_REPO:-"https://jenkins-pull:Aitahd9u@build.whamcloudlabs.com/job/chroma/lastSuccessfulBuild/arch=x86_64%2Cdistro=el6/artifact/chroma-dependencies/repo/"}
-PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 set -x
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 RELEASEVER="$releasever"
 
 # Configure repos on test nodes
 trap "pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) 'rm -rf /etc/yum.repos.d
 mv /etc/yum.repos.d{.bak,}' | dshbak -c" EXIT
 
+set +x
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) "
 mv /etc/yum.repos.d{,.bak}
 mkdir /etc/yum.repos.d/
