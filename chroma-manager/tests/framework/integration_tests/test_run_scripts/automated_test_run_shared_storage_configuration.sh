@@ -16,6 +16,11 @@ PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
+set -x
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+RELEASEVER="$releasever"
+
 # Configure repos on test nodes
 trap "pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) 'rm -rf /etc/yum.repos.d
 mv /etc/yum.repos.d{.bak,}' | dshbak -c" EXIT
@@ -45,42 +50,42 @@ enable=1
 #
 
 [base]
-name=CentOS-6.3 - Base
-mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=os
-#baseurl=http://mirror.centos.org/centos/6.3/os/\$basearch/
+name=CentOS-$RELEASEVER - Base
+mirrorlist=http://mirrorlist.centos.org/?release=$RELEASEVER&arch=\$basearch&repo=os
+#baseurl=http://mirror.centos.org/centos/$RELEASEVER/os/\$basearch/
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #released updates
 [updates]
-name=CentOS-6.3 - Updates
-mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=updates
-#baseurl=http://mirror.centos.org/centos/6.3/updates/\$basearch/
+name=CentOS-$RELEASEVER - Updates
+mirrorlist=http://mirrorlist.centos.org/?release=$RELEASEVER&arch=\$basearch&repo=updates
+#baseurl=http://mirror.centos.org/centos/$RELEASEVER/updates/\$basearch/
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #additional packages that may be useful
 [extras]
-name=CentOS-6.3 - Extras
-mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=extras
-#baseurl=http://mirror.centos.org/centos/6.3/extras/\$basearch/
+name=CentOS-$RELEASEVER - Extras
+mirrorlist=http://mirrorlist.centos.org/?release=$RELEASEVER&arch=\$basearch&repo=extras
+#baseurl=http://mirror.centos.org/centos/$RELEASEVER/extras/\$basearch/
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #additional packages that extend functionality of existing packages
 [centosplus]
-name=CentOS-6.3 - Plus
-mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=centosplus
-#baseurl=http://mirror.centos.org/centos/6.3/centosplus/\$basearch/
+name=CentOS-$RELEASEVER - Plus
+mirrorlist=http://mirrorlist.centos.org/?release=$RELEASEVER&arch=\$basearch&repo=centosplus
+#baseurl=http://mirror.centos.org/centos/$RELEASEVER/centosplus/\$basearch/
 gpgcheck=1
 enabled=0
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 #contrib - packages by Centos Users
 [contrib]
-name=CentOS-6.3 - Contrib
-mirrorlist=http://mirrorlist.centos.org/?release=6.3&arch=\$basearch&repo=contrib
-#baseurl=http://mirror.centos.org/centos/6.3/contrib/\$basearch/
+name=CentOS-$RELEASEVER - Contrib
+mirrorlist=http://mirrorlist.centos.org/?release=$RELEASEVER&arch=\$basearch&repo=contrib
+#baseurl=http://mirror.centos.org/centos/$RELEASEVER/contrib/\$basearch/
 gpgcheck=1
 enabled=0
 EOF1
@@ -94,9 +99,6 @@ rm -rfv ~/ss/test_reports/*
 rm -rfv ~/ss/coverage_reports/.coverage*
 mkdir -p ~/ss/test_reports
 mkdir -p ~/ss/coverage_reports
-
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
-TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
 
 echo "Beginning installation and setup..."
 # Install and setup integration tests on integration test runner
