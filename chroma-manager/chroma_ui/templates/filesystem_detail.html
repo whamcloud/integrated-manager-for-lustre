@@ -182,7 +182,7 @@
                   volume_markup,
                   RouteUtils.uri_properties_link(target.primary_server, target.primary_server_name),
                   RouteUtils.uri_properties_link(target.failover_servers[0], target.failover_server_name),
-                  target.active_host_name,
+                  LiveObject.active_host(target),
                   LiveObject.actions(target),
                   LiveObject.icons(target)
                 ];

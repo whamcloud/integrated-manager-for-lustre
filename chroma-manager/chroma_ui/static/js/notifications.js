@@ -209,6 +209,10 @@ var LiveObject = function()
     return spanMarkup(obj, ['object_state'], renderState(obj))
   }
 
+  function active_host(obj) {
+    return spanMarkup(obj, ['active_host'], obj.active_host_name);
+  }
+
   function actions(stateful_object) {
 
     // resource type + state mapping to contextual help
@@ -273,6 +277,7 @@ var LiveObject = function()
     icons: icons,
     label: label,
     state: state,
+    active_host: active_host,
     renderState: renderState,
     actions: actions,
     transitionClicked: transitionClicked,
@@ -714,6 +719,10 @@ var CommandNotification = function() {
           $(this).html(LiveObject.renderState(obj));
         });
 
+        $(".active_host[data-resource_uri='" + uri + "']").each(function () {
+          $(this).html(LiveObject.active_host(obj));
+        });
+
         $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
           $(this).html(LiveObject.actions(obj));
         });
@@ -747,6 +756,10 @@ var CommandNotification = function() {
             $(this).html("");
           });
           $(".object_state[data-resource_uri='" + uri + "']").each(function () {
+            $(this).html("");
+          });
+
+          $(".active_host[data-resource_uri='" + uri + "']").each(function () {
             $(this).html("");
           });
 
