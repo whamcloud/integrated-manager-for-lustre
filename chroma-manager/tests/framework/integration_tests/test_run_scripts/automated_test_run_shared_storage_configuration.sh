@@ -33,18 +33,10 @@ trap "pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORA
 mv /etc/yum.repos.d{.bak,}' | dshbak -c" EXIT
 
 set +x
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) "
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} $CLIENT_1) "set -ex
 mv /etc/yum.repos.d{,.bak}
 mkdir /etc/yum.repos.d/
 cat <<\"EOF1\" > /etc/yum.repos.d/test-run.repo
-[chroma-jenkins]
-name=chroma-jenkins
-baseurl=$CHROMA_REPO
-gpgcheck=0
-sslverify=0
-enable=1
-#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-WhamOS-6
-
 # CentOS-Base.repo
 #
 # The mirror system uses the connecting IP address of the client and the
@@ -98,13 +90,25 @@ gpgcheck=1
 enabled=0
 EOF1
 $PROXY yum clean all
-$PROXY yum -y install pdsh" | dshbak -c
+$PROXY yum -y install pdsh || true" 2>&1 | dshbak -c
+
 set -x
 
 # Install and setup integration tests on integration test runner
 scp $CLUSTER_CONFIG $CLIENT_1:/root/cluster_cfg.json
 ssh $CLIENT_1 <<EOF
-$PROXY yum -y install python-requests python-{nose-testconfig,paramiko,django}
+cat <<\"EOF1\" >> /etc/yum.repos.d/test-run.repo
+
+[chroma-jenkins]
+name=chroma-jenkins
+baseurl=$CHROMA_REPO
+gpgcheck=0
+sslverify=0
+enable=1
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-WhamOS-6
+EOF1
+
+$PROXY yum -y install python-{requests,nose-testconfig,paramiko,django,dateutil}
 cd /usr/share/chroma-manager
 unset http_proxy; unset https_proxy
 nosetests --verbosity=2 tests/integration/utils/full_cluster_reset.py --tc-format=json --tc-file=/root/cluster_cfg.json
@@ -133,7 +137,6 @@ logrotate -fv /etc/logrotate.d/syslog
 
 set -xe
 $PROXY yum remove -y chroma-agent*
-$PROXY yum install -y chroma-agent-management
 rm -f /var/tmp/.coverage*
 if $MEASURE_COVERAGE; then
     $PROXY yum install -y python-coverage
@@ -153,36 +156,11 @@ EOF
 else
     # Ensure that coverage is disabled
     rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-fi
-
-# could have installed a new kernel, so see if we need a reboot
-default_kernel=\"\$(grubby --default-kernel | sed -e 's/^.*vmlinuz-//')\"
-if [ -z \"\$default_kernel\" ]; then
-    echo \"failed to determine default kernel\"
-    exit 1
-fi
-if [ \"\$default_kernel\" != \"\$(uname -r)\" ]; then
-    sync
-    sync
-    init 6
 fi" 2>&1 | dshbak -c
-
-# give nodes shutting down time to be down
-sleep 5
-
-# wait for any rebooted nodes
-nodes="${STORAGE_APPLIANCES[@]}"
-while [ -n "$nodes" ]; do
-    for node in $nodes; do
-        if ssh $node id; then
-            nodes=$(echo "$nodes" | sed -e "s/$node//" -e 's/^ *//' -e 's/ *$//')
-        fi
-    done
-    sleep 1
-done
 
 # Install and setup chroma manager
 ssh $CHROMA_MANAGER <<"EOF"
+set -ex
 chroma-config stop
 $PROXY yum remove -y chroma-manager*
 service postgresql stop
@@ -192,7 +170,16 @@ logrotate -fv /etc/logrotate.d/chroma-manager
 logrotate -fv /etc/logrotate.d/syslog
 logrotate -fv /etc/logrotate.d/rabbitmq-server
 
-$PROXY yum install -y chroma-manager
+cd /tmp
+tar xzvf /home/brian/chroma/chroma-bundles/chroma.tar.gz
+# TODO: need to get this info from the cluster_config.json
+./install.sh <<EOF1
+chroma
+brian.murrell@intel.com
+chroma
+chroma
+localhost
+EO1
 
 cat <<"EOF1" > /usr/share/chroma-manager/local_settings.py
 import logging
