@@ -49,8 +49,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'chroma-config = chroma_core.lib.service_config:chroma_config',
-            'chroma = chroma_cli.main:standard_cli',
-            'qr3d = r3d.cli:main'
+            'chroma = chroma_cli.main:standard_cli'
         ]
     }
 )

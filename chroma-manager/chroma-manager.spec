@@ -102,7 +102,7 @@ install -m 644 %{SOURCE4} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
 # This is fugly, but it's cleaner than moving things around to get our
 # modules in the standard path.
-entry_scripts="/usr/bin/chroma-config /usr/bin/chroma /usr/bin/qr3d"
+entry_scripts="/usr/bin/chroma-config /usr/bin/chroma"
 for script in $entry_scripts; do
   ed $RPM_BUILD_ROOT$script <<EOF
 /import load_entry_point/ a
@@ -155,7 +155,6 @@ find /usr/share/chroma-manager/ -name "*.pyc" -exec rm -f {} \;
 
 %files
 %defattr(-,root,root)
-%{_bindir}/qr3d
 %{_bindir}/chroma-host-discover
 %{_bindir}/chroma-config
 %dir %attr(0755,apache,apache)/usr/share/chroma-manager
