@@ -1,4 +1,4 @@
-LOCATION := http://fedora.mirror.nexicom.net/epel/6/SRPMS/rabbitmq-server-2.6.1-1.el6.src.rpm
+LOCATION := http://www.rabbitmq.com/releases/rabbitmq-server/v3.0.3/rabbitmq-server-3.0.3-1.src.rpm
 REQUIREMENT :=
 
 include ../include/Makefile.rpm
