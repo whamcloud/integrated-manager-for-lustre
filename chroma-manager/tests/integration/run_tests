@@ -79,7 +79,6 @@ echo "Running tests in $TEST_DIR"
 echo "----------------------------------------------------------------------"
 
 if [ -n "$XML_REPORT" ]; then
-    nosetests --verbosity=2 $TEST_DIR --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" --with-xunit --xunit-file=$XML_REPORT
-else
-    nosetests --verbosity=2 $TEST_DIR --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE"
+    WITH_XUNIT="--with-xunit --xunit-file=$XML_REPORT"
 fi
+nosetests --verbosity=2 $TEST_DIR --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" $WITH_XUNIT
