@@ -1,4 +1,3 @@
-import time
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
@@ -38,6 +37,8 @@ class TestAutodetection(ChromaIntegrationTestCase):
 
         fqdn = config['lustre_servers'][0]['fqdn']
         self.remote_operations.stop_target(fqdn, mgt['ha_label'])
-        time.sleep(30)
-        fs = self.chroma_manager.get("/api/filesystem/").json['objects'][0]
-        self.assertEqual(fs['mgt']['state'], 'unmounted')
+
+        def mgt_is_unmounted():
+            fs = self.chroma_manager.get("/api/filesystem/").json['objects'][0]
+            return fs['mgt']['state'] == 'unmounted'
+        self.wait_until_true(mgt_is_unmounted)

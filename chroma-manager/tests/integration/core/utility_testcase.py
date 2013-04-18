@@ -77,6 +77,23 @@ class UtilityTestCase(TestCase):
             running_time += 1
         self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
 
+    def wait_for_assert(self, lambda_expression, timeout=TEST_TIMEOUT):
+        """
+        Evaluates lambda_expression once/1s until no AssertionError or hits
+        timeout.
+        """
+        running_time = 0
+        while running_time < timeout:
+            try:
+                lambda_expression()
+            except AssertionError, e:
+                logger.debug("%s tripped assertion: %s" % (inspect.getsource(lambda_expression), e))
+            else:
+                break
+            time.sleep(1)
+            running_time += 1
+        self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
+
     def get_host_config(self, nodename):
         """
         Get the entry for a lustre server from the cluster config.

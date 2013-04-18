@@ -118,6 +118,8 @@ class ApiTestCase(UtilityTestCase):
                 time.sleep(1)
                 running_time += 1
 
+        logger.debug("command complete: %s" % self.get_by_uri('/api/command/%s/' % command_id))
+
         self.assertTrue(command_complete, command)
         if verify_successful and (command['errored'] or command['cancelled']):
             print "COMMAND %s FAILED:" % command['id']

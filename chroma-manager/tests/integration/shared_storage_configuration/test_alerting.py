@@ -1,15 +1,7 @@
 
 
-import time
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-
-
-# Updating the status is a (very) asynchronous operation
-# 10 second periodic update from the agent, then the state change goes
-# into a queue serviced at some point in the future (fractions of a second
-# on an idle system, but not bounded)
-UPDATE_DELAY = 20
 
 
 class TestEvents(ChromaIntegrationTestCase):
@@ -29,12 +21,13 @@ class TestEvents(ChromaIntegrationTestCase):
         self.remote_operations.kill_server(host['fqdn'])
         self.remote_operations.await_server_boot(host['fqdn'])
 
-        time.sleep(UPDATE_DELAY)
+        def reboot_event_was_seen():
+            events = self.get_list("/api/event/", {'created_at__gte': start_time})
 
-        events = self.get_list("/api/event/", {'created_at__gte': start_time})
+            reboot_events = [e for e in events if e['message'].find("restarted") != -1]
+            return len(reboot_events) == 1
 
-        reboot_events = [e for e in events if e['message'].find("restarted") != -1]
-        self.assertEqual(len(reboot_events), 1, events)
+        self.wait_until_true(reboot_event_was_seen)
 
 
 class TestAlerting(ChromaIntegrationTestCase):
@@ -51,15 +44,13 @@ class TestAlerting(ChromaIntegrationTestCase):
 
         # Check the alert is raised when the target unexpectedly stops
         self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
-        time.sleep(UPDATE_DELAY)
-        self.assertHasAlert(mgt['resource_uri'])
-        self.assertState(mgt['resource_uri'], 'unmounted')
+        self.wait_for_assert(lambda: self.assertHasAlert(mgt['resource_uri']))
+        self.wait_for_assert(lambda: self.assertState(mgt['resource_uri'], 'unmounted'))
 
         # Check the alert is cleared when restarting the target
         self.remote_operations.start_target(host['fqdn'], mgt['ha_label'])
 
-        time.sleep(UPDATE_DELAY)
-        self.assertNoAlerts(mgt['resource_uri'])
+        self.wait_for_assert(lambda: self.assertNoAlerts(mgt['resource_uri']))
 
         # Check that no alert is raised when intentionally stopping the target
         self.set_state(mgt['resource_uri'], 'unmounted')
@@ -72,9 +63,8 @@ class TestAlerting(ChromaIntegrationTestCase):
         host = self.get_by_uri(host['resource_uri'])
         self.assertEqual(host['state'], 'lnet_up')
         self.remote_operations.stop_lnet(host['fqdn'])
-        time.sleep(UPDATE_DELAY)
-        self.assertHasAlert(host['resource_uri'])
-        self.assertState(host['resource_uri'], 'lnet_down')
+        self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri']))
+        self.wait_for_assert(lambda: self.assertState(host['resource_uri'], 'lnet_down'))
 
         # Check that alert is dropped when lnet is brought back up
         self.set_state(host['resource_uri'], 'lnet_up')
@@ -89,8 +79,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         for target in self.get_list("/api/target/"):
             self.remote_operations.stop_target(host['fqdn'], target['ha_label'])
         self.remote_operations.stop_lnet(host['fqdn'])
-        time.sleep(UPDATE_DELAY)
-        self.assertEqual(len(self.get_list('/api/alert/', {'active': True})), 4)
+        self.wait_for_assert(lambda: self.assertEqual(len(self.get_list('/api/alert/', {'active': True})), 4))
 
         # Remove everything
         self.graceful_teardown(self.chroma_manager)

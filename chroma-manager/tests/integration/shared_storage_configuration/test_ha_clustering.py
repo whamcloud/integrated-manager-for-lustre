@@ -10,11 +10,11 @@ class ChromaHaTestCase(ChromaIntegrationTestCase):
 
         self.add_hosts([s['address'] for s in config['lustre_servers']])
 
-        def _all_servers_up(testcase):
-            servers = testcase.get_list("/api/host/")
+        def all_servers_up():
+            servers = self.get_list("/api/host/")
             return all([server['corosync_reported_up'] for server in servers])
 
-        self.wait_until_true(lambda: _all_servers_up(self))
+        self.wait_until_true(all_servers_up)
 
 
 class TestHaClusters(ChromaHaTestCase):

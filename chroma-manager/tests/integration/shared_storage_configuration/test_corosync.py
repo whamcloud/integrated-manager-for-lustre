@@ -1,11 +1,9 @@
 
 import logging
-import time
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import (
                                                     ChromaIntegrationTestCase)
-from tests.integration.shared_storage_configuration import test_alerting
 
 log = logging.getLogger(__name__)
 
@@ -31,15 +29,11 @@ class TestCorosync(ChromaIntegrationTestCase):
         # Add two hosts
         self.add_hosts([server_config_1['address'], server_config_2['address']])
 
-        # Wait long enough for the first update to arrive
-        time.sleep(test_alerting.UPDATE_DELAY)
-
         # The first update should have said both were online
-        # COMMENT OUT NEXT 3 LINES IF TEST BECOMES BRITTLE
-        hosts = self.get_list("/api/host/")
-        for host in hosts:
-            self.assertTrue(host['corosync_reported_up'], "for: %s - %s" %
-                                 (host['fqdn'], host['corosync_reported_up']))
+        def all_hosts_online():
+            hosts = self.get_list("/api/host/")
+            return all([host['corosync_reported_up'] for host in hosts])
+        self.wait_until_true(all_hosts_online)
 
         # Check there no alerts - since nothing should be OFFLINE yet
         alerts = self.get_list("/api/alert/", {'active': True,
@@ -53,18 +47,15 @@ class TestCorosync(ChromaIntegrationTestCase):
         # Kill the second host
         self.remote_operations.kill_server(server_config_2['fqdn'])
 
-        # Wait long enough for the first host to send an
-        # updated state saying the second host is offline
-        time.sleep(test_alerting.UPDATE_DELAY)
-
         # Check that hosts status is updated
-        # COMMENT OUT NEXT 4 LINES IF TEST BECOMES BRITTLE
+        def host2_offline():
+            host2 = self.get_list("/api/host/",
+                                  args={'fqdn': server_config_2['fqdn']})[0]
+            return host2['corosync_reported_up'] == False
+        self.wait_until_true(host2_offline)
         host1 = self.get_list("/api/host/",
                               args={'fqdn': server_config_1['fqdn']})[0]
-        host2 = self.get_list("/api/host/",
-                              args={'fqdn': server_config_2['fqdn']})[0]
         self.assertTrue(host1['corosync_reported_up'])
-        self.assertFalse(host2['corosync_reported_up'])
 
         # Check that an alert was created (be specific to the 'is offline' alert
         # to avoid getting confused by 'lost contact' alerts)
