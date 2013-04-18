@@ -14,7 +14,6 @@ def patch_test_host_contact_task(context, result_attrs = {}):
     defaults = {
         'resolve': True,
         'ping': True,
-        'auth': True,
         'agent': True,
         'reverse_resolve': True,
         'reverse_ping': True,
@@ -25,7 +24,7 @@ def patch_test_host_contact_task(context, result_attrs = {}):
         context.old_test_host_contact = JobSchedulerClient.test_host_contact
 
     result = dict(defaults.items() + result_attrs.items())
-    JobSchedulerClient.test_host_contact = mock.Mock(side_effect = lambda address, root_pw, pkey, pkey_pw: dict([('address', address)] + result.items()))
+    JobSchedulerClient.test_host_contact = mock.Mock(side_effect = lambda address: dict([('address', address)] + result.items()))
 
 
 def before_all(context):
@@ -71,7 +70,7 @@ def before_feature(context, feature):
     from chroma_core.models import ManagedHost, Command
     from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
-    def create_host_ssh(address, root_pw, pkey, pkey_pw):
+    def create_host_ssh(address):
         host_data = AgentRpc.mock_servers[address]
         host = synthetic_host(address, nids = host_data['nids'], fqdn=host_data['fqdn'], nodename=host_data['nodename'])
         ObjectCache.add(ManagedHost, host)

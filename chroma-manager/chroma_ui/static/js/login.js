@@ -147,24 +147,14 @@ var Login = function() {
 
 var ValidatedForm = function() {
   function add_error(input, message) {
-    if(input) {
-        input.before("<span class='error'>" + message + "</span>").addClass('error');
-    }
+    input.before("<span class='error'>" + message + "</span>");
+    input.addClass('error');
   }
 
   function save(element, api_fn, url, obj, success, error) {
-
-      var form_params = element
-          .find('form').find('input[type!="radio"], textarea')
-          .filter(':visible')
-          .serializeArray()
-          .reduce(function (hash, pair) {
-              hash[pair.name] = pair.value;
-              return hash;
-          }, {commit: true});
-
-      $.extend(obj, form_params);
-
+    element.find('input').each(function() {
+      obj[$(this).attr('name')] = $(this).val()
+    });
     return api_fn(url, obj,
       success_callback = function(data) {
         clear_errors(element);
@@ -179,11 +169,11 @@ var ValidatedForm = function() {
           }
           var errors = JSON.parse(jqXHR.responseText);
           element.find('span.error').remove();
-          element.find('input, textarea').removeClass('error');
+          element.find('input').removeClass('error');
           $.each(errors, function(attr_name, error_list) {
             $.each(error_list, function(i, error) {
-              var sel = 'input[name='+attr_name+'], textarea[name='+attr_name+']';
-              add_error(element.find(sel), error);
+              add_error(element.find('input[name=' + attr_name + ']'), error);
+
             });
           });
         }
@@ -193,16 +183,16 @@ var ValidatedForm = function() {
 
   function clear_errors(element) {
     element.find('span.error').remove();
-    element.find('input, textarea').removeClass('error');
+    element.find('input').removeClass('error');
   }
 
   function clear(element) {
-    element.find('input, textarea').val("");
+    element.find('input').val("");
     clear_errors(element);
   }
 
   function reset(element, obj) {
-    element.find('input, textarea').each(function() {
+    element.find('input').each(function() {
       $(this).val(obj.get($(this).attr('name')));
     });
   }

@@ -5,7 +5,7 @@
 
 
 from collections import defaultdict
-from chroma_core.services.job_scheduler import job_scheduler_client
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.rpc import RpcError
 from tastypie.validation import Validation
 
@@ -47,14 +47,6 @@ class HostValidation(Validation):
         return errors
 
 
-def _host_params(bundle):
-#  See the UI (e.g. server_configuration.js)
-    return {'address': bundle.data.get('address'),
-            'root_pw': bundle.data.get('root_password'),
-            'pkey': bundle.data.get('private_key'),
-            'pkey_pw': bundle.data.get('private_key_passphrase')}
-
-
 class HostResource(MetricResource, StatefulModelResource):
     """
     Represents a Lustre server that is being monitored and managed from the Command Center.
@@ -64,11 +56,6 @@ class HostResource(MetricResource, StatefulModelResource):
     POSTs to this resource must have the ``address`` attribute set.
     """
     nids = fields.ListField(null = True)
-    root_pw = fields.CharField(help_text = "ssh root password to new server.")
-    private_key = fields.CharField(help_text = "ssh private key matching a "
-                                               "public key on the new server.")
-    private_key_passphrase = fields.CharField(help_text = "passphrase to "
-                                                          "decrypt private key")
 
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(
@@ -99,20 +86,17 @@ class HostResource(MetricResource, StatefulModelResource):
         # a 'validation errors' dialog which is pretty ugly.
 
         try:
-            host_params = _host_params(bundle)
-            host, command = job_scheduler_client.JobSchedulerClient.create_host_ssh(
-                **host_params)
+            host, command = JobSchedulerClient.create_host_ssh(bundle.data['address'])
         except RpcError, e:
             # Rather stretching the meaning of "BAD REQUEST", say that this
             # request is bad on the basis that the user specified a host that
             # is (for some reason) not playing ball.
-            args = {'address': ["Cannot add host at this address: %s" % e]}
-            raise custom_response(self, request, http.HttpBadRequest, args)
+            raise custom_response(self, request, http.HttpBadRequest,
+                {'address': ["Cannot add host at this address: %s" % e]})
         else:
-            args = {'command': dehydrate_command(command),
-                    'host': self.full_dehydrate(
-                        self.build_bundle(obj = host)).data}
-            raise custom_response(self, request, http.HttpAccepted, args)
+            raise custom_response(self, request, http.HttpAccepted,
+                {'command': dehydrate_command(command),
+                 'host': self.full_dehydrate(self.build_bundle(obj = host)).data})
 
     def apply_filters(self, request, filters = None):
         objects = super(HostResource, self).apply_filters(request, filters)
@@ -143,18 +127,9 @@ class HostResource(MetricResource, StatefulModelResource):
 class HostTestResource(Resource):
     """
     A request to test a potential host address for accessibility, typically
-    used prior to creating the host.  Only supports POST with the 'address'
-    field.
-
+    used prior to creating the host.  Only supports POST with the 'address' field.
     """
-    address = fields.CharField(help_text = "Same as ``address`` "
-                                           "field on host resource.")
-
-    root_pw = fields.CharField(help_text = "ssh root password to new server.")
-    private_key = fields.CharField(help_text = "ssh private key matching a "
-                                               "public key on the new server.")
-    private_key_passphrase = fields.CharField(help_text = "passphrase to "
-                                                          "decrypt private key")
+    address = fields.CharField(help_text = "Same as ``address`` field on host resource.")
 
     class Meta:
         list_allowed_methods = ['post']
@@ -166,8 +141,6 @@ class HostTestResource(Resource):
         validation = HostValidation()
 
     def obj_create(self, bundle, request = None, **kwargs):
-
-        result = job_scheduler_client.JobSchedulerClient.test_host_contact(
-            **_host_params(bundle))
+        result = JobSchedulerClient.test_host_contact(bundle.data['address'])
 
         raise custom_response(self, request, http.HttpAccepted, result)

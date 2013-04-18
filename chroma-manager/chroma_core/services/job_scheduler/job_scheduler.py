@@ -11,13 +11,11 @@ import threading
 import sys
 import traceback
 import urlparse
-
 import os
 from collections import defaultdict
 import Queue
 import dateutil.parser
 from copy import deepcopy
-from paramiko import SSHException, AuthenticationException
 
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
@@ -488,7 +486,7 @@ class JobScheduler(object):
         log.debug('_complete_job: %s threads in flight' % len(self._run_threads))
 
         log.info("Job %s completing (errored=%s, cancelled=%s)" %
-                 (job.id, errored, cancelled))
+                     (job.id, errored, cancelled))
 
         try:
             command = Command.objects.filter(jobs = job, complete = False)[0]
@@ -789,58 +787,26 @@ class JobScheduler(object):
                 self._drain_notification_buffer()
 
     @transaction.commit_on_success
-    def create_host_ssh(self, address, root_pw=None, pkey=None, pkey_pw=None):
-        """Agent boot strap the storage host at this address
-
-        :param address the resolveable address of the host option user@ in front
-
-        :param pw is either the root password, or the password that goes with
-        the user if address is user@address, or, pw is it is the password of
-        the private key if a pkey is specified.
-
-        :param pkey is the private key that matches the public keys installed on the
-        server at this address.
-        """
+    def create_host_ssh(self, address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
         # Commit token so that registration request handler will see it
         with transaction.commit_on_success():
             token = RegistrationToken.objects.create(credits = 1)
 
-        agent_ssh = AgentSsh(address)
-        auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
-
-        args = {
+        result = AgentSsh(address).invoke('register_server', {
             'url': settings.SERVER_HTTP_URL + "agent/",
             'address': address,
             'ca': open(Crypto().authority_cert).read().strip(),
-            'secret': token.secret}
-        result = agent_ssh.invoke('register_server', args, auth_args=auth_args)
+            'secret': token.secret
+            })
         return result['host_id'], result['command_id']
 
-    def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
-        """Test that a host at this address can be created
-
-        See create_host_ssh for explanation of parameters
-
-        TODO: Break this method up, normalize the checks
-
-        Use threaded timeouts on possible long running commands.  The idea is
-        that if the command takes longer than the timeout, you might get a
-        false negative - the command didn't fail, we just cut it short.
-        Not sure this is an issue in practice, so going to stop here no ticket.
-        """
-
+    def test_host_contact(self, address):
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
         agent_ssh = AgentSsh(address)
         user, hostname, port = agent_ssh.ssh_params()
-
-        auth = False
-        reverse_resolve = False
-        reverse_ping = False
-
-        auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
 
         try:
             resolved_address = socket.gethostbyname(hostname)
@@ -854,13 +820,7 @@ class JobScheduler(object):
         if resolve:
             manager_hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
             try:
-                rc, out, err = agent_ssh.ssh(
-                    "ping -c 1 %s" % manager_hostname,
-                    auth_args=auth_args)
-                auth = True
-            except (AuthenticationException, SSHException):
-                #  No auth methods available, or wrong creds
-                auth = False
+                rc, out, err = agent_ssh.ssh("ping -c 1 %s" % manager_hostname)
             except Exception, e:
                 log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
                 reverse_resolve = False
@@ -878,7 +838,6 @@ class JobScheduler(object):
                     reverse_resolve = False
                     reverse_ping = False
         else:
-            auth = False
             reverse_resolve = False
             reverse_ping = False
 
@@ -887,12 +846,8 @@ class JobScheduler(object):
         agent = False
         if resolve:
             try:
-                agent_ssh.invoke('test', auth_args=auth_args)
+                agent_ssh.invoke('test')
                 agent = True
-                auth = True
-            except (AuthenticationException, SSHException):
-                #  No auth methods available, or wrong creds
-                auth = False
             except Exception, e:
                 log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
                 agent = False
@@ -901,7 +856,6 @@ class JobScheduler(object):
             'address': address,
             'resolve': resolve,
             'ping': ping,
-            'auth': auth,
             'agent': agent,
             'reverse_resolve': reverse_resolve,
             'reverse_ping': reverse_ping

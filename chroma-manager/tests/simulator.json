@@ -14,7 +14,6 @@
     "lustre_servers": [
         {
             "address": "test000.localdomain",
-            "root_password": "",
             "nodename": "test000",
             "fqdn": "test000.localdomain",
             "device_paths": [
@@ -28,7 +27,6 @@
         },
         {
             "address": "test001.localdomain",
-            "root_password": "",
             "nodename": "test001",
             "fqdn": "test001.localdomain",
             "device_paths": [
@@ -42,7 +40,6 @@
         },
         {
             "address": "test002.localdomain",
-            "root_password": "",
             "nodename": "test002",
             "fqdn": "test002.localdomain",
             "device_paths": [
@@ -56,7 +53,6 @@
         },
         {
             "address": "test003.localdomain",
-            "root_password": "",
             "nodename": "test003",
             "fqdn": "test003.localdomain",
             "device_paths": [

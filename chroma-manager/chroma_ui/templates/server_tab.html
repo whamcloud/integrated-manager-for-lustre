@@ -177,7 +177,6 @@
        $(this.el).remove();
      }
   });
-
 </script>
 
 
@@ -212,42 +211,10 @@
         <div class='add_host_wizard'>
             <div class="add_host_prompt validated_form">
                 <form style="margin-bottom:0px;">
-
-                    <label style="margin-right: 6px; font-weight: bold" for='id_add_host_address'>Hostname:</label>
-                    <input tabindex="1" style="width:100%; margin-bottom: 15px" type='entry' class='add_host_address' id="id_add_host_address" name='address'/>
-
-                    <label style="margin-right: 6px; font-weight: bold" >SSH Authentication:</label>
-                    <div class="choice_ssh_auth" style="margin-bottom: 10px">
-                        <input type="radio" id="id_existing_keys_choice" name="radio" checked="checked" value='id_existing_keys'/><label for="id_existing_keys_choice">Existing key</label>
-                        <input type="radio" id="id_password_choice" name="radio" value='id_root_password'/><label for="id_password_choice">Root Password</label>
-                        <input type="radio" id="id_other_keys_choice" name="radio"  value='id_private_key'/><label for="id_other_keys_choice">Another key</label>
-                    </div>
-
-                    <div id="id_existing_keys">
-                        <div style="margin-bottom: 5px">
-                            If this management server is configured with a set of ssh keys,
-                            those keys will be used to register this new server.</div>
-                    </div>
-
-                    <div id="id_root_password" style="display: none">
-                        <div style="margin-bottom: 5px">
-                            Use standard password based auth, if you don't have ssh keys to use.</div>
-                        <label style="margin-right: 6px; font-weight: bold" for='id_add_host_password'>Root password:</label>
-                        <input tabindex="2"  style="width:100%; margin-bottom: 15px" type='password'  id='id_add_host_password' name='root_password'/>
-                    </div>
-
-                    <div id="id_private_key" style="display: none">
-                        <div style="margin-bottom: 5px">A private key that is a pair with a public key on this new server, may be used.
-                            A passphrase can be supplied for an encrypted private key.</div>
-                        <label style="margin-right: 6px; font-weight: bold" for='id_add_host_private_key'>Private key:</label>
-                        <textarea tabindex="3" style="width:100%; margin-bottom: 15px" cols="76" rows="5" name='private_key' id='id_add_host_private_key'></textarea>
-
-                        <label style="margin-right: 6px; font-weight: bold" for='id_add_host_private_key_password'>Private key passphrase:</label>
-                        <input tabindex="3"  style="width:100%; margin-bottom: 15px" type='password'  id='id_add_host_private_key_password' name='private_key_passphrase'/>
-                    </div>
-
-                    <div style="text-align: right; margin-bottom: 15px">
-                        <a style="margin-top: 6px;" tabindex="10" class="add_host_submit_button" type='submit'>Continue</a>
+                    <label style="margin-right: 6px;" for='add_host_address'>Hostname:</label>
+                    <input style="width:100%;" type='entry'  class='add_host_address' name='address'/>
+                    <div style="text-align: right;">
+                        <a style="margin-top: 6px;" class="add_host_submit_button" type='submit'>Continue</a>
                     </div>
                 </form>
             </div>
@@ -261,7 +228,6 @@
                 <table style="margin-bottom: 6px;">
                     <tr><td><a class='help_hover' data-topic='_resolve'>Resolve</a>: </td>     <td class="add_host_resolve">&nbsp;</td></tr>
                     <tr><td><a class='help_hover' data-topic='_ping'>Ping</a>: </td>        <td class="add_host_ping">&nbsp;</td></tr>
-                    <tr><td><a class='help_hover' data-topic='_auth'>Authenticated</a>: </td><td class="add_host_auth">&nbsp;</td></tr>
                     <tr><td><a class='help_hover' data-topic='_invoke_agent'>Invoke agent</a>: </td><td class="add_host_agent">&nbsp;</td></tr>
                     <tr><td><a class='help_hover' data-topic='_reverse_resolve'>Reverse resolve</a>: </td><td class="add_host_reverse_resolve">&nbsp;</td></tr>
                     <tr><td><a class='help_hover' data-topic='_reverse_ping'>Reverse ping</a>: </td><td class="add_host_reverse_ping">&nbsp;</td></tr>

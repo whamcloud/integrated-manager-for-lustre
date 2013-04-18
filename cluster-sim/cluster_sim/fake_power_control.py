@@ -42,7 +42,7 @@ class PDUSimulatorServer(ExceptionCatchingThread):
 
     def _run(self):
         log.info("Creating PDU server for %s on %s:%s" %
-                 (self._pdu.name, self._pdu.address, self._pdu.port))
+                            (self._pdu.name, self._pdu.address, self._pdu.port))
         server = StreamServer((self._pdu.address, self._pdu.port),
                               self._pdu.handle_client, spawn=1)
         server.start()
@@ -192,7 +192,7 @@ class APC79xxSimulator(PDUSimulator):
 
                     decoded_response = [ord(c) for c in response]
                     log.error("Unhandled response in %s: '%s' (%s)" %
-                              (caller, response, decoded_response))
+                                            (caller, response, decoded_response))
 
                     self.fd.write("\r\n%s" % prompt)
                     self.fd.flush()
