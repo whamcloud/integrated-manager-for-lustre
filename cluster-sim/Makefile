@@ -12,6 +12,9 @@ version:
 	echo 'BUILD = $(BUILD_NUMBER)' >> cluster_sim/scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> cluster_sim/scm_version.py
 
+develop: version
+	python setup.py develop
+
 tarball: version
 	rm -f MANIFEST
 	python setup.py sdist

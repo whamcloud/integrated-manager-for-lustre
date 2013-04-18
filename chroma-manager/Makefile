@@ -23,7 +23,10 @@ version:
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
 develop: version
+	$(MAKE) -C ../chroma-agent develop
+	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
+	./manage.py dev_setup
 
 integration_tests:
 	@echo "Running integration tests against the simulator..."

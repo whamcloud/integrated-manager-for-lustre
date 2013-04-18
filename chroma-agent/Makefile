@@ -16,6 +16,9 @@ version:
 	echo 'BUILD = $(BUILD_NUMBER)' >> chroma_agent/scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_agent/scm_version.py
 
+develop: version
+	python setup.py develop
+
 cleandist:
 	rm -rf dist
 	mkdir dist
