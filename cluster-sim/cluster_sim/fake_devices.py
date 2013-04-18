@@ -150,15 +150,19 @@ class FakeDevices(Persisted):
 
     def get_target_stats(self, target):
         if not 'stats' in target:
-            # TODO: initialize filestotal and kbytestotal during format
-            if 'MDT' in target['label']:
-                target['stats'] = MDT_STAT_TEMPLATE
-            elif 'OST' in target['label']:
-                target['stats'] = OST_STAT_TEMPLATE
-            elif target['label'] == 'MGS':
-                target['stats'] = {}
-            else:
-                raise NotImplementedError(target['label'])
+            with self._lock:
+                # Need to acquire lock because we are modifying structure of target
+                # object which lives inside inside self._state
+
+                # TODO: initialize filestotal and kbytestotal during format
+                if 'MDT' in target['label']:
+                    target['stats'] = MDT_STAT_TEMPLATE
+                elif 'OST' in target['label']:
+                    target['stats'] = OST_STAT_TEMPLATE
+                elif target['label'] == 'MGS':
+                    target['stats'] = {}
+                else:
+                    raise NotImplementedError(target['label'])
 
         if 'MDT' in target['label']:
             # Keep the client count mostly constant, blip it up or down once in a while
