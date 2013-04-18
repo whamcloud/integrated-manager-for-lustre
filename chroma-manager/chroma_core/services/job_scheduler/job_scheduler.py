@@ -107,7 +107,10 @@ class JobProgress(threading.Thread, Queue.Queue):
 
     def _handle(self, msg):
         fn = getattr(self, "_%s" % msg[0])
-        fn(*msg[1], **msg[2])
+        # Commit after each message to ensure the next message handler
+        # doesn't see a stale transaction
+        with transaction.commit_on_success():
+            fn(*msg[1], **msg[2])
 
     def stop(self):
         self._stopping.set()
