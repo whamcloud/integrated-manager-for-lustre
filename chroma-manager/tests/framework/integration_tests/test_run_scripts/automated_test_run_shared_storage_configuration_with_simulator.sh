@@ -134,12 +134,7 @@ sleep 30  # Give a chance for the services to start - TODO: Add a check to setUp
 
 set +e
 echo "Begin running tests..."
-if $MEASURE_COVERAGE; then
-  NOSE_COVERAGE_ARGS="--with-coverage"
-else
-  NOSE_COVERAGE_ARGS=""
-fi
-nosetests --verbosity=2 --tc-file=tests/simulator.json --tc-format=json --with-xunit --xunit-file /home/chromatest/test_report.xml \$NOSE_COVERAGE_ARGS $TESTS
+nosetests --verbosity=2 --tc-file=tests/simulator.json --tc-format=json --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
 
 kill \$supervisor_pid
 EOF
