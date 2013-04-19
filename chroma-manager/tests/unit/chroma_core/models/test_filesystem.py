@@ -1,6 +1,6 @@
 from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst
 from django.test import TestCase
-from tests.unit.chroma_core.helper import synthetic_host, synthetic_volume_full
+from tests.unit.chroma_core.helper import synthetic_host, synthetic_volume_full, load_default_profile
 
 
 class TestNidStrings(TestCase):
@@ -11,6 +11,8 @@ class TestNidStrings(TestCase):
         # also roll back (reset) this singleton.
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+
+        load_default_profile()
 
     def _host_with_nids(self, address):
         host_nids = {

@@ -7,7 +7,7 @@ from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 from django.test import TestCase
 import mock
-from tests.unit.chroma_core.helper import MockAgentRpc, synthetic_volume_full, freshen, MockAgentSsh, log
+from tests.unit.chroma_core.helper import MockAgentRpc, synthetic_volume_full, freshen, MockAgentSsh, log, load_default_profile, synthetic_host
 
 
 class JobTestCase(TestCase):
@@ -78,6 +78,7 @@ class JobTestCase(TestCase):
         self.old_agent_rpc = chroma_core.services.job_scheduler.agent_rpc.AgentRpc
         self.old_agent_ssh = chroma_core.services.job_scheduler.agent_rpc.AgentSsh
         MockAgentRpc.mock_servers = self.mock_servers
+        MockAgentSsh.mock_servers = self.mock_servers
 
         chroma_core.services.job_scheduler.agent_rpc.AgentRpc = MockAgentRpc
         chroma_core.services.job_scheduler.agent_rpc.AgentSsh = MockAgentSsh
@@ -178,6 +179,8 @@ class JobTestCase(TestCase):
 
         AgentDaemonRpcInterface.remove_host_resources = mock.Mock(side_effect = fake_remove_host_resources)
 
+        load_default_profile()
+
     def tearDown(self):
         import chroma_core.services.job_scheduler.agent_rpc
         chroma_core.services.job_scheduler.agent_rpc.AgentRpc = self.old_agent_rpc
@@ -219,15 +222,15 @@ class JobTestCaseWithHost(JobTestCase):
         from chroma_core.models import ManagedHost
         self.hosts = []
         for address, info in self.mock_servers.items():
-            host = ManagedHost.objects.create(address = address, fqdn = address, nodename = address)
-            lnet_configuration = LNetConfiguration.objects.create(host = host)
+            host = synthetic_host(
+                address=address,
+                fqdn=info['fqdn'],
+                nids=info['nids'],
+                nodename=info['nodename']
+            )
             ObjectCache.add(ManagedHost, host)
-            ObjectCache.add(LNetConfiguration, lnet_configuration)
-
-            self.set_state(host, 'configured', check = False)
-            self.assertState(host, 'lnet_up')
+            ObjectCache.add(LNetConfiguration, host.lnetconfiguration)
             self.hosts.append(host)
 
         # Handy if you're only using one
         self.host = self.hosts[0]
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')

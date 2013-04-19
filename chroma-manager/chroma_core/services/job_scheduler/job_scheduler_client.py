@@ -265,7 +265,7 @@ class JobSchedulerClient(object):
     @classmethod
     def create_host_ssh(cls, address, profile, root_pw=None, pkey=None, pkey_pw=None):
         """
-        Set up a host using SSH
+        Create a host which will be set up using SSH
 
         :param address: SSH address
         :return: (<ManagedHost instance>, <Command instance>)
@@ -285,7 +285,7 @@ class JobSchedulerClient(object):
         return JobSchedulerRpc().create_filesystem(fs_data)
 
     @classmethod
-    def create_host(cls, fqdn, nodename, capabilities, address = None, **kwargs):
+    def create_host(cls, fqdn, nodename, address, server_profile_id):
         from chroma_core.models import ManagedHost, Command
         # The address of a host isn't something we can learn from it (the
         # address is specifically how the host is to be reached from the manager
@@ -294,7 +294,7 @@ class JobSchedulerClient(object):
         if address is None:
             address = fqdn
 
-        host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, capabilities, address, **kwargs)
+        host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
 
         return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
 

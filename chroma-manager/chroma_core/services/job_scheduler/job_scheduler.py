@@ -37,9 +37,6 @@ import dateutil.parser
 from copy import deepcopy
 from paramiko import SSHException, AuthenticationException
 
-from chroma_core.models.registration_token import RegistrationToken
-from chroma_core.models.server_profile import ServerProfile
-
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction, DEFAULT_DB_ALIAS
@@ -47,8 +44,10 @@ from django.db.models import Q
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
-    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob, ForceRemoveHostJob
+    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob, ForceRemoveHostJob, \
+    DeployHostJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -865,40 +864,6 @@ class JobScheduler(object):
                 self._drain_notification_buffer()
                 self._run_next()
 
-    @transaction.commit_on_success
-    def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
-        """Agent boot strap the storage host at this address
-
-        :param address: the resolveable address of the host option user@ in front
-
-        :param root_pw: is either the root password, or the password that goes with
-        the user if address is user@address, or, pw is it is the password of
-        the private key if a pkey is specified.
-
-        :param pkey is the private key that matches the public keys installed on the
-        server at this address.
-        """
-        from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
-        from django.core.exceptions import ObjectDoesNotExist
-
-        try:
-            profile_obj = ServerProfile.objects.get(name = profile)
-        except ObjectDoesNotExist:
-            profile_obj = ServerProfile.objects.get(name = 'default')
-
-        # Commit token so that registration request handler will see it
-        with transaction.commit_on_success():
-            token = RegistrationToken.objects.create(credits = 1, profile=profile_obj)
-
-        agent_ssh = AgentSsh(address)
-        auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
-
-        agent_ssh.ssh('curl -k %s/agent/setup/%s/ | python' %
-                      (settings.SERVER_HTTP_URL, token.secret), auth_args)
-
-        # XXX - what should these return now?
-        return 0, ""
-
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
         """Test that a host at this address can be created
 
@@ -911,7 +876,6 @@ class JobScheduler(object):
         false negative - the command didn't fail, we just cut it short.
         Not sure this is an issue in practice, so going to stop here no ticket.
         """
-
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
         agent_ssh = AgentSsh(address)
@@ -1102,23 +1066,37 @@ class JobScheduler(object):
 
         return [target.id for target in targets], command.id
 
-    def create_host(self, fqdn, nodename, capabilities, address, **kwargs):
+    # FIXME: jcs @ 2013-04 I removed 'capabilities' from here, is it now used anywhere?
 
-        if 'immutable_state' in kwargs:
-            immutable_state = kwargs['immutable_state']
-            del kwargs['immutable_state']
-        else:
-            immutable_state = not any("manage_" in c for c in capabilities)
+    def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
+        """
+        Create a ManagedHost object and deploy the agent to its address using SSH.
+
+        :param address: the resolveable address of the host option user@ in front
+
+        :param root_pw: is either the root password, or the password that goes with
+        the user if address is user@address, or, pw is it is the password of
+        the private key if a pkey is specified.
+
+        :param pkey is the private key that matches the public keys installed on the
+        server at this address.
+        """
+        from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
+
+        fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
+        rc, stdout, stderr = AgentSsh(address).ssh(fqdn_nodename_command)
+        log.info("Getting FQDN for '%s': %s" % (address, stdout))
+        nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
 
         with self._lock:
             with transaction.commit_on_success():
                 host = ManagedHost.objects.create(
-                    fqdn = fqdn,
-                    nodename = nodename,
-                    immutable_state = immutable_state,
-                    address = address)
-                lnet_configuration = LNetConfiguration.objects.create(host = host)
-
+                    state='undeployed',
+                    address=address,
+                    nodename=nodename,
+                    fqdn=fqdn,
+                    server_profile=ServerProfile.objects.get(name=profile))
+                lnet_configuration = LNetConfiguration.objects.create(host=host)
             ObjectCache.add(LNetConfiguration, lnet_configuration)
             ObjectCache.add(ManagedHost, host)
 
@@ -1126,6 +1104,53 @@ class JobScheduler(object):
                 command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
                     [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
                     "Setting up host %s" % host)
+
+            # Tag the in-memory SSH auth information onto this DeployHostJob instance
+            for job_id in self._job_collection._command_to_jobs[command.id]:
+                job = self._job_collection.get(job_id)
+                if isinstance(job, DeployHostJob):
+                    job.auth_args = AgentSsh(address).construct_ssh_auth_args(root_pw, pkey, pkey_pw)
+                    break
+
+        self.progress.advance()
+
+        return host.id, command.id
+
+    def create_host(self, fqdn, nodename, address, server_profile_id):
+        """
+        Create a new host, or update a host in the process of being deployed.
+        """
+        server_profile = ServerProfile.objects.get(pk=server_profile_id)
+
+        with self._lock:
+            with transaction.commit_on_success():
+                try:
+                    # If there is already a host record (SSH-assisted host addition) then
+                    # update it
+                    host = ManagedHost.objects.get(fqdn=fqdn, state='undeployed')
+                    # host.fqdn = fqdn
+                    # host.nodename = nodename
+                    # host.save()
+                    job = DeployHostJob.objects.filter(~Q(state='complete'), managed_host=host)
+                    command = Command.objects.filter(jobs=job)[0]
+
+                except ManagedHost.DoesNotExist:
+                    # Else create a new one
+                    host = ManagedHost.objects.create(
+                        fqdn=fqdn,
+                        nodename=nodename,
+                        immutable_state=not server_profile.managed,
+                        address=address,
+                        server_profile=server_profile)
+                    lnet_configuration = LNetConfiguration.objects.create(host = host)
+
+                    ObjectCache.add(LNetConfiguration, lnet_configuration)
+                    ObjectCache.add(ManagedHost, host)
+
+                    with transaction.commit_on_success():
+                        command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                            [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
+                            "Setting up host %s" % host)
 
         self.progress.advance()
 

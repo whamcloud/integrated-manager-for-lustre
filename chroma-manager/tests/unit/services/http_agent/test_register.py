@@ -1,12 +1,13 @@
 import json
-from chroma_core.models import ManagedHost, RegistrationToken
+from chroma_core.models import ManagedHost, ServerProfile
+from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_agent_comms.views import MessageView
 from django.test import Client, TestCase
 import mock
 import settings
-from tests.unit.chroma_core.helper import MockAgentRpc, generate_csr, synthetic_host
+from tests.unit.chroma_core.helper import MockAgentRpc, generate_csr, synthetic_host, load_default_profile
 
 
 class TestRegistration(TestCase):
@@ -19,6 +20,9 @@ class TestRegistration(TestCase):
 
     def setUp(self):
         super(TestRegistration, self).setUp()
+
+        load_default_profile()
+
         self.old_create_host = JobSchedulerClient.create_host
         JobSchedulerClient.create_host = mock.Mock(return_value=(synthetic_host('mynewhost', **self.mock_servers['mynewhost']), mock.Mock(id='bar')))
         MessageView.valid_certs = {}
@@ -31,7 +35,7 @@ class TestRegistration(TestCase):
         settings.VERSION, MockAgentRpc.version = '2.0', '1.0'
 
         try:
-            token = RegistrationToken.objects.create()
+            token = RegistrationToken.objects.create(profile=ServerProfile.objects.get())
 
             # Try with a mis-matched version
             host_info = self.mock_servers['mynewhost']
@@ -46,7 +50,7 @@ class TestRegistration(TestCase):
             self.assertEqual(response.status_code, 400)
 
             # Try with a matching version
-            token = RegistrationToken.objects.create()
+            token = RegistrationToken.objects.create(profile=ServerProfile.objects.get())
             settings.VERSION = '1.1'
             response = Client().post("/agent/register/%s/" % token.secret, data=json.dumps({
                 'fqdn': host_info['fqdn'],

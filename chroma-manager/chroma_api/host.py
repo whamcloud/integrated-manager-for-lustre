@@ -145,14 +145,13 @@ class HostResource(MetricResource, StatefulModelResource):
         # a 'validation errors' dialog which is pretty ugly.
 
         try:
-            host, command = job_scheduler_client.JobSchedulerClient.create_host_ssh(bundle.data['profile'],
+            host, command = job_scheduler_client.JobSchedulerClient.create_host_ssh(profile=bundle.data['profile'],
                                                                                     **_host_params(bundle))
         except RpcError, e:
-            # Rather stretching the meaning of "BAD REQUEST", say that this
-            # request is bad on the basis that the user specified a host that
-            # is (for some reason) not playing ball.
-            args = {'address': ["Cannot add host at this address: %s" % e]}
-            raise custom_response(self, request, http.HttpBadRequest, args)
+            # Return 400, a failure here could mean the address was already occupied, or that
+            # we couldn't reach that address using SSH (network or auth problem)
+            raise custom_response(self, request, http.HttpBadRequest,
+                {'address': ["Cannot add host at this address: %s" % e]})
         else:
             args = {'command': dehydrate_command(command),
                     'host': self.full_dehydrate(

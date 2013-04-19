@@ -171,6 +171,42 @@ class AgentRpcMessenger(object):
                 rpc.complete.set()
         del self._session_rpcs[old_session_id]
 
+    def await_restart(self, fqdn, timeout):
+        """
+        If there is currently an action_runner session, wait for a different one.  Else
+        wait for any action_runner session to start."""
+
+        with self._lock:
+            try:
+                old_session_id = self._sessions[fqdn]
+            except KeyError:
+                old_session_id = None
+
+        log.info("AgentRpcMessenger.await_restart: awaiting %s (old %s)" % (fqdn, old_session_id))
+
+        # Note: using polling here for simplicity, if efficiency became an issue here
+        # we could set up events to be triggered by the new session logic in on_rx, and
+        # sleep on them instead of polling.
+
+        duration = 0
+        poll_period = 1.0
+        while True:
+            with self._lock:
+                try:
+                    current_session_id = self._sessions[fqdn]
+                except KeyError:
+                    current_session_id = None
+
+            if current_session_id != old_session_id:
+                log.info("AgentRpcMessenger.await_restart: %s new %s" % (fqdn, current_session_id))
+                break
+
+            if duration >= timeout:
+                log.info("AgentRpcMessenger.await_restart: %s timeout after %ss" % (fqdn, duration))
+
+            duration += poll_period
+            time.sleep(poll_period)
+
     def on_rx(self, message):
         with self._lock:
             log.debug("on_rx: %s" % message)
@@ -317,6 +353,10 @@ class AgentRpc(object):
     @classmethod
     def remove(cls, fqdn):
         return cls._messenger.remove(fqdn)
+
+    @classmethod
+    def await_restart(cls, fqdn, timeout):
+        return cls._messenger.await_restart(fqdn, timeout)
 
 
 class AgentCancellation(Exception):

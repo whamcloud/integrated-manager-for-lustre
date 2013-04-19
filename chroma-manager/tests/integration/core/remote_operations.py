@@ -497,14 +497,18 @@ class RealRemoteOperations(RemoteOperations):
                 client,
                 'umount -t lustre -a'
             )
-            result = self._ssh_address(
-                client,
-                'mount'
-            )
-            self._test_case.assertNotRegexpMatches(
-                result.stdout.read(),
-                " type lustre"
-            )
+
+            if not client in [server['address'] for server in config['lustre_servers']]:
+                # Skip this check if the client is also a server, because
+                # both targets and clients look like 'lustre' mounts
+                result = self._ssh_address(
+                    client,
+                    'mount'
+                )
+                self._test_case.assertNotRegexpMatches(
+                    result.stdout.read(),
+                    " type lustre"
+                )
 
     def has_pacemaker(self, server):
         result = self._ssh_address(
@@ -616,18 +620,20 @@ class RealRemoteOperations(RemoteOperations):
                     # Verify no more targets
                     self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
 
-                # Stop the agent
-                self._ssh_address(
-                    server['address'],
-                    'service chroma-agent stop'
-                )
-                self._ssh_address(
-                    server['address'],
-                    '''
-                    rm -rf /var/lib/chroma/*;
-                    rm -f /var/log/chroma-*.log
-                    ''',
-                    expected_return_code = None  # Keep going if it failed - may be none there.
-                )
+                rpm_q_result = self._ssh_address(server['address'], "rpm -q chroma-agent", expected_return_code=None)
+                if rpm_q_result.exit_status == 0:
+                    # Stop the agent
+                    self._ssh_address(
+                        server['address'],
+                        'service chroma-agent stop'
+                    )
+                    self._ssh_address(
+                        server['address'],
+                        '''
+                        rm -rf /var/lib/chroma/*;
+                        rm -f /var/log/chroma-*.log
+                        ''',
+                        expected_return_code = None  # Keep going if it failed - may be none there.
+                    )
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])

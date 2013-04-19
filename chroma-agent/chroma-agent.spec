@@ -19,7 +19,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3 lustre
+Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
 %endif
@@ -32,7 +32,7 @@ This is the Whamcloud monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker python-dateutil libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker python-dateutil libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents yum-utils
 %if 0%{?rhel} > 5
 Requires: fence-agents
 %endif

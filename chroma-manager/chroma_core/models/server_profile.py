@@ -30,5 +30,9 @@ class ServerProfile(models.Model):
         help_text = "The bundles specified by this profile"
     )
 
+    # TODO: add a 'default' flag so that we can consistently
+    # present a default in the UI
+
     class Meta:
         app_label = 'chroma_core'
+        unique_together = ('name',)

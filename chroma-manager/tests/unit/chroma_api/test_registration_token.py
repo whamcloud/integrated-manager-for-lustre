@@ -11,9 +11,16 @@ from tests.unit.chroma_api.tastypie_test import TestApiClient
 class TestRegistrationTokenResource(ChromaApiTestCase):
     RESOURCE_PATH = "/api/registration_token/"
 
+    def setUp(self):
+        super(TestRegistrationTokenResource, self).setUp()
+
+        # Grab a profile to use for creation tokens, doesn't matter what it is
+        response = self.api_client.get("/api/profile/")
+        self.profile = self.deserialize(response)['objects'][0]
+
     def test_cancel_token(self):
         """Test that we can cancel at token using PATCH"""
-        response = self.api_client.post(self.RESOURCE_PATH)
+        response = self.api_client.post(self.RESOURCE_PATH, data={'profile': self.profile['resource_uri']})
         self.assertHttpCreated(response)
         token_uri = self.deserialize(response)['resource_uri']
         response = self.api_client.patch(token_uri, data = {'cancelled': True})
@@ -30,7 +37,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
 
     def test_readonly_attributes(self):
         """Test that attributes which should be readonly reject PATCHes"""
-        response = self.api_client.post(self.RESOURCE_PATH)
+        response = self.api_client.post(self.RESOURCE_PATH, data={'profile': self.profile['resource_uri']})
         self.assertHttpCreated(response)
         original_object = self.deserialize(response)
         token_uri = original_object['resource_uri']
@@ -53,7 +60,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         """
 
         # Empty is OK
-        response = self.api_client.post(self.RESOURCE_PATH)
+        response = self.api_client.post(self.RESOURCE_PATH, data={'profile': self.profile['resource_uri']})
         self.assertHttpCreated(response)
 
         expiry_value = datetime.datetime.now(dateutil.tz.tzutc())
@@ -66,7 +73,8 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         }
 
         for attr, test_val in creation_allowed_values.items():
-            response = self.api_client.post(self.RESOURCE_PATH, data = {attr: test_val})
+            response = self.api_client.post(self.RESOURCE_PATH, data={
+                'profile': self.profile['resource_uri'], attr: test_val})
             self.assertHttpCreated(response)
             created_obj = self.deserialize(response)
             self.assertEqual(created_obj[attr], test_val)
@@ -78,7 +86,8 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
             'id': 0
         }
         for attribute, test_val in creation_forbidden_values.items():
-            response = self.api_client.post(self.RESOURCE_PATH, data = {attribute: test_val})
+            response = self.api_client.post(self.RESOURCE_PATH, data={
+                'profile': self.profile['resource_uri'], attribute: test_val})
             self.assertHttpBadRequest(response)
 
 
@@ -104,6 +113,10 @@ class TestTokenAuthorization(ChromaApiTestCase):
             self.clients[user['username']] = TestApiClient()
             self.clients[user['username']].client.login(username = user['username'], password=user['password'])
 
+        # Grab a profile to use for creation tokens, doesn't matter what it is
+        response = self.api_client.get("/api/profile/")
+        self.profile = self.deserialize(response)['objects'][0]
+
     def test_post(self):
         """Test that only filesystem_admins or superusers can create a token"""
 
@@ -113,7 +126,7 @@ class TestTokenAuthorization(ChromaApiTestCase):
             'token_admin': True
         }
         for username, should_succeed in users.items():
-            response = self.clients[username].post(self.RESOURCE_PATH)
+            response = self.clients[username].post(self.RESOURCE_PATH, data={'profile': self.profile['resource_uri']})
             if should_succeed:
                 self.assertHttpCreated(response)
             else:
@@ -122,7 +135,7 @@ class TestTokenAuthorization(ChromaApiTestCase):
     def test_get(self):
         """Test that tokens are not visible to normal users"""
 
-        response = self.api_client.post(self.RESOURCE_PATH)
+        response = self.api_client.post(self.RESOURCE_PATH, data={'profile': self.profile['resource_uri']})
         self.assertHttpCreated(response)
         token_uri = self.deserialize(response)['resource_uri']
 
@@ -156,7 +169,9 @@ class TestTokenAuthorization(ChromaApiTestCase):
         for username, allowed in users_allowed.items():
             # Create using the default test client, before trying each
             # of the specific user clients for PATCHing
-            token_uri = self.deserialize(self.api_client.post(self.RESOURCE_PATH))['resource_uri']
+            response = self.api_client.post(self.RESOURCE_PATH, data={'profile': self.profile['resource_uri']})
+            self.assertHttpCreated(response)
+            token_uri = self.deserialize(response)['resource_uri']
 
             patch_response = self.clients[username].patch(token_uri, data = {'cancelled': True})
             if allowed:

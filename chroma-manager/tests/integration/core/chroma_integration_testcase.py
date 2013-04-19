@@ -28,6 +28,9 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(response.successful, True, response.text)
         pre_existing_hosts = response.json['objects']
 
+        response = self.chroma_manager.get("/api/profile/")
+        profile = response.json['objects'][0]
+
         host_create_command_ids = []
         for host_address in addresses:
             if hasattr(self, 'simulator'):
@@ -41,7 +44,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 # permission to add a server
                 response = self.chroma_manager.post(
                     '/api/registration_token/',
-                    body = {'credits': 1}
+                    body={
+                        'credits': 1,
+                        'profile': profile['resource_uri']
+                    }
                 )
                 self.assertTrue(response.successful, response.text)
                 token = response.json
@@ -63,7 +69,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
                 response = self.chroma_manager.post(
                     '/api/host/',
-                    body = {'address': host_address, 'profile': 'default'}
+                    body={
+                        'address': host_address,
+                        'profile': profile['name']
+                    }
                 )
                 self.assertEqual(response.successful, True, response.text)
                 host_id = response.json['host']['id']
@@ -77,8 +86,9 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 host = response.json
                 self.assertEqual(host['address'], host_address)
 
-        # Wait for the host setup and device discovery to complete
-        self.wait_for_commands(self.chroma_manager, host_create_command_ids)
+        # Wait for the host setup to complete
+        # Rather a long timeout because this may include installing Lustre and rebooting
+        self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=600)
 
         # Verify there are now n hosts in the database.
         response = self.chroma_manager.get(

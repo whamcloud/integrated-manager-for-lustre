@@ -6,11 +6,14 @@ import os
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, DetectTargetsJob
 from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
-from tests.unit.chroma_core.helper import synthetic_host, synchronous_run_job
+from tests.unit.chroma_core.helper import synthetic_host, synchronous_run_job, load_default_profile
 
 
 class TestDetection(TestCase):
     mock_servers = {}
+
+    def setUp(self):
+        load_default_profile()
 
     def test_combined_mgs_mdt(self):
         def fixture_glob(g):

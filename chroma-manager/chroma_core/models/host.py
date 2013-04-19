@@ -41,7 +41,7 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import job_log
-from chroma_core.lib.job import  DependOn, DependAll, Step
+from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 
 import settings
@@ -127,11 +127,15 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # Recursive relationship to keep track of corosync cluster peers
     ha_cluster_peers = models.ManyToManyField('self', null = True, blank = True, help_text = "List of peers in this host's HA cluster")
 
+    # Profile of the server specifying some configured characteristics
+    # FIXME: nullable to allow migration, but really shouldn't be
+    server_profile = models.ForeignKey('ServerProfile', null=True, blank=True)
+
     needs_fence_reconfiguration = models.BooleanField(default = False,
             help_text = "Indicates that the host's fencing configuration should be updated")
 
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
+    states = ['undeployed', 'unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
 
     class Meta:
@@ -478,13 +482,19 @@ class ConfigureCorosyncStep(Step):
 class AgentActionStep(Step):
     idempotent = True
 
+    @classmethod
+    def describe(cls, kwargs):
+        if 'description' in kwargs:
+            return kwargs['description']
+        else:
+            return Step.describe(kwargs)
+
     def run(self, kwargs):
         host = kwargs['host']
         cmd = kwargs['command']
-        payload = dict([(k, v) for k, v in kwargs.items() if k not in ['host', 'command']])
-        del kwargs['command']
+        kwargs = kwargs.get('args', {})
         if not host.immutable_state:
-            self.invoke_agent(host, cmd, args=payload)
+            self.invoke_agent(host, cmd, args=kwargs)
 
 
 class ConfigureRsyslogStep(Step):
@@ -631,6 +641,82 @@ class LearnDevicesStep(Step):
         AgentDaemonRpcInterface().setup_host(host.id, plugin_data)
 
 
+class DeployStep(Step):
+    def run(self, kwargs):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
+
+        # TODO: before kicking this off, check if an existing agent install is present:
+        # the decision to clear it out/reset it should be something explicit maybe
+        # even requiring user permission
+
+        rc, stdout, stderr = AgentSsh(kwargs['address']).ssh('curl -k %s/agent/setup/%s/ | python' %
+                                                             (settings.SERVER_HTTP_URL, kwargs['token'].secret))
+
+        if rc == 0:
+            try:
+                registration_result = json.loads(stdout)
+            except ValueError:
+                raise RuntimeError("Failed to register host %s: rc=%s\n'%s'\n'%s'" % (kwargs['address'], rc, stdout, stderr))
+
+            return registration_result['host_id'], registration_result['command_id']
+        else:
+            raise RuntimeError("Failed to register host %s: rc=%s\n'%s'\n'%s'" % (kwargs['address'], rc, stdout, stderr))
+
+
+class AwaitRebootStep(Step):
+    def run(self, kwargs):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+
+        AgentRpc.await_restart(kwargs['host'].fqdn, kwargs['timeout'])
+
+
+class DeployHostJob(StateChangeJob):
+    state_transition = (ManagedHost, 'undeployed', 'unconfigured')
+    stateful_object = 'managed_host'
+    managed_host = models.ForeignKey(ManagedHost)
+    state_verb = 'Deploy agent'
+
+    def __init__(self, *args, **kwargs):
+        super(DeployHostJob, self).__init__(*args, **kwargs)
+
+        self.auth_args = {}
+
+    def description(self):
+        return "Deploying agent to %s" % self.managed_host.address
+
+    def get_steps(self):
+        from chroma_core.models.registration_token import RegistrationToken
+
+        # Commit token so that registration request handler will see it
+        with transaction.commit_on_success():
+            token = RegistrationToken.objects.create(credits=1, profile=self.managed_host.server_profile)
+
+        return [
+            (DeployStep, {
+                'token': token,
+                'address': self.managed_host.address})
+        ]
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+
+class RebootIfNeededStep(Step):
+    def run(self, kwargs):
+        # Check if we are running the latest (lustre) kernel
+        kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status', {'kernel_regex': '.*lustre.*'})
+
+        if kernel_status['running'] != kernel_status['latest'] and kernel_status['latest']:
+            self.log("Rebooting %s to switch from running kernel %s to latest %s" % (
+                kwargs['host'], kernel_status['running'], kernel_status['latest']))
+            self.invoke_agent(kwargs['host'], 'reboot_server')
+
+            from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+
+            AgentRpc.await_restart(kwargs['host'].fqdn, kwargs['timeout'])
+
+
 class SetupHostJob(StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'configured')
     stateful_object = 'managed_host'
@@ -641,11 +727,30 @@ class SetupHostJob(StateChangeJob):
         return "Set up server %s" % self.managed_host
 
     def get_steps(self):
-        return [(ConfigureNTPStep, {'host': self.managed_host}),
-                (ConfigureRsyslogStep, {'host': self.managed_host}),
+        steps = [(ConfigureNTPStep, {'host': self.managed_host}),
+                 (ConfigureRsyslogStep, {'host': self.managed_host}),
+                 (LearnDevicesStep, {'host': self.managed_host})]
+
+        # TODO: store the list of packages to install on the profile
+        PACKAGES = ['lustre', 'lustre-modules']
+
+        if self.managed_host.server_profile.managed:
+            steps.append((AgentActionStep, {'host': self.managed_host,
+                                            'description': "Installing packages on %s" % self.managed_host,
+                                            'command': 'install_packages',
+                                            'args': {
+                                                'packages': PACKAGES,
+                                                'force_dependencies': True
+                                            }}))
+
+            steps.append((RebootIfNeededStep, {'host': self.managed_host, 'timeout': settings.INSTALLATION_REBOOT_TIMEOUT}))
+
+            steps.extend([
                 (ConfigureCorosyncStep, {'host': self.managed_host}),
-                (ConfigurePacemakerStep, {'host': self.managed_host}),
-                (LearnDevicesStep, {'host': self.managed_host})]
+                (ConfigurePacemakerStep, {'host': self.managed_host})
+            ])
+
+        return steps
 
     class Meta:
         app_label = 'chroma_core'
@@ -1001,13 +1106,16 @@ class RebootHostJob(AdvertisedJob):
     @classmethod
     def can_run(cls, host):
         return (host.state not in ['removed', 'unconfigured'] and
-                not HostOfflineAlert.filter_by_item(host).filter(active = True).exists())
+                host.state != 'undeployed' and not
+                HostOfflineAlert.filter_by_item(host).filter(active = True).exists())
 
     def description(self):
         return "Initiate a reboot on host %s" % self.host
 
     def get_steps(self):
-        return [(RebootHostStep, {'host': self.host})]
+        return [
+            (RebootHostStep, {'host': self.host})
+        ]
 
     @classmethod
     def get_confirmation(cls, instance):
@@ -1044,7 +1152,8 @@ class ShutdownHostJob(AdvertisedJob):
     @classmethod
     def can_run(cls, host):
         return (host.state not in ['removed', 'unconfigured'] and
-                not HostOfflineAlert.filter_by_item(host).filter(active = True).exists())
+                host.state != 'undeployed' and not
+                HostOfflineAlert.filter_by_item(host).filter(active = True).exists())
 
     def description(self):
         return "Initiate an orderly shutdown on host %s" % self.host
@@ -1111,7 +1220,7 @@ class UpdateJob(Job, HostListMixin):
 
     def get_steps(self):
         steps_update = [(AgentActionStep, {'host': h, 'command': 'update_packages'}) for h in self.hosts.all()]
-        steps_restart = [(AgentActionStep, {'host': h, 'command': 'restart_server'}) for h in self.hosts.all()]
+        steps_restart = [(RebootIfNeededStep, {'host': h, 'timeout': settings.INSTALLATION_REBOOT_TIMEOUT}) for h in self.hosts.all()]
         return steps_update + steps_restart
 
     class Meta:

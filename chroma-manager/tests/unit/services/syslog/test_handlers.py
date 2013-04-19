@@ -1,7 +1,7 @@
 from chroma_core.services.syslog.parser import admin_client_eviction_handler, client_connection_handler, server_security_flavor_handler, client_eviction_handler
 from chroma_core.models.event import ClientConnectEvent
 from django.test import TestCase
-from tests.unit.chroma_core.helper import synthetic_host
+from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
 
 
 examples = {
@@ -44,6 +44,7 @@ examples = {
 
 class TestHandlers(TestCase):
     def setUp(self):
+        load_default_profile()
         self.host = synthetic_host('myaddress')
 
     def test_server_security_flavor_handler(self):

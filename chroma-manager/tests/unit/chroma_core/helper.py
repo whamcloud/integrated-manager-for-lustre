@@ -9,7 +9,7 @@ from collections import defaultdict
 from tastypie.serializers import Serializer
 import mock
 
-from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, StorageResourceRecord, LNetConfiguration, Nid, ManagedTarget, Bundle
+from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, StorageResourceRecord, LNetConfiguration, Nid, ManagedTarget, Bundle, Command, ServerProfile
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import normalize_nid
@@ -76,10 +76,11 @@ def synthetic_host(address, nids = list([]), storage_resource = False, fqdn = No
         nodename = address
 
     host = ManagedHost.objects.create(
-        address = address,
-        fqdn = fqdn,
-        nodename = nodename,
-        state = 'lnet_up' if nids else 'configured'
+        address=address,
+        fqdn=fqdn,
+        nodename=nodename,
+        state='lnet_up' if nids else 'configured',
+        server_profile=ServerProfile.objects.get(name='default')
     )
     if nids:
         lnet_configuration = LNetConfiguration.objects.create(host = host, state = 'nids_known')
@@ -114,6 +115,26 @@ create_filesystem_patch = mock.patch("chroma_core.services.job_scheduler.job_sch
                                      new = mock.Mock(side_effect = _passthrough_create_filesystem), create = True)
 
 
+def _synthetic_create_host_ssh(address, profile):
+    host_info = MockAgentRpc.mock_servers[address]
+    host = synthetic_host(
+        address,
+        fqdn=host_info['fqdn'],
+        nids=host_info['nids'],
+        nodename=host_info['nodename']
+    )
+    host.server_profile = ServerProfile.objects.get(name=profile)
+    host.save()
+
+    command = Command.objects.create(message="No-op", complete=True)
+    return host, command
+
+
+create_host_ssh_patch = mock.patch(
+    "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.create_host_ssh",
+    new=mock.Mock(side_effect=_synthetic_create_host_ssh), create=True)
+
+
 def freshen(obj):
     return obj.__class__.objects.get(pk=obj.pk)
 
@@ -141,41 +162,23 @@ def fake_log_message(message):
 
 
 def load_default_bundles():
-    try:
-        from django.db import connection
-        cursor = connection.cursor()
-        if 'chroma_core_bundle' in connection.introspection.get_table_list(cursor) and not Bundle.objects.filter(name='lustre'):
-            bundle = Bundle(bundle_name='lustre', location='/tmp/',
-                            description='Lustre Bundle')
-            bundle.save()
-        if 'chroma_core_bundle' in connection.introspection.get_table_list(cursor) and not Bundle.objects.filter(name='agent'):
-            bundle = Bundle(bundle_name='agent', location='/tmp/',
-                            description='Agent Bundle')
-            bundle.save()
-        if 'chroma_core_bundle' in connection.introspection.get_table_list(cursor) and not Bundle.objects.filter(name='agent_dependencies'):
-            bundle = Bundle(bundle_name='agent_dependencies', location='/tmp/',
-                            description='Agent Dependency Bundle')
-            bundle.save()
-    except:
-        pass
+    Bundle.objects.create(bundle_name='lustre', location='/tmp/',
+                          description='Lustre Bundle')
+    Bundle.objects.create(bundle_name='agent', location='/tmp/',
+                          description='Agent Bundle')
+    Bundle.objects.create(bundle_name='agent_dependencies', location='/tmp/',
+                          description='Agent Dependency Bundle')
 
 
 def load_default_profile():
-    try:
-        from django.db import connection
-        from chroma_core.models import ServerProfile
-        cursor = connection.cursor()
-        load_default_bundles()
-        if 'chroma_core_serverprofile' in connection.introspection.get_table_list(cursor) and not ServerProfile.objects.filter(name='default'):
-            default_sp = ServerProfile(name='default', ui_name='Managed storage server',
-                                       ui_description = 'A storage server suitable for creating new HA-enabled filesystem targets',
-                                       managed = True)
-            default_sp.bundles.add('lustre')
-            default_sp.bundles.add('agent')
-            default_sp.bundles.add('agent_dependencies')
-            default_sp.save()
-    except:
-        pass
+    load_default_bundles()
+    default_sp = ServerProfile(name='default', ui_name='Managed storage server',
+                               ui_description='A storage server suitable for creating new HA-enabled filesystem targets',
+                               managed=True)
+    default_sp.bundles.add('lustre')
+    default_sp.bundles.add('agent')
+    default_sp.bundles.add('agent_dependencies')
+    default_sp.save()
 
 
 class MockAgentRpc(object):
@@ -345,6 +348,9 @@ class MockAgentSsh(object):
 
     def invoke(self, cmd, args = {}, auth_args=None):
         return MockAgentRpc._call(self.address, cmd, args)
+    #
+    # def ssh(self, commandline):
+    #
 
     def ssh_params(self):
         return 'root', self.address, 22

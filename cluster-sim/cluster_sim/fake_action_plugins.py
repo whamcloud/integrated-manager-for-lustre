@@ -119,7 +119,7 @@ class FakeActionPlugins():
                 return
             elif cmd == 'configure_repo':
                 return
-            elif cmd == 'update_packages':
+            elif cmd in ['update_packages', 'install_packages']:
                 return
             elif cmd == 'kernel_status':
                 return {
