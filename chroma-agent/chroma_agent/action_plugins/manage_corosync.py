@@ -459,9 +459,8 @@ def configure_fencing(fence_agent, ipaddr = None, login = None,
                       password = None, plug = None):
 
     def set_attribute(name, value):
-        print "setting %s = %s" % (name, value)
-        shell.try_run(["crm_attribute", "--node", node,
-                       "--name", name, "-update", value])
+        shell.try_run(["crm_attribute", "--type", "nodes", "--node", node,
+                       "--name", name, "--update", value])
 
     node = socket.gethostname()
 
@@ -484,7 +483,7 @@ def configure_fencing(fence_agent, ipaddr = None, login = None,
     if plug:
         set_attribute("fence_plug", plug)
 
-    agent = getattr(chroma_agent.fence_agent, fence_agent)
+    agent = getattr(chroma_agent.fence_agent, "fence_" + fence_agent)
     agent(node).initialize()
 
 
