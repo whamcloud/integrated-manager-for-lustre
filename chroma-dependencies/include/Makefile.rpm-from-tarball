@@ -27,7 +27,7 @@ ifeq ($(shell git ls-files --error-unmatch $(SPECNAME) >/dev/null 2>&1; echo $$?
 $(SPECNAME):
 	touch $(SPECNAME)
 else
-$(SPECNAME): $(TARBALL) spec.ed Makefile
+$(SPECNAME): $(TARBALL) spec.ed Makefile ../include/setuptools-pypi-rpm_spec.ed
 	# for now we will just assume that if there is no spec, it's a
 	# python package
 	rm -rf tmp
