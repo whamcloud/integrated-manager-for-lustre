@@ -1,5 +1,5 @@
-/^python setup.py install/c
-python setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+/^%{__python} setup.py install/c
+%{__python} setup.py install --single-version-externally-managed -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
 .
 w
 q
