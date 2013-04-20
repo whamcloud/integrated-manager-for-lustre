@@ -5,9 +5,8 @@
 
 
 import os
-import socket
 import chroma_agent.fence_agent
-from chroma_agent.shell import try_run
+from chroma_agent.shell import try_run, run
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 
@@ -17,9 +16,13 @@ def _power(node, state):
     if state not in valid_states:
         raise RuntimeError("state must be one of %s" % ", ".join(valid_states))
 
-    agent = getattr(chroma_agent.fence_agent,
-                    chroma_agent.fence_agent.get_attribute("agent",
-                                                           socket.gethostname()))
+    rc, stdout, stderr = run(["crm_attribute", "--type", "nodes",
+                              "--node-uname", node, "--attr-name",
+                              "fence_agent", "--get-value"])
+    fence_agent = stdout.split()[2].split('=')[1]
+
+    agent = getattr(chroma_agent.fence_agent, fence_agent)
+
     agent(node).set_power_state(state)
 
 
@@ -40,8 +43,12 @@ def stonith(node):
     #       doesn't treat it as an AWOL
     console_log.info("Rebooting per a STONITH request")
 
-    agent = getattr(chroma_agent.fence_agent,
-                    chroma_agent.fence_agent.FenceAgent(node).agent)
+    rc, stdout, stderr = run(["crm_attribute", "--type", "nodes",
+                              "--node-uname", node, "--attr-name",
+                              "fence_agent", "--get-value"])
+    fence_agent = stdout.split()[2].split('=')[1]
+
+    agent = getattr(chroma_agent.fence_agent, fence_agent)
 
     agent(node).fence()
 
