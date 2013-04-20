@@ -52,7 +52,8 @@ class fence_xvm(FenceAgent):
 
     def initialize(self):
         # install a firewall rule for this port
-        try_run(['/usr/sbin/lokkit', '-p', '1229:tcp'])
+        #try_run(['/usr/sbin/lokkit', '-p', '1229:tcp'])
+        pass
 
 
 class fence_apc(FenceAgent):

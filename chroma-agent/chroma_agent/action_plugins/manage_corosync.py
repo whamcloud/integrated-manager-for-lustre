@@ -361,8 +361,9 @@ def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = 
                         conf_template.render(interfaces=interfaces))
 
     # install a firewall rule for this port
-    shell.try_run(['/usr/sbin/lokkit', '-n', '-p', '%s:udp' %
-                   interfaces[0].mcastport])
+    #shell.try_run(['/usr/sbin/lokkit', '-n', '-p', '%s:udp' %
+    #               interfaces[0].mcastport])
+
     # XXX using -n above and installing the rule manually here is a
     #     dirty hack due to restarting the firewall interrupting our
     #     comms with the manager
