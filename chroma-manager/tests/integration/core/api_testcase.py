@@ -1,9 +1,10 @@
 import datetime
 import logging
+import os
+import requests
 import shutil
 import sys
 import time
-import os
 
 from testconfig import config
 from tests.utils.http_requests import AuthorizedHttpRequests
@@ -70,21 +71,12 @@ class ApiTestCase(UtilityTestCase):
             self.reset_cluster()
         else:
             # Reset the manager via the API
+            self.wait_until_true(self.api_contactable)
             self.remote_operations.unmount_clients()
             self.api_force_clear()
             self.remote_operations.clear_ha()
 
-    def _check_for_down_servers(self):
-        # Check that all servers are up and available after the test
-        down_nodes = []
-        for server in config['lustre_servers']:
-            if not self.remote_operations.host_contactable(server['fqdn']):
-                down_nodes.append(server['fqdn'])
-
-        if len(down_nodes):
-            logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
-            if not getattr(self, 'down_node_expected', False):
-                raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
+        self.wait_until_true(self.supervisor_controlled_processes_running)
 
     def tearDown(self):
         if hasattr(self, 'simulator'):
@@ -98,6 +90,8 @@ class ApiTestCase(UtilityTestCase):
             if hasattr(self, 'remote_operations'):
                 self._check_for_down_servers()
 
+        self.assertTrue(self.supervisor_controlled_processes_running())
+
     @property
     def chroma_manager(self):
         if self._chroma_manager is None:
@@ -105,6 +99,41 @@ class ApiTestCase(UtilityTestCase):
             self._chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
                 server_http_url = config['chroma_managers'][0]['server_http_url'])
         return self._chroma_manager
+
+    def _check_for_down_servers(self):
+        # Check that all servers are up and available after the test
+        down_nodes = []
+        for server in config['lustre_servers']:
+            if not self.remote_operations.host_contactable(server['fqdn']):
+                down_nodes.append(server['fqdn'])
+
+        if len(down_nodes):
+            logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
+            if not getattr(self, 'down_node_expected', False):
+                raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
+
+    def api_contactable(self):
+        try:
+            self.chroma_manager.get('/api/system_status/')
+            return True
+        except requests.ConnectionError:
+            return False
+
+    def supervisor_controlled_processes_running(self):
+        # Use the api to verify the processes controlled by supervisor are all in a RUNNING state
+        response = self.chroma_manager.get('/api/system_status/')
+        self.assertEqual(response.successful, True, response.text)
+        system_status = response.json
+        non_running_processes = []
+        for process in system_status['supervisor']:
+            if not process['statename'] == 'RUNNING':
+                non_running_processes.append(process)
+
+        if non_running_processes:
+            logger.warning("Supervisor processes found not to be running: '%s'" % non_running_processes)
+            return False
+        else:
+            return True
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         logger.debug("wait_for_command: %s" % self.get_by_uri('/api/command/%s/' % command_id))

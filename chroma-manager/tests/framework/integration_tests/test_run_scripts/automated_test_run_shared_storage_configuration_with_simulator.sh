@@ -130,7 +130,6 @@ cd ~/chroma_test_env/chroma/chroma-manager
 python manage.py dev_setup
 python manage.py supervisor  &> /dev/null &
 supervisor_pid=\$!
-sleep 30  # Give a chance for the services to start - TODO: Add a check to setUp in tests themselves if the services are ready.
 
 set +e
 echo "Begin running tests..."
