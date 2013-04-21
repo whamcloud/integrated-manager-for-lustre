@@ -20,7 +20,8 @@
             "distro": "el6",
             "repos": ["chroma"],
             "users": [
-                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
+                {"username": "debug", "super": true, "password": "chr0m4_d3bug",
+                 "email": "nobody@example.com"}
             ]
         }
     ],

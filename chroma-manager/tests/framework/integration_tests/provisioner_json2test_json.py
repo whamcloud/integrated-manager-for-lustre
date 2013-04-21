@@ -70,6 +70,14 @@ if config.get('lustre_clients'):
         new_clients[client_address] = client
     config['lustre_clients'] = new_clients
 
+# hack up cluster_number based on the current vm[56][78] hack
+if config.get('lustre_servers'):
+    for server in config['lustre_servers']:
+        start_command = config.get('start_command', None)
+        if start_command:
+            server['reset_command'] = \
+                server['start_command'].replace("start", "reset")
+
 if not config.get('simulator', False):
     setup_power_config()
     setup_corosync_config()

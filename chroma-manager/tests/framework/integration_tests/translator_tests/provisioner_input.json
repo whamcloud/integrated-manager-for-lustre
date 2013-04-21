@@ -1,110 +1,111 @@
 {
+  "power_control_types": [
+    {
+      "default_password": "lustre",
+      "default_username": "root",
+      "model": "Virtual PDU",
+      "make": "KVM",
+      "agent": "fence_virsh"
+    }
+  ],
+  "repos": {
+    "chroma": {
+      "build_number": 857,
+      "build_job": "chroma-reviews"
+    }
+  },
+  "power_distribution_units": [
+    {
+      "address": "VM_HOST_IP",
+      "type": "fence_virsh KVM Virtual PDU",
+      "port": "22"
+    }
+  ],
+  "reset": true,
+  "lustre_clients": [
+    {
+      "lustre_client_version": "2.1.4",
+      "distro": "el6",
+      "address": "client1"
+    }
+  ],
   "chroma_managers": [
     {
-      "distro": "el6",
       "repos": [
         "chroma"
       ],
+      "distro": "el6",
       "users": [
         {
+          "username": "debug",
           "password": "chr0m4_d3bug",
-          "super": true,
-          "username": "debug"
+          "email": "nobody@example.com",
+          "super": true
         }
       ]
     }
   ],
-  "pacemaker_hard_reset": true,
   "failover_is_configured": true,
-  "lustre_clients": [
+  "provision": true,
+  "pacemaker_hard_reset": true,
+  "test_runners": [
     {
-      "address": "client1",
-      "distro": "el6",
-      "lustre_client_version": "2.1.4"
+      "repos": [
+        "chroma"
+      ],
+      "distro": "el6"
     }
   ],
   "lustre_servers": [
     {
       "corosync_config": {
-        "mcast_port": "4242",
-        "ring1_iface": "eth1"
+        "ring1_iface": "eth1",
+        "mcast_port": "4242"
       },
-      "distro": "el6",
-      "bridges": ["a"],
       "repos": [
         "chroma"
       ],
-      "root_password": "lustre"
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["a"]
     },
     {
       "corosync_config": {
-        "mcast_port": "4242",
-        "ring1_iface": "eth1"
+        "ring1_iface": "eth1",
+        "mcast_port": "4242"
       },
-      "distro": "el6",
-      "bridges": ["a"],
       "repos": [
         "chroma"
       ],
-      "root_password": "lustre"
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["a"]
     },
     {
       "corosync_config": {
-        "mcast_port": "4244",
-        "ring1_iface": "eth1"
+        "ring1_iface": "eth1",
+        "mcast_port": "4244"
       },
-      "distro": "el6",
-      "bridges": ["b"],
       "repos": [
         "chroma"
       ],
-      "root_password": "lustre"
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["b"]
     },
     {
       "corosync_config": {
-        "mcast_port": "4244",
-        "ring1_iface": "eth1"
+        "ring1_iface": "eth1",
+        "mcast_port": "4244"
       },
-      "distro": "el6",
-      "bridges": ["b"],
       "repos": [
         "chroma"
       ],
-      "root_password": "lustre"
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["b"]
     }
   ],
   "pdu_outlets": [
-  ],
-  "power_control_types": [
-    {
-      "agent": "fence_virsh",
-      "default_password": "lustre",
-      "default_username": "root",
-      "make": "KVM",
-      "model": "Virtual PDU"
-    }
-  ],
-  "power_distribution_units": [
-    {
-      "address": "VM_HOST_IP",
-      "port": "22",
-      "type": "fence_virsh KVM Virtual PDU"
-    }
-  ],
-  "provision": true,
-  "repos": {
-    "chroma": {
-      "build_job": "chroma-reviews",
-      "build_number": 857
-    }
-  },
-  "reset": true,
-  "test_runners": [
-    {
-      "distro": "el6",
-      "repos": [
-        "chroma"
-      ]
-    }
   ]
 }

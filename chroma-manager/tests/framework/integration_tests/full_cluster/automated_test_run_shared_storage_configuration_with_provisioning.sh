@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 spacelist_to_commalist() {
     echo $@ | tr ' ' ','
@@ -14,127 +14,141 @@ mkdir -p $PWD/coverage_reports
 
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
+USE_FENCE_XVM=false
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+# TODO: figure out how coverage fits into all of this new world order
+#MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+MEASURE_COVERAGE=false
 TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
 echo "Beginning installation and setup..."
 
+# put some keys on the nodes for easy access by developers
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
+cat <<\"EOF\" >> /root/.ssh/authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrcI6x6Fv2nzJwXP5mtItOcIDVsiD0Y//LgzclhRPOT9PQ/jwhQJgrggPhYr5uIMgJ7szKTLDCNtPIXiBEkFiCf9jtGP9I6wat83r8g7tRCk7NVcMm0e0lWbidqpdqKdur9cTGSOSRMp7x4z8XB8tqs0lk3hWefQROkpojzSZE7fo/IT3WFQteMOj2yxiVZYFKJ5DvvjdN8M2Iw8UrFBUJuXv5CQ3xV66ZvIcYkth3keFk5ZjfsnDLS3N1lh1Noj8XbZFdSRC++nbWl1HfNitMRm/EBkRGVP3miWgVNfgyyaT9lzHbR8XA7td/fdE5XrTpc7Mu38PE7uuXyLcR4F7l brian@brian-laptop
+EOF" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# need to remove the chroma repositories configured by the provisioner
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+rm -f /etc/yum.repos.d/autotest.repo" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
 # Install and setup integration tests on integration test runner
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
+exec 2>&1; set -x
 $PROXY yum -y install chroma-manager-integration-tests
-EOF
 
-case "$HOST_IP" in
-     10.10.4.29)    MCAST_START=5420 ;;   # client-29
-     10.10.4.34)    MCAST_START=5480 ;;   # hydra-2
-     10.10.4.36)    MCAST_START=5440 ;;   # hydra-4
-    10.10.4.130)    MCAST_START=5460 ;;   # fat-intel-3
-              *)    echo "I don't recognize this cluster, bailing"
-                    exit 1 ;;
-esac
+if $USE_FENCE_XVM; then
+    # make sure the host has fence_virtd installed and configured
+    ssh root@$HOST_IP "exec 2>&1; set -xe
+    uname -a
+    yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+    restorecon -Rv /etc/cluster/
+    cat <<\"EOF1\" > /etc/fence_virt.conf
+backends {
+	libvirt {
+		uri = \"qemu:///system\";
+	}
+
+}
+
+listeners {
+	multicast {
+		port = \"1229\";
+		family = \"ipv4\";
+		address = \"225.0.0.12\";
+		key_file = \"/etc/cluster/fence_xvm.key\";
+		interface = \"virbr0\";
+	}
+
+}
+
+fence_virtd {
+	module_path = \"/usr/lib64/fence-virt\";
+	backend = \"libvirt\";
+	listener = \"multicast\";
+}
+EOF1
+    chkconfig --add fence_virtd
+    chkconfig fence_virtd on
+    service fence_virtd restart"
+fi
+EOF
 
 # Install and setup chroma software storage appliances
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "set -xe; exec 2>&1
-yumdownloader --disablerepo=* --enablerepo=chroma kernel
-rpm -ivh --oldpackage kernel*.rpm
-$PROXY yum install -y chroma-agent-management
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+# this can't be done here anymore since package installation is done
+# as part of adding storage servers to the manager
+#if $MEASURE_COVERAGE; then
+#    $PROXY yum install -y python-coverage
+#    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
+#[run]
+#data_file = /var/tmp/.coverage
+#parallel = True
+#source = /usr/lib/python2.6/site-packages/chroma_agent/
+#EOF
+#    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+#import coverage
+#cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
+#cov.start()
+#cov._warn_no_data = False
+#cov._warn_unimported_source = False
+#EOF
+#else
+#    # Ensure that coverage is disabled
+#    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+#fi
 
-if $MEASURE_COVERAGE; then
-    $PROXY yum install -y python-coverage
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
-[run]
-data_file = /var/tmp/.coverage
-parallel = True
-source = /usr/lib/python2.6/site-packages/chroma_agent/
-EOF
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
-import coverage
-cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
-cov.start()
-cov._warn_no_data = False
-cov._warn_unimported_source = False
-EOF
-else
-    # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+if $USE_FENCE_XVM; then
+    # fence_xvm support
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+fi" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
 fi
 
-# Configure corosync
-case \$(uname -n) in
-    *vm[56].lab.whamcloud.com) MCAST_PORT=$((MCAST_START+1)) ;;
-    *vm[78].lab.whamcloud.com) MCAST_PORT=$((MCAST_START+3)) ;;
-esac
-cat <<EOF > /etc/corosync/corosync.conf
-compatibility: whitetank
-
-totem {
-        version: 2
-        secauth: off
-        threads: 0
-        interface {
-                ringnumber: 0
-                bindnetaddr: 10.10.4.1
-                mcastaddr: 226.94.1.1
-                mcastport: \$MCAST_PORT
-                ttl: 1
-        }
-}
-
-logging {
-        fileline: off
-        to_stderr: no
-        to_logfile: yes
-        to_syslog: yes
-        logfile: /var/log/cluster/corosync.log
-        debug: off
-        timestamp: on
-        logger_subsys {
-                subsys: AMF
-                debug: off
-        }
-}
-
-amf {
-        mode: disabled
-}
-service {
-        name: pacemaker
-        ver: 1
-}
-EOF
-chkconfig corosync on
-chkconfig pacemaker on
-
-# Removed and installed a kernel, so need a reboot
-sync
-sync
-init 6" | dshbak -c
-
 # Install and setup chroma manager
-ssh root@$CHROMA_MANAGER <<EOF
-set -ex
-$PROXY yum install -y chroma-manager
+scp chroma.tar.gz root@$CHROMA_MANAGER:/tmp
+ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
+# Install from the installation package
+cd /tmp
+tar xzvf chroma.tar.gz
+./install.sh <<EOF1
+$CHROMA_USER
+$CHROMA_EMAIL
+$CHROMA_PASS
+$CHROMA_PASS
+${CHROMA_NTP_SERVER:-localhost}
+EOF1
 
-cat <<"EOF1" > /usr/share/chroma-manager/local_settings.py
+cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-echo "MEASURE_COVERAGE: $MEASURE_COVERAGE"
+echo \"MEASURE_COVERAGE: $MEASURE_COVERAGE\"
 if $MEASURE_COVERAGE; then
     $PROXY yum install -y python-coverage
-    cat <<"EOF1" > /usr/share/chroma-manager/.coveragerc
+    cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
 source = /usr/share/chroma-manager/
 EOF1
-    cat <<"EOF1" > /usr/lib/python2.6/site-packages/sitecustomize.py
+    cat <<\"EOF1\" > /usr/lib/python2.6/site-packages/sitecustomize.py
 import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
@@ -144,71 +158,7 @@ EOF1
 else
     # Ensure that coverage is disabled
     rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-fi
-EOF
-
-# wait for rebooted nodes
-sleep 5
-nodes="${STORAGE_APPLIANCES[@]}"
-RUNNING_TIME=0
-while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
-    for node in $nodes; do
-        if ssh root@$node id; then
-            nodes=$(echo "$nodes" | sed -e "s/$node//" -e 's/^ *//' -e 's/ *$//')
-        fi
-    done
-    (( RUNNING_TIME++ )) || true
-    sleep 1
-done
-
-# Configure pacemaker
-# holy hackery here batman!  this is because the clustering of the nodes
-# as returned by the provisioner is hard coded and the provisioner doesn't
-# actually fake that for us and we are just expected to know that 5/6 and
-# 7/8 are pairs
-base=${STORAGE_APPLIANCES[0]%%vm*}vm
-pdsh -l root -R ssh -S -w "${base}5,${base}7" "set -ex; exec 2>&1
-STORAGE_APPLIANCES_${base//-/_}5=\"${base}5.lab.whamcloud.com ${base}6.lab.whamcloud.com\"
-STORAGE_APPLIANCES_${base//-/_}7=\"${base}7.lab.whamcloud.com ${base}8.lab.whamcloud.com\"
-# Wait for the CIB to be up (and erase it while we try)
-RUNNING_TIME=0
-while ! cibadmin -f -E && [ \$RUNNING_TIME -lt 500 ]; do
-  let RUNNING_TIME=\$RUNNING_TIME+1
-  sleep 1
-done
-
-if [ \$RUNNING_TIME -eq 500 ]; then
-    echo \"Timed out waiting for CIB to start up\"
-    exit 1
-fi
-
-crm configure property no-quorum-policy=\"ignore\"
-crm configure property symmetric-cluster=\"true\"
-crm configure property cluster-infrastructure=\"openais\"
-crm configure property stonith-enabled=\"true\"
-crm configure rsc_defaults resource-stickiness=1000
-crm configure rsc_defaults failure-timeout=\"20m\"
-crm configure rsc_defaults migration-threshold=3
-
-hostname=\$(uname -n)
-hostname=\${hostname%%%%.*}
-var=\"STORAGE_APPLIANCES_\${hostname//-/_}\"
-for NODE in \${!var}; do
-  VM_NAME=\${NODE%%%%.*}
-  SSH_ID="/root/.ssh/id_rsa"
-  crm -F configure primitive st-\$NODE stonith:fence_virsh params \
-                                       ipaddr=$HOST_IP login=root \
-                                       identity_file="\$SSH_ID" \
-                                       port=\$VM_NAME action=reboot secure=true \
-                                       pcmk_host_list=\$NODE \
-                                       pcmk_host_check=static-list pcmk_host_map=""
-
-  cibadmin -o constraints -C -X \"<rsc_location id=\\\"run-st-\$NODE-anywhere\\\" rsc=\\\"st-\$NODE\\\">
-    <rule id=\\\"run-st-\$NODE-anywhere-rule\\\" score=\\\"100\\\">
-      <expression id=\\\"run-st-\$NODE-anywhere-expr\\\" attribute=\\\"#uname\\\" operation=\\\"ne\\\" value=\\\"\$NODE\\\"/>
-    </rule>
-  </rsc_location>\"
-done" | dshbak -c
+fi"
 
 echo "End installation and setup."
 
@@ -244,6 +194,9 @@ if $MEASURE_COVERAGE; then
       cd /var/tmp/
       coverage combine
       yum -y install pdsh" | dshbak -c
+    if [ ${PIPESTATUS[0]} != 0 ]; then
+        exit 1
+    fi
 
     rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) /var/tmp/.coverage $PWD
 
