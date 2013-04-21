@@ -73,6 +73,7 @@ or on a separate node.
 %package integration-tests
 Summary: Chroma Manager Integration Tests
 Group: Development/Tools
+Requires: python-dateutil python-requests python-nose python-nose-testconfig python-paramiko python-django
 %description integration-tests
 This package contains the Chroma Manager integration tests and scripts and is intended
 to be used by the Chroma test framework.

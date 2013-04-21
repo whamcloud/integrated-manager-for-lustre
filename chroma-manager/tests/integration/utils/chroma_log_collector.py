@@ -6,56 +6,65 @@
 #
 # Simple script to gather all of the relevant logs from a cluster.
 #
-# Usage: ./chroma_log_collection.py destination_path cluster_cfg_host_machine:cluster_cfg_path
+# Usage: ./chroma_log_collection.py destination_path cluster_cfg_path
 #   destination_path - the directory to copy all of the log files into
-#   cluster_cfg_host_machine - the machine that has the cluster configuration file that describes the cluster to copy logs from.
-#   cluster_cfg_path - the path to the cluster config file on the cluster_cfg_host_machine
+#   cluster_cfg_path - the path to the cluster config file
 #
 # Ex usage: ./chroma_log_collection.py ss_log_collection_test some_machine:~/cluster_cfg.json
 
 import json
 import subprocess
 import sys
+# TODO - work out the details of being able to use await_server_boot() here
+#from tests.integration.core.remote_operations import RealRemoteOperations
 
 
 class ChromaLogCollector(object):
 
-    def __init__(self, destination_path, chroma_managers, lustre_servers, *args, **kwargs):
+    def __init__(self, destination_path, chroma_managers, lustre_servers, test_runners, *args, **kwargs):
         super(ChromaLogCollector, self).__init__(*args, **kwargs)
         self.destination_path = destination_path
         self.chroma_managers = chroma_managers
         self.lustre_servers = lustre_servers
+        self.test_runners = test_runners
+        #self.remote_operations = RealRemoteOperations(self)
 
     def collect_logs(self):
         subprocess.call(['rm', '-rf', "%s/*.log" % destination_path])
 
+        for test_runner in self.test_runners:
+            #self.await_server_boot(test_runner, restart = True)
+            self.fetch_log(test_runner, '/var/log/chroma_test.log', "%s-chroma_test.log" % test_runner)
+
         for chroma_manager in self.chroma_managers:
-            logs = subprocess.check_output(['ssh', chroma_manager, 'ls /var/log/chroma/*.log | xargs -n1 basename'])
+            #self.await_server_boot(chroma_manager, restart = True)
+            logs = subprocess.Popen(['ssh', chroma_manager, 'ls /var/log/chroma/*.log | xargs -n1 basename'], stdout=subprocess.PIPE).communicate()[0]
             for log in logs.split():
                 self.fetch_log(chroma_manager, '/var/log/chroma/%s' % log, "%s-%s" % (chroma_manager, log))
             self.fetch_log(chroma_manager, '/var/log/messages', '%s-messages.log' % chroma_manager)
 
         for lustre_server in self.lustre_servers:
+            #self.await_server_boot(lustre_server, restart = True)
             self.fetch_log(lustre_server, '/var/log/chroma-agent.log', '%s-chroma-agent.log' % lustre_server)
             self.fetch_log(lustre_server, '/var/log/messages', '%s-messages.log' % lustre_server)
             self.fetch_pacemaker_configuration(lustre_server)
 
     def fetch_log(self, source_address, source_log_path, destination_log_filename):
-        #print "Fetching %s from %s to %s/%s" % (source_log_path, source_address, self.destination_path, destination_log_filename)
+        print "Fetching %s from %s to %s/%s" % (source_log_path, source_address, self.destination_path, destination_log_filename)
         subprocess.call(['scp', "%s:%s" % (source_address, source_log_path), "%s/%s" % (self.destination_path, destination_log_filename)])
 
     def fetch_pacemaker_configuration(self, lustre_server):
         # Only attempt to fetch if pacemaker exists on the lustre server
         which_crm_exit_code = subprocess.call(['ssh', lustre_server, 'which crm'])
         if which_crm_exit_code == 0:
-            crm_status = subprocess.check_output(['ssh', lustre_server, 'crm status'])
+            crm_status = subprocess.Popen(['ssh', lustre_server, 'crm status'], stdout=subprocess.PIPE).communicate()[0]
             f = open('%s/%s-crm-status.log' % (self.destination_path, lustre_server), 'w')
             try:
                 f.write(crm_status)
             finally:
                 f.close()
 
-            crm_configuration = subprocess.check_output(['ssh', lustre_server, 'crm configure show'])
+            crm_configuration = subprocess.Popen(['ssh', lustre_server, 'crm configure show'], stdout=subprocess.PIPE).communicate()[0]
             f = open('%s/%s-crm-configuration.log' % (self.destination_path, lustre_server), 'w')
             try:
                 f.write(crm_configuration)
@@ -66,24 +75,26 @@ class ChromaLogCollector(object):
 if __name__ == '__main__':
 
     destination_path = sys.argv[1]
-    cluster_cfg_host_machine, cluster_cfg_path = sys.argv[2].split(':')
+    cluster_cfg_path = sys.argv[2]
 
     subprocess.call(['mkdir', '-p', destination_path])
     subprocess.call(['rm', '-f', '%s.tgz' % destination_path])
-    subprocess.call(['rm', '-f', '%s/cluster_cfg.json' % destination_path])
-    subprocess.check_call(['scp', "%s:%s" % (cluster_cfg_host_machine, cluster_cfg_path), "%s/cluster_cfg.json" % destination_path])
-    cluster_cfg_json = open('%s/cluster_cfg.json' % destination_path)
+    cluster_cfg_json = open(cluster_cfg_path)
     cluster_cfg = json.loads(cluster_cfg_json.read())
 
     chroma_managers = []
     for chroma_manager in cluster_cfg['chroma_managers']:
-        chroma_managers.append(chroma_manager['address'])
+        chroma_managers.append("root@%s" % chroma_manager['address'])
 
     lustre_servers = []
     for lustre_server in cluster_cfg['lustre_servers']:
         if not lustre_server['distro'] == "mock":
             lustre_servers.append("root@%s" % lustre_server['address'])
 
-    log_collector = ChromaLogCollector(destination_path, chroma_managers, lustre_servers)
+    test_runners = []
+    for test_runner in cluster_cfg['test_runners']:
+        test_runners.append("root@%s" % test_runner['address'])
+
+    log_collector = ChromaLogCollector(destination_path, chroma_managers, lustre_servers, test_runners)
     log_collector.collect_logs()
     subprocess.call(['tar', '-czf', '%s.tgz' % destination_path, destination_path])

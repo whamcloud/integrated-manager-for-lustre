@@ -1,0 +1,54 @@
+{
+    "repos": {
+        "chroma": {
+             "build_job": "BUILD_JOB_NAME",
+             "build_number": BUILD_JOB_BUILD_NUMBER
+        }
+    },
+    "provision": true,
+    "failover_is_configured": true,
+    "reset": true,
+    "test_runners": [
+        {
+            "distro": "el6.3",
+            "repos": ["chroma"]
+        }
+    ], 
+    "chroma_managers": [
+        {
+            "distro": "el6.3",
+            "repos": ["chroma"],
+            "users": [
+                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
+            ]
+        }
+    ],
+    "lustre_servers": [
+        {
+            "distro": "el6.3",
+            "root_password": "lustre",
+            "repos": ["chroma"]
+        },
+       {
+            "distro": "el6.3",
+            "root_password": "lustre",
+            "repos": ["chroma"]
+        },
+       {
+            "distro": "el6.3",
+            "root_password": "lustre",
+            "repos": ["chroma"]
+        },
+       {
+            "distro": "el6.3",
+            "root_password": "lustre",
+            "repos": ["chroma"]
+        }
+    ],
+    "lustre_clients": {
+        "client1": {
+            "distro": "el6.3",
+            "lustre_client_version": "2.1.4"
+        }
+    }
+}
