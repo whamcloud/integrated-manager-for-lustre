@@ -276,7 +276,7 @@ class RealRemoteOperations(RemoteOperations):
             configuration = result.stdout.read()
             self._test_case.assertRegexpMatches(
                 configuration,
-                "\s{2}Resource: %s-MDT0000_.+\n\s{4}Enabled on: %s \(score:20\)\n" %
+                "\s{2}Resource: %s-MDT0000_.+\n\s{4}Enabled on: .+ \(score:20\)\n" %
                 (filesystem['name'], host['nodename'])
             )
             self._test_case.assertRegexpMatches(
