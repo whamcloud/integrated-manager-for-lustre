@@ -75,26 +75,30 @@ class Service(ChromaService):
                             "corosync plugin: %s" % dt)
                 raise
 
-        def is_new(peer_fqdn):
-            return (peer_fqdn not in self._host_status or
-                    self._host_status[peer_fqdn].datetime < dt)
+        def is_new(peer_nodename):
+            return (peer_nodename not in self._host_status or
+                    self._host_status[peer_nodename].datetime < dt)
 
         peers_str = "; ".join(["%s: online=%s, new=%s" %
-                                (peer_fqdn, data['online'], is_new(peer_fqdn))
-                                for peer_fqdn, data in body['nodes'].items()])
+                                (peer_nodename, data['online'], is_new(peer_nodename))
+                                for peer_nodename, data in body['nodes'].items()])
         log.debug("Incoming peer report from %s:  %s" % (fqdn, peers_str))
 
         # NB: This will ignore any unknown peers in the report.
-        cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(fqdn__in = body['nodes'].keys())
+        cluster_nodes = ManagedHost.objects.select_related('ha_cluster_peers').filter(nodename__in=body['nodes'].keys())
+
+        unknown_nodes = set(body['nodes'].keys()) ^ set([h.nodename for h in cluster_nodes])
+        if unknown_nodes:
+            log.warning("Unknown nodes in report from %s: %s" % (fqdn, unknown_nodes))
 
         #  Consider all nodes in the peer group for this reporting agent
         for host in cluster_nodes:
-            data = body['nodes'][host.fqdn]
+            data = body['nodes'][host.nodename]
 
             cluster_peer_keys = sorted([node.pk for node in cluster_nodes
                                             if node is not host])
 
-            if is_new(host.fqdn):
+            if is_new(host.nodename):
                 incoming_status = data['online'] == 'true'
 
                 log.debug("Corosync processing "
@@ -120,7 +124,7 @@ class Service(ChromaService):
                 #  Keep internal track of the hosts state.
                 curr_status = self.HostStatus(status=incoming_status,
                                               datetime=dt)
-                self._host_status[host.fqdn] = curr_status
+                self._host_status[host.nodename] = curr_status
 
     def run(self):
         self._queue.serve(data_callback=self.on_data)
