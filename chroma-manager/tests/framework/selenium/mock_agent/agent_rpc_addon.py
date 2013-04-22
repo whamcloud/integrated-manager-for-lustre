@@ -17,9 +17,9 @@ MockAgentRpc.mock_servers = {
 
 import json
 import os
-CI_LOCATION = '/usr/share/chroma-manager/'
+PRODUCTION_LOCATION = '/usr/share/chroma-manager/tests/framework/selenium/mock_agent/'
 DEV_LOCATION = "tests/framework/selenium/mock_agent/"
-LOCATION = DEV_LOCATION if os.path.exists(DEV_LOCATION) else CI_LOCATION
+LOCATION = DEV_LOCATION if os.path.exists(DEV_LOCATION) else PRODUCTION_LOCATION
 MockAgentRpc.mock_servers['kp-ss-storage-appliance-1']['device-plugin'] = json.load(open(os.path.join(LOCATION, 'kp-ss-storage-appliance-1.json')))['result']
 MockAgentRpc.mock_servers['kp-ss-storage-appliance-2']['device-plugin'] = json.load(open(os.path.join(LOCATION, 'kp-ss-storage-appliance-2.json')))['result']
 

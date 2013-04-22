@@ -1,43 +1,54 @@
 {
     "headless": false,
     "screenshots": false,
-    "_comment": "Set clean_up_on_failure to false if you want the browser to stay open when a test fails to troubleshoot.",
     "clean_up_on_failure": true,
-    "chroma_managers":
+    "chroma_managers": [
         {
-            "server_http_url": "http://localhost:8000/ui/",
+            "server_http_url": "https://localhost:8000/ui/",
             "browser": "Chrome",
             "users": [
-               {"username": "debug", "is_superuser": true, "password": "chr0m4_d3bug"}
+                {
+                    "username": "debug",
+                    "is_superuser": true,
+                    "password": "chr0m4_d3bug"
+                }
             ]
-        },
-    "volumes": [
-        {
-         "label": "/dev/sdc", /* e.g. unshared device on example01 */
-         "servers": {
-             "example01": {"path": "/dev/sdc"}
-         }
-        },
-        {
-            "label": "/dev/sdc", /* e.g. unshared device on example02 */
-            "servers": {
-                "example02": {"path": "/dev/sdc"}
-            }
-        },
-        {
-         "label": "VolGroup00-volume0" /* e.g. shared device */
-         "servers": {
-             "example01": {"path": "/dev/mapper/VolGroup00-volume0"},
-             "example02": {"path": "/dev/mapper/VolGroup00-volume0"}
-         }
         }
     ],
-    "hosts": [
+    "lustre_servers":[
         {
-        	"address": "example01"
+            "nodename": "kp-ss-storage-appliance-1",
+            "address": "kp-ss-storage-appliance-1",
+            "fqdn": "kp-ss-storage-appliance-1",
+            "device_paths": [
+                "/dev/disk/by-id/scsi-1IET_00010001",
+                "/dev/disk/by-id/scsi-1IET_00020001",
+                "/dev/disk/by-id/scsi-1IET_00030001",
+                "/dev/disk/by-id/scsi-1IET_00040001",
+                "/dev/disk/by-id/scsi-1IET_00070001",
+                "/dev/disk/by-id/scsi-1IET_00080001"
+            ],
         },
         {
-        	"address": "example02"
+            "nodename": "kp-ss-storage-appliance-2",
+            "address": "kp-ss-storage-appliance-2",
+            "fqdn": "kp-ss-storage-appliance-2",
+            "device_paths": [
+                "/dev/disk/by-id/scsi-1IET_00010001",
+                "/dev/disk/by-id/scsi-1IET_00020001",
+                "/dev/disk/by-id/scsi-1IET_00030001",
+                "/dev/disk/by-id/scsi-1IET_00040001",
+                "/dev/disk/by-id/scsi-1IET_00070001",
+                "/dev/disk/by-id/scsi-1IET_00080001"
+            ],
         }
-    ]
+    ],
+    "device_path_to_label_map" : {
+        "/dev/disk/by-id/scsi-1IET_00010001": "1IET 00010001",
+        "/dev/disk/by-id/scsi-1IET_00020001": "1IET 00020001",
+        "/dev/disk/by-id/scsi-1IET_00030001": "1IET 00030001",
+        "/dev/disk/by-id/scsi-1IET_00040001": "1IET 00040001",
+        "/dev/disk/by-id/scsi-1IET_00070001": "1IET 00070001",
+        "/dev/disk/by-id/scsi-1IET_00080001": "1IET 00080001"
+    },
 }

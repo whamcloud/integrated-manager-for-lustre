@@ -76,7 +76,7 @@ class TestUsers(SeleniumBaseTestCase):
         for user in Testdata().get_test_data_for_user():
             self.users[user['username']] = SampleUser(user)
 
-        for user in config['chroma_managers']['users']:
+        for user in config['chroma_managers'][0]['users']:
             if user['is_superuser']:
                 self.users['debug'] = SampleUser(user)
 

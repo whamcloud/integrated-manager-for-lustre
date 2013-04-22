@@ -79,7 +79,7 @@ class Navigation(BaseView):
         self.quiesce()
 
     def reset(self):
-        self.driver.get(config['chroma_managers']['server_http_url'])
+        self.driver.get(config['chroma_managers'][0]['server_http_url'])
         wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
         self._patch_api()
         self.quiesce()

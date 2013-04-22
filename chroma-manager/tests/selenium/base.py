@@ -66,7 +66,7 @@ class SeleniumBaseTestCase(TestCase):
         self.long_wait = wait_time['long']
 
     def setUp(self):
-        if not config['chroma_managers']['server_http_url']:
+        if not config['chroma_managers'][0]['server_http_url']:
             raise RuntimeError("Please set server_http_url in config file")
 
         if config['headless']:
@@ -75,7 +75,7 @@ class SeleniumBaseTestCase(TestCase):
             display.start()
 
         if not self.driver:
-            browser = config['chroma_managers']['browser']
+            browser = config['chroma_managers'][0]['browser']
             if browser == 'Chrome':
                 options = webdriver.ChromeOptions()
                 options.add_argument('no-proxy-server')
@@ -83,13 +83,13 @@ class SeleniumBaseTestCase(TestCase):
             elif browser == 'Firefox':
                 self.driver = webdriver.Firefox()
 
-        self.driver.get(config['chroma_managers']['server_http_url'])
+        self.driver.get(config['chroma_managers'][0]['server_http_url'])
 
         from tests.selenium.utils.navigation import Navigation
         self.navigation = Navigation(self.driver)
 
         superuser_present = False
-        for user in config['chroma_managers']['users']:
+        for user in config['chroma_managers'][0]['users']:
             if user['is_superuser']:
                 self.navigation.login(user['username'], user['password'])
                 superuser_present = True
@@ -132,7 +132,7 @@ class SeleniumBaseTestCase(TestCase):
         Servers(self.driver).remove_all()
 
         superuser_username = None
-        for user in config['chroma_managers']['users']:
+        for user in config['chroma_managers'][0]['users']:
             if user['is_superuser']:
                 superuser_username = user['username']
         if not superuser_username:
@@ -141,16 +141,21 @@ class SeleniumBaseTestCase(TestCase):
             self.navigation.go('Configure', 'Users')
             Users(self.driver).delete_all_except(superuser_username)
 
-    def volume_and_server(self, index):
-        volume = config['volumes'][index]
+    def volume_and_server(self, index, lustre_server = None):
+        if not lustre_server:
+            lustre_server = config['lustre_servers'][0]['nodename']
 
-        # Pick an arbitrary server as the primary
-        try:
-            server = volume['servers'].keys()[0]
-        except (IndexError, KeyError):
-            raise RuntimeError("No servers for volume %s/%s" % (index, volume['id']))
-        else:
-            return volume['label'], server
+        server_config = None
+        for server in config['lustre_servers']:
+            if server['nodename'] == lustre_server:
+                server_config = server
+        if not server_config:
+            raise RuntimeError("No lustre server found called '%s'" % lustre_server)
+
+        volume = server_config['device_paths'][index]
+        volume_label = config['device_path_to_label_map'][volume]
+
+        return volume_label, server_config['nodename']
 
     def create_filesystem_with_server_and_mgt(self, host_list,
                                               mgt_host_name, mgt_device_node,

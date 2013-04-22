@@ -1,71 +1,55 @@
-set -x
+set -ex
 
-CHROMA_MANAGER=${CHROMA_MANAGER:='hydra-2-selenium-chroma-manager-1'}
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
+[ -r localenv ] && . localenv
+
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/selenium/cluster_config.json"}
+
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 
 echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
-# Remove old files from previous run
-ssh $CHROMA_MANAGER "rm -rvf ~/mock_agent/*"
-ssh $CHROMA_MANAGER "rm -rvf ~/requirements.txt"
-ssh $CHROMA_MANAGER "rm -rvf ~/rpms/*"
-ssh $CHROMA_MANAGER "mkdir -p ~/rpms/"
-
-# Copy rpms to each of the machines
-scp $(ls ~/selenium/rpms/arch\=x86_64\,distro\=el6/dist/chroma-manager-*| grep -v integration-tests) $CHROMA_MANAGER:~/rpms/
-scp ~/selenium/requirements.txt $CHROMA_MANAGER:~
-scp -r ~/selenium/mock_agent $CHROMA_MANAGER:~
 
 # Install and setup chroma manager
-ssh $CHROMA_MANAGER <<"EOF"
-set -x
+ssh root@$CHROMA_MANAGER <<EOF
+set -ex
+yum install -y chroma-manager python-mock
 
-chroma-config stop
-logrotate -fv /etc/logrotate.d/chroma-manager
+cat <<"EOF1" > /usr/share/chroma-manager/local_settings.py
+import logging
+LOG_LEVEL = logging.DEBUG
+EOF1
 
-yum remove -y chroma-manager*
-rm -rf /usr/share/chroma-manager/
-rm -f /usr/bin/chroma*
-echo "drop database chroma; create database chroma;" | mysql -u root
-service postgresql stop
-rm -fr /var/lib/pgsql/data/*
+mkdir -p /usr/share/chroma-manager/tests/framework/selenium/
+EOF
 
-source ~/.bash_profile
-pip uninstall coverage <<EOC
-y
-EOC
-pip install --force-reinstall -r requirements.txt <<EOC
-s
+scp -r chroma/chroma-manager/tests/framework/selenium/mock_agent root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/framework/selenium/mock_agent
+scp -r chroma/chroma-manager/tests/unit/ root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/unit
+scp chroma/chroma-manager/tests/__init__.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/__init__.py
 
-EOC
-yum install -y ~/rpms/chroma-manager-*
+ssh root@$CHROMA_MANAGER <<EOF
+cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
 
-echo "import logging
-LOG_LEVEL = logging.DEBUG" > /usr/share/chroma-manager/local_settings.py
-cat ~/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
-cp -r ~/mock_agent/tests/ /usr/share/chroma-manager/tests/
-cp ~/mock_agent/*.json /usr/share/chroma-manager/
-
-rm -f /var/tmp/.coverage*
 if $MEASURE_COVERAGE; then
-  echo "
+  yum install -y python-coverage
+  cat <<"EOF1" > /usr/share/chroma-manager/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
 source = /usr/share/chroma-manager/
-" > /usr/share/chroma-manager/.coveragerc
-echo "import coverage
+EOF1
+  cat <<"EOF1" > /usr/lib/python2.6/site-packages/sitecustomize.py
+import coverage
 cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
-" > /usr/lib/python2.6/site-packages/sitecustomize.py
-else
-  # Ensure that coverage is disabled
-  rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*   
+EOF1
 fi
 
-chroma-config setup debug chr0m4_d3bug localhost > /root/chroma_config.log 2>&1
+chroma-config setup debug chr0m4_d3bug localhost &> /root/chroma_config.log
 cat /root/chroma_config.log
 rm -f /root/chroma_config.log
 EOF

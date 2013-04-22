@@ -23,7 +23,7 @@ class Testdata:
     @nottest
     def get_test_data_for_server_configuration(self):
         # read and return host related data from config file
-        host_list = config["hosts"]
+        host_list = config['lustre_servers']
         return host_list
 
     @nottest

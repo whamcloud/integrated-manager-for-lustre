@@ -19,4 +19,4 @@ for server in obj["lustre_servers"]:
 
 print "CHROMA_MANAGER=\"%s\"" % obj["chroma_managers"][0]["address"]
 print "STORAGE_APPLIANCES=\"%s\"" % " ".join(servers)
-print "CLIENT_1=\"%s\"" % obj["lustre_clients"].keys()[0]
+print "CLIENT_1=\"%s\"" % obj["lustre_clients"].keys()[0] if obj.get('lustre_clients') else ""
