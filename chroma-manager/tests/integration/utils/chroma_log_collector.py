@@ -48,15 +48,15 @@ class ChromaLogCollector(object):
         # Only attempt to fetch if pacemaker exists on the lustre server
         which_crm_exit_code = subprocess.call(['ssh', lustre_server, 'which crm'])
         if which_crm_exit_code == 0:
-            crm_status = subprocess.check_output(['ssh', lustre_server, 'crm status'])
-            f = open('%s/%s-crm-status.log' % (self.destination_path, lustre_server), 'w')
+            crm_status = subprocess.check_output(['ssh', lustre_server, 'pcs status'])
+            f = open('%s/%s-pcs-status.log' % (self.destination_path, lustre_server), 'w')
             try:
                 f.write(crm_status)
             finally:
                 f.close()
 
-            crm_configuration = subprocess.check_output(['ssh', lustre_server, 'crm configure show'])
-            f = open('%s/%s-crm-configuration.log' % (self.destination_path, lustre_server), 'w')
+            crm_configuration = subprocess.check_output(['ssh', lustre_server, 'pcs config'])
+            f = open('%s/%s-pcs-config.log' % (self.destination_path, lustre_server), 'w')
             try:
                 f.write(crm_configuration)
             finally:

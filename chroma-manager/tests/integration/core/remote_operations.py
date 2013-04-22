@@ -245,17 +245,17 @@ class RealRemoteOperations(RemoteOperations):
     def get_resource_running(self, host, ha_label):
         result = self._ssh_address(
             host['address'],
-            'crm resource status %s' % ha_label,
+            'crm_resource -r %s -W' % ha_label,
             timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
         )
         resource_status = result.stdout.read()
 
-        # Sometimes crm resource status gives a false positive when it is repetitively
+        # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
         result = self._ssh_address(
             host['address'],
-            'crm resource failcount %s show %s' % (ha_label, host['nodename'])
+            'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, host['nodename'])
         )
         self._test_case.assertRegexpMatches(
             result.stdout.read(),
@@ -271,20 +271,19 @@ class RealRemoteOperations(RemoteOperations):
         for host in hosts:
             result = self._ssh_address(
                 host['address'],
-                'crm configure show'
+                'pcs config'
             )
             configuration = result.stdout.read()
             self._test_case.assertRegexpMatches(
                 configuration,
-                "location [^\n]* %s\n" % host['nodename']
+                "\s{2}Resource: %s-MDT0000_.+\n\s{4}Enabled on: %s \(score:20\)\n" %
+                (filesystem['name'], host['nodename'])
             )
             self._test_case.assertRegexpMatches(
                 configuration,
-                "primitive %s-" % filesystem['name']
-            )
-            self._test_case.assertRegexpMatches(
-                configuration,
-                "id=\"%s-" % filesystem['name']
+                " Resource: %s-MDT0000_.+ \(type=Target class=ocf provider=chroma\)\n" %
+
+                filesystem['name']
             )
 
     def exercise_filesystem(self, client_address, filesystem):
@@ -362,10 +361,11 @@ class RealRemoteOperations(RemoteOperations):
                     # Verify other host knows it is no longer offline
                     result = self._ssh_address(
                         monitor_server['address'],
-                        "crm node show %s" % boot_server['nodename']
+                        "crm_mon -1"
                     )
                     node_status = result.stdout.read()
-                    if not re.search('offline', node_status):
+                    if not re.search('Online: \[.* %s .*\]' %
+                                     boot_server['nodename'], node_status):
                         break
                 else:
                     # No monitor server, take SSH offline-ness as evidence for being booted
@@ -401,9 +401,11 @@ class RealRemoteOperations(RemoteOperations):
         if monitor_server:
             result = self._ssh_address(
                 monitor_server['address'],
-                "crm node show %s" % boot_server['nodename']
+                "crm_mon -1"
             )
-            self._test_case.assertNotRegexpMatches(result.stdout.read(), 'offline')
+            self._test_case.assertNotRegexpMatches(result.stdout.read(),
+                                                   'Online: \[.* %s .*\]' %
+                                                   boot_server['nodename'])
 
     def unmount_clients(self):
         """
@@ -426,7 +428,7 @@ class RealRemoteOperations(RemoteOperations):
     def has_pacemaker(self, server):
         result = self._ssh_address(
             server['address'],
-            'which crm',
+            'which pcs',
             expected_return_code = None
         )
         return result.exit_status == 0
@@ -437,7 +439,7 @@ class RealRemoteOperations(RemoteOperations):
         """
         result = self._ssh_address(
             server['address'],
-            'crm resource list'
+            'crm_resource -L'
         )
         crm_resources = result.stdout.read().split('\n')
         return [r.split()[0] for r in crm_resources if re.search('chroma:Target', r)]
@@ -445,7 +447,8 @@ class RealRemoteOperations(RemoteOperations):
     def is_pacemaker_target_running(self, server, target):
         result = self._ssh_address(
             server['address'],
-            "crm resource status %s" % target
+            "crm_resource -r %s -W" % target
+
         )
         return re.search('is running', result.stdout.read())
 
@@ -460,11 +463,11 @@ class RealRemoteOperations(RemoteOperations):
 
                 # Stop targets and delete targets
                 for target in crm_targets:
-                    self._ssh_address(server['address'], 'crm resource stop %s' % target)
+                    self._ssh_address(server['address'], 'pcs resource stop %s' % target)
                 for target in crm_targets:
                     self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                    self._ssh_address(server['address'], 'crm configure delete %s' % target)
-                    self._ssh_address(server['address'], 'crm resource cleanup %s' % target)
+                    self._ssh_address(server['address'], 'pcs resource delete %s' % target)
+                    self._ssh_address(server['address'], 'crm_resource -C -r %s' % target)
 
                 # Verify no more targets
                 self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))

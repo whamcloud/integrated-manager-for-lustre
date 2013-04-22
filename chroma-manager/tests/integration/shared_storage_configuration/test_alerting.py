@@ -17,8 +17,9 @@ class TestEvents(ChromaIntegrationTestCase):
         host = self.get_list("/api/host/")[0]
         start_time = host['state_modified_at']
 
-        # Reboot
+        # Kill the server
         self.remote_operations.kill_server(host['fqdn'])
+        # If STONITH is working, it should arrange for it to come back up
         self.remote_operations.await_server_boot(host['fqdn'])
 
         def reboot_event_was_seen():
