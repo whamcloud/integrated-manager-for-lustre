@@ -277,7 +277,7 @@ class RealRemoteOperations(RemoteOperations):
             self._test_case.assertRegexpMatches(
                 configuration,
                 "\s{2}Resource: %s-MDT0000_.+\n\s{4}Enabled on: .+ \(score:20\)\n" %
-                (filesystem['name'], host['nodename'])
+                filesystem['name']
             )
             self._test_case.assertRegexpMatches(
                 configuration,
