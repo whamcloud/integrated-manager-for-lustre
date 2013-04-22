@@ -24,9 +24,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
         """
         self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
-        # this requires that pacemaker be up which it no longer is until a
-        # host is added
-        #self.remote_operations.clear_ha()
+        self.remote_operations.clear_ha()
 
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:

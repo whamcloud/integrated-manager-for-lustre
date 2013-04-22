@@ -72,9 +72,7 @@ class ApiTestCase(UtilityTestCase):
             # Reset the manager via the API
             self.remote_operations.unmount_clients()
             self.api_force_clear()
-            # this requires that pacemaker be up which it no longer is until a
-            # host is added
-            #self.remote_operations.clear_ha()
+            self.remote_operations.clear_ha()
 
     def _check_for_down_servers(self):
         # Check that all servers are up and available after the test
