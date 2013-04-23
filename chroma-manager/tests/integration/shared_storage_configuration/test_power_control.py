@@ -54,14 +54,16 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
 
         super(ChromaPowerControlTestCase, self).tearDown()
 
+    def all_outlets_known(self):
+        outlets = self.get_list("/api/power_control_device_outlet/",
+                                args = {'limit': 0})
+        return all([True if o['has_power'] in [True, False] else False for o in outlets])
+
 
 class TestPduSetup(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
     def test_new_pdu_learns_outlet_states(self):
-        outlets = self.get_list("/api/power_control_device_outlet/",
-                args = {'limit': 0}
-        )
-        self.assertTrue(all([True if o['has_power'] in [True, False] else False for o in outlets]), "All outlets should be in either On or Off (not Unknown)")
+        self.wait_until_true(self.all_outlets_known)
 
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
     def test_force_removed_host_disassociated_with_outlets(self):
@@ -109,6 +111,8 @@ class TestPduOperations(ChromaPowerControlTestCase):
         # 1. Test that the Power(off|on) AdvertisedJobs are only advertised
         #    when they should be.
         # 2. Test that the jobs actually work.
+
+        self.wait_until_true(self.all_outlets_known)
 
         # Refresh the server so we get an accurate list of available jobs.
         self.server = self.get_by_uri(self.server['resource_uri'])

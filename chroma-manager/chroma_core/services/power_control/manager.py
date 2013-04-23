@@ -25,7 +25,8 @@ class PowerControlManager(CommandLine):
         # Per-device locks
         self._device_locks = defaultdict(threading.Lock)
         self._power_devices = {}
-        self.reregister_queue = Queue()
+        # Allow us to communicate with our monitoring threads
+        self.monitor_task_queue = defaultdict(Queue)
 
         self._refresh_power_devices()
 
@@ -44,15 +45,27 @@ class PowerControlManager(CommandLine):
         with self._lock:
             return self._power_devices
 
-    def register_device(self, sockaddr):
-        sockaddr = tuple(sockaddr)
-        kwargs = dict(zip(['address', 'port'], sockaddr))
-        device = PowerControlDevice.objects.get(**kwargs)
+    def get_monitor_tasks(self, sockaddr):
+        with self._lock:
+            return self.monitor_task_queue[sockaddr]
+
+    def add_monitor_task(self, sockaddr, task):
+        with self._lock:
+            self.monitor_task_queue[sockaddr].put(task)
+
+    def register_device(self, device_id):
+        device = PowerControlDevice.objects.get(pk = device_id)
+        sockaddr = device.sockaddr
 
         with self._lock:
-            self._power_devices[device.sockaddr] = device
+            self._power_devices[sockaddr] = device
 
         log.info("Registered device: %s:%s" % sockaddr)
+
+        log.info("Scheduling outlet query for new device: %s:%s" % sockaddr)
+        self.add_monitor_task(sockaddr, ('query_device_outlets', {'device_id': device.id}))
+        # Once more, just to be sure. Sigh.
+        self.add_monitor_task(sockaddr, ('query_device_outlets', {'device_id': device.id}))
 
     def unregister_device(self, sockaddr):
         sockaddr = tuple(sockaddr)
@@ -67,11 +80,32 @@ class PowerControlManager(CommandLine):
 
         log.info("Unregistered device: %s:%s" % sockaddr)
 
-    def reregister_device(self, sockaddr):
-        sockaddr = tuple(sockaddr)
-        self.unregister_device(sockaddr)
-        self.reregister_queue.put(sockaddr)
-        self.register_device(sockaddr)
+    def reregister_device(self, device_id):
+        # Not happy with this, but we don't have a great way to tell
+        # if this was called because some attribute of the PDU was updated
+        # or if it was saved due to a relation's update (e.g. an Outlet).
+        def _needs_update(old):
+            new = PowerControlDevice.objects.get(pk = device_id)
+
+            excludes = ['_state']
+            for k, v in new.__dict__.items():
+                if k in excludes:
+                    continue
+                if getattr(old, k, None) != v:
+                    return True
+            return False
+
+        for sockaddr, old in self._power_devices.items():
+            if old.pk == device_id and _needs_update(old):
+                self.unregister_device(sockaddr)
+                self.add_monitor_task(sockaddr, ('reregister', {}))
+                self.register_device(device_id)
+                return
+            elif old.pk == device_id:
+                log.debug("%s:%s was not updated, no need to reregister" % sockaddr)
+                return
+
+        raise RuntimeError("Attempt to re-register unregistered device: %s" % device_id)
 
     def check_device_availability(self, device):
         with self._device_locks[device.sockaddr]:
@@ -133,6 +167,7 @@ class PowerControlManager(CommandLine):
                 elif rc == 2:
                     outlet.has_power = False
                 else:
-                    log.error("Unknown outlet state for %s:%s: %s %s %s" % (device, outlet.identifier, rc, stdout, stderr))
+                    log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([outlet.identifier, rc, stdout, stderr])))
                     outlet.has_power = None
+                log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
                 outlet.save()

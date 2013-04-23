@@ -140,10 +140,40 @@ class PowerControlDeviceResource(CustomModelResource):
         validation = ResolvingFormValidation(form_class=PowerControlDeviceForm)
         ordering = ['name']
         filtering = {'name': ['exact']}
+        excludes = ['not_deleted']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['id']
         always_return_data = True
+
+    def obj_delete(self, request=None, **kwargs):
+        """
+        A ORM-specific implementation of ``obj_delete``.
+
+        Takes optional ``kwargs``, which are used to narrow the query to find
+        the instance.
+        """
+        from tastypie.exceptions import NotFound
+        from django.core.exceptions import ObjectDoesNotExist
+        from django.db.models import signals
+
+        obj = kwargs.pop('_obj', None)
+
+        if not hasattr(obj, 'delete'):
+            try:
+                obj = self.obj_get(request, **kwargs)
+            except ObjectDoesNotExist:
+                raise NotFound("A model instance matching the provided arguments could not be found.")
+
+        # Prevent dangling references from Alert objects which will cause
+        # 500 errors in the UI.
+        obj.mark_deleted()
+
+        # Ugh. This would probably be better in mark_deleted(), but the
+        # only model that relies on this signal is PowerControlDevice.
+        # Preferring to keep this here to avoid potential for unexpected
+        # new behavior elsewhere.
+        signals.post_delete.send(sender = obj.__class__, instance = obj)
 
 
 class PowerControlDeviceOutletForm(ModelForm):

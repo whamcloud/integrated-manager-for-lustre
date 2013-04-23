@@ -81,10 +81,10 @@ class PowerMonitoringTests(PowerControlTestCase):
         pdu = PowerControlDevice.objects.create(device_type = self.fence_type,
                                                 address = 'localhost')
         # This normally happens via a post_save signal
-        self.power_manager.register_device(pdu.sockaddr)
+        self.power_manager.register_device(pdu.id)
         self.wait_for_assert(lambda: self.assertIn('PowerDeviceMonitor', self.thread_class_names))
 
-        pdu.delete()
+        pdu.mark_deleted()
         # This normally happens via a post_delete signal
         self.power_manager.unregister_device(pdu.sockaddr)
         self.wait_for_assert(lambda: self.assertNotIn('PowerDeviceMonitor', self.thread_class_names))
@@ -93,7 +93,7 @@ class PowerMonitoringTests(PowerControlTestCase):
         pdu = PowerControlDevice.objects.create(device_type = self.fence_type,
                                                 address = 'localhost')
         # This normally happens via a post_save signal
-        self.power_manager.register_device(pdu.sockaddr)
+        self.power_manager.register_device(pdu.id)
         self.wait_for_assert(lambda: self.assertIn('PowerDeviceMonitor', self.thread_class_names))
 
         start_threads = threading.enumerate()
@@ -101,6 +101,6 @@ class PowerMonitoringTests(PowerControlTestCase):
         pdu.username = 'bob'
         pdu.save()
         # This normally happens via a post_save signal
-        self.power_manager.reregister_device(pdu.sockaddr)
+        self.power_manager.reregister_device(pdu.id)
 
         self.wait_for_assert(lambda: self.assertNotEqual(start_threads, threading.enumerate()))

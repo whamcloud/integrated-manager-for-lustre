@@ -182,7 +182,7 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
     def test_dupe_sockaddr_raises_useful_error(self):
         # Make sure that entering a duplicate (address, port) combination
         # results in something informative coming back to the user.
-        with self.assertRaisesRegexp(AssertionError, "already exists"):
+        with self.assertRaises(AssertionError):
             kwargs = {'device_type': self.pdu_type['resource_uri'],
                       'address': '1.2.3.4'}
             self._create_power_device(**kwargs)

@@ -16,6 +16,7 @@ from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import AdvertisedJob
+from chroma_core.models.utils import DeletableMetaclass
 
 from chroma_core.lib.job import Step
 
@@ -81,7 +82,16 @@ class PowerControlDeviceUnavailableAlert(AlertState):
             severity = logging.INFO)
 
 
-class PowerControlDevice(models.Model):
+class DeletablePowerControlDevice(models.Model):
+    # Needed to avoid problems with alerts that refer to deleted PDUs. Sigh.
+    __metaclass__ = DeletableMetaclass
+
+    class Meta:
+        abstract = True
+        app_label = 'chroma_core'
+
+
+class PowerControlDevice(DeletablePowerControlDevice):
     device_type = models.ForeignKey('PowerControlType', related_name = 'instances')
     name = models.CharField(null = False, blank = True, max_length = 50,
             help_text = "Optional human-friendly display name (defaults to address)")
@@ -214,24 +224,28 @@ def prepopulate_outlets(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender = PowerControlDevice)
-def query_new_power_device_outlets(sender, instance, created, **kwargs):
-    from chroma_core.services.power_control.rpc import PowerControlRpc
-    PowerControlRpc().query_device_outlets(instance.id)
-
-
-@receiver(post_save, sender = PowerControlDevice)
 def register_power_device(sender, instance, created, **kwargs):
     from chroma_core.services.power_control.rpc import PowerControlRpc
+    if instance.not_deleted is None:
+        return
+
     if not created:
-        PowerControlRpc().reregister_device(instance.sockaddr)
+        PowerControlRpc().reregister_device(instance.id)
     else:
-        PowerControlRpc().register_device(instance.sockaddr)
+        PowerControlRpc().register_device(instance.id)
 
 
 @receiver(post_delete, sender = PowerControlDevice)
 def unregister_power_device(sender, instance, **kwargs):
     from chroma_core.services.power_control.rpc import PowerControlRpc
     PowerControlRpc().unregister_device(instance.sockaddr)
+
+
+@receiver(post_delete, sender = PowerControlDevice)
+def delete_outlets(sender, instance, **kwargs):
+    # ON DELETE CASCADE no longer works after the switch to
+    # DeletableMetaclass.
+    [o.delete() for o in instance.outlets.all()]
 
 
 class PowerControlDeviceOutlet(models.Model):
