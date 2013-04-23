@@ -301,10 +301,11 @@ class FakeServer(Persisted):
             self.state['shutting_down'] = False
             self.save()
 
-    def shutdown(self, simulate_shutdown = False):
+    def shutdown(self, simulate_shutdown = False, reboot = False):
         """
         Shutdown the simulated server.
         :param simulate_shutdown: Simulate a server shutdown, delays and all.
+        :param reboot: Restart the server after shutdown completes.
         """
         def blocking_shutdown():
             log.info("%s beginning shutdown" % self.fqdn)
@@ -328,6 +329,10 @@ class FakeServer(Persisted):
 
             self._exit_shutdown()
             log.info("%s shutdown complete" % self.fqdn)
+
+            if reboot:
+                log.info("%s rebooting" % self.fqdn)
+                self.startup(simulate_shutdown)
 
         class NonBlockingShutdown(threading.Thread):
             def run(self):
@@ -366,6 +371,9 @@ class FakeServer(Persisted):
         if not self.registered:
             log.warning("%s can't start; not registered" % self.fqdn)
             return
+        if self.running and not self.shutting_down:
+            log.warning("%s already running; not starting again" % self.fqdn)
+            return
 
         def blocking_startup():
             log.info("%s beginning startup" % self.fqdn)
@@ -381,8 +389,11 @@ class FakeServer(Persisted):
                 startup_time += 1
                 time.sleep(1)
 
-            if self.running:
-                raise RuntimeError("startup() called on running self")
+            # This may happen to the losing thread(s) during startup after
+            # a multi-PDU power cycle.
+            if self.starting_up:
+                log.info("%s exiting startup because another thread is already doing it?" % self.fqdn)
+                return
 
             self._enter_startup()
             self.boot_time = datetime.datetime.utcnow()

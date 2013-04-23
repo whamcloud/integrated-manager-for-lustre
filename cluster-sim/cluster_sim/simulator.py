@@ -274,12 +274,13 @@ class ClusterSimulator(Persisted):
     def stop(self):
         log.debug("stop me")
         log.info("Stopping")
+        self.power.stop()
         for server in self.servers.values():
             server.stop()
-        self.power.stop()
 
     def join(self):
         log.info("Joining...")
+        self.power.join()
         for server in self.servers.values():
             server.join()
         log.info("Joined")

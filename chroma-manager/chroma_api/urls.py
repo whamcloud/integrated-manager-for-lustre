@@ -49,6 +49,8 @@ import chroma_api.volume_node
 import chroma_api.storage_resource
 import chroma_api.storage_resource_class
 
+import chroma_api.power_control
+
 import chroma_api.host
 import chroma_api.ha_cluster
 import chroma_api.registration_token
@@ -77,6 +79,9 @@ api.register(chroma_api.command.CommandResource())
 api.register(chroma_api.help.HelpResource())
 api.register(chroma_api.system_status.SystemStatusResource())
 api.register(chroma_api.ha_cluster.HaClusterResource())
+api.register(chroma_api.power_control.PowerControlTypeResource())
+api.register(chroma_api.power_control.PowerControlDeviceResource())
+api.register(chroma_api.power_control.PowerControlDeviceOutletResource())
 
 urlpatterns = patterns('',
     (r'^', include(api.urls)),

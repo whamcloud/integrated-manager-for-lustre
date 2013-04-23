@@ -16,7 +16,7 @@ BuildArch: noarch
 Vendor: Whamcloud, Inc. <info@whamcloud.com>
 Url: http://www.whamcloud.com/
 BuildRequires: python-setuptools
-Requires: python-argparse python-gevent python-setuptools python-requests >= 1.0.3 chroma-agent = %{version}-%{release}
+Requires: python-argparse python-setuptools python-requests >= 1.0.3 chroma-agent = %{version}-%{release}
 
 %description
 Simulates a cluster of storage servers. Intended for developers.
@@ -38,6 +38,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root)
 %{_bindir}/cluster-sim
+%{_bindir}/cluster-power
 %{_bindir}/cluster-sim-benchmark
 %{python_sitelib}/chroma_cluster_sim-*.egg-info/*
 %{python_sitelib}/cluster_sim/*

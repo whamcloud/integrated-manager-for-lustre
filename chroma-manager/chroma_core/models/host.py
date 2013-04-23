@@ -398,6 +398,24 @@ class ConfigureLNetJob(StateChangeJob):
         ordering = ['id']
 
 
+class ConfigurePacemakerStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        if not host.immutable_state:
+            self.invoke_agent(host, "configure_pacemaker")
+
+
+class ConfigureCorosyncStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        if not host.immutable_state:
+            self.invoke_agent(host, "configure_corosync")
+
+
 class ConfigureRsyslogStep(Step):
     idempotent = True
 
@@ -420,6 +438,24 @@ class ConfigureNTPStep(Step):
         host = kwargs['host']
         if not host.immutable_state:
             self.invoke_agent(host, "configure_ntp", {'ntp_server': ntp_server})
+
+
+class UnconfigurePacemakerStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        if not host.immutable_state:
+            self.invoke_agent(host, "unconfigure_pacemaker")
+
+
+class UnconfigureCorosyncStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        if not host.immutable_state:
+            self.invoke_agent(host, "unconfigure_corosync")
 
 
 class UnconfigureRsyslogStep(Step):
@@ -535,7 +571,7 @@ class SetupHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(ConfigureNTPStep, {'host': self.managed_host}),
-               (ConfigureRsyslogStep, {'host': self.managed_host}),
+                (ConfigureRsyslogStep, {'host': self.managed_host}),
                 (LearnDevicesStep, {'host': self.managed_host})]
 
     class Meta:
@@ -739,6 +775,14 @@ class DeleteHostStep(Step):
             # then crash, then get restarted.
             pass
 
+        # Remove associations with PDU outlets
+        for outlet in host.outlets.all():
+            if kwargs['force']:
+                outlet.force_host_disassociation()
+            else:
+                outlet.host = None
+                outlet.save()
+
         host.mark_deleted()
         if kwargs['force']:
             host.state = 'removed'
@@ -879,11 +923,12 @@ class RebootHostJob(AdvertisedJob):
     def get_args(cls, host):
         return {'host_id': host.id}
 
+    @classmethod
+    def can_run(cls, host):
+        return host.state not in ['removed', 'unconfigured']
+
     def description(self):
         return "Initiate a reboot on host %s" % self.host
-
-    def get_deps(self):
-        return DependOn(self.host, 'configured', acceptable_states=self.host.not_states(['removed', 'unconfigured']))
 
     def get_steps(self):
         return [(RebootHostStep, {'host': self.host})]
@@ -920,11 +965,12 @@ class ShutdownHostJob(AdvertisedJob):
     def get_args(cls, host):
         return {'host_id': host.id}
 
+    @classmethod
+    def can_run(cls, host):
+        return host.state not in ['removed', 'unconfigured']
+
     def description(self):
         return "Initiate an orderly shutdown on host %s" % self.host
-
-    def get_deps(self):
-        return DependOn(self.host, 'configured', acceptable_states=self.host.not_states(['removed', 'unconfigured']))
 
     def get_steps(self):
         return [(ShutdownHostStep, {'host': self.host})]
