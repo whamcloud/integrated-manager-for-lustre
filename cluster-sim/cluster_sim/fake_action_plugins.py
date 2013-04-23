@@ -78,8 +78,7 @@ class FakeActionPlugins():
                 server = self._server
 
                 def _reboot():
-                    server.shutdown(simulate_shutdown = True)
-                    server.startup(simulate_bootup = True)
+                    server.shutdown(simulate_shutdown = True, reboot = True)
 
                 raise CallbackAfterResponse(None, _reboot)
             elif cmd == 'unconfigure_ntp':
@@ -98,6 +97,10 @@ class FakeActionPlugins():
                 return rc
             elif cmd == 'set_conf_param':
                 self._server.set_conf_param(kwargs['key'], kwargs.get('value', None))
+            elif cmd in ['configure_corosync', 'unconfigure_corosync']:
+                return
+            elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker']:
+                return
             else:
                 try:
                     fn = getattr(self._server, cmd)

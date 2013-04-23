@@ -141,6 +141,17 @@ class ApiTestCaseWithTestReset(ApiTestCase):
 
         self.assertDatabaseClear()
 
+    def api_clear_resource(self, resource):
+        response = self.chroma_manager.get('/api/%s' % resource,
+                params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+        objects = response.json['objects']
+
+        for obj in objects:
+            response = self.chroma_manager.delete(obj['resource_uri'])
+            self.assertTrue(response.successful, response.text)
+
     def api_force_clear(self):
         """
         Clears the Chroma instance via the API (by issuing ForceRemoveHost
@@ -165,6 +176,8 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                 remove_host_command_ids.append(command['id'])
 
             self.wait_for_commands(self.chroma_manager, remove_host_command_ids)
+
+        self.api_clear_resource('power_control_type')
 
     def assertDatabaseClear(self, chroma_manager = None):
         """

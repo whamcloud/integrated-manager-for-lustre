@@ -9,8 +9,8 @@ import json
 import threading
 import sys
 import socket
+import SocketServer
 import time
-from gevent.server import StreamServer
 from cluster_sim.utils import Persisted
 from cluster_sim.log import log
 from chroma_agent.agent_client import ExceptionCatchingThread
@@ -20,6 +20,8 @@ ESC = [chr(27)]
 # In reality, ctrl-c is being transformed into:
 # IP (Suspend), DO TIMING_MARK
 CTRL_C = [chr(255), chr(244), chr(255), chr(253), chr(6)]
+# Apparently OS X telnet is different? Sends EOF.
+EOF = [chr(255), chr(236)]
 # ... To which we respond: NOPE, WON'T DO IT, which is sufficient to
 # make the client go about its business.
 # http://tools.ietf.org/html/rfc860
@@ -27,25 +29,47 @@ WONT_TIMING_MARK = [chr(255), chr(252), chr(6)]
 
 # 23xx looks pretty clear on OS X
 BASE_PDU_SERVER_PORT = 2300
-PDU_SERVER_ADDRESS = '0.0.0.0'
+PDU_SERVER_ADDRESS = '127.0.0.1'
 
 # on a real PDU, there is a brief pause between off and on when cycled
 OUTLET_CYCLE_TIME = 3
+
+
+class SimulatorTcpHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        log.debug("Handling PDU request from %s:%s" % self.client_address)
+        self.server.pdu_simulator.handle_client(self.request,
+                                                self.client_address)
+
+
+class SimulatorTcpServer(SocketServer.TCPServer):
+    def __init__(self, *args, **kwargs):
+        self.pdu_simulator = kwargs.pop('pdu_simulator')
+        # Allow the address to be re-used, otherwise we may get stuck in
+        # a TIME_WAIT timeout if there wasn't a clean connection teardown.
+        SocketServer.TCPServer.allow_reuse_address = True
+        # SocketServer classes are not new-style classes.
+        SocketServer.TCPServer.__init__(self, *args, **kwargs)
 
 
 class PDUSimulatorServer(ExceptionCatchingThread):
     def __init__(self, pdu):
         super(PDUSimulatorServer, self).__init__()
 
-        self.daemon = True
         self._pdu = pdu
+
+    def stop(self):
+        self.server.shutdown()
+        self.server.server_close()
 
     def _run(self):
         log.info("Creating PDU server for %s on %s:%s" %
-                 (self._pdu.name, self._pdu.address, self._pdu.port))
-        server = StreamServer((self._pdu.address, self._pdu.port),
-                              self._pdu.handle_client, spawn=1)
-        server.start()
+                            (self._pdu.name, self._pdu.address, self._pdu.port))
+        self.server = SimulatorTcpServer((self._pdu.address, self._pdu.port),
+                                         SimulatorTcpHandler,
+                                         pdu_simulator = self._pdu)
+
+        self.server.serve_forever()
 
 
 class PDUSimulator(Persisted):
@@ -169,7 +193,7 @@ class APC79xxSimulator(PDUSimulator):
                     break
                 recv_buf.append(c)
 
-                if recv_buf == CTRL_C:
+                if recv_buf == CTRL_C or recv_buf == EOF:
                     for c in WONT_TIMING_MARK:
                         self.socket.send(c)
                     self.control_console()
@@ -546,11 +570,16 @@ class FakePowerControl(Persisted):
         self.sim_servers[pdu_name].start()
 
     def start(self):
-        log.debug("starting power control")
+        log.info("Power control: starting...")
         for pdu_name in self.pdu_sims:
             self.start_sim_server(pdu_name)
 
     def stop(self):
-        log.debug("stopping power control")
+        log.info("Power control: stopping...")
+        for sim_server in self.sim_servers.values():
+            sim_server.stop()
+
+    def join(self):
+        log.info("Power control: joining...")
         for sim_server in self.sim_servers.values():
             sim_server.join()

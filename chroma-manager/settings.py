@@ -296,6 +296,8 @@ HTTPS_FRONTEND_PORT = 8000
 # address or port, override this
 SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
 
+# Supported power control agents
+SUPPORTED_FENCE_AGENTS = ['fence_apc']
 
 LOCAL_SETTINGS_FILE = "local_settings.py"
 

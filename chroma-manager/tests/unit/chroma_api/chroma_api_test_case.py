@@ -57,6 +57,21 @@ class ChromaApiTestCase(ResourceTestCase):
         self.mdt, _ = ManagedMdt.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
         self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
 
+    def api_get_list(self, uri):
+        response = self.api_client.get(uri)
+        try:
+            self.assertHttpOK(response)
+        except AssertionError:
+            raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
+        return self.deserialize(response)['objects']
+
+    def api_patch_attributes(self, uri, attributes):
+        response = self.api_client.patch(uri, data = attributes)
+        try:
+            self.assertHttpAccepted(response)
+        except AssertionError:
+            raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
+
     def spider_api(self):
         from chroma_api.urls import api
         for name, resource in api._registry.items():

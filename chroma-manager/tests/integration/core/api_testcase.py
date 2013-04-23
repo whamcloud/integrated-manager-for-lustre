@@ -25,8 +25,12 @@ class ApiTestCase(UtilityTestCase):
     # These are sufficient for tests existing at time of writing.
     # Tests may ask for different values by defining these at class scope.
     SIMULATOR_NID_COUNT = 1
-    SIMULATOR_SERVER_PSU_COUNT = 1
     SIMULATOR_CLUSTER_SIZE = 2
+
+    # Most tests do not need simulated PDUs, so don't bother starting them.
+    # Flip this setting on a per-class basis for groups of tests which do
+    # actually need PDUs.
+    TESTS_NEED_POWER_CONTROL = False
 
     _chroma_manager = None
 
@@ -55,8 +59,10 @@ class ApiTestCase(UtilityTestCase):
                                  volume_count,
                                  self.SIMULATOR_NID_COUNT,
                                  self.SIMULATOR_CLUSTER_SIZE,
-                                 self.SIMULATOR_SERVER_PSU_COUNT)
+                                 len(config['power_distribution_units']))
             self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
+            if self.TESTS_NEED_POWER_CONTROL:
+                self.simulator.power.start()
         else:
             self.remote_operations = RealRemoteOperations(self)
 
