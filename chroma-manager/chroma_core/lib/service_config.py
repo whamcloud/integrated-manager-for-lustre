@@ -141,11 +141,15 @@ class ServiceConfig(CommandLine):
             return False
 
         try:
-            socket.getfqdn(hostname)
+            fqdn = socket.getfqdn(hostname)
         except socket.error:
             log.error("Error: Unable to get the FQDN for the server name '%s'. "
                       "Please correct the hostname resolution.", hostname)
             return False
+        else:
+            if fqdn == 'localhost.localdomain':
+                log.error("Error: FQDN resolves to localhost.localdomain")
+                return False
 
         try:
             socket.gethostbyname(hostname)
