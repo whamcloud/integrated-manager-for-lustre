@@ -49,6 +49,17 @@ class AlertState(models.Model):
                                                 "one of %s") %
                                         conversion_util.STR_TO_SEVERITY.keys())
 
+    def get_active_bool(self):
+        return bool(self.active)
+
+    def set_active_bool(self, value):
+        if value:
+            self.active = True
+        else:
+            self.active = None
+
+    active_bool = property(get_active_bool, set_active_bool)
+
     def to_dict(self):
         from chroma_core.lib.util import time_str
         return {
@@ -181,6 +192,11 @@ class AlertState(models.Model):
             alert_state = None
 
         return alert_state
+
+    def save(self, *args, **kwargs):
+        # Protect against rogue assignments to .active
+        assert self.active in (True, None)
+        super(AlertState, self).save(*args, **kwargs)
 
 
 class AlertSubscription(models.Model):

@@ -144,7 +144,7 @@ class AlertResource(SeverityResource):
 
     alert_item = fields.CharField(help_text = "URI of affected item")
 
-    active = fields.BooleanField(attribute = 'active', null = True,
+    active = fields.BooleanField(attribute = 'active_bool', null = True,
         help_text = "``true`` if the alert is a current issue, "
                     "``false`` if it is historical")
 
@@ -163,10 +163,6 @@ class AlertResource(SeverityResource):
 
     def dehydrate_alert_item_str(self, bundle):
         return str(bundle.obj.alert_item)
-
-    def dehydrate_active(self, bundle):
-        # Map False to None for ``active`` field
-        return bool(bundle.obj.active)
 
     def dehydrate_alert_item_content_type_id(self, bundle):
         return bundle.obj.alert_item_type.id
@@ -235,10 +231,10 @@ class AlertResource(SeverityResource):
 
         filters = super(AlertResource, self).build_filters(filters)
 
-        # Map False to None for ``active`` field
-        if 'active__exact' in filters:
-            if not filters['active__exact']:
-                filters['active__exact'] = None
+        # Map False to None and 'active_bool' to 'active'
+        if 'active_bool__exact' in filters:
+            filters['active__exact'] = None if not filters['active_bool__exact'] else True
+            del filters['active_bool__exact']
 
         return filters
 
