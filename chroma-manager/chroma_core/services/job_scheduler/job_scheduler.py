@@ -979,25 +979,26 @@ class JobScheduler(object):
         # creating the target
 
         target_class = ContentType.objects.get_by_natural_key(*(target_data['content_type'])).model_class()
-        if target_class == ManagedOst:
-            fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
-            create_kwargs = {'filesystem': fs}
-        elif target_class == ManagedMgs:
-            create_kwargs = {}
-        else:
-            raise NotImplementedError(target_class)
+        with self._lock:
+            if target_class == ManagedOst:
+                fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
+                create_kwargs = {'filesystem': fs}
+            elif target_class == ManagedMgs:
+                create_kwargs = {}
+            else:
+                raise NotImplementedError(target_class)
 
-        with transaction.commit_on_success():
-            target, target_mounts = target_class.create_for_volume(target_data['volume_id'], **create_kwargs)
+            with transaction.commit_on_success():
+                target, target_mounts = target_class.create_for_volume(target_data['volume_id'], **create_kwargs)
 
-        ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-        for mount in target_mounts:
-            ObjectCache.add(ManagedTargetMount, mount)
+            ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
+            for mount in target_mounts:
+                ObjectCache.add(ManagedTargetMount, mount)
 
-        with transaction.commit_on_success():
-            command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
-                [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), target.id, 'mounted')],
-                "Creating %s" % target)
+            with transaction.commit_on_success():
+                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                    [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), target.id, 'mounted')],
+                    "Creating %s" % target)
 
         self.progress.advance()
 
@@ -1006,21 +1007,22 @@ class JobScheduler(object):
     def create_host(self, fqdn, nodename, capabilities, address):
         immutable_state = not any("manage_" in c for c in capabilities)
 
-        with transaction.commit_on_success():
-            host = ManagedHost.objects.create(
-                fqdn = fqdn,
-                nodename = nodename,
-                immutable_state = immutable_state,
-                address = address)
-            lnet_configuration = LNetConfiguration.objects.create(host = host)
+        with self._lock:
+            with transaction.commit_on_success():
+                host = ManagedHost.objects.create(
+                    fqdn = fqdn,
+                    nodename = nodename,
+                    immutable_state = immutable_state,
+                    address = address)
+                lnet_configuration = LNetConfiguration.objects.create(host = host)
 
-        ObjectCache.add(LNetConfiguration, lnet_configuration)
-        ObjectCache.add(ManagedHost, host)
+            ObjectCache.add(LNetConfiguration, lnet_configuration)
+            ObjectCache.add(ManagedHost, host)
 
-        with transaction.commit_on_success():
-            command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
-                [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
-                "Setting up host %s" % host)
+            with transaction.commit_on_success():
+                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                    [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
+                    "Setting up host %s" % host)
 
         self.progress.advance()
 
