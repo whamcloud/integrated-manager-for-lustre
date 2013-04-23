@@ -1,5 +1,5 @@
 /^Release:/s/^\(.*\)\(%{?dist}\)$/\1.wc1\2/
-/^BuildRequires:.*erlang/s/\(.*\)erlang \([^,][^,]*\)\(,.*\)/\1erlang-erts \2, erlang-public_key \2, erlang-sasl \2, erlang-mnesia \2, erlang-os_mon \2\3/
+/^BuildRequires:.*erlang/s/\(.*\)erlang \([^,][^,]*\)\(,.*\)/\1erlang-erts \2, erlang-public_key \2, erlang-sasl \2, erlang-mnesia \2, erlang-asn1 \2, erlang-eunit \2, erlang-os_mon \2\3/
 /^Requires: erlang/s/^\(.*\) \(erlang\)\(.[^,]*\)\(,.*\)/\1 \2-erts\3, \2-sasl\3, \2-mnesia\3, \2-xmerl\3, \2-os_mon\3\4/
 /^%changelog/a
 * Tue Mar 12 2013 Michael J. MacDonald <michael.macdonal@intel.com> - 3.0.3-1.wc1
