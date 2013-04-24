@@ -145,7 +145,7 @@ setsebool -P httpd_tmp_exec 1 2>/dev/null
 semanage port -a -t http_port_t -p tcp 8001
 
 echo "Thank you for installing Chroma.  To complete your installation, please"
-echo "run chroma-config"
+echo "run `chroma-config setup`"
 
 %preun
 service chroma-supervisor stop
