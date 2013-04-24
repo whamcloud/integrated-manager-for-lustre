@@ -80,6 +80,9 @@ class PowerControlManager(CommandLine):
 
         log.info("Unregistered device: %s:%s" % sockaddr)
 
+        log.info("Scheduling stop for device monitor: %s:%s" % sockaddr)
+        self.add_monitor_task(sockaddr, ('stop', {}))
+
     def reregister_device(self, device_id):
         # Not happy with this, but we don't have a great way to tell
         # if this was called because some attribute of the PDU was updated
@@ -98,7 +101,6 @@ class PowerControlManager(CommandLine):
         for sockaddr, old in self._power_devices.items():
             if old.pk == device_id and _needs_update(old):
                 self.unregister_device(sockaddr)
-                self.add_monitor_task(sockaddr, ('reregister', {}))
                 self.register_device(device_id)
                 return
             elif old.pk == device_id:

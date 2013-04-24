@@ -24,21 +24,33 @@ class PowerControlTestCase(TestCase):
 
         self.power_manager = PowerControlManager()
         monitor_daemon = PowerMonitorDaemon(self.power_manager)
-        self.monitor_daemon = monitor_daemon
 
         class MonitorDaemonThread(threading.Thread):
             def run(self):
                 monitor_daemon.run()
 
-        MonitorDaemonThread().start()
+            def stop(self):
+                monitor_daemon.stop()
+                monitor_daemon.join()
+
+        self.md_thread = MonitorDaemonThread()
+        self.md_thread.start()
 
         self.fence_type = PowerControlType.objects.create(agent = 'fake_agent',
                                                           default_username = 'fake',
                                                           default_password = 'fake')
 
     def tearDown(self):
-        self.monitor_daemon.stop()
+        self.md_thread.stop()
+        self.md_thread.join()
         super(PowerControlTestCase, self).tearDown()
+
+        stray_threads = [name for name in self.thread_class_names if name != "_MainThread"]
+        assert len(stray_threads) == 0, "Stray threads after test: %s" % stray_threads
+
+    @property
+    def thread_class_names(self):
+        return [t.__class__.__name__ for t in threading.enumerate()]
 
     # TODO: Figure out how to share these things.
     def wait_for_assert(self, lambda_expression, timeout=TEST_TIMEOUT):
@@ -64,15 +76,11 @@ class PowerControlTestCase(TestCase):
 
 @mock.patch('chroma_core.services.power_control.rpc.PowerControlRpc')
 class PowerMonitoringTests(PowerControlTestCase):
-    @property
-    def thread_class_names(self):
-        return [t.__class__.__name__ for t in threading.enumerate()]
-
     def test_monitoring_daemon_starts(self, mocked):
         self.assertIn('MonitorDaemonThread', self.thread_class_names)
 
     def test_monitoring_daemon_stops(self, mocked):
-        self.monitor_daemon.stop()
+        self.md_thread.stop()
         self.wait_for_assert(lambda: self.assertNotIn('MonitorDaemonThread', self.thread_class_names))
 
     def test_pdu_add_remove_spawns_reaps_monitors(self, mocked):

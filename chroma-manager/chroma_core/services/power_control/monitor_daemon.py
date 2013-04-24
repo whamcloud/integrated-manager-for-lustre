@@ -28,6 +28,17 @@ class PowerDeviceMonitor(threading.Thread):
         self._stopping = threading.Event()
 
     def run(self):
+        try:
+            self._run()
+        finally:
+            # Make sure we always clean up.
+            # HYD-1918: Refactor this kludgy mess so that these threads don't
+            # get DB access and therefore don't need to clean up.
+            import django.db
+            if django.db.connection.connection:
+                django.db.connection.close()
+
+    def _run(self):
         log.info("Starting monitor for %s" % self.device)
 
         while not self._stopping.is_set():
@@ -37,7 +48,7 @@ class PowerDeviceMonitor(threading.Thread):
                 log.debug("Checking for tasks for %s:%s" % self.device.sockaddr)
                 task, kwargs = self._manager.get_monitor_tasks(self.device.sockaddr).get_nowait()
                 log.debug("Found task for %s:%s: %s" % (self.device.sockaddr + tuple([task])))
-                if task == "reregister":
+                if task == "stop":
                     self.stop()
                 else:
                     getattr(self._manager, task)(**kwargs)
@@ -85,7 +96,7 @@ class PowerMonitorDaemon(object):
 
         while not self._stopping.is_set():
             # Check for new devices to monitor, or dead threads. A thread
-            # may suicide if the manager has enqueued a 'reregister' task.
+            # may suicide if the manager has enqueued a 'stop' task.
             for sockaddr, device in self._manager.power_devices.items():
                 if (sockaddr in self.device_monitors
                         and not self.device_monitors[sockaddr].is_alive()):
