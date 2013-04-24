@@ -7,6 +7,8 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 class TestAuthentication(ChromaIntegrationTestCase):
     def setUp(self):
+        super(TestAuthentication, self).setUp()
+
         superuser = config['chroma_managers'][0]['users'][0]
         self.reset_accounts(AuthorizedHttpRequests(superuser['username'], superuser['password'],
             server_http_url = config['chroma_managers'][0]['server_http_url']))

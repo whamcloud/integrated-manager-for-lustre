@@ -83,6 +83,7 @@ class ApiTestCase(UtilityTestCase):
             self.remote_operations.clear_ha()
 
         self.wait_until_true(self.supervisor_controlled_processes_running)
+        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
     def tearDown(self):
         if hasattr(self, 'simulator'):
@@ -97,6 +98,10 @@ class ApiTestCase(UtilityTestCase):
                 self._check_for_down_servers()
 
         self.assertTrue(self.supervisor_controlled_processes_running())
+        self.assertEqual(
+            self.initial_supervisor_controlled_process_start_times,
+            self.get_supervisor_controlled_process_start_times()
+        )
 
     @property
     def chroma_manager(self):
@@ -140,6 +145,15 @@ class ApiTestCase(UtilityTestCase):
             return False
         else:
             return True
+
+    def get_supervisor_controlled_process_start_times(self):
+        response = self.chroma_manager.get('/api/system_status/')
+        self.assertEqual(response.successful, True, response.text)
+        system_status = response.json
+        supervisor_controlled_process_start_times = {}
+        for process in system_status['supervisor']:
+            supervisor_controlled_process_start_times[process['name']] = process['start']
+        return supervisor_controlled_process_start_times
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         logger.debug("wait_for_command: %s" % self.get_by_uri('/api/command/%s/' % command_id))
