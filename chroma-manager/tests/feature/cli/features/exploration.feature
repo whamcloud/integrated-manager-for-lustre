@@ -86,8 +86,8 @@ Scenario: List all OSTs for a given server
 Scenario: List all OSTs for a given server, restricting to primaries only
   When I run chroma server secondfs-oss0 ost-list --primary
   Then I should see output containing "secondfs-OST0000"
-  And I should see output containing "secondfs-OST0001"
-  But I should not see output containing "secondfs-OST0002"
+  And I should see output containing "secondfs-OST0002"
+  But I should not see output containing "secondfs-OST0001"
 
 Scenario: View a specific OST
   When I run chroma ost-show firstfs-OST0002
