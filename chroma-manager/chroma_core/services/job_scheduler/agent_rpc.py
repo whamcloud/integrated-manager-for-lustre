@@ -33,6 +33,7 @@ from chroma_core.services.http_agent import HttpAgentRpc
 from chroma_core.services.http_agent.queues import AgentTxQueue
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.rpc import RpcTimeout
+import settings
 
 
 log = log_register(__name__)
@@ -468,6 +469,31 @@ class AgentSsh(object):
 
         if port:
             args["port"] = int(port)
+
+        # If given an ssh_config file, require that it defines
+        # a private key and username for accessing this host
+        config_path = settings.SSH_CONFIG
+        if config_path:
+            ssh_config = paramiko.SSHConfig()
+            ssh_config.parse(open(config_path))
+
+            host_config = ssh_config.lookup(self.address)
+            hostname = host_config['hostname']
+
+            if 'user' in host_config:
+                args['username'] = host_config['user']
+                if args['username'] != 'root':
+                    command = "sudo sh -c \"{}\"".format(command.replace('"', '\\"'))
+                    log.info("Wrapped command: '%s'" % command)
+
+            if 'identityfile' in host_config:
+                log.info("host_config: %s" % host_config)
+
+                args['key_filename'] = host_config['identityfile'][0]
+
+                # Work around paramiko issue 157, failure to parse quoted values
+                # (vagrant always quotes IdentityFile)
+                args['key_filename'] = args['key_filename'].strip("\"")
 
         # Note: paramiko has a hardcoded 15 second timeout on SSH handshake after
         # successful TCP connection (Transport.banner_timeout).

@@ -61,9 +61,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     body = {'address': host_address}
                 )
                 self.assertEqual(response.successful, True, response.text)
-                self.assertTrue(response.json['ping'])
+                if not config.get('ssh_config', None):
+                    self.assertTrue(response.json['ping'])
+                    self.assertTrue(response.json['resolve'])
+
                 self.assertTrue(response.json['auth'])
-                self.assertTrue(response.json['resolve'])
                 self.assertTrue(response.json['reverse_ping'])
                 self.assertTrue(response.json['reverse_resolve'])
 

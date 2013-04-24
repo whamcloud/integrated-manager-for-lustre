@@ -896,36 +896,31 @@ class JobScheduler(object):
             resolve = True
             ping = (0 == subprocess.call(['ping', '-c 1', resolved_address]))
 
-        if resolve:
-            manager_hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
-            try:
-                rc, out, err = agent_ssh.ssh(
-                    "ping -c 1 %s" % manager_hostname,
-                    auth_args=auth_args)
-                auth = True
-            except (AuthenticationException, SSHException):
-                #  No auth methods available, or wrong creds
-                auth = False
-            except Exception, e:
-                log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
-                reverse_resolve = False
-                reverse_ping = False
-            else:
-                if rc == 0:
-                    reverse_resolve = True
-                    reverse_ping = True
-                elif rc == 1:
-                    # Can resolve, cannot ping
-                    reverse_resolve = True
-                    reverse_ping = False
-                else:
-                    # Cannot resolve
-                    reverse_resolve = False
-                    reverse_ping = False
-        else:
+        manager_hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
+        try:
+            rc, out, err = agent_ssh.ssh(
+                "ping -c 1 %s" % manager_hostname,
+                auth_args=auth_args)
+            auth = True
+        except (AuthenticationException, SSHException):
+            #  No auth methods available, or wrong creds
             auth = False
+        except Exception, e:
+            log.error("Error trying to invoke agent on '%s': %s" % (address, e))
             reverse_resolve = False
             reverse_ping = False
+        else:
+            if rc == 0:
+                reverse_resolve = True
+                reverse_ping = True
+            elif rc == 1:
+                # Can resolve, cannot ping
+                reverse_resolve = True
+                reverse_ping = False
+            else:
+                # Cannot resolve
+                reverse_resolve = False
+                reverse_ping = False
 
         return {
             'address': address,

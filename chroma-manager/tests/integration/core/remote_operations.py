@@ -167,7 +167,33 @@ class RealRemoteOperations(RemoteOperations):
         logger.debug("remote_command[%s]: %s" % (address, command))
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(address, **{'username': 'root'})
+
+        args = {'username': 'root'}
+        # If given an ssh_config file, require that it defines
+        # a private key and username for accessing this host
+        config_path = config.get('ssh_config', None)
+        if config_path:
+            ssh_config = paramiko.SSHConfig()
+            ssh_config.parse(open(config_path))
+
+            host_config = ssh_config.lookup(address)
+            address = host_config['hostname']
+
+            if 'user' in host_config:
+                args['username'] = host_config['user']
+                if args['username'] != 'root':
+                    command = "sudo sh -c \"{}\"".format(command.replace('"', '\\"'))
+
+            if 'identityfile' in host_config:
+                args['key_filename'] = host_config['identityfile'][0]
+
+                # Work around paramiko issue 157, failure to parse quoted values
+                # (vagrant always quotes IdentityFile)
+                args['key_filename'] = args['key_filename'].strip("\"")
+
+        logger.info("SSH address = %s, args = %s" % (address, args))
+
+        ssh.connect(address, **args)
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
