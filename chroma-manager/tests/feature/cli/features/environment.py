@@ -82,13 +82,13 @@ def before_feature(context, feature):
     context.old_create_host_ssh = JobSchedulerClient.create_host_ssh
     JobSchedulerClient.create_host_ssh = mock.Mock(side_effect=create_host_ssh)
 
-    context.old_create_target = JobSchedulerClient.create_target
+    context.old_create_targets = JobSchedulerClient.create_targets
 
-    def create_target(*args, **kwargs):
-        target, command = context.old_create_target(*args, **kwargs)
+    def create_targets(*args, **kwargs):
+        targets, command = context.old_create_targets(*args, **kwargs)
         context.test_case.drain_progress()
-        return freshen(target), freshen(command)
-    JobSchedulerClient.create_target = mock.Mock(side_effect=create_target)
+        return [freshen(t) for t in targets], freshen(command)
+    JobSchedulerClient.create_targets = mock.Mock(side_effect=create_targets)
 
     context.old_create_filesystem = JobSchedulerClient.create_filesystem
 
@@ -133,7 +133,7 @@ def after_feature(context, feature):
     from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
     from chroma_core.models import Command
     JobSchedulerClient.create_host_ssh = context.old_create_host_ssh
-    JobSchedulerClient.create_target = context.old_create_target
+    JobSchedulerClient.create_targets = context.old_create_targets
     JobSchedulerClient.create_filesystem = context.old_create_filesystem
     JobSchedulerClient.command_run_jobs = context.old_run_jobs
     Command.set_state = context.old_set_state
