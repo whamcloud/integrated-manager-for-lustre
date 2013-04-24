@@ -294,7 +294,7 @@ class RealRemoteOperations(RemoteOperations):
         sanity check that it was configured correctly.
         """
         # TODO: Expand on this. Perhaps use existing lustre client tests.
-        if filesystem.get('bytes_free') == None:
+        if filesystem.get('bytes_free') is None:
             self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free') is not None)
             filesystem = self._test_case.get_filesystem(filesystem['id'])
 
@@ -303,7 +303,7 @@ class RealRemoteOperations(RemoteOperations):
             "dd if=/dev/zero of=/mnt/%s/exercisetest.dat bs=1000 count=%s" % (
                 filesystem['name'],
                 min((filesystem.get('bytes_free') * 0.4), 512000) / 1000
-                )
+            )
         )
 
     def _fqdn_to_server_config(self, fqdn):
@@ -320,12 +320,18 @@ class RealRemoteOperations(RemoteOperations):
                 address,
                 "echo 'Checking if node is ready to receive commands.'"
             )
+
         except socket.error:
             return False
         except paramiko.AuthenticationException:
             return False
         else:
             return True
+
+    def host_up_secs(self, address):
+        result = self._ssh_address(address, "cat /proc/uptime")
+        secs_up = result.split()[0]
+        return secs_up
 
     def kill_server(self, fqdn):
         # "Pull the plug" on host
@@ -336,7 +342,16 @@ class RealRemoteOperations(RemoteOperations):
         )
 
         i = 0
+        last_secs_up = 0
         while self.host_contactable(server_config['address']):
+            # plug a race where the host comes up fast enough to allow ssh to
+            # plow through
+            secs_up = self.host_up_secs(server_config['address'])
+            if secs_up < last_secs_up:
+                return
+
+            last_secs_up = secs_up
+
             i += 1
             time.sleep(1)
             if i > TEST_TIMEOUT:
