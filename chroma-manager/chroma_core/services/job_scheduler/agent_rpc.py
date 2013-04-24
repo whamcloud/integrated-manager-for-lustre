@@ -132,49 +132,50 @@ class AgentRpcMessenger(object):
             except KeyError:
                 pass
 
+    def _abort_session(self, fqdn, old_session_id, new_session_id=None):
+        log.warning("AgentRpcMessenger.on_rx: aborting session %s" % old_session_id)
+        old_rpcs = self._session_rpcs[old_session_id]
+
+        if new_session_id is not None:
+            self._sessions[fqdn] = new_session_id
+        else:
+            try:
+                del self._sessions[fqdn]
+            except KeyError:
+                pass
+
+        for rpc in old_rpcs.values():
+            if new_session_id:
+                log.warning("AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s)" % (
+                    rpc.id, new_session_id, old_session_id))
+                rpc.session_id = new_session_id
+                self._resend(rpc)
+            else:
+                rpc.exception = "Communications error with %s" % fqdn
+                rpc.complete.set()
+        del self._session_rpcs[old_session_id]
+
     def on_rx(self, message):
         with self._lock:
             log.debug("on_rx: %s" % message)
-            fqdn = message['fqdn']
             session_id = message['session_id']
+            fqdn = message['fqdn']
             log.info("AgentRpcMessenger.on_rx: %s/%s" % (fqdn, session_id))
-
-            def abort_session(old_session_id, new_session_id = None):
-                log.warning("AgentRpcMessenger.on_rx: aborting session %s" % old_session_id)
-                old_rpcs = self._session_rpcs[old_session_id]
-                if new_session_id is not None:
-                    self._sessions[fqdn] = new_session_id
-                else:
-                    try:
-                        del self._sessions[fqdn]
-                    except KeyError:
-                        pass
-
-                for rpc in old_rpcs.values():
-                    if new_session_id:
-                        log.warning("AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s)" % (
-                            rpc.id, new_session_id, old_session_id))
-                        rpc.session_id = new_session_id
-                        self._resend(rpc)
-                    else:
-                        rpc.exception = "Communications error with %s" % fqdn
-                        rpc.complete.set()
-                del self._session_rpcs[old_session_id]
 
             if message['type'] == 'SESSION_CREATE':
                 if fqdn in self._sessions:
                     old_session_id = self._sessions[fqdn]
-                    abort_session(old_session_id, session_id)
+                    self._abort_session(fqdn, old_session_id, session_id)
                 else:
                     self._sessions[fqdn] = session_id
             elif message['type'] == 'SESSION_TERMINATE':
                 # An agent has timed out or restarted, we're being told its session is now dead
                 if message['fqdn'] in self._sessions:
-                    abort_session(message['session_id'])
+                    self._abort_session(fqdn, message['session_id'])
             elif message['type'] == 'SESSION_TERMINATE_ALL':
                 # The http_agent service has restarted, all sessions are now over
-                for session in self._sessions.values():
-                    abort_session(session)
+                for fqdn, session in self._sessions.items():
+                    self._abort_session(fqdn, session)
             else:
                 rpc_response = message['body']
                 if rpc_response['type'] != 'ACTION_COMPLETE':
@@ -183,7 +184,7 @@ class AgentRpcMessenger(object):
 
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
                     log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
-                    abort_session(self._sessions[fqdn])
+                    self._abort_session(fqdn, self._sessions[fqdn])
                     HttpAgentRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
                 elif fqdn in self._sessions:
                     log.info("AgentRpcMessenger.on_rx: good session %s/%s" % (fqdn, session_id))
