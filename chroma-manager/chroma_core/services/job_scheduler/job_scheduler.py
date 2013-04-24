@@ -13,6 +13,8 @@ import traceback
 import urlparse
 
 import os
+import operator
+import itertools
 from collections import defaultdict
 import Queue
 import dateutil.parser
@@ -29,7 +31,8 @@ from django.db.models import Q
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount
+from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
+    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -914,6 +917,17 @@ class JobScheduler(object):
             'reverse_ping': reverse_ping
         }
 
+    @classmethod
+    def order_targets(cls, targets_data):
+        "Return sorted sequence of target_data dicts, such that sequential OSTs will be distributed across hosts."
+        volumes_ids = map(operator.itemgetter('volume_id'), targets_data)
+        host_ids = dict(VolumeNode.objects.filter(volume_id__in=volumes_ids, primary=True).values_list('volume_id', 'host_id'))
+        key = lambda td: host_ids[int(td['volume_id'])]
+        for host_id, target_group in itertools.groupby(sorted(targets_data, key=key), key=key):
+            for index, target_data in enumerate(target_group):
+                target_data['index'] = index
+        return sorted(targets_data, key=operator.itemgetter('index'))
+
     def create_filesystem(self, fs_data):
         # FIXME: HYD-970: check that the MGT or hosts aren't being removed while
         # creating the filesystem
@@ -951,7 +965,7 @@ class JobScheduler(object):
                 mounts.extend(mdt_mounts)
                 chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
                 osts = []
-                for ost_data in fs_data['osts']:
+                for ost_data in self.order_targets(fs_data['osts']):
                     ost, ost_mounts = ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **_target_kwargs(ost_data))
                     osts.append(ost)
                     mounts.extend(ost_mounts)
@@ -980,7 +994,7 @@ class JobScheduler(object):
 
         targets = []
         with self._lock:
-            for target_data in targets_data:
+            for target_data in self.order_targets(targets_data):
                 target_class = ContentType.objects.get_by_natural_key(*(target_data['content_type'])).model_class()
                 if target_class == ManagedOst:
                     fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
