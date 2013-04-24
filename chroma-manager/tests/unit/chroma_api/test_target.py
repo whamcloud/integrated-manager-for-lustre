@@ -1,7 +1,8 @@
+import json
 from chroma_core.models import Command
 import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import fake_log_message, synthetic_host, synthetic_volume_full, create_targets_patch
+from tests.unit.chroma_core.helper import fake_log_message, synthetic_host, synthetic_volume_full, create_targets_patch, create_filesystem_patch
 
 
 class TestTargetResource(ChromaApiTestCase):
@@ -101,3 +102,42 @@ class TestTargetResource(ChromaApiTestCase):
         response = self.api_client.get('/api/log/')
         event, = self.deserialize(response)['objects']
         self.assertEqual(len(event['substitutions']), 0)
+
+    def _target_hosts(self, paths):
+        """Generate host labels for given target paths."""
+        for path in paths:
+            response = self.api_client.get(path)
+            self.assertHttpOK(response)
+            content = json.loads(response.content)
+            volume_node, = content['volume']['volume_nodes']
+            yield volume_node['host_label']
+
+    @create_targets_patch
+    def test_striping_patch(self):
+        """Test OSTs are assigned to alternating hosts."""
+        self.create_simple_filesystem(synthetic_host('myserver'))
+        hosts = [synthetic_host('myserver{0:d}'.format(n)) for n in range(4)] * 2
+        # keep hosts in alternating order, but supply them grouped
+        objects = [{'kind': 'OST', 'filesystem_id': self.fs.id, 'volume_id': synthetic_volume_full(host).id} for host in sorted(hosts, key=str)]
+        response = self.api_client.patch('/api/target/', data={'deletions': [], 'objects': objects})
+        self.assertHttpAccepted(response)
+        content = json.loads(response.content)
+        self.assertEqual(map(str, hosts), list(self._target_hosts(content['targets'])))
+
+    @create_filesystem_patch
+    def test_striping_post(self):
+        """Test OSTs are assigned to alternating hosts."""
+        self.host = synthetic_host('myserver')
+        hosts = [synthetic_host('myserver{0:d}'.format(n)) for n in range(4)] * 2
+        # keep hosts in alternating order, but supply them grouped
+        data = {
+            'name': 'testfs',
+            'mgt': {'volume_id': synthetic_volume_full(self.host).id, 'conf_params': {}},
+            'mdt': {'volume_id': synthetic_volume_full(self.host).id, 'conf_params': {}},
+            'osts': [{'volume_id': synthetic_volume_full(host).id, 'conf_params': {}} for host in sorted(hosts, key=str)],
+            'conf_params': {},
+        }
+        response = self.api_client.post('/api/filesystem/', data=data)
+        self.assertHttpAccepted(response)
+        content = json.loads(response.content)
+        self.assertEqual(map(str, hosts), list(self._target_hosts(content['filesystem']['osts'])))
