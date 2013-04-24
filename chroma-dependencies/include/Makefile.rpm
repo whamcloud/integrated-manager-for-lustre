@@ -21,13 +21,13 @@ rpms: $(RPM_NAME).spec
 	for dep in $(DEPS); do                 \
 		$(MAKE) -C ../$$dep pkg_install; \
 	done
-	$(MAKE) -f ../include/Makefile.rpmbuild $@
+	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 
 install pkg_install: rpms
 	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE=$(RPM_NAME).spec $@
 
 cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
-	$(MAKE) -f ../include/Makefile.rpmbuild $@
+	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 
 $(SRPMS):
 	if [ -f ../$@ ]; then      \
