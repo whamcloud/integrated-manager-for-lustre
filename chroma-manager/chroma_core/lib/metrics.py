@@ -16,6 +16,16 @@ from chroma_core.lib.storage_plugin.api import statistics
 metrics_log = log_register('metrics')
 
 
+class Counter(dict):
+    "collections.Counter (builtin in 2.7)"
+    def __missing__(self, key):
+        return 0
+
+    def update(self, other):
+        for key in other:
+            self[key] += other[key]
+
+
 class MetricStore(object):
     """
     Base class for metric stores.
@@ -54,28 +64,27 @@ class MetricStore(object):
             except Series.DoesNotExist:
                 pass
 
-    def fetch(self, cfname, fetch_metrics, start_time, end_time, max_points=1000, **kwargs):
+    def fetch(self, fetch_metrics, begin, end, max_points=1000, **kwargs):
         "Return ordered timestamps, dicts of field names and values."
-        assert cfname == 'Average', cfname
         result = collections.defaultdict(dict)
         types = set()
         for series in self.series(*fetch_metrics):
             types.add(series.type)
-            for point in Stats.select(series.id, start_time, end_time, rate=series.type in ('Counter', 'Derive'), maxlen=max_points):
-                result[point.timestamp][series.name] = point.mean
+            for point in Stats.select(series.id, begin, end, rate=series.type in ('Counter', 'Derive'), maxlen=max_points):
+                result[point.dt][series.name] = point.mean
         # if absolute and derived values are mixed, the earliest value will be incomplete
         if result and types > set(['Gauge']) and len(result[min(result)]) < len(fetch_metrics):
             del result[min(result)]
-        return sorted(result.items())
+        return dict(result)
 
-    def fetch_last(self, fetch_metrics=()):
+    def fetch_last(self, fetch_metrics):
         "Return latest timestamp and dict of field names and values."
-        timestamp, result = 0, {}
+        latest, data = datetime.fromtimestamp(0, utc), {}
         for series in self.series(*fetch_metrics):
             point = Stats.latest(series.id)
-            result[series.name] = point.mean
-            timestamp = max(timestamp, point.timestamp)
-        return timestamp, result
+            data[series.name] = point.mean
+            latest = max(latest, point.dt)
+        return latest, data
 
 
 class VendorMetricStore(MetricStore):
@@ -220,107 +229,19 @@ class FilesystemMetricStore(MetricStore):
         """Don't use this -- will raise a NotImplementedError!"""
         raise NotImplementedError("Filesystem-level serialize() not supported!")
 
-    def list(self, query_class):
-        """
-        list(query_class)
-
-        Given a query class (ManagedOst, ManagedMst, ManagedHost, etc.),
-        returns a dict of metric name:type pairs found in all target metrics.
-        """
-        metrics = {}
-
-        from django.core.exceptions import FieldError
-        try:
-            fs_components = query_class.objects.filter(filesystem=self.filesystem)
-        except FieldError:
-            if query_class.__name__ == "ManagedHost":
-                fs_components = self.filesystem.get_servers()
-            else:
-                raise NotImplementedError("Unknown query class: %s" % query_class.__name__)
-
-        for comp in fs_components:
-            metrics.update(comp.metrics.list())
-
-        return metrics
-
     def fetch(self, cfname, query_class, **kwargs):
+        raise NotImplementedError("Filesystem-level fetch() not supported!")
+
+    def fetch_last(self, target_class, fetch_metrics):
         """
-        fetch(CFNAME, query_class [, fetch_metrics=['name'],
-                      start_time=datetime, end_time=datetime])
-
-        Given a consolidation function (Average, Min, Max, Last),
-        a query class (ManagedOst, ManagedMdt, ManagedHost, etc.)
-        an optional list of desired metrics, an optional start time,
-        and an optinal end time, returns a tuple containing rows of
-        aggregate datapoints retrieved from the appropriate RRAs.
-        """
-        results = {}
-
-        from django.core.exceptions import FieldError
-        try:
-            fs_components = query_class.objects.filter(filesystem=self.filesystem)
-        except FieldError:
-            if query_class.__name__ == "ManagedHost":
-                fs_components = self.filesystem.get_servers()
-            else:
-                raise NotImplementedError("Unknown query class: %s" % query_class.__name__)
-
-        for fs_component in fs_components:
-            for row in fs_component.metrics.fetch(cfname, **kwargs):
-                row_ts = row[0]
-                row_dict = row[1]
-
-                if not row_ts in results:
-                    results[row_ts] = {}
-
-                for metric in row_dict.keys():
-                    try:
-                        if row_dict[metric] is not None:
-                            if results[row_ts][metric] is None:
-                                results[row_ts][metric] = row_dict[metric]
-                            else:
-                                results[row_ts][metric] += row_dict[metric]
-                    except KeyError:
-                        results[row_ts][metric] = row_dict[metric]
-
-        return tuple(
-                sorted(
-                    [(timestamp, dict) for (timestamp, dict)
-                                        in results.items()],
-                                        key=lambda timestamp: timestamp
-                )
-        )
-
-    def fetch_last(self, target_class, fetch_metrics=None):
-        """
-        fetch_last(target_class [, fetch_metrics=['metric']])
-
         Given a target class (ObjectStoreTarget, Metadatatarget, etc),
         and an optional list of desired metrics, returns a tuple
         containing a single row of aggregate datapoints taken
         from each metric's last reading.
         """
-        results = []
-
+        latest, counter = datetime.fromtimestamp(0, utc), Counter()
         for target in target_class.objects.filter(filesystem=self.filesystem):
-            tm = target.metrics.fetch_last(fetch_metrics)
-
-            # Bit of a hack here -- deal semi-gracefully with the possibility
-            # that different targets might have different times for their
-            # last update by just using the most recent.
-            try:
-                results[0] = tm[0] if tm[0] > results[0] else results[0]
-            except IndexError:
-                results.append(tm[0])
-                results.append({})
-
-            for metric in tm[1].keys():
-                try:
-                    if tm[1][metric] is None:
-                        results[1][metric] += 0
-                    else:
-                        results[1][metric] += tm[1][metric]
-                except KeyError:
-                    results[1][metric] = tm[1][metric]
-
-        return tuple(results)
+            dt, data = target.metrics.fetch_last(fetch_metrics)
+            counter.update(data)
+            latest = max(latest, dt)
+        return latest, dict(counter)

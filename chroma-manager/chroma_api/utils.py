@@ -5,15 +5,17 @@
 
 
 import logging
-import datetime
+import itertools
 from chroma_core.models.jobs import SchedulingError
 import dateutil.parser
 import bisect
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
+from django.utils import timezone
 from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
+from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
@@ -22,7 +24,7 @@ from tastypie.resources import ModelDeclarativeMetaclass, Resource, ModelResourc
 from tastypie import fields
 from tastypie import http
 from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
-from chroma_core.lib.metrics import MetricStore
+from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
 
@@ -274,38 +276,27 @@ class MetricResource:
         if request.method != 'GET':
             return self.create_response(request, "", response_class = HttpMethodNotAllowed)
 
-        latest = request.GET.get('latest', False)
-        if latest:
-            latest = (latest.lower() == 'true' or latest == '1')
-
-        try:
-            metrics = request.GET['metrics'].split(",")
-            if len(metrics) == 0:
-                errors['metrics'].append("Metrics must be a comma separated list of 1 or more strings")
-        except KeyError:
-            errors['metrics'].append("This field is mandatory")
-
-        if not latest:
-            try:
-                begin = dateutil.parser.parse(request.GET['begin'])
-            except KeyError:
-                errors['begin'].append("This field is mandatory when latest=false")
-            except ValueError:
-                errors['begin'].append("Malformed time string")
-
-            try:
-                end = dateutil.parser.parse(request.GET['end'])
-            except KeyError:
-                errors['end'].append("This field is mandatory when latest=false")
-            except ValueError:
-                errors['end'].append("Malformed time string")
-
-        update = request.GET.get('update', False)
-        if update:
-            update = (update.lower() == 'true' or update == '1')
-
+        latest, update = (request.GET.get(name, '').lower() in ('true', '1') for name in ('latest', 'update'))
         if update and latest:
             errors['update'].append("update and latest are mutually exclusive")
+
+        metrics = request.GET.get('metrics', '').split(',')
+        if metrics == ['']:
+            errors['metrics'].append("Metrics must be a comma separated list of 1 or more strings")
+
+        datetimes = {}
+        if not latest:
+            for name in ('begin', 'end'):
+                try:
+                    datetimes[name] = dateutil.parser.parse(request.GET[name])
+                except KeyError:
+                    errors[name].append("This field is mandatory when latest=false")
+                except ValueError:
+                    errors[name].append("Malformed time string")
+        begin, end = map(datetimes.get, ('begin', 'end'))
+        if update:
+            begin, end = end, timezone.now()
+
         if 'max_points' in request.GET:
             try:
                 kwargs['max_points'] = int(request.GET['max_points'])
@@ -314,143 +305,57 @@ class MetricResource:
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
-        if update:
-            import django.utils.timezone
-            begin = end
-            end = django.utils.timezone.now()
-            # TODO: logic for dealing with incomplete values during update
-        elif latest:
-            begin = end = None
-
         if 'pk' in kwargs:
             return self.get_metric_detail(request, metrics, begin, end, **kwargs)
         return self.get_metric_list(request, metrics, begin, end, **kwargs)
 
-    def _format_timestamp(self, ts):
-        return datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
+    def _format(self, stats):
+        return [{'ts': dt.isoformat(), 'data': stats[dt]} for dt in sorted(stats)]
 
     def _fetch(self, metrics_obj, metrics, begin, end, **kwargs):
         if begin and end:
-            return metrics_obj.fetch("Average", fetch_metrics = metrics, start_time = begin, end_time = end, **kwargs)
-        else:
-            return (metrics_obj.fetch_last(fetch_metrics = metrics),)
+            return metrics_obj.fetch(metrics, begin, end, **kwargs)
+        return dict([metrics_obj.fetch_last(metrics)])
 
     def get_metric_detail(self, request, metrics, begin, end, **kwargs):
         obj = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
-        from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
-        from collections import defaultdict
-        result = []
         if isinstance(obj, StorageResourceRecord):
-            # FIXME: there is a level of indirection here to go from a StorageResourceRecord
-            # to individual time series.  This is needed because although r3d lets you associate
-            # multiple variables with one object, it then requires that they call arrive at the same
-            # time with the same resolution.  There is no way for chroma to know what resolution
-            # the third party statistics will arrive at, and no way to guarantee they are all
-            # queried at the same moment, so we have to give r3d an object per time series.
-            # We should be able to refer to time series by (object, stat name) without
-            # implicitly coupling all stats for the same object.
-            stats = StorageResourceStatistic.objects.filter(storage_resource = obj, name__in = metrics)
-            ts_data = defaultdict(list)
-            for stat in stats:
-                data = self._fetch(stat.metrics, metrics, begin, end)
-                for dp in data:
-                    ts_data[dp[0]].append(dp[1])
-
-            for ts in sorted(ts_data.keys()):
-                data_list = ts_data[ts]
-                data = {}
-                for dl in data_list:
-                    data.update(dl)
-                timestamp = datetime.datetime.fromtimestamp(ts).isoformat() + "Z"
-                if None in data.values():
-                    continue
-                result.append({'ts': timestamp, 'data': data})
+            # FIXME: there is a level of indirection here to go from a StorageResourceRecord to individual time series.
+            # Although no longer necessary, time series are still stored in separate resources.
+            stats = defaultdict(dict)
+            for stat in StorageResourceStatistic.objects.filter(storage_resource=obj, name__in=metrics):
+                for dt, data in self._fetch(stat.metrics, metrics, begin, end).items():
+                    stats[dt].update(data)
         else:
             stats = self._fetch(MetricStore(obj), metrics, begin, end)
-
-            for datapoint in stats:
-                # Assume the database was storing UTC
-                timestamp = datetime.datetime.fromtimestamp(datapoint[0]).isoformat() + "Z"
-                data = datapoint[1]
-                if not data:
-                    continue
-                if None in data.values():
-                    continue
-                for metric in metrics:
-                    if not metric in data:
-                        data[metric] = 0
-                result.append({'ts': timestamp, 'data': data})
-
-        return self.create_response(request, result)
+        for data in stats.values():
+            data.update(dict.fromkeys(set(metrics).difference(data), 0.0))
+        return self.create_response(request, self._format(stats))
 
     def _reduce(self, metrics, results, reduce_fn):
         # Want an overall reduction into one series
-        all_timestamps = set()
-        series_timestamps = {}
-        series_datapoints = {}
-        for obj_id, datapoints in results.items():
-            series_timestamps[obj_id] = []
-            series_datapoints[obj_id] = {}
-            for datapoint in datapoints:
-                series_timestamps[obj_id].append(datapoint['ts'])
-                series_datapoints[obj_id][datapoint['ts']] = datapoint['data']
-                all_timestamps.add(datapoint['ts'])
-        all_timestamps = list(all_timestamps)
-        all_timestamps.sort()
-
-        reduced_result = []
-        for timestamp in all_timestamps:
-            values = []
-            for obj_id, datapoints in results.items():
-                if not series_datapoints[obj_id]:
-                    # Empty series, can't possibly be any
-                    continue
-
-                val = series_datapoints[obj_id].get(timestamp, None)
-                if not val:
-                    # Didn't have one for this exact timestamp, do we have one before?
-                    timestamps = series_timestamps[obj_id]
-                    i = bisect.bisect(timestamps, timestamp)
-                    if i == 0:
-                        # Nothing before this, fall back to taking value after this
-                        next_value = series_datapoints[obj_id][series_timestamps[obj_id][0]]
-                        val = next_value
-                    else:
-                        prev_timestamp = timestamps[i - 1]
-                        last_value = series_datapoints[obj_id][prev_timestamp]
-                        val = last_value
-
-                values.append(val)
-
-            if not values:
-                continue
-
-            if reduce_fn == 'sum':
-                accum = dict([(m, 0) for m in metrics])
-                for value in values:
-                    for m, v in value.items():
-                        accum[m] += v
-                reduced_result.append({'ts': self._format_timestamp(timestamp), 'data': accum})
-            elif reduce_fn == 'average':
-                accum = dict([(m, 0) for m in metrics])
-                for value in values:
-                    for m, v in value.items():
-                        accum[m] += v
-                means = dict([(k, v / len(values)) for (k, v) in accum.items()])
-                reduced_result.append({'ts': self._format_timestamp(timestamp), 'data': means})
-            else:
-                raise NotImplementedError
-
-        return reduced_result
+        if reduce_fn not in ('sum', 'average'):
+            raise NotImplementedError
+        datetimes = dict((obj_id, sorted(data)) for obj_id, data in results.items())
+        result = {}
+        for dt in set(itertools.chain(*datetimes.values())):
+            result[dt] = counter = Counter.fromkeys(metrics, 0.0)
+            for obj_id, stats in results.items():
+                data = stats.get(dt, {})
+                dts = datetimes[obj_id]
+                if dts and not data:  # Didn't have one for this exact timestamp, do we have one before?
+                    data = stats[dts[max(bisect.bisect(dts, dt) - 1, 0)]]
+                counter.update(data)
+            if reduce_fn == 'average':
+                for name in counter:
+                    counter[name] /= len(results)
+        return result
 
     def get_metric_list(self, request, metrics, begin, end, **kwargs):
         errors = {}
-
-        reduce_fn = request.GET.get('reduce_fn', None)
-        group_by = request.GET.get('group_by', None)
+        reduce_fn, group_by = map(request.GET.get, ('reduce_fn', 'group_by'))
         if not reduce_fn and group_by:
             errors['reduce_fn'] = "This field is mandatory if 'group_by' is specified"
-
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
@@ -459,41 +364,26 @@ class MetricResource:
         except Http404 as exc:
             raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
 
-        result = {}
-        for obj in objs:
-            items = self._fetch(MetricStore(obj), metrics, begin, end, **kwargs)
-            # Assume these come out in chronological order
-            result[obj.id] = [{'ts': ts, 'data': data} for ts, data in items]
-
-        if reduce_fn and not group_by:
-            reduced_result = self._reduce(metrics, result, reduce_fn)
-            return self.create_response(request, reduced_result)
-        elif reduce_fn and group_by:
-            # Want to reduce into groups, one series per group
-            bins = {}
-            for obj in objs:
-                if hasattr(obj, 'content_type'):
-                    obj = obj.downcast()
-
-                if hasattr(obj, group_by):
-                    group_val = getattr(obj, group_by)
-                    if not group_val in bins:
-                        bins[group_val] = {}
-                    bins[group_val][obj.id] = result[obj.id]
-
-            grouped_result = {}
-            for group_val, results in bins.items():
-                if hasattr(group_val, 'id'):
-                    group_val = group_val.id
-                grouped_result[group_val] = self._reduce(metrics, results, reduce_fn)
-
-            return self.create_response(request, grouped_result)
-        else:
-            # Return individual series for each object
-            for obj_id, datapoints in result.items():
-                for datapoint in datapoints:
-                    datapoint['ts'] = self._format_timestamp(datapoint['ts'])
+        result = dict((obj.id, self._fetch(MetricStore(obj), metrics, begin, end, **kwargs)) for obj in objs)
+        if not reduce_fn:
+            for obj_id, stats in result.items():
+                result[obj_id] = self._format(stats)
             return self.create_response(request, result)
+        if not group_by:
+            stats = self._reduce(metrics, result, reduce_fn)
+            return self.create_response(request, self._format(stats))
+        # Want to reduce into groups, one series per group
+        groups = defaultdict(dict)
+        for obj in objs:
+            if hasattr(obj, 'content_type'):
+                obj = obj.downcast()
+            if hasattr(obj, group_by):
+                group_val = getattr(obj, group_by)
+                groups[getattr(group_val, 'id', group_val)][obj.id] = result[obj.id]
+        for key in groups:
+            stats = self._reduce(metrics, groups[key], reduce_fn)
+            groups[key] = self._format(stats)
+        return self.create_response(request, groups)
 
 
 class SeverityResource(ModelResource):
