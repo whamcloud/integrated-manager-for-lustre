@@ -221,7 +221,7 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         """
         Test adding multiple OSTs at once
         """
-        self.assertGreaterEqual(len(config['volumes']), 5)
+        self.assertGreaterEqual(len(config['device_path_to_label_map']), 5)
         # Prepare two new volumes
         volumes = [self.prepare_volume_for_use(3 + i) for i in range(0, 2)]
 
