@@ -8,16 +8,20 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
 
     def setUp(self):
+        self.TEST_SERVERS = [config['lustre_servers'][0]]
+
         super(ChromaPowerControlTestCase, self).setUp()
 
         self.power_types = {}
         self.pdu_list = []
 
         for power_type in config['power_control_types']:
-            # Keep things simple... No need to add more outlets
-            # than we have servers.
-            max_outlets = len(config['lustre_servers'])
-            power_type['max_outlets'] = max_outlets
+            # Only precreate outlets for physical PDU types.
+            if power_type.get('max_outlets', False):
+                # Keep things simple... No need to add more outlets
+                # than we have servers.
+                max_outlets = len(self.TEST_SERVERS)
+                power_type['max_outlets'] = max_outlets
 
             response = self.chroma_manager.post("/api/power_control_type/",
                                                 body = power_type)
@@ -26,8 +30,7 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
             self.power_types[type_obj['name']] = type_obj
 
         for pdu in config['power_distribution_units']:
-            import copy
-            pdu_body = copy.copy(pdu)
+            pdu_body = pdu.copy()
             pdu_body['device_type'] = self.power_types[pdu['type']]['resource_uri']
             del pdu_body['type']
             response = self.chroma_manager.post("/api/power_control_device/",
@@ -36,14 +39,23 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
             pdu_obj = response.json
             self.pdu_list.append(pdu_obj)
 
-        self.server = self.add_hosts([config['lustre_servers'][0]['address']])[0]
+        self.server = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
         # Associate the server with some PDU outlets
         for pdu in self.pdu_list:
-            outlet = [o for o in pdu['outlets'] if o['identifier'] == str(1)][0]
-            response = self.chroma_manager.patch(outlet['resource_uri'], body = {
-                'host': self.server['resource_uri']
-            })
-            self.assertTrue(response.successful, response.text)
+            if power_type.get('max_outlets', False):
+                outlet = [o for o in pdu['outlets'] if o['identifier'] == str(1)][0]
+                response = self.chroma_manager.patch(outlet['resource_uri'], body = {
+                    'host': self.server['resource_uri']
+                })
+                self.assertTrue(response.successful, response.text)
+            else:
+                # Create an outlet if the PDU is virtual.
+                response = self.chroma_manager.post("/api/power_control_device_outlet/", body = {
+                    'device': pdu['resource_uri'],
+                    'host': self.server['resource_uri'],
+                    'identifier': self.server['address']
+                })
+                self.assertTrue(response.successful, response.text)
 
     def tearDown(self):
         # Clean out the power control types, which should ultimately
@@ -103,6 +115,31 @@ class TestPduSetup(ChromaPowerControlTestCase):
             outlet = self.get_by_uri(outlet_uri)
             self.assertEqual(outlet['host'], None)
 
+    @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
+    def test_saved_outlet_triggers_fencing_update(self):
+        server_outlets = [o['resource_uri'] for o in
+                          self.get_list("/api/power_control_device_outlet/")
+                          if o['host'] == self.server['resource_uri']]
+
+        def host_needs_fence_reconfig():
+            return self.get_by_uri(self.server['resource_uri'])['needs_fence_reconfiguration']
+
+        # Starting out, we shouldn't need to reconfigure fencing on this host.
+        # ... But we might need to wait for things to settle after setup.
+        self.wait_until_true(lambda: not host_needs_fence_reconfig())
+
+        for outlet in server_outlets:
+            self.chroma_manager.patch(outlet,
+                                      body = {'host': None})
+
+        # After being disassociated with some outlets, the host should now
+        # need to be reconfigured.
+        self.wait_until_true(host_needs_fence_reconfig)
+
+        # After a while, the fencing reconfig job will complete and mark
+        # the host as not needing reconfiguration.
+        self.wait_until_true(lambda: not host_needs_fence_reconfig())
+
 
 class TestPduOperations(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
@@ -155,7 +192,7 @@ class TestPduOperations(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
     def test_powercycle_operation(self):
         # Test a couple of things:
-        # 1. Test that the Powercycle AdvertisedJob is only advertised
+        # 1. Test that the Powercycle AdvertisedJob is advertised
         #    when it should be.
         # 2. Test that the job actually works.
 
@@ -177,9 +214,9 @@ class TestPduOperations(ChromaPowerControlTestCase):
 
         self.wait_for_command(self.chroma_manager, command['id'])
 
-        self.wait_until_true(lambda: self.remote_operations.host_contactable(self.server['address']))
+        def boot_time_is_newer():
+            server = self.get_by_uri(self.server['resource_uri'])
+            post_boot_time = server['boot_time']
+            return post_boot_time > pre_boot_time
 
-        self.server = self.get_by_uri(self.server['resource_uri'])
-        post_boot_time = self.server['boot_time']
-
-        self.assertGreater(post_boot_time, pre_boot_time)
+        self.wait_until_true(boot_time_is_newer)

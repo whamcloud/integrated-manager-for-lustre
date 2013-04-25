@@ -44,13 +44,13 @@ Corosync verification
 """
 
 import socket
-import ethtool
 from netaddr import IPNetwork, IPAddress
 from netaddr.core import AddrFormatError
 from time import sleep
 from chroma_agent import shell
 from chroma_agent.store import AgentStore
 from chroma_agent import node_admin
+from chroma_agent.lib.pacemaker import PacemakerConfig
 
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
@@ -111,6 +111,7 @@ class CorosyncRingInterface(object):
                                self.ipv4_address, self.ipv4_netmask)
 
     def refresh(self):
+        import ethtool
         self._info = ethtool.get_interfaces_info(self.name)[0]
         try:
             self._network = IPNetwork("%s/%s" % (self._info.ipv4_address,
@@ -155,6 +156,7 @@ class CorosyncRingInterface(object):
 class AutoDetectedInterface(CorosyncRingInterface):
     @classmethod
     def all_interfaces(cls):
+        import ethtool
         # Not sure how robust this will be; need to test with real gear.
         # In theory, should do the job to exclude IPoIB and lo interfaces.
         hwaddr_blacklist = ['00:00:00:00:00:00', '80:00:00:48:fe:80']
@@ -434,28 +436,20 @@ def configure_pacemaker():
                    "migration-threshold=%s" % RSRC_FAIL_MIGRATION_COUNT])
 
 
-def configure_fencing(fence_agent, ipaddr = None, login = None,
-                      password = None, plug = None):
+def configure_fencing(agents):
+    pc = PacemakerConfig()
+    node = pc.get_node(socket.gethostname())
 
-    def set_attribute(name, value):
-        print "setting %s = %s" % (name, value)
-        shell.try_run(["crm", "node", "attribute", socket.gethostname(), "set",
-                  name, value])
+    node.clear_fence_attributes()
 
-    # first clear existing fence_attributes
-    for attribute in ["agent", "login", "password", "ipaddr", "plug"]:
-        shell.try_run(["crm", "node", "attribute", socket.gethostname(),
-                       "delete", "fence_%s" % attribute])
+    if isinstance(agents, basestring):
+        # For CLI debugging
+        import json
+        agents = json.loads(agents)
 
-    set_attribute("fence_agent", "fence_%s" % fence_agent)
-    if login:
-        set_attribute("fence_login", login)
-    if password:
-        set_attribute("fence_password", password)
-    if ipaddr:
-        set_attribute("fence_ipaddr", ipaddr)
-    if plug:
-        set_attribute("fence_plug", plug)
+    for idx, agent in enumerate(agents):
+        for attribute, value in agent.items():
+            node.set_fence_attribute(idx, attribute, value)
 
 
 def unconfigure_corosync():

@@ -5,6 +5,7 @@ import socket
 import time
 import paramiko
 import re
+
 from testconfig import config
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.utility_testcase import RemoteCommandResult
@@ -127,7 +128,7 @@ class SimulatorRemoteOperations(RemoteOperations):
     def unmount_clients(self):
         self._simulator.unmount_lustre_clients()
 
-    def clear_ha(self):
+    def clear_ha(self, *args):
         self._simulator.clear_clusters()
 
     def inject_log_message(self, fqdn, message):
@@ -457,7 +458,7 @@ class RealRemoteOperations(RemoteOperations):
     def has_pacemaker(self, server):
         result = self._ssh_address(
             server['address'],
-            'which crm',
+            'which crmadmin',
             expected_return_code = None
         )
         return result.exit_status == 0
@@ -480,25 +481,37 @@ class RealRemoteOperations(RemoteOperations):
         )
         return re.search('is running', result.stdout.read())
 
-    def clear_ha(self):
+    def clear_ha(self, server_list):
         """
         Stops and deletes all chroma targets for any corosync clusters
         configured on any of the lustre servers appearing in the cluster config
         """
-        for server in config['lustre_servers']:
+        for server in server_list:
             if self.has_pacemaker(server):
-                crm_targets = self.get_pacemaker_targets(server)
+                if config.get('pacemaker_hard_reset', False):
+                    self._ssh_address(
+                        server['address'],
+                        '''
+                        service pacemaker stop;
+                        service corosync stop;
+                        ifdown eth1;
+                        rm -f /etc/sysconfig/network-scripts/ifcfg-eth1;
+                        rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*
+                        '''
+                    )
+                else:
+                    crm_targets = self.get_pacemaker_targets(server)
 
-                # Stop targets and delete targets
-                for target in crm_targets:
-                    self._ssh_address(server['address'], 'crm resource stop %s' % target)
-                for target in crm_targets:
-                    self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                    self._ssh_address(server['address'], 'crm configure delete %s' % target)
-                    self._ssh_address(server['address'], 'crm resource cleanup %s' % target)
+                    # Stop targets and delete targets
+                    for target in crm_targets:
+                        self._ssh_address(server['address'], 'crm resource stop %s' % target)
+                    for target in crm_targets:
+                        self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
+                        self._ssh_address(server['address'], 'crm configure delete %s' % target)
+                        self._ssh_address(server['address'], 'crm resource cleanup %s' % target)
 
-                # Verify no more targets
-                self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
+                    # Verify no more targets
+                    self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
 
                 # Stop the agent
                 self._ssh_address(
@@ -507,7 +520,10 @@ class RealRemoteOperations(RemoteOperations):
                 )
                 self._ssh_address(
                     server['address'],
-                    'rm -rf /var/lib/chroma/*',
+                    '''
+                    rm -rf /var/lib/chroma/*;
+                    rm -f /var/log/chroma-*.log
+                    ''',
                     expected_return_code = None  # Keep going if it failed - may be none there.
                 )
             else:

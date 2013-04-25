@@ -84,12 +84,36 @@ class ResolvingFormValidation(FormValidation):
         return form.errors
 
 
+class DeleteablePowerObjectResource(CustomModelResource):
+    def obj_delete(self, request=None, **kwargs):
+        """
+        A ORM-specific implementation of ``obj_delete``.
+
+        Takes optional ``kwargs``, which are used to narrow the query to find
+        the instance.
+        """
+        from tastypie.exceptions import NotFound
+        from django.core.exceptions import ObjectDoesNotExist
+
+        obj = kwargs.pop('_obj', None)
+
+        if not hasattr(obj, 'delete'):
+            try:
+                obj = self.obj_get(request, **kwargs)
+            except ObjectDoesNotExist:
+                raise NotFound("A model instance matching the provided arguments could not be found.")
+
+        # Prevent dangling references from Alert objects which will cause
+        # 500 errors in the UI.
+        obj.mark_deleted()
+
+
 class PowerControlTypeForm(ModelForm):
     class Meta:
         model = PowerControlType
 
 
-class PowerControlTypeResource(CustomModelResource):
+class PowerControlTypeResource(DeleteablePowerObjectResource):
     """
     A type (make/model, etc.) of power control device
     """
@@ -125,7 +149,7 @@ class PowerControlDeviceForm(ModelForm):
             self.cleaned_data['address'] = field.widget.value_from_datadict(self.data, self.files, self.add_prefix('address'))
 
 
-class PowerControlDeviceResource(CustomModelResource):
+class PowerControlDeviceResource(DeleteablePowerObjectResource):
     """
     An instance of a power control device, associated with a power control type
     """
@@ -146,42 +170,13 @@ class PowerControlDeviceResource(CustomModelResource):
         readonly = ['id']
         always_return_data = True
 
-    def obj_delete(self, request=None, **kwargs):
-        """
-        A ORM-specific implementation of ``obj_delete``.
-
-        Takes optional ``kwargs``, which are used to narrow the query to find
-        the instance.
-        """
-        from tastypie.exceptions import NotFound
-        from django.core.exceptions import ObjectDoesNotExist
-        from django.db.models import signals
-
-        obj = kwargs.pop('_obj', None)
-
-        if not hasattr(obj, 'delete'):
-            try:
-                obj = self.obj_get(request, **kwargs)
-            except ObjectDoesNotExist:
-                raise NotFound("A model instance matching the provided arguments could not be found.")
-
-        # Prevent dangling references from Alert objects which will cause
-        # 500 errors in the UI.
-        obj.mark_deleted()
-
-        # Ugh. This would probably be better in mark_deleted(), but the
-        # only model that relies on this signal is PowerControlDevice.
-        # Preferring to keep this here to avoid potential for unexpected
-        # new behavior elsewhere.
-        signals.post_delete.send(sender = obj.__class__, instance = obj)
-
 
 class PowerControlDeviceOutletForm(ModelForm):
     class Meta:
         model = PowerControlDeviceOutlet
 
 
-class PowerControlDeviceOutletResource(CustomModelResource):
+class PowerControlDeviceOutletResource(DeleteablePowerObjectResource):
     """
     An outlet (individual host power control entity) associated with a
     Power Control Device.

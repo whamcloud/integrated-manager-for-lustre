@@ -52,10 +52,13 @@ def _make_deletable(metaclass, dct):
         # Not implemented as an instance method because
         # we will need to use _base_manager to ensure
         # we can get at the object
+        from django.db.models import signals
 
+        signals.pre_delete.send(sender = self.__class__, instance = self)
         if self.not_deleted:
             self.not_deleted = None
             self.save()
+        signals.post_delete.send(sender = self.__class__, instance = self)
 
         from chroma_core.lib.job import job_log
         from chroma_core.models.alert import AlertState

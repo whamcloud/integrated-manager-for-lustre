@@ -87,6 +87,7 @@
             "agent": "fence_apc",
             "make": "APC",
             "model": "7900",
+            "max_outlets": 8,
             "default_username": "apc",
             "default_password": "apc"
         }

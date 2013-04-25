@@ -8,7 +8,7 @@ import logging
 
 import settings
 from django.db import models
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_delete
 from south.signals import post_migrate
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
@@ -16,13 +16,21 @@ from django.core.exceptions import ValidationError
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
-from chroma_core.models.jobs import AdvertisedJob
+from chroma_core.models.jobs import Job, AdvertisedJob
 from chroma_core.models.utils import DeletableMetaclass
 
-from chroma_core.lib.job import Step
+from chroma_core.lib.job import Step, DependOn
 
 
-class PowerControlType(models.Model):
+class DeletablePowerControlModel(models.Model):
+    __metaclass__ = DeletableMetaclass
+
+    class Meta:
+        abstract = True
+        app_label = 'chroma_core'
+
+
+class PowerControlType(DeletablePowerControlModel):
     agent = models.CharField(null = False, blank = False, max_length = 255,
             choices = [(a, a) for a in settings.SUPPORTED_FENCE_AGENTS],
             help_text = "Fencing agent (e.g. fence_apc, fence_ipmilan, etc.)")
@@ -87,6 +95,11 @@ def create_default_power_types(app, **kwargs):
 post_migrate.connect(create_default_power_types)
 
 
+@receiver(pre_delete, sender = PowerControlType)
+def delete_power_control_units(sender, instance, **kwargs):
+    [d.mark_deleted() for d in instance.instances.all()]
+
+
 class PowerControlDeviceUnavailableAlert(AlertState):
     class Meta:
         app_label = 'chroma_core'
@@ -107,16 +120,7 @@ class PowerControlDeviceUnavailableAlert(AlertState):
             severity = logging.INFO)
 
 
-class DeletablePowerControlDevice(models.Model):
-    # Needed to avoid problems with alerts that refer to deleted PDUs. Sigh.
-    __metaclass__ = DeletableMetaclass
-
-    class Meta:
-        abstract = True
-        app_label = 'chroma_core'
-
-
-class PowerControlDevice(DeletablePowerControlDevice):
+class PowerControlDevice(DeletablePowerControlModel):
     device_type = models.ForeignKey('PowerControlType', related_name = 'instances')
     name = models.CharField(null = False, blank = True, max_length = 50,
             help_text = "Optional human-friendly display name (defaults to address)")
@@ -266,14 +270,12 @@ def unregister_power_device(sender, instance, **kwargs):
     PowerControlRpc().unregister_device(instance.sockaddr)
 
 
-@receiver(post_delete, sender = PowerControlDevice)
+@receiver(pre_delete, sender = PowerControlDevice)
 def delete_outlets(sender, instance, **kwargs):
-    # ON DELETE CASCADE no longer works after the switch to
-    # DeletableMetaclass.
-    [o.delete() for o in instance.outlets.all()]
+    [o.mark_deleted() for o in instance.outlets.all()]
 
 
-class PowerControlDeviceOutlet(models.Model):
+class PowerControlDeviceOutlet(DeletablePowerControlModel):
     device = models.ForeignKey('PowerControlDevice', related_name = 'outlets')
     # http://www.freesoft.org/CIE/RFC/1035/9.htm (max dns name == 255 octets)
     identifier = models.CharField(null = False, blank = False,
@@ -301,16 +303,42 @@ class PowerControlDeviceOutlet(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
+
+        skip_reconfigure = kwargs.pop('skip_reconfigure', False)
+
+        # Grab a copy of the outlet pre-save so that we can determine
+        # which hosts need to have their fencing reconfigured.
+        try:
+            old_self = PowerControlDeviceOutlet.objects.get(pk = self.pk)
+        except PowerControlDeviceOutlet.DoesNotExist:
+            old_self = None
         super(PowerControlDeviceOutlet, self).save(*args, **kwargs)
+
+        if skip_reconfigure:
+            return
+
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+        from django.utils.timezone import now
+        reconfigure = {'needs_fence_reconfiguration': True}
+        if self.host is not None:
+            if all([old_self, old_self.host]) and old_self.host != self.host:
+                JobSchedulerClient.notify(old_self.host, now(), reconfigure)
+            JobSchedulerClient.notify(self.host, now(), reconfigure)
+        elif self.host is None and old_self is not None:
+            # NB: If this is disassociating the last outlet for a host,
+            # then there won't be any reconfiguration done because there
+            # will be zero outlets from that host's perspective in the
+            # job step.
+            if old_self.host is not None:
+                JobSchedulerClient.notify(old_self.host, now(), reconfigure)
 
     def force_host_disassociation(self):
         """
         Override save() signals which could result in undesirable async
         behavior on a forcibly-removed host (don't mess with STONITH, etc.)
         """
-        # Placeholder for now.
         self.host = None
-        self.save()
+        self.save(skip_reconfigure = True)
 
     @property
     def power_state(self):
@@ -435,3 +463,52 @@ class TogglePduOutletStateStep(Step):
     def run(self, args):
         from chroma_core.services.power_control.client import PowerControlClient
         PowerControlClient.toggle_device_outlets(args['toggle_state'], args['outlets'])
+
+
+class ConfigureHostFencingJob(Job):
+    host = models.ForeignKey(ManagedHost)
+    requires_confirmation = False
+    verb = "Configure Host Fencing"
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host_id': host.id}
+
+    def description(self):
+        return "Configure fencing agent on %s" % self.host
+
+    def get_steps(self):
+        return [(ConfigureHostFencingStep, {'host': self.host})]
+
+    def get_deps(self):
+        return DependOn(self.host, 'configured', acceptable_states=self.host.not_state('removed'))
+
+    def on_success(self):
+        self.host.needs_fence_reconfiguration = False
+        self.host.save()
+
+
+class ConfigureHostFencingStep(Step):
+    idempotent = True
+    # Needs database in order to query host outlets
+    database = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        if host.immutable_state or host.outlets.count() < 1:
+            return
+
+        agent_kwargs = []
+        for outlet in host.outlets.select_related().all():
+            agent_kwargs.append({'plug': outlet.identifier,
+                                 'agent': outlet.device.device_type.agent,
+                                 'login': outlet.device.username,
+                                 'password': outlet.device.password,
+                                 'ipaddr': outlet.device.address,
+                                 'ipport': outlet.device.port})
+
+        self.invoke_agent(host, "configure_fencing", {'agents': agent_kwargs})

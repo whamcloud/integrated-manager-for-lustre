@@ -114,7 +114,8 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
         outlets = self.api_get(self.pdu['resource_uri'])['outlets']
         self.assertEqual(len(outlets), self.max_outlets)
 
-    def test_associating_outlets_with_hosts(self):
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    def test_associating_outlets_with_hosts(self, notify):
         synthetic_host(address = 'foo')
         host = self.api_get_list("/api/host/")[0]
 
@@ -127,9 +128,9 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
         outlet = self.api_get(outlet['resource_uri'])
         self.assertEqual(outlet['host'], host['resource_uri'])
 
+        self.assertTrue(notify.called)
+
     def test_deleting_devices_deletes_outlets(self):
-        # This is basically just testing that ON DELETE CASCADE works,
-        # but the question was asked, so this proves it.
         pre_count = len(self.api_get_list("/api/power_control_device_outlet/"))
         self.assertEqual(pre_count, self.max_outlets)
 

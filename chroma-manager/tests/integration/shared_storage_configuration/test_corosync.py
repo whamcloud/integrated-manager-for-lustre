@@ -22,6 +22,9 @@ class TestCorosync(ChromaIntegrationTestCase):
         not deterministic.  If this test fails, disable those portion of this
         test.
         """
+        # Establish baseline for alerts
+        start_alerts = self.get_list("/api/alert/", {'active': True,
+                                                     'dismissed': False})
 
         server_config_1 = config['lustre_servers'][0]
         server_config_2 = config['lustre_servers'][1]
@@ -35,10 +38,10 @@ class TestCorosync(ChromaIntegrationTestCase):
             return all([host['corosync_reported_up'] for host in hosts])
         self.wait_until_true(all_hosts_online)
 
-        # Check there no alerts - since nothing should be OFFLINE yet
+        # Check no new alerts - since nothing should be OFFLINE yet
         alerts = self.get_list("/api/alert/", {'active': True,
                                                'dismissed': False})
-        self.assertListEqual(alerts, [])
+        self.assertListEqual(alerts, start_alerts)
 
         # Signal to the harness that we're expecting a node to be down
         # after this test completes.

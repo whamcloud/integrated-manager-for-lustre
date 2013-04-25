@@ -107,7 +107,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         """
         Create the simplest possible filesystem on a single server.
         """
-        self.add_hosts([config['lustre_servers'][0]['address']])
+        self.add_hosts([self.TEST_SERVERS[0]['address']])
 
         ha_volumes = self.get_usable_volumes()
         self.assertGreaterEqual(len(ha_volumes), 3)
@@ -258,3 +258,58 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 self.assertEqual(node['host_id'], int(expected_primary_host_id))
             elif node['use']:
                 self.assertEqual(node['host_id'], int(expected_secondary_host_id))
+
+    def create_power_control_type(self, body):
+        response = self.chroma_manager.post("/api/power_control_type/",
+                                            body = body)
+        self.assertTrue(response.successful, response.text)
+        return response.json
+
+    def create_power_control_device(self, body):
+        response = self.chroma_manager.post("/api/power_control_device/",
+                                            body = body)
+        self.assertTrue(response.successful, response.text)
+        return response.json
+
+    def create_power_control_device_outlet(self, body):
+        response = self.chroma_manager.post("/api/power_control_device_outlet/",
+                                            body = body)
+        self.assertTrue(response.successful, response.text)
+        return response.json
+
+    def configure_power_control(self):
+        if not config.get('power_control_types', False):
+            return
+
+        logger.info("Configuring power control")
+
+        # clear out existing power stuff (cascading delete)
+        self.api_clear_resource('power_control_type')
+
+        power_types = {}
+        for power_type in config['power_control_types']:
+            obj = self.create_power_control_type(power_type)
+            power_types[obj['name']] = obj
+            logger.debug("Created %s" % obj['resource_uri'])
+
+        power_devices = {}
+        for pdu in config['power_distribution_units']:
+            body = pdu.copy()
+            body['device_type'] = power_types[pdu['type']]['resource_uri']
+            del body['type']
+            obj = self.create_power_control_device(body)
+            power_devices["%s:%s" % (obj.address, obj.port)] = obj
+            logger.debug("Created %s" % obj['resource_uri'])
+
+        for outlet in config['pdu_outlets']:
+            body = {'identifier': outlet['identifier']}
+            body['device'] = power_devices[outlet['device']]['resource_uri']
+            if 'host' in outlet:
+                hosts = self.get_list("/api/host/", args = {'limit': 0})
+                try:
+                    host = [h for h in hosts if h['address'] == outlet['host']][0]
+                except IndexError:
+                    raise RuntimeError("%s not found in /api/host/" % outlet['host'])
+                body['host'] = host['resource_uri']
+            obj = self.create_power_control_device_outlet(body)
+            logger.debug("Created %s" % obj['resource_uri'])

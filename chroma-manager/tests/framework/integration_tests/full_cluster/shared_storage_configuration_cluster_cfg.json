@@ -50,5 +50,43 @@
             "distro": "el6",
             "lustre_client_version": "2.1.4"
         }
-    }
+    },
+    "power_control_types": [
+        {
+            "agent": "fence_virsh",
+            "make": "KVM",
+            "model": "Virtual PDU",
+            "default_username": "root",
+            "default_password": "lustre"
+        }
+    ],
+    "power_distribution_units": [
+        {
+            "type": "fence_virsh KVM Virtual PDU",
+            "address": "VM_HOST_IP",
+            "port": "22"
+        }
+    ],
+    "pdu_outlets": [
+        {
+            "pdu": "VM_HOST_IP:22",
+            "identifier": "LUSTRE_SERVER_1",
+            "host": "LUSTRE_SERVER_1"
+        },
+        {
+            "pdu": "VM_HOST_IP:22",
+            "identifier": "LUSTRE_SERVER_2",
+            "host": "LUSTRE_SERVER_2"
+        },
+        {
+            "pdu": "VM_HOST_IP:22",
+            "identifier": "LUSTRE_SERVER_3",
+            "host": "LUSTRE_SERVER_3"
+        },
+        {
+            "pdu": "VM_HOST_IP:22",
+            "identifier": "LUSTRE_SERVER_4",
+            "host": "LUSTRE_SERVER_4"
+        }
+    ]
 }

@@ -32,7 +32,7 @@ import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
-    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode
+    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -621,6 +621,11 @@ class JobScheduler(object):
             if 'ha_cluster_peers' in updated_attrs:
                 AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
 
+            if changed_item.needs_fence_reconfiguration:
+                job = ConfigureHostFencingJob(host = changed_item)
+                command = Command.objects.create(message = "Configuring host fencing")
+                CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
+
         if isinstance(changed_item, ManagedTarget):
             # See if any MGS conf params need applying
             if issubclass(changed_item.downcast_class, FilesystemMember):
@@ -840,8 +845,8 @@ class JobScheduler(object):
                 self._complete_job(job, errored, cancelled)
 
             with transaction.commit_on_success():
-                self._run_next()
                 self._drain_notification_buffer()
+                self._run_next()
 
     @transaction.commit_on_success
     def create_host_ssh(self, address, root_pw=None, pkey=None, pkey_pw=None):

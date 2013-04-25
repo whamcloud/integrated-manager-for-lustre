@@ -24,7 +24,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
         """
         self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
-        self.remote_operations.clear_ha()
+        self.remote_operations.clear_ha(self.TEST_SERVERS)
 
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:

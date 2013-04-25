@@ -111,6 +111,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # Recursive relationship to keep track of corosync cluster peers
     ha_cluster_peers = models.ManyToManyField('self', null = True, blank = True, help_text = "List of peers in this host's HA cluster")
 
+    needs_fence_reconfiguration = models.BooleanField(default = False,
+            help_text = "Indicates that the host's fencing configuration should be updated")
+
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
@@ -414,6 +417,7 @@ class ConfigureCorosyncStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
+
         if not host.immutable_state:
             self.invoke_agent(host, "configure_corosync")
 
@@ -574,6 +578,8 @@ class SetupHostJob(StateChangeJob):
     def get_steps(self):
         return [(ConfigureNTPStep, {'host': self.managed_host}),
                 (ConfigureRsyslogStep, {'host': self.managed_host}),
+                (ConfigureCorosyncStep, {'host': self.managed_host}),
+                (ConfigurePacemakerStep, {'host': self.managed_host}),
                 (LearnDevicesStep, {'host': self.managed_host})]
 
     class Meta:
@@ -807,6 +813,8 @@ class RemoveHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(UnconfigureNTPStep, {'host': self.host}),
+                (UnconfigurePacemakerStep, {'host': self.host}),
+                (UnconfigureCorosyncStep, {'host': self.host}),
                 (UnconfigureRsyslogStep, {'host': self.host}),
                 (RemoveServerConfStep, {'host': self.host}),
                 (DeleteHostStep, {'host': self.host, 'force': False})]

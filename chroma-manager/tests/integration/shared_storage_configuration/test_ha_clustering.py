@@ -40,6 +40,8 @@ class TestHaClusters(ChromaHaTestCase):
         # analysis library to verify its own results.
         clusters = [[h['fqdn'] for h in c['peers']]
                         for c in self.get_list("/api/ha_cluster/")]
+        self.assertGreaterEqual(len(clusters), 2)
+
         for i, cluster in enumerate(clusters):
             for peer in cluster:
                 for j, other_cluster in enumerate(clusters):
@@ -58,6 +60,8 @@ class TestHaClusterVolumes(ChromaHaTestCase):
         # Make sure that we can't accidentally or otherwise set up
         # a primary/failover relationship across two HA clusters.
         clusters = self.get_list("/api/ha_cluster/")
+        self.assertGreaterEqual(len(clusters), 2)
+
         cluster_0_host = clusters[0]['peers'][0]
         cluster_1_host = clusters[1]['peers'][0]
         test_volume = self.get_list("/api/volume/")[0]
@@ -88,6 +92,7 @@ class TestHaClusterVolumes(ChromaHaTestCase):
         # (can't fail between different corosync clusters!).
         clusters = [[h['resource_uri'] for h in c['peers']]
                         for c in self.get_list("/api/ha_cluster/")]
+        self.assertGreaterEqual(len(clusters), 2)
 
         ha_volumes = set()
         ha_volume_cluster_hosts = defaultdict(list)

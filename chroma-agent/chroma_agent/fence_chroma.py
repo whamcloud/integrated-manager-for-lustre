@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
@@ -6,44 +6,83 @@
 
 
 import sys
-import chroma_agent.fence_agent
-from chroma_agent.shell import try_run, run
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
+from chroma_agent.action_plugins import manage_node
+from chroma_agent.lib.pacemaker import PacemakerConfig
 
 
-# flag to set whether we want to list a node that is off
-print_if_plug_off = False
+p_cfg = PacemakerConfig()
 
 
-def print_node_status(node, fence_agent):
-    plug_status = "off"
-    agent = getattr(chroma_agent.fence_agent, fence_agent)
-    plug_status = agent(node).plug_status()
-    if plug_status == "on" or (print_if_plug_off and plug_status == "off"):
-        print "%s junk %s" % (node, plug_status)
+def list_fenceable_nodes():
+    for node in p_cfg.fenceable_nodes:
+        print "%s," % node.name
 
 
-def main():
-    nodename = ""
-    for line in sys.stdin.readlines():
-        line = line.strip()
-        (name, value) = line.split("=", 1)
-        if name == "option":
-            option = value
-        elif name == "nodename":
-            nodename = value
+def stdin_to_args(stdin_lines=None):
+    if not stdin_lines:
+        stdin_lines = [line.strip() for line in sys.stdin.readlines()]
 
-    if option == "metadata":
+    args = []
+    for line in stdin_lines:
+        try:
+            arg, value = line.split("=")
+        except ValueError:
+            raise RuntimeError("Bad input line: %s" % line)
+
+        args.append("--%s" % arg)
+        args.append(value)
+
+    return args
+
+
+def main(args=None):
+    epilog = """
+With no command line argument, arguments are read from standard input.
+Arguments read from standard input take the form of:
+
+    arg1=value1
+    arg2=value2
+
+  option                Action to perform (off, on, reboot, metadata, monitor, list)
+  nodename              Name of node on which to perform action
+  port                  Optional port parameter, aliases to nodename
+"""
+
+    parser = ArgumentParser(description="Chroma Fence Agent",
+                            formatter_class=RawDescriptionHelpFormatter,
+                            epilog=epilog)
+
+    parser.add_argument("-o", "--option", choices=["off", "on", "reboot", "metadata", "list", "monitor"])
+    parser.add_argument("-H", "--nodename", help="Name of node on which to perform action")
+    parser.add_argument("-n", "--port", help="Optional port parameter, aliases to nodename")
+    ns = parser.parse_args(args)
+
+    if not ns.option and not ns.nodename:
+        ns = parser.parse_args(stdin_to_args())
+
+    # This all bears some explanation. When pacemaker invokes stonith, it
+    # sends parameters via stdin rather than via command-line options. It
+    # always sends nodename, hence the preference for its use.
+    if ns.nodename and ns.port and not ns.nodename == ns.port:
+        sys.stderr.write("Both nodename and port were supplied, but do not match!\n")
+        sys.exit(1)
+    elif ns.port and not ns.nodename:
+        ns.nodename = ns.port
+
+    if ns.option == "metadata":
         print """
 <?xml version="1.0" ?>
 <resource-agent name="fence_chroma" shortdesc="Fence agent for Intel Manager for Lustre Storage Servers">
 <longdesc>fence_chroma is an I/O Fencing agent which can be used with Intel Manager for Lustre Storage Servers.</longdesc>
 <parameters>
-    <parameter name="port">
+    <parameter name="nodename">
         <getopt mixed="-H" />
         <content type="string" />
         <shortdesc lang="en">Storage Server (machine name) to fence</shortdesc>
     </parameter>
-    <parameter name="action">
+    <parameter name="option">
         <getopt mixed="-o" />
         <content type="string" default="reboot" />
         <shortdesc lang="en">Fencing action ([reboot], metadata, list)</shortdesc>
@@ -53,23 +92,20 @@ def main():
     <action name="reboot" />
     <action name="metadata" />
     <action name="list" />
+    <action name="monitor" />
 </actions>
 </resource-agent>
 """
-    elif option == "reboot":
-        try_run(['chroma-agent', 'stonith', '--node', nodename])
-    elif option == "list":
-        rc, stdout, stderr = run(["crm", "node", "list"])
-        node = None
-        fence_agent = None
-        for line in stdout.split('\n'):
-            if line:
-                if line[0] != '\t':
-                    if node:
-                        print_node_status(node, fence_agent)
-                    node, status = line.split(": ")
-                else:
-                    attribute, value = line.lstrip().split(": ")
-                    if attribute == "fence_agent":
-                        fence_agent = value
-        print_node_status(node, fence_agent)
+    elif ns.option in ["on", "off"]:
+        node = p_cfg.get_node(ns.nodename)
+        getattr(node, "fence_%s" % ns.option)()
+    elif ns.option == "reboot":
+        manage_node.stonith(ns.nodename)
+    elif ns.option == "monitor":
+        # TODO: What does "monitor" mean for this agent? We have to have it
+        # to keep pacemaker happy, but longer-term it might make sense to
+        # make this a meta-monitor, in that it invokes the monitor option for
+        # all sub-agents and aggregates the results.
+        sys.exit(0)
+    elif ns.option == "list":
+        list_fenceable_nodes()

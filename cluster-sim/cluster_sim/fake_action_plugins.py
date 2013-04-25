@@ -101,6 +101,10 @@ class FakeActionPlugins():
                 return
             elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker']:
                 return
+            elif cmd in ['configure_fencing', 'unconfigure_fencing']:
+                return
+            elif cmd == "host_corosync_config":
+                return {}
             else:
                 try:
                     fn = getattr(self._server, cmd)

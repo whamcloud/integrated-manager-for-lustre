@@ -32,6 +32,11 @@ class ApiTestCase(UtilityTestCase):
     # actually need PDUs.
     TESTS_NEED_POWER_CONTROL = False
 
+    # By default, work with all configured servers. Tests which will
+    # only ever be using a subset of servers can override this to
+    # gain a slight decrease in running time.
+    TEST_SERVERS = config['lustre_servers']
+
     _chroma_manager = None
 
     def setUp(self):
@@ -67,13 +72,13 @@ class ApiTestCase(UtilityTestCase):
             self.remote_operations = RealRemoteOperations(self)
 
         # Ensure that all servers are up and available
-        for server in config['lustre_servers']:
+        for server in self.TEST_SERVERS:
             logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
             self.remote_operations.await_server_boot(server['fqdn'], restart = True)
             logger.info("%s is running" % server['fqdn'])
 
         # Erase all volumes
-        for server in config['lustre_servers']:
+        for server in self.TEST_SERVERS:
             if not 'device_paths' in server:
                 # Working around the the 'existing_filesystem_configuration' tests
                 # which helpfully have their own different config file which doesn't
@@ -92,7 +97,7 @@ class ApiTestCase(UtilityTestCase):
             self.wait_until_true(self.api_contactable)
             self.remote_operations.unmount_clients()
             self.api_force_clear()
-            self.remote_operations.clear_ha()
+            self.remote_operations.clear_ha(self.TEST_SERVERS)
 
         self.wait_until_true(self.supervisor_controlled_processes_running)
         self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
@@ -126,7 +131,7 @@ class ApiTestCase(UtilityTestCase):
     def _check_for_down_servers(self):
         # Check that all servers are up and available after the test
         down_nodes = []
-        for server in config['lustre_servers']:
+        for server in self.TEST_SERVERS:
             if not self.remote_operations.host_contactable(server['fqdn']):
                 down_nodes.append(server['fqdn'])
 
