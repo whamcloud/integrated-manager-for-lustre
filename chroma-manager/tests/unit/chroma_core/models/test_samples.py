@@ -38,8 +38,10 @@ class TestModels(TestCase):
     def setUp(self):
         Stats.delete(id)
         connection.use_debug_cursor = True
+        connection.cursor().execute('SET enable_seqscan = off')
 
     def tearDown(self):
+        connection.cursor().execute('SET enable_seqscan = on')
         connection.use_debug_cursor = False
         Stats.delete(id)
 
