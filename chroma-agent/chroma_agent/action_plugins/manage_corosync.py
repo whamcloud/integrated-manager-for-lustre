@@ -4,53 +4,21 @@
 # ========================================================
 
 
-#import socket
-#from chroma_agent import shell
-#
-
-# FIXME: this appear to be unused
-#def verify_corosync():
-#    """Verifies the state of corosync"""
-#
-#    # Is corosync accessible?
-#    rc, stdout, stderr = shell.run("crm status", shell=True)
-#    if rc != 0:
-#        return {'accessible': False,
-#                'cluster_member': True,
-#                'targets_exist': False
-#               }
-#
-#    # Is this node a member of a cluster?
-#    hostname = socket.gethostname()
-#    rc, stdout, stderr = shell.run("crm node show %s" % hostname,
-#                                       shell=True)
-#    if rc != 0 or not "%s: normal" % hostname in stdout:
-#        return {'accessible': True,
-#                'cluster_member': False,
-#                'targets_exist': False
-#               }
-#
-#    # now make sure there are no resources using the Target ocf
-#    rc, stdout, stderr = shell.run("crm resource list", shell=True)
-#    for line in stdout.split('\n'):
-#        if "ocf::chroma:Target" in line:
-#            return {'accessible': True,
-#                    'cluster_member': True,
-#                    'targets_exist': True
-#                   }
-#
 """
 Corosync verification
 """
 
+import re
 import socket
 from netaddr import IPNetwork, IPAddress
 from netaddr.core import AddrFormatError
 from time import sleep
+
 from chroma_agent import shell
 from chroma_agent.store import AgentStore
 from chroma_agent import node_admin
 from chroma_agent.lib.pacemaker import PacemakerConfig
+from chroma_agent.log import console_log
 
 from jinja2 import Environment, PackageLoader
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
@@ -69,12 +37,17 @@ class CorosyncRingInterface(object):
         from urlparse import urlparse
         server_url = AgentStore.get_server_conf()['url']
         manager_address = socket.gethostbyname(urlparse(server_url).hostname)
-        rc, out, err = shell.run(['/sbin/ip', 'route', 'get', manager_address])
-        manager_dev = out.split()[2]
+        out = shell.try_run(['/sbin/ip', 'route', 'get', manager_address])
+        match = re.search(r'dev\s+(\w+)', out)
+        if match:
+            manager_dev = match.groups()[0]
+        else:
+            raise RuntimeError("Unable to find ring0 dev in %s" % out)
+        console_log.info("Chose %s for corosync ring0" % manager_dev)
         return cls(manager_dev)
 
     @classmethod
-    def ring1(cls, device, ipaddr, netmask, mcast_port):
+    def ring1(cls, device, ipaddr, subnet, mcast_port):
         # ring1 is auto-configured on the first-available unconfigured
         # ethernet interface that has physical link
         ring0 = cls.ring0()
@@ -82,8 +55,9 @@ class CorosyncRingInterface(object):
             raise RuntimeError("Network on %s cannot be bigger than /9 (%s)" %
                                (ring0.name, ring0.ipv4_prefixlen))
         ring1_address = IPAddress(ipaddr)
-        prefixlen = IPNetwork("0.0.0.0/%s" % netmask).prefixlen
+        prefixlen = IPNetwork(subnet).prefixlen
 
+        console_log.debug("Creating ring1 device for %s" % device)
         iface = cls(device, ringnumber = 1)
         iface.set_address("%s/%s" % (ring1_address, prefixlen))
         iface.mcastport = int(mcast_port)
@@ -91,7 +65,8 @@ class CorosyncRingInterface(object):
         return iface
 
     def __init__(self, name, ringnumber=0):
-        self.name = name
+        # ethtool does NOT like unicode
+        self.name = str(name)
         self.refresh()
         self.ringnumber = ringnumber
         self.ring1_peers = []
@@ -116,7 +91,7 @@ class CorosyncRingInterface(object):
         try:
             self._network = IPNetwork("%s/%s" % (self._info.ipv4_address,
                                                  self._info.ipv4_netmask))
-        except AddrFormatError:
+        except (UnboundLocalError, AddrFormatError):
             pass
 
     @property
@@ -168,21 +143,24 @@ class AutoDetectedInterface(CorosyncRingInterface):
         return eth_interfaces
 
     @classmethod
-    def detect_ring1(cls, ring0):
+    def generate_ring1_network_config(cls, ring0):
         # find a good place for the ring1 network
-        ring1_subnet = cls.find_subnet(ring0.ipv4_network,
-                                       ring0.ipv4_prefixlen)
-        ring1_address = str(IPAddress((int(IPAddress(ring0.ipv4_hostmask)) &
+        subnet = cls.find_subnet(ring0.ipv4_network, ring0.ipv4_prefixlen)
+        address = str(IPAddress((int(IPAddress(ring0.ipv4_hostmask)) &
                                        int(IPAddress(ring0.ipv4_address))) |
-                                      int(ring1_subnet.ip)))
+                                      int(subnet.ip)))
+        console_log.info("Chose %s/%d for ring1 address" % (address, subnet.prefixlen))
+        return address, str(subnet.prefixlen)
 
+    @classmethod
+    def detect_ring1(cls, ring0, ring1_address, ring1_subnet):
         all_interfaces = AutoDetectedInterface.all_interfaces()
         # Find potential ring1 interface auto-configure candidates
         if ring1_address not in [i.ipv4_address for i in all_interfaces]:
             for iface in all_interfaces:
                 if not iface.ipv4_address and iface.has_link:
-                    iface.set_address("%s/%s" % (ring1_address,
-                                                 ring0.ipv4_prefixlen))
+                    console_log.info("Chose %s for corosync ring1" % iface.name)
+                    iface.set_address("%s/%s" % (ring1_address, ring0.ipv4_prefixlen))
                     break
 
         for iface in all_interfaces:
@@ -196,6 +174,7 @@ class AutoDetectedInterface(CorosyncRingInterface):
             # the time searching after deciding one is not being used
             # already because that delays the discovery of us by our peer
             iface.mcastport = iface.find_unused_port(ring0)
+            console_log.info("Proposing %d for multicast port" % iface.mcastport)
 
             # Now see if one is being used on ring1
             # Note: we randomize the timeout to reduce races
@@ -206,6 +185,7 @@ class AutoDetectedInterface(CorosyncRingInterface):
             #      uses that
             from random import randint
             iface.discover_existing_mcastport(timeout = randint(5, 20))
+            console_log.info("Decided on %d for multicast port" % iface.mcastport)
 
             return iface
 
@@ -242,6 +222,7 @@ class AutoDetectedInterface(CorosyncRingInterface):
 
         def recv_packets(header, data):
             tgt_port = self.get_dport_from_packet(data)
+            console_log.debug("Saw traffic on mcast port %d (%s)" % (tgt_port, iface.name))
 
             try:
                 ports.remove(tgt_port)
@@ -264,13 +245,16 @@ class AutoDetectedInterface(CorosyncRingInterface):
         dest_addr = self.mcastaddr
 
         self.subscribe_multicast(self)
+        console_log.debug("Starting packet capture on %s:%s" % (interface, dest_addr))
         cap = self.start_cap(interface, timeout, "host %s and udp" % dest_addr)
 
         self.num_recvd = 0
 
         def recv_packets(header, data):
             self.mcastport = self.get_dport_from_packet(data)
+            console_log.debug("Sniffed multicast traffic on %d" % self.mcastport)
             self.num_recvd = self.num_recvd + 1
+            console_log.debug("Received: %d" % self.num_recvd)
 
         start = time.time()
         while self.num_recvd < 1 and time.time() - start < timeout:
@@ -280,6 +264,8 @@ class AutoDetectedInterface(CorosyncRingInterface):
                 raise RuntimeError("Error reading from the network: %s" %
                                    str(e))
 
+        console_log.debug("Timed out after %d seconds, sniffed: %d" % (timeout, self.num_recvd))
+
     def subscribe_multicast(self, iface):
         # subscribe to the mcast addr
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -288,6 +274,7 @@ class AutoDetectedInterface(CorosyncRingInterface):
         mreq = socket.inet_aton(iface.mcastaddr) + \
                socket.inet_aton(iface.ipv4_address)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        return sock
 
     def start_cap(self, interface, timeout, filter):
         import pcapy
@@ -345,11 +332,15 @@ def _render_config_file(path, config):
 def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = None, mcast_port = None):
     conf_template = env.get_template('corosync.conf')
     ring0 = CorosyncRingInterface.ring0()
-    if ring1_iface:
+    if not ring1_ipaddr and not ring1_netmask:
+        ring1_ipaddr, ring1_subnet = AutoDetectedInterface.generate_ring1_network_config(ring0)
+    elif ring1_netmask:
+        ring1_subnet = str(IPNetwork("0.0.0.0/%s" % ring1_netmask).prefixlen)
+    if ring1_iface and ring1_ipaddr and ring1_subnet and mcast_port:
         ring1 = CorosyncRingInterface.ring1(ring1_iface, ring1_ipaddr,
-                                            ring1_netmask, mcast_port)
+                                            ring1_subnet, mcast_port)
     else:
-        ring1 = AutoDetectedInterface.detect_ring1(ring0)
+        ring1 = AutoDetectedInterface.detect_ring1(ring0, ring1_ipaddr, ring1_subnet)
 
     if not ring1:
         raise RuntimeError("Failed to detect ring1 interface")
@@ -537,7 +528,34 @@ def cibadmin(command_args):
 
     return rc, stdout, stderr
 
+
+def host_corosync_config():
+    """
+    If desired, automatic corosync configuration can be bypassed by creating
+    an /etc/chroma.cfg file containing parameters for the configure_corosync
+    function.
+
+    Example 1: Allow automatic assignment of ring1 network parameters
+    [corosync]
+    mcast_port = 4400
+    ring1_iface = eth1
+
+    Example 2: Specify all parameters to completely bypass automatic config
+    [corosync]
+    mcast_port = 4400
+    ring1_iface = eth1
+    ring1_ipaddr = 10.42.42.10
+    ring1_netmask = 255.255.0.0
+    """
+    from ConfigParser import SafeConfigParser
+
+    parser = SafeConfigParser()
+    parser.add_section('corosync')
+    parser.read("/etc/chroma.cfg")
+    return dict(parser.items('corosync'))
+
+
 ACTIONS = [configure_corosync, unconfigure_corosync,
            configure_pacemaker, unconfigure_pacemaker,
            configure_fencing, unconfigure_fencing,
-           delete_node]
+           host_corosync_config, delete_node]

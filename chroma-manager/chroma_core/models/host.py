@@ -419,7 +419,9 @@ class ConfigureCorosyncStep(Step):
         host = kwargs['host']
 
         if not host.immutable_state:
-            self.invoke_agent(host, "configure_corosync")
+            # Empty dict if no host-side config.
+            config = self.invoke_agent(host, "host_corosync_config")
+            self.invoke_agent(host, "configure_corosync", config)
 
 
 class ConfigureRsyslogStep(Step):

@@ -27,22 +27,38 @@
         {
             "distro": "el6",
             "root_password": "lustre",
-            "repos": ["chroma"]
+            "repos": ["chroma"],
+            "corosync_config": {
+                "ring1_iface": "eth1",
+                "mcast_port": "4242"
+            }
         },
        {
             "distro": "el6",
             "root_password": "lustre",
-            "repos": ["chroma"]
+            "repos": ["chroma"],
+            "corosync_config": {
+                "ring1_iface": "eth1",
+                "mcast_port": "4242"
+            }
         },
        {
             "distro": "el6",
             "root_password": "lustre",
-            "repos": ["chroma"]
+            "repos": ["chroma"],
+            "corosync_config": {
+                "ring1_iface": "eth1",
+                "mcast_port": "4244"
+            }
         },
        {
             "distro": "el6",
             "root_password": "lustre",
-            "repos": ["chroma"]
+            "repos": ["chroma"],
+            "corosync_config": {
+                "ring1_iface": "eth1",
+                "mcast_port": "4244"
+            }
         }
     ],
     "lustre_clients": {

@@ -128,6 +128,9 @@ class SimulatorRemoteOperations(RemoteOperations):
     def unmount_clients(self):
         self._simulator.unmount_lustre_clients()
 
+    def write_config(self, *args):
+        pass
+
     def clear_ha(self, *args):
         self._simulator.clear_clusters()
 
@@ -141,7 +144,7 @@ class RealRemoteOperations(RemoteOperations):
 
     # TODO: reconcile this with the one in UtilityTestCase, ideally all remote
     # operations would flow through here to avoid rogue SSH calls
-    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT):
+    def _ssh_address(self, address, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
         """
         Executes a command on a remote server over ssh.
 
@@ -158,6 +161,11 @@ class RealRemoteOperations(RemoteOperations):
         channel = transport.open_session()
         channel.settimeout(timeout)
         channel.exec_command(command)
+        if buffer:
+            stdin = channel.makefile('wb')
+            stdin.write(buffer)
+            stdin.flush()
+            stdin.channel.shutdown_write()
         stdout = channel.makefile('rb')
         stderr = channel.makefile_stderr()
         exit_status = channel.recv_exit_status()
@@ -480,6 +488,33 @@ class RealRemoteOperations(RemoteOperations):
             "crm resource status %s" % target
         )
         return re.search('is running', result.stdout.read())
+
+    def write_config(self, server_list):
+        """
+        Write out /etc/chroma.cfg on the test servers.
+        """
+        from ConfigParser import SafeConfigParser
+        from StringIO import StringIO
+
+        sections = ['corosync']
+
+        for server in server_list:
+            config = SafeConfigParser()
+            for section in sections:
+                config_key = "%s_config" % section
+                if config_key in server:
+                    config.add_section(section)
+                    for key, val in server[config_key].items():
+                        config.set(section, key, val)
+            cfg_str = StringIO()
+            config.write(cfg_str)
+
+            if len(cfg_str.getvalue()) > 0:
+                self._ssh_address(
+                    server['address'],
+                    'cat > /etc/chroma.cfg',
+                    buffer = cfg_str.getvalue()
+                )
 
     def clear_ha(self, server_list):
         """

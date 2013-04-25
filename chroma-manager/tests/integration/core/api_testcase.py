@@ -99,6 +99,8 @@ class ApiTestCase(UtilityTestCase):
             self.api_force_clear()
             self.remote_operations.clear_ha(self.TEST_SERVERS)
 
+        self.remote_operations.write_config(self.TEST_SERVERS)
+
         self.wait_until_true(self.supervisor_controlled_processes_running)
         self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
 
