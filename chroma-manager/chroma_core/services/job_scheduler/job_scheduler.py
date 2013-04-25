@@ -927,27 +927,11 @@ class JobScheduler(object):
             reverse_resolve = False
             reverse_ping = False
 
-        # Don't depend on ping to try invoking agent, could well have
-        # SSH but no ping
-        agent = False
-        if resolve:
-            try:
-                agent_ssh.invoke('test', auth_args=auth_args)
-                agent = True
-                auth = True
-            except (AuthenticationException, SSHException):
-                #  No auth methods available, or wrong creds
-                auth = False
-            except Exception, e:
-                log.error("Error trying to invoke agent on '%s': %s" % (resolved_address, e))
-                agent = False
-
         return {
             'address': address,
             'resolve': resolve,
             'ping': ping,
             'auth': auth,
-            'agent': agent,
             'reverse_resolve': reverse_resolve,
             'reverse_ping': reverse_ping
         }

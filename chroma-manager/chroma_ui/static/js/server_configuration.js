@@ -136,7 +136,6 @@ function add_host_dialog() {
         resolve: 'add_host_resolve',
         ping: 'add_host_ping',
         auth: 'add_host_auth',
-        agent: 'add_host_agent',
         reverse_ping: 'add_host_reverse_ping',
         reverse_resolve: 'add_host_reverse_resolve'};
 
