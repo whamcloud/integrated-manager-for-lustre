@@ -27,7 +27,7 @@
                 "/dev/disk/by-id/scsi-1IET_00040001",
                 "/dev/disk/by-id/scsi-1IET_00070001",
                 "/dev/disk/by-id/scsi-1IET_00080001"
-            ],
+            ]
         },
         {
             "nodename": "kp-ss-storage-appliance-2",
@@ -40,7 +40,7 @@
                 "/dev/disk/by-id/scsi-1IET_00040001",
                 "/dev/disk/by-id/scsi-1IET_00070001",
                 "/dev/disk/by-id/scsi-1IET_00080001"
-            ],
+            ]
         }
     ],
     "device_path_to_label_map" : {
@@ -50,5 +50,5 @@
         "/dev/disk/by-id/scsi-1IET_00040001": "1IET 00040001",
         "/dev/disk/by-id/scsi-1IET_00070001": "1IET 00070001",
         "/dev/disk/by-id/scsi-1IET_00080001": "1IET 00080001"
-    },
+    }
 }
