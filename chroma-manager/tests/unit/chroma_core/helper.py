@@ -115,7 +115,7 @@ create_filesystem_patch = mock.patch("chroma_core.services.job_scheduler.job_sch
                                      new = mock.Mock(side_effect = _passthrough_create_filesystem), create = True)
 
 
-def _synthetic_create_host_ssh(address, profile):
+def _synthetic_create_host_ssh(address, profile, root_pw=None, pkey=None, pkey_pw=None):
     host_info = MockAgentRpc.mock_servers[address]
     host = synthetic_host(
         address,
@@ -132,7 +132,7 @@ def _synthetic_create_host_ssh(address, profile):
 
 create_host_ssh_patch = mock.patch(
     "chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.create_host_ssh",
-    new=mock.Mock(side_effect=_synthetic_create_host_ssh), create=True)
+    new=mock.Mock(side_effect=_synthetic_create_host_ssh))
 
 
 def freshen(obj):
