@@ -121,6 +121,8 @@ __________
         return baz + 2;
       })
 
+    |
+
   **Prefer storing methods on a prototype over storing them on an object literal or instance object:** If you think a class is going to be instantiated more than once, you should store it's instance methods on it's prototype.
   This way they are stored once and copies are not created when the object is.
 
@@ -143,3 +145,18 @@ __________
       Bar.prototype.getName = function getName() {
         return this.name;
       }
+
+    |
+
+  **Prefer string formatting over concatenation**
+
+    **Don't do:** ::
+
+      var foo = 'foo';
+      var fooBar = foo + 'bar';
+
+    **Do:** ::
+
+      var fooBar = '%sbar'.sprintf(foo);
+
+    |
