@@ -154,13 +154,13 @@ var ValidatedForm = function() {
 
   function save(element, api_fn, url, obj, success, error, form_params) {
 
-      if(form_params == undefined) {
-          element.find('input').each(function() {
-              obj[$(this).attr('name')] = $(this).val()
-          });
-      } else {
-          $.extend(obj, form_params);
-      }
+    if (_.isObject(form_params)) {
+      $.extend(obj, form_params);
+    } else {
+      element.find('input').each(function() {
+        obj[$(this).attr('name')] = $(this).val();
+      });
+    }
 
     return api_fn(url, obj,
       success_callback = function(data) {

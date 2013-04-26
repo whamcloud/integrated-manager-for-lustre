@@ -1,7 +1,17 @@
-
-
 div.add_host_wizard {
-    padding: 12px;
+    max-width: 800px;
+    min-width: 300px;
+    padding: 3px;
+    margin: 6px 0px;
+}
+
+div.add_host_wizard li a {
+    outline: none;
+}
+
+div.add_host_wizard .button-container {
+    text-align: right;
+    margin-top: 15px;
 }
 
 td.success {
@@ -16,4 +26,54 @@ td.failure {
     background-repeat: no-repeat;
     width: 16px;
     height: 16px;
+}
+
+div.add_host_https {
+    max-width: 400px;
+}
+
+div.add_host_https p, div.add_host_https_command p {
+    margin-bottom: 10px;
+}
+
+div.add_host_https_command pre {
+    overflow: auto;
+}
+
+div.add_host_prompt {
+    width: 400px;
+}
+
+/* Slider widgets for SSHless creation */
+div.add_host_https .slider-widget {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #D3D3D3
+}
+
+div.add_host_https .slider-widget-container {
+    position: relative;
+    padding-bottom: 14px;
+}
+
+div.add_host_https .slider-widget-container .slider-legend {
+    position: absolute;
+    top: 16px;
+    font-size: 11px;
+    color: #AAA;
+}
+
+div.add_host_https .slider-widget-container .slider-legend:first-child {
+    left: 0px;
+}
+
+div.add_host_https .slider-widget-container .slider-legend:nth-child(2) {
+    right: 0px;
+}
+
+div.add_host_https .slider-widget-container .slider-legend:last-child {
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+    color: #000;
 }

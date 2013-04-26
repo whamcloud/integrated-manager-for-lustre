@@ -15,7 +15,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         """Test that we can cancel at token using PATCH"""
         response = self.api_client.post(self.RESOURCE_PATH)
         self.assertHttpCreated(response)
-        token_uri = response['Location']
+        token_uri = self.deserialize(response)['resource_uri']
         response = self.api_client.patch(token_uri, data = {'cancelled': True})
         self.assertHttpAccepted(response)
 
@@ -32,9 +32,8 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         """Test that attributes which should be readonly reject PATCHes"""
         response = self.api_client.post(self.RESOURCE_PATH)
         self.assertHttpCreated(response)
-        token_uri = response['Location']
-
-        original_object = self.deserialize(self.api_client.get(token_uri))
+        original_object = self.deserialize(response)
+        token_uri = original_object['resource_uri']
 
         readonly_test_values = {
             'secret': "X" * SECRET_LENGTH * 2,
@@ -69,9 +68,6 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         for attr, test_val in creation_allowed_values.items():
             response = self.api_client.post(self.RESOURCE_PATH, data = {attr: test_val})
             self.assertHttpCreated(response)
-            uri = response['Location']
-            response = self.api_client.get(uri)
-            self.assertHttpOK(response)
             created_obj = self.deserialize(response)
             self.assertEqual(created_obj[attr], test_val)
 
@@ -128,7 +124,7 @@ class TestTokenAuthorization(ChromaApiTestCase):
 
         response = self.api_client.post(self.RESOURCE_PATH)
         self.assertHttpCreated(response)
-        token_uri = response['Location']
+        token_uri = self.deserialize(response)['resource_uri']
 
         expected_rows = {
             'token_user': 0,
@@ -160,7 +156,7 @@ class TestTokenAuthorization(ChromaApiTestCase):
         for username, allowed in users_allowed.items():
             # Create using the default test client, before trying each
             # of the specific user clients for PATCHing
-            token_uri = self.api_client.post(self.RESOURCE_PATH)['Location']
+            token_uri = self.deserialize(self.api_client.post(self.RESOURCE_PATH))['resource_uri']
 
             patch_response = self.clients[username].patch(token_uri, data = {'cancelled': True})
             if allowed:

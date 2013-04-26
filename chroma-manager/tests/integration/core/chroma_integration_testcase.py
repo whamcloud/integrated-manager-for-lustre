@@ -42,10 +42,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     '/api/registration_token/',
                     body = {'credits': 1}
                 )
-
-                self.assertTrue(response.successful)
-                token_uri = response.headers['location']
-                token = self.chroma_manager.get(token_uri).json
+                self.assertTrue(response.successful, response.text)
+                token = response.json
 
                 # Pass our token to the simulator to register a server
                 registration_result = self.simulator.register(fqdn, token['secret'])
