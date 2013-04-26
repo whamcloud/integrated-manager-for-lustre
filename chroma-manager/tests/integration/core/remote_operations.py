@@ -42,6 +42,12 @@ class SimulatorRemoteOperations(RemoteOperations):
         else:
             return False
 
+    def erase_block_device(self, fqdn, path):
+        self._simulator.format_block_device(fqdn, path, None)
+
+    def format_block_device(self, fqdn, path, filesystem_type):
+        self._simulator.format_block_device(fqdn, path, filesystem_type)
+
     def stop_target(self, fqdn, ha_label):
         self._simulator.get_cluster(fqdn).stop(ha_label)
 
@@ -158,7 +164,7 @@ class RealRemoteOperations(RemoteOperations):
             self._test_case.assertEqual(exit_status, expected_return_code, stderr.read())
         return RemoteCommandResult(exit_status, stdout, stderr)
 
-    def _ssh_fqdn(self, fqdn, command, expected_return_code = 0, timeout = TEST_TIMEOUT):
+    def _ssh_fqdn(self, fqdn, command, expected_return_code=0, timeout = TEST_TIMEOUT):
         address = None
         for host in config['lustre_servers']:
             if host['fqdn'] == fqdn:
@@ -167,6 +173,23 @@ class RealRemoteOperations(RemoteOperations):
             raise KeyError(fqdn)
 
         return self._ssh_address(address, command, expected_return_code, timeout)
+
+    def erase_block_device(self, fqdn, path):
+        # Needless to say, we're not bothering to scrub the whole device, just enough
+        # that it doesn't look formatted any more.
+        self._ssh_fqdn(fqdn, "dd if=/dev/zero of={path} bs=4k count=1".format(path=path))
+
+    def format_block_device(self, fqdn, path, filesystem_type):
+        commands = {
+            'ext2': "mkfs.ext2 -F '{path}'".format(path=path),
+            'lustre': "mkfs.lustre --mgs '{path}'".format(path=path)
+        }
+        try:
+            command = commands[filesystem_type]
+        except KeyError:
+            raise RuntimeError("Unknown filesystem type %s (known types are %s)" % (filesystem_type, commands.keys()))
+
+        self._ssh_fqdn(fqdn, command)
 
     def stop_target(self, fqdn, ha_label):
         self._ssh_fqdn(fqdn, "chroma-agent stop_target --ha %s" % ha_label)

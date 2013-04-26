@@ -378,6 +378,28 @@ class TestResourceOperations(ResourceManagerTestCase):
 
         # TODO: try removing resources in an update_scan and check that Volume/VolumeNode are still removed
 
+    def test_occupied_host_lun(self):
+        """
+        Test that when a ScsiDevice is reported with a filesystem on it, the resulting Volume
+        is marked as occupied.
+        """
+
+        FILESYSTEM_TYPE = 'ext2'
+        occupied_dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80="foobar", serial_83=None,
+                                                          size=4096, filesystem_type=FILESYSTEM_TYPE)
+        occupied_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path="/dev/foo",
+                                                           parents=[occupied_dev_resource], host_id=self.host.id)
+
+        resource_manager = ResourceManager()
+
+        resource_manager.session_open(
+            self.scannable_resource_pk, [self.scannable_resource, occupied_dev_resource, occupied_node_resource], 60)
+
+        self.assertEqual(Volume.objects.count(), 1)
+        self.assertEqual(VolumeNode.objects.count(), 1)
+        self.assertEqual(Volume.objects.get().label, occupied_dev_resource.get_label())
+        self.assertEqual(Volume.objects.get().filesystem_type, FILESYSTEM_TYPE)
+
 
 class TestEdgeIndex(ResourceManagerTestCase):
     def test_add_remove(self):

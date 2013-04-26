@@ -237,7 +237,10 @@ class MockAgentRpc(object):
                 # A 'foo' value
                 inode_size = 777
 
-            return {'uuid': uuid.uuid1().__str__(), 'inode_count': 666, 'inode_size': inode_size}
+            return {'uuid': uuid.uuid1().__str__(),
+                    'inode_count': 666,
+                    'inode_size': inode_size,
+                    'filesystem_type': 'ext4'}
         elif cmd == 'stop_target':
             ha_label = args['ha_label']
             target = ManagedTarget.objects.get(ha_label = ha_label)

@@ -38,6 +38,7 @@ class JobTestCase(TestCase):
                 self.assertState(obj, state)
             except obj.__class__.DoesNotExist:
                 pass
+        return command
 
     def set_state_delayed(self, obj_state_pairs):
         """Schedule some jobs without executing them"""
@@ -124,11 +125,12 @@ class JobTestCase(TestCase):
             job_scheduler_queue_handler.on_message(body)
         NotificationQueue.put = mock.Mock(side_effect = job_scheduler_queue_immediate)
 
-        RunJobThread._disable_database = mock.Mock()
+        import chroma_core.services.job_scheduler.job_scheduler
+        chroma_core.services.job_scheduler.job_scheduler._disable_database = mock.Mock()
 
         def _spawn_job(job):
             log.debug("functional spawn job")
-            thread = RunJobThread(self.job_scheduler, job, job.get_steps())
+            thread = RunJobThread(self.job_scheduler.progress, self.job_scheduler._db_quota, job, job.get_steps())
             self.job_scheduler._run_threads[job.id] = thread
             thread._run()
         self.job_scheduler._spawn_job = mock.Mock(side_effect=_spawn_job)

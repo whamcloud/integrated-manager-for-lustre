@@ -525,6 +525,13 @@ class ResourceManager(object):
         logicaldrive_id_to_size = dict([(s['resource_id'],
                                     StorageResourceAttributeSerialized.decode(s['value'])) for s in sizes])
 
+        # Build a dict of filesystem_type for each logicaldrive
+        logicaldrive_id_to_fstype = defaultdict(lambda: None)
+        for attr in StorageResourceAttributeSerialized.objects.filter(
+                resource__id__in = node_to_logicaldrive_id.values(),
+                key = 'filesystem_type').values('resource_id', 'value'):
+            logicaldrive_id_to_fstype[attr['resource_id']] = StorageResourceAttributeSerialized.decode(attr['value'])
+
         existing_volumes = Volume.objects.filter(storage_resource__in = node_to_logicaldrive_id.values())
         logicaldrive_id_to_volume = dict([(v.storage_resource_id, v) for v in existing_volumes])
         logicaldrive_id_handled = set()
@@ -532,8 +539,6 @@ class ResourceManager(object):
         with Volume.delayed as volumes:
             for node_resource, logicaldrive_id in node_to_logicaldrive_id.items():
                 if logicaldrive_id not in logicaldrive_id_to_volume and logicaldrive_id not in logicaldrive_id_handled:
-                    size = logicaldrive_id_to_size[logicaldrive_id]
-
                     # If this logicaldrive has one and only one ancestor which is
                     # also a logicaldrive, then inherit the label from that ancestor
                     ancestors = self._record_find_ancestors(logicaldrive_id, LogicalDrive)
@@ -554,7 +559,8 @@ class ResourceManager(object):
                         continue
 
                     volumes.insert(dict(
-                        size = size,
+                        size = logicaldrive_id_to_size[logicaldrive_id],
+                        filesystem_type = logicaldrive_id_to_fstype.get(logicaldrive_id, None),
                         storage_resource_id = logicaldrive_id,
                         not_deleted = True,
                         label = label

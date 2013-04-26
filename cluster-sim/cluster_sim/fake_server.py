@@ -455,6 +455,10 @@ class FakeServer(Persisted):
             target = self._devices.get_target_by_path(self.fqdn, device)
             self._devices.mgt_writeconf(target['mgsnode'])
 
+    def check_block_device(self, path):
+        serial = self._devices.get_by_path(self.fqdn, path)['serial_80']
+        return self._devices.state['local_filesystems'].get(serial, None)
+
     def format_target(self, device = None, target_types = None, mgsnode = None, fsname = None, failnode = None, reformat = None, mkfsoptions = None, index = None):
         if 'mgs' in target_types:
             label = "MGS"
@@ -485,7 +489,8 @@ class FakeServer(Persisted):
         return {
             'uuid': tgt_uuid,
             'inode_size': 512,
-            'inode_count': 6666666
+            'inode_count': 6666666,
+            'filesystem_type': 'ext4'
         }
 
     def register_target(self, device = None, mount_point = None):

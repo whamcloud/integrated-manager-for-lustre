@@ -34,21 +34,21 @@ def patch_open(path_to_result):
 class TestBlkId(unittest.TestCase):
     def test_load(self):
         command_to_result = {
-            ('blkid', '-s', 'UUID'): """/dev/sda1: UUID="d546845f-481f-48f8-a998-8a81adcdb53d"
-/dev/sda2: UUID="V229Xn-n1BI-b9J0-tchM-YRfi-9mTz-SMEE5P"
-/dev/mapper/LustreVG-root: UUID="9503858f-5ea9-44b6-b690-f473def07a3d"
-/dev/mapper/LustreVG-swap: UUID="c334dbab-3121-41c3-ae2b-1d7ab26f5329"
-/dev/mapper/LustreVG-usr: UUID="9bc9c040-fc00-4cf3-a073-7096c12a8f17"
-/dev/mapper/LustreVG-var: UUID="f9093f90-534c-4c61-a49e-b7cadd32fb90"
+            ('blkid', '-s', 'UUID', '-s', 'TYPE'): """/dev/sda1: UUID="d546845f-481f-48f8-a998-8a81adcdb53d" TYPE="ext3"
+/dev/sda2: UUID="V229Xn-n1BI-b9J0-tchM-YRfi-9mTz-SMEE5P" TYPE="LVM2_member"
+/dev/mapper/LustreVG-root: UUID="9503858f-5ea9-44b6-b690-f473def07a3d" TYPE="ext3"
+/dev/mapper/LustreVG-swap: UUID="c334dbab-3121-41c3-ae2b-1d7ab26f5329" TYPE="swap"
+/dev/mapper/LustreVG-usr: UUID="9bc9c040-fc00-4cf3-a073-7096c12a8f17" TYPE="ext3"
+/dev/mapper/LustreVG-var: UUID="f9093f90-534c-4c61-a49e-b7cadd32fb90" TYPE="ext3"
 """
         }
 
-        expected_result = [{'dev': '/dev/sda1', 'uuid': 'd546845f-481f-48f8-a998-8a81adcdb53d'},
-                           {'dev': '/dev/sda2', 'uuid': 'V229Xn-n1BI-b9J0-tchM-YRfi-9mTz-SMEE5P'},
-                           {'dev': '/dev/mapper/LustreVG-root', 'uuid': '9503858f-5ea9-44b6-b690-f473def07a3d'},
-                           {'dev': '/dev/mapper/LustreVG-swap', 'uuid': 'c334dbab-3121-41c3-ae2b-1d7ab26f5329'},
-                           {'dev': '/dev/mapper/LustreVG-usr', 'uuid': '9bc9c040-fc00-4cf3-a073-7096c12a8f17'},
-                           {'dev': '/dev/mapper/LustreVG-var', 'uuid': 'f9093f90-534c-4c61-a49e-b7cadd32fb90'}]
+        expected_result = [{'path': '/dev/sda1', 'uuid': 'd546845f-481f-48f8-a998-8a81adcdb53d', 'type': 'ext3'},
+                           {'path': '/dev/sda2', 'uuid': 'V229Xn-n1BI-b9J0-tchM-YRfi-9mTz-SMEE5P', 'type': 'LVM2_member'},
+                           {'path': '/dev/mapper/LustreVG-root', 'uuid': '9503858f-5ea9-44b6-b690-f473def07a3d', 'type': 'ext3'},
+                           {'path': '/dev/mapper/LustreVG-swap', 'uuid': 'c334dbab-3121-41c3-ae2b-1d7ab26f5329', 'type': 'swap'},
+                           {'path': '/dev/mapper/LustreVG-usr', 'uuid': '9bc9c040-fc00-4cf3-a073-7096c12a8f17', 'type': 'ext3'},
+                           {'path': '/dev/mapper/LustreVG-var', 'uuid': 'f9093f90-534c-4c61-a49e-b7cadd32fb90', 'type': 'ext3'}]
 
         with patch_shell(command_to_result):
             result = BlkId().all()

@@ -26,7 +26,7 @@ from chroma_core.services.http_agent.crypto import Crypto
 
 
 from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
+from django.db import transaction, DEFAULT_DB_ALIAS
 from django.db.models import Q
 import django.utils.timezone
 
@@ -36,6 +36,7 @@ from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
+from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.log import log_register
 import chroma_core.lib.conf_param
@@ -76,11 +77,48 @@ class NotificationBuffer(object):
         return notifications
 
 
+class SimpleConnectionQuota(object):
+    """
+    This class provides a way to limit the total number of DB connections
+    used by a population of threads.
+
+    It is *not* a pool: the connections are destroyed and created every time.
+
+    It's for when threads need to briefly dip into a period of database access
+    before giving it up again.
+    """
+
+    def __init__(self, max_connections):
+        self._semaphore = threading.Semaphore(max_connections)
+        self.db_alias = DEFAULT_DB_ALIAS
+        self.database = django.db.connections.databases[self.db_alias]
+
+    def acquire(self):
+        self._semaphore.acquire()
+        if django.db.connection.connection == DISABLED_CONNECTION:
+            django.db.connection.connection = None
+        #connection = load_backend(self.database['ENGINE']).DatabaseWrapper(self.database, self.db_alias)
+        #return connection
+
+    def release(self, connection):
+        # Close the connection if present, and hand back our token
+        if django.db.connection.connection:
+            _disable_database()
+
+        self._semaphore.release()
+
+
 class DisabledConnection(object):
     def __getattr__(self, item):
         raise RuntimeError("Attempted to use database from a step which does not have database=True")
 
 DISABLED_CONNECTION = DisabledConnection()
+
+
+def _disable_database():
+    if django.db.connection.connection is not None and django.db.connection.connection != DISABLED_CONNECTION:
+        django.db.connection.close()
+    django.db.connection.connection = DISABLED_CONNECTION
 
 
 class JobProgress(threading.Thread, Queue.Queue):
@@ -176,10 +214,11 @@ class JobProgress(threading.Thread, Queue.Queue):
 class RunJobThread(threading.Thread):
     CANCEL_TIMEOUT = 30
 
-    def __init__(self, job_scheduler, job, steps):
+    def __init__(self, job_progress, connection_quota, job, steps):
         super(RunJobThread, self).__init__()
         self.job = job
-        self._job_scheduler = job_scheduler
+        self._job_progress = job_progress
+        self._connection_quota = connection_quota
         self._cancel = threading.Event()
         self._complete = threading.Event()
         self.steps = steps
@@ -214,11 +253,6 @@ class RunJobThread(threading.Thread):
         if django.db.connection.connection and django.db.connection.connection != DISABLED_CONNECTION:
             django.db.connection.close()
 
-    def _disable_database(self):
-        if django.db.connection.connection is not None and django.db.connection.connection != DISABLED_CONNECTION:
-            django.db.connection.close()
-        django.db.connection.connection = DISABLED_CONNECTION
-
     def _run(self):
         log.info("Job %d: %s.run" % (self.job.id, self.__class__.__name__))
 
@@ -226,7 +260,7 @@ class RunJobThread(threading.Thread):
         finish_step = -1
         while step_index < len(self.steps) and not self._cancel.is_set():
             klass, args = self.steps[step_index]
-            self._job_scheduler.progress.start_step(
+            self._job_progress.start_step(
                 self.job.id,
                 step_klass=klass,
                 args=args,
@@ -235,38 +269,42 @@ class RunJobThread(threading.Thread):
 
             step = klass(self.job,
                          args,
-                         lambda l: self._job_scheduler.progress.log(self.job.id, l),
-                         lambda c: self._job_scheduler.progress.console(self.job.id, c),
+                         lambda l: self._job_progress.log(self.job.id, l),
+                         lambda c: self._job_progress.console(self.job.id, c),
                          self._cancel)
 
-            if not step.database:
-                self._disable_database()
-            else:
-                if django.db.connection.connection == DISABLED_CONNECTION:
-                    django.db.connection.connection = None
-
-            from chroma_core.services.job_scheduler.agent_rpc import AgentException
             try:
+                if step.database:
+                    # Get a token entitling code running in this thread
+                    # to open a database connection when it chooses to
+                    self._connection_quota.acquire()
+                else:
+                    _disable_database()
+
                 log.debug("Job %d running step %d" % (self.job.id, step_index))
                 step.run(args)
                 log.debug("Job %d step %d successful" % (self.job.id, step_index))
 
-                self._job_scheduler.progress.step_success(self.job.id)
+                self._job_progress.step_success(self.job.id)
             except AgentException, e:
                 log.error("Job %d step %d encountered an agent error: %s" % (self.job.id, step_index, e.backtrace))
 
                 # Don't bother storing the backtrace to invoke_agent, the interesting part
                 # is the backtrace inside the AgentException
-                self._job_scheduler.progress.step_failure(self.job.id, e.backtrace)
-                self._job_scheduler.progress.complete_job(self.job.id, errored = True)
+                self._job_progress.step_failure(self.job.id, e.backtrace)
+                self._job_progress.complete_job(self.job.id, errored = True)
                 return
             except Exception:
                 backtrace = traceback.format_exc()
                 log.error("Job %d step %d encountered an error: %s" % (self.job.id, step_index, backtrace))
 
-                self._job_scheduler.progress.step_failure(self.job.id, backtrace)
-                self._job_scheduler.progress.complete_job(self.job.id, errored = True)
+                self._job_progress.step_failure(self.job.id, backtrace)
+                self._job_progress.complete_job(self.job.id, errored = True)
                 return
+            finally:
+                if step.database:
+                    log.debug("Job %d releasing database connection" % self.job.id)
+                    self._connection_quota.release(django.db.connection.connection)
 
             finish_step = step_index
             step_index += 1
@@ -276,9 +314,7 @@ class RunJobThread(threading.Thread):
 
         log.info("Job %d finished %d steps successfully" % (self.job.id, finish_step + 1))
 
-        self._job_scheduler.progress.complete_job(self.job.id, errored = False)
-
-        return
+        self._job_progress.complete_job(self.job.id, errored = False)
 
 
 class JobCollection(object):
@@ -317,14 +353,19 @@ class JobCollection(object):
         return self._jobs[job_id]
 
     def update(self, job, new_state, **kwargs):
-        del self._state_jobs[job.state][job.id]
+        initial_state = job.state
 
         Job.objects.filter(id = job.id).update(state = new_state, **kwargs)
         job.state = new_state
         for attr, val in kwargs.items():
             setattr(job, attr, val)
 
-        self._state_jobs[job.state][job.id] = job
+        try:
+            del self._state_jobs[initial_state][job.id]
+        except KeyError:
+            log.warning("Cancelling uncached Job %s" % job.id)
+        else:
+            self._state_jobs[job.state][job.id] = job
 
     def update_commands(self, job):
         """
@@ -389,6 +430,9 @@ class JobScheduler(object):
 
 
     """
+
+    MAX_STEP_DB_CONNECTIONS = 10
+
     def __init__(self):
         self._lock = threading.RLock()
         """Globally serialize all scheduling operations: within a given cluster, they all potentially
@@ -401,6 +445,7 @@ class JobScheduler(object):
         self._job_collection = JobCollection()
         self._notification_buffer = NotificationBuffer()
 
+        self._db_quota = SimpleConnectionQuota(self.MAX_STEP_DB_CONNECTIONS)
         self._run_threads = {}  # Map of job ID to RunJobThread
 
         self.progress = JobProgress(self)
@@ -468,7 +513,7 @@ class JobScheduler(object):
         # without having a database connection for each RunJobThread
 
         if job.steps:
-            thread = RunJobThread(self, job, job.steps)
+            thread = RunJobThread(self.progress, self._db_quota, job, job.steps)
             assert not job.id in self._run_threads
             self._run_threads[job.id] = thread
 
@@ -945,7 +990,7 @@ class JobScheduler(object):
             mounts = []
             mgt_data = fs_data['mgt']
             if 'volume_id' in mgt_data:
-                mgt, mgt_mounts = ManagedMgs.create_for_volume(mgt_data['volume_id'], **_target_kwargs(mgt_data))
+                mgt, mgt_mounts = ManagedMgs.create_for_volume(mgt_data['volume_id'], reformat=mgt_data.get('reformat', False), **_target_kwargs(mgt_data))
                 mounts.extend(mgt_mounts)
                 ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
                 mgt_id = mgt.pk
@@ -961,12 +1006,15 @@ class JobScheduler(object):
                 chroma_core.lib.conf_param.set_conf_params(fs, fs_data['conf_params'])
 
                 mdt_data = fs_data['mdt']
-                mdt, mdt_mounts = ManagedMdt.create_for_volume(mdt_data['volume_id'], filesystem = fs, **_target_kwargs(mdt_data))
+                mdt, mdt_mounts = ManagedMdt.create_for_volume(mdt_data['volume_id'], reformat=mdt_data.get('reformat', False), filesystem = fs, **_target_kwargs(mdt_data))
                 mounts.extend(mdt_mounts)
                 chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
+
                 osts = []
                 for ost_data in self.order_targets(fs_data['osts']):
-                    ost, ost_mounts = ManagedOst.create_for_volume(ost_data['volume_id'], filesystem = fs, **_target_kwargs(ost_data))
+                    ost, ost_mounts = ManagedOst.create_for_volume(ost_data['volume_id'],
+                                                                   reformat=ost_data.get('reformat', False),
+                                                                   filesystem=fs, **_target_kwargs(ost_data))
                     osts.append(ost)
                     mounts.extend(ost_mounts)
                     chroma_core.lib.conf_param.set_conf_params(ost, ost_data['conf_params'])
@@ -1005,7 +1053,8 @@ class JobScheduler(object):
                     raise NotImplementedError(target_class)
 
                 with transaction.commit_on_success():
-                    target, target_mounts = target_class.create_for_volume(target_data['volume_id'], **create_kwargs)
+                    target, target_mounts = target_class.create_for_volume(
+                        target_data['volume_id'], reformat=target_data.get('reformat', False), **create_kwargs)
 
                 ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
                 for mount in target_mounts:

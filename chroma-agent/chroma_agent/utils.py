@@ -90,15 +90,16 @@ class Fstab(object):
 
 
 class BlkId(object):
-    def __init__(self, fields = None):
-        blkid_lines = shell.try_run(['blkid', '-s', 'UUID']).split("\n")
+    def __init__(self):
+        blkid_lines = shell.try_run(['blkid', '-s', 'UUID', '-s', 'TYPE']).split("\n")
 
         devices = []
         for line in [l for l in blkid_lines if len(l)]:
-            dev, uuid = re.search("(.*): UUID=\"(.*)\"", line).groups()
+            path, uuid, type = re.search("(.*): UUID=\"(.*)\" TYPE=\"(.*)\"", line).groups()
             devices.append({
-                'dev': dev,
-                'uuid': uuid
+                'path': path,
+                'uuid': uuid,
+                'type': type
             })
         self.devices = devices
 

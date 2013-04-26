@@ -35,6 +35,12 @@ class FilesystemMember(models.Model):
         abstract = True
 
 
+# How Lustre targets are reported by blkid: this assumes stock Lustre 2.x
+# whose ldiskfs filesystems appear as ext4.  Would require extension
+# to deal with ZFS builds of Lustre.
+LUSTRE_FILESYSTEM_TYPE = 'ext4'
+
+
 class ManagedTarget(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
     name = models.CharField(max_length = 64, null = True, blank = True,
@@ -71,6 +77,10 @@ class ManagedTarget(StatefulObject):
                     failovers.append(mount.host)
 
         return failovers
+
+    reformat = models.BooleanField(
+        help_text = "Only used during formatting, indicates that when formatting this target \
+        any existing filesystem on the Volume shoudl be overwritten")
 
     def primary_server(self):
         return self.get_hosts(primary=True)
@@ -750,9 +760,36 @@ class StopTargetJob(StateChangeJob):
         return [(UnmountStep, {"target": self.target, "host": self.target.best_available_host()})]
 
 
-class MkfsStep(Step):
-    timeout = 3600
+class PreFormatCheck(Step):
+    @classmethod
+    def describe(cls, kwargs):
+        return "Prepare for format %s:%s" % (kwargs['host'], kwargs['path'])
 
+    def run(self, kwargs):
+        occupying_fs = self.invoke_agent(kwargs['host'], "check_block_device", {'path': kwargs['path']})
+        if occupying_fs is not None:
+            msg = "Found filesystem of type '%s' on %s:%s" % (occupying_fs, kwargs['host'], kwargs['path'])
+            self.log(msg)
+            raise RuntimeError(msg)
+
+
+class PreFormatComplete(Step):
+    """
+    This step separated from PreFormatCheck so that it
+    can write to the database without forcing the remote
+    ops in the check to hold a DB connection (would limit
+    parallelism).
+    """
+    database = True
+
+    def run(self, kwargs):
+        job_log.info("%s passed pre-format check, allowing subsequent reformats" % kwargs['target'])
+        with transaction.commit_on_success():
+            kwargs['target'].reformat = True
+            kwargs['target'].save()
+
+
+class MkfsStep(Step):
     def _mkfs_args(self, kwargs):
         target = kwargs['target']
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
@@ -768,8 +805,8 @@ class MkfsStep(Step):
             mkfs_args['fsname'] = target.downcast().filesystem.name
             mkfs_args['mgsnode'] = kwargs['mgs_nids']
 
-        # FIXME: HYD-266
-        mkfs_args['reformat'] = True
+        if kwargs['reformat']:
+            mkfs_args['reformat'] = True
 
         if kwargs['failover_nids']:
             mkfs_args['failnode'] = kwargs['failover_nids']
@@ -807,6 +844,10 @@ class MkfsStep(Step):
 
         args = self._mkfs_args(kwargs)
         result = self.invoke_agent(kwargs['primary_host'], "format_target", args)
+
+        if not result['filesystem_type'] == LUSTRE_FILESYSTEM_TYPE:
+            raise RuntimeError("Unexpected filesystem type '%s'" % result['filesystem_type'])
+
         target.uuid = result['uuid']
 
         # Check that inode_size was applied correctly
@@ -876,13 +917,35 @@ class FormatTargetJob(StateChangeJob):
         else:
             mgs_nids = None
 
-        return [(MkfsStep, {
+        steps = []
+
+        if not self.target.reformat:
+            # We are not expecting to need to reformat/overwrite this volume
+            # so before proceeding, check that it is indeed unoccupied
+            steps.append((PreFormatCheck, {
+                'host': primary_mount.host,
+                'path': path
+            }))
+
+            steps.append((PreFormatComplete, {
+                'target': self.target
+            }))
+
+        steps.append((MkfsStep, {
             'primary_host': primary_mount.host,
             'target': self.target,
             'device_path': path,
             'failover_nids': self.target.get_failover_nids(),
-            'mgs_nids': mgs_nids
-        })]
+            'mgs_nids': mgs_nids,
+            'reformat': self.target.reformat
+        }))
+
+        return steps
+
+    def on_success(self):
+        super(FormatTargetJob, self).on_success()
+        self.target.volume.filesystem_type = LUSTRE_FILESYSTEM_TYPE
+        self.target.volume.save()
 
 
 class MigrateTargetJob(AdvertisedJob):

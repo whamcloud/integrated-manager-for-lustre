@@ -60,6 +60,74 @@
       }
     }
 
+    function submit(filesystem) {
+      Api.post("filesystem/", filesystem,
+        function(data) {
+          //revert form values to default
+          $('#inode_size').val('512');
+          $('#bytes_per_inode').val('2048');
+          $('#mgt_existing_dropdown').val('');
+          set_mdt_advanced_visible(false);
+
+          Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
+        },
+        {
+            400: function (jqXHR) {
+              var errors = JSON.parse(jqXHR.responseText);
+
+              if (_.size(errors.mgt) == 0) {
+                  delete errors.mgt;
+              }
+
+              var mdt_advanced_errors = false;
+              if (errors.mdt.inode_size) {
+                  mdt_advanced_errors = true;
+                  _.each(errors.mdt.inode_size, function(message) {
+                      ValidatedForm.add_error($('input#inode_size'), message);
+                  });
+                  delete errors.mdt.inode_size;
+              }
+              if (errors.mdt.bytes_per_inode) {
+                  mdt_advanced_errors = true;
+                  _.each(errors.mdt.bytes_per_inode, function(message) {
+                      ValidatedForm.add_error($('input#bytes_per_inode'), message);
+                  });
+                  delete errors.mdt.bytes_per_inode;
+              }
+
+              if (mdt_advanced_errors) {
+                  set_mdt_advanced_visible(true);
+              }
+
+              if (_.size(errors.mdt) == 0) {
+                  delete errors.mdt;
+              }
+
+              errors.osts = _.reject(errors.osts, function(ost_errors){return _.size(ost_errors) == 0;});
+
+              if (errors.osts.length == 0) {
+                  delete errors.osts;
+              }
+
+              if (errors.name){
+                  _.each(errors.name, function(message) {
+                      ValidatedForm.add_error($('#txtfsnameid'), message);
+                  });
+                  delete errors.name;
+              }
+
+              if (errors.conf_params) {
+                  conf_param_dialog.open();
+                  conf_param_errors(conf_param_dialog.get_datatable(), errors.conf_params);
+                  delete errors.conf_params;
+              }
+
+              return errors;
+            }
+        }
+      );
+    }
+
     function init()
     {
       function updateMdtEstimate() {
@@ -235,70 +303,26 @@
             filesystem.conf_params = {}
         }
 
-        Api.post("filesystem/", filesystem,
-          function(data) {
-
-            //revert form values to default
-            $('#inode_size').val('512');
-            $('#bytes_per_inode').val('2048');
-            $('#mgt_existing_dropdown').val('');
-            set_mdt_advanced_visible(false);
-
-            Backbone.history.navigate("configure/filesystem/detail/" + data.filesystem.id + "/", {trigger: true});
-          },
-          {400: function (jqXHR) {
-              var errors = JSON.parse(jqXHR.responseText);
-
-              if (_.size(errors.mgt) == 0) {
-                delete errors.mgt;
-              }
-
-              var mdt_advanced_errors = false;
-              if (errors.mdt.inode_size) {
-                mdt_advanced_errors = true;
-                _.each(errors.mdt.inode_size, function(message) {
-                  ValidatedForm.add_error($('input#inode_size'), message);
-                });
-                delete errors.mdt.inode_size;
-              }
-              if (errors.mdt.bytes_per_inode) {
-                mdt_advanced_errors = true;
-                _.each(errors.mdt.bytes_per_inode, function(message) {
-                    ValidatedForm.add_error($('input#bytes_per_inode'), message);
-                });
-                delete errors.mdt.bytes_per_inode;
-              }
-
-              if (mdt_advanced_errors) {
-                set_mdt_advanced_visible(true);
-              }
-
-              if (_.size(errors.mdt) == 0) {
-                delete errors.mdt;
-              }
-
-              errors.osts = _.reject(errors.osts, function(ost_errors){return _.size(ost_errors) == 0;});
-
-              if (errors.osts.length == 0) {
-                delete errors.osts;
-              }
-
-              if (errors.name){
-                _.each(errors.name, function(message) {
-                  ValidatedForm.add_error($('#txtfsnameid'), message);
-                });
-                delete errors.name;
-              }
-
-              if (errors.conf_params) {
-                conf_param_dialog.open();
-                conf_param_errors(conf_param_dialog.get_datatable(), errors.conf_params);
-                delete errors.conf_params;
-              }
-
-              return errors;
-            }
-          }
+        // Finally, pass volume list into reformatPrompt with callbacks to submit()
+        var volume_ids = [];
+        if (mgt_lun_id) {
+          volume_ids.push(mgt_lun_id);
+        }
+        volume_ids.push(mdt_lun_id);
+        volume_ids.push.apply(volume_ids, ost_lun_ids);
+        volume_chooser_store.reformatPrompt(
+                volume_ids,
+                function() {
+                  submit(filesystem);
+                },
+                function() {
+                  filesystem.mdt.reformat = true;
+                  filesystem.mgt.reformat = true;
+                  _.each(filesystem.osts, function(ost) {
+                      ost.reformat = true;
+                  });
+                  submit(filesystem);
+                }
         );
       });
 

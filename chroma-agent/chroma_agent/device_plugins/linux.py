@@ -7,7 +7,7 @@
 from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import shell
-from chroma_agent.utils import normalize_device
+from chroma_agent.utils import normalize_device, BlkId
 
 import os
 import glob
@@ -74,6 +74,13 @@ class BlockDevices(DeviceHelper):
 
     def __init__(self):
         self.old_udev = None
+
+        # Build this map to retreive fstype in _device_node
+        self._major_minor_to_fstype = {}
+        for blkid_dev in BlkId().all():
+            major_minor = self._dev_major_minor(blkid_dev['path'])
+            self._major_minor_to_fstype[major_minor] = blkid_dev['type']
+
         self.block_device_nodes, self.node_block_devices = self._parse_sys_block()
 
     def _device_node(self, device_name, major_minor, path, size, parent):
@@ -101,11 +108,17 @@ class BlockDevices(DeviceHelper):
             serial_80 = scsi_id_command(["scsi_id", "-g", "-p", "0x80", path])
             serial_83 = scsi_id_command(["scsi_id", "-g", "-p", "0x83", path])
 
+        try:
+            type = self._major_minor_to_fstype[major_minor]
+        except KeyError:
+            type = None
+
         info = {'major_minor': major_minor,
                 'path': path,
                 'serial_80': serial_80,
                 'serial_83': serial_83,
                 'size': size,
+                'filesystem_type': type,
                 'parent': parent}
 
         return info

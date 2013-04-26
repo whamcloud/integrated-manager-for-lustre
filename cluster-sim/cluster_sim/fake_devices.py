@@ -25,7 +25,8 @@ class FakeDevices(Persisted):
         'mgts': {},
         'targets': {},
         'devices': {},
-        'presentations': {}
+        'presentations': {},
+        'local_filesystems': {}
     }
 
     def __init__(self, path):
@@ -81,7 +82,20 @@ class FakeDevices(Persisted):
             except KeyError:
                 pass
 
+    def format_local(self, fqdn, path, filesystem_type):
+        """Format a local filesystem"""
+        with self._lock:
+            serial = self.get_by_path(fqdn, path)['serial_80']
+            if serial in self.state['targets']:
+                # This isn't actually illegal (if the Lustre target is offline, we could overwrite it), but
+                # the code is simpler if we ban it for now.  If you need to do this then feel free to replace
+                # this exception with some code to handle it.
+                raise RuntimeError("Tried to format a local filesystem somewhere we already have a lustre target")
+
+            self.state['local_filesystems'][serial] = filesystem_type
+
     def format(self, fqdn, path, target_data):
+        """Format a Lustre target"""
         with self._lock:
             serial = self.get_by_path(fqdn, path)['serial_80']
 
@@ -144,6 +158,7 @@ class FakeDevices(Persisted):
         for path, serial in self.state['presentations'][fqdn].items():
             device = deepcopy(self.state['devices'][serial])
             device['path'] = path
+            device['filesystem_type'] = self.state['local_filesystems'].get(serial, None)
             nodes[device['major_minor']] = device
 
         return nodes
