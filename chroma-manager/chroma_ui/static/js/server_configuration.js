@@ -101,7 +101,7 @@ function add_host_dialog() {
   select_page('.add_host_https', https_pages);
 
   element.find('.add_host_address').keypress(function(ev) {
-    if (ev.which == 13 && ! $('#id_existing_keys_choice:checked').length) {
+    if (ev.which == 13 && element.find('#id_existing_keys_choice:checked').length) {
       element.find('.add_host_submit_button').click();
       ev.stopPropagation();
       ev.preventDefault();
@@ -134,7 +134,7 @@ function add_host_dialog() {
   element.find('.add_host_submit_button').click(function(ev) {
 
       var form_params = element
-          .find('form').find('input[type!="radio"], textarea')
+          .find('form').find('input, textarea')
           .filter(':visible')
           .serializeArray()
           .reduce(function (hash, pair) {
@@ -159,7 +159,7 @@ function add_host_dialog() {
       test_skipped = false;
 
       ev.preventDefault();
-  });
+  })
 
   var existing_keys_div = $('#id_existing_keys');
   var root_password_div = $('#id_root_password');
