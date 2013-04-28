@@ -11,7 +11,7 @@ from tests.utils.http_requests import AuthorizedHttpRequests
 
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.utility_testcase import UtilityTestCase
-from tests.integration.core.remote_operations import  SimulatorRemoteOperations, RealRemoteOperations
+from tests.integration.core.remote_operations import SimulatorRemoteOperations, RealRemoteOperations
 
 
 logger = logging.getLogger('test')
@@ -76,6 +76,9 @@ class ApiTestCase(UtilityTestCase):
             logger.info("Checking that %s is running and restarting if necessary..." % server['fqdn'])
             self.remote_operations.await_server_boot(server['fqdn'], restart = True)
             logger.info("%s is running" % server['fqdn'])
+            self.remote_operations.inject_log_message(server['fqdn'],
+                                                      "==== " "starting test %s "
+                                                      "=====" % self)
 
         if not 'filesystem' in config:
             # Erase all volumes if the config does not indicate that there is already
@@ -128,8 +131,10 @@ class ApiTestCase(UtilityTestCase):
     def chroma_manager(self):
         if self._chroma_manager is None:
             user = config['chroma_managers'][0]['users'][0]
-            self._chroma_manager = AuthorizedHttpRequests(user['username'], user['password'],
-                server_http_url = config['chroma_managers'][0]['server_http_url'])
+            self._chroma_manager = AuthorizedHttpRequests(user['username'],
+                                                          user['password'],
+                                                          server_http_url =
+                                                          config['chroma_managers'][0]['server_http_url'])
         return self._chroma_manager
 
     def _check_for_down_servers(self):
