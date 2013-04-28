@@ -68,9 +68,7 @@ class SupervisorStatus(object):
 
         self._xmlrpc = xmlrpclib.ServerProxy(
             'http://127.0.0.1',
-            transport = SupervisorTransport(username,
-                                            password,
-                                            url)
+            transport = SupervisorTransport(username, password, url)
         )
 
     def get_all_process_info(self):
@@ -83,7 +81,7 @@ class SupervisorStatus(object):
 class NTPConfig:
     CONFIG_FILE = "/etc/ntp.conf"
     SENTINEL = "# Added by chroma-manager\n"
-    COMMENTED = "# Commented by chroma-manager: "
+    COMMENTED = "# Commented out by chroma-manager: "
 
     def __init__(self, config_file = None):
         self.config_file = config_file or self.CONFIG_FILE
@@ -106,8 +104,13 @@ class NTPConfig:
         nothing if our section is not there"""
         tmp_f, tmp_name, f = self.open_conf_for_edit()
         skip = False
+        server = None
         for line in f.readlines():
             if skip:
+                if line.startswith("server "):
+                    server = line.split()[1]
+                    if server == "127.127.1.0":
+                        server = "localhost"
                 if line == self.SENTINEL:
                     skip = False
                 continue
@@ -118,6 +121,8 @@ class NTPConfig:
                 line = line[len(self.COMMENTED):]
             os.write(tmp_f, line)
         self.close_conf(tmp_f, tmp_name, f)
+
+        return server
 
     def add(self, server):
         tmp_f, tmp_name, f = self.open_conf_for_edit()
@@ -241,14 +246,18 @@ class ServiceConfig(CommandLine):
             server = self.get_input(msg = "NTP Server", default = "localhost")
         log.info("Writing ntp configuration")
         ntp = NTPConfig()
-        ntp.remove()
+        old_server = ntp.remove()
         ntp.add(server)
-        self._start_ntp()
+        self._start_ntp(old_server != server)
 
-    def _start_ntp(self):
-        log.info("Restarting ntp")
+    def _start_ntp(self, restart):
         self.try_shell(["chkconfig", "ntpd", "on"])
-        self.try_shell(['service', 'ntpd', 'restart'])
+        if restart:
+            log.info("Restarting ntp")
+            self.try_shell(['service', 'ntpd', 'restart'])
+        else:
+            log.info("Starting ntp")
+            self.try_shell(['service', 'ntpd', 'start'])
 
     def _setup_rabbitmq_service(self):
         log.info("Starting RabbitMQ...")
