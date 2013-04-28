@@ -64,7 +64,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # Run chroma-config setup to recreate the database and start the chroma manager.
             result = self.remote_command(
                 chroma_manager['address'],
-                "chroma-config setup %s %s localhost &> config_setup.log" % (superuser['username'], superuser['password']),
+                "chroma-config setup %s %s %s &> config_setup.log" % (superuser['username'], superuser['password'], chroma_manager.get('ntp_server', "localhost")),
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
@@ -180,8 +180,7 @@ EOF
 
     def api_clear_resource(self, resource):
         response = self.chroma_manager.get('/api/%s' % resource,
-                params = {'limit': 0}
-        )
+                                           params = {'limit': 0})
         self.assertTrue(response.successful, response.text)
         objects = response.json['objects']
 
