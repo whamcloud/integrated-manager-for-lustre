@@ -128,7 +128,6 @@ EOF
 # Start apache which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
 chkconfig httpd on
-service httpd restart
 
 # Pre-create log files to set permissions
 mkdir -p /var/log/chroma
@@ -146,7 +145,7 @@ setsebool -P httpd_tmp_exec 1 2>/dev/null
 semanage port -a -t http_port_t -p tcp 8001
 
 echo "Thank you for installing Chroma.  To complete your installation, please"
-echo "run `chroma-config setup`"
+echo "run \"chroma-config setup\""
 
 %preun
 service chroma-supervisor stop
