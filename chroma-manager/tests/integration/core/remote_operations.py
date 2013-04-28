@@ -421,7 +421,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def host_up_secs(self, address):
         result = self._ssh_address(address, "cat /proc/uptime")
-        secs_up = result.split()[0]
+        secs_up = result.stdout.read().split()[0]
         return secs_up
 
     def _host_of_server(self, server):
