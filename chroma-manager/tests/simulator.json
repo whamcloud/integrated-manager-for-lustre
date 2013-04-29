@@ -9,7 +9,7 @@
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ],
-            "distro": "el6.3"
+            "distro": "el6"
         }
     ],
     "lustre_servers": [

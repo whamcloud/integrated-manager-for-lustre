@@ -10,13 +10,13 @@
     "reset": true,
     "test_runners": [
         {
-            "distro": "el6.3",
+            "distro": "el6",
             "repos": ["chroma"]
         }
     ], 
     "chroma_managers": [
         {
-            "distro": "el6.3",
+            "distro": "el6",
             "repos": ["chroma"],
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
@@ -25,29 +25,29 @@
     ],
     "lustre_servers": [
         {
-            "distro": "el6.3",
+            "distro": "el6",
             "root_password": "lustre",
             "repos": ["chroma"]
         },
        {
-            "distro": "el6.3",
+            "distro": "el6",
             "root_password": "lustre",
             "repos": ["chroma"]
         },
        {
-            "distro": "el6.3",
+            "distro": "el6",
             "root_password": "lustre",
             "repos": ["chroma"]
         },
        {
-            "distro": "el6.3",
+            "distro": "el6",
             "root_password": "lustre",
             "repos": ["chroma"]
         }
     ],
     "lustre_clients": {
         "client1": {
-            "distro": "el6.3",
+            "distro": "el6",
             "lustre_client_version": "2.1.4"
         }
     }
