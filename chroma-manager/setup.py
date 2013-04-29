@@ -30,6 +30,7 @@ setup(
         'chroma_ui': ["static/js/lib/*.js", "static/js/lib/angular/*.js",
                       "static/js/lib/select2/*.js", "static/js/*.js",
                       "static/js/controllers/*.js", "static/js/controllers/dialogs/*.js",
+                      "static/js/directives/*.js",
                       "static/js/filters/*.js", "static/js/interceptors/*.js",
                       "static/js/models/*.js", "static/js/services/*.js", "static/js/util/sprintf/*.js",
                       "static/partials/*.html", "static/partials/dialogs/*.html",

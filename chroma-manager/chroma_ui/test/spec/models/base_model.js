@@ -68,7 +68,7 @@ describe('Base Model', function () {
 
     $httpBackend.flush();
 
-    expect(spy).toHaveBeenCalledWith(jasmine.any(Object));
+    expect(spy).toHaveBeenCalledWith(jasmine.any(Object), jasmine.any(Object));
     expect(res.foo).toEqual('bar');
   }));
 

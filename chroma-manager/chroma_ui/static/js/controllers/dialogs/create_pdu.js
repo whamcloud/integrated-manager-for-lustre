@@ -31,10 +31,10 @@
 
     if (device != null) {
       extension = {
-        form: angular.fromJson(angular.toJson(device)), //Remove any possible circular-references.
+        form: angular.copy(device),
         submit: function (data) {
           $scope.$emit('blockUi', {fadeIn: true, message: null});
-          PowerControlDeviceModel.update(data).$promise.then(function success(resp) {
+          data.$update().then(function success(resp) {
             angular.copy(resp, device);
             dialog.close();
             $scope.$emit('unblockUi');

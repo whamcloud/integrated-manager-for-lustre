@@ -83,7 +83,7 @@ describe('Power Control Device', function () {
 
   it('should have a method to calculate the outlets intersection of a host and pdu',
     inject(function (PowerControlDeviceModel) {
-      var powerControlDeviceModel = new PowerControlDeviceModel({
+      var data = {
         outlets: [
           {
             host: '1/2/3',
@@ -98,13 +98,15 @@ describe('Power Control Device', function () {
             identifier: 'outlet 3'
           }
         ]
-      });
+      };
+
+      var powerControlDeviceModel = new PowerControlDeviceModel(data);
 
       var result = powerControlDeviceModel.getOutletHostIntersection({
         resource_uri: '1/2/3'
       });
 
-      expect(result).toEqual(['outlet 1', 'outlet 3']);
+      expect(result).toEqual([data.outlets[0], data.outlets[2]]);
     })
   );
 });

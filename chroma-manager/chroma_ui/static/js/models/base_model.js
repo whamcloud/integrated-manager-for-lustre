@@ -26,8 +26,8 @@
           query: {
             method: 'GET',
             isArray: true,
-            patch: function (value) {
-              value.paging = paging(value.$response.props.meta);
+            patch: function (value, resp) {
+              value.paging = paging(resp.props.meta);
             }
           }
         },

@@ -1,7 +1,7 @@
 (function (_) {
   'use strict';
 
-  function PowerControlDeviceModel($q, baseModel, PowerControlDeviceOutlet) {
+  function PowerControlDeviceModel(baseModel, PowerControlDeviceOutlet) {
     /**
      * @description Flattens nested device resources before save or update to server.
      * @param {object} data
@@ -96,14 +96,9 @@
               toUpdate.push(outlet);
             });
 
-          var results = toUpdate.map(function runUpdate(outlet) { return outlet.$update(); });
-
-          if (results.length) {
-            $q.all(results).then(function remapOutlets() {
-              // Remap outlets to obtain a new reference.
-              this.outlets = this.outlets.map(angular.identity);
-            }.bind(this));
-          }
+          toUpdate.forEach(function runUpdate(outlet) {
+            angular.copy(outlet).$update();
+          });
         },
         /**
          * @description Returns a flat list of what outlets are assigned at the intersection of a host and pdu.
@@ -113,15 +108,16 @@
         getOutletHostIntersection: function (host) {
           return this.outlets.filter(function (outlet) {
             return outlet.host === host.resource_uri;
-          }).map(function (outlet) {
-            return outlet.identifier;
           });
+        },
+        format: function (value) {
+          return _.pluck(value, 'identifier');
         }
       }
     });
   }
 
   angular.module('models')
-    .factory('PowerControlDeviceModel', ['$q', 'baseModel', 'PowerControlDeviceOutlet', PowerControlDeviceModel]);
+    .factory('PowerControlDeviceModel', ['baseModel', 'PowerControlDeviceOutlet', PowerControlDeviceModel]);
 }(window.lodash));
 

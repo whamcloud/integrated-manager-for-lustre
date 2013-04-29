@@ -969,7 +969,7 @@ angular.module('ui.directives').directive('uiSelect2', ['ui.config', '$timeout',
                 // Refresh angular to remove the superfluous option
                 elm.trigger('change');
               });
-            });
+            }, true);
           }
 
           if (!isSelect) {

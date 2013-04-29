@@ -30,7 +30,7 @@
       <tbody>
         <tr ng-repeat="host in powerCtrl.hosts | orderBy: 'nodename'">
           <td>((host.nodename))</td>
-          <td ng-cloak class="outlets" ng-repeat="device in powerCtrl.powerControlDevices | orderBy: 'name'">
+          <td class="outlets" ng-repeat="device in powerCtrl.powerControlDevices | orderBy: 'name'">
             <select
               tabindex="(($index + 1))"
               ng-init="outletHostIntersection = device.getOutletHostIntersection(host)"
@@ -38,6 +38,7 @@
               ng-change="device.reAssignOutletHostIntersection(host, outletHostIntersection)"
               ui-select2="{formatTagCssClass: powerCtrl.formatTagCssClass, formatResult: powerCtrl.formatResult, dropdownCssClass: 'config-outlets'}"
               style="width: 100%; display: none;"
+              transform-model="{formatter: device.format}"
               multiple="true"
             >
               <option

@@ -10,7 +10,8 @@
    * App module; bootstraps the application.
    */
   angular.module('iml',
-      ['controllers', 'models', 'interceptors', 'ngResource', 'constants', 'ui.bootstrap', 'services', 'filters', 'ui']
+      ['controllers', 'models', 'interceptors', 'ngResource', 'constants',
+        'ui.bootstrap', 'services', 'filters', 'ui', 'directives']
     )
     .config(['$interpolateProvider', function ($interpolateProvider) {
       $interpolateProvider.startSymbol('((');

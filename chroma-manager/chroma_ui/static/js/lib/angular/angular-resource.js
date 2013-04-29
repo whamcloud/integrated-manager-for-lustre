@@ -185,7 +185,7 @@
                 httpConfig[key] = copy(value);
               }
             });
-            httpConfig.data = data; // $promise, $resolved and $response will be deleted in toJson.
+            httpConfig.data = data; // $promise and $resolved will be deleted in toJson.
             route.setUrlParams(httpConfig, extend({}, extractParams(data, action.params || {}), params), action.url);
 
             value.$promise = promise = $http(httpConfig).then(function(response) {
@@ -204,9 +204,8 @@
 
               value.$resolved = true;
               value.$promise  = promise;
-              value.$response = response;
 
-              (action.patch||noop)(value);
+              (action.patch||noop)(value, response);
 
               (success||noop)(value, response.headers);
 
@@ -215,7 +214,6 @@
             }, function(response) {
               value.$resolved = true;
               value.$promise  = promise;
-              value.$response = response;
 
               (error||noop)(response);
 
