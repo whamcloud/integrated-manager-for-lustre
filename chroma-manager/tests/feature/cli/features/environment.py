@@ -1,3 +1,8 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+
 import mock
 from chroma_core.lib.util import chroma_settings
 
@@ -121,7 +126,9 @@ def before_feature(context, feature):
     CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
 
     from tests.unit.chroma_core.helper import load_default_profile
-    load_default_profile()
+    from chroma_core.models import ServerProfile
+    if not ServerProfile.objects.all().exists():
+        load_default_profile()
 
 
 def after_feature(context, feature):
