@@ -1,3 +1,9 @@
+#
+# ========================================================
+# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
+# ========================================================
+from chroma_cli.exceptions import BadUserInput
+
 import os
 from behave import *
 from nose.tools import *
@@ -11,6 +17,7 @@ def step(context, args):
     import sys
     context.stdout = StringIO()
     context.stderr = StringIO()
+
     try:
         sys.stdout = context.stdout
         sys.stderr = context.stderr
@@ -41,8 +48,13 @@ def step(context, args):
               "".join(context.stdout.readlines()),
               "".join(context.stderr.readlines())))
 
-    sys.stdout = sys.__stdout__
+    sys.__stdout__ = sys.__stdout__
     sys.stderr = sys.__stderr__
+
+
+@given('The following commands will fail')
+def step(context):
+    context.cli_failure_expected = True
 
 
 @then('I should see output containing "{message}"')
@@ -52,7 +64,6 @@ def step(context, message):
         ok_(message in "".join(context.stdout.readlines()))
     except AssertionError:
         context.stdout.seek(0)
-        print context.stdout.readlines()
         raise
 
 

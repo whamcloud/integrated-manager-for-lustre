@@ -45,6 +45,14 @@ def create_host(self, *args, **kwargs):
 JobScheduler.create_host = create_host
 
 
+def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
+    host_info = MockAgentRpc.mock_servers[address]
+    host_id, command_id = self.create_host(host_info['fqdn'], host_info['nodename'], address, profile)
+    return host_id, command_id
+
+JobScheduler.create_host_ssh = create_host_ssh
+
+
 def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
     ok = address in MockAgentRpc.mock_servers
     return {

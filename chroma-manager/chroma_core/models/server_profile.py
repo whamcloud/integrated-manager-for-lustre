@@ -30,6 +30,13 @@ class ServerProfile(models.Model):
         help_text = "The bundles specified by this profile"
     )
 
+    @property
+    def id(self):
+        """
+        Work around tastypie bug, when calling get_resource_uri it looks for .id
+        """
+        return self.pk
+
     # TODO: add a 'default' flag so that we can consistently
     # present a default in the UI
 

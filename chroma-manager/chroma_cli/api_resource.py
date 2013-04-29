@@ -96,6 +96,12 @@ class ApiResource(object):
             return out_time.strftime("%H:%M:%S")
 
 
+class ServerProfile(ApiResource):
+    def __init__(self, *args, **kwargs):
+        super(ServerProfile, self).__init__(*args, **kwargs)
+        self.list_columns.extend(["name", "ui_name", "ui_description", "managed", "bundles"])
+
+
 class Host(ApiResource):
     def __init__(self, *args, **kwargs):
         super(Host, self).__init__(*args, **kwargs)

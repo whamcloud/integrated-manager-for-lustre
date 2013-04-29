@@ -282,7 +282,13 @@ class ServerHandler(Handler):
             raise BadUserInput("\n".join([message] + failures))
 
     def add(self, ns):
-        kwargs = {'address': ns.subject, 'profile': 'default'}
+        kwargs = {'address': ns.subject}
+
+        if not ns.server_profile:
+            raise BadUserInput("No server_profile supplied.")
+
+        kwargs['server_profile'] = self.api.endpoints['server_profile'].show(ns.server_profile[0])['resource_uri']
+
         if not ns.force:
             self.test_host(ns, **kwargs)
         self.output(self.api_endpoint.create(**kwargs))
@@ -304,6 +310,16 @@ class ServerHandler(Handler):
             'message': "Initiating a shutdown on host %s" % host.label
         }
         self.output(self.api.endpoints['command'].create(**kwargs))
+
+
+class ServerProfileHandler(Handler):
+    nouns = ['server_profile']
+    verbs = ['list']
+    intransitive_verbs = ['list']
+
+    def __init__(self, *args, **kwargs):
+        super(ServerProfileHandler, self).__init__(*args, **kwargs)
+        self.api_endpoint = self.api.endpoints['server_profile']
 
 
 class FilesystemHandler(Handler):

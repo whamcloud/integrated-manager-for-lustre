@@ -21,6 +21,7 @@
 
 
 import json
+from urlparse import urljoin
 
 from chroma_cli.exceptions import InvalidApiResource, UnsupportedFormat, NotFound, TooManyMatches, BadRequest, InternalError, UnauthorizedRequest, AuthenticationFailure, ApiConnectionError
 
@@ -71,7 +72,6 @@ class ChromaSessionClient(object):
 
     @property
     def session_uri(self):
-        from urlparse import urljoin
         return urljoin(self.api_uri, "session/")
 
     def start_session(self):
@@ -240,7 +240,6 @@ class ApiHandle(object):
         if not re.search(r"^http(s)?://", base_uri):
             base_uri = "http://" + base_uri
         if not re.search(r"/api(/?)$", base_uri):
-            from urlparse import urljoin
             base_uri = urljoin(base_uri, "/api/")
 
         return base_uri
@@ -259,7 +258,6 @@ class ApiHandle(object):
             return content
 
     def send_and_decode(self, method_name, relative_url, data=None):
-        from urlparse import urljoin
         full_url = urljoin(self.base_url, relative_url)
 
         from requests import ConnectionError
@@ -369,7 +367,7 @@ class ApiEndpoint(object):
     def fields(self):
         return self.schema['fields']
 
-    def resolve_id(self, query):
+    def resolve_uri(self, query):
         try:
             # Slight hack here -- relies on the "name" field usually being
             # first in a reverse-sort in order to optimize for the most
@@ -393,22 +391,21 @@ class ApiEndpoint(object):
 
                     try:
                         if query in candidates[0][field]:
-                            return candidates[0]['id']
+                            return candidates[0]['resource_uri']
                     except (IndexError, KeyError):
                         continue
         except KeyError:
             # No filtering possible?
             pass
 
-        raise NotFound("Unable to resolve id for %s/%s" % (self.name, query))
+        raise NotFound("Unable to resolve URI for %s/%s" % (self.name, query))
 
     def resource_uri(self, subject):
         try:
             id = int(subject)
+            urljoin(self.uri, "%s/" % id)
         except (ValueError, TypeError):
-            id = self.resolve_id(subject)
-        from urlparse import urljoin
-        return urljoin(self.uri, "%s/" % id)
+            return urljoin(self.uri, self.resolve_uri(subject))
 
     def get_decoded(self, uri=None, **data):
         if not uri:

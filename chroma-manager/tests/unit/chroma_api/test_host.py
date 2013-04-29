@@ -1,9 +1,11 @@
-from chroma_core.models import Bundle
+from chroma_api.urls import api
+from chroma_core.models import Bundle, Command
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.services.job_scheduler import job_scheduler_client
+import mock
 
-from tests.unit.chroma_core.helper import MockAgentRpc, create_host_ssh_patch
+from tests.unit.chroma_core.helper import MockAgentRpc, create_host_ssh_patch, synthetic_host
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 
 
@@ -21,7 +23,7 @@ class TestHostResource(ChromaApiTestCase):
 
     @create_host_ssh_patch
     def test_creation(self):
-        response = self.api_client.post(self.RESOURCE_PATH, data={'address': 'foo', 'profile': 'default'})
+        response = self.api_client.post(self.RESOURCE_PATH, data={'address': 'foo', 'server_profile': '/api/server_profile/test_profile/'})
         self.assertHttpAccepted(response)
         self.assertTrue(ManagedHost.objects.count())
 
@@ -32,7 +34,7 @@ class TestHostResource(ChromaApiTestCase):
         test_sp.save()
         test_sp.bundles.add(Bundle.objects.get(bundle_name='agent'))
 
-        response = self.api_client.post(self.RESOURCE_PATH, data={'address': 'foo', 'profile': 'test'})
+        response = self.api_client.post(self.RESOURCE_PATH, data={'address': 'foo', 'server_profile': '/api/server_profile/test/'})
         self.assertHttpAccepted(response)
         self.assertTrue(ManagedHost.objects.count())
 
@@ -72,74 +74,50 @@ rBxijqhV7HZNBMbgrttwG0KVhyqb3XdveevUpL3VMgpRxZ3Sgf2wMQ==
 
 
 class TestCreateHostAPI(ChromaApiTestCase):
-    """Test ssh auth - API Resource /api/host and /api/test_host to job client
-
-    Test that if the ssh auth params are given from the UI to the API,
-    the params will be passed to the JobSchedulerClient.
+    """Test HostResource and TestHostResource passing through SSH auth
+    arguments in the expected form to JobSchedulerClient.
     """
-
-    class MockJobSchedulerClient(object):
-        """Simulate the signature of the JobSchedulerClient methods
-
-        This sim allows code above like the API to test the interface
-        JobSchedulerClient interface.
-        """
-
-        #  Test that the client will receive the correct paramaters
-
-        tester = None
-
-        @classmethod
-        def _check_params(cls, address, profile = None, root_pw=None,
-                          pkey=None, pkey_pw=None):
-            cls.tester.assertEquals(address, cls.tester.expected_data['address'])
-            if profile is not None:
-                cls.tester.assertEquals(profile, cls.tester.expected_data['profile'])
-            cls.tester.assertEquals(root_pw, cls.tester.expected_data['root_password'])
-            cls.tester.assertEquals(pkey, cls.tester.expected_data['private_key'])
-            cls.tester.assertEquals(pkey_pw, cls.tester.expected_data['private_key_passphrase'])
-
-        @classmethod
-        def create_host_ssh(cls, address, profile, root_pw=None,
-                            pkey=None, pkey_pw=None):
-            cls.got_called = True
-            cls._check_params(address, profile, root_pw, pkey, pkey_pw)
-            raise Exception("Passes")
-
-        @classmethod
-        def test_host_contact(cls, address, root_pw=None,
-                              pkey=None, pkey_pw=None):
-            cls.got_called = True
-            cls._check_params(address, root_pw=root_pw, pkey=pkey, pkey_pw=pkey_pw)
 
     def setUp(self):
         super(TestCreateHostAPI, self).setUp()
 
-        self.old_jobSchedulerClient = job_scheduler_client.JobSchedulerClient
-        job_scheduler_client.JobSchedulerClient = TestCreateHostAPI.MockJobSchedulerClient
-        job_scheduler_client.JobSchedulerClient.got_called = False
-        job_scheduler_client.JobSchedulerClient.tester = self
-
-        self.expected_data = {"address": 'storage1',
-                              "profile": ServerProfile.objects.get().name,
-                              "root_password": 'secret_pw',
-                              "private_key": sample_private_key,
-                              "private_key_passphrase": 'secret_key_pw'}
+        # Body for a POST to either host or test_host
+        self.input_data = {"address": 'myaddress',
+                           "auth_type": 'existing_keys_choice',
+                           "server_profile": api.get_resource_uri(ServerProfile.objects.get()),
+                           "root_password": 'secret_pw',
+                           "private_key": sample_private_key,
+                           "private_key_passphrase": 'secret_key_pw'}
 
     def tearDown(self):
         super(TestCreateHostAPI, self).tearDown()
 
-        job_scheduler_client.JobSchedulerClient = self.old_jobSchedulerClient
-
     def test_host_contact_ssh_auth(self):
         """Test POST to /api/test_host/ results in jobschedulerclient call."""
 
-        api_resp = self.api_client.post("/api/test_host/", data = self.expected_data)
-        self.assertHttpAccepted(api_resp)
-        self.assertTrue(job_scheduler_client.JobSchedulerClient.got_called)
+        with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact", mock.Mock()) as thc:
+            api_resp = self.api_client.post("/api/test_host/", data=self.input_data)
+            self.assertHttpAccepted(api_resp)
+            thc.assert_called_once_with(**{"address": 'myaddress',
+                                           "root_pw": 'secret_pw',
+                                           "pkey": sample_private_key,
+                                           "pkey_pw": 'secret_key_pw'})
 
     def test_create_host_api_ssh_auth(self):
         """Test POST to /api/host/ results in jobschedulerclient call."""
 
-        self.api_client.post("/api/host/", data = self.expected_data)
-        self.assertTrue(job_scheduler_client.JobSchedulerClient.got_called)
+        with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.create_host_ssh", mock.Mock()) as chs:
+            # Got to return something here for API to dehydrate its response
+            def create_host_ssh(*args, **kwargs):
+                return synthetic_host(kwargs['address']), Command.objects.create()
+            chs.side_effect = create_host_ssh
+
+            response = self.api_client.post("/api/host/", data=self.input_data)
+            self.assertHttpAccepted(response)
+            job_scheduler_client.JobSchedulerClient.create_host_ssh.assert_called_once_with(
+                **{"address": 'myaddress',
+                   "server_profile": ServerProfile.objects.get().name,
+                   "root_pw": 'secret_pw',
+                   "pkey": sample_private_key,
+                   "pkey_pw": 'secret_key_pw'}
+            )

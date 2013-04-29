@@ -6,9 +6,20 @@ Feature: Manage Chroma Servers
 Background: Set up test environment
   Given the "server-management" mocks are loaded
 
+Scenario: List server profiles
+  When I run chroma server_profile-list
+  Then I should see output containing "test_profile"
+
+Scenario: Add a server without profile
+  Given the server count should be 0
+  And the following commands will fail
+  When I run chroma server-add setup-mgs
+  Then the server count should be 0
+  And I should see output containing "No server_profile supplied"
+
 Scenario: Add a server
   Given the server count should be 0
-  When I run chroma server-add setup-mgs
+  When I run chroma server-add setup-mgs --server_profile test_profile
   Then the server count should be 1
 
 Scenario: Stop LNet on a server
@@ -45,7 +56,7 @@ Scenario: Fail to add non-resolving server
 Scenario: Force addition of a non-pingable server
   Given the server count should be 0
   And the ping host contact test should fail
-  When I run chroma --force server-add setup-mgs
+  When I run chroma --force server-add setup-mgs --server_profile test_profile
   Then the server count should be 1
 
 Scenario: Reboot a server

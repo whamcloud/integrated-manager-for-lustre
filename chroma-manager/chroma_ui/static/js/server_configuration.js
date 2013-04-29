@@ -206,10 +206,10 @@ function add_host_dialog() {
   });
 
   function get_profiles() {
-    Api.get("profile/", {limit: 0}, success_callback = function(data) {
+    Api.get("server_profile/", {limit: 0}, success_callback = function(data) {
       $.each(data.objects, function(i, profile) {
-        var option = "<option value='" + profile.name + "'>"+ profile.ui_name + "</option>";
-        $('div.add_host_dialog select[name=\'profile\']').prepend(option)
+        var option = "<option value='" + profile.resource_uri + "'>"+ profile.ui_name + "</option>";
+        $('div.add_host_dialog select[name=\'server_profile\']').prepend(option)
       });
     });
   }
@@ -237,7 +237,7 @@ function add_host_dialog() {
           .find('form')
           .find('#id_add_host_address').val();
 
-      post_params['profile'] = element
+      post_params['server_profile'] = element
           .find('form')
           .find('.add_server_profile').val();
 

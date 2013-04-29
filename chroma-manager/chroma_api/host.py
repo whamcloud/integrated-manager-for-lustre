@@ -21,7 +21,7 @@
 
 
 from collections import defaultdict
-from chroma_core.services.job_scheduler import job_scheduler_client
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.rpc import RpcError
 from tastypie.validation import Validation
 
@@ -101,6 +101,17 @@ def _host_params(bundle):
             'pkey_pw': bundle.data.get('private_key_passphrase')}
 
 
+class ServerProfileResource(ModelResource):
+    class Meta:
+        queryset = ServerProfile.objects.all()
+        resource_name = 'server_profile'
+        authentication = AnonymousAuthentication()
+        authorization = DjangoAuthorization()
+        list_allowed_methods = ['get']
+        readonly = ['ui_name']
+        filtering = {'name': ['exact']}
+
+
 class HostResource(MetricResource, StatefulModelResource):
     """
     Represents a Lustre server that is being monitored and managed from the Command Center.
@@ -115,6 +126,8 @@ class HostResource(MetricResource, StatefulModelResource):
                                                "public key on the new server.")
     private_key_passphrase = fields.CharField(help_text = "passphrase to "
                                                           "decrypt private key")
+
+    server_profile = fields.ToOneField(ServerProfileResource, 'server_profile')
 
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(
@@ -139,13 +152,15 @@ class HostResource(MetricResource, StatefulModelResource):
                      'role': ['exact']}
 
     def obj_create(self, bundle, request = None, **kwargs):
-
-        # FIXME: we get errors back just fine when something goes wrong
+        # FIXME HYD-1657: we get errors back just fine when something goes wrong
         # during registration, but the UI tries to format backtraces into
         # a 'validation errors' dialog which is pretty ugly.
 
+        # Resolve a server profile URI to a record
+        profile = self.fields['server_profile'].hydrate(bundle).obj
+
         try:
-            host, command = job_scheduler_client.JobSchedulerClient.create_host_ssh(profile=bundle.data['profile'],
+            host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name,
                                                                                     **_host_params(bundle))
         except RpcError, e:
             # Return 400, a failure here could mean the address was already occupied, or that
@@ -184,16 +199,6 @@ class HostResource(MetricResource, StatefulModelResource):
         return objects.distinct()
 
 
-class ServerProfileResource(ModelResource):
-    class Meta:
-        queryset = ServerProfile.objects.all()
-        resource_name = 'profile'
-        authentication = AnonymousAuthentication()
-        authorization = DjangoAuthorization()
-        list_allowed_methods = ['get']
-        readonly = ['ui_name']
-
-
 class HostTestResource(Resource):
     """
     A request to test a potential host address for accessibility, typically
@@ -229,7 +234,7 @@ class HostTestResource(Resource):
 
     def obj_create(self, bundle, request = None, **kwargs):
 
-        result = job_scheduler_client.JobSchedulerClient.test_host_contact(
+        result = JobSchedulerClient.test_host_contact(
             **_host_params(bundle))
 
         raise custom_response(self, request, http.HttpAccepted, result)

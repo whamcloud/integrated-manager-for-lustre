@@ -15,7 +15,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         super(TestRegistrationTokenResource, self).setUp()
 
         # Grab a profile to use for creation tokens, doesn't matter what it is
-        response = self.api_client.get("/api/profile/")
+        response = self.api_client.get("/api/server_profile/")
         self.profile = self.deserialize(response)['objects'][0]
 
     def test_cancel_token(self):
@@ -114,7 +114,7 @@ class TestTokenAuthorization(ChromaApiTestCase):
             self.clients[user['username']].client.login(username = user['username'], password=user['password'])
 
         # Grab a profile to use for creation tokens, doesn't matter what it is
-        response = self.api_client.get("/api/profile/")
+        response = self.api_client.get("/api/server_profile/")
         self.profile = self.deserialize(response)['objects'][0]
 
     def test_post(self):

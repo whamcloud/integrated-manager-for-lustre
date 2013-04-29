@@ -80,7 +80,7 @@ def synthetic_host(address, nids = list([]), storage_resource = False, fqdn = No
         fqdn=fqdn,
         nodename=nodename,
         state='lnet_up' if nids else 'configured',
-        server_profile=ServerProfile.objects.get(name='default')
+        server_profile=ServerProfile.objects.get(name='test_profile')
     )
     if nids:
         lnet_configuration = LNetConfiguration.objects.create(host = host, state = 'nids_known')
@@ -115,7 +115,7 @@ create_filesystem_patch = mock.patch("chroma_core.services.job_scheduler.job_sch
                                      new = mock.Mock(side_effect = _passthrough_create_filesystem), create = True)
 
 
-def _synthetic_create_host_ssh(address, profile, root_pw=None, pkey=None, pkey_pw=None):
+def _synthetic_create_host_ssh(address, server_profile, root_pw=None, pkey=None, pkey_pw=None):
     host_info = MockAgentRpc.mock_servers[address]
     host = synthetic_host(
         address,
@@ -123,7 +123,7 @@ def _synthetic_create_host_ssh(address, profile, root_pw=None, pkey=None, pkey_p
         nids=host_info['nids'],
         nodename=host_info['nodename']
     )
-    host.server_profile = ServerProfile.objects.get(name=profile)
+    host.server_profile = ServerProfile.objects.get(name=server_profile)
     host.save()
 
     command = Command.objects.create(message="No-op", complete=True)
@@ -172,7 +172,7 @@ def load_default_bundles():
 
 def load_default_profile():
     load_default_bundles()
-    default_sp = ServerProfile(name='default', ui_name='Managed storage server',
+    default_sp = ServerProfile(name='test_profile', ui_name='Managed storage server',
                                ui_description='A storage server suitable for creating new HA-enabled filesystem targets',
                                managed=True)
     default_sp.bundles.add('lustre')
@@ -323,6 +323,11 @@ class MockAgentRpc(object):
                 return registration_data
             finally:
                 CsrfAuthentication.is_authenticated = old_is_authenticated
+        elif cmd == 'kernel_status':
+            return {
+                'running': 'fake_kernel-0.1',
+                'latest': 'fake_kernel-0.1'
+            }
         elif cmd == 'device_plugin':
             try:
                 data = cls.mock_servers[host.address]['device-plugin']

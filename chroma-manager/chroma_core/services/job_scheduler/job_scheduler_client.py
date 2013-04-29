@@ -263,7 +263,7 @@ class JobSchedulerClient(object):
         JobSchedulerRpc().cancel_job(job_id)
 
     @classmethod
-    def create_host_ssh(cls, address, profile, root_pw=None, pkey=None, pkey_pw=None):
+    def create_host_ssh(cls, address, server_profile, root_pw=None, pkey=None, pkey_pw=None):
         """
         Create a host which will be set up using SSH
 
@@ -272,7 +272,7 @@ class JobSchedulerClient(object):
         """
         from chroma_core.models import ManagedHost, Command
 
-        host_id, command_id = JobSchedulerRpc().create_host_ssh(address, profile, root_pw, pkey, pkey_pw)
+        host_id, command_id = JobSchedulerRpc().create_host_ssh(address, server_profile, root_pw, pkey, pkey_pw)
         return ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id)
 
     @classmethod

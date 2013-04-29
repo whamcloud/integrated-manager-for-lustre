@@ -49,7 +49,6 @@ def before_all(context):
 def before_feature(context, feature):
     context.runner.setup_test_environment()
     context.old_db_config = context.runner.setup_databases()
-    context.cli_failure_expected = False
 
     from tests.unit.services.job_scheduler.job_test_case import JobTestCase
 
@@ -70,7 +69,7 @@ def before_feature(context, feature):
     from chroma_core.models import ManagedHost, Command
     from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
-    def create_host_ssh(address, profile, root_pw, pkey, pkey_pw):
+    def create_host_ssh(address, server_profile, root_pw, pkey, pkey_pw):
         host_data = AgentRpc.mock_servers[address]
         host = synthetic_host(address, nids = host_data['nids'], fqdn=host_data['fqdn'], nodename=host_data['nodename'])
         ObjectCache.add(ManagedHost, host)
@@ -190,3 +189,6 @@ def after_feature(context, feature):
 #--    context.runner.teardown_databases(context.old_db_config)
 #--    context.runner.teardown_test_environment()
 #--    # Bob's your uncle.
+
+def before_scenario(context, scenario):
+    context.cli_failure_expected = False
