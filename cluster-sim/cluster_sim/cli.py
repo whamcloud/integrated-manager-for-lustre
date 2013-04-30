@@ -96,11 +96,7 @@ class SimulatorCli(object):
             args['expiry'] = (datetime.datetime.now(dateutil.tz.tzutc()) + duration).isoformat()
 
         response = session.post("%sapi/registration_token/" % url, data = json.dumps(args))
-        if not response.status_code == 201:
-            print response.content
-            raise RuntimeError("Error %s acquiring token" % response.status_code)
-        token_uri = response.headers['location']
-        response = session.get(token_uri)
+        assert response.ok
         return response.json()['secret']
 
     def register(self, args):

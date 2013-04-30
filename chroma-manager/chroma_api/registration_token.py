@@ -71,3 +71,4 @@ class RegistrationTokenResource(CustomModelResource):
             expiry__gt = datetime.datetime.now(dateutil.tz.tzutc()),
             credits__gt = 0)
         validation = RegistrationTokenValidation()
+        always_return_data = True
