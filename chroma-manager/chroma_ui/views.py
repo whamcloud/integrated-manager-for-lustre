@@ -6,9 +6,15 @@
 
 import json
 import datetime
+import socket
+import traceback
+import os
+from chroma_core.lib.service_config import SupervisorStatus
+from chroma_core.lib.service_config import ServiceConfig
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.core.serializers import json as django_json
 
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
@@ -26,31 +32,74 @@ def _build_cache(request):
     for resource in resources:
         if settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated():
             resource_instance = resource()
-            cache[resource.Meta.resource_name] = [resource_instance.full_dehydrate(resource_instance.build_bundle(obj = m)).data for m in resource.Meta.queryset._clone()]
+            cache[resource.Meta.resource_name] = [
+                resource_instance.full_dehydrate(resource_instance.build_bundle(obj=m)).data for m in
+                resource.Meta.queryset._clone()]
         else:
             cache[resource.Meta.resource_name] = []
 
     from tastypie.serializers import Serializer
+
     serializer = Serializer()
     return serializer.to_simple(cache, {})
 
 
-def index(request):
-    """Serve either the javascript UI, or an advice HTML page
-    if the backend isn't ready yet."""
+def _debug_info(request):
+    """
+    Return some information which may be useful to support in diagnosing errors
 
-    from chroma_core.lib.service_config import ServiceConfig
+    :return: A list of two-tuples
+    """
+
+    info = {
+        'server_time': "%s +00:00" % datetime.datetime.utcnow(),
+        'BUILD': settings.BUILD,
+        'VERSION': settings.VERSION,
+        'IS_RELEASE': settings.IS_RELEASE,
+        'fqdn': socket.getfqdn()
+    }
+
+    for k, v in zip(('sysname', 'nodename', 'release', 'version', 'machine'), os.uname()):
+        info["uname_%s" % k] = v
+
+    return sorted(info.items(), key=lambda v: v[0])
+
+
+def index(request):
+    """Serve either the javascript UI, an advice HTML page
+    if the backend isn't ready yet, or a blocking error page
+    if the backend is in a bad state."""
+
     if not ServiceConfig().configured():
         return render_to_response("installation.html",
-                RequestContext(request, {}))
+                                  RequestContext(request, {}))
     else:
+        stopped_services = SupervisorStatus().get_non_running_services()
+        if stopped_services:
+            # If any services are not running, stop here: rendering API resources
+            # may depend on access to backend services, and in any case a non-running
+            # service is a serious problem that must be reported.
+            return render_to_response("backend_error.html", RequestContext(request, {
+                'description': "The following services are not running: \n%s\n" % "\n".join(
+                    [" * %s" % svc for svc in stopped_services]),
+                'debug_info': _debug_info(request)
+            }))
+        else:
+            try:
+                cache = json.dumps(_build_cache(request), cls=django_json.DjangoJSONEncoder)
+            except:
+                # An exception here indicates an internal error (bug or fatal config problem)
+                # in any of the chroma_api resource classes
+                return render_to_response("backend_error.html", RequestContext(request, {
+                    'description': "Exception rendering resources: %s" % traceback.format_exc(),
+                    'debug_info': _debug_info(request)
+                }))
 
-        from django.core.serializers import json as django_json
-        return render_to_response("base.html",
-                RequestContext(request,
-                        {'cache': json.dumps(_build_cache(request), cls = django_json.DjangoJSONEncoder),
-                         'server_time': datetime.datetime.utcnow(),
-                         'BUILD': settings.BUILD,
-                         'VERSION': settings.VERSION,
-                         'IS_RELEASE': settings.IS_RELEASE
-                         }))
+            return render_to_response("base.html",
+                                      RequestContext(request,
+                                                     {'cache': cache,
+                                                      'server_time': datetime.datetime.utcnow(),
+                                                      'BUILD': settings.BUILD,
+                                                      'VERSION': settings.VERSION,
+                                                      'IS_RELEASE': settings.IS_RELEASE
+                                                     }))

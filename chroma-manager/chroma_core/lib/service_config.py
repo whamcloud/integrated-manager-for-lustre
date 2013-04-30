@@ -57,6 +57,9 @@ class SupervisorStatus(object):
     def get_all_process_info(self):
         return self._xmlrpc.supervisor.getAllProcessInfo()
 
+    def get_non_running_services(self):
+        return [p['name'] for p in SupervisorStatus().get_all_process_info() if p['statename'] != 'RUNNING']
+
 
 class NTPConfig:
     CONFIG_FILE = "/etc/ntp.conf"
@@ -289,8 +292,7 @@ class ServiceConfig(CommandLine):
                 time.sleep(1)
                 t += 1
                 if t > SUPERVISOR_START_TIMEOUT:
-                    bad_services = [p['name'] for p in SupervisorStatus().get_all_process_info() if p['statename'] != 'RUNNING']
-                    msg = "Some services failed to start: %s" % ", ".join(bad_services)
+                    msg = "Some services failed to start: %s" % ", ".join(SupervisorStatus().get_non_running_services())
                     log.error(msg)
                     raise RuntimeError(msg)
 

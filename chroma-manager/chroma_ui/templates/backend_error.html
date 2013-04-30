@@ -1,0 +1,28 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="{{STATIC_URL}}css/base.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/header.css" type="text/css" />
+    <title>Intel&reg; Manager for Lustre* software</title>
+  </head>
+
+  <body>
+    <div class="logohead">
+      <a class="navigation" href="">
+        <div class="logo"></div>
+      </a>
+    </div>
+    <div class='content'>
+    <p>
+      A fatal error has occurred.  Please contact support with the following information.
+    </p>
+    <pre style="border: 2px solid red; word-wrap: break-word; margin-right: 0.5em;">
+[description]
+{{ description }}
+[debug]
+{% for k,v in debug_info %}{{ k }}: {{ v }}
+{% endfor %}</pre>
+    </div>
+  </body>
+</html>
