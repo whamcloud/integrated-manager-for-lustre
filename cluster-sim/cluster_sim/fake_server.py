@@ -277,6 +277,7 @@ class FakeServer(Persisted):
     def join(self):
         if self._agent_client:
             self._agent_client.join()
+            self._agent_client.reader.join()
 
     def stop(self):
         if self._agent_client:
