@@ -42,35 +42,35 @@ class PowerControlResourceTestCase(ChromaApiTestCase):
 class BasicPowerControlResourceTests(PowerControlResourceTestCase):
     def test_creation_with_inherited_values(self):
         self._create_power_type(agent = 'fence_apc',
-                                make = 'APC',
-                                model = '7901',
+                                make = 'FAKE',
+                                model = 'FAKE',
                                 max_outlets = 8,
                                 default_username = 'apc',
                                 default_password = 'apc',
                                 default_options = 'foo=x')
 
-        apc_type = self.api_get_list("/api/power_control_type/")[0]
-        self._create_power_device(device_type = apc_type['resource_uri'],
+        power_type = self.api_get_list("/api/power_control_type/")[0]
+        self._create_power_device(device_type = power_type['resource_uri'],
                                   address = '1.2.3.4')
 
-        apc_pdu = self.api_get_list("/api/power_control_device/")[0]
-        self.assertEqual(apc_pdu['name'], apc_pdu['address'])
-        self.assertEqual(apc_pdu['port'], apc_type['default_port'])
-        self.assertEqual(apc_pdu['username'], apc_type['default_username'])
-        self.assertEqual(apc_pdu['password'], apc_type['default_password'])
-        self.assertEqual(apc_pdu['options'], apc_type['default_options'])
+        new_pdu = self.api_get_list("/api/power_control_device/")[0]
+        self.assertEqual(new_pdu['name'], new_pdu['address'])
+        self.assertEqual(new_pdu['port'], power_type['default_port'])
+        self.assertEqual(new_pdu['username'], power_type['default_username'])
+        self.assertEqual(new_pdu['password'], power_type['default_password'])
+        self.assertEqual(new_pdu['options'], power_type['default_options'])
 
     def test_creation_with_all_values_supplied(self):
         self._create_power_type(agent = 'fence_apc',
-                                make = 'APC',
-                                model = '7901',
+                                make = 'FAKE',
+                                model = 'FAKE',
                                 max_outlets = 8,
                                 default_username = 'apc',
                                 default_password = 'apc',
                                 default_options = "foo=x")
 
-        apc_type = self.api_get_list("/api/power_control_type/")[0]
-        self._create_power_device(device_type = apc_type['resource_uri'],
+        power_type = self.api_get_list("/api/power_control_type/")[0]
+        self._create_power_device(device_type = power_type['resource_uri'],
                                   name = 'foopdu',
                                   address = '1.2.3.4',
                                   port = 2300,
@@ -78,12 +78,12 @@ class BasicPowerControlResourceTests(PowerControlResourceTestCase):
                                   password = 's3kr3t',
                                   options = "foo=y")
 
-        apc_pdu = self.api_get_list("/api/power_control_device/")[0]
-        self.assertEqual(apc_pdu['name'], 'foopdu')
-        self.assertEqual(apc_pdu['port'], 2300)
-        self.assertEqual(apc_pdu['username'], 'super')
-        self.assertEqual(apc_pdu['password'], 's3kr3t')
-        self.assertEqual(apc_pdu['options'], 'foo=y')
+        new_pdu = self.api_get_list("/api/power_control_device/")[0]
+        self.assertEqual(new_pdu['name'], 'foopdu')
+        self.assertEqual(new_pdu['port'], 2300)
+        self.assertEqual(new_pdu['username'], 'super')
+        self.assertEqual(new_pdu['password'], 's3kr3t')
+        self.assertEqual(new_pdu['options'], 'foo=y')
 
 
 class PowerControlResourceTests(PowerControlResourceTestCase):

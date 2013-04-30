@@ -1,0 +1,82 @@
+[
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7900",
+        "max_outlets": 8,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7901",
+        "max_outlets": 8,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7902",
+        "max_outlets": 16,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7930",
+        "max_outlets": 24,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7931",
+        "max_outlets": 16,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7932",
+        "max_outlets": 24,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7920",
+        "max_outlets": 8,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7921",
+        "max_outlets": 8,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7960",
+        "max_outlets": 24,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
+        "agent": "fence_apc",
+        "make": "APC",
+        "model": "7990",
+        "max_outlets": 24,
+        "default_username": "apc",
+        "default_password": "apc"
+    }
+]

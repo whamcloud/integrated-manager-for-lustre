@@ -9,6 +9,7 @@ import logging
 import settings
 from django.db import models
 from django.db.models.signals import post_save, post_delete
+from south.signals import post_migrate
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 
@@ -60,6 +61,30 @@ class PowerControlType(models.Model):
     class Meta:
         app_label = 'chroma_core'
         unique_together = ('agent', 'make', 'model')
+
+
+def create_default_power_types(app, **kwargs):
+    if app != 'chroma_core':
+        return
+
+    import os
+    import json
+    import chroma_core
+    chroma_core = os.path.abspath(os.path.dirname(chroma_core.__file__))
+    with open(os.path.join(chroma_core, "migrations/default_power_types.json")) as f:
+        default_types = json.load(f)
+
+    for power_type in default_types:
+        try:
+            PowerControlType.objects.get(agent = power_type['agent'],
+                                         make = power_type['make'],
+                                         model = power_type['model'])
+        except PowerControlType.DoesNotExist:
+            PowerControlType.objects.create(**power_type)
+
+    print "Loaded %d default power device types." % len(default_types)
+
+post_migrate.connect(create_default_power_types)
 
 
 class PowerControlDeviceUnavailableAlert(AlertState):
