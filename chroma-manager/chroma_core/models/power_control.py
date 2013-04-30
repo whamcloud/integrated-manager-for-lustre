@@ -71,7 +71,7 @@ def create_default_power_types(app, **kwargs):
     import json
     import chroma_core
     chroma_core = os.path.abspath(os.path.dirname(chroma_core.__file__))
-    with open(os.path.join(chroma_core, "migrations/default_power_types.json")) as f:
+    with open(os.path.join(chroma_core, "fixtures/default_power_types.json")) as f:
         default_types = json.load(f)
 
     for power_type in default_types:

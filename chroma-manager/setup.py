@@ -27,6 +27,7 @@ setup(
     # that setuptools wants to strip the first character off the filename.
     package_data = {
         '': [".chroma-manager.wsgi", ".production_supervisord.conf"],
+        'chroma_core': ["fixtures/default_power_types.json"],
         'chroma_ui': ["static/js/lib/*.js", "static/js/lib/angular/*.js",
                       "static/js/lib/select2/*.js", "static/js/*.js",
                       "static/js/controllers/*.js", "static/js/controllers/dialogs/*.js",
