@@ -193,10 +193,12 @@ class APC79xxSimulator(PDUSimulator):
                     break
                 recv_buf.append(c)
 
-                if recv_buf == CTRL_C or recv_buf == EOF:
+                if recv_buf == CTRL_C:
                     for c in WONT_TIMING_MARK:
                         self.socket.send(c)
                     self.control_console()
+                elif recv_buf == EOF:
+                    self.logout()
                 elif recv_buf == ESC:
                     backward(self.last_choice)
 
