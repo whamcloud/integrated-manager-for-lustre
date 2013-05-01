@@ -80,7 +80,7 @@ class EditFilesystem(BaseView):
     def add_ost(self, primary_server_address, volume_name):
         self.add_osts([(primary_server_address, volume_name)])
 
-    def add_osts(self, volumes):
+    def add_osts(self, volumes, reformat=False):
         """
         Open add OST dialog, select some volumes, submit
 
@@ -96,6 +96,11 @@ class EditFilesystem(BaseView):
 
         # Submit and wait for the add to complete
         self.driver.find_element_by_css_selector('#ost_ok_button').click()
+
+        if reformat:
+            self.quiesce()
+            self.driver.find_element_by_css_selector('button#confirm_button').click()
+
         self.quiesce()
         wait_for_transition(self.driver, self.long_wait)
 

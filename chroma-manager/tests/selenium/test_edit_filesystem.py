@@ -172,7 +172,7 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         ost_conf_params = self.conf_param_test_data['ost_conf_params']
         self._test_conf_params_for_target('%s-OST0000' % self.filesystem_name, ost_conf_params)
 
-    def add_osts_and_verify(self, volumes, ost_index_base):
+    def add_osts_and_verify(self, volumes, ost_index_base, reformat=False):
         """
         Add many OSTs, given that the filesystem detail page is rendered
         """
@@ -183,7 +183,7 @@ class TestEditFilesystem(SeleniumBaseTestCase):
             with self.assertRaises(NoSuchElementException):
                 self.driver.find_element_by_link_text(link_text)
 
-        self.edit_filesystem_page.add_osts(volumes)
+        self.edit_filesystem_page.add_osts(volumes, reformat)
 
         # Check that the new OSTs are on the page
         for link_text in osts_to_create:
@@ -237,7 +237,7 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         # do a cycle of add, remove, add without a page refresh
         self.add_osts_and_verify([(new_ost_server_address, new_ost_volume_name)], ost_index_base=1)
         self.remove_ost_and_verify(ost_index=1)
-        self.add_osts_and_verify([(new_ost_server_address, new_ost_volume_name)], ost_index_base=2)
+        self.add_osts_and_verify([(new_ost_server_address, new_ost_volume_name)], ost_index_base=2, reformat=True)
 
     def test_stop_start_ost(self):
         self.edit_filesystem_page.ost_set_state("%s-OST0000" % self.filesystem_name, "unmounted")
