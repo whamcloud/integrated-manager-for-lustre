@@ -254,10 +254,8 @@ class VerifiedHTTPSHandler(urllib2.HTTPSHandler):
         return self.do_open(self.specialized_conn_class, req)
 
 
-def launch_command(cmd, sudo=False):
+def launch_command(cmd):
     args = shlex.split(cmd)
-    if sudo:
-        args.insert(0, 'sudo')
     p = Popen(args, stdout=PIPE)
     stdout = p.communicate()[0]
     if p.returncode != 0:
@@ -310,21 +308,21 @@ def create_repo():
     tmp.write(REPO_CONTENT.format(repo_url, AUTHORITY_CERT, PRIVATE_KEY, AGENT_CERT))
 
     tmp.flush()
-    launch_command('cp %s %s' % (tmp.name, REPO_PATH), sudo=True)
+    launch_command('cp %s %s' % (tmp.name, REPO_PATH))
     os.chmod(REPO_PATH, 0644)
 
 
 def install_agent():
-    return launch_command('yum install -y chroma-agent-management', sudo=True)
+    return launch_command('yum install -y chroma-agent-management')
 
 
 def configure_server():
     server_conf_path = '/var/lib/chroma'
-    launch_command('mkdir -p %s' % server_conf_path, sudo=True)
+    launch_command('mkdir -p %s' % server_conf_path)
     tmp = tempfile.NamedTemporaryFile()
     tmp.write(json.dumps({{'url': base_url + "agent/"}}))
     tmp.flush()
-    launch_command('cp %s %s' % (tmp.name, os.path.join(server_conf_path, 'server_conf')), sudo=True)
+    launch_command('cp %s %s' % (tmp.name, os.path.join(server_conf_path, 'server_conf')))
 
 
 def start_agent():
