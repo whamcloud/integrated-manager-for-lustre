@@ -93,9 +93,26 @@ class BlkId(object):
     def __init__(self):
         blkid_lines = shell.try_run(['blkid', '-s', 'UUID', '-s', 'TYPE']).split("\n")
 
+        # Record filesystem type and UUID for each block devices reported by blkid
         devices = []
-        for line in [l for l in blkid_lines if len(l)]:
-            path, uuid, type = re.search("(.*): UUID=\"(.*)\" TYPE=\"(.*)\"", line).groups()
+        for line in [l.strip() for l in blkid_lines if len(l)]:
+            match = re.match("(.*): UUID=\"([^\"]*)\" TYPE=\"([^\"]*)\"$", line)
+            if match is None:
+                # BlkId only reports devices that contain a filesystem (will have a TYPE), but
+                # not all filesystems have a UUID (e.g. iso9660 doesn't).
+                match = re.match("(.*): TYPE=\"([^\"]*)\"$", line)
+                if match:
+                    path, type = match.groups()
+                    uuid = None
+                else:
+                    # We do not silently drop lines we don't understand, because the BlkId output is
+                    # important to recognising presence of existing filesystems that we have to warn
+                    # against overwriting: if we can't read this cleanly, we need to error out rather
+                    # than risk overwriting something.
+                    raise RuntimeError("Malformed blkid line '%s'" % line)
+            else:
+                path, uuid, type = match.groups()
+
             devices.append({
                 'path': path,
                 'uuid': uuid,

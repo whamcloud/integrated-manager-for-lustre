@@ -54,6 +54,66 @@ class TestBlkId(unittest.TestCase):
             result = BlkId().all()
             self.assertListEqual(expected_result, result)
 
+    def test_HYD_1958(self):
+        """Reproducer for HYD-1958.  Feed BlkId the result from that bug and check it processes it correctly.
+        Checks that BlkId copes with presence of filesystems which do not have a UUID."""
+
+        command_to_result = {
+            (
+                "blkid",
+                "-s",
+                "UUID",
+                "-s",
+                "TYPE"
+            ): """/dev/mapper/vg_regalmds00-lv_lustre63: UUID="e4b74ffe-0456-4495-91cd-1b38c0fa070c" TYPE="ext4"
+/dev/loop0: TYPE="iso9660"
+/dev/sda1: UUID="c9e08e31-b3ce-42b4-ba88-c0a8ca3e46ae" TYPE="ext4"
+"""
+        }
+
+        expected_result = [
+            {
+                "path": "/dev/mapper/vg_regalmds00-lv_lustre63",
+                "type": "ext4",
+                "uuid": "e4b74ffe-0456-4495-91cd-1b38c0fa070c"
+            },
+            {
+                "path": "/dev/loop0",
+                "type": "iso9660",
+                "uuid": None
+            },
+            {
+                "path": "/dev/sda1",
+                "type": "ext4",
+                "uuid": "c9e08e31-b3ce-42b4-ba88-c0a8ca3e46ae"
+            }
+        ]
+
+        with patch_shell(command_to_result):
+            result = BlkId().all()
+            self.assertListEqual(expected_result, result)
+
+    def test_parse_intolerance(self):
+        """
+        Check that the BlkId parser raises an exception if it sees something it doesn't understand
+        """
+        command_to_result = {
+            (
+                "blkid",
+                "-s",
+                "UUID",
+                "-s",
+                "TYPE"
+            ): """/dev/mapper/vg_regalmds00-lv_lustre63: UUID="e4b74ffe-0456-4495-91cd-1b38c0fa070c" TYPE="ext4"
+/dev/loop0: TYPE="iso9660" JUNK="trash"
+/dev/sda1: UUID="c9e08e31-b3ce-42b4-ba88-c0a8ca3e46ae" TYPE="ext4"
+"""
+        }
+
+        with patch_shell(command_to_result):
+            with self.assertRaises(RuntimeError):
+                BlkId().all()
+
 
 class TestFstab(unittest.TestCase):
     def test_load(self):
