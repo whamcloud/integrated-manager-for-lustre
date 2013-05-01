@@ -4,9 +4,7 @@
 # ========================================================
 
 
-from collections import defaultdict
-
-from chroma_core.models import Volume, VolumeNode, ManagedFilesystem, HaCluster
+from chroma_core.models import Volume, ManagedFilesystem, HaCluster
 
 from tastypie.resources import ModelResource
 from tastypie.exceptions import ImmediateHttpResponse
@@ -198,35 +196,17 @@ class VolumeResource(ModelResource):
             raise AssertionError("Volume %s is in use!")
 
         lun = get_object_or_404(Volume, id = volume['id'])
-
-        ha_clusters = [[p for p in c.peers] for c in HaCluster.all_clusters()]
-
-        def _cluster_index(clusters, node):
-            return [i for i in range(len(clusters)) if node in clusters[i]][0]
-
-        lun_nodes_to_update = defaultdict(list)
-        # Apply use,primary values from the request
-        for lun_node_params in volume['nodes']:
-            primary, use = (lun_node_params['primary'], lun_node_params['use'])
-
-            lun_node = get_object_or_404(VolumeNode, id = lun_node_params['id'])
-            lun_node.primary = primary
-            lun_node.use = use
-            lun_node.cluster_index = _cluster_index(ha_clusters, lun_node.host)
-            lun_nodes_to_update[lun].append(lun_node)
+        node_ids = [node['id'] for node in volume['nodes']]
+        host_ids = set(lun.volumenode_set.filter(id__in=node_ids).values_list('host_id', flat=True))
 
         # Sanity-check the primary/failover relationships and save if OK
-        for lun, lun_nodes in lun_nodes_to_update.items():
-            if len(set([node.cluster_index for node in lun_nodes])) > 1:
-                raise ImmediateHttpResponse(response = HttpBadRequest("Attempt to set primary/secondary VolumeNodes across HA clusters for Volume %s" % lun.id))
-            for lun_node in lun_nodes:
-                lun_node.save()
+        if not any(host_ids.issubset(host.id for host in cluster.peers) for cluster in HaCluster.all_clusters()):
+            raise ImmediateHttpResponse(response = HttpBadRequest("Attempt to set primary/secondary VolumeNodes across HA clusters for Volume %s" % lun.id))
+        # Apply use,primary values from the request
+        for node in volume['nodes']:
+            lun.volumenode_set.filter(id=node['id']).update(primary=node['primary'], use=node['use'])
 
         # Clear use, primary on any nodes not in this request
-        from django.db.models import Q
-        for lun_node in lun.volumenode_set.filter(~Q(id__in = [n['id'] for n in volume['nodes']])):
-            lun_node.primary = False
-            lun_node.use = False
-            lun_node.save()
+        lun.volumenode_set.exclude(id__in=node_ids).update(primary=False, use=False)
 
         return bundle
