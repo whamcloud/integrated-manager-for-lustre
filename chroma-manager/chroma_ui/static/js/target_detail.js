@@ -27,11 +27,15 @@ var Target = Backbone.Model.extend({
 var TargetDetail = Backbone.View.extend({
   className: 'target_detail',
   template: _.template($('#target_detail_template').html()),
-  render: function() {
-    var rendered = this.template({target: this.model.toJSON()});
+  render: function () {
+    var cleanModel = this.model.toJSON();
+    var rendered = this.template({target: cleanModel});
     var view = this;
     $(this.el).find('.ui-dialog-content').html(rendered);
     $(this.el).find('.tabs').tabs({'show': function(event, ui) {view.tab_select(event, ui)}});
+
+    var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
+    generateCommandDropdown.generateDropdown($(this.el).find('div[command-dropdown]'), cleanModel);
 
     var conf_params = this.model.get('conf_params');
     if (conf_params != null && !this.model.get('immutable_state')) {

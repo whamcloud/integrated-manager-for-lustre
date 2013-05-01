@@ -45,7 +45,7 @@
         dialogFade: true
       });
     }])
-    .run(['$rootScope', 'STATIC_URL', function ($rootScope, STATIC_URL) {
+    .run(['$rootScope', 'STATIC_URL', 'safeApply', function ($rootScope, STATIC_URL, safeApply) {
       $rootScope.config = {
         asStatic: function (url) {
           return STATIC_URL + url;
@@ -59,9 +59,13 @@
       $rootScope.$on('unblockUi', function () {
         $.unblockUI();
       });
-
     }])
     // TODO: ngInclude -> $anchorScroll -> $location. We do not use $anchorScroll and we do not want to import
     // location as it conflicts with Backbone's router. Remove this when routing goes through Angular.
-    .value('$anchorScroll', null);
+    .value('$anchorScroll', null)
+    // TODO: patching $location with a noop as it conflicts with Backbone's router.
+    // Remove this when routing goes through Angular.
+    .value('$location', {
+      path: angular.noop
+    });
 }());

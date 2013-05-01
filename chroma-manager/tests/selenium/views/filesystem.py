@@ -1,8 +1,5 @@
-from tests.selenium.base import wait_for_transition
 from tests.selenium.base_view import  DatatableView
-from tests.selenium.utils.element import (
-    wait_for_element_by_css_selector, find_visible_element_by_css_selector
-)
+from tests.selenium.utils.element import find_visible_element_by_css_selector
 
 
 class Filesystem(DatatableView):
@@ -28,31 +25,10 @@ class Filesystem(DatatableView):
 
         raise RuntimeError("File system: " + filesystem_name + " not found in file system list")
 
-    def transition(self, filesystem_name, transition_name, transition_confirm = True):
+    def transition(self, filesystem_name, transition_name):
         """Perform given transition on target filesystem"""
         target_filesystem_row = self.locate_filesystem(filesystem_name)
-        buttons = target_filesystem_row.find_elements_by_tag_name("button")
-
-        for button in buttons:
-            if button.text == transition_name:
-                button.click()
-                if transition_confirm:
-                    wait_for_element_by_css_selector(self.driver, '#transition_confirm_button', self.medium_wait)
-                    self.driver.find_element_by_css_selector('#transition_confirm_button').click()
-                wait_for_transition(self.driver, self.standard_wait)
-                return
-
-        raise RuntimeError("Cannot perform transition " + transition_name + " on filesystem " + filesystem_name)
-
-    def check_action_unavailable(self, fs_name, action_name):
-        """Check whether the given transition(action) is present in all possible transitions available for the filesystem"""
-        target_filesystem_row = self.locate_filesystem(fs_name)
-        buttons = target_filesystem_row.find_elements_by_tag_name("button")
-        for button in buttons:
-            if button.text == action_name:
-                raise RuntimeError("Error in File system while performing operation: " + action_name)
-
-        return True
+        self.click_command_button(target_filesystem_row, transition_name)
 
     def edit(self, fs_name):
         """Click filesystem name to be edited"""

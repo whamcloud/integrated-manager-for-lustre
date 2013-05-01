@@ -8,7 +8,6 @@ files = [
   JASMINE,
   JASMINE_ADAPTER,
   'static/js/lib/lodash.custom.js',
-  'static/js/lib/underscore-min.js',
   'static/js/lib/xdate.js',
   'static/js/lib/angular/angular.js',
   'static/js/lib/angular/angular-resource.js',
@@ -23,6 +22,8 @@ files = [
   'static/js/services/*.js',
   'static/js/controllers/controller_module.js',
   'static/js/controllers/**/*.js',
+  'static/js/directives/directive_module.js',
+  'static/js/directives/*.js',
   'test/mock/**/*.js',
   'test/spec/**/*.js'
 ];

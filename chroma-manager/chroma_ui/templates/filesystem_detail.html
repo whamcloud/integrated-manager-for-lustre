@@ -140,6 +140,9 @@
         }
       });
 
+      var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
+      function transformFunc (data) { return data[5]; }
+
       /* Tables of targets */
       var target_table_elements = ['#mgt_configuration_view', '#ost', '#mdt'];
       $.each(target_table_elements, function(i, selector) {
@@ -155,9 +158,10 @@
             { "sClass": 'txtleft' },
             { "sClass": 'txtleft' },
             { "sClass": 'txtleft' },
-            { "sClass": 'txtcenter', bSortable: false},
+            { "sClass": 'txtcenter actions-cell', bSortable: false},
             { "sClass": 'txtcenter', bSortable: false}
-          ]
+          ],
+          fnRowCallback: generateCommandDropdown.dataTableCallback(6, transformFunc, _.isEmpty)
         });
       });
     }
@@ -176,8 +180,12 @@
         $('#mgs_name').html(RouteUtils.uri_properties_link(filesystem.mgt.primary_server, filesystem.mgt.primary_server_name));
         $('#mds_name').html(RouteUtils.uri_properties_link(filesystem.mdts[0].primary_server, filesystem.mdts[0].primary_server_name));
         $('#fs_alerts').html(LiveObject.alertLabel(filesystem));
-        $('#fs_actions').html(LiveObject.actions(filesystem) + LiveObject.busyIcon(filesystem));
         $('#fs_name').html(filesystem.name);
+
+        var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
+        var $commandDropdown = generateCommandDropdown.generateDropdown(angular.element('#fs_actions'), filesystem, 'right');
+
+        $commandDropdown.after(LiveObject.busyIcon(filesystem));
 
         // Config param dialog
         conf_param_dialog = ConfParamDialog({object: filesystem, conf_params: filesystem.conf_params});
@@ -213,7 +221,7 @@
                   RouteUtils.uri_properties_link(target.primary_server, target.primary_server_name),
                   RouteUtils.uri_properties_link(target.failover_servers[0], target.failover_server_name),
                   LiveObject.active_host(target),
-                  LiveObject.actions(target),
+                  target,
                   LiveObject.icons(target)
                 ];
           if (target.kind == "OST") {

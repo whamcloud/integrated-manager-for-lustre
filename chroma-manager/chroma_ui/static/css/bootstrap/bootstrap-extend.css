@@ -1,6 +1,6 @@
 /* This file is intended to fix conflicts between base.css and boostrap.css
- * as well as extentions to some classes
-*/
+ * as well as extensions to some classes
+ */
 
 .btn {
     -webkit-touch-callout: none;
@@ -30,4 +30,14 @@ body form.form .help-inline {
 .tooltip.right {
   border: 0;
   background-color: transparent;
+  white-space: normal;
+}
+
+.dropdown-menu a {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dropdown-menu .tooltip-inner {
+  width: 250px;
 }

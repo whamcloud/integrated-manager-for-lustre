@@ -20,7 +20,7 @@
 // express and approved by Intel in writing.
 
 
-(function () {
+(function (_) {
   'use strict';
 
   /*
@@ -33,7 +33,7 @@
    else: green
    */
 
-  function healthFactory (alertModel, commandModel, eventModel, $timeout, $q, $rootScope, STATES) {
+  function healthFactory(alertModel, commandModel, eventModel, $timeout, $q, $rootScope, STATES) {
     var events, alerts, inactiveAlerts, commands;
 
     $timeout(function timesUp() {
@@ -47,7 +47,7 @@
     /**
      * Loads the relevant services.
      */
-    function getHealth () {
+    function getHealth() {
       events = eventModel.query({dismissed: false, severity__in: [STATES.WARN, STATES.ERROR], limit: 1});
       alerts = alertModel.query({active: true, severity__in: [STATES.WARN, STATES.ERROR], limit: 0});
       inactiveAlerts = alertModel.query({active: false, severity__in: [STATES.WARN], limit: 1});
@@ -59,7 +59,7 @@
     /**
      * Checks the relevant services for status and calls broadcast with the results.
      */
-    function broadcastHealth () {
+    function broadcastHealth() {
       var states = [STATES.GOOD, STATES.WARN, STATES.ERROR];
       var health = [states.indexOf(STATES.GOOD)];
 
@@ -93,4 +93,4 @@
     healthFactory
   ];
   angular.module('models').factory('healthModel', deps);
-}());
+}(window.lodash));

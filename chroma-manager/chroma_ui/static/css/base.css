@@ -461,10 +461,6 @@ tr.log_info {
 .ui-timepicker-div dl dd{ margin: -25px 0 10px 65px; }
 .ui-timepicker-div td { font-size: 90%; }
 
-span.transition_buttons {
-  white-space: nowrap;
-}
-
 .no_notification {
   background-color: #F0F0F0;
   font-family:'Verdana, Arial, Helvetica, sans-serif';
@@ -933,4 +929,12 @@ div.help_loaded {
 .technical_name {
     font-family: Courier, monospace;
     font-weight: bold;
+}
+
+.actions-cell div.dropdown {
+  width: 100px;
+}
+
+.actions-cell .dropdown-menu {
+  left: -30px;
 }

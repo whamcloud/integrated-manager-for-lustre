@@ -228,62 +228,6 @@ var LiveObject = function()
     return spanMarkup(obj, ['active_host'], obj.active_host_name);
   }
 
-  function actions(stateful_object) {
-
-    // resource type + state mapping to contextual help
-    var help_transition_map = {
-      'filesystem': { 'stopped': '_stop_file_system', 'removed': '_remove_file_system', 'available': '_start_file_system' },
-      'host': { 'lnet_up': '_start_lnet', 'lnet_down': '_stop_lnet', 'removed': '_remove_server', 'lnet_unloaded':'_unload_lnet' },
-      'target-MGT': { 'unmounted': '_stop_mgt', 'mounted': '_start_mgt', 'removed': '_remove_mgt' },
-      'target-MDT': { 'unmounted': '_stop_mdt', 'mounted': '_start_mdt' },
-      'target-OST': { 'unmounted': '_stop_ost', 'mounted': '_start_ost', 'removed': '_remove_ost' }
-    };
-
-    // resource type + job class name mapping to contextual help
-    var help_job_map = { 'host' : { 'ForceRemoveHostJob' : '_force_remove' } };
-
-    var markup="<span class='transition_buttons' data-resource_uri='" + stateful_object.resource_uri + "'>";
-    var resource_type = resourceType(stateful_object);
-
-    // Transition buttons
-    _.each(stateful_object.available_transitions, function(transition) {
-      var properties = {
-        'data-resource_uri' : stateful_object.resource_uri,
-        'data-state' : transition.state,
-        'onclick' : 'LiveObject.transitionClicked.apply(this)'
-      };
-      // contextual help mappings
-      if ( _.has(help_transition_map, resource_type) && _.has(help_transition_map[resource_type], transition.state) ) {
-        properties['data-topic'] = help_transition_map[resource_type][transition.state];
-        properties['class'] = 'help_hover';
-      }
-
-      markup += UIHelper.build_tag('button',{content: transition.verb, properties: properties })
-        + '&nbsp;';
-    });
-
-    // Job buttons
-    _.each(stateful_object.available_jobs, function(job)
-    {
-      var properties = {
-        'data-job_confirmation' : JSON.stringify(job.confirmation),
-        'data-job_class'        : job.class_name,
-        'data-job_message'      : job.verb + "(" + stateful_object.label + ")",
-        'data-job_args'         : JSON.stringify(job.args),
-        'onclick'               : "LiveObject.jobClicked.apply(this)"
-      };
-      // contextual help mappings for jobs
-      if (_.has(help_job_map, resource_type) && _.has(help_job_map[resource_type], job.class_name) ) {
-        properties['data-topic'] = help_job_map[resource_type][job.class_name];
-        properties['class'] = 'help_hover';
-      }
-      markup += UIHelper.build_tag('button', { content: job.verb, properties: properties }) + '&nbsp;';
-    });
-
-    markup += "</span>";
-    return markup;
-  }
-
   return {
     alertIcon: alertIcon,
     alertList: alertList,
@@ -294,7 +238,7 @@ var LiveObject = function()
     state: state,
     active_host: active_host,
     renderState: renderState,
-    actions: actions,
+    resourceType: resourceType,
     transitionClicked: transitionClicked,
     jobClicked: jobClicked
   }
@@ -483,6 +427,29 @@ var CommandNotification = function() {
   var read_locks = {};
   var write_locks = {};
   var fast_update_interval = 5000;
+
+  var broadcastDisable = broadcast.bind(null, 'disableCommandDropdown');
+  var broadcastUpdate = broadcast.bind(null, 'updateCommandDropdown');
+
+  /**
+   * @description Since we may not be in angular scope, make sure the $broadcast runs inside the scope if necessary.
+   */
+  function broadcast() {
+    'use strict';
+
+    var args = _.toArray(arguments);
+    var $scope = angular.element('html').scope().$root;
+
+    function broadcaster() {
+      $scope.$broadcast.apply($scope, args);
+    }
+
+    if ($scope.$$phase) {
+      broadcaster();
+    } else {
+      $scope.$apply(broadcaster)
+    }
+  }
 
   function updateBusy()
   {
@@ -718,9 +685,8 @@ var CommandNotification = function() {
       $(".notification_object_icon[data-resource_uri='" + uri + "']").each(function() {
         updateIcon(uri, $(this), true);
       });
-      $(".transition_buttons[data-resource_uri='" + uri + "']").each(function() {
-        $(this).html("")
-      });
+
+      broadcastDisable(uri);
     });
   }
 
@@ -738,9 +704,7 @@ var CommandNotification = function() {
           $(this).html(LiveObject.active_host(obj));
         });
 
-        $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
-          $(this).html(LiveObject.actions(obj));
-        });
+        broadcastUpdate(uri, obj);
 
         var resource = uri.split('/')[2];
         var id = uri.split('/')[3];
@@ -760,9 +724,11 @@ var CommandNotification = function() {
           $(".notification_object_icon[data-resource_uri='" + uri + "']").each(function () {
             var dt_wrapper = $(this).closest("div.dataTables_wrapper");
             if (dt_wrapper.length == 1) {
-              // We are inside a datatable, call its refresh method
+              // We are inside a datatable, remove the row and call its refresh method.
               var table_el = dt_wrapper.find('table')[0];
-              $(table_el).dataTable().fnDraw();
+              var dataTable = $(table_el).dataTable();
+              dataTable.fnDeleteRow($(this).parents('tr')[0]);
+              dataTable.fnDraw();
             }
           });
 
@@ -778,9 +744,7 @@ var CommandNotification = function() {
             $(this).html("");
           });
 
-          $(".transition_buttons[data-resource_uri='" + uri + "']").each(function () {
-            $(this).html("");
-          });
+          broadcastDisable(uri);
         }
       }},
       false);

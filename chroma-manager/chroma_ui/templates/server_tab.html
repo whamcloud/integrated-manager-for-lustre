@@ -30,6 +30,8 @@
 
     function init()
     {
+      var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
+
       $('#server_configuration').dataTable( {
         bServerSide: true,
         bProcessing: true,
@@ -43,7 +45,7 @@
             $.each(data.aaData, function(i, row) {
               var server = $.extend({}, row);
               row['state'] = LiveObject.state(server);
-              row['actions'] = LiveObject.actions(server);
+              row['actions'] = '';
               row['icons'] = LiveObject.icons(server);
               /* Although the value comes from the 'label' attribute, we name
                  the column 'fqdn' so that it is sortable on the fqdn (from
@@ -60,11 +62,12 @@
         "oLanguage": {
             "sEmptyTable": "No Servers to display"
         },
+        fnRowCallback: generateCommandDropdown.dataTableCallback(3),
         aaSort: [[0, 'asc']],
         "aoColumns": [
           { "sClass": 'txtleft', mDataProp: 'fqdn', bSortable: true},
           { "sClass": 'txtcenter', mDataProp: 'state', bSortable: false},
-          { "sClass": 'txtcenter', bSortable: false, mDataProp: 'actions'},
+          { "sClass": 'txtcenter actions-cell', bSortable: false, mDataProp: 'actions'},
           { "sClass": 'txtcenter', bSortable: false, mDataProp: 'icons'}
         ]
       } );

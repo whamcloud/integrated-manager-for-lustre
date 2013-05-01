@@ -20,17 +20,17 @@
 // express and approved by Intel in writing.
 
 
-(function () {
+(function (_) {
   'use strict';
 
   angular.module('interceptors')
-    .factory('tastypieInterceptor', function tastypieInterceptor () {
+    .factory('tastypieInterceptor', function tastypieInterceptor() {
       /**
        * A Factory function that intercepts successful http responses
        * and puts the meta property at a higher level if it is a tastypie generated response.
        * @returns {Function} A new promise.
        */
-      return function tastypieIntercepted (promise) {
+      return function tastypieIntercepted(promise) {
         return promise.then(function (resp) {
           var fromTastyPie = _.isObject(resp.data) && _.isObject(resp.data.meta) && Array.isArray(resp.data.objects);
 
@@ -54,4 +54,4 @@
       // register the interceptor.
       $httpProvider.responseInterceptors.push('tastypieInterceptor');
     });
-}());
+}(window.lodash));

@@ -7,7 +7,7 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 
 from tests.selenium.base import wait_for_transition
 from tests.selenium.utils.constants import wait_time
-from tests.selenium.utils.element import find_visible_element_by_css_selector
+from tests.selenium.utils.element import find_visible_element_by_css_selector, wait_for_element_by_css_selector
 
 
 log = logging.getLogger(__name__)
@@ -23,6 +23,14 @@ class BaseView(object):
         self.long_wait = wait_time['long']
         self.medium_wait = wait_time['medium']
         self.standard_wait = wait_time['standard']
+        self.short_wait = wait_time['short']
+
+        #store selectors and selectors to be formatted.
+        self.dropdown_class_name = 'dropdown'
+        self.dropdown_selector = '.%s' % self.dropdown_class_name
+        self.dropdown_menu_class_name = 'dropdown-menu'
+        self.dropdown_menu_selector = '.%s' % self.dropdown_menu_class_name
+        self.state_format = self.dropdown_menu_selector + ' a[data-state="%s"]'
 
     def quiesce(self):
         for i in xrange(self.long_wait):
@@ -54,21 +62,30 @@ class BaseView(object):
             raise RuntimeError("No visible element match %s" % selector)
         return element
 
-    def _find_state_button(self, container, state):
-        # Iterating because selenium doesn't seem to correctly apply a [data-state=xxx] selector
-        buttons = container.find_elements_by_css_selector('button')
-        for button in buttons:
-            if button.get_attribute('data-state') == state:
-                return button
-        raise NoSuchElementException("No button (of %s buttons) found with state %s" % (len(buttons), state))
+    def _find_state_anchor(self, container, state):
+        sel = self.state_format % state
+
+        try:
+            return container.find_element_by_css_selector(sel)
+        except NoSuchElementException:
+            raise NoSuchElementException("No action found with state %s" % state)
 
     def click_command_button(self, container, state):
-        """Find a button within `container` that is a state transition
+        """Find a the dropdown within `container` that is a state transition
         to `state`, click it, and wait for the transition to complete"""
 
-        button = self._find_state_button(container, state)
+        self.quiesce()
 
-        button.click()
+        wait_for_element_by_css_selector(container, self.dropdown_selector, self.standard_wait)
+
+        dropdown = container.find_element_by_class_name(self.dropdown_class_name)
+        dropdown_menu = dropdown.find_element_by_class_name(self.dropdown_menu_class_name)
+
+        if not dropdown_menu.is_displayed():
+            dropdown.click()
+
+        anchor = self._find_state_anchor(dropdown_menu, state)
+        anchor.click()
 
         # Lets move the mouse off the button to untrigger any hover that could block
         # the #transition_confirm_button.
@@ -82,12 +99,10 @@ class BaseView(object):
         wait_for_transition(self.driver, self.standard_wait)
 
         try:
-            self._find_state_button(container, state)
-            raise RuntimeError("Transition to %s in %s failed (button still visible)" % (state, container))
-        except (NoSuchElementException, StaleElementReferenceException):
-            # NoSuchElement is if the container is still there but the button is gone
-            # StaleElementException is if the container is no longer there (also ok
-            # because implies the button is definitely gone too)
+            anchor.is_displayed()
+            if dropdown.is_displayed():
+                raise RuntimeError("Transition to %s in %s failed (action still selectable)" % (state, container))
+        except StaleElementReferenceException:
             pass
 
     def get_table_text(self, table_element, columns):

@@ -20,20 +20,29 @@
 // express and approved by Intel in writing.
 
 
-var Server = Backbone.Model.extend({
-  urlRoot: "/api/host/"
-});
+(function (_) {
+  'use strict';
 
-var ServerDetail = Backbone.View.extend({
-  className: 'server_detail',
-  template: _.template($('#server_detail_template').html()),
-  render: function () {
-    var cleanModel = this.model.toJSON();
-    var rendered = this.template({'server': cleanModel});
-    $(this.el).find('.ui-dialog-content').html(rendered);
+  function helpText($http, STATIC_URL, $templateCache, $q) {
+    function buildUrl(topic) {
+      return '%scontextual/%s.html'.sprintf(STATIC_URL, topic);
+    }
 
-    var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
-    generateCommandDropdown.generateDropdown($(this.el).find('div[command-dropdown]'), cleanModel);
-    return this;
+    return function getHelpText(topic) {
+      if (_.isEmpty(topic)) {
+        return $q.when('');
+      }
+
+      return $http.get(buildUrl(topic), {
+        cache: $templateCache
+      }).then(function success(resp) {
+          return resp.data;
+        });
+    };
   }
-});
+
+  /**
+   * @name helpText
+   */
+  angular.module('services').factory('helpText', ['$http', 'STATIC_URL', '$templateCache', '$q', helpText]);
+}(window.lodash));

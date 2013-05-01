@@ -12,6 +12,8 @@
 
     function init()
     {
+      var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
+
       var oTable = $('#fs_list').dataTable( {
         bServerSide: true,
         sAjaxSource: 'filesystem/',
@@ -40,7 +42,7 @@
               row.client_count = formatBigNumber(row.client_count);
               row.bytes_total = formatBytes(row.bytes_total);
               row.bytes_free = formatBytes(row.bytes_free);
-              row.state_transitions = LiveObject.actions(row);
+              row.state_transitions = '';
               row.notification_icons = LiveObject.icons(row);
             });
             callback(data);
@@ -53,9 +55,10 @@
           { "sClass": 'txtright', mDataProp: 'client_count', bSortable: false},
           { "sClass": 'txtright', mDataProp: 'bytes_total', bSortable: false},
           { "sClass": 'txtright', mDataProp: 'bytes_free', bSortable: false},
-          { "sClass": 'txtright', mDataProp: 'state_transitions', bSortable: false},
+          { "sClass": 'txtcenter actions-cell', mDataProp: 'state_transitions', bSortable: false},
           { "sClass": 'txtleft', mDataProp: 'notification_icons', bSortable: false}
-        ]
+        ],
+        fnRowCallback: generateCommandDropdown.dataTableCallback(7)
       });
 
       $('#create_new_fs').button();

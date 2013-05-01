@@ -20,20 +20,17 @@
 // express and approved by Intel in writing.
 
 
-var Server = Backbone.Model.extend({
-  urlRoot: "/api/host/"
-});
+angular.module('services').factory('safeApply', ['$rootScope', function ($rootScope) {
+  'use strict';
 
-var ServerDetail = Backbone.View.extend({
-  className: 'server_detail',
-  template: _.template($('#server_detail_template').html()),
-  render: function () {
-    var cleanModel = this.model.toJSON();
-    var rendered = this.template({'server': cleanModel});
-    $(this.el).find('.ui-dialog-content').html(rendered);
+  $rootScope.safeApply = function (func, $scope) {
+    $scope = $scope || $rootScope;
+    func = func || angular.noop;
 
-    var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
-    generateCommandDropdown.generateDropdown($(this.el).find('div[command-dropdown]'), cleanModel);
-    return this;
-  }
-});
+    if ($scope.$root.$$phase) {
+      return func();
+    } else {
+      return $scope.$apply(func);
+    }
+  };
+}]);

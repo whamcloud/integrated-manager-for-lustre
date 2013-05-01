@@ -25,6 +25,8 @@
 
     function init()
     {
+      var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
+
       // List Existing MGT JQuery Table init()
       var oMgtConfiguration = $('#mgt_configuration').dataTable( {
         bServerSide: true,
@@ -39,7 +41,7 @@
               $.each(mgt.filesystems, function(i, fs) {fs_names.push(fs.name);});
               mgt.fs_names = fs_names.join(", ")
               mgt.primary_server_name = RouteUtils.object_properties_link(mgt, mgt.primary_server_name);
-              mgt.state_transitions = LiveObject.actions(mgt);
+              mgt.state_transitions = '';
               mgt.notification_icons = LiveObject.icons(mgt);
             });
             callback(data);
@@ -58,9 +60,10 @@
           { "sClass": 'txtleft', mDataProp: 'primary_server_name', bSortable: false},
           { "sClass": 'txtleft', mDataProp: 'failover_server_name', bSortable: false},
           { "sClass": 'txtleft', mDataProp: 'active_host_name', bSortable: false},
-          { "sClass": 'txtcenter', bSortable: false, mDataProp: 'state_transitions', bSortable: false},
+          { "sClass": 'txtcenter actions-cell', bSortable: false, mDataProp: 'state_transitions', bSortable: false},
           { "sClass": 'txtleft', bSortable: false, mDataProp: 'notification_icons', bSortable: false}
-        ]
+        ],
+        fnRowCallback: generateCommandDropdown.dataTableCallback(6)
       } );
 
       $('#btnNewMGT').attr('disabled', true);

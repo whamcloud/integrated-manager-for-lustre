@@ -23,10 +23,10 @@ describe('Power Control Device', function () {
     var baseUri = '/api/power_control_device/';
 
     $httpBackend
-      .expectPUT('%s%s'.sprintf(baseUri, 'foo/'), _.extend({id: 'foo'}, expectedData))
+      .expectPUT('%s%s'.sprintf(baseUri, 'foo/'), window.lodash.extend({id: 'foo'}, expectedData))
       .respond({outlets: []});
 
-    var powerControlDeviceModel = new PowerControlDeviceModel(_.extend({id: 'foo'}, data));
+    var powerControlDeviceModel = new PowerControlDeviceModel(window.lodash.extend({id: 'foo'}, data));
 
     powerControlDeviceModel.$update();
 
