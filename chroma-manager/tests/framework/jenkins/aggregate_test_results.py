@@ -9,6 +9,7 @@
 #
 # Usage: ./extract_downstream_projects.py jenkins_url username password build_job_name build_job_build_number valid_test_jobs required_tests
 
+import errno
 import os
 import re
 import sys
@@ -17,6 +18,17 @@ from jenkinsapi import api
 
 import logging
 logging.basicConfig()
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
 
 if __name__ == '__main__':
 
@@ -57,8 +69,8 @@ if __name__ == '__main__':
         test_run.block_until_complete()
 
     # Gather test and coverage reports from test jobs
-    os.makedirs('coverage_files')
-    os.makedirs('test_reports')
+    mkdir_p('coverage_files')
+    mkdir_p('test_reports')
 
     for test_run in test_runs:
         artifacts = test_run.get_artifact_dict()
@@ -68,7 +80,7 @@ if __name__ == '__main__':
             coverage_report.save('coverage_files/.coverage.%s' % test_run.job.name)
 
         test_reports = [v for k, v in artifacts.iteritems() if re.match("test_reports/.*", k)]
-        os.makedirs("test_reports/%s" % test_run.job.name)
+        mkdir_p("test_reports/%s" % test_run.job.name)
         for test_report in test_reports:
             test_report.savetodir("test_reports/%s/" % test_run.job.name)
 
