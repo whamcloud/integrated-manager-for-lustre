@@ -43,13 +43,13 @@ class Lun(resources.LogicalDrive):
     class Meta:
         identifier = identifiers.ScopedId('local_id')
         relations = [
-            relations.Provide(provide_to=('linux', 'ScsiDevice'), attributes=['serial_83'], ignorecase=True),
+            relations.Provide(provide_to=('linux', 'ScsiDevice'), attributes=['serial'], ignorecase=True),
         ]
 
     local_id = attributes.Integer()
     name = attributes.String()
 
-    serial_83 = attributes.String()
+    serial = attributes.String()
 
     def get_label(self):
         return self.name

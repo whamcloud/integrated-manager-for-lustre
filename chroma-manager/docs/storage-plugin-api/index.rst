@@ -418,28 +418,28 @@ As well as explicit *parents* relations between resources, resource attributes c
 declared to *provide* a particular entity.  This is used for linking up resources between
 different plugins, or between storage controllers and Linux hosts.
 
-Detected SCSI devices have two serial number attributes, which are called `serial_80` and
-`serial_83`. These correspond to the output of the `scsi_id` tool when using `-p 0x80` or
-`-p 0x83` arguments respectively.
-
 To match up two resources based on their attributes, use the `Meta.relations` attribute,
-which must be a list of `relations.Provide` and `relations.Subscribe` objects.
+which must be a list of `relations.Provide` and `relations.Subscribe` objects.  In the following
+example, a plugin matches its LUNs to detected SCSI devices of the built in class `linux.ScsiDevice`,
+which stores the device's WWID as the `serial` attribute.
+
 
 .. code-block:: python
 
     class MyLunClass(Resource):
-        serial_80 = attributes.String()
+        serial = attributes.String()
 
         class Meta:
             identifier = identifiers.GlobalId('my_serial')
             relations = [relations.Provide(
                 provide_to = ('linux', 'ScsiDevice'),
-                attributes = 'serial_80')]
+                attributes = 'serial')]
 
 
 The `provide_to` argument to `Provide` can either be a resource class, or a 2-tuple of `([plugin name], [class name])`
 for referring to resources in another plugin.  In this case, we are referring to a resource in the 'linux' plugin, which
-is what the Command Center uses for detecting standard devices and device nodes on Linux servers.
+is what the Command Center uses for detecting standard devices and device nodes on Linux servers.  Note that these
+relations are case sensitive.
 
 Example Plugin
 --------------

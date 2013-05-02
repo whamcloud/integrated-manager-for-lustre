@@ -132,17 +132,16 @@ class TestManyObjects(ResourceManagerTestCase):
                 drives.append(drive_resource)
             lun_resource = self._make_local_resource(
                 'example_plugin', 'Lun',
-                parents = drives,
-                serial_83 = "foobar%d" % n,
-                local_id = n,
-                size = lun_size,
-                name = "LUN_%d" % n)
+                parents=drives,
+                serial="foobar%d" % n,
+                local_id=n,
+                size=lun_size,
+                name="LUN_%d" % n)
             self.controller_resources.extend(drives + [lun_resource])
 
             dev_resource = self._make_local_resource('linux', 'ScsiDevice',
-                serial_80 = None,
-                serial_83 = "foobar%d" % n,
-                size = lun_size)
+                                                     serial="foobar%d" % n,
+                                                     size=lun_size)
             node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo%s" % n, parents = [dev_resource], host_id = self.host.id)
             self.host_resources.extend([dev_resource, node_resource])
 
@@ -255,7 +254,7 @@ class TestResourceOperations(ResourceManagerTestCase):
         self.scannable_resource_pk = resource_record.pk
         self.scannable_resource = scannable_resource
 
-        self.dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80 = "foobar", serial_83 = None, size = 4096)
+        self.dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial="foobar", size=4096)
         self.node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo", parents = [self.dev_resource], host_id = self.host.id)
 
     def test_re_add(self):
@@ -359,8 +358,8 @@ class TestResourceOperations(ResourceManagerTestCase):
         # Check the created Volume has a link back to the UnsharedDevice
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         from chroma_core.models import StorageResourceRecord
-        resource_record = StorageResourceRecord.objects.get(pk = self.scannable_resource_pk)
-        dev_record = ResourceQuery().get_record_by_attributes('linux', 'ScsiDevice', serial_80 = "foobar", serial_83 = None)
+        resource_record = StorageResourceRecord.objects.get(pk=self.scannable_resource_pk)
+        dev_record = ResourceQuery().get_record_by_attributes('linux', 'ScsiDevice', serial="foobar")
 
         self.assertEqual(Volume.objects.get().storage_resource_id, dev_record.pk)
         self.assertEqual(Volume.objects.get().size, 4096)
@@ -385,7 +384,7 @@ class TestResourceOperations(ResourceManagerTestCase):
         """
 
         FILESYSTEM_TYPE = 'ext2'
-        occupied_dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80="foobar", serial_83=None,
+        occupied_dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial="foobar",
                                                           size=4096, filesystem_type=FILESYSTEM_TYPE)
         occupied_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path="/dev/foo",
                                                            parents=[occupied_dev_resource], host_id=self.host.id)
@@ -495,7 +494,7 @@ class TestVolumeBalancing(ResourceManagerTestCase):
             for host_info in hosts:
                 resources = []
                 for device in devices:
-                    dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80 = device, serial_83 = "", size = 4096)
+                    dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial=device, size=4096)
                     node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/%s" % device, parents = [dev_resource], host_id = host_info['host'].id)
                     resources.extend([dev_resource, node_resource])
                 resource_manager.session_add_resources(host_info['record'].pk, resources)
@@ -542,7 +541,7 @@ class TestVolumeBalancing(ResourceManagerTestCase):
             for host_info in hosts:
                 resources = []
                 for device in devices:
-                    dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80 = device, serial_83 = "", size = 4096)
+                    dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial=device, size=4096)
                     node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/%s" % device, parents = [dev_resource], host_id = host_info['host'].id)
                     resources.extend([dev_resource, node_resource])
                 resource_manager.session_add_resources(host_info['record'].pk, resources)
@@ -571,11 +570,10 @@ class TestVolumeNaming(ResourceManagerTestCase):
             'address_2': 'bar'
         })
         lun_resource = self._make_local_resource('example_plugin', 'Lun',
-            local_id = 1,
-            name = self.PLUGIN_LUN_NAME,
-            serial_83 = self.SERIAL.upper(),
-            size = 4096
-        )
+                                                 local_id=1,
+                                                 name=self.PLUGIN_LUN_NAME,
+                                                 serial=self.SERIAL.upper(),
+                                                 size=4096)
 
         resource_manager.session_open(couplet_record.pk, [couplet_resource, lun_resource], 60)
 
@@ -584,7 +582,7 @@ class TestVolumeNaming(ResourceManagerTestCase):
 
         host_record, host_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
 
-        dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial_80 = None, serial_83 = self.SERIAL, size = 4096)
+        dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial=self.SERIAL, size=4096)
         node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo", parents = [dev_resource], host_id = self.host.id)
         resources = [host_resource, dev_resource, node_resource]
         if lvm:

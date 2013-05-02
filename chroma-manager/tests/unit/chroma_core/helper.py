@@ -35,8 +35,7 @@ def synthetic_volume(serial=None):
     if not serial:
         serial = "foobar%d" % volume.id
 
-    attrs = {'serial_80': None,
-             'serial_83': serial,
+    attrs = {'serial': serial,
              'size': 1024000}
 
     from chroma_core.lib.storage_plugin.manager import storage_plugin_manager

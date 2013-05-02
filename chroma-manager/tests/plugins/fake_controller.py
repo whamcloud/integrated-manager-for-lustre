@@ -62,11 +62,11 @@ class Lun(resources.LogicalDrive):
 
 
 class ScsiLun(resources.LogicalDrive):
-    serial_80 = attributes.String()
+    serial = attributes.String()
 
     class Meta:
-        identifier = GlobalId('serial_80')
-        relations = [relations.Provide(provide_to = ('linux', 'ScsiDevice'), attributes = ['serial_80'])]
+        identifier = GlobalId('serial')
+        relations = [relations.Provide(provide_to=('linux', 'ScsiDevice'), attributes=['serial'])]
 
 
 class FakePresentation(resources.PathWeight):
@@ -105,7 +105,7 @@ class FakeControllerPlugin(Plugin):
             lun, creaated = self.update_or_create(Lun, parents = [couplet], lun_id = lun, size = 73 * 1024 * 1024 * 1024, couplet = couplet)
             self._luns.append(lun)
 
-        self.update_or_create(ScsiLun, serial_80 = "SQEMU    QEMU HARDDISK  MPATH-testdev01", size = 73 * 1024 * 1024 * 1024)
+        self.update_or_create(ScsiLun, serial="SQEMU    QEMU HARDDISK  MPATH-testdev01", size=73 * 1024 * 1024 * 1024)
 
     def update_scan(self, scannable_resource):
         import random

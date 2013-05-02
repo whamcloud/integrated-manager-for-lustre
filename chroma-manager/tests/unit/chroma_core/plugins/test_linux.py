@@ -129,3 +129,13 @@ class LinuxPluginTestCase(TestCase):
 
         # The other partition should still be shown
         self.assertEqual(VolumeNode.objects.filter(volume = Volume.objects.get(label = "MPATH-testdev00-2")).count(), 1)
+
+    def test_HYD_1969(self):
+        """Reproducer for HYD-1969, one shared volume is being reported as two separate volumes with the same label."""
+        host1 = synthetic_host('mds00', storage_resource=True)
+        host2 = synthetic_host('mds01', storage_resource=True)
+
+        self._start_session_with_data(host1, "HYD-1969-mds00.json")
+        self._start_session_with_data(host2, "HYD-1969-mds01.json")
+
+        self.assertEqual(Volume.objects.filter(label="3690b11c00006c68d000007ea5158674f").count(), 1)

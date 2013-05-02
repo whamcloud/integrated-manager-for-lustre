@@ -49,16 +49,13 @@ class PluginAgentResources(resources.Resource, HostsideResource):
 
 class ScsiDevice(resources.LogicalDrive):
     class Meta:
-        identifier = GlobalId('serial_80', 'serial_83')
+        identifier = GlobalId('serial')
         label = "SCSI device"
 
-    serial_80 = attributes.String()
-    serial_83 = attributes.String()
+    serial = attributes.String()
 
     def get_label(self):
-        for attr in SERIAL_PREFERENCE:
-            if getattr(self, attr):
-                return getattr(self, attr)
+        return self.serial
 
 
 class UnsharedDevice(resources.LogicalDrive):
@@ -204,14 +201,13 @@ class Linux(Plugin):
         for bdev in devices['devs'].values():
             serial = preferred_serial(bdev)
             if not bdev['major_minor'] in special_block_devices:
-                if serial != None and not serial in res_by_serial:
+                if serial is not None and not serial in res_by_serial:
                     # NB it's okay to have multiple block devices with the same
                     # serial (multipath): we just store the serial+size once
                     node, created = self.update_or_create(ScsiDevice,
-                            serial_80 = bdev['serial_80'],
-                            serial_83 = bdev['serial_83'],
-                            size = bdev['size'],
-                            filesystem_type = bdev['filesystem_type'])
+                                                          serial=serial,
+                                                          size=bdev['size'],
+                                                          filesystem_type=bdev['filesystem_type'])
                     res_by_serial[serial] = node
 
         # Map major:minor string to LinuxDeviceNode
@@ -229,7 +225,7 @@ class Linux(Plugin):
                 continue
 
             serial = preferred_serial(bdev)
-            if serial != None:
+            if serial is not None:
                 # Serial is set, so look up the ScsiDevice
                 lun_resource = res_by_serial[serial]
                 node, created = self.update_or_create(LinuxDeviceNode,

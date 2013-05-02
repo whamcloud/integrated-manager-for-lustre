@@ -30,11 +30,11 @@ class Couplet(resources.ScannableResource):
 
 class Lun(resources.LogicalDrive):
     class Meta:
-        identifier = GlobalId('serial_80')
+        identifier = GlobalId('serial')
         relations = [
             relations.Provide(
-                provide_to = ('linux', 'ScsiDevice'),
-                attributes = ['serial_80']),
+                provide_to=('linux', 'ScsiDevice'),
+                attributes=['serial']),
         ]
         charts = [
             {
@@ -53,7 +53,7 @@ class Lun(resources.LogicalDrive):
 
     couplet = attributes.ResourceReference()
     lun_id = attributes.String()
-    serial_80 = attributes.String()
+    serial = attributes.String()
 
     read_bytes_sec = statistics.Gauge(units="B/s", label="Read bandwidth")
     write_bytes_sec = statistics.Gauge(units="B/s", label="Write bandwidth")
@@ -90,31 +90,6 @@ class Disk(resources.PhysicalDisk):
     read_bytes_sec = statistics.Gauge(units="B/s", label="Read bandwidth")
     write_bytes_sec = statistics.Gauge(units="B/s", label="Write bandwidth")
 
-# class ScsiLun(resources.LogicalDrive):
-#     serial_80 = attributes.String()
-#
-#     class Meta:
-#         identifier = GlobalId('serial_80')
-#         relations = [relations.Provide(provide_to=('linux', 'ScsiDevice'), attributes=['serial_80'])]
-#
-#
-# class FakePresentation(resources.PathWeight):
-#     lun_id = attributes.String()
-#     path = attributes.String()
-#     host_id = attributes.Integer()
-#
-#     class Meta:
-#         identifier = ScopedId('path')
-#
-#         relations = [
-#             relations.Provide(
-#                 provide_to=resources.DeviceNode,
-#                 attributes=['host_id', 'path']),
-#             relations.Subscribe(
-#                 subscribe_to=Lun,
-#                 attributes=['lun_id'])
-#         ]
-
 
 class SimulatorController(Plugin):
     def initial_scan(self, couplet):
@@ -133,8 +108,8 @@ class SimulatorController(Plugin):
         for lun_serial, lun_data in poll_data['luns'].items():
             lun, created = self.update_or_create(Lun,
                                                  parents=[couplet] + [self._disks[wwid] for wwid in lun_data['wwids']],
-                                                 couplet = couplet,
-                                                 serial_80=lun_data['serial'],
+                                                 couplet=couplet,
+                                                 serial=lun_data['serial'],
                                                  lun_id=lun_data['serial'],
                                                  size=lun_data['size'] * 1024 * 1024)
             for wwid in lun_data['wwids']:

@@ -275,7 +275,8 @@ STORAGE_PLUGIN_DEBUG_PLUGINS = []
 
 STORAGE_PLUGIN_ENABLE_STATS = True
 
-# Order of preference of ScsiDevice attributes in linux plugin, favourite first.
+# When agent sends VPD 0x80 and 0x83 serial numbers, which do we prefer to use
+# for the canonical device serial on the manager?  Favorite first.
 SERIAL_PREFERENCE = ['serial_83', 'serial_80']
 
 # For django_coverage
