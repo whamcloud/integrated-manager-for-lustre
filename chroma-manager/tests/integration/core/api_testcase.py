@@ -77,7 +77,8 @@ class ApiTestCase(UtilityTestCase):
             self.remote_operations.await_server_boot(server['fqdn'], restart = True)
             logger.info("%s is running" % server['fqdn'])
             self.remote_operations.inject_log_message(server['fqdn'],
-                                                      "==== " "starting test %s "
+                                                      "==== "
+                                                      "starting test %s "
                                                       "=====" % self)
 
         if not 'filesystem' in config:
@@ -119,7 +120,22 @@ class ApiTestCase(UtilityTestCase):
                 shutil.rmtree(self.simulator.folder)
         else:
             if hasattr(self, 'remote_operations'):
-                self._check_for_down_servers()
+                # Check that all servers are up and available after the test
+                down_nodes = []
+                for server in config['lustre_servers']:
+                    if not self.remote_operations.host_contactable(server['address']):
+                        down_nodes.append(server['address'])
+                    else:
+                        self.remote_operations.inject_log_message(
+                            server['fqdn'], "==== stopping test %s =====" %
+                            self
+                        )
+
+                if len(down_nodes):
+                    logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
+                    if not getattr(self, 'down_node_expected', False):
+                        raise RuntimeError("AWOL servers after test: %s" %
+                                           ", ".join(down_nodes))
 
         self.assertTrue(self.supervisor_controlled_processes_running())
         self.assertEqual(
@@ -136,18 +152,6 @@ class ApiTestCase(UtilityTestCase):
                                                           server_http_url =
                                                           config['chroma_managers'][0]['server_http_url'])
         return self._chroma_manager
-
-    def _check_for_down_servers(self):
-        # Check that all servers are up and available after the test
-        down_nodes = []
-        for server in self.TEST_SERVERS:
-            if not self.remote_operations.host_contactable(server['fqdn']):
-                down_nodes.append(server['fqdn'])
-
-        if len(down_nodes):
-            logger.warning("After test, some servers were no longer running: %s" % ", ".join(down_nodes))
-            if not getattr(self, 'down_node_expected', False):
-                raise RuntimeError("AWOL servers after test: %s" % ", ".join(down_nodes))
 
     def api_contactable(self):
         try:
