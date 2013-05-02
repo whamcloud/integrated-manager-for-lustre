@@ -47,6 +47,36 @@ class HostValidation(Validation):
         return errors
 
 
+class HostTestValidation(HostValidation):
+
+    def is_valid(self, bundle, request=None):
+        errors = super(HostTestValidation, self).is_valid(bundle, request)
+
+        try:
+            auth_type = bundle.data['auth_type']
+            if auth_type == 'root_password_choice':
+                try:
+                    root_password = bundle.data.get('root_password')
+                except KeyError:
+                    errors['root_password'].append("This field is mandatory")
+                else:
+                    if not len(root_password.strip()):
+                        errors['root_password'].append("This field is mandatory")
+            elif auth_type == 'private_key_choice':
+                try:
+                    private_key = bundle.data.get('private_key')
+                except KeyError:
+                    errors['private_key'].append("This field is mandatory")
+                else:
+                    if not len(private_key.strip()):
+                        errors['private_key'].append("This field is mandatory")
+        except KeyError:
+            #  What?  Now auth_type? assume existing key default case.
+            pass
+
+        return errors
+
+
 def _host_params(bundle):
 #  See the UI (e.g. server_configuration.js)
     return {'address': bundle.data.get('address'),
@@ -156,6 +186,14 @@ class HostTestResource(Resource):
     private_key_passphrase = fields.CharField(help_text = "passphrase to "
                                                           "decrypt private key")
 
+    auth_type = fields.CharField(help_text = "SSH authentication type. "
+         "If has the value 'root_password_choice', then the root_password "
+         "field must be non-empty, and if the value is 'private_key_choice' "
+         "then the private_key field must be non empty.  All other values are "
+         "ignored and assume existing private key.  This field is not for "
+         "actual ssh connections.  It is used to validate that enough "
+         "information is available to attempt the chosen auth_type.")
+
     class Meta:
         list_allowed_methods = ['post']
         detail_allowed_methods = []
@@ -163,7 +201,7 @@ class HostTestResource(Resource):
         authentication = AnonymousAuthentication()
         authorization = PermissionAuthorization('add_managedhost')
         object_class = dict
-        validation = HostValidation()
+        validation = HostTestValidation()
 
     def obj_create(self, bundle, request = None, **kwargs):
 
