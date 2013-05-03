@@ -1,8 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
 # A script that handles translating our json input into the format
 # accepted by our vm provisioner.
 #

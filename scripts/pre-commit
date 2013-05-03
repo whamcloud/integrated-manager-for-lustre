@@ -92,7 +92,7 @@ CHECKS = [
         'command': 'scripts/boilerplate.py test %s',
         'match_files': [
             '.*\.py$',
-            '.*chroma_ui/static/js/[^/]+\.js$'
+            '.*chroma_ui/static/js/.*\.js$'
         ],
         'ignore_files': [
             '.*/chroma-manager/r3d/prettytable.py',
@@ -105,7 +105,8 @@ CHECKS = [
             '.*/tests/.*.py',
             '.*/manage.py',
             '.*/BUILD/.*',
-            '.*/chroma-director/.*'],
+            '.*/chroma-director/.*',
+            '.*chroma_ui/static/js/lib/.*\.js$'],
         'print_filename': True
     }
 ]

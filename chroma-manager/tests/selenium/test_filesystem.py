@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 from tests.selenium.views.filesystem import Filesystem
 from tests.selenium.base import SeleniumBaseTestCase, wait_for_transition
 from utils.sample_data import Testdata

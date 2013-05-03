@@ -1,8 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
 from mock import patch
 from chroma_agent.action_plugins.manage_node import shutdown_server, reboot_server
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse

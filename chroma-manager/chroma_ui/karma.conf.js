@@ -14,7 +14,7 @@ files = [
   'static/js/lib/angular/angular-resource.js',
   'static/js/lib/angular/ui-bootstrap.js',
   'test/lib/angular-mocks.js',
-  'static/js/util/**/*.js',
+  'static/js/lib/sprintf/*.js',
   'static/js/constants.js',
   'static/js/interceptors/*.js',
   'static/js/models/models_module.js',

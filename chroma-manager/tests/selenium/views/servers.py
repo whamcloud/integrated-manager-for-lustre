@@ -1,7 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
 from selenium.common.exceptions import NoSuchElementException
 
 from tests.selenium.base import wait_for_transition

@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-#
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 #
 # Simple script to gather all of the relevant logs from a cluster.
 #

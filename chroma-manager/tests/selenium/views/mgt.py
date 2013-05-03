@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 from tests.selenium.base_view import DatatableView
 from tests.selenium.base import wait_for_transition
 

@@ -1,7 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
 from tests.selenium.views.command_detail import CommandDetail
 
 from tests.selenium.views.servers import Servers

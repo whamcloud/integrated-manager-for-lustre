@@ -1,8 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
 from selenium.webdriver.support.ui import WebDriverWait
 
 from tests.selenium.base import wait_for_transition

@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 from tests.selenium.views.mgt import Mgt
 from tests.selenium.views.servers import Servers
 from tests.selenium.base import SeleniumBaseTestCase
