@@ -248,7 +248,6 @@ class Migration(SchemaMigration):
             'host': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ManagedHost']", 'unique': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'needs_fence_reconfiguration': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
@@ -304,6 +303,7 @@ class Migration(SchemaMigration):
             'corosync_reported_up': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'fqdn': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'ha_cluster_peers': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'ha_cluster_peers_rel_+'", 'null': 'True', 'to': "orm['chroma_core.ManagedHost']"}),
+            'needs_fence_reconfiguration': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255'}),

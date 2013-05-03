@@ -6,65 +6,19 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
+    TEST_SERVERS = [config['lustre_servers'][0]]
 
     def setUp(self):
-        self.TEST_SERVERS = [config['lustre_servers'][0]]
+        self.test_server_addresses = [h['address'] for h in self.TEST_SERVERS]
 
         super(ChromaPowerControlTestCase, self).setUp()
 
-        self.power_types = {}
-        self.pdu_list = []
-
-        for power_type in config['power_control_types']:
-            # Only precreate outlets for physical PDU types.
-            if power_type.get('max_outlets', False):
-                # Keep things simple... No need to add more outlets
-                # than we have servers.
-                max_outlets = len(self.TEST_SERVERS)
-                power_type['max_outlets'] = max_outlets
-
-            response = self.chroma_manager.post("/api/power_control_type/",
-                                                body = power_type)
-            self.assertTrue(response.successful, response.text)
-            type_obj = response.json
-            self.power_types[type_obj['name']] = type_obj
-
-        for pdu in config['power_distribution_units']:
-            pdu_body = pdu.copy()
-            pdu_body['device_type'] = self.power_types[pdu['type']]['resource_uri']
-            del pdu_body['type']
-            response = self.chroma_manager.post("/api/power_control_device/",
-                                                body = pdu_body)
-            self.assertTrue(response.successful, response.text)
-            pdu_obj = response.json
-            self.pdu_list.append(pdu_obj)
-
         self.server = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
-        # Associate the server with some PDU outlets
-        for pdu in self.pdu_list:
-            if power_type.get('max_outlets', False):
-                outlet = [o for o in pdu['outlets'] if o['identifier'] == str(1)][0]
-                response = self.chroma_manager.patch(outlet['resource_uri'], body = {
-                    'host': self.server['resource_uri']
-                })
-                self.assertTrue(response.successful, response.text)
-            else:
-                # Create an outlet if the PDU is virtual.
-                response = self.chroma_manager.post("/api/power_control_device_outlet/", body = {
-                    'device': pdu['resource_uri'],
-                    'host': self.server['resource_uri'],
-                    'identifier': self.server['address']
-                })
-                self.assertTrue(response.successful, response.text)
 
-    def tearDown(self):
-        # Clean out the power control types, which should ultimately
-        # result in the PDU monitoring threads being reaped. This is
-        # a nice teardown rather than a requirement for tests to run
-        # properly.
-        self.api_clear_resource('power_control_type')
+        self.configure_power_control()
 
-        super(ChromaPowerControlTestCase, self).tearDown()
+        # This should help to avoid any lingering threads
+        self.addCleanup(lambda: self.api_clear_resource('power_control_type'))
 
     def all_outlets_known(self):
         outlets = self.get_list("/api/power_control_device_outlet/",

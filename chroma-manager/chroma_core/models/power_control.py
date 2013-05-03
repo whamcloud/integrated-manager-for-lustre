@@ -174,73 +174,39 @@ class PowerControlDevice(DeletablePowerControlModel):
         "Convenience method for getting at (self.address, self.port)"
         return (self.address, self.port)
 
-    def _cmd_to_list(self, cmd_str):
+    def _template_to_command(self, template, identifier = None):
         import re
+        from os.path import expanduser
+
+        cmd_str = getattr(self.device_type, "%s_template" % template) % {
+                'agent': self.device_type.agent,
+                'address': self.address,
+                'port': self.port,
+                'username': self.username,
+                'password': self.password,
+                'identifier': identifier,
+                'options': self.options,
+                'home': expanduser("~")
+            }
         return re.split(r'\s+', cmd_str)
 
     def poweron_command(self, identifier):
-        return self._cmd_to_list(self.device_type.poweron_template % {
-                'agent': self.device_type.agent,
-                'address': self.address,
-                'port': self.port,
-                'username': self.username,
-                'password': self.password,
-                'identifier': identifier,
-                'options': self.options
-        })
+        return self._template_to_command('poweron', identifier)
 
     def poweroff_command(self, identifier):
-        return self._cmd_to_list(self.device_type.poweroff_template % {
-                'agent': self.device_type.agent,
-                'address': self.address,
-                'port': self.port,
-                'username': self.username,
-                'password': self.password,
-                'identifier': identifier,
-                'options': self.options
-        })
+        return self._template_to_command('poweroff', identifier)
 
     def powercycle_command(self, identifier):
-        return self._cmd_to_list(self.device_type.powercycle_template % {
-                'agent': self.device_type.agent,
-                'address': self.address,
-                'port': self.port,
-                'username': self.username,
-                'password': self.password,
-                'identifier': identifier,
-                'options': self.options
-        })
+        return self._template_to_command('powercycle', identifier)
 
     def monitor_command(self):
-        return self._cmd_to_list(self.device_type.monitor_template % {
-                'agent': self.device_type.agent,
-                'address': self.address,
-                'port': self.port,
-                'username': self.username,
-                'password': self.password,
-                'options': self.options
-        })
+        return self._template_to_command('monitor')
 
     def outlet_query_command(self, identifier):
-        return self._cmd_to_list(self.device_type.outlet_query_template % {
-                'agent': self.device_type.agent,
-                'address': self.address,
-                'port': self.port,
-                'username': self.username,
-                'password': self.password,
-                'identifier': identifier,
-                'options': self.options
-        })
+        return self._template_to_command('outlet_query', identifier)
 
     def outlet_list_command(self):
-        return self._cmd_to_list(self.device_type.outlet_list_template % {
-                'agent': self.device_type.agent,
-                'address': self.address,
-                'port': self.port,
-                'username': self.username,
-                'password': self.password,
-                'options': self.options
-        })
+        return self._template_to_command('outlet_list')
 
 
 @receiver(post_save, sender = PowerControlDevice)
@@ -321,7 +287,7 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         from django.utils.timezone import now
         reconfigure = {'needs_fence_reconfiguration': True}
         if self.host is not None:
-            if all([old_self, old_self.host]) and old_self.host != self.host:
+            if old_self and old_self.host and old_self.host != self.host:
                 JobSchedulerClient.notify(old_self.host, now(), reconfigure)
             JobSchedulerClient.notify(self.host, now(), reconfigure)
         elif self.host is None and old_self is not None:

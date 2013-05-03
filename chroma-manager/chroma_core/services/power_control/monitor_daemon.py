@@ -4,6 +4,7 @@
 # ========================================================
 
 
+import traceback
 import threading
 import Queue
 
@@ -59,7 +60,7 @@ class PowerDeviceMonitor(threading.Thread):
                 log.error("Attempted to run %s on %s, but it no longer exists" % (task, self.device))
                 self.stop()
             except Exception, e:
-                log.error("Caught and re-raising exception: %s" % e)
+                log.error("Caught and re-raising exception: %s" % traceback.format_exc())
                 raise e
 
             # Check to see if we can log into the PDU and that it's

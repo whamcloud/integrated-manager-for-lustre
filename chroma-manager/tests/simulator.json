@@ -87,7 +87,7 @@
             "agent": "fence_apc",
             "make": "APC",
             "model": "7900",
-            "max_outlets": 8,
+            "max_outlets": 4,
             "default_username": "apc",
             "default_password": "apc"
         }
@@ -102,6 +102,48 @@
             "type": "fence_apc APC 7900",
             "address": "127.0.0.1",
             "port": 2301
+        }
+    ],
+    "pdu_outlets": [
+        {
+            "host": "test000.localdomain",
+            "pdu": "127.0.0.1:2300",
+            "identifier": "1"
+        },
+        {
+            "host": "test000.localdomain",
+            "pdu": "127.0.0.1:2301",
+            "identifier": "1"
+        },
+        {
+            "host": "test001.localdomain",
+            "pdu": "127.0.0.1:2300",
+            "identifier": "2"
+        },
+        {
+            "host": "test001.localdomain",
+            "pdu": "127.0.0.1:2301",
+            "identifier": "2"
+        },
+        {
+            "host": "test002.localdomain",
+            "pdu": "127.0.0.1:2300",
+            "identifier": "3"
+        },
+        {
+            "host": "test002.localdomain",
+            "pdu": "127.0.0.1:2301",
+            "identifier": "3"
+        },
+        {
+            "host": "test003.localdomain",
+            "pdu": "127.0.0.1:2300",
+            "identifier": "4"
+        },
+        {
+            "host": "test003.localdomain",
+            "pdu": "127.0.0.1:2301",
+            "identifier": "4"
         }
     ]
 }

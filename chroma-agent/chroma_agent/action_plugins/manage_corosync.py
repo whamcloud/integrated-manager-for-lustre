@@ -47,7 +47,7 @@ class CorosyncRingInterface(object):
         return cls(manager_dev)
 
     @classmethod
-    def ring1(cls, device, ipaddr, subnet, mcast_port):
+    def ring1(cls, device, ipaddr, prefix_len, mcast_port):
         # ring1 is auto-configured on the first-available unconfigured
         # ethernet interface that has physical link
         ring0 = cls.ring0()
@@ -55,11 +55,10 @@ class CorosyncRingInterface(object):
             raise RuntimeError("Network on %s cannot be bigger than /9 (%s)" %
                                (ring0.name, ring0.ipv4_prefixlen))
         ring1_address = IPAddress(ipaddr)
-        prefixlen = IPNetwork(subnet).prefixlen
 
         console_log.debug("Creating ring1 device for %s" % device)
         iface = cls(device, ringnumber = 1)
-        iface.set_address("%s/%s" % (ring1_address, prefixlen))
+        iface.set_address("%s/%s" % (ring1_address, prefix_len))
         iface.mcastport = int(mcast_port)
 
         return iface
@@ -81,6 +80,7 @@ class CorosyncRingInterface(object):
 
     def set_address(self, address):
         shell.try_run(['/sbin/ifconfig', self.name, address, 'up'])
+        console_log.info("Set %s (%s) up" % (self.name, address))
         self.refresh()
         node_admin.write_ifcfg(self.device, self.mac_address,
                                self.ipv4_address, self.ipv4_netmask)
@@ -336,6 +336,7 @@ def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = 
         ring1_ipaddr, ring1_subnet = AutoDetectedInterface.generate_ring1_network_config(ring0)
     elif ring1_netmask:
         ring1_subnet = str(IPNetwork("0.0.0.0/%s" % ring1_netmask).prefixlen)
+
     if ring1_iface and ring1_ipaddr and ring1_subnet and mcast_port:
         ring1 = CorosyncRingInterface.ring1(ring1_iface, ring1_ipaddr,
                                             ring1_subnet, mcast_port)
@@ -373,6 +374,12 @@ def get_cluster_size():
 
 
 def configure_pacemaker():
+    # Corosync needs to be running for pacemaker -- if it's not, make
+    # an attempt to get it going.
+    if shell.run(['/sbin/service', 'corosync', 'status'])[0]:
+        shell.try_run(['/sbin/service', 'corosync', 'restart'])
+        shell.try_run(['/sbin/service', 'corosync', 'status'])
+
     shell.try_run(['/sbin/service', 'pacemaker', 'restart'])
     # need to wait for the CIB to be ready
     timeout = 120

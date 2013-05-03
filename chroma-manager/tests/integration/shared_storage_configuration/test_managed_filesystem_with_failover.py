@@ -219,7 +219,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
             )
 
     def test_lnet_operational_after_failover(self):
-        self.remote_operations.kill_server(config['lustre_servers'][0]['fqdn'])
+        self.remote_operations.reset_server(config['lustre_servers'][0]['address'])
         self.remote_operations.await_server_boot(config['lustre_servers'][0]['fqdn'], config['lustre_servers'][1]['fqdn'])
 
         # Add two hosts

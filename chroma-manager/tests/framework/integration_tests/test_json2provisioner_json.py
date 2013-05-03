@@ -11,6 +11,7 @@
 
 import json
 import sys
+import os
 
 test_json_file = open(sys.argv[1])
 config = json.load(test_json_file)
@@ -27,6 +28,11 @@ if config.get('lustre_clients'):
             new_client[key] = value
         new_clients.append(new_client)
     config['lustre_clients'] = new_clients
+
+# insert the jenkins metadata
+if config.get('repos', False):
+    config['repos']['chroma']['build_job'] = os.environ['BUILD_JOB_NAME']
+    config['repos']['chroma']['build_number'] = int(os.environ['BUILD_JOB_BUILD_NUMBER'])
 
 provisioner_json_file = open(sys.argv[2], 'w')
 json.dump(config, provisioner_json_file, sort_keys=True, indent=4)

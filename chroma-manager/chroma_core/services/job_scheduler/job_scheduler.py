@@ -32,7 +32,7 @@ import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
-    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob
+    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob, ForceRemoveHostJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -612,7 +612,8 @@ class JobScheduler(object):
                     log.debug('running_or_failed')
 
             if changed_item.state == 'configured':
-                if not running_or_failed(GetLNetStateJob, host = changed_item):
+                if (not running_or_failed(GetLNetStateJob, host = changed_item)
+                    and not running_or_failed(ForceRemoveHostJob, host = changed_item)):
                     job = GetLNetStateJob(host = changed_item)
                     if not command:
                         command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)

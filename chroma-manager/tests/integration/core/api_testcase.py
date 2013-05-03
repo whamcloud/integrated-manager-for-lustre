@@ -99,6 +99,13 @@ class ApiTestCase(UtilityTestCase):
             self.api_force_clear()
             self.remote_operations.clear_ha(self.TEST_SERVERS)
 
+        # Ensure that config from previous runs doesn't linger into
+        # this one.
+        self.remote_operations.remove_config(self.TEST_SERVERS)
+
+        # If there are no configuration options for a given server
+        # (e.g. corosync_config), then this is a noop and no config file
+        # is written.
         self.remote_operations.write_config(self.TEST_SERVERS)
 
         self.wait_until_true(self.supervisor_controlled_processes_running)

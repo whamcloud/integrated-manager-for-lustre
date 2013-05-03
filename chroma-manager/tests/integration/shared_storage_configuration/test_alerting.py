@@ -5,11 +5,13 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 class TestEvents(ChromaIntegrationTestCase):
+    TEST_SERVERS = [config['lustre_servers'][0]]
+
     def test_reboot_event(self):
         """Test that when a host is restarted, a single corresponding event is generated"""
 
         # Add one host
-        self.add_hosts([config['lustre_servers'][0]['address']])
+        self.add_hosts([self.TEST_SERVERS[0]['address']])
 
         # Record the start time for later querying of events since
         # NB using a time from chroma-manager so as not to depend
@@ -18,7 +20,7 @@ class TestEvents(ChromaIntegrationTestCase):
         start_time = host['state_modified_at']
 
         # Reboot
-        self.remote_operations.kill_server(host['fqdn'])
+        self.remote_operations.reset_server(host['address'])
         self.remote_operations.await_server_boot(host['fqdn'])
 
         def reboot_event_was_seen():

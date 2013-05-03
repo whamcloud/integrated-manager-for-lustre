@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)
 
 class TestCorosync(ChromaIntegrationTestCase):
     """Integration tests involving the CorosyncSerivice and DeviceAgent"""
+    TEST_SERVERS = config['lustre_servers'][0:2]
 
     def test_host_goes_down(self):
         """Test that a host going down results in Alerts
@@ -26,8 +27,8 @@ class TestCorosync(ChromaIntegrationTestCase):
         start_alerts = self.get_list("/api/alert/", {'active': True,
                                                      'dismissed': False})
 
-        server_config_1 = config['lustre_servers'][0]
-        server_config_2 = config['lustre_servers'][1]
+        server_config_1 = self.TEST_SERVERS[0]
+        server_config_2 = self.TEST_SERVERS[1]
 
         # Add two hosts
         self.add_hosts([server_config_1['address'], server_config_2['address']])
@@ -43,10 +44,6 @@ class TestCorosync(ChromaIntegrationTestCase):
                                                'dismissed': False})
         self.assertListEqual(alerts, start_alerts)
 
-        # Signal to the harness that we're expecting a node to be down
-        # after this test completes.
-        self.down_node_expected = True
-
         # Kill the second host
         self.remote_operations.kill_server(server_config_2['fqdn'])
 
@@ -56,6 +53,7 @@ class TestCorosync(ChromaIntegrationTestCase):
                                   args={'fqdn': server_config_2['fqdn']})[0]
             return host2['corosync_reported_up'] == False
         self.wait_until_true(host2_offline)
+
         host1 = self.get_list("/api/host/",
                               args={'fqdn': server_config_1['fqdn']})[0]
         self.assertTrue(host1['corosync_reported_up'])
@@ -67,3 +65,13 @@ class TestCorosync(ChromaIntegrationTestCase):
         offline_alerts = [a for a in all_alerts if 'is offline' in a['message']]
         self.assertEqual(len(offline_alerts), 1,
                                "%s %s" % (len(all_alerts), len(offline_alerts)))
+
+        # Now start the second host back up
+        self.remote_operations.await_server_boot(server_config_2['fqdn'], restart = True)
+
+        # Make sure that host2 eventually goes back to online
+        def host2_online():
+            host2 = self.get_list("/api/host/",
+                                  args={'fqdn': server_config_2['fqdn']})[0]
+            return host2['corosync_reported_up'] == True
+        self.wait_until_true(host2_online)

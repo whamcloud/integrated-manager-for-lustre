@@ -1,0 +1,208 @@
+{
+  "power_control_types": [
+    {
+      "default_password": "lustre",
+      "default_username": "root",
+      "model": "Virtual PDU",
+      "make": "KVM",
+      "agent": "fence_virsh"
+    }
+  ],
+  "repos": {
+    "chroma": {
+      "build_number": 857,
+      "build_job": "chroma-reviews"
+    }
+  },
+  "power_distribution_units": [
+    {
+      "address": "VM_HOST_IP",
+      "type": "fence_virsh KVM Virtual PDU",
+      "port": "22"
+    }
+  ],
+  "hosts": {
+    "hydra-4": {
+      "fqdn": "hydra-4.lab.whamcloud.com",
+      "ip_address": "10.10.4.36",
+      "address": "hydra-4.lab.whamcloud.com",
+      "nodename": "hydra-4.lab.whamcloud.com"
+    }
+  },
+  "reset": true,
+  "lustre_clients": [
+    {
+      "lustre_client_version": "2.1.4",
+      "start_command": "virsh start hydra-4vm2",
+      "fqdn": "hydra-4vm2.lab.whamcloud.com",
+      "ip_address": "10.10.4.215",
+      "destroy_command": "virsh destroy hydra-4vm2",
+      "device_paths": [
+
+      ],
+      "distro": "el6",
+      "status_command": "virsh domstate hydra-4vm2",
+      "address": "hydra-4vm2.lab.whamcloud.com",
+      "host": "hydra-4",
+      "nodename": "hydra-4vm2.lab.whamcloud.com"
+    }
+  ],
+  "chroma_managers": [
+    {
+      "server_http_url": "https://hydra-4vm3.lab.whamcloud.com",
+      "start_command": "virsh start hydra-4vm3",
+      "repos": [
+        "chroma"
+      ],
+      "fqdn": "hydra-4vm3.lab.whamcloud.com",
+      "ip_address": "10.10.4.216",
+      "destroy_command": "virsh destroy hydra-4vm3",
+      "device_paths": [
+
+      ],
+      "distro": "el6",
+      "users": [
+        {
+          "username": "debug",
+          "password": "chr0m4_d3bug",
+          "super": true
+        }
+      ],
+      "address": "hydra-4vm3.lab.whamcloud.com",
+      "status_command": "virsh domstate hydra-4vm3",
+      "host": "hydra-4",
+      "nodename": "hydra-4vm3.lab.whamcloud.com"
+    }
+  ],
+  "cluster_id": 207394704,
+  "failover_is_configured": true,
+  "provision": true,
+  "success": true,
+  "test_runners": [
+    {
+      "start_command": "virsh start hydra-4vm4",
+      "repos": [
+        "chroma"
+      ],
+      "fqdn": "hydra-4vm4.lab.whamcloud.com",
+      "ip_address": "10.10.4.217",
+      "destroy_command": "virsh destroy hydra-4vm4",
+      "device_paths": [
+
+      ],
+      "distro": "el6",
+      "address": "hydra-4vm4.lab.whamcloud.com",
+      "status_command": "virsh domstate hydra-4vm4",
+      "host": "hydra-4",
+      "nodename": "hydra-4vm4.lab.whamcloud.com"
+    }
+  ],
+  "lustre_servers": [
+    {
+      "start_command": "virsh start hydra-4vm5",
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4242"
+      },
+      "repos": [
+        "chroma"
+      ],
+      "fqdn": "hydra-4vm5.lab.whamcloud.com",
+      "ip_address": "10.10.4.218",
+      "destroy_command": "virsh destroy hydra-4vm5",
+      "device_paths": [
+
+      ],
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["a"],
+      "address": "hydra-4vm5.lab.whamcloud.com",
+      "status_command": "virsh domstate hydra-4vm5",
+      "host": "hydra-4",
+      "nodename": "hydra-4vm5.lab.whamcloud.com"
+    },
+    {
+      "start_command": "virsh start hydra-4vm6",
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4242"
+      },
+      "repos": [
+        "chroma"
+      ],
+      "fqdn": "hydra-4vm6.lab.whamcloud.com",
+      "ip_address": "10.10.4.219",
+      "destroy_command": "virsh destroy hydra-4vm6",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-1IET_00010001",
+        "/dev/disk/by-id/scsi-1IET_00010002",
+        "/dev/disk/by-id/scsi-1IET_00010003",
+        "/dev/disk/by-id/scsi-1IET_00010004",
+        "/dev/disk/by-id/scsi-1IET_00010005"
+      ],
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["a"],
+      "address": "hydra-4vm6.lab.whamcloud.com",
+      "status_command": "virsh domstate hydra-4vm6",
+      "host": "hydra-4",
+      "nodename": "hydra-4vm6.lab.whamcloud.com"
+    },
+    {
+      "start_command": "virsh start hydra-4vm7",
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4244"
+      },
+      "repos": [
+        "chroma"
+      ],
+      "fqdn": "hydra-4vm7.lab.whamcloud.com",
+      "ip_address": "10.10.4.223",
+      "destroy_command": "virsh destroy hydra-4vm7",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-1IET_00010001",
+        "/dev/disk/by-id/scsi-1IET_00010002",
+        "/dev/disk/by-id/scsi-1IET_00010003",
+        "/dev/disk/by-id/scsi-1IET_00010004",
+        "/dev/disk/by-id/scsi-1IET_00010005"
+      ],
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["b"],
+      "address": "hydra-4vm7.lab.whamcloud.com",
+      "status_command": "virsh domstate hydra-4vm7",
+      "host": "hydra-4",
+      "nodename": "hydra-4vm7.lab.whamcloud.com"
+    },
+    {
+      "start_command": "virsh start hydra-4vm8",
+      "corosync_config": {
+        "ring1_iface": "eth1",
+        "mcast_port": "4244"
+      },
+      "repos": [
+        "chroma"
+      ],
+      "fqdn": "hydra-4vm8.lab.whamcloud.com",
+      "ip_address": "10.10.4.226",
+      "destroy_command": "virsh destroy hydra-4vm8",
+      "device_paths": [
+        "/dev/disk/by-id/scsi-1IET_00010001",
+        "/dev/disk/by-id/scsi-1IET_00010002",
+        "/dev/disk/by-id/scsi-1IET_00010003",
+        "/dev/disk/by-id/scsi-1IET_00010004",
+        "/dev/disk/by-id/scsi-1IET_00010005"
+      ],
+      "root_password": "lustre",
+      "distro": "el6",
+      "bridges": ["b"],
+      "address": "hydra-4vm8.lab.whamcloud.com",
+      "status_command": "virsh domstate hydra-4vm8",
+      "host": "hydra-4",
+      "nodename": "hydra-4vm8.lab.whamcloud.com"
+    }
+  ],
+  "pdu_outlets": [
+  ]
+}

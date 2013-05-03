@@ -233,6 +233,14 @@ class ClusterSimulator(Persisted):
     def poweron_server(self, fqdn):
         self.start_server(fqdn, simulate_bootup = True)
 
+    def reboot_server(self, fqdn):
+        log.debug("reboot %s" % fqdn)
+        server = self.servers[fqdn]
+        if not server.running:
+            server.startup()
+        else:
+            server.shutdown(reboot = True)
+
     def stop_server(self, fqdn, shutdown = False, simulate_shutdown = False):
         """
         :param shutdown: Whether to treat this like a server shutdown (leave the

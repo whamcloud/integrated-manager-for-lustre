@@ -2,7 +2,7 @@
     "repos": {
         "chroma": {
              "build_job": "BUILD_JOB_NAME",
-             "build_number": BUILD_JOB_BUILD_NUMBER
+             "build_number": "BUILD_JOB_BUILD_NUMBER"
         }
     },
     "provision": true,
@@ -28,8 +28,8 @@
         {
             "distro": "el6",
             "root_password": "lustre",
-            "bridges": ["a"],
             "repos": ["chroma"],
+            "bridges": ["a"],
             "corosync_config": {
                 "ring1_iface": "eth1",
                 "mcast_port": "4242"
@@ -38,8 +38,8 @@
        {
             "distro": "el6",
             "root_password": "lustre",
-            "bridges": ["a"],
             "repos": ["chroma"],
+            "bridges": ["a"],
             "corosync_config": {
                 "ring1_iface": "eth1",
                 "mcast_port": "4242"
@@ -48,8 +48,8 @@
        {
             "distro": "el6",
             "root_password": "lustre",
+            "repos": ["chroma"],
             "bridges": ["b"],
-            "repos": ["chroma"],
             "corosync_config": {
                 "ring1_iface": "eth1",
                 "mcast_port": "4244"
@@ -58,8 +58,8 @@
        {
             "distro": "el6",
             "root_password": "lustre",
-            "bridges": ["b"],
             "repos": ["chroma"],
+            "bridges": ["b"],
             "corosync_config": {
                 "ring1_iface": "eth1",
                 "mcast_port": "4244"
@@ -78,13 +78,7 @@
             "make": "KVM",
             "model": "Virtual PDU",
             "default_username": "root",
-            "default_password": "lustre",
-            "poweron_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o on -n %(identifier)s",
-            "powercycle_template": "%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o reboot -n %(identifier)s",
-            "poweroff_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o off -n %(identifier)s",
-            "monitor_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o monitor",
-            "outlet_query_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o status -n %(identifier)s",
-            "outlet_list_template": "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -k %(home)s/.ssh/id_rsa -o list"
+            "default_password": "lustre"
         }
     ],
     "power_distribution_units": [

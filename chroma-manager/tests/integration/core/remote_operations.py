@@ -101,6 +101,9 @@ class SimulatorRemoteOperations(RemoteOperations):
         # and that the filesystem targets are up
         pass
 
+    def reset_server(self, fqdn):
+        self._simulator.reboot_server(fqdn)
+
     def kill_server(self, fqdn):
         self._simulator.stop_server(fqdn, shutdown = True)
 
@@ -127,6 +130,9 @@ class SimulatorRemoteOperations(RemoteOperations):
 
     def unmount_clients(self):
         self._simulator.unmount_lustre_clients()
+
+    def remove_config(self, *args):
+        pass
 
     def write_config(self, *args):
         pass
@@ -355,7 +361,8 @@ class RealRemoteOperations(RemoteOperations):
 
         except socket.error:
             return False
-        except paramiko.AuthenticationException:
+        except paramiko.AuthenticationException, e:
+            logger.debug("Auth error when checking %s: %s" % (address, e))
             return False
         else:
             return True
@@ -364,6 +371,16 @@ class RealRemoteOperations(RemoteOperations):
         result = self._ssh_address(address, "cat /proc/uptime")
         secs_up = result.split()[0]
         return secs_up
+
+    def reset_server(self, address):
+        # NB: This is a vaguely dangerous operation -- basically the
+        # equivalent of hitting the reset button. It's not a nice
+        # shutdown that gives the fs time to sync, etc.
+        self._ssh_address(address,
+                          '''
+                          echo 1 > /proc/sys/kernel/sysrq;
+                          echo b > /proc/sysrq-trigger
+                          ''', expected_return_code = -1)
 
     def kill_server(self, fqdn):
         # "Pull the plug" on host
@@ -489,6 +506,13 @@ class RealRemoteOperations(RemoteOperations):
         )
         return re.search('is running', result.stdout.read())
 
+    def remove_config(self, server_list):
+        """
+        Remove /etc/chroma.cfg on the test servers.
+        """
+        for server in server_list:
+            self._ssh_address(server['address'], 'rm -f /etc/chroma.cfg')
+
     def write_config(self, server_list):
         """
         Write out /etc/chroma.cfg on the test servers.
@@ -531,6 +555,7 @@ class RealRemoteOperations(RemoteOperations):
                         service corosync stop;
                         ifdown eth1;
                         rm -f /etc/sysconfig/network-scripts/ifcfg-eth1;
+                        rm -f /etc/corosync/corosync.conf;
                         rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*
                         '''
                     )

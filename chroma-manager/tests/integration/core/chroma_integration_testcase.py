@@ -283,7 +283,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         logger.info("Configuring power control")
 
-        # clear out existing power stuff (cascading delete)
+        # clear out existing power stuff
         self.api_clear_resource('power_control_type')
 
         power_types = {}
@@ -298,18 +298,29 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             body['device_type'] = power_types[pdu['type']]['resource_uri']
             del body['type']
             obj = self.create_power_control_device(body)
-            power_devices["%s:%s" % (obj.address, obj.port)] = obj
+            power_devices["%s:%s" % (obj['address'], obj['port'])] = obj
             logger.debug("Created %s" % obj['resource_uri'])
 
+        precreated_outlets = self.get_list("/api/power_control_device_outlet/", args = {'limit': 0})
+
         for outlet in config['pdu_outlets']:
-            body = {'identifier': outlet['identifier']}
-            body['device'] = power_devices[outlet['device']]['resource_uri']
-            if 'host' in outlet:
+            new = {'identifier': outlet['identifier'],
+                   'device': power_devices[outlet['pdu']]['resource_uri']}
+            if 'host' in outlet and outlet['host'] in self.test_server_addresses:
                 hosts = self.get_list("/api/host/", args = {'limit': 0})
                 try:
                     host = [h for h in hosts if h['address'] == outlet['host']][0]
                 except IndexError:
                     raise RuntimeError("%s not found in /api/host/" % outlet['host'])
-                body['host'] = host['resource_uri']
-            obj = self.create_power_control_device_outlet(body)
-            logger.debug("Created %s" % obj['resource_uri'])
+                new['host'] = host['resource_uri']
+
+            try:
+                obj = [o for o in precreated_outlets if o['device'] == new['device'] and o['identifier'] == new['identifier']][0]
+                if 'host' in new:
+                    response = self.chroma_manager.patch(obj['resource_uri'],
+                                                         body = {'host': new['host']})
+                    self.assertEqual(response.successful, True, response.text)
+                    logger.debug("Updated %s" % obj)
+            except IndexError:
+                obj = self.create_power_control_device_outlet(new)
+                logger.debug("Created %s" % obj)
