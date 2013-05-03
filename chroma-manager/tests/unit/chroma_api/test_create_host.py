@@ -29,6 +29,7 @@ rBxijqhV7HZNBMbgrttwG0KVhyqb3XdveevUpL3VMgpRxZ3Sgf2wMQ==
 -----END RSA PRIVATE KEY-----"""
 
 expected_data = {"address": 'storage1',
+                 "auth_type": 'existing_keys_choice',
                  "root_password": 'secret_pw',
                  "private_key": sample_private_key,
                  "private_key_passphrase": 'secret_key_pw'}
