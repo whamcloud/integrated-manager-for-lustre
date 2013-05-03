@@ -40,12 +40,6 @@ from cluster_sim.log import log
 from chroma_agent.agent_daemon import daemon_log
 
 
-daemon_log.addHandler(logging.StreamHandler())
-daemon_log.setLevel(logging.DEBUG)
-handler = logging.FileHandler("chroma-agent.log")
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
-daemon_log.addHandler(handler)
-
 SIMULATOR_PORT = 8743
 
 
@@ -79,7 +73,7 @@ class SimulatorCli(object):
             volume_count = server_count * 2
 
         simulator = ClusterSimulator(args.config, args.url)
-        simulator.setup(server_count, volume_count, int(args.nid_count), int(args.cluster_size), int(args.psu_count))
+        simulator.setup(server_count, volume_count, int(args.nid_count), int(args.cluster_size), int(args.psu_count), int(args.su_size))
 
     def _get_authenticated_session(self, url, username, password):
         session = requests.session()
@@ -101,7 +95,7 @@ class SimulatorCli(object):
 
         return session
 
-    def _acquire_token(self, url, username, password, credit_count, duration = None):
+    def _acquire_token(self, url, username, password, credit_count, duration=None):
         """
         Localised use of the REST API to acquire a server registration token.
         """
@@ -208,6 +202,12 @@ class SimulatorCli(object):
     def main(self):
         log.addHandler(logging.StreamHandler())
 
+        daemon_log.addHandler(logging.StreamHandler())
+        daemon_log.setLevel(logging.DEBUG)
+        handler = logging.FileHandler("chroma-agent.log")
+        handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+        daemon_log.addHandler(handler)
+
         # Usually on our Intel laptops https_proxy is set, and needs to be unset for tests,
         # but let's not completely rule out the possibility that someone might want to run
         # the tests on a remote system using a proxy.
@@ -220,6 +220,7 @@ class SimulatorCli(object):
         parser.add_argument('--url', required = False, help = "Chroma manager URL", default = "https://localhost:8000/")
         subparsers = parser.add_subparsers()
         setup_parser = subparsers.add_parser("setup")
+        setup_parser.add_argument('--su_size', required = False, help = "Servers per SU", default = '0')
         setup_parser.add_argument('--cluster_size', required = False, help = "Number of simulated storage servers", default = '4')
         setup_parser.add_argument('--server_count', required = False, help = "Number of simulated storage servers", default = '8')
         setup_parser.add_argument('--nid_count', required = False, help = "Number of LNet NIDs per storage server, defaults to 1 per server", default = '1')

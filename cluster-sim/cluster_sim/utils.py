@@ -43,20 +43,30 @@ class Persisted(object):
     filename = None
     default_state = {}
 
+    def _load_default(self):
+        self.state = deepcopy(self.default_state)
+
     def __init__(self, path):
         self.path = path
 
-        try:
-            self.state = json.load(open(os.path.join(self.path, self.filename), 'r'))
-        except IOError:
-            self.state = deepcopy(self.default_state)
+        if not self.path:
+            self._load_default()
+        else:
+            try:
+                self.state = json.load(open(os.path.join(self.path, self.filename), 'r'))
+            except IOError:
+                self._load_default()
 
     def save(self):
-        json.dump(self.state, open(os.path.join(self.path, self.filename), 'w'), indent = 4)
+        if self.path:
+            json.dump(self.state, open(os.path.join(self.path, self.filename), 'w'), indent = 4)
 
     def delete(self):
+        if not self.path:
+            return
+
         try:
-            os.unlink(self.filename)
+            os.unlink(os.path.join(self.path, self.filename))
         except OSError, e:
             if e.errno == errno.ENOENT:
                 pass

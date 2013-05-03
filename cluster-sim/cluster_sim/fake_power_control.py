@@ -486,7 +486,8 @@ class FakePowerControl(Persisted):
         self.pdu_sims = {}
         self.sim_servers = {}
 
-        self._load_pdu_sims()
+        if self.folder:
+            self._load_pdu_sims()
 
     def setup(self, psu_count):
         outlets = {}
@@ -494,9 +495,8 @@ class FakePowerControl(Persisted):
             name = "pdu%.3d" % n
             port = BASE_PDU_SERVER_PORT + n
             # FIXME: Make the type of PDU sim configurable
-            APC79xxSimulator(self.folder, PDU_SERVER_ADDRESS, port, name, outlets)
-
-        self._load_pdu_sims()
+            pdu_sim = APC79xxSimulator(self.folder, PDU_SERVER_ADDRESS, port, name, outlets, self.server_poweroff_hook, self.server_poweron_hook)
+            self.pdu_sims[name] = pdu_sim
 
     @property
     def next_outlet_index(self):

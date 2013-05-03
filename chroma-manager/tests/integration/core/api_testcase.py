@@ -48,8 +48,10 @@ class ApiTestCase(UtilityTestCase):
 
             # The simulator's state directory will be left behind when a test fails,
             # so make sure it has a unique-per-run name
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
             state_path = 'simulator_state_%s.%s_%s' % (self.__class__.__name__, self._testMethodName, timestamp)
+            if os.path.exists(state_path):
+                raise RuntimeError("Simulator state folder already exists at '%s'!" % state_path)
 
             # Hook up the agent log to a file
             from chroma_agent.agent_daemon import daemon_log
@@ -64,7 +66,8 @@ class ApiTestCase(UtilityTestCase):
                                  volume_count,
                                  self.SIMULATOR_NID_COUNT,
                                  self.SIMULATOR_CLUSTER_SIZE,
-                                 len(config['power_distribution_units']))
+                                 len(config['power_distribution_units']),
+                                 su_size=0)
             self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
             if self.TESTS_NEED_POWER_CONTROL:
                 self.simulator.power.start()

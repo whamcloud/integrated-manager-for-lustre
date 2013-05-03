@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 
+import tempfile
 import time
 import datetime
 import json
@@ -80,7 +81,13 @@ class FakeServer(Persisted):
 
         self._cluster.join(nodename, fqdn=fqdn)
 
-        crypto_folder = os.path.join(simulator.folder, "%s_crypto" % self.fqdn)
+        if simulator.folder:
+            # If simulator is persistent, save Crypto in same place
+            crypto_folder = os.path.join(simulator.folder, "%s_crypto" % self.fqdn)
+        else:
+            # If simulator is ephemeral, create temp dir for Crypto
+            crypto_folder = tempfile.mkdtemp()
+
         if not os.path.exists(crypto_folder):
             os.makedirs(crypto_folder)
         self.crypto = Crypto(crypto_folder)

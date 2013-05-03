@@ -73,29 +73,53 @@ for physical test systems (operating via SSH) and for the simulator.
 Use in benchmarking
 ______________________
 
-To run benchmarking against the simulator, first ensure the simulator_controller plugin is loaded.
-Append 'simulator_controller' to INSTALLED_STORAGE_PLUGINS in {\local_}settings,
-and append 'SITE_ROOT/chroma-manager/tests/plugins' to the python path.
+The simulator includes a benchmark tool, which measures the performance
+limits of the manager server by instantiating a simulator instance, and then
+driving the manager through a series of operations (such as filesystem creations)
+using the REST API.
+
+Clearly the load that the simulator can drive on the manager is limited by
+the simulator's own performance.  To get the best out of the simulator benchmark, run it
+on a separate server to the manager so that they are not competing for resources.
+
+The simulator benchmark includes adding simulated storage controllers via the
+storage plugin API.  To enable this, a special simulator-specific storage plugin
+is included in the manager source tree, called ``simulator_controller``.  You must
+enable this plugin before running the benchmark.  On the manager server, append
+'simulator_controller' to INSTALLED_STORAGE_PLUGINS in {\local_}settings, and append
+'SITE_ROOT/chroma-manager/tests/plugins' to the python path.  These paths are for running
+the manager in development mode (from a git tree) -- for a production mode manager, copy
+the plugin from a git tree to the manager server and modify the paths appropriately.
 
 ::
 
   sys.path.append(os.path.join(os.path.dirname(__file__), 'tests/plugins'))
-  INSTALLED_STORAGE_PLUGINS = [..., 'simulator_controller']
+  INSTALLED_STORAGE_PLUGINS.append('simulator_controller')
 
-Configure the simulator with 0 servers, skipping the register step as there are no servers to register.
-The benchmark process will add servers itself as necesary.
+Once the manager server is up and running with the plugin installed, you can run the
+simulator benchmark.  The script will be in your path if you are in a virtualenv and have
+run ``python setup.py develop`` in ``cluster-sim``.
 
-::
-
-  (virtualenv) chroma$ cluster-sim setup --server_count 0
-  (virtualenv) chroma$ cluster-sim run
-
-Then begin the benchmarking in a separate shell.  See the help for various limit commands,
-and note the reset command is also handy for cleaning up the database, e.g., removing hosts.
+The benchmark tool includes various routines, you can list them with ``--help``.  For example,
+to run the ``filesystem_size_limit`` routine, simply pass it to the benchmark script as the
+first argument:
 
 ::
 
-  (virtualenv) chroma$ cluster-sim-benchmark {reset,filesystem_size_limit,...}
+ $ cluster-sim-benchmark filesystem_size_limit
+
+By default, the benchmark script looks for a manager server at localhost:8000, and uses
+the default development username and password.  You can customize these for use with a
+production mode instance using ``--url``, ``--password`` and ``--username`` arguments.
+
+The benchmark script will generally clean up after itself, but if some hosts or controllers
+are left behind in your manager instance, you can explicitly request a cleanup by running:
+
+::
+
+ $ cluster-sim-benchmark reset
+
+
 
 
 Implementation details

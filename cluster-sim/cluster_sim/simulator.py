@@ -58,7 +58,7 @@ class ClusterSimulator(Persisted):
 
         self.url = url + "agent/"
 
-        if not os.path.exists(folder):
+        if folder and not os.path.exists(folder):
             os.makedirs(folder)
 
         self.lustre_clients = {}
@@ -68,6 +68,7 @@ class ClusterSimulator(Persisted):
         self.clusters = {}
         self.controllers = {}
 
+        self._load_controllers()
         self._load_servers()
 
     def update_packages(self, packages):
@@ -110,6 +111,11 @@ class ClusterSimulator(Persisted):
                 conf['nodename'],
                 conf['nids'])
 
+    def _load_controllers(self):
+        for controller_conf in glob.glob("%s/fake_controller_*.json" % self.folder):
+            conf = json.load(open(controller_conf))
+            self.controllers[conf['controller_id']] = FakeController(self.folder, conf['controller_id'])
+
     def _create_server(self, i, nid_count):
         nids = []
         nodename = "test%.3d" % i
@@ -127,7 +133,17 @@ class ClusterSimulator(Persisted):
 
         return server
 
-    def setup(self, server_count, volume_count, nid_count, cluster_size, psu_count):
+    def setup(self, server_count, volume_count, nid_count, cluster_size, pdu_count, su_size):
+        """
+
+        :param server_count: How many servers in total should exist after call
+        :param volume_count: How many volumes in total should exist after call
+        :param nid_count: How many NIDs each server should have
+        :param cluster_size: How many servers per corosync cluster
+        :param pdu_count: How many PDUs in total
+        :param su_size: How many servers per SU, or zero for no controllers + SAN-style volumes
+        :return:
+        """
         self.state['cluster_size'] = cluster_size
         self.save()
 
@@ -137,13 +153,24 @@ class ClusterSimulator(Persisted):
             'lustre-modules': (0, "2.1.4", "1", "x86_64")
         }
 
-        self.power.setup(psu_count)
+        self.power.setup(pdu_count)
 
-        for i in range(0, server_count):
-            self._create_server(i, nid_count)
+        if su_size:
+            # Series of SUs, blocks of one controller with several servers
+            if server_count % su_size != 0:
+                raise RuntimeError("server_count not a multiple of su_size")
+            su_count = server_count / su_size
+            if volume_count % su_count != 0:
+                raise RuntimeError("volume_count not a multiple of su_count")
 
-        # SAN-style LUNs visible to all servers
-        self.devices.add_presented_luns(volume_count, self.servers.keys())
+            for i in range(0, su_count):
+                self.add_su(server_count / su_count, volume_count / su_count, nid_count)
+        else:
+            # SAN-style LUNs visible to all servers
+            for i in range(0, server_count):
+                self._create_server(i, nid_count)
+
+            self.devices.add_presented_luns(volume_count, self.servers.keys())
 
     def clear_clusters(self):
         for cluster in self.clusters.values():
@@ -180,6 +207,14 @@ class ClusterSimulator(Persisted):
         return server.fqdn
 
     def add_su(self, server_count, volume_count, nid_count):
+        """
+        In this context SU stands for 'scalable unit', a notional unit of storage hardware
+        consisting of some servers and a shared storage controller.
+
+        :param server_count: How many servers in the SU
+        :param volume_count: How many volumes in the SU (visible to all servers in the SU)
+        :param nid_count: How many LNET NIDs should each server have
+        """
         try:
             fqdns = [self.add_server(nid_count) for _ in range(0, server_count)]
             serials = self.devices.add_presented_luns(volume_count, fqdns)
@@ -216,10 +251,12 @@ class ClusterSimulator(Persisted):
             log.debug("register %s" % fqdn)
             server = self.servers[fqdn]
             if server.agent_is_running:
+                # e.g. if the server was added then force-removed then re-added
                 server.shutdown_agent()
+
             if not self.power.server_has_power(fqdn):
-                log.warning("Not registering %s, none of its PSUs are powered" % fqdn)
-                return
+                raise RuntimeError("Not registering %s, none of its PSUs are powered" % fqdn)
+
             client = AgentClient(
                 url = self.url + "register/%s/" % secret,
                 action_plugins = FakeActionPlugins(self, server),
@@ -323,7 +360,6 @@ class ClusterSimulator(Persisted):
             client.unmount_all()
 
     def stop(self):
-        log.debug("stop me")
         log.info("Stopping")
         self.power.stop()
         for server in self.servers.values():
@@ -361,8 +397,13 @@ class ClusterSimulator(Persisted):
         """
         For use by the simulator_controller storage plugin: query a particular fake controller
         """
-        data = self.controllers[controller_id].poll()
-        return data
+        try:
+            controller = self.controllers[int(controller_id)]
+        except KeyError:
+            log.error("Controller '%s' not found in %s" % (controller_id, self.controllers.keys()))
+            raise
+        else:
+            return controller.poll()
 
     def format_block_device(self, fqdn, path, filesystem_type):
         self.devices.format_local(fqdn, path, filesystem_type)

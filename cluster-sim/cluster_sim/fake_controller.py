@@ -35,7 +35,7 @@ class FakeController(Persisted):
 
     @property
     def filename(self):
-        return "fake_controller_%s" % self.controller_id
+        return "fake_controller_%s.json" % self.controller_id
 
     def __init__(self, path, controller_id):
         self.controller_id = controller_id

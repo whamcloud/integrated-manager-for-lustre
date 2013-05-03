@@ -22,6 +22,7 @@
 
 
 import argparse
+from collections import defaultdict
 import json
 import logging
 import threading
@@ -30,6 +31,7 @@ import xmlrpclib
 import time
 import math
 import datetime
+import os
 import requests
 
 from cluster_sim.cli import SIMULATOR_PORT, SimulatorCli
@@ -74,17 +76,20 @@ class ApiLatencyMonitor(threading.Thread):
             self._stopping.wait(timeout = self._period)
 
     @property
+    def successful_samples(self):
+        return [s for s in self.samples if s[1] is not None]
+
+    @property
     def mean(self):
         """
         Return the mean of the latency of all successful requests, or None
         if there are no such samples available.
         """
-        successful_samples = [s for s in self.samples if s[1] is not None]
-        if not len(successful_samples):
+        if not len(self.successful_samples):
             return None
 
-        total = sum([s[1] for s in successful_samples])
-        return total / float(len(successful_samples))
+        total = sum([s[1] for s in self.successful_samples])
+        return total / float(len(self.successful_samples))
 
     @property
     def stderr(self):
@@ -96,9 +101,8 @@ class ApiLatencyMonitor(threading.Thread):
         if mean is None:
             return None
 
-        successful_samples = [s for s in self.samples if s[1] is not None]
-        std_dev = math.sqrt((sum([(s[1] - mean) * (s[1] - mean) for s in successful_samples]) / float(len(successful_samples))))
-        return std_dev / math.sqrt(len(successful_samples))
+        std_dev = math.sqrt((sum([(s[1] - mean) * (s[1] - mean) for s in self.successful_samples]) / float(len(self.successful_samples))))
+        return std_dev / math.sqrt(len(self.successful_samples))
 
     def __str__(self):
         mean = self.mean
@@ -108,18 +112,76 @@ class ApiLatencyMonitor(threading.Thread):
             return "%.40s: %2.2f ± %2.2f" % (self._path, mean, self.stderr)
 
 
+class QueueDepthMonitor(threading.Thread):
+    def __init__(self, benchmark):
+        super(QueueDepthMonitor, self).__init__()
+
+        self._benchmark = benchmark
+        self._stopping = threading.Event()
+        self._period = 1
+        self.samples = []
+
+    def stop(self):
+        self._stopping.set()
+
+    def run(self):
+        while not self._stopping.is_set():
+            ts = time.time()
+
+            sample = dict([(queue['name'], queue['messages']) for queue in self._benchmark.get_queues()])
+            sample['_timestamp'] = ts
+            self.samples.append(sample)
+
+            self._stopping.wait(timeout=self._period)
+
+    def __str__(self):
+        statistics = defaultdict(lambda: dict({'total': 0, 'min': None, 'max': None, 'count': 0}))
+
+        for sample in self.samples:
+            for name, val in sample.items():
+                stats = statistics[name]
+                stats['total'] += val
+                stats['min'] = val if stats['min'] is None else min(stats['min'], val)
+                stats['max'] = val if stats['max'] is None else max(stats['max'], val)
+                stats['count'] += 1
+
+        report = ""
+        report += "RabbitMQ queue lengths: (avg, min,max)\n"
+        for name, stats in statistics.items():
+            if name == '_timestamp':
+                continue
+
+            average = stats['total'] / float(stats['count'])
+
+            report += "  %40.40s %06.1f %.4d %.4d\n" % (name, average, stats['min'], stats['max'])
+
+        return report
+
+
 class Benchmark(object):
-    def __init__(self, args):
+    PLUGIN_NAME = 'simulator_controller'
+
+    def __init__(self, args, simulator):
         self.args = args
         self.url = args.url
 
         self.api_session = self._authenticated_session(args.username, args.password)
-        self.simulator = xmlrpclib.ServerProxy("http://localhost:%s" % SIMULATOR_PORT, allow_none = True)
+        self.simulator = simulator
+
+    def run(self):
+        raise NotImplementedError()
 
     def run_benchmark(self):
+        # Check that the plugin for our simulated controllers is loaded
+        response = self.GET("/api/storage_resource_class?plugin_name={plugin_name}".format(plugin_name=self.PLUGIN_NAME))
+        if not response.json()['objects']:
+            raise RuntimeError("simulator_controller plugin not enabled on manager at %s" % self.url)
+
+        # Remove any servers etc on the manager from previous runs
         log.info("Resetting")
         self.reset()
 
+        # Kick off some threads to monitor things in the background
         self._latency_monitors = {}
         for path in ["/api/session/",
                      "/api/volume/",
@@ -131,24 +193,35 @@ class Benchmark(object):
             monitor = self._latency_monitors[path] = ApiLatencyMonitor(self, path)
             monitor.start()
 
-        log.info("Starting %s" % self.__class__.__name__)
+        self._queue_monitor = QueueDepthMonitor(self)
+        self._queue_monitor.start()
+
+        # Kick off the benchmark routine itself
+        log.info("Starting %s:" % self.__class__.__name__)
+        log.info("    %s" % self.run.__doc__)
         ts = time.time()
         try:
             self.run()
         except:
             log.error(traceback.format_exc())
+            raise
         finally:
             for monitor in self._latency_monitors.values():
                 monitor.stop()
                 monitor.join()
 
-        te = time.time()
-        log.info("Ran in %.0fs" % (te - ts))
-        log.info("API latencies:")
-        for path, monitor in sorted(self._latency_monitors.items(), lambda a, b: cmp(a[0], b[0])):
-            log.info("  %s" % monitor)
+            self._queue_monitor.stop()
+            self._queue_monitor.join()
 
-    def get_registration_secret(self, credit_count, duration = None):
+            te = time.time()
+            log.info("Ran in %.0fs" % (te - ts))
+            log.info("API latencies:")
+            for path, monitor in sorted(self._latency_monitors.items(), lambda a, b: cmp(a[0], b[0])):
+                log.info("  %s" % monitor)
+
+            log.info(self._queue_monitor)
+
+    def get_registration_secret(self, credit_count, duration=None):
         return SimulatorCli()._acquire_token(self.url + "/", self.args.username, self.args.password, credit_count,
                                              duration=duration)
 
@@ -191,8 +264,8 @@ class Benchmark(object):
             assert response.ok
 
     def _add_controller(self, controller_id):
-        response = self.POST("/api/storage_resource/", data = json.dumps({
-            'plugin_name': 'simulator_controller',
+        response = self.POST("/api/storage_resource/", data=json.dumps({
+            'plugin_name': self.PLUGIN_NAME,
             'class_name': 'Couplet',
             'attrs': {
                 'controller_id': controller_id
@@ -243,13 +316,13 @@ class Benchmark(object):
 
         return session
 
-    def _get_queues(self):
+    def get_queues(self):
         response = self.GET("/api/system_status")
         assert response.ok
         return response.json()['rabbitmq']['queues']
 
     def _get_queue(self, queue_name):
-        queue = [q for q in self._get_queues() if q['name'] == queue_name][0]
+        queue = [q for q in self.get_queues() if q['name'] == queue_name][0]
 
         return queue
 
@@ -275,6 +348,8 @@ class timed(object):
 
 class FilesystemSizeLimit(Benchmark):
     def run(self):
+        """Create increasingly large filesystems on large numbers of server and controllers until an error occurs."""
+
         SU_SIZE = 4
 
         log.debug("Connection count initially: %s" % self._connection_count())
@@ -284,7 +359,7 @@ class FilesystemSizeLimit(Benchmark):
             ost_count = (n * VOLUMES_PER_SERVER - 2)
             log.info("n = %s (ost count = %s)" % (n, ost_count))
 
-            secret = self.get_registration_secret(n, datetime.timedelta(seconds = 3600))
+            secret = self.get_registration_secret(n, datetime.timedelta(seconds=3600))
             command_uris = []
             fqdns = []
             serials = []
@@ -349,14 +424,14 @@ class FilesystemSizeLimit(Benchmark):
 
 
 class ConcurrentRegistrationLimit(Benchmark):
-    """
-    Increase the number of concurrent server registrations until server
-    setup commands start failing.
-
-    What we're testing here is that not only can N servers exist, but that
-    they can all register at the same instant without causing anything to fall over.
-    """
     def run(self):
+        """
+        Increase the number of concurrent server registrations until server
+        setup commands start failing.
+
+        What we're testing here is that not only can N servers exist, but that
+        they can all register at the same instant without causing anything to fall over.
+        """
         SU_SIZE = 4
 
         log.debug("Connection count initially: %s" % self._connection_count())
@@ -391,10 +466,10 @@ class ConcurrentRegistrationLimit(Benchmark):
 
 
 class ServerCountLimit(Benchmark):
-    """
-    Increase the number of servers being monitored until queues start backing up
-    """
     def run(self):
+        """
+        Increase the number of servers being monitored until queues start backing up
+        """
         # Some arbitrary nonzero amount of log data from each server
         LOG_RATE = 10
 
@@ -415,10 +490,10 @@ class ServerCountLimit(Benchmark):
             self._wait_for_commands(registration_command_uris)
 
             backed_up_queues = []
-            for queue in self._get_queues():
+            for queue in self.get_queues():
                 if queue['messages'] > max(queue['message_stats_ack_details_rate'] * 4, i):
                     backed_up_queues.append(queue['name'])
-                    log.debug("Queue %s is backed up (%s in=%.2f out=%.2f)" % (
+                    log.info("Queue %s is backed up (%s in=%.2f out=%.2f)" % (
                         queue['name'],
                         queue['messages'],
                         queue['message_stats_publish_details_rate'],
@@ -433,9 +508,9 @@ class ServerCountLimit(Benchmark):
 
 
 class LogIngestRate(Benchmark):
-    """Increase the rate of log messages from a fixed number of servers until the
-    log RX queue starts to back up"""
     def run(self):
+        """Increase the rate of log messages from a fixed number of servers until the
+        log RX queue starts to back up"""
         # Actual log messages per second is (log_rate / Session.POLL_INTERVAL) * server_count
         server_count = 8
 
@@ -513,31 +588,59 @@ class LogIngestRate(Benchmark):
 
 
 def main():
-    parser = argparse.ArgumentParser(description = "Simulated benchmarks")
-    parser.add_argument('--debug', required = False, help = "Enable DEBUG-level logs", default = False)
-    parser.add_argument('--url', required = False, help = "Chroma manager URL", default = "https://localhost:8000")
-    parser.add_argument('--username', required = False, help = "REST API username", default = 'debug')
-    parser.add_argument('--password', required = False, help = "REST API password", default = 'chr0m4_d3bug')
+    parser = argparse.ArgumentParser(description="Simulated benchmarks")
+    parser.add_argument('--remote_simulator', required=False, help="Disable built-in simulator (run it separately)", default=False)
+    parser.add_argument('--debug', required=False, help="Enable DEBUG-level logs", default=False)
+    parser.add_argument('--url', required=False, help="Chroma manager URL", default="https://localhost:8000")
+    parser.add_argument('--username', required=False, help="REST API username", default='debug')
+    parser.add_argument('--password', required=False, help="REST API password", default='chr0m4_d3bug')
     subparsers = parser.add_subparsers()
 
     log_ingest_parser = subparsers.add_parser("reset")
-    log_ingest_parser.set_defaults(func = lambda args: Benchmark(args).reset())
+    log_ingest_parser.set_defaults(func=lambda args, simulator: Benchmark(args, simulator).reset())
 
     log_ingest_parser = subparsers.add_parser("log_ingest_rate")
-    log_ingest_parser.set_defaults(func = lambda args: LogIngestRate(args).run_benchmark())
+    log_ingest_parser.set_defaults(func=lambda args, simulator: LogIngestRate(args, simulator).run_benchmark())
 
     server_count_limit_parser = subparsers.add_parser("server_count_limit")
-    server_count_limit_parser.set_defaults(func = lambda args: ServerCountLimit(args).run_benchmark())
+    server_count_limit_parser.set_defaults(func=lambda args, simulator: ServerCountLimit(args, simulator).run_benchmark())
 
     server_count_limit_parser = subparsers.add_parser("concurrent_registration_limit")
-    server_count_limit_parser.set_defaults(func = lambda args: ConcurrentRegistrationLimit(args).run_benchmark())
+    server_count_limit_parser.set_defaults(func=lambda args, simulator: ConcurrentRegistrationLimit(args, simulator).run_benchmark())
 
     server_count_limit_parser = subparsers.add_parser("filesystem_size_limit")
-    server_count_limit_parser.set_defaults(func = lambda args: FilesystemSizeLimit(args).run_benchmark())
+    server_count_limit_parser.set_defaults(func=lambda args, simulator: FilesystemSizeLimit(args, simulator).run_benchmark())
 
     args = parser.parse_args()
 
     if args.debug:
         log.setLevel(logging.DEBUG)
 
-    args.func(args)
+    if not args.remote_simulator:
+        log.info("Starting simulator...")
+
+        # Enable logging by agent code run within simulator
+        from chroma_agent.log import daemon_log
+        daemon_log.setLevel(logging.DEBUG)
+        handler = logging.FileHandler("chroma-agent.log")
+        handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+        daemon_log.addHandler(handler)
+        daemon_log.info("Enabled agent logging within simulator")
+
+        from cluster_sim.simulator import ClusterSimulator
+        simulator = ClusterSimulator(folder=None, url=args.url + "/")
+        simulator.power.setup(1)
+        simulator.start_all()
+        simulator.setup(0, 0, nid_count=1, cluster_size=4, pdu_count=1, su_size=0)
+    else:
+        simulator = xmlrpclib.ServerProxy("http://localhost:%s" % SIMULATOR_PORT, allow_none=True)
+
+    try:
+        log.info("Starting benchmark...")
+        args.func(args, simulator)
+    finally:
+        # Do a hard exit to avoid dealing with lingering threads (not the cleanest, but
+        # this isn't production code).
+        os._exit(-1)
+
+    log.info("Complete.")
