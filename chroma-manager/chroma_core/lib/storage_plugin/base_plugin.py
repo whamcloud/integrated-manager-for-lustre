@@ -277,7 +277,8 @@ class BaseStoragePlugin(object):
             r_stats = resource.flush_stats()
             if r_stats and settings.STORAGE_PLUGIN_ENABLE_STATS:
                 samples += self._resource_manager.session_get_stats(self._scannable_id, resource._handle, r_stats)
-        StatsQueue().put(samples)
+        if samples:
+            StatsQueue().put(samples)
         return len(samples)
 
     def update_or_create(self, klass, parents = [], **attrs):
