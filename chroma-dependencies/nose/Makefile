@@ -1,4 +1,4 @@
-LOCATION := http://download.fedoraproject.org/pub/fedora/linux/updates/testing/18/SRPMS/python-nose-1.2.1-1.fc18.src.rpm
+LOCATION := http://dl.fedoraproject.org/pub/fedora/linux/releases/18/Fedora/source/SRPMS/p/python-nose-1.2.1-1.fc18.src.rpm
 
 DEPS = coverage
 
