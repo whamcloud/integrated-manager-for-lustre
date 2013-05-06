@@ -3,13 +3,14 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 class TestAutodetection(ChromaIntegrationTestCase):
-    def setUp(self):
-        super(TestAutodetection, self).setUp()
+    TEST_SERVERS = [config['lustre_servers'][0]]
 
     def test_simple_detection(self):
         self.create_filesystem_simple()
         host_id = self.chroma_manager.get("/api/host/").json['objects'][0]['id']
         mgt = self.chroma_manager.get("/api/filesystem/").json['objects'][0]['mgt']
+
+        existing_targets = self.remote_operations.backup_cib(self.TEST_SERVERS[0])
 
         command = self.chroma_manager.post("/api/command/", body = {
             'jobs': [{'class_name': 'ForceRemoveHostJob', 'args': {'host_id': host_id}}],
@@ -20,7 +21,9 @@ class TestAutodetection(ChromaIntegrationTestCase):
 
         self.assertEqual(len(self.chroma_manager.get("/api/host/").json['objects']), 0)
 
-        self.add_hosts([config['lustre_servers'][0]['address']])
+        self.add_hosts([self.TEST_SERVERS[0]['address']])
+
+        self.remote_operations.restore_cib(self.TEST_SERVERS[0], existing_targets)
 
         response = self.chroma_manager.post("/api/command/", body = {
             'jobs': [{'class_name': 'DetectTargetsJob', 'args': {}}],
@@ -35,7 +38,7 @@ class TestAutodetection(ChromaIntegrationTestCase):
 
         self.assertEqual(fs['mgt']['state'], 'mounted')
 
-        fqdn = config['lustre_servers'][0]['fqdn']
+        fqdn = self.TEST_SERVERS[0]['fqdn']
         self.remote_operations.stop_target(fqdn, mgt['ha_label'])
 
         def mgt_is_unmounted():
