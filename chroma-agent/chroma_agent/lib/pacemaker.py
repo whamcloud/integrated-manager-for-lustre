@@ -12,9 +12,11 @@ from chroma_agent.lib import fence_agents
 
 
 class PacemakerNode(object):
-    def __init__(self, name, attributes={}):
+    def __init__(self, name, attributes=None):
         self.name = name
         self.attributes = attributes
+        if not self.attributes:
+            self.attributes = {}
 
     def fence_reboot(self):
         self.fence_off()
