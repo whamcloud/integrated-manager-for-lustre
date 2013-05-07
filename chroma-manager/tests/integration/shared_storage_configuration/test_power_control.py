@@ -9,8 +9,6 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
     TEST_SERVERS = [config['lustre_servers'][0]]
 
     def setUp(self):
-        self.test_server_addresses = [h['address'] for h in self.TEST_SERVERS]
-
         super(ChromaPowerControlTestCase, self).setUp()
 
         self.server = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]

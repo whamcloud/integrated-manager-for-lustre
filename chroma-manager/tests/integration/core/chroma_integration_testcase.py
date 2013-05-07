@@ -306,7 +306,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         for outlet in config['pdu_outlets']:
             new = {'identifier': outlet['identifier'],
                    'device': power_devices[outlet['pdu']]['resource_uri']}
-            if 'host' in outlet and outlet['host'] in self.test_server_addresses:
+            if 'host' in outlet and outlet['host'] in [h['address'] for h in self.TEST_SERVERS]:
                 hosts = self.get_list("/api/host/", args = {'limit': 0})
                 try:
                     host = [h for h in hosts if h['address'] == outlet['host']][0]

@@ -576,6 +576,12 @@ class RealRemoteOperations(RemoteOperations):
                     'cat > /etc/chroma.cfg',
                     buffer = cfg_str.getvalue()
                 )
+                # Make sure the config gets to disk!
+                self._ssh_address(
+                    server['address'],
+                    'sync; sync',
+                    buffer = cfg_str.getvalue()
+                )
 
     def clear_ha(self, server_list):
         """
