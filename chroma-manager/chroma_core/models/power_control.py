@@ -362,8 +362,12 @@ class PoweronHostJob(AdvertisedJob):
                             for o in host.outlets.all()])
                 and not any([o.has_power for o in host.outlets.all()]))
 
+    @classmethod
+    def get_confirmation(cls, instance):
+        return "Switch on power to this server."
+
     def description(self):
-        return "Restore power for host %s" % self.host
+        return "Restore power for server %s" % self.host
 
     def get_steps(self):
         return [(TogglePduOutletStateStep, {'outlets': self.host.outlets.all(), 'toggle_state': 'on'})]
@@ -394,8 +398,12 @@ class PoweroffHostJob(AdvertisedJob):
                             for o in host.outlets.all()])
                 and any([o.has_power for o in host.outlets.all()]))
 
+    @classmethod
+    def get_confirmation(cls, instance):
+        return "Switch off power to this server. Any HA-capable targets running on the server will be failed over to a peer. Non-HA-capable targets will be unavailable until the server is turned on again."
+
     def description(self):
-        return "Kill power for host %s" % self.host
+        return "Kill power for server %s" % self.host
 
     def get_steps(self):
         return [(TogglePduOutletStateStep, {'outlets': self.host.outlets.all(), 'toggle_state': 'off'})]
@@ -424,8 +432,12 @@ class PowercycleHostJob(AdvertisedJob):
         # switched On, so we can rely on this to get into a known state.
         return host.outlets.count()
 
+    @classmethod
+    def get_confirmation(cls, instance):
+        return "Switch the power to this server off and then back on again. Any HA-capable targets running on the server will be failed over to a peer. Non-HA-capable targets will be unavailable until the server has finished booting."
+
     def description(self):
-        return "Cycle power for host %s" % self.host
+        return "Cycle power for server %s" % self.host
 
     def get_steps(self):
         # We can't use the PDU 'reboot' action, because that's per-outlet, and
