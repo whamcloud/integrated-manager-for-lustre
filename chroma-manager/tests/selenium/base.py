@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 import logging
 import time
 import sys

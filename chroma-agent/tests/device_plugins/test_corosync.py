@@ -1,8 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
 import logging
 import datetime
 import simplejson as json

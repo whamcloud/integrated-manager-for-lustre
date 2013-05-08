@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 from selenium.common.exceptions import NoSuchElementException
 from testconfig import config
 from tests.selenium.base import SeleniumBaseTestCase

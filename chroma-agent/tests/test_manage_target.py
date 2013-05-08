@@ -1,7 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
 from chroma_agent.action_plugins.manage_targets import writeconf_target, format_target, _get_nvpairid_from_xml
 
 from django.utils import unittest

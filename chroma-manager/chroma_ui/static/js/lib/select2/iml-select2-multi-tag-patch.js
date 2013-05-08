@@ -1,8 +1,3 @@
-//
-// ========================================================
-// Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-// ========================================================
-
 /**
  * @fileOverview This is a patch for select2 tags to make them stylable.
  */

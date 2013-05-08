@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
 from tests.selenium.utils.element import (

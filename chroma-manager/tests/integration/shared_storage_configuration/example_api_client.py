@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 import os
 import requests
 import json

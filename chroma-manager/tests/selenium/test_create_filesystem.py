@@ -1,9 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
-
 from tests.selenium.base import SeleniumBaseTestCase
 from tests.selenium.views.edit_filesystem import EditFilesystem
 from tests.selenium.views.mgt import Mgt

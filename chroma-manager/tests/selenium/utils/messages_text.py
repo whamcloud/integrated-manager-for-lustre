@@ -1,8 +1,3 @@
-#
-# ========================================================
-# Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
-# ========================================================
-
 # Dictionary for UI messages
 validation_messages = {
     "blank_filesystem_name": "File system name is mandatory",

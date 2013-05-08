@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-#
-# ==============================
-# Copyright 2011 Whamcloud, Inc.
-# ==============================
 #
 # Simple script to accept the jenkins json api output of $BUILD_URL/api/json?tree=runs[fingerprint[usage[name,ranges[ranges[end]]]]]
 # and return the name and build number for each job triggered downstream of the original build in BUILD_URL.
