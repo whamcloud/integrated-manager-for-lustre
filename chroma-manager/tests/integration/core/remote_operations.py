@@ -61,6 +61,12 @@ class SimulatorRemoteOperations(RemoteOperations):
     def stop_lnet(self, fqdn):
         self._simulator.servers[fqdn].stop_lnet()
 
+    def backup_cib(*args, **kwargs):
+        return []
+
+    def restore_cib(*args, **kwargs):
+        pass
+
     def read_proc(self, address, path):
         fqdn = None
         for server in config['lustre_servers']:
@@ -224,6 +230,26 @@ class RealRemoteOperations(RemoteOperations):
     def read_proc(self, address, path):
         result = self._ssh_address(address, "cat %s" % path)
         return result.stdout.read().strip()
+
+    def backup_cib(self, server, backup="/tmp/cib-backup.xml"):
+        running_targets = self.get_pacemaker_targets(server, running = True)
+        for target in running_targets:
+            self.stop_target(server['fqdn'], target)
+
+        self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) < 1)
+
+        self._ssh_fqdn(server['fqdn'],
+            '''cibadmin --query | sed -e 's/epoch="[[:digit:]]\+" //'> %s''' % backup)
+
+        return running_targets
+
+    def restore_cib(self, server, start_targets, restore="/tmp/cib-backup.xml"):
+        self._ssh_fqdn(server['fqdn'], "cibadmin --erase --force")
+        self._ssh_fqdn(server['fqdn'], "cibadmin --modify --xml-file %s" % restore)
+        for target in start_targets:
+            self.start_target(server['fqdn'], target)
+
+        self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) == len(start_targets))
 
     def mount_filesystem(self, client_address, filesystem):
         """
@@ -488,16 +514,27 @@ class RealRemoteOperations(RemoteOperations):
         )
         return result.exit_status == 0
 
-    def get_pacemaker_targets(self, server):
+    def get_pacemaker_targets(self, server, running = False):
         """
         Returns a list of chroma targets configured in pacemaker on a server.
+        :param running: Restrict the returned list only to running targets.
         """
         result = self._ssh_address(
             server['address'],
             'crm resource list'
         )
         crm_resources = result.stdout.read().split('\n')
-        return [r.split()[0] for r in crm_resources if re.search('chroma:Target', r)]
+        targets = []
+        for r in crm_resources:
+            if not re.search('chroma:Target', r):
+                continue
+
+            target = r.split()[0]
+            if running and re.search('Started\s*$', r):
+                targets.append(target)
+            elif not running:
+                targets.append(target)
+        return targets
 
     def is_pacemaker_target_running(self, server, target):
         result = self._ssh_address(
