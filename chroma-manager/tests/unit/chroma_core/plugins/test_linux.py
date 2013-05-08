@@ -5,7 +5,7 @@ import os
 from chroma_core.models.host import Volume, VolumeNode
 
 from chroma_core.models.storage_plugin import StorageResourceRecord
-from tests.unit.chroma_core.helper import synthetic_host
+from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
 
 
@@ -18,6 +18,8 @@ class LinuxPluginTestCase(TestCase):
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.manager
 
         self.resource_manager = ResourceManager()
+
+        load_default_profile()
 
     def tearDown(self):
         import chroma_core.lib.storage_plugin.manager
@@ -41,7 +43,7 @@ class LinuxPluginTestCase(TestCase):
         data = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures/%s" % data_file)))
 
         resource_record = self._make_global_resource('linux', 'PluginAgentResources',
-                {'plugin_name': 'linux', 'host_id': host.id})
+                                                     {'plugin_name': 'linux', 'host_id': host.id})
 
         instance = plugin_klass(self.resource_manager, resource_record.id)
         instance.do_agent_session_start(data['linux'])
