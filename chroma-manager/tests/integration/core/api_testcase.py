@@ -77,17 +77,12 @@ class ApiTestCase(UtilityTestCase):
             self.remote_operations.await_server_boot(server['fqdn'], restart = True)
             logger.info("%s is running" % server['fqdn'])
 
-        # Erase all volumes
-        for server in self.TEST_SERVERS:
-            if not 'device_paths' in server:
-                # Working around the the 'existing_filesystem_configuration' tests
-                # which helpfully have their own different config file which doesn't
-                # include 'device_paths' (in any case we wouldn't want to do any
-                # erasing, but there isn't a neat way to distinguish the configs
-                # to make that decision).
-                continue
-            for path in server['device_paths']:
-                self.remote_operations.erase_block_device(server['fqdn'], path)
+        if not 'filesystem' in config:
+            # Erase all volumes if the config does not indicate that there is already
+            # a pres-existing file system (in the case of the monitoring only tests).
+            for server in self.TEST_SERVERS:
+                for path in server['device_paths']:
+                    self.remote_operations.erase_block_device(server['fqdn'], path)
 
         reset = config.get('reset', True)
         if reset:

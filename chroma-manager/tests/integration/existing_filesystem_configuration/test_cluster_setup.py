@@ -15,5 +15,5 @@ class TestClusterSetup(TestCase):
 
     def test_config_contains_minimum_components(self):
         # Verify there are enough hosts present for the test
-        self.assertGreaterEqual(len(config['lustre_servers']), 5)
+        self.assertGreaterEqual(len(config['lustre_servers']), 3)
         self.assertGreaterEqual(len(config['lustre_clients']), 1)

@@ -1,0 +1,109 @@
+{
+    "chroma_managers": [
+        {
+            "address": "hydra-2-efs-chroma-manager-1",
+            "server_http_url": "https://hydra-2-efs-chroma-manager-1/",
+            "users": [
+                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
+            ],
+            "repos": ["chroma"],
+            "distro": "el6"
+        }
+    ],
+    "lustre_servers": [
+        {
+            "address": "hydra-2-efs-mgs-mds",
+            "nodename": "hydra-2-efs-mgs-mds",
+            "fqdn": "hydra-2-efs-mgs-mds",
+            "ip_address": "10.10.4.90",
+            "host": "hydra-2",
+            "destroy_command": "virsh destroy hydra-2-efs-mgs-mds",
+            "status_command": "virsh domstate hydra-2-efs-mgs-mds",
+            "start_command": "virsh start hydra-2-efs-mgs-mds",
+            "repos": ["chroma"],
+            "distro": "el6"
+        },
+        {
+            "address": "hydra-2-efs-oss1",
+            "nodename": "hydra-2-efs-oss1",
+            "fqdn": "hydra-2-efs-oss1",
+            "ip_address": "10.10.4.91",
+            "host": "hydra-2",
+            "destroy_command": "virsh destroy hydra-2-efs-oss1",
+            "status_command": "virsh domstate hydra-2-efs-oss1",
+            "start_command": "virsh start hydra-2-efs-oss1",
+            "repos": ["chroma"],
+            "distro": "el6"
+        },
+        {
+            "address": "hydra-2-efs-oss2",
+            "nodename": "hydra-2-efs-oss2",
+            "fqdn": "hydra-2-efs-oss2",
+            "host": "hydra-2",
+            "ip_address": "10.10.4.92",
+            "destroy_command": "virsh destroy hydra-2-efs-oss2",
+            "status_command": "virsh domstate hydra-2-efs-oss2",
+            "start_command": "virsh start hydra-2-efs-oss2",
+            "repos": ["chroma"],
+            "distro": "el6"
+        }
+    ],
+    "lustre_clients": {
+        "hydra-2-efs-client-1": {
+            "distro": "el6",
+            "lustre_client_version": "2.1.4"
+        }
+    },
+    "hosts": {
+        "hydra-2": {}
+    },
+    "filesystem": {
+        "name": "efs",
+        "targets": {
+            "MGS": {
+                "kind": "MGT",
+                "primary_server": "hydra-2-efs-mgs-mds",
+                "mount_path": "/mnt/mdt"
+            },
+            "efs-MDT0000": {
+                "kind": "MDT",
+                "primary_server": "hydra-2-efs-mgs-mds",
+                "mount_path": "/mnt/mdt"
+            },
+            "efs-OST0000": {
+                "kind": "OST",
+                "primary_server": "hydra-2-efs-oss1",
+                "mount_path": "/mnt/ost0"
+            },
+            "efs-OST0001": {
+                "kind": "OST",
+                "primary_server": "hydra-2-efs-oss1",
+                "mount_path": "/mnt/ost1"
+            },
+            "efs-OST0002": {
+                "kind": "OST",
+                "primary_server": "hydra-2-efs-oss2",
+                "mount_path": "/mnt/ost2"
+            },
+            "efs-OST0003": {
+                "kind": "OST",
+                "primary_server": "hydra-2-efs-oss2",
+                "mount_path": "/mnt/ost3"
+            }
+        }
+    },
+    "test_runners": [
+        {
+            "distro": "el6",
+            "repos": ["chroma"]
+        }
+    ],
+    "repos": {
+        "chroma": {
+            "build_job": "BUILD_JOB_NAME",
+            "build_number": 0
+        }
+    },
+    "provision": true,
+    "reset": true
+}

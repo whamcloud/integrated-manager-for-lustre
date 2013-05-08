@@ -74,6 +74,14 @@ if not config.get('simulator', False):
     setup_power_config()
     setup_corosync_config()
 
+if config.get('filesystem') and config.get('lustre_servers'):
+    for name, target in config['filesystem']['targets'].iteritems():
+        if target['kind'] in ['MGT', 'MDT']:
+            target['primary_server'] = config['lustre_servers'][0]['nodename']
+        if target['kind'] == 'OST':
+            # Split up the osts between the lustre servers
+            target['primary_server'] = config['lustre_servers'][(int(name[-1]) % 2) + 1]['nodename']
+
 test_json_file = open(sys.argv[2], 'w')
 json.dump(config, test_json_file, sort_keys=True, indent=4)
 test_json_file.close()
