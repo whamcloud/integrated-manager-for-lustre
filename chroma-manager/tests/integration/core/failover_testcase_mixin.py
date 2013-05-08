@@ -36,7 +36,7 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         primary_host['config'] = self.get_host_config(primary_host['nodename'])
 
         # "Push the reset button" on the primary lustre server
-        self.remote_operations.reset_server(primary_host['config']['address'])
+        self.remote_operations.reset_server(primary_host['config']['fqdn'])
 
         # Wait for failover to occur
         self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
@@ -59,14 +59,15 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         )
         self.assertTrue(response.successful, response.text)
         targets_running_on_primary_host = [t for t in response.json['objects']
-            if t['active_host'] == primary_host['resource_uri']]
+                                           if t['active_host'] ==
+                                           primary_host['resource_uri']]
 
         failover_target_command_ids = []
         for target in targets_running_on_primary_host:
             response = self.chroma_manager.post(
                 '/api/command/',
                 body = {
-                    'jobs': [{'class_name':'FailoverTargetJob',
+                    'jobs': [{'class_name': 'FailoverTargetJob',
                               'args': {'target_id': target['id']}}],
                     'message': "Failing %s over to secondary" % target['label']
                 }
@@ -95,7 +96,8 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         )
         self.assertTrue(response.successful, response.text)
         targets_with_matching_primary_host = [t for t in response.json['objects']
-            if t['primary_server'] == primary_host['resource_uri']]
+                                              if t['primary_server'] ==
+                                              primary_host['resource_uri']]
 
         failback_target_command_ids = []
         for target in targets_with_matching_primary_host:

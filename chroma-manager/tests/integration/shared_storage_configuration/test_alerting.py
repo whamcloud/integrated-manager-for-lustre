@@ -20,7 +20,7 @@ class TestEvents(ChromaIntegrationTestCase):
         start_time = host['state_modified_at']
 
         # Reboot
-        self.remote_operations.reset_server(host['address'])
+        self.remote_operations.reset_server(host['fqdn'])
         self.remote_operations.await_server_boot(host['fqdn'])
 
         def reboot_event_was_seen():

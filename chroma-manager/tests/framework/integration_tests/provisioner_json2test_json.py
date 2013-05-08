@@ -57,6 +57,11 @@ def setup_corosync_config():
     except KeyError:
         pass
 
+# until the provisioner is actually telling us which hosts have buggy reset
+# implementations, assume if we're not told, it does
+for host in config['hosts'].values():
+    if not host.get('reset_is_buggy', False):
+        host['reset_is_buggy'] = True
 
 if config.get('chroma_managers') and config.get('simulator'):
     for manager in config['chroma_managers']:
@@ -70,7 +75,6 @@ if config.get('lustre_clients'):
         new_clients[client_address] = client
     config['lustre_clients'] = new_clients
 
-# hack up cluster_number based on the current vm[56][78] hack
 if config.get('lustre_servers'):
     for server in config['lustre_servers']:
         start_command = config.get('start_command', None)

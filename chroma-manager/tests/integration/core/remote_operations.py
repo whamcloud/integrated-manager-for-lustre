@@ -265,7 +265,7 @@ class RealRemoteOperations(RemoteOperations):
         self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) < 1)
 
         self._ssh_fqdn(server['fqdn'],
-            '''cibadmin --query | sed -e 's/epoch="[[:digit:]]\+" //'> %s''' % backup)
+                       '''cibadmin --query | sed -e 's/epoch="[[:digit:]]\+" //'> %s''' % backup)
 
         return running_targets
 
@@ -424,15 +424,34 @@ class RealRemoteOperations(RemoteOperations):
         secs_up = result.split()[0]
         return secs_up
 
-    def reset_server(self, address):
+    def _host_of_server(self, server):
+        return config['hosts'][server['host']]
+
+    def reset_server(self, fqdn):
         # NB: This is a vaguely dangerous operation -- basically the
         # equivalent of hitting the reset button. It's not a nice
         # shutdown that gives the fs time to sync, etc.
-        self._ssh_address(address,
-                          '''
-                          echo 1 > /proc/sys/kernel/sysrq;
-                          echo b > /proc/sysrq-trigger
-                          ''', expected_return_code = -1)
+        server_config = self._fqdn_to_server_config(fqdn)
+        host = self._host_of_server(server_config)
+        reset_cmd = server_config.get('reset_command', None)
+        if host.get('reset_is_buggy', False):
+            self.kill_server(fqdn)
+            self.await_server_boot(fqdn, restart = True)
+        elif reset_cmd:
+            result = self._ssh_address(
+                server_config['host'],
+                reset_cmd,
+                ssh_key_file = server_config.get('ssh_key_file', None)
+            )
+            node_status = result.stdout.read()
+            if re.search('was reset', node_status):
+                logger.info("%s reset successfully" % fqdn)
+        else:
+            self._ssh_address(server_config['address'],
+                              '''
+                              echo 1 > /proc/sys/kernel/sysrq;
+                              echo b > /proc/sysrq-trigger
+                              ''', expected_return_code = -1)
 
     def kill_server(self, fqdn):
         # "Pull the plug" on host

@@ -34,7 +34,8 @@
       "address": "hydra-4.lab.whamcloud.com",
       "fqdn": "hydra-4.lab.whamcloud.com",
       "ip_address": "10.10.4.36",
-      "nodename": "hydra-4.lab.whamcloud.com"
+      "nodename": "hydra-4.lab.whamcloud.com",
+      "reset_is_buggy": true
     }
   },
   "lustre_clients": {
