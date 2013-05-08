@@ -198,7 +198,7 @@ class AgentRpcMessenger(object):
                 except KeyError:
                     current_session_id = None
 
-            if current_session_id != old_session_id:
+            if current_session_id is not None and current_session_id != old_session_id:
                 log.info("AgentRpcMessenger.await_restart: %s new %s" % (fqdn, current_session_id))
                 break
 
