@@ -194,11 +194,12 @@ def check_block_device(path):
         raise RuntimeError("Unexpected return code %s from blkid %s: '%s' '%s'" % (rc, path, blkid_output, blkid_err))
 
 
-def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnode=(),
-         servicenode=(), param={}, index=None, comment=None, mountfsoptions=None,
-         network=(), backfstype=None, device_size=None, mkfsoptions=None,
-         reformat=False, stripe_count_hint=None, iam_dir=False,
-         dryrun=False, verbose=False, quiet=False):
+def format_target(device=None, target_types=(), mgsnode=(), fsname=None,
+                  failnode=(), servicenode=(), param={}, index=None,
+                  comment=None, mountfsoptions=None, network=(),
+                  backfstype=None, device_size=None, mkfsoptions=None,
+                  reformat=False, stripe_count_hint=None, iam_dir=False,
+                  dryrun=False, verbose=False, quiet=False):
     """Perform a mkfs.lustre operation on a block device."""
 
     # freeze a view of the namespace before we start messing with it
@@ -258,12 +259,10 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None, failnod
     inode_count = int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
     inode_size = int(re.search("Inode size:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
 
-    return {
-            'uuid': uuid,
+    return {'uuid': uuid,
             'filesystem_type': type,
             'inode_size': inode_size,
-            'inode_count': inode_count
-    }
+            'inode_count': inode_count}
 
 
 def _mkdir_p_concurrent(path):
@@ -368,7 +367,7 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
     <nvpair id=\"%s-instance_attributes-target\" name=\"target\" value=\"%s\"/>\
   </instance_attributes>\
 </primitive>" % (ha_label, ha_label, ha_label, ha_label, ha_label,
-            ha_label, ha_label, ha_label, ha_label, uuid))
+                 ha_label, ha_label, ha_label, ha_label, uuid))
         os.close(tmp_f)
 
         cibadmin(["-o", "resources", "-C", "-x", "%s" % tmp_name])
@@ -445,43 +444,51 @@ def unmount_target(uuid):
 
 def start_target(ha_label):
     from time import sleep
-    # do a cleanup first, just to clear any previously errored state
-    shell.try_run(['crm', 'resource', 'cleanup', ha_label])
-    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-                   '-m', '-v', 'Started'])
+    # HYD-1989: brute force, try up to 3 times to start the target
+    i = 0
+    while True:
+        i += 1
+        # do a cleanup first, just to clear any previously errored state
+        shell.try_run(['crm', 'resource', 'cleanup', ha_label])
+        shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
+                       '-m', '-v', 'Started'])
 
-    # now wait for it to start
-    # FIXME: this may break on non-english systems or new versions of pacemaker
-    timeout = 100
-    n = 0
-    while n < timeout:
-        stdout = shell.try_run(['crm', 'resource', 'status', ha_label])
+        # now wait for it to start
+        # FIXME: this may break on non-english systems or new versions of pacemaker
+        timeout = 100
+        n = 0
+        while n < timeout:
+            stdout = shell.try_run(['crm', 'resource', 'status', ha_label])
 
-        if stdout.startswith("resource %s is running on:" % ha_label):
-            break
+            if stdout.startswith("resource %s is running on:" % ha_label):
+                break
 
-        sleep(1)
-        n += 1
+            sleep(1)
+            n += 1
 
-    # and make sure it didn't start but (the RA) fail(ed)
-    stdout = shell.try_run(['crm', 'status'])
+        # and make sure it didn't start but (the RA) fail(ed)
+        stdout = shell.try_run(['crm', 'status'])
 
-    failed = True
-    for line in stdout.split("\n"):
-        if line.startswith(" %s" % ha_label):
-            if line.find("FAILED") < 0:
-                failed = False
+        failed = True
+        for line in stdout.split("\n"):
+            if line.startswith(" %s" % ha_label):
+                if line.find("FAILED") < 0:
+                    failed = False
 
-    if failed:
-        # try to leave things in a sane state for a failed mount
-        shell.try_run(['crm_resource', '-r', ha_label, '-p',
-                       'target-role', '-m', '-v', 'Stopped'])
-        raise RuntimeError("failed to start target %s" % ha_label)
-    else:
-        location = get_resource_location(ha_label)
-        if not location:
-            raise RuntimeError("Started %s but now can't locate it!" % ha_label)
-        return {'location': location}
+        if failed:
+            # try to leave things in a sane state for a failed mount
+            shell.try_run(['crm_resource', '-r', ha_label, '-p',
+                           'target-role', '-m', '-v', 'Stopped'])
+            if i < 4:
+                console_log.info("failed to start target %s" % ha_label)
+            else:
+                raise RuntimeError("failed to start target %s" % ha_label)
+
+        else:
+            location = get_resource_location(ha_label)
+            if not location:
+                raise RuntimeError("Started %s but now can't locate it!" % ha_label)
+            return {'location': location}
 
 
 def stop_target(ha_label):
