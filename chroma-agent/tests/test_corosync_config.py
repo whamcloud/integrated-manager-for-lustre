@@ -2,7 +2,8 @@ import sys
 import mock
 from django.utils import unittest
 
-from chroma_agent.action_plugins.manage_corosync import env, configure_corosync
+from chroma_agent.lib.corosync import env
+from chroma_agent.action_plugins.manage_corosync import configure_corosync
 
 
 class FakeEtherInfo(object):
@@ -30,14 +31,16 @@ class fake_ethtool(object):
 class TestConfigureCorosync(unittest.TestCase):
     def setUp(self):
         super(TestConfigureCorosync, self).setUp()
+
         import chroma_agent.shell
         patcher = mock.patch.object(chroma_agent.shell, 'try_run')
         self.try_run = patcher.start()
 
-        @classmethod
-        def ring0(cls):
-            return cls('eth0')
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.CorosyncRingInterface.ring0', ring0)
+        from chroma_agent.lib.corosync import CorosyncRingInterface
+
+        def get_ring0():
+            return CorosyncRingInterface('eth0')
+        patcher = mock.patch('chroma_agent.lib.corosync.get_ring0', get_ring0)
         patcher.start()
 
         self.interfaces = {
@@ -66,48 +69,32 @@ class TestConfigureCorosync(unittest.TestCase):
         patcher = mock.patch('chroma_agent.node_admin.write_ifcfg')
         self.write_ifcfg = patcher.start()
 
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync._render_config_file')
-        self.render_config_file = patcher.start()
+        patcher = mock.patch('chroma_agent.lib.corosync.write_config_to_file')
+        self.write_config_to_file = patcher.start()
+
         patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.unconfigure_pacemaker')
-        patcher.start()
-
-        from chroma_agent.action_plugins.manage_corosync import CorosyncRingInterface
-        old_ring1 = CorosyncRingInterface.ring1
-
-        @classmethod
-        def ring1(cls, *args):
-            self.interfaces['eth1']['ipv4_address'] = args[1]
-            try:
-                self.interfaces['eth1']['ipv4_netmask'] = args[2].prefixlen
-            except AttributeError:
-                self.interfaces['eth1']['ipv4_netmask'] = args[2]
-            return old_ring1(*args)
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.CorosyncRingInterface.ring1', ring1)
         patcher.start()
 
         old_set_address = CorosyncRingInterface.set_address
 
-        def set_address(obj, address):
+        def set_address(obj, address, prefix):
             if self.interfaces[obj.name]['ipv4_address'] is None:
-                self.interfaces[obj.name]['ipv4_address'] = address.split("/")[0]
-                self.interfaces[obj.name]['ipv4_netmask'] = address.split("/")[1]
-            old_set_address(obj, address)
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.CorosyncRingInterface.set_address', set_address)
+                self.interfaces[obj.name]['ipv4_address'] = address
+                self.interfaces[obj.name]['ipv4_netmask'] = prefix
+            old_set_address(obj, address, prefix)
+        patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.set_address', set_address)
         patcher.start()
 
         @property
         def has_link(obj):
             return self.interfaces[obj.name]['has_link']
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.AutoDetectedInterface.has_link', has_link)
+        patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.has_link', has_link)
         patcher.start()
 
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.AutoDetectedInterface.find_unused_port', return_value = "4242")
+        patcher = mock.patch('chroma_agent.lib.corosync.find_unused_port', return_value = 4242)
         patcher.start()
 
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.AutoDetectedInterface.find_unused_port', return_value = 4242)
-        patcher.start()
-
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.AutoDetectedInterface.discover_existing_mcastport')
+        patcher = mock.patch('chroma_agent.lib.corosync.discover_existing_mcastport')
         patcher.start()
 
         self.conf_template = env.get_template('corosync.conf')
@@ -143,7 +130,7 @@ class TestConfigureCorosync(unittest.TestCase):
         self.write_ifcfg.assert_called_with(ring1_iface, 'ba:db:ee:fb:aa:af', '10.42.42.42', '255.255.255.0')
 
         test_config = self._render_test_config()
-        self.render_config_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
+        self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
 
     def test_semi_automatic_ring1_config(self):
         ring1_iface = "eth1"
@@ -153,7 +140,7 @@ class TestConfigureCorosync(unittest.TestCase):
         self.write_ifcfg.assert_called_with(ring1_iface, 'ba:db:ee:fb:aa:af', '10.0.0.1', '255.255.255.0')
 
         test_config = self._render_test_config()
-        self.render_config_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
+        self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
 
     def test_full_automatic_ring1_config(self):
         configure_corosync()
@@ -161,4 +148,19 @@ class TestConfigureCorosync(unittest.TestCase):
         self.write_ifcfg.assert_called_with('eth1', 'ba:db:ee:fb:aa:af', '10.0.0.1', '255.255.255.0')
 
         test_config = self._render_test_config()
-        self.render_config_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
+        self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
+
+    def test_find_subnet(self):
+        from chroma_agent.lib.corosync import find_subnet
+        from netaddr import IPNetwork
+
+        test_map = {
+            ("192.168.1.0", "24"): IPNetwork("10.0.0.0/24"),
+            ("10.0.1.0", "24"): IPNetwork("10.128.0.0/24"),
+            ("10.128.0.0", "9"): IPNetwork("10.0.0.0/9"),
+            ("10.127.255.254", "9"): IPNetwork("10.128.0.0/9"),
+            ("10.255.255.255", "32"): IPNetwork("10.0.0.0/32"),
+        }
+
+        for args, output in test_map.items():
+            self.assertEqual(output, find_subnet(*args))
