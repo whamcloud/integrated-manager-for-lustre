@@ -145,9 +145,21 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         self.assertTrue(response.successful, response.text)
         targets = response.json['objects']
 
+        response = self.chroma_manager.get(
+            '/api/host/',
+            params = {
+            }
+        )
+        self.assertTrue(response.successful, response.text)
+        hosts = response.json['objects']
+
         for target in targets:
             if target['volume']['id'] in volumes_to_expected_hosts:
                 expected_host = volumes_to_expected_hosts[target['volume']['id']]
+                active_host = target['active_host']
+                if active_host is not None:
+                    active_host = [h['fqdn'] for h in hosts if h['resource_uri'] == active_host][0]
+                logger.debug("%s: should be running on %s (actual: %s)" % (target['name'], expected_host['fqdn'], active_host))
 
                 # Check chroma manager's view
                 if assert_true:
@@ -158,6 +170,7 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
 
                 # Check corosync's view
                 is_running = self.remote_operations.get_resource_running(expected_host, target['ha_label'])
+                logger.debug("Manager says it's OK, pacemaker says: %s" % is_running)
                 if assert_true:
                     self.assertEqual(is_running, True)
                 elif not is_running:
