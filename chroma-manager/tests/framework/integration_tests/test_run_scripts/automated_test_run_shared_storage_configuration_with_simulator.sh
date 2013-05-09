@@ -119,7 +119,15 @@ python setup.py develop
 make fence_agents
 
 cd ~/chroma_test_env/chroma/chroma-manager
+
+# Enable DEBUG logging
+cat <<"EOF1" > local_settings.py
+import logging
+LOG_LEVEL = logging.DEBUG
+EOF1
+
 python manage.py dev_setup --no-bundles
+
 python manage.py supervisor  &> /dev/null &
 supervisor_pid=\$!
 
