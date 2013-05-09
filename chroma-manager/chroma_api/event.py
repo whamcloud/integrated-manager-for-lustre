@@ -73,12 +73,23 @@ class EventResource(SeverityResource):
         always_return_data = True
 
     def dehydrate_host_name(self, bundle):
-        """When sending to API caller, initialize this field."""
+        """When sending to API caller, initialize this field. """
 
         return bundle.obj.host.get_label() if bundle.obj.host else "---"
 
     def dehydrate_message(self, bundle):
         return bundle.obj.message()
+
+    def hydrate_host(self, bundle):
+        """Check the host isn't deleted, if it exists"""
+
+        #  NB:  This works because even when an object is "deleted", it is
+        #  possible navigate with dot notation to the object.  If that is
+        #  ever changed, this will fail.  But a test will catch that.
+        if bundle.obj.host is None or bundle.obj.host.not_deleted is None:
+            #  don't let Tasty load it.
+            bundle.data['host'] = None
+        return bundle
 
     def build_filters(self, filters = None):
         """Convert HTTP param incoming values to DB types in the filter."""

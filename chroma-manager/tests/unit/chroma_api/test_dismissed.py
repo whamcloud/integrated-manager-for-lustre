@@ -41,11 +41,15 @@ class DismissableTestCase(ChromaApiTestCase):
                                           dismissed=dismissed,
                                           message_str='test')
 
+        if host is not None:
+            event.host = host
+
         #  Event.created_at is auto_add_now - so have to update it
         if created_at is not None:
             event.created_at = created_at
-            event.save()
-            event = freshen(event)
+
+        event.save()
+        event = freshen(event)
 
         return event
 
@@ -278,6 +282,61 @@ class TestPatchDismissables(DismissableTestCase):
 
         event = self.make_dismissable(Event, dismissed=False, severity=WARNING)
         self.assertEqual(event.dismissed, False)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/event/%s/" % event.pk,
+            data=data)
+        self.assertHttpAccepted(response)
+
+        event = freshen(event)
+        self.assertEqual(event.dismissed, True)
+
+
+class TestPatchDismissablesWithDeletedRelatedObject(DismissableTestCase):
+    """After the first load the UI can request updates based on date
+
+    Sending all fields as strings to simulate what I think the FE does
+    """
+    def test_dismissing_alert(self):
+        """Send a API PATCH to update Alert.dismissed to True with del obj
+
+        AlertState.alert_item is a GenericForeignKey.  This will test that
+        item being set, but deleted
+        """
+
+        alert = self.make_dismissable(AlertState, dismissed=False,
+            severity=WARNING, date=timezone.now())
+        self.assertEqual(alert.dismissed, False)
+
+        self.assertEqual(type(alert.alert_item), ManagedHost)
+        alert.alert_item.mark_deleted()
+
+        #  Make sure it is deleted.
+        self.assertRaises(ManagedHost.DoesNotExist,
+                          ManagedHost.objects.get,
+                          pk=alert.alert_item.pk)
+
+        #  Should not be able to PATCH this to dismissed without a failure
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
+        self.assertHttpAccepted(response)
+
+        alert = freshen(alert)
+        self.assertEqual(alert.dismissed, True)
+
+    def test_dismissing_event(self):
+        """Send a API PATCH to update Event.dismissed to True"""
+
+        event = self.make_event(self.make_random_managed_host(),
+                                dismissed=False, severity=WARNING)
+        self.assertEqual(event.dismissed, False)
+
+        event.host.mark_deleted()
+
+        #  Make sure it is deleted.
+        self.assertRaises(ManagedHost.DoesNotExist,
+                          ManagedHost.objects.get,
+                          pk=event.host.pk)
 
         data = {"dismissed": 'true'}
         response = self.api_client.patch("/api/event/%s/" % event.pk,
