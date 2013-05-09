@@ -103,6 +103,26 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
         ProxyPass http://localhost:{{HTTP_AGENT_PORT}}/agent/register/
     </Location>
 
+    <Location /agent/reregister/>
+        ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/reregister/
+
+        SSLVerifyClient require
+        RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
+        RewriteRule .* - [E=SSLC_ON:%1]
+        RequestHeader add X-SSL-Client-On %{SSLC_ON}e
+
+        RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
+        RewriteRule .* - [E=SSLC_NAME:%1]
+        RequestHeader add X-SSL-Client-Name %{SSLC_NAME}e
+
+        RewriteCond %{SSL:SSL_CLIENT_M_SERIAL} (.*)
+        RewriteRule .* - [E=SSLC_SERIAL:%1]
+        RequestHeader add X-SSL-Client-Serial %{SSLC_SERIAL}e
+
+        RewriteEngine on
+        RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/reregister/ [P,L]
+    </Location>
+
     <Location /agent/message/>
         ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/message/
 

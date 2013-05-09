@@ -15,7 +15,7 @@ from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler import agent_rpc
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration
+from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration, ClientCertificate
 
 RABBITMQ_GRACE_PERIOD = 1
 
@@ -86,8 +86,6 @@ class TestAgentRpc(SupervisorTestCase):
         return session_id
 
     def setUp(self):
-        super(TestAgentRpc, self).setUp()
-
         if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
             self.host = ManagedHost.objects.create(
                 fqdn = self.CLIENT_NAME,
@@ -97,8 +95,11 @@ class TestAgentRpc(SupervisorTestCase):
                 state_modified_at = datetime.datetime.now(tz = dateutil.tz.tzutc())
             )
             LNetConfiguration.objects.create(host = self.host, state = 'nids_known')
+            ClientCertificate.objects.create(host = self.host, serial = self.CLIENT_CERT_SERIAL)
         else:
             self.host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
+
+        super(TestAgentRpc, self).setUp()
 
     def tearDown(self):
         super(TestAgentRpc, self).tearDown()

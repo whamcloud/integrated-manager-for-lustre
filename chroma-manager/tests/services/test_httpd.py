@@ -163,3 +163,7 @@ class TestSecureUrls(HttpdTestCase):
             self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-On'), "SUCCESS")
             self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-Name'), client_cn)
             self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-Serial'), client_cert_serial)
+
+            url = "https://localhost:%s/agent/reregister/" % settings.HTTPS_FRONTEND_PORT
+            response = requests.post(url, verify=False, cert=(cert, key))
+            self.assertEqual(response.status_code, 200)

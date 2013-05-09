@@ -148,11 +148,6 @@ class TestHttpAgent(SupervisorTestCase):
             q.put(message)
 
     def setUp(self):
-        super(TestHttpAgent, self).setUp()
-
-        self._flush_queue(self.RX_QUEUE_NAME)
-        self._flush_queue(self.TX_QUEUE_NAME)
-
         if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
             self.host = ManagedHost.objects.create(
                 fqdn = self.CLIENT_NAME,
@@ -160,6 +155,11 @@ class TestHttpAgent(SupervisorTestCase):
                 address = self.CLIENT_NAME
             )
             ClientCertificate.objects.create(host = self.host, serial = self.CLIENT_CERT_SERIAL)
+
+        super(TestHttpAgent, self).setUp()
+
+        self._flush_queue(self.RX_QUEUE_NAME)
+        self._flush_queue(self.TX_QUEUE_NAME)
 
     def tearDown(self):
         super(TestHttpAgent, self).tearDown()

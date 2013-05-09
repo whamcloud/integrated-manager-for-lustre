@@ -64,11 +64,15 @@ class MessageView(View):
 
     LONG_POLL_TIMEOUT = 30
 
-    def _check_cert_revokation(self, request):
-        revoked = request.META['HTTP_X_SSL_CLIENT_SERIAL'] in self.revoked_certs
-        if revoked:
+    @classmethod
+    def valid_fqdn(cls, request):
+        "Return fqdn if certificate is valid."
+        fqdn = cls.valid_certs.get(request.META['HTTP_X_SSL_CLIENT_SERIAL'])
+        if not fqdn:
             log.warning("Rejecting certificate %s" % request.META['HTTP_X_SSL_CLIENT_SERIAL'])
-        return revoked
+        elif fqdn != request.META['HTTP_X_SSL_CLIENT_NAME']:
+            log.info("Domain name changed %s" % fqdn)
+        return fqdn
 
     @log_exception
     def post(self, request):
@@ -77,11 +81,10 @@ class MessageView(View):
         Handle a POST containing messages from the agent
         """
 
-        if self._check_cert_revokation(request):
-            return HttpForbidden()
-
         body = json.loads(request.body)
-        fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
+        fqdn = self.valid_fqdn(request)
+        if not fqdn:
+            return HttpForbidden()
 
         try:
             messages = body['messages']
@@ -155,10 +158,9 @@ class MessageView(View):
         Handle a long-polling GET for messages to the agent
         """
 
-        if self._check_cert_revokation(request):
+        fqdn = self.valid_fqdn(request)
+        if not fqdn:
             return HttpForbidden()
-
-        fqdn = request.META['HTTP_X_SSL_CLIENT_NAME']
         server_boot_time = dateutil.parser.parse(request.GET['server_boot_time'])
         client_start_time = dateutil.parser.parse(request.GET['client_start_time'])
 
@@ -261,6 +263,7 @@ def register(request, key):
     certificate_str = Crypto().sign(csr)
     certificate_serial = Crypto().get_serial(certificate_str)
     log.info("Generated certificate %s:%s" % (host_attributes['fqdn'], certificate_serial))
+    MessageView.valid_certs[certificate_serial] = host_attributes['fqdn']
 
     # FIXME: handle the case where someone registers,
     # and then dies before saving their certificate:
@@ -290,3 +293,18 @@ def register(request, key):
         'host_id': host.id,
         'certificate': certificate_str
     }), mimetype = "application/json")
+
+
+@csrf_exempt
+@log_exception
+def reregister(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    fqdn = MessageView.valid_fqdn(request)
+    if not fqdn:
+        return HttpForbidden()
+    host_attributes = json.loads(request.body)
+
+    MessageView.valid_certs[request.META['HTTP_X_SSL_CLIENT_SERIAL']] = host_attributes['fqdn']
+    ManagedHost.objects.filter(fqdn=fqdn).update(fqdn=host_attributes['fqdn'], address=host_attributes['address'])
+    return HttpResponse()

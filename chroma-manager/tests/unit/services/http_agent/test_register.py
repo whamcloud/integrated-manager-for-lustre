@@ -1,6 +1,8 @@
 import json
-from chroma_core.models.registration_token import RegistrationToken
+from chroma_core.models import ManagedHost, RegistrationToken
+from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_agent_comms.views import MessageView
 from django.test import Client, TestCase
 import mock
 import settings
@@ -9,11 +11,17 @@ from tests.unit.chroma_core.helper import MockAgentRpc, generate_csr, synthetic_
 
 class TestRegistration(TestCase):
     """API unit tests for functionality used only by the agent"""
+    mock_servers = {'mynewhost': {
+        'fqdn': 'mynewhost.mycompany.com',
+        'nodename': 'test01.mynewhost.mycompany.com',
+        'nids': ["192.168.0.1@tcp"],
+    }}
 
     def setUp(self):
         super(TestRegistration, self).setUp()
         self.old_create_host = JobSchedulerClient.create_host
-        JobSchedulerClient.create_host = mock.Mock(return_value=(synthetic_host('mynewhost'), mock.Mock(id='bar')))
+        JobSchedulerClient.create_host = mock.Mock(return_value=(synthetic_host('mynewhost', **self.mock_servers['mynewhost']), mock.Mock(id='bar')))
+        MessageView.valid_certs = {}
 
     def tearDown(self):
         JobSchedulerClient.create_host = self.old_create_host
@@ -21,12 +29,6 @@ class TestRegistration(TestCase):
     def test_version(self):
         versions = settings.VERSION, MockAgentRpc.version
         settings.VERSION, MockAgentRpc.version = '2.0', '1.0'
-
-        self.mock_servers = {'mynewhost': {
-            'fqdn': 'mynewhost.mycompany.com',
-            'nodename': 'test01.mynewhost.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
-        }}
 
         try:
             token = RegistrationToken.objects.create()
@@ -55,6 +57,20 @@ class TestRegistration(TestCase):
                 'csr': generate_csr(host_info['fqdn'])
             }), content_type="application/json")
             self.assertEqual(response.status_code, 201)
+            content = json.loads(response.content)
+
+            # reregistration should fail with unknown serial
+            data = {'address': 'mynewhost', 'fqdn': 'mynewhost.newcompany.com'}
+            headers = {'HTTP_X_SSL_CLIENT_NAME': host_info['fqdn'], 'HTTP_X_SSL_CLIENT_SERIAL': ''}
+            response = Client().post('/agent/reregister/', data=json.dumps(data), content_type='application/json', **headers)
+            self.assertEqual(response.status_code, 403)
+
+            # reregistration should update host's domain name
+            headers['HTTP_X_SSL_CLIENT_SERIAL'] = Crypto().get_serial(content['certificate'])
+            response = Client().post('/agent/reregister/', data=json.dumps(data), content_type='application/json', **headers)
+            self.assertEqual(response.status_code, 200)
+            host = ManagedHost.objects.get(id=content['host_id'])
+            self.assertEqual(host.fqdn, data['fqdn'])
 
         finally:
             settings.VERSION, MockAgentRpc.version = versions

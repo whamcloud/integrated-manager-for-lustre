@@ -67,7 +67,7 @@ class Service(ChromaService):
         with transaction.commit_on_success():
             for cert in ClientCertificate.objects.filter(host__fqdn = fqdn, revoked = False):
                 log.info("Revoking %s:%s" % (fqdn, cert.serial))
-                self.revoked_certs.add(cert.serial)
+                self.valid_certs.pop(cert.serial, None)
             ClientCertificate.objects.filter(host__fqdn = fqdn, revoked = False).update(revoked = True)
 
         # TODO: ensure there are no GETs left in progress after this completes
@@ -79,10 +79,7 @@ class Service(ChromaService):
         self.queues = HostQueueCollection()
         self.sessions = SessionCollection(self.queues)
         self.hosts = HostStateCollection()
-        self.revoked_certs = set()
-
-        for cert in ClientCertificate.objects.filter(revoked = True):
-            self.revoked_certs.add(cert.serial)
+        self.valid_certs = dict(ClientCertificate.objects.filter(revoked=False).values_list('serial', 'host__fqdn'))
 
     def run(self):
         self.amqp_tx_forwarder = AmqpTxForwarder(self.queues)
@@ -123,7 +120,7 @@ class Service(ChromaService):
         MessageView.queues = self.queues
         MessageView.sessions = self.sessions
         MessageView.hosts = self.hosts
-        MessageView.revoked_certs = self.revoked_certs
+        MessageView.valid_certs = self.valid_certs
 
         # The thread for generating HostOfflineAlerts
         host_checker_thread = ServiceThread(HostStatePoller(self.hosts, self.sessions))

@@ -26,11 +26,12 @@ it from chroma manager)
 """
 
 from chroma_agent import shell
-from chroma_agent.agent_client import AgentClient
+from chroma_agent.agent_client import AgentClient, HttpError
 from chroma_agent.agent_daemon import ServerProperties
 from chroma_agent.crypto import Crypto
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.log import console_log
+from chroma_agent.store import AgentStore
 
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 import os
@@ -57,7 +58,6 @@ def _disable_service():
 
 
 def deregister_server():
-    from chroma_agent.store import AgentStore
     AgentStore.remove_server_conf()
 
     def disable_and_kill():
@@ -71,7 +71,6 @@ def deregister_server():
 
 
 def register_server(url, ca, secret, address = None):
-    from chroma_agent.store import AgentStore
 
     if _service_is_running():
         console_log.warning("chroma-agent service was running before registration, stopping.")
@@ -102,10 +101,33 @@ def register_server(url, ca, secret, address = None):
     return registration_result
 
 
+def reregister_server(url, address):
+    "Update manager url and register agent address with manager."
+    if _service_is_running():
+        console_log.warning("chroma-agent service was running before registration, stopping.")
+        shell.try_run(["/sbin/service", "chroma-agent", "stop"])
+
+    AgentStore.set_server_conf({'url': url})
+    crypto = Crypto(AgentStore.libdir())
+    agent_client = AgentClient(url + 'reregister/', ActionPluginManager(), DevicePluginManager(), ServerProperties(), crypto)
+    data = {'address': address, 'fqdn': agent_client._fqdn}
+
+    try:
+        result = agent_client.post(data)
+    except HttpError:
+        console_log.error("Reregistration failed to %s with request %s" % (agent_client.url, data))
+        raise
+
+    console_log.info("Starting chroma-agent service")
+    shell.try_run(["/sbin/service", "chroma-agent", "start"])
+
+    return result
+
+
 def test():
     """A dummy action used for testing that the agent is available
     and successfully running actions."""
     pass
 
-ACTIONS = [deregister_server, register_server, test]
+ACTIONS = [deregister_server, register_server, reregister_server, test]
 CAPABILITIES = []
