@@ -182,9 +182,6 @@ class AlertState(models.Model):
                     alert_item = alert_item, **kwargs)
             try:
                 alert_state.save()
-                be = alert_state.begin_event()
-                if be:
-                    be.save()
             except IntegrityError, e:
                 job_log.warning("AlertState: IntegrityError %s saving %s : %s : %s" % (e, cls.__name__, alert_item, kwargs))
                 # Handle colliding inserts: drop out here, no need to update
@@ -201,6 +198,8 @@ class AlertState(models.Model):
             alert_state.end = now
             alert_state.active = None
             alert_state.save()
+            # Send end event, but note no begin event.
+            # The unified UI makes that
             ee = alert_state.end_event()
             if ee:
                 ee.save()

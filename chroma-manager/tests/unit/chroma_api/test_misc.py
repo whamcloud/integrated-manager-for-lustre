@@ -66,7 +66,7 @@ class TestMisc(ChromaApiTestCase):
         # Create an alert/event referencing the host
         HostOfflineAlert.notify(host, True)
         self.assertEqual(len(self.deserialize(self.api_client.get("/api/alert/"))['objects']), 1)
-        self.assertEqual(len(self.deserialize(self.api_client.get("/api/event/"))['objects']), 1)
+        self.assertEqual(len(self.deserialize(self.api_client.get("/api/event/"))['objects']), 0)
 
         # Cause JobScheduler() to delete the objects, check the objects are gone in the API
         # and the API can still be spidered cleanly
