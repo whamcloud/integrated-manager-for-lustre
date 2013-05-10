@@ -8,6 +8,26 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # Adding model 'ServerProfile'
+        db.create_table('chroma_core_serverprofile', (
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=50, primary_key=True)),
+            ('ui_name', self.gf('django.db.models.fields.CharField')(max_length=50)),
+            ('ui_description', self.gf('django.db.models.fields.TextField')()),
+            ('managed', self.gf('django.db.models.fields.BooleanField')(default=True)),
+        ))
+        db.send_create_signal('chroma_core', ['ServerProfile'])
+
+        # Adding M2M table for field bundles on 'ServerProfile'
+        db.create_table('chroma_core_serverprofile_bundles', (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('serverprofile', models.ForeignKey(orm['chroma_core.serverprofile'], null=False)),
+            ('bundle', models.ForeignKey(orm['chroma_core.bundle'], null=False))
+        ))
+        db.create_unique('chroma_core_serverprofile_bundles', ['serverprofile_id', 'bundle_id'])
+
+        # Adding unique constraint on 'ServerProfile', fields ['name']
+        db.create_unique('chroma_core_serverprofile', ['name'])
+
         # Adding model 'Bundle'
         db.create_table('chroma_core_bundle', (
             ('bundle_name', self.gf('django.db.models.fields.CharField')(max_length=50, primary_key=True)),
@@ -16,10 +36,62 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('chroma_core', ['Bundle'])
 
+        # Adding unique constraint on 'Bundle', fields ['bundle_name']
+        db.create_unique('chroma_core_bundle', ['bundle_name'])
+
+        # Adding model 'DeployHostJob'
+        db.create_table('chroma_core_deployhostjob', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
+            ('managed_host', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ManagedHost'])),
+        ))
+        db.send_create_signal('chroma_core', ['DeployHostJob'])
+
+        # Adding model 'UpdateJob'
+        db.create_table('chroma_core_updatejob', (
+            ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
+            ('host_ids', self.gf('django.db.models.fields.CharField')(max_length=512)),
+        ))
+        db.send_create_signal('chroma_core', ['UpdateJob'])
+
+        # Adding field 'ManagedHost.server_profile'
+        db.add_column('chroma_core_managedhost', 'server_profile',
+                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ServerProfile'], null=True, blank=True),
+                      keep_default=False)
+
+        # Adding field 'RegistrationToken.profile'
+        db.add_column('chroma_core_registrationtoken', 'profile',
+                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.ServerProfile'], null=True),
+                      keep_default=False)
+
 
     def backwards(self, orm):
+        # Removing unique constraint on 'Bundle', fields ['bundle_name']
+        db.delete_unique('chroma_core_bundle', ['bundle_name'])
+
+        # Removing unique constraint on 'ServerProfile', fields ['name']
+        db.delete_unique('chroma_core_serverprofile', ['name'])
+
+        # Deleting model 'ServerProfile'
+        db.delete_table('chroma_core_serverprofile')
+
+        # Removing M2M table for field bundles on 'ServerProfile'
+        db.delete_table('chroma_core_serverprofile_bundles')
+
         # Deleting model 'Bundle'
         db.delete_table('chroma_core_bundle')
+
+        # Deleting model 'DeployHostJob'
+        db.delete_table('chroma_core_deployhostjob')
+
+        # Deleting model 'UpdateJob'
+        db.delete_table('chroma_core_updatejob')
+
+        # Deleting field 'ManagedHost.server_profile'
+        db.delete_column('chroma_core_managedhost', 'server_profile_id')
+
+        # Deleting field 'RegistrationToken.profile'
+        db.delete_column('chroma_core_registrationtoken', 'profile_id')
 
 
     models = {
@@ -88,7 +160,7 @@ class Migration(SchemaMigration):
             'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedTarget']"})
         },
         'chroma_core.bundle': {
-            'Meta': {'object_name': 'Bundle'},
+            'Meta': {'unique_together': "(('bundle_name',),)", 'object_name': 'Bundle'},
             'bundle_name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'primary_key': 'True'}),
             'description': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'location': ('django.db.models.fields.CharField', [], {'max_length': '255'})
@@ -117,6 +189,11 @@ class Migration(SchemaMigration):
             'jobs': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['chroma_core.Job']", 'symmetrical': 'False'}),
             'message': ('django.db.models.fields.CharField', [], {'max_length': '512'})
         },
+        'chroma_core.configurehostfencingjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'ConfigureHostFencingJob', '_ormbases': ['chroma_core.Job']},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
         'chroma_core.configurelnetjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'ConfigureLNetJob'},
             'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
@@ -137,6 +214,12 @@ class Migration(SchemaMigration):
             'mgs': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedMgs']"}),
             'value': ('django.db.models.fields.CharField', [], {'max_length': '512', 'null': 'True', 'blank': 'True'}),
             'version': ('django.db.models.fields.IntegerField', [], {})
+        },
+        'chroma_core.deployhostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'DeployHostJob'},
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'}),
+            'managed_host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'old_state': ('django.db.models.fields.CharField', [], {'max_length': '32'})
         },
         'chroma_core.detecttargetsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'DetectTargetsJob', '_ormbases': ['chroma_core.Job']},
@@ -299,8 +382,10 @@ class Migration(SchemaMigration):
             'ha_cluster_peers': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'ha_cluster_peers_rel_+'", 'null': 'True', 'to': "orm['chroma_core.ManagedHost']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'immutable_state': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'needs_fence_reconfiguration': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'nodename': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
+            'server_profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True', 'blank': 'True'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {})
         },
@@ -334,6 +419,7 @@ class Migration(SchemaMigration):
             'inode_size': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '64', 'null': 'True', 'blank': 'True'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
+            'reformat': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'state': ('django.db.models.fields.CharField', [], {'max_length': '32'}),
             'state_modified_at': ('django.db.models.fields.DateTimeField', [], {}),
             'uuid': ('django.db.models.fields.CharField', [], {'max_length': '64', 'null': 'True', 'blank': 'True'}),
@@ -365,6 +451,65 @@ class Migration(SchemaMigration):
             'confparam_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.ConfParam']", 'unique': 'True', 'primary_key': 'True'}),
             'ost': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedOst']"})
         },
+        'chroma_core.powercontroldevice': {
+            'Meta': {'unique_together': "(('address', 'port', 'not_deleted'),)", 'object_name': 'PowerControlDevice'},
+            'address': ('django.db.models.fields.IPAddressField', [], {'max_length': '15'}),
+            'device_type': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'instances'", 'to': "orm['chroma_core.PowerControlType']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
+            'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
+            'options': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
+            'password': ('django.db.models.fields.CharField', [], {'max_length': '64', 'blank': 'True'}),
+            'port': ('django.db.models.fields.PositiveIntegerField', [], {'default': '23', 'blank': 'True'}),
+            'username': ('django.db.models.fields.CharField', [], {'max_length': '64', 'blank': 'True'})
+        },
+        'chroma_core.powercontroldeviceoutlet': {
+            'Meta': {'unique_together': "(('device', 'identifier', 'host', 'not_deleted'),)", 'object_name': 'PowerControlDeviceOutlet'},
+            'device': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'outlets'", 'to': "orm['chroma_core.PowerControlDevice']"}),
+            'has_power': ('django.db.models.fields.NullBooleanField', [], {'null': 'True', 'blank': 'True'}),
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'outlets'", 'null': 'True', 'to': "orm['chroma_core.ManagedHost']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'identifier': ('django.db.models.fields.CharField', [], {'max_length': '254'}),
+            'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'})
+        },
+        'chroma_core.powercontroldeviceunavailablealert': {
+            'Meta': {'ordering': "['id']", 'object_name': 'PowerControlDeviceUnavailableAlert', '_ormbases': ['chroma_core.AlertState']},
+            'alertstate_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.AlertState']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.powercontroltype': {
+            'Meta': {'unique_together': "(('agent', 'make', 'model', 'not_deleted'),)", 'object_name': 'PowerControlType'},
+            'agent': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'default_options': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
+            'default_password': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'}),
+            'default_port': ('django.db.models.fields.PositiveIntegerField', [], {'default': '23', 'blank': 'True'}),
+            'default_username': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'make': ('django.db.models.fields.CharField', [], {'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'max_outlets': ('django.db.models.fields.PositiveIntegerField', [], {'default': '0', 'blank': 'True'}),
+            'model': ('django.db.models.fields.CharField', [], {'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'monitor_template': ('django.db.models.fields.CharField', [], {'default': "'%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o monitor'", 'max_length': '512', 'blank': 'True'}),
+            'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
+            'outlet_list_template': ('django.db.models.fields.CharField', [], {'default': "'%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o list'", 'max_length': '512', 'null': 'True', 'blank': 'True'}),
+            'outlet_query_template': ('django.db.models.fields.CharField', [], {'default': "'%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o status -n %(identifier)s'", 'max_length': '512', 'blank': 'True'}),
+            'powercycle_template': ('django.db.models.fields.CharField', [], {'default': "'%(agent)s %(options)s  -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o reboot -n %(identifier)s'", 'max_length': '512', 'blank': 'True'}),
+            'poweroff_template': ('django.db.models.fields.CharField', [], {'default': "'%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o off -n %(identifier)s'", 'max_length': '512', 'blank': 'True'}),
+            'poweron_template': ('django.db.models.fields.CharField', [], {'default': "'%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o on -n %(identifier)s'", 'max_length': '512', 'blank': 'True'})
+        },
+        'chroma_core.powercyclehostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'PowercycleHostJob'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.poweroffhostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'PoweroffHostJob'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        'chroma_core.poweronhostjob': {
+            'Meta': {'ordering': "['id']", 'object_name': 'PoweronHostJob'},
+            'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
+            'job_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['chroma_core.Job']", 'unique': 'True', 'primary_key': 'True'})
+        },
         'chroma_core.reboothostjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RebootHostJob'},
             'host': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ManagedHost']"}),
@@ -380,10 +525,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'RegistrationToken'},
             'cancelled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'credits': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
-            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 4, 10, 0, 0)'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 5, 10, 0, 0)'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'profile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['chroma_core.ServerProfile']", 'null': 'True'}),
-            'secret': ('django.db.models.fields.CharField', [], {'default': "'92CD203026FA2EB6A276F1BE7FB38C8D'", 'max_length': '32'})
+            'secret': ('django.db.models.fields.CharField', [], {'default': "'89EA6FF0B34F163F615B64930D0E3EBD'", 'max_length': '32'})
         },
         'chroma_core.relearnnidsjob': {
             'Meta': {'ordering': "['id']", 'object_name': 'RelearnNidsJob', '_ormbases': ['chroma_core.Job']},
@@ -464,8 +609,8 @@ class Migration(SchemaMigration):
             'type': ('django.db.models.fields.CharField', [], {'max_length': '30'})
         },
         'chroma_core.serverprofile': {
-            'Meta': {'object_name': 'ServerProfile'},
-            '_bundles': ('django.db.models.fields.TextField', [], {'null': 'True'}),
+            'Meta': {'unique_together': "(('name',),)", 'object_name': 'ServerProfile'},
+            'bundles': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['chroma_core.Bundle']", 'symmetrical': 'False'}),
             'managed': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'primary_key': 'True'}),
             'ui_description': ('django.db.models.fields.TextField', [], {}),
@@ -665,6 +810,7 @@ class Migration(SchemaMigration):
         },
         'chroma_core.volume': {
             'Meta': {'ordering': "['id']", 'unique_together': "(('storage_resource', 'not_deleted'),)", 'object_name': 'Volume'},
+            'filesystem_type': ('django.db.models.fields.CharField', [], {'max_length': '32', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'label': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
             'not_deleted': ('django.db.models.fields.NullBooleanField', [], {'default': 'True', 'null': 'True', 'blank': 'True'}),
