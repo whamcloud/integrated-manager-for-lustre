@@ -24,7 +24,7 @@ class TestRegistration(TestCase):
         load_default_profile()
 
         self.old_create_host = JobSchedulerClient.create_host
-        JobSchedulerClient.create_host = mock.Mock(return_value=(synthetic_host('mynewhost', **self.mock_servers['mynewhost']), mock.Mock(id='bar')))
+        JobSchedulerClient.create_host = mock.Mock(side_effect=lambda *args, **kwargs: (synthetic_host('mynewhost', **self.mock_servers['mynewhost']), mock.Mock(id='bar')))
         MessageView.valid_certs = {}
 
     def tearDown(self):
