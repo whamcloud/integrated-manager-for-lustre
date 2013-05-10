@@ -432,6 +432,39 @@ var CommandNotification = function() {
   var broadcastUpdate = broadcast.bind(null, 'updateCommandDropdown');
 
   /**
+   *  Given an object literal keyed on uri's, determine
+   *  it's lock state
+   *
+   *  @param {object} An object with uri's as keys
+   *  @param {string} uri The resource uri to be checked
+   *  @returns {boolean} Whether the resource is locked
+   */
+  function uriIsLocked(lock, uri) {
+    return (lock[uri] && _.size(lock[uri]) ? true: false);
+  }
+
+  /**
+   * Check read lock status of a resource using it's uri
+   *
+   * In the gui this is represented by a lock icon
+   *
+   * @param {string} uri The resource uri to be checked
+   * @returns {boolean} Whether the resource is read-locked
+   */
+  var uriIsReadLocked = uriIsLocked.bind(null, read_locks);
+
+  /**
+   * Check write lock status of a resource using it's uri
+   * If true, no jobs or transitions may be performed on this resources
+   *
+   * In the gui this is represented by a spinner icon
+   *
+   * @param {string} uri The resource uri to be checked
+   * @returns {boolean} Whether the resource is write-locked
+   */
+  var uriIsWriteLocked = uriIsLocked.bind(null, write_locks);
+
+  /**
    * @description Since we may not be in angular scope, make sure the $broadcast runs inside the scope if necessary.
    */
   function broadcast() {
@@ -444,11 +477,7 @@ var CommandNotification = function() {
       $scope.$broadcast.apply($scope, args);
     }
 
-    if ($scope.$$phase) {
-      broadcaster();
-    } else {
-      $scope.$apply(broadcaster)
-    }
+    $scope.safeApply(broadcaster);
   }
 
   function updateBusy()
@@ -506,7 +535,7 @@ var CommandNotification = function() {
               $.each(job.write_locks, function(i, lock) {
 
                   var uri = lock.locked_item_uri;
-                  if (objectLength(read_locks[uri]) == 0 && objectLength(write_locks[uri]) == 0) {
+                  if ( ! uriIsReadLocked(uri) && ! uriIsWriteLocked(uri) ) {
                       updateObject(uri);
                   }
               });
@@ -619,27 +648,27 @@ var CommandNotification = function() {
   }
 
   function updateIcon(uri, element, completing) {
-    var obj_read_locks = read_locks[uri]
-    var obj_write_locks = write_locks[uri]
-    if (obj_write_locks && objectLength(obj_write_locks) > 0) {
+    if ( uriIsWriteLocked(uri) ) {
       element.show();
       element.addClass('busy_icon');
       var jobs = {}
-      $.each(obj_write_locks, function(job_id, x) {
+      $.each(write_locks[uri], function(job_id, x) {
         jobs[job_id] = incomplete_jobs[job_id]
       });
       Tooltip.detailList(
           {element: element, title: "Ongoing operations: ", objects: jobs, attr: 'description'});
-    } else if (obj_read_locks && objectLength(obj_read_locks) > 0) {
+    }
+    else if ( uriIsReadLocked(uri) ) {
       element.show();
       element.addClass('locked_icon');
       var jobs = {}
-      $.each(obj_read_locks, function(job_id, x) {
+      $.each(read_locks[uri], function(job_id, x) {
         jobs[job_id] = incomplete_jobs[job_id]
       });
       Tooltip.detailList(
           {element: element, title: "Locked by pending operations: ", objects: jobs, attr: 'description'});
-    } else {
+    }
+    else {
       element.removeClass('locked_icon');
       element.removeClass('busy_icon');
     }
@@ -704,7 +733,12 @@ var CommandNotification = function() {
           $(this).html(LiveObject.active_host(obj));
         });
 
-        broadcastUpdate(uri, obj);
+        if (uriIsWriteLocked(uri)) {
+          broadcastDisable(uri);
+        }
+        else {
+          broadcastUpdate(uri, obj);
+        }
 
         var resource = uri.split('/')[2];
         var id = uri.split('/')[3];
@@ -770,7 +804,7 @@ var CommandNotification = function() {
     });
 
     $.each(uris, function(uri, x) {
-      if (objectLength(read_locks[uri]) == 0 && objectLength(write_locks[uri]) == 0) {
+      if ( ! uriIsReadLocked(uri) && ! uriIsWriteLocked(uri) ) {
         updateObject(uri)
       }
       $(".notification_object_icon[data-resource_uri='" + uri + "']").each(function() {
@@ -783,7 +817,8 @@ var CommandNotification = function() {
     init: init,
     begin: begin,
     updateIcons: updateIcons,
-    updateObject: updateObject
+    updateObject: updateObject,
+    uriIsWriteLocked: uriIsWriteLocked
   }
 }();
 
@@ -860,7 +895,7 @@ var AlertNotification = function() {
 
   function updateSidebar()
   {
-    var active_alert_count = objectLength(active_alerts);
+    var active_alert_count = _.size(active_alerts);
     if (active_alert_count == 0) {
       $('#notification_icon_alerts').slideUp()
     } else {
@@ -922,7 +957,7 @@ var AlertNotification = function() {
     var uri = element.data('resource_uri')
     var effects = alert_effects[uri]
 
-    effect_count = objectLength(effects)
+    effect_count = _.size(effects)
     if (element.hasClass('alert_indicator_list')) {
       var list_markup = "<ul>";
       if (effect_count > 0) {
@@ -981,13 +1016,3 @@ var AlertNotification = function() {
     updateIcons: updateIcons
   }
 }();
-
-objectLength = function(obj) {
-  var count = 0;
-  for (var k in obj) {
-    if (obj.hasOwnProperty(k)) {
-      ++count;
-    }
-  }
-  return count;
-}

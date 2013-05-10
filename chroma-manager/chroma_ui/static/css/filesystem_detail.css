@@ -1,8 +1,3 @@
 #filesystem_detail #fs_actions {
   padding: 7px 0 0 7px;
 }
-
-#filesystem_detail #fs_actions > div {
-  display: inline-block;
-  vertical-align: top;
-}

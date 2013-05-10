@@ -131,6 +131,12 @@
 
         // Build the list the first time.
         buildList();
+
+        // Blank out the button if a job is in progress
+        if ($window.CommandNotification.uriIsWriteLocked(scope.data.resource_uri) ) {
+          scope.$broadcast('disableCommandDropdown', scope.data.resource_uri);
+        }
+
       }
     };
   }
