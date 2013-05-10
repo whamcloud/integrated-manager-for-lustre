@@ -23,14 +23,18 @@
 angular.module('services').factory('safeApply', ['$rootScope', function ($rootScope) {
   'use strict';
 
-  $rootScope.safeApply = function (func, $scope) {
-    $scope = $scope || $rootScope;
-    func = func || angular.noop;
+  return {
+    addToRootScope: function () {
+      $rootScope.safeApply = function (func, $scope) {
+        $scope = $scope || $rootScope;
+        func = func || angular.noop;
 
-    if ($scope.$root.$$phase) {
-      return func();
-    } else {
-      return $scope.$apply(func);
+        if ($scope.$root.$$phase) {
+          return func();
+        } else {
+          return $scope.$apply(func);
+        }
+      };
     }
   };
 }]);

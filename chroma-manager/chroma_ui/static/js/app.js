@@ -46,6 +46,8 @@
       });
     }])
     .run(['$rootScope', 'STATIC_URL', 'safeApply', function ($rootScope, STATIC_URL, safeApply) {
+      safeApply.addToRootScope();
+
       $rootScope.config = {
         asStatic: function (url) {
           return STATIC_URL + url;

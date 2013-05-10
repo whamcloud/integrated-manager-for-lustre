@@ -57,13 +57,15 @@ describe('Command Dropdown', function () {
 
   }));
 
-  beforeEach(inject(function ($injector) {
+  beforeEach(inject(function ($injector, safeApply) {
     // patch $window.
     var $window = $injector.get('$window');
 
     $window.LiveObject = {
       resourceType: jasmine.createSpy('resourceType').andReturn('host')
     };
+
+    safeApply.addToRootScope();
   }));
 
 
@@ -103,7 +105,7 @@ describe('Command Dropdown', function () {
     expect(helpText).toHaveBeenCalledWith('_force_remove');
   }));
 
-  it('should attach bridge events to the scope', inject(function (commandDropdownService, $rootScope, helpText, safeApply) {
+  it('should attach bridge events to the scope', inject(function (commandDropdownService, $rootScope, helpText) {
     var $scope = $rootScope.$new();
     $scope.data = data;
 
