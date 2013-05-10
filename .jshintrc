@@ -59,7 +59,6 @@
 
   // Relaxing Options
   "eqnull": true,
-  "es5" : true,
 
   //Environments
   "browser" : true,
