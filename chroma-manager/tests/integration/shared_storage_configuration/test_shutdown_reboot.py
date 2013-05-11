@@ -7,6 +7,8 @@ from tests.integration.core.constants import TEST_TIMEOUT
 
 
 class TestShutdownAndReboot(ChromaIntegrationTestCase):
+    TEST_SERVERS = config['lustre_servers'][0:2]
+
     def _wait_for_server_boot_time(self, fqdn, old_boot_time=None):
         import dateutil.parser
 
@@ -33,8 +35,7 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         # after this test completes.
         self.down_node_expected = True
 
-        server = config['lustre_servers'][0]
-        self.add_hosts([server['address']])
+        server = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
 
         host = self.get_list("/api/host/")[0]
 
@@ -56,8 +57,7 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         self.assertLess(running_time, TEST_TIMEOUT, "Timed out waiting for host to shut down.")
 
     def test_server_reboot(self):
-        server = config['lustre_servers'][0]
-        self.add_hosts([server['address']])
+        server = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
 
         first_boot_time = self._wait_for_server_boot_time(server['fqdn'])
         host_id = self.get_list("/api/host/")[0]['id']
@@ -72,3 +72,38 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         second_boot_time = self._wait_for_server_boot_time(server['fqdn'], first_boot_time)
 
         self.assertGreater(second_boot_time, first_boot_time)
+
+    def test_jobs_advertisement(self):
+        servers = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
+        test_server = servers[0]
+
+        test_job_classes = ['RebootHostJob', 'ShutdownHostJob']
+
+        # First, ensure that reboot/shutdown jobs are advertised for a
+        # server after it's been added and set up.
+        job_classes = [j['class_name'] for j in self.get_by_uri(test_server['resource_uri'])['available_jobs']]
+        for class_name in test_job_classes:
+            self.assertIn(class_name, job_classes)
+
+        # Next, kill the server to generate a HostOfflineAlert.
+        self.remote_operations.kill_server(test_server['fqdn'])
+
+        def saw_offline_alert(hostname):
+            alerts = self.get_list("/api/alert/", {'active': True,
+                                                   'dismissed': False})
+            return len([a for a in alerts if "is offline %s" % hostname in a['message']]) > 0
+        self.wait_until_true(lambda: saw_offline_alert(test_server['nodename']))
+
+        # Check to make sure the reboot/shutdown jobs are not advertised.
+        job_classes = [j['class_name'] for j in self.get_by_uri(test_server['resource_uri'])['available_jobs']]
+        for class_name in test_job_classes:
+            self.assertNotIn(class_name, job_classes)
+
+        # Finally, start the server back up to lower the HostOfflineAlert,
+        self.remote_operations.await_server_boot(test_server['fqdn'])
+        self.wait_until_true(lambda: not saw_offline_alert(test_server['nodename']))
+
+        # and ensure that we see the reboot/shutdown jobs again.
+        job_classes = [j['class_name'] for j in self.get_by_uri(test_server['resource_uri'])['available_jobs']]
+        for class_name in test_job_classes:
+            self.assertIn(class_name, job_classes)
