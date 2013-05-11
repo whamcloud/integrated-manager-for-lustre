@@ -67,6 +67,12 @@ class SimulatorRemoteOperations(RemoteOperations):
     def restore_cib(*args, **kwargs):
         pass
 
+    def set_node_standby(*args, **kwargs):
+        pass
+
+    def set_node_online(*args, **kwargs):
+        pass
+
     def read_proc(self, address, path):
         fqdn = None
         for server in config['lustre_servers']:
@@ -276,6 +282,16 @@ class RealRemoteOperations(RemoteOperations):
             self.start_target(server['fqdn'], target)
 
         self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) == len(start_targets))
+
+    # HYD-2071: These two methods may no longer be useful after the API-side
+    # work lands.
+    def set_node_standby(self, server):
+        self._ssh_address(server['address'],
+                          "chroma-agent set_node_standby --node %s" % server['nodename'])
+
+    def set_node_online(self, server):
+        self._ssh_address(server['address'],
+                          "chroma-agent set_node_online --node %s" % server['nodename'])
 
     def mount_filesystem(self, client_address, filesystem):
         """
@@ -591,6 +607,14 @@ class RealRemoteOperations(RemoteOperations):
             "crm resource status %s" % target
         )
         return re.search('is running', result.stdout.read())
+
+    def get_fence_nodes_list(self, address):
+        result = self._ssh_address(address, "fence_chroma -o list")
+        # -o list returns:
+        # host1,\n
+        # host2,\n
+        # ...
+        return [name[:-2] for name in result.stdout.readlines()]
 
     def remove_config(self, server_list):
         """

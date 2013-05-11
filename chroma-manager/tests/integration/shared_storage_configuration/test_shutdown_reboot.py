@@ -100,7 +100,7 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
             self.assertNotIn(class_name, job_classes)
 
         # Finally, start the server back up to lower the HostOfflineAlert,
-        self.remote_operations.await_server_boot(test_server['fqdn'])
+        self.remote_operations.await_server_boot(test_server['fqdn'], restart = True)
         self.wait_until_true(lambda: not saw_offline_alert(test_server['nodename']))
 
         # and ensure that we see the reboot/shutdown jobs again.

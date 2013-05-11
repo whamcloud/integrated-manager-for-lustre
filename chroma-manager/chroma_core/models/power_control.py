@@ -284,16 +284,18 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         super(PowerControlDeviceOutlet, self).clean()
 
     def save(self, *args, **kwargs):
-        self.full_clean()
-
         skip_reconfigure = kwargs.pop('skip_reconfigure', False)
 
-        # Grab a copy of the outlet pre-save so that we can determine
-        # which hosts need to have their fencing reconfigured.
-        try:
-            old_self = PowerControlDeviceOutlet.objects.get(pk = self.pk)
-        except PowerControlDeviceOutlet.DoesNotExist:
-            old_self = None
+        if not skip_reconfigure:
+            self.full_clean()
+
+            # Grab a copy of the outlet pre-save so that we can determine
+            # which hosts need to have their fencing reconfigured.
+            try:
+                old_self = PowerControlDeviceOutlet.objects.get(pk = self.pk)
+            except PowerControlDeviceOutlet.DoesNotExist:
+                old_self = None
+
         super(PowerControlDeviceOutlet, self).save(*args, **kwargs)
 
         if skip_reconfigure:
@@ -307,10 +309,6 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
                 JobSchedulerClient.notify(old_self.host, now(), reconfigure)
             JobSchedulerClient.notify(self.host, now(), reconfigure)
         elif self.host is None and old_self is not None:
-            # NB: If this is disassociating the last outlet for a host,
-            # then there won't be any reconfiguration done because there
-            # will be zero outlets from that host's perspective in the
-            # job step.
             if old_self.host is not None:
                 JobSchedulerClient.notify(old_self.host, now(), reconfigure)
 
@@ -493,7 +491,7 @@ class ConfigureHostFencingStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if host.immutable_state or host.outlets.count() < 1:
+        if host.immutable_state:
             return
 
         agent_kwargs = []
