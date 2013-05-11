@@ -176,6 +176,41 @@ class ApiTestCase(UtilityTestCase):
             supervisor_controlled_process_start_times[process['name']] = process['start']
         return supervisor_controlled_process_start_times
 
+    def _print_command(self, command, disposition="OK"):
+        print "COMMAND %s: %s" % (command['id'], disposition)
+        print "-----------------------------------------------------------"
+        print command
+        print ''
+
+        for job_uri in command['jobs']:
+            job = self.get_by_uri(job_uri)
+            job_steps = [self.get_by_uri(s) for s in job['steps']]
+            if disposition == "FAILED":
+                if job['errored']:
+                    print "Job %s Errored:" % job['id']
+                    print job
+                    print ''
+                    for step in job_steps:
+                        if step['state'] == 'failed':
+                            print "Step %s (%s) failed:" % (step['id'], step['description'])
+                            print step['console']
+                            print step['backtrace']
+                            print ''
+            elif disposition == "TIMED OUT":
+                if job['state'] != "complete":
+                    print "Job %s incomplete:" % job['id']
+                    print job
+                    print ''
+                    for step in job_steps:
+                        if step['state'] == "incomplete":
+                            print "Step %s incomplete:" % step['id']
+                            print step
+                            print ''
+            else:
+                print job
+                for step in job_steps:
+                    print step
+
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
         logger.debug("wait_for_command: %s" % self.get_by_uri('/api/command/%s/' % command_id))
         # TODO: More elegant timeout?
@@ -188,32 +223,14 @@ class ApiTestCase(UtilityTestCase):
                 time.sleep(1)
                 running_time += 1
 
-        logger.debug("command complete: %s" % self.get_by_uri('/api/command/%s/' % command_id))
+        if running_time >= timeout:
+            self._print_command(command, "TIMED OUT")
+        else:
+            logger.debug("command complete: %s" % self.get_by_uri('/api/command/%s/' % command_id))
 
         self.assertTrue(command_complete, command)
         if verify_successful and (command['errored'] or command['cancelled']):
-            print "COMMAND %s FAILED:" % command['id']
-            print "-----------------------------------------------------------"
-            print command
-            print ''
-
-            for job_uri in command['jobs']:
-                response = chroma_manager.get(job_uri)
-                self.assertTrue(response.successful, response.text)
-                job = response.json
-                if job['errored']:
-                    print "Job %s Errored:" % job['id']
-                    print job
-                    print ''
-                    for step_uri in job['steps']:
-                        response = chroma_manager.get(step_uri)
-                        self.assertTrue(response.successful, response.text)
-                        step = response.json
-                        if step['state'] == 'failed':
-                            print "Step %s failed:" % step['id']
-                            print step['console']
-                            print step['backtrace']
-                            print ''
+            self._print_command(command, "FAILED")
 
             self.assertFalse(command['errored'] or command['cancelled'], command)
 
