@@ -52,6 +52,7 @@ setup(
                       "static/js/filters/*.js", "static/js/interceptors/*.js",
                       "static/js/models/*.js", "static/js/services/*.js",
                       "static/partials/*.html", "static/partials/dialogs/*.html",
+                      "static/partials/directives/*.html",
                       "static/fonts/*", "static/css/bootstrap/*.css",
                       "static/css/smoothness/images/*",
                       "static/css/smoothness/*.css", "static/css/images/*.gif",

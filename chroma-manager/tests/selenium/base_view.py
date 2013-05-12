@@ -71,12 +71,12 @@ class BaseView(object):
             raise NoSuchElementException("No action found with state %s" % state)
 
     def click_command_button(self, container, state):
-        """Find a the dropdown within `container` that is a state transition
+        """Find the action within the dropdown that is a state transition
         to `state`, click it, and wait for the transition to complete"""
 
         self.quiesce()
 
-        wait_for_element_by_css_selector(container, self.dropdown_selector, self.standard_wait)
+        wait_for_element_by_css_selector(container, self.dropdown_selector, self.short_wait)
 
         dropdown = container.find_element_by_class_name(self.dropdown_class_name)
         dropdown_menu = dropdown.find_element_by_class_name(self.dropdown_menu_class_name)
