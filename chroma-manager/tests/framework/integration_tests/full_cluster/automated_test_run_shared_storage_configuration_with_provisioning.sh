@@ -31,6 +31,7 @@ EOF
 
 case "$HOST_IP" in
      10.10.4.29)    MCAST_START=5420 ;;   # client-29
+     10.10.4.34)    MCAST_START=5480 ;;   # hydra-2
      10.10.4.36)    MCAST_START=5440 ;;   # hydra-4
     10.10.4.130)    MCAST_START=5460 ;;   # fat-intel-3
               *)    echo "I don't recognize this cluster, bailing"
