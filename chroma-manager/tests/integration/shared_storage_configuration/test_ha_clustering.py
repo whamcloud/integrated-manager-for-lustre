@@ -8,6 +8,9 @@ class ChromaHaTestCase(ChromaIntegrationTestCase):
     def setUp(self):
         super(ChromaHaTestCase, self).setUp()
 
+        # Wipe out any corosync config on the test hosts -- no safety net!
+        self.remote_operations.remove_config(config['lustre_servers'])
+
         self.add_hosts([s['address'] for s in config['lustre_servers']])
 
         def all_servers_up():
