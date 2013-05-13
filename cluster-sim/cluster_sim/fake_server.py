@@ -275,9 +275,10 @@ class FakeServer(Persisted):
         return self.starting_up or self.shutting_down or self.agent_is_running
 
     def join(self):
-        if self._agent_client:
-            self._agent_client.join()
-            self._agent_client.reader.join()
+        with self._lock:
+            if self._agent_client:
+                self._agent_client.join()
+                self._agent_client.reader.join()
 
     def stop(self):
         if self._agent_client:
@@ -288,14 +289,14 @@ class FakeServer(Persisted):
             # Already stopped?
             return
 
-        self._agent_client.stop()
-        self._agent_client.join()
-        # Have to join the reader explicitly, normal AgentClient code
-        # skips it because it's slow to join (waits for long-polling GET
-        # to complete)
-        self._agent_client.reader.join()
-
         with self._lock:
+            self._agent_client.stop()
+            self._agent_client.join()
+            # Have to join the reader explicitly, normal AgentClient code
+            # skips it because it's slow to join (waits for long-polling GET
+            # to complete)
+            self._agent_client.reader.join()
+
             self._agent_client = None
 
     def start_agent(self):
@@ -306,7 +307,7 @@ class FakeServer(Persisted):
                 device_plugins = FakeDevicePlugins(self),
                 server_properties = self,
                 crypto = self.crypto)
-        self._agent_client.start()
+            self._agent_client.start()
 
     def _enter_shutdown(self):
         with self._lock:

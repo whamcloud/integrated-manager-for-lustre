@@ -221,11 +221,7 @@ ssh root@$TEST_RUNNER <<EOF
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 set -x
-TEST_FILES=(\$(find $TESTS -name "test_*.py"))
-for TEST_FILE in \${TEST_FILES[@]}; do
-    SHORT_FILE_NAME=\$(basename \$TEST_FILE .py)
-    ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report_\$SHORT_FILE_NAME.xml \$TEST_FILE
-done
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS
 
 # Verify we got the report for all of the tests
 NUM_TEST_FILES=\${#TEST_FILES[@]}
