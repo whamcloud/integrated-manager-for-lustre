@@ -9,6 +9,7 @@ class FencingTestCase(unittest.TestCase):
     fake_node_hostname = 'fake.host.domain'
     fake_node_kwargs = {fake_node_hostname: {'name': fake_node_hostname,
                                              'attributes': {}}}
+    stdin_lines = None
 
     def setUp(self):
         super(FencingTestCase, self).setUp()
@@ -26,6 +27,18 @@ class FencingTestCase(unittest.TestCase):
             return [PacemakerNode(**self.fake_node_kwargs[self.fake_node_hostname])]
         patcher = mock.patch('chroma_agent.lib.pacemaker.PacemakerConfig.nodes', nodes)
         patcher.start()
+
+        import chroma_agent.fence_chroma
+        real_stdin_to_args = chroma_agent.fence_chroma.stdin_to_args
+
+        def stdin_to_args(**kwargs):
+            return real_stdin_to_args(self.stdin_lines)
+        patcher = mock.patch('chroma_agent.fence_chroma.stdin_to_args', stdin_to_args)
+        patcher.start()
+
+        # nose confuses things
+        import sys
+        sys.argv = ['fence_chroma']
 
         # Guaranteed cleanup with unittest2
         self.addCleanup(mock.patch.stopall)
@@ -82,12 +95,16 @@ class TestFenceAgent(FencingTestCase):
         self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
 
         from chroma_agent.fence_chroma import main as agent_main
-        # Normal use
-        agent_main(['-o', 'reboot', '-H', self.fake_node_hostname])
+
+        # Normal use, stonithd feeds commands via stdin
+        self.stdin_lines = ["nodename=%s" % self.fake_node_hostname,
+                            "action=reboot",
+                            "port=%s" % self.fake_node_hostname]
+        agent_main()
         self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'off'])
         self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'on'])
 
-        # This should work too
+        # Command-line should work too
         agent_main(['-o', 'reboot', '-n', self.fake_node_hostname])
         self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'off'])
         self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'on'])
@@ -99,10 +116,10 @@ class TestFenceAgent(FencingTestCase):
 
         # These options aren't likely to be used for STONITH, but they
         # should still work for manual invocation.
-        agent_main(['-o', 'off', '-H', self.fake_node_hostname])
+        agent_main(['-o', 'off', '-n', self.fake_node_hostname])
         self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'off'])
 
-        agent_main(['-o', 'on', '-H', self.fake_node_hostname])
+        agent_main(['-o', 'on', '-n', self.fake_node_hostname])
         self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'on'])
 
     def test_fence_agent_monitor(self):
@@ -115,4 +132,16 @@ class TestFenceAgent(FencingTestCase):
         # agent's monitor option doesn't barf.
         from chroma_agent.fence_chroma import main as agent_main
         agent_main(['-o', 'monitor'])
+        exit.assert_called_with(0)
+
+        # Make sure running with args from stdin works...
+        self.stdin_lines = ["nodename=%s" % self.fake_node_hostname,
+                            "action=monitor"]
+        agent_main()
+        exit.assert_called_with(0)
+
+        # Apparently stonithd sometimes(?) uses option instead of action...
+        self.stdin_lines = ["nodename=%s" % self.fake_node_hostname,
+                            "option=monitor"]
+        agent_main()
         exit.assert_called_with(0)
