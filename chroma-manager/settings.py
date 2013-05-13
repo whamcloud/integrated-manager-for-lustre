@@ -322,6 +322,9 @@ SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_virsh']
 # How long to wait for a storage server to reboot after installing a new kernel
 INSTALLATION_REBOOT_TIMEOUT = 300
 
+# How long to wait for an agent to resume contact after being restarted
+AGENT_RESTART_TIMEOUT = 30
+
 SSH_CONFIG = None
 
 LOCAL_SETTINGS_FILE = "local_settings.py"

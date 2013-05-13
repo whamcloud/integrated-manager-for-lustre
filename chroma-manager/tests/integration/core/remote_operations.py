@@ -155,6 +155,17 @@ class SimulatorRemoteOperations(RemoteOperations):
     def inject_log_message(self, fqdn, message):
         self._simulator.servers[fqdn].inject_log_message(message)
 
+    def install_upgrades(self):
+        # We don't actually modify the manager here, rather we cause the
+        # agents to report that they are seeing higher versions of available
+        # packages
+        self._simulator.update_packages({
+            'lustre': (0, '2.9.0', '1', 'x86_64')
+        })
+
+    def get_package_version(self, fqdn, package):
+        return self._simulator.servers[fqdn].get_package_version(package)
+
 
 class RealRemoteOperations(RemoteOperations):
     def __init__(self, test_case):
@@ -706,3 +717,9 @@ class RealRemoteOperations(RemoteOperations):
                     )
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
+
+    def install_upgrades(self):
+        raise NotImplementedError("Automated test of upgrades is HYD-1739")
+
+    def get_package_version(self, fqdn, package):
+        raise NotImplementedError("Automated test of upgrades is HYD-1739")

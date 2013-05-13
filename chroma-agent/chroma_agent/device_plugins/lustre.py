@@ -20,18 +20,80 @@
 # express and approved by Intel in writing.
 
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
+from chroma_agent.log import daemon_log
 import os
 import glob
 import datetime
+import ConfigParser
 
 from chroma_agent.utils import Mounts, normalize_device
 from chroma_agent.action_plugins.lnet_scan import lnet_status, get_nids
-from chroma_agent import shell, version
+from chroma_agent import shell
+from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from chroma_agent.device_plugins.audit.local import LocalAudit
+
+
+VersionInfo = namedtuple('VersionInfo', ['epoch', 'version', 'release', 'arch'])
+
+
+def scan_packages():
+    """
+    Interrogate the packages available from configured repositories, and the installation
+    status of those packages.
+    """
+    from chroma_agent.action_plugins.manage_updates import REPO_PATH
+
+    # Local import so that this module can be imported in pure python
+    # environments as well as on Linux.
+    import rpm
+
+    # Look up what repos are configured
+    # =================================
+    if not os.path.exists(REPO_PATH):
+        return None
+
+    cp = ConfigParser.SafeConfigParser()
+    cp.read(REPO_PATH)
+    repo_names = cp.sections()
+    repo_packages = dict([(name, defaultdict(lambda: {'available': [], 'installed': []})) for name in repo_names])
+
+    # For all repos, enumerate packages in the repo
+    # =============================================
+    shell.try_run(["yum", "--disablerepo=*", "--enablerepo=%s" % ",".join(repo_names), "clean", "all"])
+    for repo_name, packages in repo_packages.items():
+        try:
+            stdout = shell.try_run(["repoquery", "--repoid=%s" % repo_name, "-a", "--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}"])
+            for line in [l.strip() for l in stdout.strip().split("\n")]:
+                epoch, name, version, release, arch = line.split()
+                packages[name]['available'].append(VersionInfo(
+                    epoch=epoch,
+                    version=version,
+                    release=release,
+                    arch=arch))
+        except RuntimeError, e:
+            # This is a network operation, so cope with it failing
+            daemon_log.error(e)
+            return None
+
+    # For all packages named in the repos, get installed version if it is installed
+    # =============================================================================
+    ts = rpm.TransactionSet()
+    for repo_name, packages in repo_packages.items():
+        for package_name, package_data in packages.items():
+            headers = ts.dbMatch('name', package_name)
+            for h in headers:
+                package_data['installed'].append(VersionInfo(
+                    epoch=h['epochnum'].__str__(),
+                    version=h['version'],
+                    release=h['release'],
+                    arch=h['arch']
+                ))
+
+    return repo_packages
 
 
 class LustrePlugin(DevicePlugin):
@@ -86,7 +148,7 @@ class LustrePlugin(DevicePlugin):
 
         return mounts.values()
 
-    def _scan(self):
+    def _scan(self, initial=False):
         started_at = datetime.datetime.utcnow().isoformat() + "Z"
 
         metrics = LocalAudit().metrics()
@@ -105,23 +167,29 @@ class LustrePlugin(DevicePlugin):
 
         mounts = self._scan_mounts()
 
+        if initial:
+            packages = scan_packages()
+        else:
+            packages = None
+
         # FIXME: HYD-1095 we should be sending a delta instead of a full dump every time
         return {
             "started_at": started_at,
-            "agent_version": version(),
+            "agent_version": agent_version(),
             "capabilities": ActionPluginManager().capabilities,
             "metrics": metrics,
             "lnet_loaded": lnet_loaded,
             "lnet_nids": lnet_nids,
             "lnet_up": lnet_up,
             "mounts": mounts,
+            "packages": packages,
             "resource_locations": resource_locations
         }
 
     def start_session(self):
         self._mount_cache = defaultdict(dict)
 
-        return self._scan()
+        return self._scan(initial=True)
 
     def update_session(self):
         return self._scan()

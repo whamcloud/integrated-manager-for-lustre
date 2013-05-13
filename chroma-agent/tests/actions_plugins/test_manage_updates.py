@@ -6,6 +6,7 @@ from mock import patch
 from django.utils.unittest.case import TestCase
 
 from chroma_agent.action_plugins import manage_updates
+from chroma_agent.device_plugins import lustre
 
 
 class TestManageUpdates(TestCase):
@@ -13,9 +14,14 @@ class TestManageUpdates(TestCase):
         super(TestManageUpdates, self).setUp()
         self.tmpRepo = NamedTemporaryFile(delete=False)
 
+        self.old_scan_packages = lustre.scan_packages
+        lustre.scan_packages = mock.Mock(return_value={})
+
     def tearDown(self):
         if os.path.exists(self.tmpRepo.name):
             os.remove(self.tmpRepo.name)
+
+        lustre.scan_packages = self.old_scan_packages
 
     def test_configure_repo(self):
         expected_content = """
@@ -39,9 +45,12 @@ sslclientcert = /var/lib/chroma/self.crt
         self.assertFalse(os.path.exists(self.tmpRepo.name))
 
     def test_update_packages(self):
-        with patch('chroma_agent.shell.try_run') as mock_run:
-            manage_updates.update_packages()
-            mock_run.assert_called_once_with(['yum', '-y', 'update'])
+        with patch('chroma_agent.shell.run', new=mock.Mock(side_effect=lambda args: (100, "", ""))):
+            with patch('chroma_agent.shell.try_run') as mock_try_run:
+                manage_updates.update_packages(['myrepo'], ['mypackage'])
+                self.assertListEqual(list(mock_try_run.call_args_list[0][0][0]), ['yum', '--disablerepo=*', '--enablerepo=myrepo', 'clean', 'all'])
+                self.assertListEqual(list(mock_try_run.call_args_list[1][0][0]), ['repoquery', '--requires', 'mypackage'])
+                self.assertListEqual(list(mock_try_run.call_args_list[2][0][0]), ['yum', '--disablerepo=*', '--enablerepo=myrepo', '-y', 'update'])
 
     def test_install_packages(self):
         with patch('chroma_agent.shell.try_run') as mock_run:

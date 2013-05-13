@@ -115,13 +115,7 @@ class JobSchedulerClient(object):
 
         """
 
-        difference = False
-        for attr, value in update_attrs.items():
-            old_value = getattr(instance, attr)
-            if old_value != value:
-                difference = True
-
-        if ((not from_states) or instance.state in from_states) and difference:
+        if (not from_states) or instance.state in from_states:
             log.info("Enqueuing notify %s at %s:" % (instance, time))
             for attr, value in update_attrs.items():
                 log.info("  .%s %s->%s" % (attr, getattr(instance, attr), value))

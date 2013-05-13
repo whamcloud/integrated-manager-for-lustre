@@ -179,3 +179,8 @@ html_static_path = ['_static']
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
 #html_file_suffix = None
+
+rst_epilog = """
+.. include:: <isonum.txt>
+.. |iml| replace:: Intel Manager for Lustre
+"""
