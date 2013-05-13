@@ -84,6 +84,8 @@ function add_host_dialog() {
   element.find('.add_host_https_back_button').button();
   element.find('.choice_ssh_auth').buttonset();
 
+  var $https_server_profile = element.find('div.add_host_https select.add_server_profile');
+
   var $slider_credits = element.find('.slider-credits');
   $slider_credits.slider({
     value:  credits.default,
@@ -266,22 +268,17 @@ function add_host_dialog() {
     Api.post('registration_token/',
       {
         credits: $slider_credits.slider('value'),
+        profile: $https_server_profile.val(),
         expiry: XDate(true).addMinutes($slider_expiry.slider('value')).toISOString()  //$slider_expiry.slider('value') * 60
       },
       success_callback = function(token) {
-
-        var command_line = 'curl -k %s//%s/agent/setup/%s/ | python'.sprintf(
-          window.location.protocol,
-          window.location.host,
-          token.secret
-        );
         var limit_string = 'This command can be used for %d storage server%s until %s.'.sprintf(
           token.credits,
           ( token.credits > 1 ? 's' : '' ),
           XDate( token.expiry ).toString()
         );
         $generate_button.button('enable');
-        element.find('.add_host_https_command pre').text(command_line);
+        element.find('.add_host_https_command pre').text(token.register_command);
         element.find('.add_host_https_command p.token_limits').text(limit_string);
         select_page('.add_host_https_command', https_pages);
       },
