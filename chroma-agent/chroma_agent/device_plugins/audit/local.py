@@ -57,8 +57,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
 
         def vals(key):
             """Returns all values for `key` in all `dicts`."""
-            withkey = (d for d in dicts if key in d)
-            return [d[key] for d in withkey]
+            return [d[key] for d in dicts if key in d]
 
         def recurse(*values):
             """Recurse if the values are dictionaries."""
