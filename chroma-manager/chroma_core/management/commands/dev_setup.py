@@ -58,9 +58,8 @@ class Command(BaseCommand):
                     print "Missing bundle %s" % bundle_name
                     missing_bundles = True
 
-            else:
-                if not Bundle.objects.filter(location=path).exists():
-                    chroma_core.lib.service_config.bundle('register', path)
+            if not Bundle.objects.filter(location=path).exists():
+                chroma_core.lib.service_config.bundle('register', path)
 
         if missing_bundles:
             print "Obtain bundles from Jenkins or build them yourself on a linux host, then unpack in %s" % settings.DEV_REPO_PATH
