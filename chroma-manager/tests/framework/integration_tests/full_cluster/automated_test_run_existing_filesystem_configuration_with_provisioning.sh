@@ -125,13 +125,6 @@ cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 set -x
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS
-
-# Verify we got the report for all of the tests
-NUM_TEST_FILES=\${#TEST_FILES[@]}
-NUM_TEST_REPORTS=\$(ls ~/test_report_*.xml | wc -l)
-if [ ! \$NUM_TEST_REPORTS = \$NUM_TEST_FILES ]; then
-  exit 1;
-fi
 EOF
 
 echo "End running tests."
