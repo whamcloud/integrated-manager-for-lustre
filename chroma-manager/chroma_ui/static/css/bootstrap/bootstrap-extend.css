@@ -41,3 +41,17 @@ body form.form .help-inline {
 .dropdown-menu .tooltip-inner {
   width: 250px;
 }
+
+.ui-dialog-buttonset .close {
+  opacity: 1;
+  filter: alpha(opacity=100);
+  float: none;
+  text-shadow: none;
+  line-height: normal;
+}
+.ui-dialog-buttonset .close:hover,
+.ui-dialog-buttonset .close:focus {
+  opacity: 1;
+  filter: alpha(opacity=100);
+  color: #555555;
+}
