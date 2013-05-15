@@ -383,14 +383,27 @@ class CorosyncRingInterface(object):
         # before link detection will work. Work around this by bringing
         # the interface up with a 0.0.0.0 address before testing link
         # status.
+        time_left = 0
         if not self.is_up:
             shell.try_run(['/sbin/ifconfig', self.name, "0.0.0.0", "up"])
+            time_left = 10
 
-        SIOCETHTOOL = 0x8946
-        ETHTOOL_GLINK = 0x0000000a
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ecmd = array.array('B', struct.pack('2I', ETHTOOL_GLINK, 0))
-        ifreq = struct.pack('16sP', self.name, ecmd.buffer_info()[0])
-        fcntl.ioctl(sock.fileno(), SIOCETHTOOL, ifreq)
-        sock.close()
-        return bool(struct.unpack('4xI', ecmd.tostring())[0])
+        def _has_link():
+            SIOCETHTOOL = 0x8946
+            ETHTOOL_GLINK = 0x0000000a
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ecmd = array.array('B', struct.pack('2I', ETHTOOL_GLINK, 0))
+            ifreq = struct.pack('16sP', self.name, ecmd.buffer_info()[0])
+            fcntl.ioctl(sock.fileno(), SIOCETHTOOL, ifreq)
+            sock.close()
+            return bool(struct.unpack('4xI', ecmd.tostring())[0])
+
+        while time_left:
+            # Poll for link status on newly-up interfaces
+            if _has_link():
+                return True
+            else:
+                time.sleep(1)
+                time_left -= 1
+
+        return _has_link()
