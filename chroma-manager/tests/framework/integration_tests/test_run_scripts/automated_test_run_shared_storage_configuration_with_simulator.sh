@@ -128,7 +128,7 @@ python setup.py develop
 make fence_agents
 
 cd ~/chroma_test_env/chroma/chroma-manager
-python manage.py dev_setup
+python manage.py dev_setup --no-bundles
 python manage.py supervisor  &> /dev/null &
 supervisor_pid=\$!
 

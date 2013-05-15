@@ -21,6 +21,7 @@
 
 
 from StringIO import StringIO
+from optparse import make_option
 import tarfile
 import os
 
@@ -29,6 +30,14 @@ import settings
 
 
 class Command(BaseCommand):
+    option_list = BaseCommand.option_list + (
+        make_option('--no-bundles',
+                    action='store_true',
+                    dest='no_bundles',
+                    default=False,
+                    help='Do not load any bundles, instead create dummies for use with simulator'),
+    )
+
     def handle(self, *args, **options):
         from chroma_core.lib.service_config import ServiceConfig
 
@@ -42,28 +51,34 @@ class Command(BaseCommand):
         import chroma_core.lib.service_config
         from chroma_core.models import Bundle, ServerProfile
 
-        missing_bundles = False
-        for bundle_name in BUNDLE_NAMES:
-            path = os.path.join(settings.DEV_REPO_PATH, bundle_name)
-            if not os.path.exists(os.path.join(path, 'meta')):
-                tarball_path = os.path.join(settings.DEV_REPO_PATH, bundle_name) + "-bundle.tar.gz"
-                if os.path.exists(tarball_path):
-                    print "Extracting %s" % bundle_name
-                    if not os.path.exists(path):
-                        os.makedirs(path)
-                    archive = tarfile.open(tarball_path, "r:gz")
-                    archive.list()
-                    archive.extractall(path)
-                else:
-                    print "Missing bundle %s" % bundle_name
-                    missing_bundles = True
+        if options['no_bundles']:
+            for bundle in BUNDLE_NAMES:
+                Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
+        else:
+            missing_bundles = False
+            for bundle_name in BUNDLE_NAMES:
+                path = os.path.join(settings.DEV_REPO_PATH, bundle_name)
+                folder_present = os.path.exists(os.path.join(path, 'meta'))
+                if not folder_present:
+                    tarball_path = os.path.join(settings.DEV_REPO_PATH, bundle_name) + "-bundle.tar.gz"
+                    if os.path.exists(tarball_path):
+                        print "Extracting %s" % bundle_name
+                        if not os.path.exists(path):
+                            os.makedirs(path)
+                        archive = tarfile.open(tarball_path, "r:gz")
+                        archive.list()
+                        archive.extractall(path)
+                    else:
+                        print "Missing bundle %s" % bundle_name
+                        missing_bundles = True
 
-            if not Bundle.objects.filter(location=path).exists():
-                chroma_core.lib.service_config.bundle('register', path)
+                if folder_present and not Bundle.objects.filter(location=path).exists():
+                    chroma_core.lib.service_config.bundle('register', path)
 
-        if missing_bundles:
-            print "Obtain bundles from Jenkins or build them yourself on a linux host, then unpack in %s" % settings.DEV_REPO_PATH
-            return
+            if missing_bundles:
+                print "Obtain bundles from Jenkins or build them yourself on a linux host, then unpack in %s" % settings.DEV_REPO_PATH
+                print "Alternatively, use --no-bundles if you will only ever use the simulator."
+                return
 
         # FIXME: having to copy-paste this because the production version is embedded in a .sh
         base_profile = """
