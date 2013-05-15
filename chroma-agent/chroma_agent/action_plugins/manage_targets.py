@@ -449,7 +449,9 @@ def start_target(ha_label):
     while True:
         i += 1
         # do a cleanup first, just to clear any previously errored state
-        shell.try_run(['crm', 'resource', 'cleanup', ha_label])
+        # HYD-1989
+        # TODO: this cleanup needs to be done only if necessary
+        #shell.try_run(['crm', 'resource', 'cleanup', ha_label])
         shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
                        '-m', '-v', 'Started'])
 
