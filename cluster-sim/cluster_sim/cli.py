@@ -107,11 +107,18 @@ class SimulatorCli(object):
         """
         session = self._get_authenticated_session(url, username, password)
 
-        args = {'credits': credit_count}
+        # Acquire a server profile
+        response = session.get("%sapi/server_profile/" % url)
+        profile = response.json()['objects'][0]
+
+        args = {
+            'credits': credit_count,
+            'profile': profile['resource_uri']
+        }
         if duration is not None:
             args['expiry'] = (datetime.datetime.now(dateutil.tz.tzutc()) + duration).isoformat()
 
-        response = session.post("%sapi/registration_token/" % url, data = json.dumps(args))
+        response = session.post("%sapi/registration_token/" % url, data=json.dumps(args))
         assert response.ok
         return response.json()['secret']
 
