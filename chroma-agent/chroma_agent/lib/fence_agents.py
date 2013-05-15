@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 
+from os.path import isfile, expanduser
 from chroma_agent import shell
 
 # TODO: Refactor out this hard-coded stuff in favor of using templates
@@ -53,12 +54,12 @@ class fence_apc(FenceAgent):
 
 
 class fence_virsh(FenceAgent):
-    def __init__(self, agent, login, plug, ipaddr, ipport=22, password=None, identity_file=None):
+    def __init__(self, agent, login, plug, ipaddr, ipport=22, password=None, identity_file="%s/.ssh/id_rsa" % expanduser("~")):
         self.plug = plug
-        if password:
-            auth = ['-p', password]
-        elif identity_file:
+        if identity_file and isfile(identity_file):
             auth = ['-k', identity_file]
+        elif password:
+            auth = ['-p', password]
         else:
             raise RuntimeError("Neither password nor identity_file were supplied")
         self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-x'] + auth
