@@ -265,22 +265,27 @@ class ServiceConfig(CommandLine):
         RABBITMQ_PASSWORD = "chroma123"
         RABBITMQ_VHOST = "chromavhost"
 
-        rc, out, err = self.try_shell(["rabbitmqctl", "-q", "list_users"])
+        # Enable use from dev_setup as a nonroot user on linux
+        sudo = []
+        if 'linux' in sys.platform and os.geteuid() != 0:
+            sudo = ['sudo']
+
+        rc, out, err = self.try_shell(sudo + ["rabbitmqctl", "-q", "list_users"])
         users = [line.split()[0] for line in out.split("\n") if len(line)]
         if not RABBITMQ_USER in users:
             log.info("Creating RabbitMQ user...")
-            self.try_shell(["rabbitmqctl", "add_user", RABBITMQ_USER, RABBITMQ_PASSWORD])
+            self.try_shell(sudo + ["rabbitmqctl", "add_user", RABBITMQ_USER, RABBITMQ_PASSWORD])
 
-        rc, out, err = self.try_shell(["rabbitmqctl", "-q", "list_vhosts"])
+        rc, out, err = self.try_shell(sudo + ["rabbitmqctl", "-q", "list_vhosts"])
         vhosts = [line.split()[0] for line in out.split("\n") if len(line)]
         if not RABBITMQ_VHOST in vhosts:
             log.info("Creating RabbitMQ vhost...")
-            self.try_shell(["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
+            self.try_shell(sudo + ["rabbitmqctl", "add_vhost", RABBITMQ_VHOST])
 
-        self.try_shell(["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
+        self.try_shell(sudo + ["rabbitmqctl", "set_permissions", "-p", RABBITMQ_VHOST, RABBITMQ_USER, ".*", ".*", ".*"])
 
         # Enable use of the management plugin if its available, else this tag is just ignored.
-        self.try_shell(["rabbitmqctl", "set_user_tags", RABBITMQ_USER, "management"])
+        self.try_shell(sudo + ["rabbitmqctl", "set_user_tags", RABBITMQ_USER, "management"])
 
     def _setup_crypto(self):
         if not os.path.exists(settings.CRYPTO_FOLDER):

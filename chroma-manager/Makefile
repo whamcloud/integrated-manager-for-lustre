@@ -1,5 +1,7 @@
 include ../include/Makefile.version
 
+DEVELOPER_BUNDLES = lustre chroma-agent e2fsprogs
+
 # In development, we want to stop at first failure, but when running
 # in a Jenkins job we want all the gory details.
 ifdef JENKINS_URL
@@ -26,7 +28,7 @@ develop: version
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
-	./manage.py dev_setup
+	./manage.py dev_setup --no-bundles
 
 integration_tests:
 	@echo "Running integration tests against the simulator..."

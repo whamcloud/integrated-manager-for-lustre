@@ -55,11 +55,10 @@ class Command(BaseCommand):
             for bundle in BUNDLE_NAMES:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
-            missing_bundles = False
+            missing_bundles = []
             for bundle_name in BUNDLE_NAMES:
                 path = os.path.join(settings.DEV_REPO_PATH, bundle_name)
-                folder_present = os.path.exists(os.path.join(path, 'meta'))
-                if not folder_present:
+                if not os.path.exists(os.path.join(path, 'meta')):
                     tarball_path = os.path.join(settings.DEV_REPO_PATH, bundle_name) + "-bundle.tar.gz"
                     if os.path.exists(tarball_path):
                         print "Extracting %s" % bundle_name
@@ -70,14 +69,25 @@ class Command(BaseCommand):
                         archive.extractall(path)
                     else:
                         print "Missing bundle %s" % bundle_name
-                        missing_bundles = True
+                        missing_bundles.append(path)
 
-                if folder_present and not Bundle.objects.filter(location=path).exists():
+                if (not path in missing_bundles and
+                    not Bundle.objects.filter(location=path).exists()):
                     chroma_core.lib.service_config.bundle('register', path)
 
-            if missing_bundles:
-                print "Obtain bundles from Jenkins or build them yourself on a linux host, then unpack in %s" % settings.DEV_REPO_PATH
-                print "Alternatively, use --no-bundles if you will only ever use the simulator."
+            if len(missing_bundles):
+                print """
+Package bundles are required for installation. In order to proceed, you
+have 3 options:
+    1. Download a bundle from %(bundle_url)s and unpack it in %(repo_path)s
+    2. Build a bundle locally and unpack it in %(repo_path)s
+    3. Run ./manage.py dev_setup --no-bundles to generate a set of fake
+       bundles for simulated servers
+
+Please note that the fake bundles can't be used to install real storage
+servers -- you'll need to use one of the first two methods in order to make
+that work.
+    """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH}
                 return
 
         # FIXME: having to copy-paste this because the production version is embedded in a .sh
