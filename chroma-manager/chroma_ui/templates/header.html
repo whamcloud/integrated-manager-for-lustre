@@ -3,19 +3,20 @@
     <div class="logo"></div>
   </a>
   <div class="top_links read_enabled_only">
+    <div>
     <ul class="navigation">
-      <li><a id="dashboard_menu" class="navigation" href="dashboard/">Dashboard</a></li>
-      <li class='fsadmin_only'><a id="configure_menu" class="navigation" href="configure/">Configuration</a></li>
-      <li><a id="alert_menu" class="navigation" href="alert/">Alerts</a></li>
-      <li><a id="event_menu" class="navigation" href="event/">History</a></li>
-      <li><a id="log_menu" class="navigation" href="log/">Logs</a></li>
-      <li class='fsadmin_only'><a id="help_menu" class="navigation skip_router" target="_blank" href="{{STATIC_URL}}webhelp/help_wrapper.html">Help</a></li>
+      <li><a id="dashboard_menu" class="navigation" href="dashboard/"><i class="icon-bar-chart"></i> Dashboard</a></li>
+      <li class='fsadmin_only'><a id="configure_menu" class="navigation" href="configure/"><i class="icon-cog"></i> Configuration</a></li>
+      <li><a id="alert_menu" class="navigation" href="alert/"><i class="icon-warning-sign"></i> Alerts</a></li>
+      <li><a id="event_menu" class="navigation" href="event/"><i class="icon-time"></i> History</a></li>
+      <li><a id="log_menu" class="navigation" href="log/"><i class="icon-book"></i> Logs</a></li>
+      <li class='fsadmin_only'><a id="help_menu" class="navigation skip_router" href="{{STATIC_URL}}webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i> Help</a></li>
     </ul>
-
+    </div>
     <span id="user_info">
       <span id="authenticated">
         <span id="username"></span>
-        <span class='account_links'>[<a href='#' id='account'>Account</a>&nbsp;|&nbsp;<a href="#" id='logout'>Logout</a>]</span>
+        <span class='account_links'><a href='#' id='account'>Account</a> <a href="#" id='logout'>Logout</a></span>
       </span>
       <span id="anonymous">
         <a href="#" id='login'>Login</a>
