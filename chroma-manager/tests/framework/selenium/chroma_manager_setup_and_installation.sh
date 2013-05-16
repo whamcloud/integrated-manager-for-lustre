@@ -56,6 +56,9 @@ cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
 EOF1
-fi"
+fi
+
+chroma-config restart
+"
 
 echo "End installation and setup."
