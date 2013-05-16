@@ -6,6 +6,18 @@ ____________
 This page serves as a best practice of sorts for front-end development. Please check back often as it will
 be updated frequently.
 
+General Practices
+_________________
+This section covers general conventions that should be followed when working on the front-end.
+
+  **Naming Buttons:** Buttons should start with a verb if they are used to perform an action. Button text should be
+  capitalized on each word.
+
+    **Example:** ::
+
+      Update Item
+
+
 JavaScript
 __________
   **spacing:** Code blocks should be indented using two spaces, Including continuation indents.

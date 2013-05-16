@@ -575,7 +575,7 @@ var CommandNotification = function() {
       */
     } else if (command.errored) {
       var body = command.message;
-      body += "&nbsp;<a class='navigation' href='command/" + command.id + "/'>Details...</a>";
+      body += "&nbsp;<a class='navigation' href='command/" + command.id + "/'>Details</a>";
       Tooltip.createGrowl("Command failed", body, true);
     } else {
       /*

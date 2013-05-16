@@ -144,7 +144,7 @@ var VolumeChooserStore = function ()
       if (formatted_volumes.length) {
         var plural = formatted_volumes.length > 1;
         prompt = formatted_volumes.length + " of the selected volumes contain" + (plural ? "" : "s") + " a filesystem, although " + (plural ? "they" : "it") + " may not be in use.  Do you wish to overwrite " + (plural ? "them" : "it") +"?";
-        prompt += "<br><a href='#' onclick=\"$('div#volume_details').show();\">Details...</a><div id='volume_details' style='display: none; max-height: 300px;'><table class='properties'><thead><th>Volume</th><th>Filesystem type</th></thead><tbody>"
+        prompt += "<br><a href='#' onclick=\"$('div#volume_details').show();\">Details</a><div id='volume_details' style='display: none; max-height: 300px;'><table class='properties'><thead><th>Volume</th><th>Filesystem type</th></thead><tbody>"
         _.each(formatted_volumes, function(v){
           prompt += "<tr><td>" + v.label + "</td><td>" + v.filesystem_type + "</td></tr>";
         });
@@ -204,7 +204,7 @@ var VolumeChooserStore = function ()
       }
       opts['selected_lun_id'] = null;
       opts.store.select(element, opts.selected_lun_id);
-      element.parents('.volume_chooser_background').find('.volume_chooser_selected').html("Select storage...")
+      element.parents('.volume_chooser_background').find('.volume_chooser_selected').html("Select Storage")
     }
 
     if (changed && opts.change) {
