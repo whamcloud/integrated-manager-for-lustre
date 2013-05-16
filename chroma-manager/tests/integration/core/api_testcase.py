@@ -122,7 +122,7 @@ class ApiTestCase(UtilityTestCase):
             if hasattr(self, 'remote_operations'):
                 # Check that all servers are up and available after the test
                 down_nodes = []
-                for server in config['lustre_servers']:
+                for server in self.TEST_SERVERS:
                     if not self.remote_operations.host_contactable(server['address']):
                         down_nodes.append(server['address'])
                     else:
