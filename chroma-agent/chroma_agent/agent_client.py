@@ -328,7 +328,11 @@ class HttpWriter(ExceptionCatchingThread):
 
         daemon_log.debug("HttpWriter sending %s messages" % len(messages))
         try:
-            self._client.post({'messages': [m.dump(self._client._fqdn) for m in messages]})
+            self._client.post({
+                'messages': [m.dump(self._client._fqdn) for m in messages],
+                'server_boot_time': self._client.boot_time.isoformat() + "Z",
+                'client_start_time': self._client.start_time.isoformat() + "Z"
+            })
         except HttpError:
             # Terminate any sessions which we've just droppped messages for
             kill_sessions = set()

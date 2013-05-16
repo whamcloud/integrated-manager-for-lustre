@@ -2,7 +2,7 @@
 """
 Tests for the inter-service interactions that occur through the lifetime of an agent device_plugin session
 """
-
+from copy import deepcopy
 
 from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
@@ -14,6 +14,7 @@ import json
 import time
 import datetime
 import requests
+import threading
 from django.db import transaction
 
 from chroma_core.models import ManagedHost, HostContactAlert, ClientCertificate
@@ -27,6 +28,29 @@ from tests.services.supervisor_test_case import SupervisorTestCase
 # the time it takes the receiving process to wake up and handle it)
 # Should be very very quick.
 RABBITMQ_GRACE_PERIOD = 1
+
+
+class BackgroundGet(threading.Thread):
+    def __init__(self, test_case):
+        super(BackgroundGet, self).__init__()
+        self.test_case = test_case
+        self.headers = deepcopy(test_case.headers)
+        self.get_params = {'client_start_time': test_case.client_start_time, 'server_boot_time': test_case.server_boot_time}
+
+        self.complete = False
+        self.messages = None
+        self.response = None
+
+    def run(self):
+        start_time = datetime.datetime.now()
+        response = requests.get(self.test_case.URL, headers=self.headers, params=self.get_params)
+        end_time = datetime.datetime.now()
+        print "Response after %s" % (end_time - start_time)
+
+        self.complete = True
+        self.response = response
+        if response.ok:
+            self.messages = response.json()['messages']
 
 
 class TestHttpAgent(SupervisorTestCase):
@@ -47,7 +71,6 @@ class TestHttpAgent(SupervisorTestCase):
         super(TestHttpAgent, self).__init__(*args, **kwargs)
         self.client_start_time = datetime.datetime.now().isoformat() + 'Z'
         self.server_boot_time = datetime.datetime.now().isoformat() + 'Z'
-        self.get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
 
         # Serial must be different every time because once we use it in a test it is permanently
         # revoked.
@@ -58,6 +81,21 @@ class TestHttpAgent(SupervisorTestCase):
             "X-SSL-Client-Name": self.CLIENT_NAME,
             "X-SSL-Client-Serial": self.CLIENT_CERT_SERIAL
         }
+
+    def _mock_restart(self):
+        self.client_start_time = datetime.datetime.now().isoformat() + 'Z'
+
+    def _post(self, messages):
+        post_body = {
+            'server_boot_time': self.server_boot_time,
+            'client_start_time': self.client_start_time,
+            'messages': messages
+        }
+        return requests.post(self.URL, data = json.dumps(post_body), headers = self.headers)
+
+    def _get(self):
+        get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
+        return requests.get(self.URL, headers = self.headers, params = get_params)
 
     def _open_session(self, expect_termination = None, expect_initial = True):
         """
@@ -77,11 +115,11 @@ class TestHttpAgent(SupervisorTestCase):
         }
 
         # Send a session create request on the RX channel
-        response = requests.post(self.URL, data = json.dumps({'messages': [message]}), headers = self.headers)
+        response = self._post([message])
         self.assertResponseOk(response)
 
         # Read from the TX channel
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
 
         if expect_initial:
@@ -195,7 +233,7 @@ class TestHttpAgent(SupervisorTestCase):
             'session_seq': 0,
             'body': None
         }
-        response = requests.post(self.URL, data = json.dumps({'messages': [sent_data_message]}), headers = self.headers)
+        response = self._post([sent_data_message])
         self.assertResponseOk(response)
 
         forwarded_data_message = self._receive_one_amqp()
@@ -216,11 +254,86 @@ class TestHttpAgent(SupervisorTestCase):
         }
         self._send_one_amqp(sent_fresh_message)
 
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
         self.assertEqual(forwarded_messages[0], sent_fresh_message)
+
+    def test_zombie_get(self):
+        """Test that when an agent is hard-killed, or its host restarts (such that
+           an outstanding GET connection is not torn down), then when the agent 'comes back
+           to life' and opens another GET connection, TX messages make it to the new agent
+           rather than going into a black hole on the zombie connection.  This scenario
+           is HYD-2063"""
+
+        # Pretend to be the first agent instance
+        zombie_session_id = self._open_session()
+        # Start doing a GET
+        self._zombie = BackgroundGet(self)
+        self.addCleanup(lambda: self._zombie.join())
+        self._zombie.start()
+
+        # Leaving that GET open, imagine the agent now gets killed hard
+        self._mock_restart()
+
+        # The agent restarts, now I pretend to be the second agent instance
+        try:
+            healthy_session_id = self._open_session(expect_termination=zombie_session_id)
+        except AssertionError:
+            # A session creation failure, could be that the SESSION_CREATE_RESPONSE
+            # got sent to the zombie
+            self._zombie.join()
+            self.assertResponseOk(self._zombie.response)
+
+            # If the HYD-2063 bug happens then the zombie was sent some messages
+            self.assertListEqual(self._zombie.messages, [])
+
+            # No message to the zombie?  In that case maybe something else went wrong
+            raise
+
+        self._healthy = BackgroundGet(self)
+        self.addCleanup(lambda: self._healthy.join())
+        self._healthy.start()
+
+        # In the HYD-2063 case, there are now two HTTP GET handlers subscribed to the
+        # TX messages for our host, so when we send a message, it might go to the healthy
+        # one, or it might go to the unhealthy one.  Send ten messages to give a decent
+        # chance that if they all go to the right place then there isn't a bug.
+        message_count = 10
+        for i in range(0, message_count):
+            sent_fresh_message = {
+                'fqdn': self.CLIENT_NAME,
+                'type': 'DATA',
+                'plugin': 'test_messaging',
+                'session_id': healthy_session_id,
+                'session_seq': i,
+                'body': None
+            }
+            self._send_one_amqp(sent_fresh_message)
+            # Avoid bunching up the messages so that they have a decent
+            # chance of being sent to different handlers if there are
+            # multiple handelrs in flight
+            time.sleep(0.1)
+
+        self._zombie.join()
+        self.assertResponseOk(self._zombie.response)
+        self._healthy.join()
+        self.assertResponseOk(self._healthy.response)
+
+        self.assertListEqual(self._zombie.messages, [])
+        healthy_messages = len(self._healthy.messages)
+        get_attempts = 9
+        while healthy_messages < message_count and get_attempts > 0:
+            get_attempts -= 1
+            response = self._get()
+            self.assertResponseOk(response)
+            healthy_messages += len(response.json()['messages'])
+            if not response.json()['messages']:
+                # This was a GET timeout
+                break
+
+        self.assertEqual(healthy_messages, message_count)
 
     def test_tx_stale_on_get(self):
         """Test that messages not forwarded to the agent when their session ID has
@@ -255,7 +368,7 @@ class TestHttpAgent(SupervisorTestCase):
         }
         self._send_one_amqp(sent_fresh_message)
 
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
@@ -273,7 +386,7 @@ class TestHttpAgent(SupervisorTestCase):
             self._wait_for_port(port)
 
         # If we try to continue our session, it will tell us to terminate
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
         forwarded_messages = response.json()['messages']
         self.assertEqual(len(forwarded_messages), 1)
@@ -326,7 +439,7 @@ class TestHttpAgent(SupervisorTestCase):
         HttpAgentRpc().remove_host(self.host.fqdn)
 
         # After revokation any access should be bounced
-        response = requests.post(self.URL, data = json.dumps({'messages': []}), headers = self.headers)
+        response = self._post([])
         self.assertEqual(response.status_code, 403)
-        response = requests.get(self.URL, headers = self.headers)
+        response = self._get()
         self.assertEqual(response.status_code, 403)

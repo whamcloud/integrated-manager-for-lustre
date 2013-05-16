@@ -98,7 +98,7 @@ class MessageView(View):
             if message['fqdn'] != fqdn:
                 return HttpResponseBadRequest("Incorrect client name")
 
-        log.debug("MessageView.post: %s %s messages" % (fqdn, len(messages)))
+        log.debug("MessageView.post: %s %s messages: %s" % (fqdn, len(messages), body))
         for message in messages:
             if message['type'] == 'DATA':
                 try:
@@ -120,6 +120,21 @@ class MessageView(View):
             elif message['type'] == 'SESSION_CREATE_REQUEST':
                 session = self.sessions.create(fqdn, message['plugin'])
                 log.info("Creating session %s/%s/%s" % (fqdn, message['plugin'], session.id))
+
+                # When creating a session, it may be for a new agent instance.  There may be an older
+                # agent instance with a hanging GET.  We need to make sure that messages that we send
+                # from this point onwards go to the new agent and not any GET handlers that haven't
+                # caught up yet.  Achive this by sending a barrier message with the agent start time, such
+                # that any GET handler receiving the barrier which has a different agent start time will
+                # detach itself from the TX queue.  NB the barrier only works because there's also a lock,
+                # so if there was a zombie GET, it will be holding the lock and receive the barrier.
+
+                self.queues.send({
+                    'fqdn': fqdn,
+                    'type': 'TX_BARRIER',
+                    'client_start_time': body['client_start_time']
+                })
+
                 self.queues.send({
                     'fqdn': fqdn,
                     'type': 'SESSION_CREATE_RESPONSE',
@@ -188,24 +203,41 @@ class MessageView(View):
             })
 
         log.debug("MessageView.get: composing messages for %s" % fqdn)
-        queue = self.queues.get(fqdn).tx
+        queues = self.queues.get(fqdn)
 
-        try:
-            first_message = queue.get(block = True, timeout = self.LONG_POLL_TIMEOUT)
-        except Queue.Empty:
-            pass
-        else:
-            # TODO: limit number of messages per response
-            messages.append(first_message)
-            while True:
-                try:
-                    messages.append(queue.get(block = False))
-                except Queue.Empty:
-                    break
+        # If this handler is sitting on the TX queue, draining messages, then
+        # when a new session starts, *before* sending any TX messages, we have to
+        # make sure it has been disconnected, to avoid the TX messages being sent
+        # to an 'old' session (old session meaning TCP connection from a now-dead agent)
+
+        with queues.tx_lock:
+            try:
+                first_message = queues.tx.get(block=True, timeout=self.LONG_POLL_TIMEOUT)
+                if first_message['type'] == 'TX_BARRIER':
+                    if first_message['client_start_time'] != request.GET['client_start_time']:
+                        log.warning("Cancelling GET due to barrier %s %s" % (first_message['client_start_time'], request.GET['client_start_time']))
+                        return HttpResponse(json.dumps({'messages': []}), mimetype="application/json")
+                else:
+                    messages.append(first_message)
+            except Queue.Empty:
+                pass
+            else:
+                # TODO: limit number of messages per response
+                while True:
+                    try:
+                        message = queues.tx.get(block=False)
+                        if message['type'] == 'TX_BARRIER':
+                            if message['client_start_time'] != request.GET['client_start_time']:
+                                log.warning("Cancelling GET due to barrier %s %s" % (message['client_start_time'], request.GET['client_start_time']))
+                                return HttpResponse(json.dumps({'messages': []}), mimetype="application/json")
+                        else:
+                            messages.append(message)
+                    except Queue.Empty:
+                        break
 
         messages = self._filter_valid_messages(fqdn, messages)
 
-        log.debug("MessageView.get: responding to %s with %s messages" % (fqdn, len(messages)))
+        log.debug("MessageView.get: responding to %s with %s messages (%s)" % (fqdn, len(messages), client_start_time))
         return HttpResponse(json.dumps({'messages': messages}), mimetype = "application/json")
 
 

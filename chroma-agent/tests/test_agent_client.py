@@ -15,6 +15,8 @@ class TestHttpWriter(unittest.TestCase):
 
         client = mock.Mock()
         client._fqdn = "test_server"
+        client.boot_time = datetime.datetime.utcnow()
+        client.start_time = datetime.datetime.utcnow()
 
         callback = mock.Mock()
 
@@ -39,7 +41,11 @@ class TestHttpWriter(unittest.TestCase):
 
             # Should have sent back the result
             self.assertEqual(client.post.call_count, 1)
-            self.assertDictEqual(client.post.call_args[0][0], {'messages': [message.dump(client._fqdn)]})
+            self.assertDictEqual(client.post.call_args[0][0], {
+                'messages': [message.dump(client._fqdn)],
+                'server_boot_time': client.boot_time.isoformat() + "Z",
+                'client_start_time': client.start_time.isoformat() + "Z"
+            })
 
             # Should have invoked the callback
             self.assertEqual(callback.call_count, 1)
@@ -55,6 +61,9 @@ class TestHttpWriter(unittest.TestCase):
 
         client = mock.Mock()
         client._fqdn = "test_server"
+        client.boot_time = datetime.datetime.utcnow()
+        client.start_time = datetime.datetime.utcnow()
+
         writer = HttpWriter(client)
 
         def inject_messages(*args, **kwargs):
@@ -86,6 +95,9 @@ class TestHttpWriter(unittest.TestCase):
         sending SESSION_CREATE_REQUEST messages has a power-of-two backoff wait"""
         client = mock.Mock()
         client._fqdn = "test_server"
+        client.boot_time = datetime.datetime.utcnow()
+        client.start_time = datetime.datetime.utcnow()
+
         writer = client.writer = HttpWriter(client)
         reader = client.reader = HttpReader(client)
 

@@ -70,6 +70,7 @@ class HostQueues(object):
         self.fqdn = fqdn
         self.rx = Queue.Queue()
         self.tx = Queue.Queue()
+        self.tx_lock = threading.Lock()
 
 
 class AmqpRxForwarder(object):
