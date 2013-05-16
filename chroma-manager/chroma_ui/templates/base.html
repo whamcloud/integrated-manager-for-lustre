@@ -151,8 +151,17 @@
         }
 
         function updateChartSizes() {
-          $('div.dashboard_page').css('margin-top', $('#dashboard_navigation').height());
-          $('div.dashboard_page').height($('div.rightpanel').height() - $('#dashboard_navigation').height() - 16)
+          var dashboardPage = $('div.dashboard_page');
+          var dashboardNavigationHeight = $('#dashboard_navigation').height() + 2;
+
+          dashboardPage.css('margin-top', dashboardNavigationHeight);
+
+          var dashboardPageHeight = ($('div.rightpanel').height()
+            - dashboardNavigationHeight
+            - 16
+            - parseInt(dashboardPage.css('top'), 10));
+
+          dashboardPage.height(dashboardPageHeight);
 
           $('.chart_grid').each(function() {
             var grid = $(this);
@@ -165,7 +174,7 @@
               var row_count = grid.children('tbody').children('tr').length;
               grid.children('tbody').children('tr').each(function() {
                 var row = $(this);
-                var col_count = row.children('td').length
+                var col_count = row.children('td').length;
                 var chart_width = (grid_width / col_count) - chart_pad_x;
                 var chart_height = (grid_height / row_count) - chart_pad_y;
                 row.find('.chart').each(function() {
@@ -227,6 +236,7 @@
           <div class="toplevel" id='toplevel-system_status' style="display: none;">
           </div>
           <div class="toplevel" id='toplevel-status' style="display: none;">
+            <h1 class="page-header">Status</h1>
             <div ng-include="(( config.asStatic('partials/status.html') ))"></div>
           </div>
           <p class='footer'>

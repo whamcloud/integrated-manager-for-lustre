@@ -12,9 +12,9 @@
     }
 
     function init()
-    { 
+    {
       loadObjectSelection('host', $('#event_host'));
-            
+
       var oTable = $('#events_table').dataTable(
       {
         "bProcessing": true,
@@ -56,7 +56,7 @@
     return {draw:draw}
   }();
 </script>
-
+<h1 class="page-header"><i class="icon-time"></i> History</h1>
 <div class='content'>
   <h2 class="section_header">Event History</h2>
   <table class='layout'>
@@ -83,7 +83,7 @@
             <option value="SyslogEvent">Syslog</option>
             <option value="StorageResourceLearnEvent">Storage resource detection</option>
           </select>
-          <input value="Filter" id="filter_btn" type="button"></input>
+          <input value="Filter" id="filter_btn" type="button" />
         </div>
       </td>
     </tr>

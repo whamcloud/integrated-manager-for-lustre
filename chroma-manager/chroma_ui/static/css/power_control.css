@@ -26,6 +26,10 @@ div.config-outlets .select2-result.select2-highlighted:before {
 
 /* General page styles start */
 
+div[ng-controller="PowerCtrl"] .page-header {
+  margin-bottom: 50px;
+}
+
 div[ng-controller="PowerCtrl"] .button-row {
   margin-top: 25px;
   margin-bottom: 15px;
