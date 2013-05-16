@@ -30,9 +30,8 @@ class TestAvailable(ChromaIntegrationTestCase):
 
         #  Since no jobs are incomplete (could check it, but na...)
         #  We ought to get some available states, more than 1 at least.
-        returned_states = [trans['state'] for trans in host1['available_transitions']]
-        expected_states = ['lnet_up', 'removed', 'lnet_down']
-        self.assertEqual(set(returned_states), set(expected_states))
+        for trans in host1['available_transitions']:
+            self.assertIn(trans['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded', 'removed'])
 
     def test_available_jobs(self):
         """Test that hosts job can be looked on the JobScheduler over RPC"""
