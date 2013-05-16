@@ -4,6 +4,7 @@ from chroma_api.host import HostResource
 from chroma_api.log import LogResource
 from chroma_api.target import TargetResource
 from chroma_api.volume import VolumeResource
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import LogMessage, ManagedHost, LNetConfiguration, VolumeNode, Volume, ManagedFilesystem, ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedMdt, ManagedOst
 from django.db import connection
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
@@ -21,7 +22,7 @@ OrderBad = namedtuple('OrderBad', [])
 # then think about whether you meant to do that, and grudgingly
 # update this number upwards if necessary, or go back and
 # revise the API change.
-QUERIES_PER_TARGET = 8  # queries per target accessing that resource directly
+QUERIES_PER_TARGET = 7  # queries per target accessing that resource directly
 QUERIES_PER_FILESYSTEM_TARGET = 4  # queries per target when included in a filesystem resource
 QUERIES_PER_VOLUME = 1  # queries per volume object when reading volumes
 QUERIES_PER_VOLUME_HOST = 1  # additional queries per-volume per-host
@@ -65,11 +66,12 @@ class TestQueryScaling(ChromaApiTestCase):
         query_counts = {}
         samples = [5, 6, 7, 8]
         for n in samples:
+            ObjectCache.clear()
             create_n(n)
             # Queries get reset at the start of a request
             self.assertEqual(scaled_resource._meta.queryset.count(), n)
             response = self.api_client.get("/api/%s/" % measured_resource._meta.resource_name, data = {'limit': 0})
-            self.assertEqual(response.status_code, 200, response.content)
+            self.assertEqual(response.status_code, 200, "%s:%s" % (response.content, measured_resource._meta.resource_name))
             query_count = len(connection.queries)
 
             self.assertEqual(len(self.deserialize(response)['objects']), measured_resource._meta.queryset.count())
@@ -208,6 +210,7 @@ class TestQueryScaling(ChromaApiTestCase):
                 ManagedOst.create_for_volume(volume.id, filesystem = fs)
 
     def test_filesystem_targets(self):
+
         target_scaling = self._measure_scaling(self._create_filesystem_n_osts, TargetResource, TargetResource)
         self.assertIsInstance(target_scaling, OrderN)
         self.assertEqual(target_scaling.queries_per_object, QUERIES_PER_TARGET)

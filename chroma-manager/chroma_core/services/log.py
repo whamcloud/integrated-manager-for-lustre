@@ -49,6 +49,8 @@ _enable_stdout = False
 trace = None
 
 FILE_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
+#  Alternative file format showing files and line numbers
+#FILE_FORMAT = '[%(asctime)s: %(thread)d %(pathname)s:%(lineno)d %(levelname)s/%(name)s] %(message)s'
 STDOUT_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
 
 

@@ -1,4 +1,7 @@
+from collections import defaultdict
 import mock
+from chroma_core.lib.cache import ObjectCache
+from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_api.tastypie_test import ResourceTestCase
 from tests.unit.chroma_core.helper import synthetic_volume_full
 
@@ -23,9 +26,46 @@ class ChromaApiTestCase(ResourceTestCase):
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
 
+        #  Fetching available transitions from the JobSchedule would require
+        #  Avoiding moving this to integration scope by mocking the rpc
+        #  fetched method.
+
+        @classmethod
+        def fake_available_transitions(cls, object_list):
+            transitions = defaultdict(list)
+            for obj_ct, obj_id in object_list:
+                obj = JobScheduler._retrieve_stateful_object(obj_ct, obj_id)
+                #  fake receiving ['fake_trans', 'make_fake_trans'] from JS
+                #  and converting to this form with verbs
+                transitions[obj.id] = [{'state': 'fake_trans', 'verb': 'make_fake_trans'},
+                                       {'state': 'fake_other', 'verb': 'make_fake_other'}]
+            return transitions
+
+        from chroma_core.services.job_scheduler import job_scheduler_client
+        self.old_available_transitions = job_scheduler_client.JobSchedulerClient.available_transitions
+        job_scheduler_client.JobSchedulerClient.available_transitions = fake_available_transitions
+
+        @classmethod
+        def fake_available_jobs(cls, object_list):
+            jobs = defaultdict(list)
+            for obj_ct, obj_id in object_list:
+                obj = JobScheduler._retrieve_stateful_object(obj_ct, obj_id)
+                jobs[obj.id] = []
+            return jobs
+
+        self.old_available_jobs = job_scheduler_client.JobSchedulerClient.available_jobs
+        job_scheduler_client.JobSchedulerClient.available_jobs = fake_available_jobs
+
     def tearDown(self):
         from chroma_api.authentication import CsrfAuthentication
         CsrfAuthentication.is_authenticated = self.old_is_authenticated
+
+        #  Restore
+        from chroma_core.services.job_scheduler import job_scheduler_client
+        job_scheduler_client.JobSchedulerClient.available_transitions = self.old_available_transitions
+        job_scheduler_client.JobSchedulerClient.available_jobs = self.old_available_jobs
+
+        ObjectCache.clear()
 
     def api_set_state_full(self, uri, state):
         original_object = self.api_get(uri)
@@ -75,6 +115,8 @@ class ChromaApiTestCase(ResourceTestCase):
             raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
 
     def spider_api(self):
+        ObjectCache.clear()
+
         from chroma_api.urls import api
         for name, resource in api._registry.items():
             if 'get' in resource._meta.list_allowed_methods:

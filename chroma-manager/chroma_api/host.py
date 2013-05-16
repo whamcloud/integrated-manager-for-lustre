@@ -168,9 +168,17 @@ class HostResource(MetricResource, StatefulModelResource):
             raise custom_response(self, request, http.HttpBadRequest,
                 {'address': ["Cannot add host at this address: %s" % e]})
         else:
+            #  TODO:  Could simplify this by adding a 'command' key to the
+            #  bundle, then optionally handling dehydrating that
+            #  in super.alter_detail_data_to_serialize.  That way could
+            #  return from this method avoiding all this extra code, and
+            #  providing a central handling for all things that migth have
+            #  a command argument.  NB:  not tested, and not part of any ticket
             args = {'command': dehydrate_command(command),
-                    'host': self.full_dehydrate(
-                        self.build_bundle(obj = host)).data}
+                    'host': self.alter_detail_data_to_serialize(None,
+                                self.full_dehydrate(
+                                    self.build_bundle(obj = host))).data
+            }
             raise custom_response(self, request, http.HttpAccepted, args)
 
     def apply_filters(self, request, filters = None):

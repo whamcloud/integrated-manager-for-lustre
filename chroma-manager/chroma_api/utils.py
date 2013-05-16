@@ -32,6 +32,7 @@ from django.utils import timezone
 from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
+from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
@@ -43,6 +44,8 @@ from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
 from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
+
+log = log_register(__name__)
 
 
 def custom_response(resource, request, response_klass, response_data):
@@ -142,12 +145,6 @@ class StatefulModelResource(CustomModelResource):
     class Meta:
         readonly = ['id', 'immutable_state', 'state', 'content_type_id', 'available_transitions', 'available_jobs', 'label', 'state_modified_at']
 
-    def dehydrate_available_transitions(self, bundle):
-        return JobSchedulerClient.available_transitions(bundle.obj)
-
-    def dehydrate_available_jobs(self, bundle):
-        return JobSchedulerClient.available_jobs(bundle.obj)
-
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, 'content_type'):
             return bundle.obj.content_type_id
@@ -156,6 +153,106 @@ class StatefulModelResource(CustomModelResource):
 
     def dehydrate_label(self, bundle):
         return bundle.obj.get_label()
+
+    def alter_detail_data_to_serialize(self, request, bundle):
+        """Add post dehydrate data to a single bundle
+
+        Call in methods that call obj_create() and have a flag to create
+        a fresh copy of the bundle.
+
+        Recommended to be used in places that call full_dehydrate directly
+        around this app to get available_* data added to the bundle.
+
+        Normally as GET call to TastyPie will call the
+        alter_list_data_to_serialize hook method which populates the
+        available_* data.  In the short circuit case of calling full_dehydrate
+        you can use this method to get the available_* post added.
+
+        Example:
+          self.alter_detail_data_to_serialize(
+            self.full_dehydrate(
+                self.build_bundle(obj=the_obj)
+                )
+            ).data
+
+        or, perhaps more readable
+
+          bundle = self.full_dehydrate(self.build_bundle(obj=the_obj))
+          bundle = self.alter_detail_data_to_serialize(bundle)
+          data = bundle.data
+
+        """
+
+        to_be_serialized = dict()
+        to_be_serialized['objects'] = [bundle, ]
+        to_be_serialized = self.alter_list_data_to_serialize(None,
+                                                             to_be_serialized)
+
+        #  Return the bundle
+        return to_be_serialized['objects'][0]
+
+    def alter_list_data_to_serialize(self, request, to_be_serialized):
+        """Post process available jobs and state transitions
+
+        This method is a TastyPie hook that is called after all fields
+        have been dehydrated.  The available_* methods are no longer
+        dehydrated one at a time.  Instead, they are all done in two batched
+        calls, and set in the return datastructure here.
+
+        to_be_serialized is a list of TastyPie Bundles composing some
+        subclass of StatefulObjects under the key 'objects.
+
+        Returns an updated copy of the input dict.
+        """
+
+        batch = []
+        for bundle in to_be_serialized['objects']:
+            obj = bundle.obj
+            so_id = obj.id
+            so_ct_key = ContentType.objects.get_for_model(
+                                                obj.downcast()).natural_key()
+
+            batch.append((so_ct_key, so_id,))
+
+        computed_transitions = JobSchedulerClient.available_transitions(batch)
+        computed_jobs = JobSchedulerClient.available_jobs(batch)
+
+        #  decorate the transition lists with verbs
+        #  and install in the bundle for return
+        for idx, bundle in enumerate(to_be_serialized['objects']):
+            obj_transitions = computed_transitions[str(bundle.obj.id)]
+            verbed_trans = self._add_verb(bundle.obj, obj_transitions)
+            to_be_serialized['objects'][idx].data['available_transitions'] = verbed_trans
+            obj_jobs = computed_jobs[str(bundle.obj.id)]
+            to_be_serialized['objects'][idx].data['available_jobs'] = obj_jobs
+
+        return to_be_serialized
+
+    def _add_verb(self, stateful_object, raw_transitions):
+        """Lookup the verb for each available state
+
+        raw_transitions is a list of state names coming from the
+        JobScheduler.
+        a list of dicts containing state and verb are returned.
+        """
+
+        from_state = stateful_object.state
+        transitions = []
+        for to_state in raw_transitions:
+            try:
+                verb = stateful_object.get_verb(from_state, to_state)
+            except KeyError:
+                log.warning("Object %s in state %s advertised an "
+                            "unreachable state %s" % (stateful_object,
+                                                      from_state,
+                                                      to_state))
+            else:
+                # NB: a None verb means its an internal
+                # transition that shouldn't be advertised
+                if verb:
+                    transitions.append({"state": to_state, "verb": verb})
+
+        return transitions
 
     # PUT handler for accepting {'state': 'foo', 'dry_run': <true|false>}
     def obj_update(self, bundle, request, **kwargs):
@@ -253,7 +350,8 @@ class ConfParamResource(StatefulModelResource):
 
                 raise custom_response(self, request, http.HttpAccepted,
                         {'command': dehydrate_command(Command.objects.get(pk = command_id)),
-                         self.Meta.resource_name: self.full_dehydrate(bundle).data})
+                         self.Meta.resource_name: self.alter_detail_data_to_serialize(request,
+                            self.full_dehydrate(bundle)).data})
             else:
                 return super(ConfParamResource, self).obj_update(bundle, request, **kwargs)
 

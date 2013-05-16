@@ -31,7 +31,6 @@ import datetime
 
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.lib.util import all_subclasses
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.queue import ServiceQueue
@@ -55,7 +54,9 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'test_host_contact',
                'create_filesystem',
                'create_host',
-               'create_targets'
+               'create_targets',
+               'available_transitions',
+               'available_jobs'
                ]
 
 
@@ -150,76 +151,22 @@ class JobSchedulerClient(object):
             })
 
     @classmethod
-    def available_transitions(cls, stateful_object):
-        """Query which new states can be set for an object, depending on its
-        current state.  Provides a list of states and descriptive verbs for
-        use in presentation.  Note that the verb for a particular state is
-        not always the same, for example transitioning to 'lnet_down' could
-        either be "Load LNet module" or "Stop LNet" depending on whether the
-        object is in lnet_unloaded or lnet_up.
+    def available_transitions(cls, object_list):
+        """Return the transitions available for each object in list
 
-        :param stateful_object: Instance of a StatefulObject
-        :return: A list of dicts like {'state': '<new state>', 'verb': '<human readable verb>'}
+        See the Job Scheduler method of the same name for details.
         """
 
-        if hasattr(stateful_object, 'content_type'):
-            stateful_object = stateful_object.downcast()
-
-        # We don't advertise transitions for anything which is currently
-        # locked by an incomplete job.  We could alternatively advertise
-        # which jobs would actually be legal to add by skipping this check and
-        # using get_expected_state in place of .state below.
-        if LockCache().get_latest_write(stateful_object):
-            return []
-
-        # XXX: could alternatively use expected_state here if you want to advertise
-        # what jobs can really be added (i.e. advertise transitions which will
-        # be available when current jobs are complete)
-        #from_state = self.get_expected_state(stateful_object)
-        from_state = stateful_object.state
-        available_states = stateful_object.get_available_states(from_state)
-        transitions = []
-        for to_state in available_states:
-            try:
-                verb = stateful_object.get_verb(from_state, to_state)
-            except KeyError:
-                log.warning("Object %s in state %s advertised an unreachable state %s" % (stateful_object, from_state, to_state))
-            else:
-                # NB: a None verb means its an internal transition that shouldn't be advertised
-                if verb:
-                    transitions.append({"state": to_state, "verb": verb})
-
-        return transitions
+        return JobSchedulerRpc().available_transitions(object_list)
 
     @classmethod
-    def available_jobs(cls, instance):
+    def available_jobs(cls, object_list):
         """Query which jobs (other than changes to state) can be run on this object.
 
-        :param instance: Instance of a StatefulObject
-        :return: A list of dicts like {'verb': '<Human readable description>', 'confirmation': '<Human readable confirmation prompt or None', 'class_name': '<Job class name>', 'args': {<dict of args to job constructor}}
+        See the Job Scheduler method of the same name for details.
         """
-        # If the object is subject to an incomplete Job
-        # then don't offer any actions
-        if LockCache().get_latest_write(instance) > 0:
-            return []
 
-        from chroma_core.models import AdvertisedJob
-
-        available_jobs = []
-        for aj in all_subclasses(AdvertisedJob):
-            if not aj.plural:
-                for class_name in aj.classes:
-                    ct = ContentType.objects.get_by_natural_key('chroma_core', class_name.lower())
-                    klass = ct.model_class()
-                    if isinstance(instance, klass):
-                        if aj.can_run(instance):
-                            available_jobs.append({
-                                'verb': aj.verb,
-                                'confirmation': aj.get_confirmation(instance),
-                                'class_name': aj.__name__,
-                                'args': aj.get_args(instance)})
-
-        return available_jobs
+        return JobSchedulerRpc().available_jobs(object_list)
 
     @classmethod
     def get_transition_consequences(cls, stateful_object, new_state):

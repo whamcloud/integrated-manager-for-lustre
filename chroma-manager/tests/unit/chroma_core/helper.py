@@ -26,7 +26,14 @@ def synchronous_run_job(job):
         step_klass(job, args, lambda x: None, lambda x: None, mock.Mock()).run(args)
 
 
-def synthetic_volume(serial=None):
+def random_str(length=10, prefix='', postfix=''):
+
+    test_string = (str(uuid.uuid4()).translate(None, '-'))[:length]
+
+    return "%s%s%s" % (prefix, test_string, postfix)
+
+
+def synthetic_volume(serial=None, with_storage=True):
     """
     Create a Volume and an underlying StorageResourceRecord
     """
@@ -38,12 +45,14 @@ def synthetic_volume(serial=None):
     attrs = {'serial': serial,
              'size': 1024000}
 
-    from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-    resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDevice')
+    if with_storage:
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'ScsiDevice')
 
-    storage_resource, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, attrs)
+        storage_resource, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, attrs)
 
-    volume.storage_resource = storage_resource
+        volume.storage_resource = storage_resource
+
     volume.save()
 
     return volume
@@ -63,12 +72,15 @@ def synthetic_volume_full(primary_host, *args):
     return volume
 
 
-def synthetic_host(address, nids = list([]), storage_resource = False, fqdn = None, nodename = None):
+def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None):
     """
     Create a ManagedHost + paraphernalia, with states set as if configuration happened successfully
 
     :param storage_resource: If true, create a PluginAgentResources (additional overhead, only sometimes required)
     """
+
+    if address is None:
+        address = random_str(postfix=".tld")
 
     if fqdn is None:
         fqdn = address

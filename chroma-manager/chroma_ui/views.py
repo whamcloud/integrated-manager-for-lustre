@@ -20,6 +20,8 @@
 # express and approved by Intel in writing.
 
 
+from collections import defaultdict
+
 import json
 import datetime
 import socket
@@ -48,9 +50,16 @@ def _build_cache(request):
     for resource in resources:
         if settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated():
             resource_instance = resource()
-            cache[resource.Meta.resource_name] = [
-                resource_instance.full_dehydrate(resource_instance.build_bundle(obj=m)).data for m in
-                resource.Meta.queryset._clone()]
+#            cache[resource.Meta.resource_name] = [
+#                resource_instance.full_dehydrate(resource_instance.build_bundle(obj=m)).data for m in
+#                resource.Meta.queryset._clone()]
+
+            to_be_serialized = defaultdict(list)
+            to_be_serialized['objects'] = [resource_instance.full_dehydrate(resource_instance.build_bundle(obj=m))  for m in
+                                           resource.Meta.queryset._clone()]
+            to_be_serialized = resource_instance.alter_list_data_to_serialize(request, to_be_serialized)
+
+            cache[resource.Meta.resource_name] = [bundle.data for bundle in to_be_serialized['objects']]
         else:
             cache[resource.Meta.resource_name] = []
 

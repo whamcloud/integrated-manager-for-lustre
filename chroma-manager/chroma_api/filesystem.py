@@ -367,10 +367,13 @@ class FilesystemResource(MetricResource, ConfParamResource):
         always_return_data = True
 
     def obj_create(self, bundle, request = None, **kwargs):
+
         filesystem_id, command_id = JobSchedulerClient.create_filesystem(bundle.data)
         filesystem = ManagedFilesystem.objects.get(pk = filesystem_id)
         command = Command.objects.get(pk = command_id)
-        filesystem_data = self.full_dehydrate(self.build_bundle(obj = filesystem)).data
+        fs_bundle = self.full_dehydrate(self.build_bundle(obj = filesystem))
+        filesystem_data = self.alter_detail_data_to_serialize(request,
+                                                            fs_bundle).data
 
         raise custom_response(self, request, http.HttpAccepted,
                               {

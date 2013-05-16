@@ -36,6 +36,7 @@ import Queue
 import dateutil.parser
 from copy import deepcopy
 from paramiko import SSHException, AuthenticationException
+from chroma_core.lib.util import all_subclasses
 
 
 from django.contrib.contenttypes.models import ContentType
@@ -1134,3 +1135,111 @@ class JobScheduler(object):
         self.progress.advance()
 
         return host.id, command.id
+
+    @staticmethod
+    def _retrieve_stateful_object(obj_content_type_natural_key, object_id):
+        """Get the stateful object from cache or DB"""
+
+        model_klass = ContentType.objects.get_by_natural_key(
+            *obj_content_type_natural_key).model_class()
+        if issubclass(model_klass, ManagedTarget):
+            stateful_object = ObjectCache.get_by_id(ManagedTarget, object_id)
+        else:
+            stateful_object = ObjectCache.get_by_id(model_klass, object_id)
+
+        return stateful_object.downcast()
+
+    def available_transitions(self, object_list):
+        """Compute the available transitional states for each stateful object
+
+        Return dict of transition state name lists that are available for each
+        object in the object_list, depending on its current state.
+        The key in the return dict is the object id, and
+        the value is the list of states available for that object
+
+        If an object in the list is locked, it will be included in the return
+        dict, but it's transitions will be an empty list.
+
+        :param object_list: list of serialized tuples: [(obj_key, obj_id), ...]
+        :return: dict of list of states {obj_id: ['<state1>','<state2',etc], }
+        """
+
+        with self._lock:
+            transitions = defaultdict(list)
+            for obj_key, obj_id in object_list:
+                stateful_object = JobScheduler._retrieve_stateful_object(obj_key,
+                                                                        obj_id)
+
+                # We don't advertise transitions for anything which is currently
+                # locked by an incomplete job.  We could alternatively advertise
+                # which jobs would actually be legal to add by skipping this
+                # check and using get_expected_state in place of .state below.
+                if self._lock_cache.get_latest_write(stateful_object):
+                    transitions[obj_id] = []
+                else:
+
+                    # XXX: could alternatively use expected_state here if you
+                    # want to advertise
+                    # what jobs can really be added (i.e. advertise transitions
+                    # which will
+                    # be available when current jobs are complete)
+                    #from_state = self.get_expected_state(stateful_object)
+                    from_state = stateful_object.state
+                    available_states = stateful_object.get_available_states(
+                        from_state)
+
+                    transitions[obj_id] = available_states
+
+            return transitions
+
+    def _fetch_jobs(self, stateful_object):
+        from chroma_core.models import AdvertisedJob
+
+        available_jobs = []
+        for aj in all_subclasses(AdvertisedJob):
+            if not aj.plural:
+                for class_name in aj.classes:
+                    ct = ContentType.objects.get_by_natural_key(
+                        'chroma_core', class_name.lower())
+                    klass = ct.model_class()
+                    if isinstance(stateful_object, klass):
+                        if aj.can_run(stateful_object):
+                            available_jobs.append({
+                                'verb': aj.verb,
+                                'confirmation': aj.get_confirmation(
+                                    stateful_object),
+                                'class_name': aj.__name__,
+                                'args': aj.get_args(stateful_object)})
+        return available_jobs
+
+    def available_jobs(self, object_list):
+        """Compute the available jobs for the stateful object
+
+        Return a dict of jobs that are available for each object in object_list.
+        The key in the dict is the object id, and the valuie is the list of
+        job classes.
+
+        If an object in the list is locked, it will be included in the return
+        dict, but it's jobs will be an empty list.
+
+        :param object_list: list of serialized tuples: [(obj_key, obj_id), ...]
+        :return: A dict of lists of jobs like {obj1_id: [{'verb': ...,
+                        'confirmation': ..., 'class_name': ..., 'args: ...}], ...}
+        """
+
+        with self._lock:
+
+            jobs = defaultdict(list)
+            for obj_key, obj_id in object_list:
+
+                stateful_object = JobScheduler._retrieve_stateful_object(
+                    obj_key, obj_id)
+
+                # If the object is subject to an incomplete Job
+                # then don't offer any actions
+                if self._lock_cache.get_latest_write(stateful_object) > 0:
+                    jobs[obj_id] = []
+                else:
+                    jobs[obj_id] = self._fetch_jobs(stateful_object)
+
+            return jobs

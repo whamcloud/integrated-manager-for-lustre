@@ -1,3 +1,4 @@
+from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.target import ManagedOst
@@ -138,6 +139,8 @@ class TestFilesystemConfParamValidation(ChromaApiTestCase):
 
     def tearDown(self):
         JobSchedulerClient.command_run_jobs = self.old_command_run_jobs
+
+        ObjectCache.clear()
 
     @create_filesystem_patch
     def _post_filesystem(self, fs_params, mgt_params, mdt_params, ost_params):
