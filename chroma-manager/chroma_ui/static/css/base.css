@@ -840,9 +840,10 @@ table#global_filesystem_table {
 }
 
 table#global_filesystem_table th {
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
     font-weight: normal;
     text-align: right;
-    font-style: italic;
 }
 
 table#global_filesystem_table td {
@@ -882,6 +883,8 @@ div.dataTables_wrapper th {
 div.DataTables_sort_wrapper {
   position: relative;
   padding-right: 20px;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
 div.DataTables_sort_wrapper span {
