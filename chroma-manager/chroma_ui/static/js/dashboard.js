@@ -46,7 +46,7 @@ var Dashboard = (function() {
       if (polling_updater) {
         polling_updater.destroy();
       }
-    });    
+    });
   }
 
   function pollingInterval() {
@@ -252,8 +252,9 @@ var Dashboard = (function() {
     var ostKindMarkUp = "<option value=''></option>";
     var ost_file_system_MarkUp = "<option value=''></option>";
 
+    var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>"+
-      "<li><a href='dashboard/' class='home_icon navigation'>Home</a></li>"+
+      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
       "<li>"+get_view_selection_markup()+"</li>";
     breadCrumbHtml += "<li><select id='breadcrumb_server'></select></li>";
 
@@ -281,7 +282,7 @@ var Dashboard = (function() {
           "</select>"+
           "</li>"+
           "</ul>";
-        $("#breadcrumbs").html(breadCrumbHtml);
+        $('#breadcrumbs').html(compileTemplate(breadCrumbHtml));
         populate_breadcrumb_server(ApiCache.list('host'));
 
         $('#ossSummaryTblDiv').show();
@@ -296,8 +297,10 @@ var Dashboard = (function() {
     dashboard_page('target');
 
     var target_params = "";
+
+    var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>"+
-      "<li><a href='dashboard/' class='home_icon navigation'>Home</a></li>"+
+      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
       "<li>"+get_view_selection_markup()+"</li>";
     if (dashboard_filesystem){
       breadCrumbHtml += "<li><a class='navigation' href='dashboard/filesystem/" + dashboard_filesystem.id + "/''>"+dashboard_filesystem.label+"</a></li>";
@@ -331,7 +334,7 @@ var Dashboard = (function() {
           "</select>"+
           "</li>"+
           "</ul>";
-        $("#breadcrumbs").html(breadCrumbHtml);
+        $('#breadcrumbs').html(compileTemplate(breadCrumbHtml));
       });
 
 
@@ -410,14 +413,16 @@ var Dashboard = (function() {
     }
   }
 
+
   function load_filesystem_page()
   {
     dashboard_page('filesystem');
 
     var ostKindMarkUp = "<option value=''></option>";
 
+    var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>"+
-      "<li><a href='dashboard/' class='home_icon navigation'>Home</a></li>" +
+      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
       "<li>"+get_view_selection_markup()+"</li>" +
       "<li><select id='breadcrumb_filesystem'></select></li>" +
       "<li>"+
@@ -445,7 +450,7 @@ var Dashboard = (function() {
           "</select>"+
           "</li>"+
           "</ul>";
-        $("#breadcrumbs").html(breadCrumbHtml);
+        $('#breadcrumbs').html(compileTemplate(breadCrumbHtml));
         populate_breadcrumb_filesystem(ApiCache.list('filesystem'));
 
         $("#ostKind").html(ostKindMarkUp);
@@ -469,8 +474,9 @@ var Dashboard = (function() {
   {
     dashboard_page('global');
 
+    var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>" +
-    "  <li><a href='dashboard/' class='home_icon navigation'>Home</a></li>" +
+    "  <li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
     "  <li>" + get_view_selection_markup() + "</li>" +
     "  </li>" +
     "  <li>" +
@@ -481,7 +487,8 @@ var Dashboard = (function() {
     "  </li>" +
     "</ul>";
 
-    $('#breadcrumbs').html(breadCrumbHtml);
+    $('#breadcrumbs').html(compileTemplate(breadCrumbHtml));
+
     if (dashboard_type === 'filesystem') {
       $('#breadcrumb_server').hide();
       populate_breadcrumb_filesystem(ApiCache.list('filesystem'));

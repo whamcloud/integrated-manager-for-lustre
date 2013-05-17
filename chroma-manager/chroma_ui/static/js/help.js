@@ -93,7 +93,11 @@ var ContextualHelp = function(){
             data: {}
           }
         },
-        position: { viewport: $(window) },
+        position: {
+          viewport: $(window),
+          my: 'top center',
+          at: 'bottom center'
+        },
         show: { event: event }
       });
     }

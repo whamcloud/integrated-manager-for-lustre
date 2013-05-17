@@ -4,7 +4,7 @@ div[ng-controller="BigGreenButtonCtrl"] {
     display: inline-block;
     border-radius: 12px;
     margin-top: 8px;
-    margin-left: 50px;
+    margin-left: 40px;
     cursor: pointer;
 
     -webkit-transition: all 1s ease-in-out;

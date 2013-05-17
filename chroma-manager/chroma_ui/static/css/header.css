@@ -83,7 +83,11 @@ span#username {
     display: block;
     height: 37px;
     line-height: 37px;
-    padding: 0px 13px 0px 13px;
+    padding: 0px 10px;
+}
+
+.top_links ul.navigation a i {
+    margin-right: 2px;
 }
 
 .top_links ul.navigation a:hover {
@@ -93,7 +97,7 @@ span#username {
     background-color: #0067B0;
     border-left: solid 1px #004372;
     border-right: solid 1px #004372;
-    padding: 0px 12px 0px 12px;
+    padding: 0px 9px;
 }
 
 .top_links ul.navigation a.active {
@@ -103,6 +107,6 @@ span#username {
     background-color: #0067B0;
     border-left: solid 1px #004372;
     border-right: solid 1px #004372;
-    padding: 0px 12px 0px 12px;
+    padding: 0px 9px;
 
 }

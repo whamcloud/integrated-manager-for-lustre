@@ -963,3 +963,7 @@ div.help_loaded {
 .actions-cell .dropdown-menu {
   left: -30px;
 }
+
+.qtip p {
+    margin: 4px 0 4px 0;
+}
