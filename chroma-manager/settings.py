@@ -310,7 +310,7 @@ HTTP_FRONTEND_PORT = 9000
 HTTPS_FRONTEND_PORT = 8000
 
 # In development, where to serve repos from
-DEV_REPO_PATH = os.path.join(os.path.dirname(sys.modules['settings'].__file__), 'repo')
+DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules['settings'].__file__)), 'repo')
 
 # If your storage servers will address the manager server by a non-default
 # address or port, override this

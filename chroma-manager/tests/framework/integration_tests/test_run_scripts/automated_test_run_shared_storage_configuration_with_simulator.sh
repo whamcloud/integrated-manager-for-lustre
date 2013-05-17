@@ -56,15 +56,6 @@ chkconfig rabbitmq-server on
 echo "%rabbitmq ALL=(ALL) NOPASSWD: /usr/sbin/rabbitmqctl"  > /etc/sudoers.d/rabbitmqctl
 chmod 440 /etc/sudoers.d/rabbitmqctl
 sed -i "s/Defaults    requiretty/# Defaults    requiretty/g" /etc/sudoers
-cat <<EOC > /usr/local/bin/rabbitmqctl
-#!/bin/sh
-if [ \\\`id -u\\\` != 0 ]; then
-  sudo /usr/sbin/rabbitmqctl "\\\$@"
-else
-  /usr/sbin/rabbitmqctl "\\\$@"
-fi
-EOC
-chmod a+rx /usr/local/bin/rabbitmqctl
 sed -i "s/rabbitmq:x:\([0-9]*\):[a-z]*/rabbitmq:x:\1:chromatest/g" /etc/group
 # End witchcraft
 
