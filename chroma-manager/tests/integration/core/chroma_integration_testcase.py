@@ -336,3 +336,6 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             except IndexError:
                 obj = self.create_power_control_device_outlet(new)
                 logger.debug("Created %s" % obj)
+
+            # Ensure that this stuff gets cleaned up, no matter what
+            self.addCleanup(lambda: self.api_clear_resource('power_control_type'))

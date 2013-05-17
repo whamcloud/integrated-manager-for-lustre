@@ -39,12 +39,14 @@ class PacemakerNode(object):
         self.fence_on()
 
     def fence_off(self):
-        for agent in self.fence_agents:
-            agent.off()
+        if self.attributes.get('standby', "off") != "on":
+            for agent in self.fence_agents:
+                agent.off()
 
     def fence_on(self):
-        for agent in self.fence_agents:
-            agent.on()
+        if self.attributes.get('standby', "off") != "on":
+            for agent in self.fence_agents:
+                agent.on()
 
     @property
     def fence_agents(self):
@@ -79,10 +81,19 @@ class PacemakerNode(object):
     def set_fence_attribute(self, agent, key, value):
         self.set_attribute("%s_fence_%s" % (agent, key), value)
 
+    def clear_fence_attribute(self, agent, key):
+        self.set_attribute("%s_fence_%s" % (agent, key))
+
     def clear_fence_attributes(self):
         for fence_agent in self.fence_agent_dicts:
             for agent_attr in fence_agent:
                 self.clear_attribute(agent_attr)
+
+    def enable_standby(self):
+        shell.try_run(["crm_attribute", "-N", self.name, "-n", "standby", "-v", "on", "--lifetime=forever"])
+
+    def disable_standby(self):
+        shell.try_run(["crm_attribute", "-N", self.name, "-n", "standby", "-v", "off", "--lifetime=forever"])
 
     # These crm_attribute options are undocumented, but they're exactly
     # what the crm utility uses when it does its thing. The documented

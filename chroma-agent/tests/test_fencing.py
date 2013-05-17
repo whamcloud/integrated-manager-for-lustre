@@ -1,7 +1,7 @@
 import mock
 from django.utils import unittest
 
-from chroma_agent.action_plugins.manage_corosync import configure_fencing
+from chroma_agent.action_plugins.manage_corosync import configure_fencing, set_node_standby, set_node_online
 from chroma_agent.lib.pacemaker import PacemakerNode
 
 
@@ -74,6 +74,16 @@ class TestAgentConfiguration(FencingTestCase):
         for key in fake_attributes:
             self.try_run.assert_any_call(['crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key])
 
+    def test_node_standby(self):
+        set_node_standby(self.fake_node_hostname)
+
+        self.try_run.assert_any_call(['crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'on', '--lifetime=forever'])
+
+    def test_node_online(self):
+        set_node_online(self.fake_node_hostname)
+
+        self.try_run.assert_any_call(['crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'off', '--lifetime=forever'])
+
 
 class TestFenceAgent(FencingTestCase):
     fake_attributes = {'0_fence_agent': 'fence_apc',
@@ -145,3 +155,14 @@ class TestFenceAgent(FencingTestCase):
                             "option=monitor"]
         agent_main()
         exit.assert_called_with(0)
+
+    def test_standby_node_not_fenced(self):
+        # a node in standby should not be fenced
+        attributes = self.fake_attributes.copy()
+        attributes['standby'] = "on"
+        self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = attributes
+
+        from chroma_agent.fence_chroma import main as agent_main
+
+        agent_main(['-o', 'off', '-n', self.fake_node_hostname])
+        assert not self.try_run.called

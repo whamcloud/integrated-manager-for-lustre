@@ -163,6 +163,22 @@ def configure_fencing(agents):
             node.set_fence_attribute(idx, attribute, value)
 
 
+def set_node_standby(node):
+    from chroma_agent.lib.pacemaker import PacemakerConfig
+
+    pc = PacemakerConfig()
+    node = pc.get_node(node)
+    node.enable_standby()
+
+
+def set_node_online(node):
+    from chroma_agent.lib.pacemaker import PacemakerConfig
+
+    pc = PacemakerConfig()
+    node = pc.get_node(node)
+    node.disable_standby()
+
+
 def unconfigure_corosync():
     from os import remove
     import errno
@@ -278,4 +294,5 @@ def host_corosync_config():
 ACTIONS = [configure_corosync, unconfigure_corosync,
            configure_pacemaker, unconfigure_pacemaker,
            configure_fencing, unconfigure_fencing,
+           set_node_standby, set_node_online,
            host_corosync_config, delete_node]
