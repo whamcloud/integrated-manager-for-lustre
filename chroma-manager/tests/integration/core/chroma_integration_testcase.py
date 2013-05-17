@@ -2,6 +2,7 @@ import logging
 
 from testconfig import config
 from tests.integration.core.api_testcase_with_test_reset import ApiTestCaseWithTestReset
+from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
 
 logger = logging.getLogger('test')
@@ -167,8 +168,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         filesystem_id = response.json['filesystem']['id']
         command_id = response.json['command']['id']
 
-        self.wait_for_command(self.chroma_manager, command_id,
-            verify_successful=verify_successful)
+        self.wait_for_command(
+            self.chroma_manager,
+            command_id,
+            verify_successful=verify_successful,
+            timeout = LONG_TEST_TIMEOUT
+        )
 
         response = self.chroma_manager.get(
             '/api/host/',
