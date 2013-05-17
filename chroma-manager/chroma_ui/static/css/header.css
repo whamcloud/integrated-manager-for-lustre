@@ -1,18 +1,10 @@
 
 .logohead{
-    width:100%;
-    height:35px;
+    width: 100%;
+    height: 37px;
     color: #ccc;
 
-    background-color: #2c2c2c;
-    background-image: -moz-linear-gradient(top, #222222, #000000);
-    background-image: -ms-linear-gradient(top, #222222, #000000);
-    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#222222), to(#000000));
-    background-image: -webkit-linear-gradient(top, #222222, #000000);
-    background-image: -o-linear-gradient(top, #222222, #000000);
-    background-image: linear-gradient(top, #222222, #000000);
-    background-repeat: repeat-x;
-    filter: progid:dximagetransform.microsoft.gradient(startColorstr='#222222', endColorstr='#000000', GradientType=0);
+    background-color: #2C2C2C;
 }
 
 .logohead a {
@@ -20,15 +12,13 @@
 }
 
 .logo{
-    background-image:url(../images/intel-logo-white-trans-80x31.png);
-    background-repeat:no-repeat;
+    background-image: url(../images/intel-logo-white-trans-80x31.png);
+    background-repeat: no-repeat;
     background-size: 80px 31px;
-    width:80px;
-    height:31px;
-    float:left;
-    margin-left:5px;
-    margin-bottom:3px;
-    margin-right:50px;
+    width: 80px;
+    height: 31px;
+    float: left;
+    margin: 3px 10px 2px 5px;
 }
 
 @media only screen and (min--moz-device-pixel-ratio: 2),
@@ -36,36 +26,37 @@
     only screen and (-webkit-min-device-pixel-ratio: 2),
     only screen and (min-device-pixel-ratio: 2) {
     .logo {
-        background-image:url(../images/intel-logo-white-trans-160x62.png);
+        background-image: url(../images/intel-logo-white-trans-160x62.png);
     }
 }
 
 
 span#user_info{
-    float:right;
+    float: right;
     font-size: 9pt;
     margin-left: 12px;
     margin-right: 12px;
+    margin-top: 10px;
 }
 
 span#authenticated{
-    float:left;
+    float: left;
 }
 
 span.header_version {
     float: right;
     font-size: 9pt;
+    margin-top: 10px;
 }
 
 span.header_version a {
     color: #777;
-    text-shadow: #333 1px 1px 2px;
     text-decoration: none;
 }
 
 span.account_links {
     font-size: 9pt;
-    float:left;
+    float: left;
     margin-left: 6px;
 }
 
@@ -76,30 +67,42 @@ span#username {
 }
 
 .top_links ul.navigation {
-    font-size: 12pt;
-    color:#fff;
-    padding-left:20px;
-    padding-top:9px;
-    font-size: 12px;
+    font-size: 14px;
+    padding-left: 20px;
 }
 
-.top_links ul.navigation a{
-    text-decoration:none;padding:4px;
-    font-weight: bold;
+.top_links ul.navigation li {
+    border: none;
+    padding: 0;
 }
 
-.top_links ul.navigation a:hover{
-    color:#fff;
-    text-decoration:none;
-    background-color:#054358;
-    padding:4px;
+.top_links ul.navigation a {
+    -webkit-font-smoothing: antialiased;
+    color: #FFFFFF;
+    text-decoration: none;
+    display: block;
+    height: 37px;
+    line-height: 37px;
+    padding: 0px 13px 0px 13px;
 }
 
-.top_links ul.navigation a.active{
-    color:#fff;
-    text-decoration:none;
-    background-color:#054358;
-    padding:4px;
-    border-radius: 4px;
+.top_links ul.navigation a:hover {
+    color: #fff;
+    text-decoration: none;
+
+    background-color: #0067B0;
+    border-left: solid 1px #004372;
+    border-right: solid 1px #004372;
+    padding: 0px 12px 0px 12px;
 }
 
+.top_links ul.navigation a.active {
+    color: #fff;
+    text-decoration: none;
+
+    background-color: #0067B0;
+    border-left: solid 1px #004372;
+    border-right: solid 1px #004372;
+    padding: 0px 12px 0px 12px;
+
+}

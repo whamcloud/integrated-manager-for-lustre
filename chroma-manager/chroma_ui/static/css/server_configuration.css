@@ -63,11 +63,11 @@ div.add_host_https .slider-widget-container .slider-legend {
     color: #AAA;
 }
 
-div.add_host_https .slider-widget-container .slider-legend:first-child {
+div.add_host_https .slider-widget-container .slider-legend:nth-child(2) {
     left: 0px;
 }
 
-div.add_host_https .slider-widget-container .slider-legend:nth-child(2) {
+div.add_host_https .slider-widget-container .slider-legend:nth-child(3) {
     right: 0px;
 }
 

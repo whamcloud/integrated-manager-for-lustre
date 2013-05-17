@@ -3,7 +3,7 @@ div[ng-controller="BigGreenButtonCtrl"] {
     height: 20px;
     display: inline-block;
     border-radius: 12px;
-    margin-top: -2px;
+    margin-top: 8px;
     margin-left: 50px;
     cursor: pointer;
 
