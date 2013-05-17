@@ -650,7 +650,8 @@ class DeployStep(Step):
         # even requiring user permission
 
         rc, stdout, stderr = AgentSsh(kwargs['address']).ssh('curl -k %s/agent/setup/%s/ | python' %
-                                                             (settings.SERVER_HTTP_URL, kwargs['token'].secret))
+                                                             (settings.SERVER_HTTP_URL, kwargs['token'].secret),
+                                                             auth_args=kwargs.get('auth_args'))
 
         if rc == 0:
             try:
@@ -675,11 +676,10 @@ class DeployHostJob(StateChangeJob):
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
     state_verb = 'Deploy agent'
+    auth_args = {}
 
     def __init__(self, *args, **kwargs):
         super(DeployHostJob, self).__init__(*args, **kwargs)
-
-        self.auth_args = {}
 
     def description(self):
         return "Deploying agent to %s" % self.managed_host.address
@@ -694,7 +694,8 @@ class DeployHostJob(StateChangeJob):
         return [
             (DeployStep, {
                 'token': token,
-                'address': self.managed_host.address})
+                'address': self.managed_host.address,
+                'auth_args': self.auth_args},)
         ]
 
     class Meta:

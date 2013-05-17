@@ -1064,7 +1064,9 @@ class JobScheduler(object):
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
         fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
-        rc, stdout, stderr = AgentSsh(address).ssh(fqdn_nodename_command)
+        agent_ssh = AgentSsh(address)
+        auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
+        rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
         log.info("Getting FQDN for '%s': %s" % (address, stdout))
         nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
 

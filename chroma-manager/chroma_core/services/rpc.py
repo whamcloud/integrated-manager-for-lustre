@@ -92,12 +92,14 @@ log = log_register('rpc')
 
 
 class RpcError(Exception):
-    def __init__(self, backtrace, *args, **kwargs):
-        super(Exception, self).__init__(*args, **kwargs)
-        self.backtrace = backtrace
+    def __init__(self, description, exception_type, **kwargs):
+        super(Exception, self).__init__(description)
+        self.description = description
+        self.remote_exception_type = exception_type
+        self.traceback = kwargs.get('traceback')
 
     def __str__(self):
-        return "RpcError: %s" % self.backtrace
+        return "RpcError: %s" % self.description
 
 
 class RpcTimeout(Exception):
@@ -120,15 +122,26 @@ class RunOneRpc(threading.Thread):
                 'request_id': self.body['request_id'],
                 'exception': None
             }
-        except Exception:
+        except Exception, e:
             import sys
             import traceback
             exc_info = sys.exc_info()
             backtrace = '\n'.join(traceback.format_exception(*(exc_info or sys.exc_info())))
+
+            # Utility to generate human readable errors
+            def translate_error(err):
+                from socket import error as socket_error
+                if type(err) == socket_error:
+                    return "Cannot reach server"
+
+                return str(err)
+
             result = {
                 'request_id': self.body['request_id'],
                 'result': None,
-                'exception': backtrace
+                'exception': translate_error(e),
+                'exception_type': type(e).__name__,
+                'traceback': backtrace
             }
             log.error("RunOneRpc: exception calling %s: %s" % (self.body['method'], backtrace))
 
@@ -523,8 +536,8 @@ class ServiceRpcInterface(object):
         result = rpc_client.call(request)
 
         if result['exception']:
-            log.error("ServiceRpcInterface._call: exception: %s" % result['exception'])
-            raise RpcError(result['exception'])
+            log.error("ServiceRpcInterface._call: exception %s: %s \ttraceback: %s" % (result['exception'], result['exception_type'], result.get('traceback')))
+            raise RpcError(result['exception'], result.get('exception_type'), traceback=result.get('traceback'))
         else:
             log.info("Completed rpc '%s' (result=%s)" % (fn_name, result))
             return result['result']

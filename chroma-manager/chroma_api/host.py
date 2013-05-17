@@ -70,7 +70,7 @@ class HostTestValidation(HostValidation):
 
         try:
             auth_type = bundle.data['auth_type']
-            if auth_type == 'root_password_choice':
+            if auth_type == 'id_password_root':
                 try:
                     root_password = bundle.data.get('root_password')
                 except KeyError:
@@ -166,7 +166,8 @@ class HostResource(MetricResource, StatefulModelResource):
             # Return 400, a failure here could mean the address was already occupied, or that
             # we couldn't reach that address using SSH (network or auth problem)
             raise custom_response(self, request, http.HttpBadRequest,
-                {'address': ["Cannot add host at this address: %s" % e]})
+                {'address': ["Cannot add host at this address: %s" % e],
+                'traceback': e.traceback})
         else:
             #  TODO:  Could simplify this by adding a 'command' key to the
             #  bundle, then optionally handling dehydrating that

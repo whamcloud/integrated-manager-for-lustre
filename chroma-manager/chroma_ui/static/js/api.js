@@ -204,6 +204,8 @@ var Api = function() {
   function validationError(field_errors)
   {
     var list_markup = "<dl>";
+    traceback = field_errors.traceback;
+    delete field_errors.traceback;
     $.each(field_errors, function(field, errors) {
       $.each(errors, function(i, error) {
         list_markup += "<dt>" + field + "</dt><dd>" + error + "</dd>";
@@ -211,7 +213,13 @@ var Api = function() {
     });
     list_markup += "</dl>";
 
-    $("<div class='error_dialog'><h2>Validation errors</h2>" + list_markup + "</div>").dialog({
+    var dialog_content = "<div class='error_dialog'><h2>Validation errors</h2>" + list_markup + "</div>";
+    if (typeof traceback !== 'undefined') {
+        var traceback_content = '<a href="#" onclick="$(\'#show_traceback\').toggle()">See more</a><div id="show_traceback" style="display:none">' + traceback + '</div>';
+        dialog_content = "<div>" + dialog_content + traceback_content + "</div>";
+    }
+
+    $(dialog_content).dialog({
         buttons: {
           "Dismiss": {
             "text": "Dismiss",
