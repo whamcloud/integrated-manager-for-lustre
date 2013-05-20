@@ -70,4 +70,8 @@ body form.form .help-inline {
 
 .tooltip p {
   margin: 0;
+  text-align: left;
+  -webkit-font-smoothing: subpixel-antialiased;
+  font-size: 12px;
+  line-height: 18px;
 }

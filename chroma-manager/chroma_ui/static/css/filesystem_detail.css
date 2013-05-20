@@ -1,3 +1,11 @@
 #filesystem_detail #fs_actions {
   padding: 7px 0 0 7px;
 }
+
+#filesystem_detail .fs-overview {
+  float: left;
+}
+
+#filesystem_detail .fs-overview table {
+  margin-bottom: 20px;
+}

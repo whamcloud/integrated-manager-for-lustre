@@ -290,13 +290,12 @@
   }();
 </script>
 <h1 class="page-header"><i class="icon-th"></i> Volumes</h1>
-<h2 class='section_header'>Volume Configuration</h2>
-<div class='help_loader' style='max-width: none;' data-topic="_volume_long"></div>
+<h2 class='section_header'>Volume Configuration <i context-tooltip="_volume_long" tooltip-placement="right" class="icon-question-sign"></i></h2>
 
 <table class="display tight_lines" id="volume_configuration" width="100%">
   <thead>
     <tr>
-      <th width="20%">Name</th>
+      <th width="20%">Volume Name</th>
       <th width="25%">Primary Server</th>
       <th width="25%">Failover Server</th>
       <th width="10%">Size</th>
@@ -309,10 +308,11 @@
     <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
   </tbody>
 </table>
-<div align="right">
+<div class="volume-buttons">
   <button type="button" id="btnApplyConfig">Apply</button>
   <button type="button" id="btnCancelConfig">Cancel</button>
 </div>
+<br class="clear" />
 <!-- Markup for cancel volume confirmation dialog -->
 <div id="cancel_volume_conf">
 </div>

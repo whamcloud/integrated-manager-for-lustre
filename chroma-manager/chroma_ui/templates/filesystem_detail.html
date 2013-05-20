@@ -252,8 +252,8 @@
 <div id='filesystem_detail' class='detail_screen'>
 <h1 class="page-header"><i class="icon-sitemap"></i> File System <span id='fs_name'></span></h1>
 
-<h2 class='section_header' id='edit_fs_title'>Overview</h2>
-<div style='float:left;'>
+<h2 class="section_header" id="edit_fs_title">Overview</h2>
+<div class="fs-overview">
   <table class='fs'>
     <tr>
       <th>Management Server:</th><td id='mgs_name'></td>
@@ -325,7 +325,9 @@
 </table>
 
 <h2 class="section_header">Object Storage Targets</h2>
-<p><button class='add' type="button" id="btnNewOST">Create OST</button></p>
+<div class="buttonspacer">
+  <button class="add" type="button" id="btnNewOST">Create OST</button>
+</div>
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="ost" width="100%">
   <thead>
     <tr>

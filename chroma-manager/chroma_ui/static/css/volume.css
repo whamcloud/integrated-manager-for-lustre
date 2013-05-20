@@ -1,0 +1,13 @@
+#volume-tab .section_header i {
+  cursor: pointer;
+}
+
+#volume-tab .section_header .tooltip-inner {
+  max-width: 500px;
+  line-height: 20px;
+}
+
+#volume-tab .volume-buttons {
+  float: right;
+  margin-top: 25px;
+}
