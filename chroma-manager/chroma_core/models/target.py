@@ -96,7 +96,7 @@ class ManagedTarget(StatefulObject):
 
     reformat = models.BooleanField(
         help_text = "Only used during formatting, indicates that when formatting this target \
-        any existing filesystem on the Volume shoudl be overwritten")
+        any existing filesystem on the Volume should be overwritten")
 
     def primary_server(self):
         return self.get_hosts(primary=True)

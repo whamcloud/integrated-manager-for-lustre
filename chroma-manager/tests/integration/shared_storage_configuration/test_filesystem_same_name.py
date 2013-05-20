@@ -37,10 +37,10 @@ class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
                     },
                     'osts': [{
                         'volume_id': v['id'],
-                        'conf_params': {}
+                        'conf_params': {},
+                        'reformat': reformat
                     } for v in ost_volumes],
                     'conf_params': {},
-                    'reformat': reformat
                 }
             )
 

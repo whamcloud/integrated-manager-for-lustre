@@ -230,7 +230,7 @@ class RealRemoteOperations(RemoteOperations):
     def erase_block_device(self, fqdn, path):
         # Needless to say, we're not bothering to scrub the whole device, just enough
         # that it doesn't look formatted any more.
-        self._ssh_fqdn(fqdn, "dd if=/dev/zero of={path} bs=4k count=1".format(path=path))
+        self._ssh_fqdn(fqdn, "dd if=/dev/zero of={path} bs=4k count=1; sync".format(path=path))
 
     def format_block_device(self, fqdn, path, filesystem_type):
         commands = {
