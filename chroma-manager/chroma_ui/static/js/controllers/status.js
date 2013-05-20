@@ -23,7 +23,7 @@
 (function (_) {
   'use strict';
 
-  function StatusCtrl ($scope, $q, alertModel, eventModel, commandModel, collectionModel) {
+  function StatusCtrl($scope, $q, $element, alertModel, eventModel, commandModel, collectionModel) {
     var params = _.extend.bind(_, {}, {order_by: '-created_at', limit: 30, dismissed: false});
 
     var types = {};
@@ -93,14 +93,28 @@
         return this.state[this.view];
       },
       /**
+       * A simple wrapper around getPage that scrolls the message container to the top.
+       * @name updateViewState
+       * @param {number} [page] If page is null || undefined then this method acts as a refresh for the current type.
+       * @param {boolean} noBlock Should this method block the page?
+       */
+      updateViewState: function (page, noBlock) {
+        function scrollTop() {
+          $element.find('ul.messages').scrollTop(0);
+        }
+
+        this.getPage(page, noBlock).then(scrollTop, scrollTop);
+      },
+      /**
        * @description Moves the current state to the specified page.
        * @name getPage
        * @param {number} [page] If page is null || undefined then this method acts as a refresh for the current type.
        * @param {boolean} noBlock Should this method block the page?
+       * @returns {object} A promise.
        */
       getPage: function (page, noBlock) {
         if (!noBlock) {
-          $.blockUI({message: null});
+          $scope.$emit('blockUi', {message: null});
         }
 
         var viewState = this.getViewState();
@@ -123,13 +137,13 @@
           unblock();
         }
 
-        function unblock () {
+        function unblock() {
           if (!noBlock) {
-            $.unblockUI();
+            $scope.$emit('unblockUi');
           }
         }
 
-        viewState.model.query(func).$promise.then(callback, unblock);
+        return viewState.model.query(func).$promise.then(callback, unblock);
       },
       /**
        * @description Dismisses the passed in message, then refreshes the page.
@@ -143,7 +157,7 @@
         function success() { $scope.$emit('checkHealth'); }
 
         delete message.active;
-        message.$patch().then(noUpdate? angular.noop: success);
+        message.$patch().then(noUpdate ? angular.noop: success);
 
         return message.$promise;
       }
@@ -172,8 +186,7 @@
         ]
       });
 
-      //@TODO: This could probably be abstracted in the $http handler,
-      $.blockUI({fadeIn: true, message: null});
+      $scope.$emit('blockUi', {fadeIn: true, message: null});
 
       model.query(function success(res) {
         var promises = res.map(function (model) {
@@ -182,7 +195,7 @@
 
         function callback() {
           $scope.$emit('checkHealth');
-          $.unblockUI();
+          $scope.$emit('unblockUi');
         }
 
         $q.all(promises).then(callback, callback);
@@ -193,6 +206,6 @@
   }
 
   angular.module('controllers').controller('StatusCtrl',
-    ['$scope', '$q', 'alertModel', 'eventModel', 'commandModel', 'collectionModel', StatusCtrl]
+    ['$scope', '$q', '$element', 'alertModel', 'eventModel', 'commandModel', 'collectionModel', StatusCtrl]
   );
 }(window.lodash));

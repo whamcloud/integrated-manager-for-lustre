@@ -1,7 +1,17 @@
 describe('status controller', function () {
   'use strict';
 
-  beforeEach(module('controllers', 'models', 'ngResource', 'services', 'constants', 'interceptors'));
+  beforeEach(module('controllers', 'models', 'ngResource', 'services', 'constants', 'interceptors',
+    function ($provide) {
+      // Mock out this dep.
+      var $elementMock = {
+        find: jasmine.createSpy('find').andCallFake(function () { return $elementMock; }),
+        scrollTop: jasmine.createSpy('scrollTop')
+      };
+
+      $provide.value('$element', $elementMock);
+    }
+  ));
 
   var $httpBackend;
   var scope;
@@ -12,7 +22,7 @@ describe('status controller', function () {
     commandCollection: '/api/command/?dismissed=false&limit=10&order_by=-created_at'
   };
 
-  function expectReqRes (config) {
+  function expectReqRes(config) {
     config = config || {};
 
     Object.keys(urls).forEach(function (url) {
@@ -58,25 +68,25 @@ describe('status controller', function () {
 
   it('should dismiss a message', inject(function ($controller) {
     var commands = {
-      "meta": {
-        "limit": 30,
-        "next": null,
-        "offset": 0,
-        "previous": null,
-        "total_count": 3
+      'meta': {
+        'limit': 30,
+        'next': null,
+        'offset': 0,
+        'previous': null,
+        'total_count': 3
       },
-      "objects": [
+      'objects': [
         {
-          "id": 1,
-          "message": "Creating OST"
+          'id': 1,
+          'message': 'Creating OST'
         },
         {
-          "id": 2,
-          "message": "Start file system testfs"
+          'id': 2,
+          'message': 'Start file system testfs'
         },
         {
-          "id": 3,
-          "message": "Stop file system testfs"
+          'id': 3,
+          'message': 'Stop file system testfs'
         }
       ]
     };
@@ -102,5 +112,18 @@ describe('status controller', function () {
     scope.status.dismiss(scope.status.types.command.current.models[0]);
 
     $httpBackend.flush();
+  }));
+
+  it('should scroll the message container', inject(function ($controller, $element) {
+    $controller('StatusCtrl', {$scope: scope});
+
+    expectReqRes();
+
+    scope.status.updateViewState();
+
+    $httpBackend.flush();
+
+    expect($element.find).toHaveBeenCalledWith('ul.messages');
+    expect($element.scrollTop).toHaveBeenCalledWith(0);
   }));
 });

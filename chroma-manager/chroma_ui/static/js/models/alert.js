@@ -28,7 +28,7 @@ angular.module('models').factory('alertModel', ['baseModel', 'STATES', function 
 
   return baseModel({
     url: '/api/alert/:alertId',
-    params: {alertId:'@id'},
+    params: {alertId: '@id'},
     methods: {
       /**
        * @description Returns the state of the alert (which is always STATES.ERROR).
@@ -36,6 +36,9 @@ angular.module('models').factory('alertModel', ['baseModel', 'STATES', function 
        */
       getState: function () {
         return STATES.ERROR;
+      },
+      getName: function () {
+        return 'alert';
       }
     }
   });

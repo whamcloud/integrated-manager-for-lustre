@@ -25,7 +25,7 @@ angular.module('models').factory('commandModel', ['baseModel', 'STATES', functio
 
   return baseModel({
     url: '/api/command/:commandId',
-    params: {commandId:'@id'},
+    params: {commandId: '@id'},
     methods: {
       /**
        * @description Returns the state of the command.
@@ -41,6 +41,9 @@ angular.module('models').factory('commandModel', ['baseModel', 'STATES', functio
         } else {
           return STATES.COMPLETE;
         }
+      },
+      getName: function () {
+        return 'command';
       }
     }
   });

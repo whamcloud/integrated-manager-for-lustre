@@ -1,5 +1,5 @@
 <div ng-controller="StatusCtrl">
-    <div class="btn-group" data-toggle="buttons-radio" ng-click="status.getPage()">
+    <div class="btn-group" data-toggle="buttons-radio" ng-click="status.updateViewState()">
         <a class="btn" ng-model="status.state" btn-radio="status.types.collection">All</a>
         <a class="btn" ng-model="status.state" btn-radio="status.types.alert">Alerts</a>
         <a class="btn" ng-model="status.state" btn-radio="status.types.command">Commands</a>
@@ -8,7 +8,7 @@
 
     <a class="btn" ng-click="status.dismissAll()">Dismiss all</a>
 
-    <div class="btn-group pull-right" data-toggle="buttons-radio" ng-click="status.getPage()">
+    <div class="btn-group pull-right" data-toggle="buttons-radio" ng-click="status.updateViewState()">
         <a class="btn" ng-model="status.view" btn-radio="'current'">Current</a>
         <a class="btn" ng-model="status.view" btn-radio="'history'">History</a>
     </div>
@@ -18,20 +18,22 @@
             <div class="message" ng-class="model.getState()">
                 <div class="status">
                     <i class="icon-"></i>
+                    <span class="message-type">(( model.getState() | lowercase | capitalize ))</span>
                 </div>
                 <div class="date">
                     (( model.created_at || model.begin | isoDate:'MM/dd/yyyy HH:mm' ))
                 </div>
                 <div class="message-body">
                     <div ng-show="model.alert_item_str || model.host_name"><strong>Host: </strong> ((model.host_name || model.alert_item_str))</div>
-                    <strong>Message:&nbsp;</strong> (( model.message ))
+                    <strong>(( model.getName() | capitalize )):&nbsp;</strong> (( model.message ))
                 </div>
                 <div class="buttons" ng-show="status.view == 'current'">
-                    <a ng-show="status.state.current.name == 'command'" class="navigation" ng-href="/ui/command/((model.id))/">
-                        <i class="icon-info-sign"></i> Detail
-                    </a>
-                    <a ng-click="status.dismiss(model)">
+                    <a class="btn btn-small" ng-click="status.dismiss(model)" context-tooltip="_dismiss_message" tooltip-placement="left">
                         <i class="icon-trash"></i> Dismiss
+                    </a>
+                    <a ng-show="model.getName() == 'command'" class="navigation btn btn-small"
+                       ng-href="/ui/command/((model.id))/" context-tooltip="_command_detail" tooltip-placement="left">
+                      <i class="icon-list-alt"></i> Detail
                     </a>
                 </div>
             </div>
@@ -44,7 +46,7 @@
               current-page="data.models.paging.currentPage"
               num-pages="data.models.paging.noOfPages"
               max-size="((5))"
-              on-select-page="status.getPage(page)"
+              on-select-page="status.updateViewState(page)"
             ></pagination>
         </div>
     </div>

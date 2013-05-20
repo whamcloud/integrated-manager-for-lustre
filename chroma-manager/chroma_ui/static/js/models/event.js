@@ -25,7 +25,7 @@ angular.module('models').factory('eventModel', ['baseModel', function (baseModel
 
   return baseModel({
     url: '/api/event/:eventId',
-    params: {eventId:'@id'},
+    params: {eventId: '@id'},
     methods: {
       /**
        * @description Returns the state of the event.
@@ -33,6 +33,9 @@ angular.module('models').factory('eventModel', ['baseModel', function (baseModel
        */
       getState: function () {
         return this.severity;
+      },
+      getName: function () {
+        return 'event';
       }
     }
   });

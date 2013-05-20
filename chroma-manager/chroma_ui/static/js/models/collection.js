@@ -39,11 +39,11 @@
      * @function
      */
     return function collectionFactory(config) {
-      if(!Array.isArray(config.models)) {
+      if (!Array.isArray(config.models)) {
         throw new TypeError('collectionModel expected config.models to be an array');
       }
 
-      function query (success) {
+      function query(success) {
         /*jshint validthis: true */
 
         var collection;
