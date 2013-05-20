@@ -363,8 +363,8 @@ class ResourceManager(object):
                                     for cluster in HaCluster.all_clusters()]
         log.debug("HA clusters: %s" % ha_clusters)
 
-        outer_host_to_primary_count = dict([(host_id, 0) for host_id in hosts])
-        outer_host_to_used_count = dict([(host_id, 0) for host_id in hosts])
+        outer_host_to_primary_count = dict.fromkeys(hosts, 0)
+        outer_host_to_used_count = dict.fromkeys(hosts, 0)
 
         host_volumes = Volume.objects.filter(volumenode__host__in = hosts).distinct()
         volume_to_volume_nodes = defaultdict(list)
@@ -385,38 +385,22 @@ class ResourceManager(object):
 
         host_id_to_fqdn = dict([(v['id'], v['fqdn']) for v in ManagedHost.objects.all().values("id", "fqdn")])
 
-        def _next_best_host(host_to_primary_count):
-            """
-            Pick the host with fewest primary mounts on it.  If there
-            is more than one candidate, pick the 'first' one sorted
-            by FQDN.
-
-            The sort by FQDN is not functionally necessary but makes
-            the list of volumes look 'right' to a human being.
-            """
-            sorted_hosts_counts = sorted(host_to_primary_count.items(), lambda x, y: cmp(x[1], y[1]))
-            smallest_count = sorted_hosts_counts[0][1]
-            elegible_hosts = [host_id for host_id, count in sorted_hosts_counts if count == smallest_count]
-            elegible_hosts_by_fqdn = sorted(elegible_hosts, lambda a, b: cmp(host_id_to_fqdn[a], host_id_to_fqdn[b]))
-            return elegible_hosts_by_fqdn[0]
-
         with VolumeNode.delayed as vn_writer:
             for volume_id in volume_ids_to_balance:
                 volume_nodes = volume_to_volume_nodes[volume_id]
                 host_to_lun_nodes = defaultdict(list)
                 for vn in volume_nodes:
-                    host_to_lun_nodes[vn.host_id].append(vn)
+                    if vn.host_id in hosts:
+                        host_to_lun_nodes[vn.host_id].append(vn)
 
-                host_to_primary_count = {}
-                for host_id in host_to_lun_nodes.keys():
+                for host_id in host_to_lun_nodes:
                     # Instead of just counting primary nodes (that would include local volumes), only
                     # give a host credit for a primary node if the node's volume also has a secondary
                     # somewhere.
-                    primary_count = outer_host_to_primary_count[host_id]
-                    host_to_primary_count[host_id] = primary_count
-                    log.info("primary_count %s = %s" % (host_id, primary_count))
+                    log.info("primary_count %s = %s" % (host_id, outer_host_to_primary_count[host_id]))
 
-                chosen_host = _next_best_host(host_to_primary_count)
+                # pick the host with fewest primary mounts on it, using fqdn as a tie-breaker
+                chosen_host = min(host_to_lun_nodes, key=lambda h: (outer_host_to_primary_count[h], host_id_to_fqdn[h]))
                 primary_lun_node = host_to_lun_nodes[chosen_host][0]
                 outer_host_to_primary_count[chosen_host] += 1
                 outer_host_to_used_count[chosen_host] += 1
@@ -458,8 +442,7 @@ class ResourceManager(object):
                     host_to_lun_nodes.clear()
 
                 if len(host_to_lun_nodes) > 0:
-                    host_to_used_node_count = dict([(h, outer_host_to_used_count[h]) for h in host_to_lun_nodes.keys()])
-                    fewest_used_nodes = [host for host, count in sorted(host_to_used_node_count.items(), lambda x, y: cmp(x[1], y[1]))][0]
+                    fewest_used_nodes = min(host_to_lun_nodes, key=outer_host_to_used_count.__getitem__)
                     outer_host_to_used_count[fewest_used_nodes] += 1
                     secondary_lun_node = host_to_lun_nodes[fewest_used_nodes][0]
 
