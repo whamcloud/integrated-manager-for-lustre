@@ -1130,9 +1130,15 @@ class RebootHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        return (host.state not in ['removed', 'unconfigured'] and
-                host.state != 'undeployed' and not
-                HostOfflineAlert.filter_by_item(host).filter(active = True).exists())
+        return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
+                not AlertState.filter_by_item(host).filter(
+                        active = True,
+                        alert_type__in = [
+                            HostOfflineAlert.__name__,
+                            HostContactAlert.__name__
+                        ]
+                    ).exists()
+                )
 
     def description(self):
         return "Initiate a reboot on host %s" % self.host
@@ -1176,9 +1182,15 @@ class ShutdownHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        return (host.state not in ['removed', 'unconfigured'] and
-                host.state != 'undeployed' and not
-                HostOfflineAlert.filter_by_item(host).filter(active = True).exists())
+        return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
+                not AlertState.filter_by_item(host).filter(
+                        active = True,
+                        alert_type__in = [
+                            HostOfflineAlert.__name__,
+                            HostContactAlert.__name__
+                        ]
+                    ).exists()
+                )
 
     def description(self):
         return "Initiate an orderly shutdown on host %s" % self.host

@@ -1,9 +1,13 @@
-
+import logging
 import time
 
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.constants import TEST_TIMEOUT
+
+
+logger = logging.getLogger('test')
+logger.setLevel(logging.DEBUG)
 
 
 class TestShutdownAndReboot(ChromaIntegrationTestCase):
@@ -81,18 +85,32 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
 
         # First, ensure that reboot/shutdown jobs are advertised for a
         # server after it's been added and set up.
-        job_classes = [j['class_name'] for j in self.get_by_uri(test_server['resource_uri'])['available_jobs']]
-        for class_name in test_job_classes:
-            self.assertIn(class_name, job_classes)
+        def saw_expected_transitions(test_job_classes):
+            available_job_classes = [j['class_name'] for j in
+                self.get_by_uri(test_server['resource_uri'])['available_jobs']
+                if j['class_name'] in test_job_classes
+            ]
+            logger.debug("Found these available jobs: '%s'" % available_job_classes)
+            return set(available_job_classes) == set(test_job_classes) and \
+                    len(available_job_classes) == len(test_job_classes)
+        self.assertTrue(saw_expected_transitions(test_job_classes))
 
         # Next, kill the server to generate a HostOfflineAlert.
         self.remote_operations.kill_server(test_server['fqdn'])
 
-        def saw_offline_alert(hostname):
-            alerts = self.get_list("/api/alert/", {'active': True,
-                                                   'dismissed': False})
-            return len([a for a in alerts if "is offline %s" % hostname in a['message']]) > 0
-        self.wait_until_true(lambda: saw_offline_alert(test_server['nodename']))
+        def get_host_unavailable_alerts(host):
+            host_alerts = self.get_list(
+                "/api/alert/",
+                {
+                    'active': True,
+                    'alert_item_content_type_id': host['content_type_id'],
+                    'alert_item_id': host['id'],
+                    'alert_type__in': ["HostOfflineAlert", "HostContactAlert"]
+                }
+            )
+            logger.debug("Found these host related alerts: '%s'" % host_alerts)
+            return host_alerts
+        self.wait_until_true(lambda: get_host_unavailable_alerts(test_server))
 
         # Check to make sure the reboot/shutdown jobs are not advertised.
         job_classes = [j['class_name'] for j in self.get_by_uri(test_server['resource_uri'])['available_jobs']]
@@ -101,9 +119,8 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
 
         # Finally, start the server back up to lower the HostOfflineAlert,
         self.remote_operations.await_server_boot(test_server['fqdn'], restart = True)
-        self.wait_until_true(lambda: not saw_offline_alert(test_server['nodename']))
+        self.wait_until_true(lambda: not get_host_unavailable_alerts(test_server))
+        self.wait_until_true(lambda: self.get_by_uri(test_server['resource_uri'])['state'] not in ['removed', 'undeployed', 'unconfigured'])
 
         # and ensure that we see the reboot/shutdown jobs again.
-        job_classes = [j['class_name'] for j in self.get_by_uri(test_server['resource_uri'])['available_jobs']]
-        for class_name in test_job_classes:
-            self.assertIn(class_name, job_classes)
+        self.wait_until_true(lambda: saw_expected_transitions(test_job_classes))

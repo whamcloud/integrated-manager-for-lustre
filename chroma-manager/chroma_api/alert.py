@@ -152,13 +152,16 @@ class AlertResource(SeverityResource):
         help_text = ("Human readable description "
                      "of the alert, about one sentence"))
 
-    alert_item_content_type_id = fields.IntegerField(
-        help_text = "ID of affected item")
-
-    alert_item_content_id = fields.IntegerField(
+    alert_item_content_type_id = fields.IntegerField(attribute = 'alert_item_type_id',
         help_text = "Content type ID of affected item")
 
+    alert_item_id = fields.IntegerField(attribute = 'alert_item_id',
+        help_text = "ID of affected item")
+
     alert_item = fields.CharField(help_text = "URI of affected item")
+
+    alert_type = fields.CharField(attribute = 'alert_type',
+        help_text = "The type of alert, which is the name of class for the alert. Ex: 'HostOfflineAlert'")
 
     active = fields.BooleanField(attribute = 'active_bool', null = True,
         help_text = "``true`` if the alert is a current issue, "
@@ -179,9 +182,6 @@ class AlertResource(SeverityResource):
 
     def dehydrate_alert_item_str(self, bundle):
         return str(bundle.obj.alert_item)
-
-    def dehydrate_alert_item_content_type_id(self, bundle):
-        return bundle.obj.alert_item_type.id
 
     def dehydrate_message(self, bundle):
         return bundle.obj.message()
@@ -259,11 +259,14 @@ class AlertResource(SeverityResource):
         resource_name = 'alert'
         fields = ['begin', 'end', 'message', 'active', 'dismissed',
                   'alert_item_id', 'alert_item_content_type_id', 'id',
-                  'severity']
+                  'severity', 'alert_type']
         filtering = {'active': ['exact'],
                      'dismissed': ['exact'],
                      'severity': ['in'],
-                     'begin': ['gte']}
+                     'begin': ['gte'],
+                     'alert_type': ['exact', 'in'],
+                     'alert_item_id': ['exact', 'in'],
+                     'alert_item_content_type_id': ['exact', 'in']}
         ordering = ['begin', 'end', 'active']
         authorization = DjangoAuthorization()
         authentication = AnonymousAuthentication()
