@@ -50,6 +50,7 @@ Requires: chroma-manager-libs = %{version}
 Requires: policycoreutils-python
 Requires: python-gevent >= 0.13
 Requires: fence-agents
+Requires: system-config-firewall-base
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 
@@ -144,6 +145,26 @@ setsebool -P httpd_tmp_exec 1 2>/dev/null
 # This is required for apache to serve HTTP_API_PORT
 semanage port -a -t http_port_t -p tcp 8001
 
+if ! out=$(service iptables status) || [ "$out" = "Table: filter
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+
+Chain FORWARD (policy ACCEPT)
+num  target     prot opt source               destination         
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination         " ]; then
+    arg="-n"
+else
+    arg=""
+fi
+if [ $1 -lt 2 ]; then
+    # open ports in the firewall for access to the manager
+    for port in 80 443; do
+        lokkit $arg -p $port:tcp
+    done
+fi
+
 echo "Thank you for installing Chroma.  To complete your installation, please"
 echo "run \"chroma-config setup\""
 
@@ -152,6 +173,24 @@ service chroma-supervisor stop
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf /usr/share/chroma-manager/static
 find /usr/share/chroma-manager/ -name "*.pyc" -exec rm -f {} \;
+
+%postun
+if [ $1 -lt 1 ]; then
+    # close previously opened ports in the firewall for access to the manager
+    ed /etc/sysconfig/iptables <<EOF
+/-A INPUT -m state --state NEW -m udp -p tcp --dport 80 -j ACCEPT/d
+/-A INPUT -m state --state NEW -m udp -p tcp --dport 443 -j ACCEPT/d
+w
+q
+EOF
+    ed /etc/sysconfig/system-config-firewall <<EOF
+/--port=80/d
+/--port=443/d
+/
+w
+q
+EOF
+fi
 
 
 %files

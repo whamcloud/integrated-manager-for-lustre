@@ -241,13 +241,95 @@ class ServiceConfig(CommandLine):
         a user interface"""
         return self._db_current() and self._users_exist()
 
+    def iptables(self, op, chain, args):
+        rc, stdout, stderr = self.shell(["service", "iptables", "status"])
+        if rc == 0 and stdout != '''Table: filter
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+
+Chain FORWARD (policy ACCEPT)
+num  target     prot opt source               destination         
+
+Chain OUTPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+
+''':
+            op_arg = ""
+            if op == "add":
+                op_arg = "-I"
+            elif op == "del":
+                op_arg = "-D"
+            else:
+                raise RuntimeError("invalid mode: %s" % op)
+
+            cmdlist = ["/sbin/iptables", op_arg, chain]
+            cmdlist.extend(args)
+            self.try_shell(cmdlist)
+
+    # TODO: abstract out and generalize these next two functions
+    # since these will be needed in the manager UI in the future
+    # when we support changing things like this in the UI
+    #
+    # these two functions should also be properly shared with agent,
+    # as well as asbstracting the shell/try_shell function out of
+    # the CommandLine class
+    #
+    # Note: the duplicate implementation of these functions in the
+    # agent's lib.system library
+    def _add_firewall_rule(self, port, proto, port_desc):
+        log.info("Opening firewall for %s" % port_desc)
+        # install a firewall rule for this port
+        self.try_shell(['/usr/sbin/lokkit', '-n', '-p', '%s:%s' % (port, proto)])
+        # XXX using -n above and installing the rule manually here is a
+        #     dirty hack due to lokkit completely restarting the firewall
+        #     interrupts existing sessions
+        self.iptables("add", 'INPUT', ['4', '-m', 'state', '--state', 'new',
+                      '-p', proto, '--dport', str(port), '-j', 'ACCEPT'])
+
+    def _del_firewall_rule(self, port, proto, port_desc):
+        log.info("Closing firewall for %s" % port_desc)
+        # it really bites that lokkit has no "delete" functionality
+        self.iptables("del", 'INPUT', ['-m', 'state', '--state', 'new', '-p',
+                      proto, '--dport', str(port), '-j', 'ACCEPT'])
+        import os
+        from tempfile import mkstemp
+        import shutil
+        import errno
+        try:
+            tmp = mkstemp(dir = "/etc/sysconfig")
+            with os.fdopen(tmp[0], "w") as tmpf:
+                for line in open("/etc/sysconfig/iptables").readlines():
+                    if line.rstrip() != "-A INPUT -m state --state NEW -m %s -p %s --dport %s -j ACCEPT" % (proto, proto, port):
+                        tmpf.write(line)
+                tmpf.flush()
+            shutil.move(tmp[1], "/etc/sysconfig/iptables")
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+
+        try:
+            tmp = mkstemp(dir = "/etc/sysconfig")
+            with os.fdopen(tmp[0], "w") as tmpf:
+                for line in open("/etc/sysconfig/system-config-firewall").readlines():
+                    if line.rstrip() != "--port=%s:udp" % port:
+                        tmpf.write(line)
+                tmpf.flush()
+            shutil.move(tmp[1], "/etc/sysconfig/system-config-firewall")
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+
     def _setup_ntp(self, server = None):
         if not server:
             server = self.get_input(msg = "NTP Server", default = "localhost")
         log.info("Writing ntp configuration")
         ntp = NTPConfig()
         old_server = ntp.remove()
+        if old_server == "localhost":
+            self._del_firewall_rule(123, "udp", "ntp")
         ntp.add(server)
+        if server == "localhost":
+            self._add_firewall_rule(123, "udp", "ntp")
         self._start_ntp(old_server != server)
 
     def _start_ntp(self, restart):
