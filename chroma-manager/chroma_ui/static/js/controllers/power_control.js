@@ -30,15 +30,41 @@
       hosts: hostModel.query(),
       powerControlDevices: PowerControlDeviceModel.query({order_by: 'name'}),
       /**
+       * Indicates whether or not any of the instantiated devices are IPMI.
+       * @returns {Boolean}
+       */
+      hasIpmi: function (powerControlDevices) {
+        return powerControlDevices.some(function (device) {
+          return device.isIpmi();
+        });
+      },
+      /**
+       * @description Instantiates the and opens add BMC dialog.
+       * @param {PowerControlDeviceModel} device
+       * @param {ManagedHost} host
+       */
+      createBmc: function createBmc(device, host) {
+        var dialog = $dialog.dialog({
+          resolve: {
+            device: function () { return device; },
+            host: function () { return host; },
+          }
+        });
+
+        dialog.open($scope.config.asStatic('partials/dialogs/create_bmc.html'), 'CreateBmcCtrl');
+      },
+      /**
        * @description Instantiates the and opens create pdu dialog.
        * @param{[PowerControlDeviceModel]} devices
        * @param {PowerControlDeviceModel} [device]
+       * @param {boolean} [ipmi]
        */
-      createPdu: function createPdu(devices, device) {
+      createPdu: function createPdu(devices, device, ipmi) {
         var dialog = $dialog.dialog({
           resolve: {
             devices: function () { return devices; },
-            device: function () { return device; }
+            device: function () { return device; },
+            ipmi: function () { return ipmi; }
           }
         });
 

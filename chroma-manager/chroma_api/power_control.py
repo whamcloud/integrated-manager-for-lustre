@@ -135,6 +135,19 @@ class PowerControlTypeResource(DeleteablePowerObjectResource):
     """
     name = fields.CharField(attribute = 'display_name', readonly = True)
 
+    def hydrate(self, bundle):
+        bundle = super(PowerControlTypeResource, self).hydrate(bundle)
+
+        # We don't want to expose the default credentials via the API, so
+        # we've added them to the excluded fields. We do, however, want to
+        # allow them to be set, so we have to jam them into the object
+        # ourselves.
+        for field in ['default_username', 'default_password']:
+            if field in bundle.data:
+                setattr(bundle.obj, field, bundle.data[field])
+
+        return bundle
+
     class Meta:
         queryset = PowerControlType.objects.all()
         resource_name = 'power_control_type'
@@ -146,6 +159,7 @@ class PowerControlTypeResource(DeleteablePowerObjectResource):
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['id']
+        excludes = ['not_deleted', 'default_username', 'default_password']
         always_return_data = True
 
 
@@ -172,6 +186,18 @@ class PowerControlDeviceResource(DeleteablePowerObjectResource):
     device_type = fields.ToOneField('chroma_api.power_control.PowerControlTypeResource', 'device_type', full = True)
     outlets = fields.ToManyField('chroma_api.power_control.PowerControlDeviceOutletResource', 'outlets', full = True, null = True)
 
+    def hydrate(self, bundle):
+        bundle = super(PowerControlDeviceResource, self).hydrate(bundle)
+
+        # We don't want to expose the PDU password via the API, so
+        # we've added it to the excluded fields. We do, however, want to
+        # allow it to be set, so we have to jam it into the object
+        # ourselves.
+        if 'password' in bundle.data:
+            bundle.obj.password = bundle.data['password']
+
+        return bundle
+
     class Meta:
         queryset = PowerControlDevice.objects.all()
         resource_name = 'power_control_device'
@@ -180,7 +206,7 @@ class PowerControlDeviceResource(DeleteablePowerObjectResource):
         validation = ResolvingFormValidation(form_class=PowerControlDeviceForm)
         ordering = ['name']
         filtering = {'name': ['exact']}
-        excludes = ['not_deleted']
+        excludes = ['not_deleted', 'password']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['id']
@@ -209,4 +235,5 @@ class PowerControlDeviceOutletResource(DeleteablePowerObjectResource):
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete', 'patch']
         readonly = ['id']
+        excludes = ['not_deleted']
         always_return_data = True

@@ -5,20 +5,20 @@
     <div class="modal-body">
       <alert ng-repeat="alert in createPduCtrl.err.__all__" type="'error'" close="createPduCtrl.closeAlert($index)">((alert))</alert>
       <form name="pduForm" class="form form-horizontal">
-        <div class="control-group">
+        <div class="control-group" ng-hide="createPduCtrl.ipmi">
           <label class="control-label">Device type:</label>
           <div class="controls">
-            <select ng-model="createPduCtrl.form.device_type" ng-options="value.name for value in createPduCtrl.powerControlTypes" ng-disabled="createPduCtrl.type == 'edit'"></select>
+            <select ng-model="createPduCtrl.form.device_type" ng-options="value.name for value in createPduCtrl.powerControlTypes | orderBy: 'name'" ng-disabled="createPduCtrl.type == 'edit'"></select>
           </div>
         </div>
-        <div class="control-group">
+        <div class="control-group" ng-hide="createPduCtrl.ipmi">
           <label class="control-label">Name:</label>
           <div class="controls">
             <input ng-model="createPduCtrl.form.name" type="text" placeholder="name"/>
           </div>
         </div>
         <fieldset>
-          <div class="control-group" ng-class="{error: createPduCtrl.err.address != null}">
+          <div class="control-group" ng-class="{error: createPduCtrl.err.address != null}" ng-hide="createPduCtrl.ipmi">
             <label class="control-label">Management address:</label>
 
             <div class="controls">
@@ -26,7 +26,7 @@
               <span class="help-block" ng-repeat="err in createPduCtrl.err.address">((err))</span>
             </div>
           </div>
-          <div class="control-group" ng-class="{error: createPduCtrl.err.port != null}">
+          <div class="control-group" ng-class="{error: createPduCtrl.err.port != null}" ng-hide="createPduCtrl.ipmi">
             <label class="control-label">Port:</label>
 
             <div class="controls">
@@ -35,8 +35,6 @@
             </div>
           </div>
         </fieldset>
-
-
         <div class="control-group">
           <label class="control-label">Management username:</label>
           <div class="controls">

@@ -36,8 +36,6 @@
       //flatten device_type.
       flatData.device_type = data.device_type.resource_uri;
 
-      delete flatData.not_deleted;
-
       return angular.toJson(flatData);
     }
 
@@ -115,6 +113,13 @@
           outlet.host = null;
           return outlet.$update();
         },
+        removeIpmiOutlet: function (outlet) {
+          outlet.host = null;
+          return outlet.$delete().then(function () {
+            var outletIndex = this.outlets.indexOf(outlet);
+            this.outlets.splice(outletIndex, 1);
+          }.bind(this));
+        },
         /**
          * Adds an outlet to a host.
          * @param {PowerControlDeviceOutlet} outlet
@@ -127,6 +132,9 @@
         },
         format: function (value) {
           return _.pluck(value, 'identifier');
+        },
+        isIpmi: function () {
+          return this.device_type.max_outlets === 0;
         }
       }
     });

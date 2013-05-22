@@ -45,6 +45,24 @@ class DeletablePowerControlModel(models.Model):
         abstract = True
         app_label = 'chroma_core'
 
+    # Stick this here so we can use it with both device and outlet classes
+    def validate_inet_address(self, address):
+        # Guard against accidental input of single-digit "addresses" which
+        # apparently gethostbyname will take anyhow. This is an unlikely
+        # problem, but could happen if a BMC identifier field is confused
+        # for a regular PDU identifier field (i.e. an outlet number).
+        try:
+            if int(address):
+                raise ValidationError("%s is not a valid address for a BMC" % address)
+        except ValueError:
+            pass
+
+        import socket
+        try:
+            return socket.gethostbyname(address)
+        except socket.gaierror, e:
+            raise ValidationError("Unable to resolve %s: %s" % (address, e))
+
 
 class PowerControlType(DeletablePowerControlModel):
     agent = models.CharField(null = False, blank = False, max_length = 255,
@@ -173,11 +191,7 @@ class PowerControlDevice(DeletablePowerControlModel):
         if self.address in ["", None]:
             raise ValidationError("Address may not be blank")
 
-        import socket
-        try:
-            self.address = socket.gethostbyname(self.address)
-        except socket.gaierror, e:
-            raise ValidationError("Unable to resolve %s: %s" % (self.address, e))
+        self.address = self.validate_inet_address(self.address)
 
         if self.name in ["", None]:
             self.name = self.address
@@ -185,6 +199,10 @@ class PowerControlDevice(DeletablePowerControlModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         super(PowerControlDevice, self).save(*args, **kwargs)
+
+    @property
+    def is_ipmi(self):
+        return self.device_type.max_outlets == 0
 
     @property
     def all_outlets_known(self):
@@ -221,8 +239,8 @@ class PowerControlDevice(DeletablePowerControlModel):
     def powercycle_command(self, identifier):
         return self._template_to_command('powercycle', identifier)
 
-    def monitor_command(self):
-        return self._template_to_command('monitor')
+    def monitor_command(self, identifier=None):
+        return self._template_to_command('monitor', identifier)
 
     def outlet_query_command(self, identifier):
         return self._template_to_command('outlet_query', identifier)
@@ -235,7 +253,7 @@ class PowerControlDevice(DeletablePowerControlModel):
 def prepopulate_outlets(sender, instance, created, **kwargs):
     # Prepopulate outlets for real PDUs. IPMI "PDUs" don't have a
     # fixed number of outlets
-    if created and instance.device_type.max_outlets > 0:
+    if created and not instance.is_ipmi:
         for i in xrange(1, instance.device_type.max_outlets + 1):
             instance.outlets.create(identifier = i)
 
@@ -281,11 +299,25 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         except PowerControlDeviceOutlet.DoesNotExist:
             is_update = False
 
-        if not is_update:
-            max_device_outlets = self.device.device_type.max_outlets
-            if max_device_outlets > 0:
-                if self.device.outlets.count() >= max_device_outlets:
-                    raise ValidationError("Device %s is already at maximum number of outlets: %d" % (self.device.name, max_device_outlets))
+        # Do not allow mixed PDU/IPMI configurations for a server. It's
+        # just asking for trouble. We may support it eventually, but not
+        # now.
+        if self.host and self.host.outlets.count() > 0:
+            devices = [o.device for o in self.host.outlets.all()] + [self.device]
+            if (any([d.is_ipmi for d in devices])
+                and not all([d.is_ipmi for d in devices])):
+                raise ValidationError("Mixing of IPMI and PDU power control is not supported.")
+
+        if (self.device.is_ipmi
+            and self.device.device_type.agent != "fence_virsh"):
+            # Special-case for IPMI "outlets". The identifier is the BMC
+            # address.
+            self.identifier = self.validate_inet_address(self.identifier)
+
+        max_device_outlets = self.device.device_type.max_outlets
+        if not is_update and not self.device.is_ipmi:
+            if self.device.outlets.count() >= max_device_outlets:
+                raise ValidationError("Device %s is already at maximum number of outlets: %d" % (self.device.name, max_device_outlets))
 
         super(PowerControlDeviceOutlet, self).clean()
 
@@ -306,6 +338,9 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
 
         if skip_reconfigure:
             return
+
+        # FIXME (HYD-2187): Don't force a pointless fence reconfig on state
+        # changes that don't affect the host's fence configuration.
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
         from django.utils.timezone import now
@@ -338,7 +373,7 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
 
     class Meta:
         app_label = 'chroma_core'
-        unique_together = ('device', 'identifier', 'host')
+        unique_together = ('device', 'identifier')
 
 
 class PoweronHostJob(AdvertisedJob):
@@ -502,11 +537,20 @@ class ConfigureHostFencingStep(Step):
 
         agent_kwargs = []
         for outlet in host.outlets.select_related().all():
-            agent_kwargs.append({'plug': outlet.identifier,
-                                 'agent': outlet.device.device_type.agent,
-                                 'login': outlet.device.username,
-                                 'password': outlet.device.password,
-                                 'ipaddr': outlet.device.address,
-                                 'ipport': outlet.device.port})
+            fence_kwargs = {
+                'agent': outlet.device.device_type.agent,
+                'login': outlet.device.username,
+                'password': outlet.device.password
+            }
+            # IPMI fencing config doesn't need most of these attributes.
+            if (outlet.device.is_ipmi
+                and outlet.device.device_type.agent != 'fence_virsh'):
+                fence_kwargs['ipaddr'] = outlet.identifier
+            else:
+                fence_kwargs['plug'] = outlet.identifier
+                fence_kwargs['ipaddr'] = outlet.device.address
+                fence_kwargs['ipport'] = outlet.device.port
+
+            agent_kwargs.append(fence_kwargs)
 
         self.invoke_agent(host, "configure_fencing", {'agents': agent_kwargs})

@@ -3,8 +3,9 @@
 
   <div class="well-large well" ng-show="powerCtrl.powerControlDevices.length == 0">
     <div class="row">
-      <span>No power distribution units are currently configured.</span>
-      <button ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices)" class="btn"><i class="icon-plus"></i> Add One</button>
+      <span>No power control devices are currently configured.</span>
+      <button ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices)" class="btn"><i class="icon-plus"></i> Add PDU</button>
+      <button ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices, null, true)" class="btn"><i class="icon-plus"></i> Configure IPMI</button>
     </div>
   </div>
   <div ng-show="powerCtrl.powerControlDevices.length > 0">
@@ -29,13 +30,19 @@
         <tr ng-repeat="host in powerCtrl.hosts | orderBy: 'nodename'">
           <td>((host.nodename))</td>
           <td class="outlets" ng-repeat="device in powerCtrl.powerControlDevices | orderBy: 'name'">
-            <power-control-autocomplete
-              tab-index="(($index + 1))"
-              device="device"
-              host="host"
-              on-add="device.addOutlet(outlet, host)"
-              on-remove="device.removeOutlet(outlet)"
-              ></power-control-autocomplete>
+            <button ng-click="powerCtrl.createBmc(device, host)" ng-show="!host.hasOutlets(powerCtrl.powerControlDevices) && device.isIpmi() && device.getOutletHostIntersection(host).length === 0" class="btn"><i class="icon-plus"></i> Add BMC</button>
+            <div ng-hide="(!device.isIpmi() && host.hasIpmi(powerCtrl.powerControlDevices)) || (device.isIpmi() && device.getOutletHostIntersection(host).length === 0)">
+              <power-control-autocomplete
+                tab-index="(($index + 1))"
+                device="device"
+                host="host"
+                on-add="device.addOutlet(outlet, host)"
+                on-remove="device.isIpmi() && device.removeIpmiOutlet(outlet) || device.removeOutlet(outlet)"
+                ></power-control-autocomplete>
+            </div>
+            <div ng-show="(!device.isIpmi() && host.hasIpmi(powerCtrl.powerControlDevices)) || (device.isIpmi() && host.hasOutlets(powerCtrl.powerControlDevices))">
+              Mixing PDU outlets and IPMI is not supported.
+            </div>
           </td>
         </tr>
       </tbody>
@@ -43,6 +50,8 @@
     <div class="button-row">
       <a class="btn btn-small" ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices)"><i class="icon-plus"></i>
         Add PDU</a>
+      <a class="btn btn-small" ng-click="powerCtrl.createPdu(powerCtrl.powerControlDevices, null, true)" ng-hide="powerCtrl.hasIpmi(powerCtrl.powerControlDevices)"><i class="icon-plus"></i>
+        Configure IPMI</a>
     </div>
   </div>
 </div>
