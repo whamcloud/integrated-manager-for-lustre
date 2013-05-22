@@ -54,15 +54,41 @@
       });
 
       $('div#filesystem_detail button.mount_info').click(function() {
-          var markup = _.template($('#filesystem_mount_info_template').html())({filesystem: filesystem});
-          $(markup).dialog({
+
+          // initially, we _should_ have the mount_command available
+          var template_data = {
+            name: filesystem.name,
+            mount_command: '<div style="text-align: center"><img src="/static/images/loading.gif"> Loading</div>'
+          };
+          if ( filesystem.mount_command ) {
+            template_data.mount_command = _.escape(filesystem.mount_command);
+          }
+          var markup = $('#filesystem_mount_info_template').html();
+          var $element = $(_.template(markup, template_data));
+
+          // no mount command available, try and fetch fresher filesystem info
+          if (! filesystem.mount_command) {
+            Api.get("filesystem/%s/".sprintf(filesystem.id), {},
+              success_callback = function(filesystem_data) {
+                filesystem = filesystem_data;
+                var command = filesystem.mount_command
+                              ? _.escape(filesystem.mount_command)
+                              : 'Information not currently available. Please try again in a moment.';
+                $element.find('pre').html(command);
+              }
+            );
+          }
+
+          $element.dialog({
               width: 800,
               buttons: {
-                  "Close": {
-                      click: function() {$(this).dialog('close')},
-                      text: 'Close',
-                      class: 'close'
-                  }}
+                Close: {
+                  click: function() {$(this).dialog('close'); },
+                  text: 'Close',
+                  class: 'close'
+                }
+              },
+              close: function(){ $(this).remove(); }
           });
       });
 
@@ -243,9 +269,9 @@
 
 <script language="text/template" id='filesystem_mount_info_template'>
     <div class='filesystem_mount_info'>
-        <h1><%= filesystem.name %> mount information</h1>
+        <h1><%- name %> mount information</h1>
         <p>To mount this filesystem on a Lustre client, use the following command:</p>
-        <pre><%= filesystem.mount_command %></pre>
+        <pre><%= mount_command %></pre>
     </div>
 </script>
 
