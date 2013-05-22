@@ -54,6 +54,7 @@ from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
 from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
 import chroma_core.lib.conf_param
 import settings
@@ -636,7 +637,10 @@ class JobScheduler(object):
                     CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
 
             if 'ha_cluster_peers' in updated_attrs:
-                AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
+                try:
+                    AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
+                except RpcError:
+                    log.error("Host volumes failed to rebalance: " + traceback.format_exc())
 
             if changed_item.needs_fence_reconfiguration:
                 job = ConfigureHostFencingJob(host = changed_item)
