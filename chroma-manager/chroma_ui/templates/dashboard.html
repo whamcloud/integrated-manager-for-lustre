@@ -95,6 +95,20 @@
     </div>
 </script>
 
+<script type='text/template' id='tooltip_template'>
+    <div class="chart_tooltip">
+        <small><%- label %></small>
+        <table width="100%">
+            <% points.forEach(function(point) { %>
+            <tr>
+                <td style="color: <%= point.series_color %>;"><%- point.series_name %>:</td>
+                <td style="text-align: right;"><b><%- point.value %></b></td>
+            </tr>
+            <% }); %>
+        </table>
+    </div>
+</script>
+
 <div id="dashboard_page_global" class='dashboard_page'>
     <table class='chart_grid'>
         <thead>
@@ -185,7 +199,7 @@
 
 <div id="dashboard_page_server" class='dashboard_page' style="display: none">
     <table class='chart_grid'>
-        <tr>
+        <tr id="first_server_chart_grid_row">
             <td>
                 <div id="server_detail" class="chart_info_pane"></div>
             </td>

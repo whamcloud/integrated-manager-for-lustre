@@ -22,16 +22,16 @@
 
 /* global TIME_OFFSET defined in base.html */
 
-/*
-  HYD-410: Workaround for highcharts issue 568, highcharts support case 64
+/**
+ * Auto formats datetime values based on the X-axis closest point ranges
+ *
+ * @param {integer} key Epoch miliseconds
+ * @return {string|integer} Retruns a formatted date string, or the original key
  */
-Highcharts.Series.prototype.tooltipHeaderFormatter = function (key) {
-  var series = this,
-    tooltipOptions = series.tooltipOptions,
-    xDateFormat = tooltipOptions.xDateFormat,
-    xAxis = series.xAxis,
-    isDateTime = xAxis && xAxis.options.type === 'datetime',
-    n;
+Highcharts.Series.prototype.autoDateFormat = function(key) {
+
+  var closestPointRange = this.xAxis.closestPointRange;
+  var xDateFormat;
 
   var dateTimeLabelFormats = {
     millisecond: '%A, %b %e, %H:%M:%S.%L',
@@ -55,18 +55,32 @@ Highcharts.Series.prototype.tooltipHeaderFormatter = function (key) {
     year: 31556952000
   };
 
-  // Guess the best date format based on the closest point distance (#568) // docs
-  if (isDateTime && !xDateFormat) {
-    for (n in timeUnits) {
-      if (timeUnits[n] >= xAxis.closestPointRange) {
-        xDateFormat = dateTimeLabelFormats[n];
-        break;
-      }
+  for (var n in timeUnits) {
+    if (timeUnits[n] >= closestPointRange) {
+      xDateFormat = dateTimeLabelFormats[n];
+      break;
     }
   }
+  return xDateFormat ? Highcharts.dateFormat(xDateFormat, key) : key;
 
-  return tooltipOptions.headerFormat
-    .replace('{point.key}', isDateTime ? Highcharts.dateFormat(xDateFormat, key) :  key)
+};
+
+/*
+  HYD-410: Workaround for highcharts issue 568, highcharts support case 64
+ */
+Highcharts.Series.prototype.tooltipHeaderFormatter = function (key) {
+  var series = this;
+  var xDateFormat = series.tooltipOptions.xDateFormat;
+  var xAxis = series.xAxis;
+  var isDateTime = xAxis && xAxis.options.type === 'datetime';
+
+  // Guess the best date format based on the closest point distance (#568) // docs
+  if (isDateTime && !xDateFormat) {
+    key = series.autoDateFormat(key);
+  }
+
+  return series.tooltipOptions.headerFormat
+    .replace('{point.key}', key)
     .replace('{series.name}', series.name)
     .replace('{series.color}', series.color);
 }

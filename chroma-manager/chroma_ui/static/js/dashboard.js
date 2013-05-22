@@ -287,6 +287,12 @@ var Dashboard = (function() {
 
         $('#ossSummaryTblDiv').show();
         $('#serverSummaryTblDiv').show();
+
+        // HYD-2012 -- only display the read/write chart if this server has at least one OST
+        var hasOst = targets.some(function (target) { return target.kind === 'OST'; });
+        var method = (hasOst ? 'show' : 'hide');
+        $('#first_server_chart_grid_row')[method]();
+
       });
 
     init_charts('servers');
@@ -723,6 +729,7 @@ var Dashboard = (function() {
     // ost_balance chart needs a pre-compiled template for tooltips
     // used by both dashboard and filesystem page
     var ost_balance_tooltip_template = _.template($('#ost_balance_tooltip_template').html());
+    var tooltip_template = _.template($('#tooltip_template').html());
 
     // need to know the number of OSTs so we can customize graph settings BEFORE first data callback
     // will filter if we are on a filesystem detail page
@@ -733,6 +740,31 @@ var Dashboard = (function() {
       ),
       function(target) { if( dashboard_filesystem ) { return target.filesystem_id == dashboard_filesystem.id; } else { return 1; } }
     );
+
+    function bytes_tooltip_formatter() {
+      var tooltip_data = {
+        label : this.points[0].series.autoDateFormat(this.points[0].key),
+        points : this.points.map(function(point) {
+          return {
+            series_name  : point.series.name,
+            series_color : point.series.color,
+            value        : formatBytes(point.y)
+          };
+        })
+      };
+      return tooltip_template( tooltip_data );
+    }
+
+    function readwrite_tooltip_formatter() {
+      var tooltip_data = {
+        label : this.points[0].series.autoDateFormat(this.points[0].key),
+        points   : [
+          { series_name : this.points[0].series.name, series_color : this.points[0].series.color, value : "%s/s".sprintf(formatBytes(this.points[0].y)) },
+          { series_name : this.points[1].series.name, series_color : this.points[1].series.color, value : "%s/s".sprintf(formatBytes(this.points[1].y * -1)) }
+        ]
+      };
+      return tooltip_template( tooltip_data );
+    }
 
     //used by both dashboard and filesystem OST Balance charts as the snapshot_callback
     function ost_balance_snapshot_callback(chart,data) {
@@ -844,7 +876,8 @@ var Dashboard = (function() {
           },
           title: {
             text: "Metadata servers"
-          }
+          },
+          tooltip: { valueSuffix: '%', }
         }
       }));
 
@@ -857,7 +890,8 @@ var Dashboard = (function() {
           },
           title: {
             text: "Object storage servers"
-          }
+          },
+          tooltip: { valueSuffix: '%', }
         }
       }));
 
@@ -927,6 +961,7 @@ var Dashboard = (function() {
           renderTo: 'global_read_write'
         },
         title: { text: 'Read/Write bandwidth'},
+        tooltip: { formatter: readwrite_tooltip_formatter },
         xAxis: { type:'datetime' },
         yAxis: [
           {title: null,
@@ -1111,7 +1146,8 @@ var Dashboard = (function() {
         series: _.map(
           [ 'user','system','iowait'],
           function(metric) { return { type: 'line', data: [], name: metric }; }
-        )
+        ),
+        tooltip: { valueSuffix: '%', }
       }
     });
 
@@ -1148,7 +1184,8 @@ var Dashboard = (function() {
         series: _.map(
           ['Total memory', 'Used memory', 'Total swap', 'Used swap'],
           function(metric) { return { type: 'line', data: [], name: metric }; }
-        )
+        ),
+        tooltip: { formatter: bytes_tooltip_formatter }
       }
     });
 
@@ -1176,7 +1213,8 @@ var Dashboard = (function() {
         series: [
           { type: 'area', name: 'read' },
           { type: 'area', name: 'write' }
-        ]
+        ],
+        tooltip: { formatter: readwrite_tooltip_formatter }
       }
     });
 
@@ -1296,7 +1334,8 @@ var Dashboard = (function() {
         series: [
           { type: 'area', name: 'Read', data: []},
           { type: 'area', name: 'Write',data: []}
-        ]
+        ],
+        tooltip: { formatter: readwrite_tooltip_formatter }
       }
     });
 
@@ -1487,7 +1526,8 @@ var Dashboard = (function() {
           },
           title: {
             text: "Object storage servers"
-          }
+          },
+          tooltip: { valueSuffix: '%' }
         }
       }));
 
@@ -1501,7 +1541,8 @@ var Dashboard = (function() {
           },
           title: {
             text: "Metadata server"
-          }
+          },
+          tooltip: { valueSuffix: '%' }
         }
       }));
 
@@ -1531,7 +1572,8 @@ var Dashboard = (function() {
         series: [
           { type: 'area', name: 'read' },
           { type: 'area', name: 'write' }
-        ]
+        ],
+        tooltip: { formatter: readwrite_tooltip_formatter }
       }
     });
     chart_manager.add_chart('mdops','filesystem', {
