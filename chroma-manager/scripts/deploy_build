@@ -1,0 +1,176 @@
+#!/bin/bash -eu
+
+#SCRIPT_DIR=$(dirname $(readlink -f $0))
+# Really, BSD? You suck.
+SCRIPT_DIR=$(python -c 'import os,sys;print os.path.dirname(os.path.realpath(sys.argv[1]))' $0)
+CACHE_ROOT=$HOME/cache
+
+# do manager install or just scrub the nodes clean?
+INSTALL_MGR=${INSTALL_MGR:-true}
+
+IML_NODE=${IML_NODE:-"manager"}
+MDS_NODES=${MDS_NODES:-"storage0"}
+OSS_NODES=${OSS_NODES:-"storage1"}
+SERVERS="$MDS_NODES $OSS_NODES"
+SERVER_RING1=${SERVER_RING1:-"eth1"}
+CLIENTS=${CLIENTS:-"storage2"}
+ALL_NODES="$IML_NODE $SERVERS $CLIENTS"
+
+BUILDER_USERNAME=${BUILDER_USERNAME:-"jenkins-pull"}
+BUILDER_PASSWORD=${BUILDER_PASSWORD:-"2cf9b55238c654b00bc37a6e8ccc4caf"}
+IML_USERNAME=${IML_USERNAME:-"admin"}
+IML_PASSWORD=${IML_PASSWORD:-"lustre"}
+
+BUILDER_URL=https://build.whamcloudlabs.com
+# NB: This default should probably be chroma-blessed for non-daily builds
+BUILD_JOB=${BUILD_JOB:-chroma}
+BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
+BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6"}
+BUILD_URL=$BUILDER_URL/job/$BUILD_JOB/$BUILD_NUMBER/$BUILD_TARGET
+BUNDLE_TARBALL=${BUNDLE_FILE:-chroma.tar.gz}
+BUNDLE_URL=$BUILD_URL/artifact/chroma-bundles/$BUNDLE_TARBALL
+
+get_metadata()
+{
+    last_build=$(ls -r $CACHE_ROOT | head -1 | sed -e "s/$BUILD_JOB-//" -e "s/-$BUNDLE_TARBALL//")
+    export BUILDER_USERNAME BUILDER_PASSWORD
+    eval $($SCRIPT_DIR/get_metadata "$1/api/python" $last_build)
+}
+
+get_bundle()
+{
+    if [ "$BUILD_META_RESULT" != "SUCCESS" ]; then
+        echo "WARNING: Build $BUILD_JOB was not successful ($BUILD_META_RESULT)"
+    fi
+
+    BUNDLE=$CACHE_ROOT/$BUILD_JOB-$BUILD_META_NUMBER-$(basename $BUNDLE_URL)
+    if ! [ -s $BUNDLE ]; then
+        curl -k -u $BUILDER_USERNAME:$BUILDER_PASSWORD -o $BUNDLE $BUNDLE_URL
+    fi
+    if [ -s $BUNDLE ]; then
+        export BUNDLE
+    fi
+}
+
+hl2h()
+{
+    echo $(echo $1 | sed -e 's/,/ /g')
+}
+
+h2hl()
+{
+    echo $(echo $* | sed -e 's/[[:space:]]/,/g')
+}
+
+remote_shell()
+{
+    host_list=$1
+    shift
+    if $(which pdsh >/dev/null); then
+        pdsh -lroot -w$host_list $* | dshbak -c
+    else
+        for host in $(hl2h $host_list); do
+            ssh root@$host $*
+        done
+    fi
+}
+
+scrub_manager()
+{
+    remote_shell $IML_NODE chroma-config stop
+    remote_shell $IML_NODE yum erase -y chroma-manager-libs
+    remote_shell $IML_NODE su - postgres -c "'dropdb chroma'"
+    remote_shell $IML_NODE rm -f /var/log/chroma/*
+}
+
+scrub_servers()
+{
+    server_list=$(h2hl $SERVERS)
+    remote_shell $server_list service chroma-agent stop
+    remote_shell $server_list yum erase -y chroma-agent
+    remote_shell $server_list rm -f /var/log/chroma* /var/lib/chroma/*
+    remote_shell $server_list cibadmin -f -E
+    remote_shell $server_list killall -9 pacemaker\; killall -9 corosync
+    remote_shell $server_list rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*
+    remote_shell $server_list umount -a -tlustre -f
+    remote_shell $server_list ifconfig $SERVER_RING1 0.0.0.0 down
+    remote_shell $server_list rm -f /etc/sysconfig/network-scripts/ifcfg-$SERVER_RING1
+}
+
+scrub_clients()
+{
+    remote_shell $(h2hl $CLIENTS) umount -a -tlustre -f
+}
+
+scrub_cluster()
+{
+    scrub_manager
+    scrub_clients
+    scrub_servers
+}
+
+disable_ssh_host_verification()
+{
+    set +e
+    if ! grep -q StrictHostKeyChecking ~/.ssh/config 2>/dev/null; then
+        cat<<EOF >>~/.ssh/config
+
+Host *
+    StrictHostKeyChecking no
+EOF
+        chmod 0600 ~/.ssh/config
+    fi
+    set -e
+}
+
+setup()
+{
+    mkdir -p $CACHE_ROOT
+    mkdir -m 0700 -p ~/.ssh
+    if ! [ -f ~/.ssh/id_rsa ]; then
+        echo "No SSH keys in $HOME/.ssh -- cluster access will fail!"
+        exit 1
+    fi
+    disable_ssh_host_verification
+}
+
+copy_bundle()
+{
+    scp $BUNDLE root@$IML_NODE:/tmp
+}
+
+install_manager()
+{
+    bundle_dir=/tmp/$(basename $BUNDLE .tar.gz)
+    remote_shell $IML_NODE mkdir -p $bundle_dir
+    remote_shell $IML_NODE tar -C $bundle_dir -xzf $bundle_dir.tar.gz
+    tmp=$(mktemp -t deploy.XXXXX)
+    cat<<EOF>$tmp
+$IML_USERNAME
+iml-$IML_USERNAME@intel.com
+$IML_PASSWORD
+$IML_PASSWORD
+localhost
+EOF
+    scp $tmp root@$IML_NODE:$bundle_dir/input.txt
+    rm -f $tmp
+    tmp=$(mktemp -t deploy.XXXXX)
+    echo -e "Changes since last build:\n$BUILD_META_CHANGES" > $tmp
+    scp $tmp root@$IML_NODE:$bundle_dir/ChangeLog.txt
+    rm -f $tmp
+    remote_shell $IML_NODE cd $bundle_dir\; $bundle_dir/install.sh \< $bundle_dir/input.txt
+}
+
+setup
+scrub_cluster
+get_metadata $BUILD_URL
+echo -e "Changes since last build:\n$BUILD_META_CHANGES"
+get_bundle
+if [ -z "$BUNDLE" ]; then
+    echo "No bundle found at $BUNDLE, can't continue"
+    exit
+fi
+copy_bundle
+if $INSTALL_MGR; then
+    install_manager
+fi
