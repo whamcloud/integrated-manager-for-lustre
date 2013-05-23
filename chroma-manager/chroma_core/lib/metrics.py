@@ -81,20 +81,21 @@ class MetricStore(object):
                 pass
 
     def fetch(self, fetch_metrics, begin, end, max_points=1000, **kwargs):
-        "Return ordered timestamps, dicts of field names and values."
+        "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
         for series in self.series(*fetch_metrics):
             types.add(series.type)
+            minimum = 0.0 if series.type == 'Counter' else float('-inf')
             for point in Stats.select(series.id, begin, end, rate=series.type in ('Counter', 'Derive'), maxlen=max_points):
-                result[point.dt][series.name] = point.mean
+                result[point.dt][series.name] = max(minimum, point.mean)
         # if absolute and derived values are mixed, the earliest value will be incomplete
         if result and types > set(['Gauge']) and len(result[min(result)]) < len(fetch_metrics):
             del result[min(result)]
         return dict(result)
 
     def fetch_last(self, fetch_metrics):
-        "Return latest timestamp and dict of field names and values."
+        "Return latest datetime and dict of field names and values."
         latest, data = datetime.fromtimestamp(0, utc), {}
         for series in self.series(*fetch_metrics):
             point = Stats.latest(series.id)

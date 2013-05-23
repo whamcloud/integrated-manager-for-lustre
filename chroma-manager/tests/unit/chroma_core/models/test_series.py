@@ -66,11 +66,14 @@ class TestSeries(TestCase):
         data = stats[dt]
         self.assertEqual(timestamp(dt), 10)
         for name, type, start, stop in fields:
+            delta = (stop - start) / 10.0
             if type == 'Gauge':
                 self.assertGreaterEqual(data[name], start)
                 self.assertLessEqual(data[name], stop)
+            elif type == 'Counter':
+                self.assertGreaterEqual(data[name], 0.0)
+                self.assertLessEqual(data[name], delta)
             else:
-                delta = (stop - start) / 10.0
                 self.assertGreaterEqual(data[name], -delta)
                 self.assertLessEqual(data[name], delta)
 
