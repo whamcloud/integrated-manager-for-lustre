@@ -20,14 +20,8 @@
 // express and approved by Intel in writing.
 
 
-var ContextualHelp = function(){
-
-  var loaded_snippets = {}; //container for loaded snippets as some are reused
+var ContextualHelp = (function(){
   var compiled_snippet_template = _.template("<div class='ui-helper-clearfix ui-state-<%= state%> ui-corner-all'><div class='contextual_help_icon'><span class='ui-icon ui-icon-<%= icon %>'></span></div><div class='contextual_help'><%= content %></div></div>");
-
-  function contextual_help_link(topic) {
-    return STATIC_URL + "contextual/" + topic + ".html";
-  }
 
   function set_default(value, default_value) {
     return ( _.isUndefined(value) ? default_value : value );
@@ -40,23 +34,18 @@ var ContextualHelp = function(){
       return true;
     }
 
-    var icon = set_default($(container).data('icon'),'info');
+    var icon = set_default($(container).data('icon'), 'info');
 
-    var state = set_default($(container).data('state'),'highlight');
+    var state = set_default($(container).data('state'), 'highlight');
 
-    // if we've already retrieved this one, just pull it from memory
-    if (_.has(loaded_snippets,topic)) {
-      $(container).html(compiled_snippet_template({ content: loaded_snippets[topic], icon: icon, state: state}));
-      return true;
-    }
+    $(container).removeClass('help_loader')
+      .addClass('help_loaded')
+      .html(compiled_snippet_template({
+        content: window.HELP_TEXT[topic],
+        icon: icon,
+        state: state
+      }));
 
-    //otherwise we have to get it
-    $.get(contextual_help_link(topic), data = undefined, success = function(topic_html) {
-      loaded_snippets[topic] = topic_html;
-      $(container).removeClass('help_loader')
-        .addClass('help_loaded')
-        .html(compiled_snippet_template({ content: topic_html, icon: icon, state: state}));
-    });
     return true;
   }
 
@@ -71,7 +60,7 @@ var ContextualHelp = function(){
       snippets = $(selector);
     }
 
-    snippets.each(function() { populate_snippet(this); });
+    snippets.each(function () { populate_snippet(this); });
 
   }
 
@@ -86,12 +75,7 @@ var ContextualHelp = function(){
 
       element.qtip({
         content: {
-          text: 'Loading...',
-          ajax: {
-            url: contextual_help_link(element.data('topic')),
-            type: "GET",
-            data: {}
-          }
+          text: window.HELP_TEXT[element.data('topic')]
         },
         position: {
           viewport: $(window),
@@ -103,7 +87,7 @@ var ContextualHelp = function(){
     }
 
     // tooltip on a link/button - hover activated
-    $('a.help_hover, button.help_hover').each(function() {
+    $('a.help_hover, button.help_hover').each(function () {
       var el = $(this);
       if (!el.data('qtip')) {
         help_qtip(el, false);
@@ -143,7 +127,7 @@ var ContextualHelp = function(){
     init: init,
     load_snippets: load_snippets
   };
-}();
+}());
 
 
 
@@ -153,7 +137,7 @@ var ContextualHelp = function(){
 <a class='help_hover' data-topic='test'>My help</a>
 <a class='help_button' data-topic='test'>My help</a>
 <a class='help_button_small' data-topic='test'></a>
-<div class='help_loader' data-topic='_advanced_settings' data-icon='info' data-state='highlight|error' />
+<div class='help_loader' data-topic='advanced_settings' data-icon='info' data-state='highlight|error' />
   - data-icon (optional) can be any valid icon from jquery ui
     reference: http://jqueryui.com/themeroller/ (at the bottom; hover over for name)
     default: info

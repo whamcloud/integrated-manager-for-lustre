@@ -28,6 +28,7 @@ from chroma_core.models.jobs import StatefulObject, StateChangeJob, StateLock
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
 from django.db.models import Q
+from chroma_help.help import help_text
 
 
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
@@ -161,6 +162,7 @@ class RemoveFilesystemJob(StateChangeJob):
     stateful_object = 'filesystem'
     state_verb = "Remove"
     filesystem = models.ForeignKey('ManagedFilesystem')
+    long_description = help_text["remove_file_system"]
 
     def get_requires_confirmation(self):
         return True
@@ -228,6 +230,7 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
     state_transition = (ManagedFilesystem, 'stopped', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
+    long_description = help_text["start_file_system"]
 
     def description(self):
         return "Start file system %s" % self.filesystem.name
@@ -246,6 +249,7 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
     state_transition = (ManagedFilesystem, 'unavailable', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
+    long_description = help_text["start_file_system"]
 
     def description(self):
         return "Start filesystem %s" % self.filesystem.name
@@ -263,6 +267,7 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Stop"
     state_transition = (ManagedFilesystem, 'unavailable', 'stopped')
     filesystem = models.ForeignKey('ManagedFilesystem')
+    long_description = help_text["stop_file_system"]
 
     def description(self):
         return "Stop file system %s" % self.filesystem.name
@@ -298,6 +303,7 @@ class ForgetFilesystemJob(StateChangeJob):
     state_verb = "Remove"
     filesystem = models.ForeignKey(ManagedFilesystem)
     requires_confirmation = True
+    long_description = help_text["remove_file_system"]
 
     def description(self):
         return "Remove unmanaged file system %s" % self.filesystem.name

@@ -1212,6 +1212,7 @@ class JobScheduler(object):
                         if aj.can_run(stateful_object):
                             available_jobs.append({
                                 'verb': aj.verb,
+                                'long_description': aj.get_long_description(stateful_object),
                                 'confirmation': aj.get_confirmation(
                                     stateful_object),
                                 'class_name': aj.__name__,

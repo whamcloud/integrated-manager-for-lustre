@@ -254,7 +254,7 @@ var Dashboard = (function() {
 
     var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>"+
-      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
+      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
       "<li>"+get_view_selection_markup()+"</li>";
     breadCrumbHtml += "<li><select id='breadcrumb_server'></select></li>";
 
@@ -306,7 +306,7 @@ var Dashboard = (function() {
 
     var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>"+
-      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
+      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
       "<li>"+get_view_selection_markup()+"</li>";
     if (dashboard_filesystem){
       breadCrumbHtml += "<li><a class='navigation' href='dashboard/filesystem/" + dashboard_filesystem.id + "/''>"+dashboard_filesystem.label+"</a></li>";
@@ -428,7 +428,7 @@ var Dashboard = (function() {
 
     var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>"+
-      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
+      "<li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
       "<li>"+get_view_selection_markup()+"</li>" +
       "<li><select id='breadcrumb_filesystem'></select></li>" +
       "<li>"+
@@ -482,7 +482,7 @@ var Dashboard = (function() {
 
     var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>" +
-    "  <li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"_goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
+    "  <li><a href='dashboard/' class=\"navigation home_icon\" context-tooltip=\"goto_dashboard\" tooltip-placement=\"right\"><i class='icon-bar-chart'></i></a></li>"+
     "  <li>" + get_view_selection_markup() + "</li>" +
     "  </li>" +
     "  <li>" +

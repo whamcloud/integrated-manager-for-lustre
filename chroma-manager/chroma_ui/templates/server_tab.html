@@ -103,14 +103,14 @@
       $('div#server_list button.detect_button').click(function() {
         ServerCommandPrompt({
             message: "Detecting File Systems",
-            help_topic: '_detect_file_systems-dialog',
+            help_topic: 'detect_file_systems-dialog',
             job_class: 'DetectTargetsJob'
         });
       });
 
       $('div#server_list button.rescan_nids_button').click(function() {
         ServerCommandPrompt({
-            help_topic: '_rescan_NIDs-dialog',
+            help_topic: 'rescan_NIDs-dialog',
             message: "Re-scanning NIDs",
             job_class: 'RelearnNidsJob'
         });
@@ -118,7 +118,7 @@
 
         $('div#server_list button.writeconf_button').click(function() {
             ServerCommandPrompt({
-            help_topic: '_rewrite_target_configuration-dialog',
+            help_topic: 'rewrite_target_configuration-dialog',
                 message: "Updating filesystem NIDs",
                 job_class: 'UpdateNidsJob'
             });
@@ -201,7 +201,7 @@
   <thead>
     <tr>
       <th width="85%">Hostname</th>
-      <th width="13%"><a class='help_hover' data-topic='_lnet_state'>LNet State</a></th>
+      <th width="13%"><a class='help_hover' data-topic='lnet_state'>LNet State</a></th>
       <th width="1%"></th>
       <th width="1%"></th>
     </tr>
@@ -213,9 +213,9 @@
 
 <h2 class='section_header'>Server Actions</h2>
 
-<button class='detect_button multi_server_button help_hover' data-topic='_detect_file_systems-tooltip'>Detect File Systems</button>
-<button class='rescan_nids_button multi_server_button help_hover' data-topic='_rescan_NIDs-tooltip'>Re-scan NIDs</button>
-<button class='writeconf_button multi_server_button help_hover' data-topic='_rewrite_target_configuration-tooltip'>Re-write Target Configuration</button>
+<button class='detect_button multi_server_button help_hover' data-topic='detect_file_systems-tooltip'>Detect File Systems</button>
+<button class='rescan_nids_button multi_server_button help_hover' data-topic='rescan_NIDs-tooltip'>Re-scan NIDs</button>
+<button class='writeconf_button multi_server_button help_hover' data-topic='rewrite_target_configuration-tooltip'>Re-write Target Configuration</button>
 <button class='updates_button multi_server_button'>Install Updates</button>
 
 <script type="text/template" id="add_host_dialog_template">
@@ -321,11 +321,11 @@
                 <div class='add_host_confirm'>
                     <p style="margin-bottom: 0px;margin-top:0px;">Host: <span style="font-weight: bold;" class="add_host_address_label"></span></p>
                     <table style="margin-bottom: 6px;">
-                        <tr><td><a class='help_hover' data-topic='_resolve'>Resolve</a>: </td>     <td class="add_host_resolve">&nbsp;</td></tr>
-                        <tr><td><a class='help_hover' data-topic='_ping'>Ping</a>: </td>        <td class="add_host_ping">&nbsp;</td></tr>
-                        <tr><td><a class='help_hover' data-topic='_auth'>Authenticated</a>: </td><td class="add_host_auth">&nbsp;</td></tr>
-                        <tr><td><a class='help_hover' data-topic='_reverse_resolve'>Reverse resolve</a>: </td><td class="add_host_reverse_resolve">&nbsp;</td></tr>
-                        <tr><td><a class='help_hover' data-topic='_reverse_ping'>Reverse ping</a>: </td><td class="add_host_reverse_ping">&nbsp;</td></tr>
+                        <tr><td><a class='help_hover' data-topic='resolve'>Resolve</a>: </td>     <td class="add_host_resolve">&nbsp;</td></tr>
+                        <tr><td><a class='help_hover' data-topic='ping'>Ping</a>: </td>        <td class="add_host_ping">&nbsp;</td></tr>
+                        <tr><td><a class='help_hover' data-topic='auth'>Authenticated</a>: </td><td class="add_host_auth">&nbsp;</td></tr>
+                        <tr><td><a class='help_hover' data-topic='reverse_resolve'>Reverse resolve</a>: </td><td class="add_host_reverse_resolve">&nbsp;</td></tr>
+                        <tr><td><a class='help_hover' data-topic='reverse_ping'>Reverse ping</a>: </td><td class="add_host_reverse_ping">&nbsp;</td></tr>
                     </table>
                     <a href="#" class="add_host_back_button">Back</a>
                     <a href="#" class="add_host_confirm_button">Confirm</a>

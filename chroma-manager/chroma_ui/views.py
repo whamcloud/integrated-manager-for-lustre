@@ -37,6 +37,7 @@ from django.core.serializers import json as django_json
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
 from chroma_api.target import TargetResource
+from chroma_help.help import help_text
 import settings
 
 
@@ -123,6 +124,7 @@ def index(request):
             return render_to_response("base.html",
                                       RequestContext(request,
                                                      {'cache': cache,
+                                                      'help_text': json.dumps(help_text),
                                                       'server_time': datetime.datetime.utcnow(),
                                                       'BUILD': settings.BUILD,
                                                       'VERSION': settings.VERSION,

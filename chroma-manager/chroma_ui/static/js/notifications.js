@@ -176,7 +176,7 @@ var LiveObject = function()
     // host status is the Lnet Status which we convert into an icon
     if ( resourceType(obj) === 'host' ) {
       return UIHelper.help_hover(
-        "_server_status_" + host_state,
+        "server_status_" + host_state,
         UIHelper.fugue_icon(
           server_status_map[host_state]['icon'],
           { style: 'padding-right: 5px;', 'data-state': host_state }
@@ -238,7 +238,6 @@ var LiveObject = function()
     state: state,
     active_host: active_host,
     renderState: renderState,
-    resourceType: resourceType,
     transitionClicked: transitionClicked,
     jobClicked: jobClicked
   }
@@ -744,7 +743,7 @@ var CommandNotification = function() {
         var id = uri.split('/')[3];
         ApiCache.put(resource, obj);
       },
-      {404:function () {
+      {404: function () {
         if (RouteUtils.api_path_to_ui_path(uri) == RouteUtils.current_path()) {
           // If we are currently on the detail view of this object, then navigate away
           Backbone.history.navigate(RouteUtils.detail_path_to_list_path(RouteUtils.current_path()), {trigger: true})

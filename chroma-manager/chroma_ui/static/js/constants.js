@@ -33,5 +33,6 @@
       CANCELED: 'CANCELED',
       COMPLETE: 'COMPLETE'
     })
-    .constant('STATIC_URL', window.STATIC_URL);
+    .constant('STATIC_URL', window.STATIC_URL)
+    .constant('HELP_TEXT', window.HELP_TEXT);
 }());

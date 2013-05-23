@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  function factory(STATIC_URL, helpText, $window) {
+  function factory(STATIC_URL, $window) {
     return {
       restrict: 'A',
       scope: {
@@ -32,44 +32,6 @@
       },
       templateUrl: '%spartials/directives/command_dropdown.html'.sprintf(STATIC_URL),
       link: function postLink(scope, el) {
-        var maps = {
-          // resource type + state mapping to contextual help
-          transitionsHelp: {
-            filesystem: {
-              stopped: '_stop_file_system',
-              removed: '_remove_file_system',
-              available: '_start_file_system'
-            },
-            host: {
-              lnet_up: '_start_lnet',
-              lnet_down: '_stop_lnet',
-              removed: '_remove_server',
-              lnet_unloaded: '_unload_lnet'
-            },
-            'target-MGT': {
-              unmounted: '_stop_mgt',
-              mounted: '_start_mgt',
-              removed: '_remove_mgt'
-            },
-            'target-MDT': {
-              unmounted: '_stop_mdt',
-              mounted: '_start_mdt'
-            },
-            'target-OST': {
-              unmounted: '_stop_ost',
-              mounted: '_start_ost',
-              removed: '_remove_ost'
-            }
-          },
-          // resource type + job class name mapping to contextual help
-          jobsHelp: {
-            host: {
-              ForceRemoveHostJob: '_force_remove'
-            }
-          }
-        };
-
-        var resourceType = $window.LiveObject.resourceType(scope.data);
 
         /**
          * @description builds the list of actions that can be performed.
@@ -78,12 +40,13 @@
           scope.list = ['transitions', 'jobs']
             .map(function (type) {
               var items = angular.copy(scope.data['available_%s'.sprintf(type)]);
-              var mapType = '%sHelp'.sprintf(type);
-              var topics = maps[mapType][resourceType] || {};
 
-              items.forEach(function (item) {
+              items
+                .filter(function (item) {
+                  return item.verb !== null;
+                })
+                .forEach(function (item) {
                 item.type = type;
-                item.tooltip = helpText(topics[item.state || item.class_name]);
               });
 
               return items;
@@ -133,7 +96,7 @@
         buildList();
 
         // Blank out the button if a job is in progress
-        if ($window.CommandNotification.uriIsWriteLocked(scope.data.resource_uri) ) {
+        if ($window.CommandNotification.uriIsWriteLocked(scope.data.resource_uri)) {
           scope.$broadcast('disableCommandDropdown', scope.data.resource_uri);
         }
 
@@ -145,7 +108,7 @@
    * @description Service wrapper for the command dropdown. Useful for testing.
    * @name commandDropdownService
    */
-  angular.module('services').factory('commandDropdownService', ['STATIC_URL', 'helpText', '$window', factory]);
+  angular.module('services').factory('commandDropdownService', ['STATIC_URL', '$window', factory]);
 
   /**
    * @description Generates a dropdown based on a given resource.

@@ -250,7 +250,11 @@ class StatefulModelResource(CustomModelResource):
                 # NB: a None verb means its an internal
                 # transition that shouldn't be advertised
                 if verb:
-                    transitions.append({"state": to_state, "verb": verb})
+                    transitions.append({
+                        "state": to_state,
+                        "verb": verb["state_verb"],
+                        "long_description": verb["long_description"]
+                    })
 
         return transitions
 

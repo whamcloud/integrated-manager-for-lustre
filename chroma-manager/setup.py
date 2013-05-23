@@ -62,7 +62,7 @@ setup(
                       "static/images/breadcrumb/*.gif", "static/images/breadcrumb/COPYING",
                       "static/images/*.ico", "static/images/*.png",
                       "static/images/*.gif", "templates/*"],
-        'chroma_help': ["static/contextual/*.html", "static/webhelp/*.htm*",
+        'chroma_help': ["static/webhelp/*.htm*",
                         "static/webhelp/*.gif", "static/webhelp/*.js",
                         "static/webhelp/*.css", "static/webhelp/*.jpg",
                         "static/webhelp/*.png", "static/webhelp/*.swf"],

@@ -3,14 +3,14 @@
   <ul class="dropdown-menu">
     <li ng-repeat="item in list" ng-switch on="item.type">
       <a ng-switch-when="transitions"
-        tooltip-html-unsafe="((item.tooltip))"
+        tooltip-html-unsafe="((item.long_description))"
         tooltip-placement="((placement))"
         data-resource_uri="(( data.resource_uri ))"
         data-state="(( item.state ))"
         ng-click="transitionClicked($event)"
       >(( item.verb ))</a>
       <a ng-switch-when="jobs"
-        tooltip-html-unsafe="((item.tooltip))"
+        tooltip-html-unsafe="((item.long_description))"
         tooltip-placement="((placement))"
         data-job_confirmation="(( toJson(item.confirmation) ))"
         data-job_class="(( item.class_name ))"

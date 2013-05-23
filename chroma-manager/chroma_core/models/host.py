@@ -43,6 +43,7 @@ from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLoc
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
+from chroma_help.help import help_text
 
 import settings
 
@@ -856,6 +857,7 @@ class LoadLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Load LNet'
+    long_description = help_text["start_lnet"]
 
     class Meta:
         app_label = 'chroma_core'
@@ -873,6 +875,7 @@ class UnloadLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Unload LNet'
+    long_description = help_text["unload_lnet"]
 
     class Meta:
         app_label = 'chroma_core'
@@ -890,6 +893,7 @@ class StartLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Start LNet'
+    long_description = help_text["start_lnet"]
 
     class Meta:
         app_label = 'chroma_core'
@@ -907,6 +911,7 @@ class StopLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Stop LNet'
+    long_description = help_text["stop_lnet"]
 
     class Meta:
         app_label = 'chroma_core'
@@ -972,6 +977,7 @@ class RemoveHostJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
+    long_description = help_text['remove_server']
 
     requires_confirmation = True
 
@@ -1036,6 +1042,8 @@ class ForceRemoveHostJob(AdvertisedJob):
     classes = ['ManagedHost']
 
     verb = "Force Remove"
+
+    long_description = help_text['force_remove']
 
     class Meta:
         app_label = 'chroma_core'

@@ -23,12 +23,12 @@
 (function () {
   'use strict';
 
-  function factory(helpText, $tooltip) {
+  function factory($tooltip, HELP_TEXT) {
     return {
       restrict: 'A',
       scope: true,
       link: function postLink(scope, el, attrs) {
-        attrs.contextTooltip = helpText(attrs.contextTooltip);
+        attrs.contextTooltip = HELP_TEXT[attrs.contextTooltip];
         $tooltip('contextTooltip', 'tooltip', 'mouseenter').link(scope, el, attrs);
       }
     };
@@ -38,13 +38,13 @@
    * @description Service wrapper for Context Tooltips. Useful for testing.
    * @name contextTooltipService
    */
-  angular.module('services').factory('contextTooltipService', ['helpText', '$tooltip', factory]);
+  angular.module('services').factory('contextTooltipService', ['$tooltip', 'HELP_TEXT', factory]);
 
   /**
    * Adds a tooltip
    * @name contextTooltip
    * @example
-   * <a context-tooltip="_tooltip_name" tooltip-placement="right"></a>
+   * <a context-tooltip="tooltip_name" tooltip-placement="right"></a>
    * @see {@link http://angular-ui.github.io/bootstrap/#/tooltip|Tooltip Options}
    */
   angular.module('directives').directive('contextTooltip', ['contextTooltipService', angular.identity]);

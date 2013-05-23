@@ -1,13 +1,11 @@
-(function(_) {
+(function (_) {
   'use strict';
 
   describe('Command Dropdown', function () {
 
     var data;
 
-    beforeEach(module('services', 'constants', function ($provide) {
-      $provide.value('helpText', jasmine.createSpy('helpText'));
-
+    beforeEach(module('services', 'constants', function () {
       data = {
         resource_uri: 'foo',
         available_jobs: [
@@ -18,7 +16,8 @@
             class_name: 'ForceRemoveHostJob',
             confirmation: 'The record for the server in Chroma Manager is removed without\n' +
               'attempting to contact server.',
-            verb: 'Force Remove'
+            verb: 'Force Remove',
+            long_description: null
           },
           {
             args: {
@@ -26,7 +25,8 @@
             },
             class_name: 'RebootHostJob',
             confirmation: 'Initiate a reboot on the host.',
-            verb: 'Reboot'
+            verb: 'Reboot',
+            long_description: null
           },
           {
             args: {
@@ -34,21 +34,25 @@
             },
             class_name: 'ShutdownHostJob',
             confirmation: 'Initiate an orderly shutdown on the host. ',
-            verb: 'Shutdown'
+            verb: 'Shutdown',
+            long_description: 'baz'
           }
         ],
         available_transitions: [
           {
             state: 'removed',
-            verb: 'Remove'
+            verb: 'Remove',
+            long_description: null
           },
           {
             state: 'lnet_down',
-            verb: 'Stop LNet'
+            verb: 'Stop LNet',
+            long_description: 'foo'
           },
           {
             state: 'lnet_unloaded',
-            verb: 'Unload LNet'
+            verb: 'Unload LNet',
+            long_description: 'bar'
           }
         ]
       };
@@ -64,8 +68,8 @@
       };
 
       $window.CommandNotification = {
-        uriIsWriteLocked: jasmine.createSpy('uriIsWriteLocked').andCallFake(function(uri) {
-          return (uri === 'bar') ? true : false;
+        uriIsWriteLocked: jasmine.createSpy('uriIsWriteLocked').andCallFake(function (uri) {
+          return uri === 'bar';
         })
       };
 
@@ -78,7 +82,7 @@
       expect(commandDropdownService.link).toEqual(jasmine.any(Function));
     }));
 
-    it('should build a list of items given some data', inject(function (commandDropdownService, $rootScope, helpText) {
+    it('should build a list of items given some data', inject(function (commandDropdownService, $rootScope) {
       var $scope = $rootScope.$new();
 
       $scope.data = data;
@@ -101,16 +105,10 @@
 
         expect(match.length).toEqual(1);
       });
-
-      expect(helpText.callCount).toBe(6);
-      expect(helpText).toHaveBeenCalledWith('_remove_server');
-      expect(helpText).toHaveBeenCalledWith('_stop_lnet');
-      expect(helpText).toHaveBeenCalledWith('_unload_lnet');
-      expect(helpText).toHaveBeenCalledWith('_force_remove');
     }));
 
     it('should attach bridge events to the scope',
-      inject(function (commandDropdownService, $rootScope, helpText) {
+      inject(function (commandDropdownService, $rootScope) {
       var $scope = $rootScope.$new();
       $scope.data = data;
 
@@ -133,11 +131,10 @@
       $scope.$broadcast('updateCommandDropdown', 'foo', newData);
 
       expect($scope.data).toBe(newData);
-      expect(helpText).toHaveBeenCalledWith('_start_lnet');
     }));
 
     it('should hide new buttons when uriIsWriteLocked',
-      inject(function(commandDropdownService, $rootScope, $window) {
+      inject(function (commandDropdownService, $rootScope, $window) {
       var $scope = $rootScope.$new();
       $scope.data = _.cloneDeep(data);
       $scope.data.resource_uri = 'bar';
@@ -151,6 +148,5 @@
       expect(el.hasClass('hide')).toBeTruthy();
       expect($window.CommandNotification.uriIsWriteLocked).toHaveBeenCalledWith('bar');
     }));
-
   });
 })(window.lodash);

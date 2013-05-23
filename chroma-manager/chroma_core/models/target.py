@@ -33,6 +33,7 @@ from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
 from chroma_core.models.host import ManagedHost, LNetConfiguration, VolumeNode, Volume, HostContactAlert
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_help.help import help_text
 import settings
 
 
@@ -454,6 +455,10 @@ class RemoveConfiguredTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
+    long_description = [
+        {"type": ManagedOst, "value": help_text["remove_ost"]},
+        {"type": ManagedMgs, "value": help_text["remove_mgt"]}
+    ]
 
     def get_requires_confirmation(self):
         return True
@@ -503,6 +508,10 @@ class RemoveTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
+    long_description = [
+        {"type": ManagedOst, "value": help_text["remove_ost"]},
+        {"type": ManagedMgs, "value": help_text["remove_mgt"]}
+    ]
 
     def description(self):
         return "Remove target %s from configuration" % (self.target)
@@ -545,6 +554,10 @@ class ForgetTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
+    long_description = [
+        {"type": ManagedOst, "value": help_text["remove_ost"]},
+        {"type": ManagedMgs, "value": help_text["remove_mgt"]}
+    ]
 
 
 class RegisterTargetStep(Step):
@@ -725,6 +738,11 @@ class StartTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'mounted')
     state_verb = "Start"
     target = models.ForeignKey(ManagedTarget)
+    long_description = [
+        {"type": ManagedOst, "value": help_text["start_ost"]},
+        {"type": ManagedMgs, "value": help_text["start_mgt"]},
+        {"type": ManagedMdt, "value": help_text["start_mdt"]}
+    ]
 
     class Meta:
         app_label = 'chroma_core'
@@ -761,6 +779,11 @@ class StopTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'mounted', 'unmounted')
     state_verb = "Stop"
     target = models.ForeignKey(ManagedTarget)
+    long_description = [
+        {"type": ManagedOst, "value": help_text["stop_ost"]},
+        {"type": ManagedMgs, "value": help_text["stop_mgt"]},
+        {"type": ManagedMdt, "value": help_text["stop_mdt"]}
+    ]
 
     def get_requires_confirmation(self):
         return True

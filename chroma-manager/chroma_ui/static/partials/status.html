@@ -28,11 +28,11 @@
                     <strong>(( model.getName() | capitalize )):&nbsp;</strong> (( model.message ))
                 </div>
                 <div class="buttons" ng-show="status.view == 'current'">
-                    <a class="btn btn-small" ng-click="status.dismiss(model)" context-tooltip="_dismiss_message" tooltip-placement="left">
+                    <a class="btn btn-small" ng-click="status.dismiss(model)" context-tooltip="dismiss_message" tooltip-placement="left">
                         <i class="icon-trash"></i> Dismiss
                     </a>
                     <a ng-show="model.getName() == 'command'" class="navigation btn btn-small"
-                       ng-href="/ui/command/((model.id))/" context-tooltip="_command_detail" tooltip-placement="left">
+                       ng-href="/ui/command/((model.id))/" context-tooltip="command_detail" tooltip-placement="left">
                       <i class="icon-list-alt"></i> Detail
                     </a>
                 </div>

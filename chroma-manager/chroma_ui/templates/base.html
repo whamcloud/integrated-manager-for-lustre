@@ -12,6 +12,7 @@
       // so that we can access it from static .js code
       var STATIC_URL = '{{STATIC_URL}}';
       var CACHE_INITIAL_DATA = {{cache|safe}};
+      var HELP_TEXT = {{help_text|safe}};
       var UI_ROOT = "/ui/";
 
       // Note: these limits do not control the window size, they limit
@@ -90,7 +91,6 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/services/compile_template.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/safe_apply.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/paging.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/services/help_text.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/generate_command_dropdown.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/filters/filters_module.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/filters/iso_date.js"></script>

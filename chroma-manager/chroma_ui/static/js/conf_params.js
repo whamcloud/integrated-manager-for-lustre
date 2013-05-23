@@ -21,7 +21,7 @@
 
 
 var ConfParamDialog = function(options) {
-  var el = $("<div><div class='help_loader' data-topic='_advanced_settings' /><table class='validated_form' width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
+  var el = $("<div><div class='help_loader' data-topic='advanced_settings' /><table class='validated_form' width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
   var _options = $.extend({}, options);
 
   el.find('table').dataTable( {

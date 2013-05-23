@@ -5,16 +5,16 @@
           <tr><th>Address:</th><td><%= server.address %></td></tr>
           <tr><th>FQDN:</th><td><%= server.fqdn %></td></tr>
           <tr><th>Nodename:</th><td><%= server.nodename %></td></tr>
-          <tr><th><a data-topic='_nids' class='help_hover'>NIDs</a>:</th><td>
+          <tr><th><a data-topic='nids' class='help_hover'>NIDs</a>:</th><td>
               <ul>
                   <% _.each(server.nids, function(nid) { %>
                     <li><%= nid %></li>
                   <% }); %>
               </ul>
           </td></tr>
-          <tr><th><a data-topic='_lnet_state' class='help_hover'>State</a>:</th><td><%= LiveObject.state(server) %></td></tr>
+          <tr><th><a data-topic='lnet_state' class='help_hover'>State</a>:</th><td><%= LiveObject.state(server) %></td></tr>
           <tr><th>Boot time:</th><td><%= shortLocalTime(server.boot_time) %></td></tr>
-          <tr><th><a data-topic='_state_changed' class='help_hover'>State changed</a>:</th><td><%= shortLocalTime(server.state_modified_at) %></td></tr>
+          <tr><th><a data-topic='state_changed' class='help_hover'>State changed</a>:</th><td><%= shortLocalTime(server.state_modified_at) %></td></tr>
           <tr><th>Alerts:</th><td><%= LiveObject.alertLabel(server) %></td></tr>
           <tr><th>Actions:</th><td><div command-dropdown command-placement="left" command-data="((data))"></div><%= LiveObject.busyIcon(server) %></td></tr>
       </table>

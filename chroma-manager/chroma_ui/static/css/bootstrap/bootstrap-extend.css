@@ -68,7 +68,7 @@ body form.form .help-inline {
   cursor: pointer;
 }
 
-.tooltip p {
+.tooltip .tooltip-inner {
   margin: 0;
   text-align: left;
   -webkit-font-smoothing: subpixel-antialiased;

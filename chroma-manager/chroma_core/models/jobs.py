@@ -265,15 +265,18 @@ class StatefulObject(models.Model):
 
             return list(set(self.transition_map[begin_state]))
 
-    @classmethod
-    def get_verb(cls, begin_state, end_state):
+    def get_verb(self, begin_state, end_state):
         """begin_state need not be adjacent but there must be a route between them"""
-        if not hasattr(cls, 'route_map') or not hasattr(cls, 'job_class_map'):
-            cls._build_maps()
+        if not hasattr(self, 'route_map') or not hasattr(self, 'job_class_map'):
+            self._build_maps()
 
-        route = cls.route_map[(begin_state, end_state)]
-        job_cls = cls.job_class_map[(route[-2], route[-1])]
-        return job_cls.state_verb
+        route = self.route_map[(begin_state, end_state)]
+        job_cls = self.job_class_map[(route[-2], route[-1])]
+
+        return {
+            "state_verb": job_cls.state_verb,
+            "long_description": job_cls.get_long_description(self)
+        }
 
     @classmethod
     def get_job_class(cls, begin_state, end_state):
@@ -369,6 +372,19 @@ class Job(models.Model):
 
     wait_for_json = models.TextField()
     locks_json = models.TextField()
+
+    long_description = None
+
+    # Human readable long description of the job.
+    @classmethod
+    def get_long_description(cls, stateful_object):
+        if type(cls.long_description) is list:
+            def match(class_to_compare):
+                return issubclass(stateful_object.downcast_class, class_to_compare)
+
+            return next((desc["value"] for desc in cls.long_description if match(desc["type"])), None)
+        else:
+            return cls.long_description
 
     # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)

@@ -111,7 +111,7 @@
         volume.dirty_ids = volume.original_ids;
 
         volume.status_icon = UIHelper.help_hover(
-          topic = '_volume_status_' + volume.status,
+          topic = 'volume_status_' + volume.status,
           content = UIHelper.fugue_icon(
                       volume_status_map[volume.status]['icon'],
                       { 'data-status': volume.status }
@@ -284,13 +284,12 @@
           }
         }
       });
-      ContextualHelp.load_snippets("#volume-tab");
     }
     return {draw:draw}
   }();
 </script>
 <h1 class="page-header"><i class="icon-th"></i> Volumes</h1>
-<h2 class='section_header'>Volume Configuration <i context-tooltip="_volume_long" tooltip-placement="right" class="icon-question-sign"></i></h2>
+<h2 class='section_header'>Volume Configuration <i context-tooltip="volume_long" tooltip-placement="right" class="icon-question-sign"></i></h2>
 
 <table class="display tight_lines" id="volume_configuration" width="100%">
   <thead>
@@ -299,7 +298,7 @@
       <th width="25%">Primary Server</th>
       <th width="25%">Failover Server</th>
       <th width="10%">Size</th>
-      <th width="20%"><a class='help_hover' data-topic='_status'>Status</a></th>
+      <th width="20%"><a class='help_hover' data-topic='status'>Status</a></th>
       <th></th>
       <th></th>
     </tr>
