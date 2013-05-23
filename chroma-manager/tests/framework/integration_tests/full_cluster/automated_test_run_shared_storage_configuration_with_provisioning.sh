@@ -45,7 +45,10 @@ fi
 # Install and setup integration tests on integration test runner
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
-exec 2>&1; set -x
+exec 2>&1; set -xe
+# need to substitute in the el6.4 repo until this is all transitioned over
+sed -i -e 's/\(distro=el6\)\//\1.4\//' /etc/yum.repos.d/autotest.repo
+yum --disablerepo=\* --enablerepo=chroma makecache
 $PROXY yum -y install chroma-manager-integration-tests
 
 if $USE_FENCE_XVM; then
