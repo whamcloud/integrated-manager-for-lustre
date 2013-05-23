@@ -793,6 +793,7 @@ var Dashboard = (function() {
         // this chart only displays when there's < 128 osts, so we'll nick off
         // the filesystem part of <filesystem>-OST<index> if we're on the dashboard
         // or if there's only one filesystem
+        name = name.replace(/OST0*([a-f\d]+?)$/,'$1');
         if ( dashboard_filesystem || ApiCache.list('filesystem').length === 1) {
           name = name.replace(/^[^\-]+-/,'');
         }
