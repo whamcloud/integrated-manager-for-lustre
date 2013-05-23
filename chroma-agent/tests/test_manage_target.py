@@ -1,4 +1,4 @@
-from chroma_agent.action_plugins.manage_targets import writeconf_target, format_target, _get_nvpairid_from_xml
+from chroma_agent.action_plugins.manage_targets import writeconf_target, format_target, _get_nvpairid_from_xml, check_block_device
 
 from django.utils import unittest
 import chroma_agent.shell
@@ -10,19 +10,28 @@ class CommandCaptureTestCase(unittest.TestCase):
     def setUp(self):
         self._command_history = []
 
-        def fake_shell(args):
+        def fake_try_run(args):
             self._command_history.append(args)
             if tuple(args) in self.results:
                 return self.results[tuple(args)]
 
-        self._old_shell = chroma_agent.shell.try_run
-        chroma_agent.shell.try_run = fake_shell
+        self._old_try_run = chroma_agent.shell.try_run
+        chroma_agent.shell.try_run = fake_try_run
+
+        def fake_run(args):
+            self._command_history.append(args)
+            if tuple(args) in self.results:
+                return self.results[tuple(args)]
+
+        self._old_run = chroma_agent.shell.run
+        chroma_agent.shell.run = fake_run
 
     def assertRan(self, command):
         self.assertIn(command, self._command_history)
 
     def tearDown(self):
-        chroma_agent.shell.try_run = self._old_shell
+        chroma_agent.shell.try_run = self._old_try_run
+        chroma_agent.shell.run = self._old_run
 
 
 class TestWriteconfTarget(CommandCaptureTestCase):
@@ -171,3 +180,26 @@ class TestXMLParsing(unittest.TestCase):
 
     def test_get_nvpairid_from_xml(self):
         self.assertEqual('c2890397-e0a2-4759-8f4e-df5ed64e1518', _get_nvpairid_from_xml(self.xml_example))
+
+
+class TestCheckBlockDevice(CommandCaptureTestCase):
+    def test_occupied_device(self):
+        self.results = {
+            ("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"): (0, "ext4\n", "")
+        }
+
+        self.assertEqual(check_block_device("/dev/sdb"), 'ext4')
+
+    def test_mbr_device(self):
+        self.results = {
+            ("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"): (0, "\n", "")
+        }
+
+        self.assertEqual(check_block_device("/dev/sdb"), None)
+
+    def test_empty_device(self):
+        self.results = {
+            ("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/sdb"): (2, "", "")
+        }
+
+        self.assertEqual(check_block_device("/dev/sdb"), None)

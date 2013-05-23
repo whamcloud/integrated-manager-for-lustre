@@ -184,12 +184,19 @@ def check_block_device(path):
     """
 
     rc, blkid_output, blkid_err = shell.run(["blkid", "-p", "-o", "value", "-s", "TYPE", path])
+
     if rc == 2:
         # blkid returns 2 if there is no fileysstem on the device
         return None
     elif rc == 0:
-        # We have a filesystem type
-        return blkid_output.strip()
+        filesystem_type = blkid_output.strip()
+
+        if filesystem_type:
+            return filesystem_type
+        else:
+            # Empty filesystem: blkid returns 0 but prints no FS if it seems something non-filesystem-like
+            # like an MBR
+            return None
     else:
         raise RuntimeError("Unexpected return code %s from blkid %s: '%s' '%s'" % (rc, path, blkid_output, blkid_err))
 
