@@ -433,7 +433,7 @@ class AgentSsh(object):
             try:
                 #  private key to match a public key on the server
                 #  optionally encrypted
-                pkey_filelike = StringIO(str(pkey))
+                pkey_filelike = StringIO(pkey)
                 if pkey_pw:
                     pkey_paramiko = paramiko.RSAKey.from_private_key(
                         pkey_filelike,
