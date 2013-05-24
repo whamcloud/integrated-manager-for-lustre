@@ -65,8 +65,14 @@ var TargetDetail = Backbone.View.extend({
       this.model.toJSON(),
       $(this.el).find(".conf_param_table").dataTable());
   },
-  conf_param_reset: function() {
-    reset_config_params($(this.el).find(".conf_param_table").dataTable());
+  conf_param_reset: function () {
+    var dataTable = $(this.el).find('.conf_param_table').dataTable();
+
+    window.reset_config_params(dataTable);
+    this.conf_param_apply(dataTable);
+  },
+  conf_param_cancel: function () {
+    window.cancel_config_params($(this.el).find('.conf_param_table').dataTable());
   },
   tab_select: function(event, ui) {
     var view = this;
@@ -96,6 +102,7 @@ var TargetDetail = Backbone.View.extend({
   },
   events: {
     "click .conf_param_apply": "conf_param_apply",
-    "click .conf_param_reset": "conf_param_reset"
+    "click .conf_param_reset": "conf_param_reset",
+    'click .conf_param_cancel': 'conf_param_cancel'
   }
 });

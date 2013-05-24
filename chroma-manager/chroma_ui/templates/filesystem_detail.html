@@ -214,7 +214,11 @@
         $commandDropdown.after(LiveObject.busyIcon(filesystem));
 
         // Config param dialog
-        conf_param_dialog = ConfParamDialog({object: filesystem, conf_params: filesystem.conf_params});
+        conf_param_dialog = ConfParamDialog({
+          object: filesystem,
+          conf_params: filesystem.conf_params,
+          title: 'File System: %s Advanced Settings'.sprintf(filesystem.label)
+        });
 
         // Monitored filesystems can't have new targets
         $('#btnNewOST').button('option', 'disabled', filesystem.immutable_state);
