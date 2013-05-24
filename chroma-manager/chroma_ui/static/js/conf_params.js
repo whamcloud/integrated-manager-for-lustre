@@ -22,7 +22,7 @@
 
 var ConfParamDialog = function(options) {
   var el = $("<div><div class='help_loader' data-topic='advanced_settings' /><table class='validated_form' width='100%' border='0' cellspacing='0' cellpadding='0'><thead><th></th><th></th><th></th></thead><tbody></tbody></table></div>");
-  var _options = $.extend({}, options);
+  var _options = $.extend({title: ''}, options);
 
   el.find('table').dataTable( {
     "iDisplayLength":30,
@@ -55,6 +55,7 @@ var ConfParamDialog = function(options) {
   el.dialog
     ({
       autoOpen: false,
+      title: _options.title,
       width: 450,
       height: 'auto',
       //maxHeight: $(window).height() - 100,
@@ -64,7 +65,7 @@ var ConfParamDialog = function(options) {
       {
         "Apply": {
           text: "Apply",
-          class: "conf_param_apply_button",
+          'class': "conf_param_apply_button",
           click: function(){
             var datatable = $(this).find('table').dataTable();
             var dialog = $(this);
@@ -75,15 +76,44 @@ var ConfParamDialog = function(options) {
             }
           }
         },
-        "Close": {
-            text: "Close",
-            class: "conf_param_close_button",
+        "Cancel": {
+            text: "Cancel",
+            'class': "conf_param_close_button",
             click: function(){
                 $(this).dialog('close')
             }
         }
       }
     });
+
+  if (_options.object) {
+    var buttonsGetterSetter = el.dialog.bind(el, 'option', 'buttons');
+    var buttons = buttonsGetterSetter();
+
+    _.extend(buttons, {
+      Reset: {
+        text: 'Reset To Defaults',
+        click: function handleReset() {
+          var dataTable = el.find('table').dataTable();
+          dataTable.fnGetNodes().forEach(function (node) {
+            $(node).find('input').val('');
+          });
+
+          // Call the apply button click handler.
+          $(this).dialog('option', 'buttons').Apply.click.call(this);
+        }
+      }
+    });
+
+    // Reorder the buttons object literal.
+    var cancelButton = buttons.Cancel;
+    delete buttons.Cancel;
+    buttons.Cancel = cancelButton;
+
+    buttonsGetterSetter(buttons);
+
+    el.bind('dialogclose', clear);
+  }
 
   //populate help snippets
   ContextualHelp.load_snippets(el.find('div').first());
@@ -188,8 +218,13 @@ function populate_conf_param_table(data, table, help) {
   }
 }
 
-function reset_config_params(datatable)
-{
+function reset_config_params(dataTable) {
+  dataTable.fnGetNodes().forEach(function (node) {
+    $(node).find('input').val('');
+  });
+}
+
+function cancel_config_params(datatable) {
   var oSetting = datatable.fnSettings();
   for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
     var conf_param_name = oSetting.aoData[i]._aData[3];

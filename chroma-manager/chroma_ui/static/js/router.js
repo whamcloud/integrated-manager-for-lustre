@@ -131,12 +131,8 @@ var ChromaRouter = Backbone.Router.extend({
       $('#' + dialog_id).remove();
       var mydiv = $("<div id='" + dialog_id + "' style='overflow-y: scroll;'></div>");
 
-      var title;
-      if (title_attr){
-        title = c.get(title_attr);
-      } else {
-        title = undefined;
-      }
+      var title = (_.isFunction(title_attr)? title_attr(c): c.get(title_attr));
+
       mydiv.dialog({
         buttons: [{text: "Close", 'class': "close", click: function(){
           $(this).dialog('close');
@@ -160,7 +156,18 @@ var ChromaRouter = Backbone.Router.extend({
   },
   target_detail: function(id)
   {
-    this.object_detail(id, Target, TargetDetail, 'label');
+    this.object_detail(id, Target, TargetDetail, function titleFunc(c) {
+      var kinds = {
+        MDT: 'Metadata Target',
+        MGT: 'Management Target',
+        OST: 'Object Storage Target'
+      };
+
+      var kind = kinds[c.get('kind')];
+      var label = c.get('label');
+
+      return '%s: %s'.sprintf(kind, label);
+    });
   },
   storage_resource_detail: function(id)
   {
