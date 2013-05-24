@@ -78,14 +78,22 @@ class PacemakerNode(object):
 
         return agents
 
-    def set_fence_attribute(self, agent, key, value):
-        self.set_attribute("%s_fence_%s" % (agent, key), value)
-
-    def clear_fence_attribute(self, agent, key):
-        self.set_attribute("%s_fence_%s" % (agent, key))
+    def set_fence_attributes(self, index, attributes):
+        # HYD-2014: Make sure we set the N_fence_agent attribute last
+        # in order to avoid races.
+        agent = attributes.pop('agent')
+        for key, value in attributes.items():
+            self.set_attribute("%s_fence_%s" % (index, key), value)
+        self.set_attribute("%s_fence_agent" % index, agent)
 
     def clear_fence_attributes(self):
+        # HYD-2014: Make sure we remove the N_fence_agent attribute first
+        # in order to avoid races.
         for fence_agent in self.fence_agent_dicts:
+            key = [a for a in fence_agent if 'fence_agent' in a][0]
+            del fence_agent[key]
+            self.clear_attribute(key)
+
             for agent_attr in fence_agent:
                 self.clear_attribute(agent_attr)
 
