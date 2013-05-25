@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+from argparse import ArgumentParser
+from urllib import urlencode
+import urllib2
+import base64
+import os
+import ast
+
+def build_authenticated_request(opts, url):
+    req = urllib2.Request(url = url)
+    auth = base64.standard_b64encode("%s:%s" % (opts.username, opts.password))
+    req.add_header("Authorization", "Basic %s" % auth)
+
+    return req
+
+
+def get_build_data(opts, url):
+    req = build_authenticated_request(opts, url)
+    return ast.literal_eval(urllib2.urlopen(req).read())
+
+
+def create_build_job(opts, url):
+    req = build_authenticated_request(opts, url)
+    return urllib2.urlopen(req).read()
+
+
+JENKINS_URL = "https://build.whamcloudlabs.com/"
+
+parser = ArgumentParser(description="SSI Test Invoker")
+parser.add_argument("-b", "--build", help="Build number", required=True)
+parser.add_argument("-c", "--coverage", help="Enable coverage reporting for test run")
+parser.add_argument("-j", "--job", help="Source job [chroma-reviews]", default="chroma-reviews")
+parser.add_argument("-p", "--password", help="Jenkins password (can also use $JENKINS_PASSWORD)")
+parser.add_argument("-t", "--test-job", help="Destination job [chroma-integration-tests-shared-storage-configuration]", default="chroma-integration-tests-shared-storage-configuration")
+parser.add_argument("-u", "--username", help="Jenkins username (can also use $JENKINS_USERNAME)")
+opts = parser.parse_args()
+
+if os.environ.get('JENKINS_USERNAME') and not opts.username:
+    opts.username = os.environ.get('JENKINS_USERNAME')
+elif not opts.username:
+    raise RuntimeError("You must supply a username for Jenkins.")
+
+if os.environ.get('JENKINS_PASSWORD') and not opts.password:
+    opts.password = os.environ.get('JENKINS_PASSWORD')
+elif not opts.password:
+    raise RuntimeError("You must supply a password for Jenkins.")
+
+# get the primary build's data
+source_url = "/".join([JENKINS_URL, "job", opts.job, opts.build, "api/python"])
+source = get_build_data(opts, source_url)
+
+# Why, Jenkins, why?
+source_params = dict([(d['name'], d['value']) for d in [a for a in source['actions'] if "parameters" in a][0]['parameters']])
+args = {'BUILD_JOB_NAME': opts.job,
+        'BUILD_JOB_BUILD_NUMBER': opts.build,
+        'GIT_BRANCH': source_params['GERRIT_REFSPEC'],
+        'GIT_COMMIT': source_params['GERRIT_PATCHSET_REVISION']}
+if opts.coverage:
+    args['MEASURE_COVERAGE'] = "on"
+
+dest_url = "/".join([JENKINS_URL, "job", opts.test_job, "buildWithParameters?%s" % urlencode(args)])
+response = create_build_job(opts, dest_url)
+# TODO: figure out what the new job number is
+#print response
