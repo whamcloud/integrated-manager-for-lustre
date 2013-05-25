@@ -222,24 +222,26 @@ def discover_existing_mcastport(ring1, timeout = 10):
 
     talker_thread = create_talker_thread(ring1)
 
-    packet_count = 0
-    start_time = current_time = time.time()
-    while packet_count < 1 and current_time < start_time + timeout:
-        try:
-            packet_count += cap.dispatch(1, recv_packets)
-        except Exception, e:
+    try:
+        packet_count = 0
+        start_time = current_time = time.time()
+        while packet_count < 1 and current_time < start_time + timeout:
+            try:
+                packet_count += cap.dispatch(1, recv_packets)
+            except Exception, e:
+                raise RuntimeError("Error reading from the network: %s" %
+                                   str(e))
+
+            # If we haven't seen anything yet, start blathering...
+            if packet_count < 1 and not talker_thread.is_alive():
+                talker_thread.start()
+            current_time = time.time()
+
+        console_log.debug("Finished after %d seconds, sniffed: %d" % (current_time - start_time, packet_count))
+    finally:
+        if talker_thread.is_alive():
             talker_thread.stop()
-            raise RuntimeError("Error reading from the network: %s" %
-                               str(e))
-
-        # If we haven't seen anything yet, start blathering...
-        if packet_count < 1:
-            talker_thread.start()
-        current_time = time.time()
-
-    console_log.debug("Finished after %d seconds, sniffed: %d" % (current_time - start_time, packet_count))
-
-    talker_thread.stop()
+            talker_thread.join()
 
 
 def subscribe_multicast(interface):
