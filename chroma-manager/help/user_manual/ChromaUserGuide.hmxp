@@ -66,8 +66,8 @@
       </tablestyleclass>
     </styleclasses>
     <config-group name="project">
-      <config-value name="title" translate="true">Chroma User Guide</config-value>
-      <config-value name="author" translate="true">Whamcloud, Inc.</config-value>
+      <config-value name="title" translate="true">Intel Manager for Lustre User Guide</config-value>
+      <config-value name="author" translate="true">Intel Corporation</config-value>
       <config-value name="copyright" translate="true">© &lt;%YEAR%&gt; &lt;%Company%&gt;</config-value>
       <config-value name="versionmajor">1</config-value>
       <config-value name="versionminor">0</config-value>

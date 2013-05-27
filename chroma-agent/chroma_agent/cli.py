@@ -71,7 +71,7 @@ def main():
     daemon_log.addHandler(logging.StreamHandler(sys.stderr))
     daemon_log.setLevel(logging.WARNING)
 
-    parser = argparse.ArgumentParser(description="Whamcloud Chroma Agent")
+    parser = argparse.ArgumentParser(description="Intel Manager for Lustre Agent")
     subparsers = parser.add_subparsers()
 
     for command, fn in ActionPluginManager().commands.items():

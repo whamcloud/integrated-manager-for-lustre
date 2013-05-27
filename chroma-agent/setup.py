@@ -29,14 +29,14 @@ excludes = ["*tests*"]
 setup(
     name = 'chroma-agent',
     version = package_version(),
-    author = "Whamcloud, Inc.",
-    author_email = "info@whamcloud.com",
-    url = 'http://www.whamcloud.com/',
+    author = "Intel Corporation",
+    author_email = "hpdd-info@intel.com",
+    url = 'http://lustre.intel.com/',
     packages = find_packages(exclude=excludes),
     include_package_data = True,
     data_files=[('/usr/lib/ocf/resource.d/chroma', ['Target'])],
     license = 'Proprietary',
-    description = 'The Whamcloud Lustre Monitoring and Adminisration Interface Agent',
+    description = 'The Intel Manager for Lustre Monitoring and Adminisration Interface Agent',
     long_description = open('README.txt').read(),
     entry_points = {
         'console_scripts': [

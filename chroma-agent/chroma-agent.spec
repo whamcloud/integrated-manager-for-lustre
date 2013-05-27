@@ -16,8 +16,8 @@ Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
-Vendor: Whamcloud, Inc. <info@whamcloud.com>
-Url: http://www.whamcloud.com/
+Vendor: Intel Corporation <hpdd-info@intel.com>
+Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
 Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3
 %if 0%{?rhel} > 5
@@ -26,7 +26,7 @@ Requires: util-linux-ng
 Requires(post): selinux-policy
 
 %description
-This is the Whamcloud monitoring and adminstration agent
+This is the Intel Manager for Lustre monitoring and adminstration agent
 
 %package management
 Summary: Management functionality layer.
@@ -34,7 +34,7 @@ Group: System/Utility
 Conflicts: sysklogd
 Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents-iml yum-utils system-config-firewall-base
 %description management
-This package layers on management capabilities for Whamcloud Chroma Agent.
+This package layers on management capabilities for Intel Manager for Lustre Agent.
 
 %prep
 %setup -n %{name}-%{version}

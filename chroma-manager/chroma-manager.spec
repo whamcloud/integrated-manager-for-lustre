@@ -3,7 +3,7 @@
 %{?!release: %define release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
-Summary: The Whamcloud Lustre Monitoring and Adminisration Interface
+Summary: The Intel Manager for Lustre Monitoring and Adminisration Interface
 Name: %{name}
 Version: %{version}
 Release: %{release}
@@ -17,8 +17,8 @@ Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
-Vendor: Whamcloud, Inc. <info@whamcloud.com>
-Url: http://www.whamcloud.com/
+Vendor: Intel Corporation <hpdd-info@intel.com>
+Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
 Requires: mod_wsgi mod_ssl httpd ntp ed
 Requires: python-setuptools
@@ -55,7 +55,7 @@ Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 
 %description
-This is the Whamcloud Monitoring and Adminstration Interface
+This is the Intel Manager for Lustre Monitoring and Adminstration Interface
 
 %package libs
 Summary: Common libraries for Chroma Server

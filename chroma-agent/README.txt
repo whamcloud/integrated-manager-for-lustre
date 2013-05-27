@@ -1,1 +1,1 @@
-This is the Whamcloud Monitoring and Adminstration Interface Agent.
+This is the Intel Manager for Lustre Monitoring and Adminstration Interface Agent.

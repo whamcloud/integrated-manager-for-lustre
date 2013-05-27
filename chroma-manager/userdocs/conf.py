@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Chroma documentation build configuration file, created by
+# Intel Manager for Lustre documentation build configuration file, created by
 # sphinx-quickstart on Wed Dec 21 15:15:42 2011.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -38,8 +38,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Chroma'
-copyright = u'2011, Whamcloud Inc.'
+project = u'Intel Manager for Lustre'
+copyright = u'2013, Intel Corporation'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -168,21 +168,21 @@ htmlhelp_basename = 'Chromadoc'
 # -- Options for LaTeX output --------------------------------------------------
 
 latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+    # The paper size ('letterpaper' or 'a4paper').
+    #'papersize': 'letterpaper',
 
-# The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    #'pointsize': '10pt',
 
-# Additional stuff for the LaTeX preamble.
-#'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    #'preamble': '',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Chroma.tex', u'Chroma Documentation',
-   u'Whamcloud Inc.', 'manual'),
+    ('index', 'Chroma.tex', u'Intel Manager for Lustre Documentation',
+     u'Intel Corporation', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -211,8 +211,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'chroma', u'Chroma Documentation',
-     [u'Whamcloud Inc.'], 1)
+    ('index', 'chroma', u'Intel Manager for Lustre Documentation',
+     [u'Intel Corporation'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -225,9 +225,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Chroma', u'Chroma Documentation',
-   u'Whamcloud Inc.', 'Chroma', 'One line description of project.',
-   'Miscellaneous'),
+    ('index', 'Intel Manager for Lustre', u'Intel Manager for Lustre Documentation',
+     u'Intel Corporation', 'Intel Manager for Lustre', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.

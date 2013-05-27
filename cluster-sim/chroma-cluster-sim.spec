@@ -13,8 +13,8 @@ Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
-Vendor: Whamcloud, Inc. <info@whamcloud.com>
-Url: http://www.whamcloud.com/
+Vendor: Intel Corporation <hpdd-info@intel.com>
+Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
 Requires: python-argparse python-setuptools python-requests >= 1.0.3 chroma-agent = %{version}-%{release}
 

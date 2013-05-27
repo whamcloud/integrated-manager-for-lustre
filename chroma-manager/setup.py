@@ -29,11 +29,11 @@ excludes = ["*docs*"]
 setup(
     name = 'chroma-manager',
     version = PACKAGE_VERSION,
-    author = "Whamcloud, Inc.",
-    author_email = "info@whamcloud.com",
-    url = 'http://www.whamcloud.com/',
+    author = "Intel Corporation",
+    author_email = "hpdd-info@intel.com",
+    url = 'http://lustre.intel.com/',
     license = 'Proprietary',
-    description = 'The Whamcloud Lustre Monitoring and Adminisration Interface',
+    description = 'The Intel Manager for Lustre Monitoring and Adminisration Interface',
     long_description = open('README.txt').read(),
     packages = find_packages(exclude=excludes) + [''],
     # include_package_data would be far more convenient, but the top-level
