@@ -455,10 +455,16 @@ def start_target(ha_label):
     i = 0
     while True:
         i += 1
-        # do a cleanup first, just to clear any previously errored state
-        # HYD-1989
-        # TODO: this cleanup needs to be done only if necessary
-        #shell.try_run(['crm', 'resource', 'cleanup', ha_label])
+        # see if we need to do a cleanup first
+        found = False
+        for line in shell.try_run(['crm_mon', '-1']).split('\n'):
+            # find any failed actions
+            if line.startswith("Failed actions:"):
+                found = True
+            if found and line.startswith("    %s" % ha_label):
+                shell.try_run(['crm', 'resource', 'cleanup', ha_label])
+                break
+
         shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
                        '-m', '-v', 'Started'])
 
