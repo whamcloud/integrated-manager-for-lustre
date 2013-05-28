@@ -44,7 +44,7 @@ ACTION_MANAGER_PLUGIN_NAME = 'action_runner'
 
 # If no action_runner session is present when trying to run
 # an action, wait this long for one to show up
-SESSION_WAIT_TIMEOUT = 10
+SESSION_WAIT_TIMEOUT = 30
 
 
 class AgentRunnerPluginRxQueue(AgentRxQueue):
