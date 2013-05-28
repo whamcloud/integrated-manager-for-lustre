@@ -333,7 +333,7 @@
         if(!conf_param_dialog) {
           Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
             advanced_tab_clicked = true;
-            conf_param_dialog = ConfParamDialog({help: help_dict, title: 'File System Advanced Settings'});
+            conf_param_dialog = ConfParamDialog({help: help_dict});
             conf_param_dialog.open();
           })
         } else {
