@@ -1,62 +1,68 @@
 {
+    "repos": {
+        "chroma": {
+             "build_job": "BUILD_JOB_NAME",
+             "build_number": BUILD_JOB_BUILD_NUMBER
+        }
+    },
+    "provision": true,
+    "failover_is_configured": false,
+    "reset": true,
+    "test_runners": [
+        {
+            "distro": "el6.4",
+            "repos": ["chroma"]
+        }
+    ],
     "chroma_managers": [
         {
-            "address": "hydra-2-efs-chroma-manager-1",
-            "server_http_url": "https://hydra-2-efs-chroma-manager-1/",
-            "users": [
-                {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
-            ],
+            "distro": "el6.4",
+            "selinux_enabled": true,
+            "firewall_enabled": true,
             "repos": ["chroma"],
-            "distro": "el6.4"
+            "users": [
+                {"username": "debug", "super": true, "password": "chr0m4_d3bug",
+                 "email": "nobody@example.com"}
+            ]
         }
     ],
     "lustre_servers": [
         {
-            "address": "hydra-2-efs-mgs-mds",
-            "nodename": "hydra-2-efs-mgs-mds",
-            "fqdn": "hydra-2-efs-mgs-mds",
-            "ip_address": "10.10.4.90",
-            "host": "hydra-2",
-            "destroy_command": "virsh destroy hydra-2-efs-mgs-mds",
-            "status_command": "virsh domstate hydra-2-efs-mgs-mds",
-            "start_command": "virsh start hydra-2-efs-mgs-mds",
-            "repos": ["chroma"],
-            "distro": "el6.4"
+            "distro": "el6.4",
+            "selinux_enabled": false,
+            "firewall_enabled": false,
+            "root_password": "lustre",
+            "repos": ["chroma"]
         },
         {
-            "address": "hydra-2-efs-oss1",
-            "nodename": "hydra-2-efs-oss1",
-            "fqdn": "hydra-2-efs-oss1",
-            "ip_address": "10.10.4.91",
-            "host": "hydra-2",
-            "destroy_command": "virsh destroy hydra-2-efs-oss1",
-            "status_command": "virsh domstate hydra-2-efs-oss1",
-            "start_command": "virsh start hydra-2-efs-oss1",
-            "repos": ["chroma"],
-            "distro": "el6.4"
+            "distro": "el6.4",
+            "selinux_enabled": false,
+            "firewall_enabled": false,
+            "root_password": "lustre",
+            "repos": ["chroma"]
         },
         {
-            "address": "hydra-2-efs-oss2",
-            "nodename": "hydra-2-efs-oss2",
-            "fqdn": "hydra-2-efs-oss2",
-            "host": "hydra-2",
-            "ip_address": "10.10.4.92",
-            "destroy_command": "virsh destroy hydra-2-efs-oss2",
-            "status_command": "virsh domstate hydra-2-efs-oss2",
-            "start_command": "virsh start hydra-2-efs-oss2",
-            "repos": ["chroma"],
-            "distro": "el6.4"
+            "distro": "el6.4",
+            "selinux_enabled": false,
+            "firewall_enabled": false,
+            "root_password": "lustre",
+            "repos": ["chroma"]
+        },
+        {
+            "distro": "el6.4",
+            "selinux_enabled": false,
+            "firewall_enabled": false,
+            "root_password": "lustre",
+            "repos": ["chroma"]
         }
     ],
     "lustre_clients": {
-        "hydra-2-efs-client-1": {
+        "client1": {
             "distro": "el6.4",
             "lustre_client_version": "2.3.0"
         }
     },
-    "hosts": {
-        "hydra-2": {}
-    },
+    "managed": false,
     "filesystem": {
         "name": "efs",
         "targets": {
@@ -91,19 +97,5 @@
                 "mount_path": "/mnt/ost3"
             }
         }
-    },
-    "test_runners": [
-        {
-            "distro": "el6.4",
-            "repos": ["chroma"]
-        }
-    ],
-    "repos": {
-        "chroma": {
-            "build_job": "BUILD_JOB_NAME",
-            "build_number": 0
-        }
-    },
-    "provision": true,
-    "reset": true
+    }
 }

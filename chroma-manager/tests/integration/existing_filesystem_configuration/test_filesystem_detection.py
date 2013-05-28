@@ -31,7 +31,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
         hosts = response.json['objects']
         self.assertEqual(len(config['lustre_servers']), len(hosts))
         for host in hosts:
-            self.assertTrue(host['immutable_state'])
+            self.assertTrue(host['immutable_state'], host)
             available_job_classes = [j['class_name'] for j in host['available_jobs']]
             self.assertIn('ForceRemoveHostJob', available_job_classes)
             available_transition_states = [t['state'] for t in host['available_transitions']]

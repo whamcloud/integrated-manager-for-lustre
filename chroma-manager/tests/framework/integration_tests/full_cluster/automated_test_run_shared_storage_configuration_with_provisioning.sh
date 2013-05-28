@@ -190,11 +190,16 @@ if $MEASURE_COVERAGE; then
     pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "set -x
       rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
       cd /var/tmp/
-      coverage combine" | dshbak -c
+      coverage combine
+# when putting the pdcp below back, might need to install pdsh first
+#      yum -y install pdsh
+" | dshbak -c
     if [ ${PIPESTATUS[0]} != 0 ]; then
         exit 1
     fi
 
+    # TODO: should use something like this for better efficiency:
+    # rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) /var/tmp/.coverage $PWD
     for SERVER in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
         scp root@$SERVER:/var/tmp/.coverage .coverage.$SERVER
     done

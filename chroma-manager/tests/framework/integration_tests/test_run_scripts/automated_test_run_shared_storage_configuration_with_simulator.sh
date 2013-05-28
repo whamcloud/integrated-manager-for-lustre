@@ -77,7 +77,10 @@ cd ~/chroma_test_env/chroma/chroma-manager
 if [ ! -f requirements.txt ]; then
   make requirements
 fi
-pip install -r requirements.txt
+pip install -r requirements.txt || {
+    cat \$HOME/.pip/pip.log
+    exit 1
+}
 
 unset http_proxy
 unset https_proxy

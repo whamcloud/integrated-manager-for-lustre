@@ -22,9 +22,11 @@ class ApiTestCaseWithTestReset(ApiTestCase):
           - unmounting any lustre filesystems from the clients
           - unconfiguring any chroma targets in pacemaker
         """
-        self.remote_operations.unmount_clients()
+        if config.get('managed'):
+            self.remote_operations.unmount_clients()
         self.reset_chroma_manager_db()
-        self.remote_operations.clear_ha(self.TEST_SERVERS)
+        if config.get('managed'):
+            self.remote_operations.clear_ha(self.TEST_SERVERS)
 
     def reset_chroma_manager_db(self):
         for chroma_manager in config['chroma_managers']:
@@ -98,16 +100,16 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (result.stdout.read(), result.stderr.read()))
             result = self.remote_command(
                 chroma_manager['address'],
-                """chroma-config profile register /tmp/ieel-*/base_managed.profile &> config_bundle.log""",
+                "for profile_pat in base_managed.profile base_monitored.profile; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log",
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
             if not chroma_config_exit_status == 0:
                 result = self.remote_command(
                     chroma_manager['address'],
-                    "cat config_bundle.log"
+                    "cat config_profile.log"
                 )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout.read())
+                self.assertEqual(0, chroma_config_exit_status, "chroma-config profile register failed: '%s'" % result.stdout.read())
 
     def graceful_teardown(self, chroma_manager):
         """

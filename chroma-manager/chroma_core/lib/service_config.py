@@ -915,6 +915,7 @@ def chroma_config():
                 register_profile(open(sys.argv[3]))
             except IOError:
                 print "Error opening %s" % sys.argv[3]
+                sys.exit(-1)
         elif operation == 'delete':
             delete_profile(sys.argv[3])
         elif operation == 'default':

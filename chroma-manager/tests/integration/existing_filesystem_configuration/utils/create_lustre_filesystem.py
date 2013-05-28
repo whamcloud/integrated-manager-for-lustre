@@ -47,7 +47,11 @@ class CreateLustreFilesystem(UtilityTestCase):
         logger.info("mkfs.lustre output:\n %s" % result.stdout.read())
         used_devices.append(mgt_device)
         self.mount_target(mgt, mgt_device)
-        mgs_ip = self.get_lustre_server_by_name(mgt['primary_server'])['ip_address']
+        try:
+            mgs_ip = self.get_lustre_server_by_name(mgt['primary_server'])['ip_address']
+        except:
+            raise RuntimeError("Could not get 'ip_address' for %s" %
+                               mgt['primary_server'])
 
         if not combined_mgt_mdt:
             # TODO: Create the separate MDT

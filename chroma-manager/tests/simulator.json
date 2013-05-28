@@ -3,6 +3,7 @@
     "log_dir": ".",
     "reset": false,
     "failover_is_configured": true,
+    "managed": true,
     "chroma_managers": [
         {
             "server_http_url": "https://localhost:8000/",

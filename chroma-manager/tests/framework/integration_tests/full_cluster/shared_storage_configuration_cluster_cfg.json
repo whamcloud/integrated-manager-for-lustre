@@ -9,12 +9,13 @@
     "failover_is_configured": true,
     "reset": true,
     "pacemaker_hard_reset": true,
+    "managed": true,
     "test_runners": [
         {
             "distro": "el6.4",
             "repos": ["chroma"]
         }
-    ], 
+    ],
     "chroma_managers": [
         {
             "distro": "el6.4",
@@ -40,7 +41,7 @@
                 "mcast_port": "4242"
             }
         },
-       {
+        {
             "distro": "el6.4",
             "selinux_enabled": true,
             "firewall_enabled": true,
@@ -52,7 +53,7 @@
                 "mcast_port": "4242"
             }
         },
-       {
+        {
             "distro": "el6.4",
             "selinux_enabled": true,
             "firewall_enabled": true,
@@ -64,7 +65,7 @@
                 "mcast_port": "4244"
             }
         },
-       {
+        {
             "distro": "el6.4",
             "selinux_enabled": true,
             "firewall_enabled": true,

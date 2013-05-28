@@ -85,8 +85,7 @@ class ApiTestCase(UtilityTestCase):
                                                       "starting test %s "
                                                       "=====" % self)
 
-        reset = config.get('reset', True)
-        if reset:
+        if config.get('reset', True):
             self.reset_cluster()
         else:
             # Reset the manager via the API
@@ -95,21 +94,21 @@ class ApiTestCase(UtilityTestCase):
             self.api_force_clear()
             self.remote_operations.clear_ha(self.TEST_SERVERS)
 
-        if not 'filesystem' in config:
+        if config.get('managed'):
             # Erase all volumes if the config does not indicate that there is already
             # a pres-existing file system (in the case of the monitoring only tests).
             for server in self.TEST_SERVERS:
                 for path in server['device_paths']:
                     self.remote_operations.erase_block_device(server['fqdn'], path)
 
-        # Ensure that config from previous runs doesn't linger into
-        # this one.
-        self.remote_operations.remove_config(self.TEST_SERVERS)
+            # Ensure that config from previous runs doesn't linger into
+            # this one.
+            self.remote_operations.remove_config(self.TEST_SERVERS)
 
-        # If there are no configuration options for a given server
-        # (e.g. corosync_config), then this is a noop and no config file
-        # is written.
-        self.remote_operations.write_config(self.TEST_SERVERS)
+            # If there are no configuration options for a given server
+            # (e.g. corosync_config), then this is a noop and no config file
+            # is written.
+            self.remote_operations.write_config(self.TEST_SERVERS)
 
         # Enable agent debugging
         self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
