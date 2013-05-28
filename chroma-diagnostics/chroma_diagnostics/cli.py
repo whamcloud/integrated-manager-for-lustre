@@ -91,6 +91,12 @@ def execute(cmd):
 
 DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
 
+PACKAGES = ['chroma-agent',
+            'chroma-agent-management',
+            'chroma-manager',
+            'chroma-manager-cli',
+            'chroma-manager-libs']
+
 
 def main():
 
@@ -141,6 +147,11 @@ def main():
         log.info("Validated chroma installation")
     elif args.verbose > 0:
         log.info("Failed to run chroma installation validation")
+
+    if dump('finger-print.dump', ['rpm', '-V', ] + PACKAGES, output_directory):
+        log.info("Finger printed chroma installation")
+    elif args.verbose > 0:
+        log.info("Failed to finger print chroma installation")
 
     if execute(['cp', ] + chroma_log_locations + [output_directory, ]):
         log.info("Copied all log files")
