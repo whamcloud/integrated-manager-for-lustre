@@ -56,7 +56,9 @@
             dialog.close();
             $scope.$emit('unblockUi');
           }, errback);
-        }
+        },
+        type: 'edit',
+        title: 'Edit Pdu: %s'.sprintf(device.name)
       };
 
       getDeviceType = function (resp) {
@@ -74,7 +76,9 @@
               $scope.$emit('unblockUi');
             });
           }, errback);
-        }
+        },
+        type: 'add',
+        title: 'New Pdu'
       };
 
       getDeviceType = _.first;

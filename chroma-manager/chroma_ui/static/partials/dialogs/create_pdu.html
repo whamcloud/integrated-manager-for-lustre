@@ -1,6 +1,6 @@
 <div class="create-pdu">
     <div class="modal-header">
-        <h4>New PDU</h4>
+        <h4>((createPduCtrl.title))</h4>
     </div>
     <div class="modal-body">
       <alert ng-repeat="alert in createPduCtrl.err.__all__" type="'error'" close="createPduCtrl.closeAlert($index)">((alert))</alert>
@@ -8,7 +8,7 @@
         <div class="control-group">
           <label class="control-label">Device type:</label>
           <div class="controls">
-            <select ng-model="createPduCtrl.form.device_type" ng-options="value.name for value in createPduCtrl.powerControlTypes"></select>
+            <select ng-model="createPduCtrl.form.device_type" ng-options="value.name for value in createPduCtrl.powerControlTypes" ng-disabled="createPduCtrl.type == 'edit'"></select>
           </div>
         </div>
         <div class="control-group">
