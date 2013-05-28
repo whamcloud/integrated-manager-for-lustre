@@ -22,7 +22,7 @@
 
 from collections import defaultdict
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.services.rpc import RpcError
+from chroma_core.services.rpc import RpcError, RpcTimeout
 from tastypie.validation import Validation
 
 from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile
@@ -243,7 +243,9 @@ class HostTestResource(Resource):
 
     def obj_create(self, bundle, request = None, **kwargs):
 
-        result = JobSchedulerClient.test_host_contact(
-            **_host_params(bundle))
+        try:
+            result = JobSchedulerClient.test_host_contact(**_host_params(bundle))
+        except RpcTimeout:
+            raise custom_response(self, request, http.HttpBadRequest, {'address': ["Cannot contact host at this address:"]})
 
         raise custom_response(self, request, http.HttpAccepted, result)
