@@ -181,7 +181,7 @@ class SeleniumBaseTestCase(TestCase):
         self.mgt_page = Mgt(self.driver)
         self.mgt_page.create_mgt(mgt_host_name, mgt_device_node)
 
-        self.navigation.go('Configure', 'Create_new_filesystem')
+        self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.enter_name(filesystem_name)
         create_filesystem_page.open_conf_params()

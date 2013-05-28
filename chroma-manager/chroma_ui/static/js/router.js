@@ -218,7 +218,8 @@ var ChromaRouter = Backbone.Router.extend({
   {
     if ( this.failed_filesystem_admin_check() )
       return;
-    this.filesystemList();
+    
+    this.configure('server');
   },
   toplevel: function(name)
   {

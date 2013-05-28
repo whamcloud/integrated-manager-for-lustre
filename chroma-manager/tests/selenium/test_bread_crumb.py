@@ -32,14 +32,14 @@ class TestBreadCrumb(SeleniumBaseTestCase):
         self.assertListEqual(filesystem_list, breadcrumb_filesystem_list, 'Filesystem list on breadcrumb and filesystem tab do not match')
 
         # Verify length is 1 with one filesystem.
-        self.navigation.go('Configure')
+        self.navigation.go('Configure', 'Filesystems')
         self.create_filesystem_simple(
             self.test_data.get_test_data_for_server_configuration(),
             self.test_data.get_test_data_for_filesystem_configuration()['name'],
             self.test_data.get_test_data_for_conf_params()['filesystem_conf_params']
         )
 
-        self.navigation.go('Configure')
+        self.navigation.go('Configure', 'Filesystems')
         filesystem_page = Filesystem(self.driver)
         filesystem_list = filesystem_page.get_filesystem_list()
 

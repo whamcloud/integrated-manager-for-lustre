@@ -69,7 +69,7 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         self.mgt_page.create_mgt(self.mgt_server_address, self.mgt_volume_name)
 
         # Create filesystem
-        self.navigation.go('Configure', 'Create_new_filesystem')
+        self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.enter_name(self.filesystem_name)
         create_filesystem_page.select_mgt(self.mgt_server_address)
@@ -128,7 +128,7 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         self.mgt_page.create_mgt(self.mgt_server_address, self.mgt_volume_name)
 
         # Create filesystem
-        self.navigation.go('Configure', 'Create_new_filesystem')
+        self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
         create_filesystem_page = CreateFilesystem(self.driver)
         create_filesystem_page.enter_name(self.filesystem_name)
         create_filesystem_page.select_mgt(self.mgt_server_address)
