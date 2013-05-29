@@ -127,7 +127,6 @@ class TestFstab(unittest.TestCase):
 # See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
 #
 /dev/mapper/LustreVG-root /                       ext3    defaults        1 1
-UUID=d546845f-481f-48f8-a998-8a81adcdb53d /boot                   ext3    defaults        1 2
 /dev/mapper/LustreVG-usr /usr                    ext3    defaults        1 2
 /dev/mapper/LustreVG-var /var                    ext3    defaults        1 2
 /dev/mapper/LustreVG-swap swap                    swap    defaults        0 0
@@ -139,7 +138,6 @@ proc                    /proc                   proc    defaults        0 0
         }
 
         expected_result = [('/dev/mapper/LustreVG-root', '/', 'ext3'),
-                           ('UUID=d546845f-481f-48f8-a998-8a81adcdb53d', '/boot', 'ext3'),
                            ('/dev/mapper/LustreVG-usr', '/usr', 'ext3'),
                            ('/dev/mapper/LustreVG-var', '/var', 'ext3'),
                            ('/dev/mapper/LustreVG-swap', 'swap', 'swap'),

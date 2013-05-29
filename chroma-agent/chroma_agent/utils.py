@@ -96,6 +96,13 @@ class Fstab(object):
             line = line.split('#')[0]
             try:
                 (device, mntpnt, fstype) = line.split()[0:3]
+
+                uuid_match = re.match("UUID=([\w-]+)$", device)
+                if uuid_match:
+                    # Resolve UUID to device node path
+                    uuid = uuid_match.group(1)
+                    device = shell.try_run(['blkid', '-U', uuid]).strip()
+
                 self.fstab.append((device, mntpnt, fstype))
             except ValueError:
                 # Empty or malformed line
