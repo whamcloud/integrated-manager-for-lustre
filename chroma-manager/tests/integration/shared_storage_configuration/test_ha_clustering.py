@@ -5,6 +5,9 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 class ChromaHaTestCase(ChromaIntegrationTestCase):
+    # Adjust this if we ever support more.
+    SERVERS_PER_HA_CLUSTER = 2
+
     def setUp(self):
         super(ChromaHaTestCase, self).setUp()
 
@@ -19,31 +22,40 @@ class ChromaHaTestCase(ChromaIntegrationTestCase):
 
         self.wait_until_true(all_servers_up)
 
+        self.EXPECTED_CLUSTER_COUNT = len(self.TEST_SERVERS) / self.SERVERS_PER_HA_CLUSTER
+
+    def wait_for_cluster_count(self, count):
+        def cluster_count_matches(count):
+            clusters = self.get_list("/api/ha_cluster/")
+            return len(clusters) == count
+
+        self.wait_until_true(lambda: cluster_count_matches(count))
+
 
 class TestHaClusters(ChromaHaTestCase):
     def test_ha_cluster_count(self):
-        # Adjust this if we ever support more.
-        SERVERS_PER_HA_CLUSTER = 2
+        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
 
         clusters = self.get_list("/api/ha_cluster/")
         server_count = len(config['lustre_servers'])
 
-        if server_count >= (SERVERS_PER_HA_CLUSTER * 2):
+        if server_count >= (self.SERVERS_PER_HA_CLUSTER * 2):
             # If we have at least 4 servers, then we should have at least
             # 2 HA clusters, assuming 2 servers per HA cluster.
-            self.assertEqual(len(clusters), server_count / SERVERS_PER_HA_CLUSTER)
-        elif server_count > (SERVERS_PER_HA_CLUSTER - 1):
+            self.assertEqual(len(clusters), server_count / self.SERVERS_PER_HA_CLUSTER)
+        elif server_count > (self.SERVERS_PER_HA_CLUSTER - 1):
             # Conversely, if we have fewer than 4 servers, but more than 1,
             # we should have exactly 1 cluster (2 peers + 1 not in a cluster).
             self.assertEqual(len(clusters), 1)
 
     def test_ha_clusters_are_distinct(self):
+        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
+
         # Verify that each host only appears in a single HA cluster.
         # Stupid brute-force test... Don't want to use a graph
         # analysis library to verify its own results.
         clusters = [[h['fqdn'] for h in c['peers']]
                         for c in self.get_list("/api/ha_cluster/")]
-        self.assertGreaterEqual(len(clusters), 2)
 
         for i, cluster in enumerate(clusters):
             for peer in cluster:
@@ -60,10 +72,10 @@ class TestHaClusterVolumes(ChromaHaTestCase):
     #    pass
 
     def test_api_rejects_multi_cluster_failover(self):
+        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
         # Make sure that we can't accidentally or otherwise set up
         # a primary/failover relationship across two HA clusters.
         clusters = self.get_list("/api/ha_cluster/")
-        self.assertGreaterEqual(len(clusters), 2)
 
         cluster_0_host = clusters[0]['peers'][0]
         cluster_1_host = clusters[1]['peers'][0]
@@ -89,13 +101,13 @@ class TestHaClusterVolumes(ChromaHaTestCase):
         self.assertEqual(response.status_code, 400, response.text)
 
     def test_volumes_assigned_to_single_clusters(self):
+        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
         # A given volume should only be usable with nodes in a single HA
         # cluster. Allowing fully-meshed volumes to be usable across
         # multiple HA clusters will lead to weird and broken behavior
         # (can't fail between different corosync clusters!).
         clusters = [[h['resource_uri'] for h in c['peers']]
                         for c in self.get_list("/api/ha_cluster/")]
-        self.assertGreaterEqual(len(clusters), 2)
 
         ha_volumes = set()
         ha_volume_cluster_hosts = defaultdict(list)
