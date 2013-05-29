@@ -32,7 +32,7 @@ try:
         build_url = sys.argv[1].replace('lastSuccessfulBuild', str(build))
         build_url = build_url.replace(str(data['number']), str(build))
         build_data = get_build_data(build_url)
-        changes += [i['msg'] for i in build_data['changeSet']['items']]
+        changes += [i['msg'].replace('"','') for i in build_data['changeSet']['items']]
     print 'BUILD_META_CHANGES="%s"' % "\\n".join(changes)
 except IndexError:
     print 'BUILD_META_CHANGES="None. First deployment?"'
