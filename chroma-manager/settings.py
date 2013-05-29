@@ -146,7 +146,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.admindocs',
     'south',
-    'r3d',
     'djcelery',
     'tastypie',
     'chroma_core',

@@ -73,12 +73,6 @@ The CLI code is a peer of the UI, also consuming the API over HTTP.
 
 This is a vanilla Python module, not a Django app.
 
-r3d
-____
-
-A database-backed time series store, used for storing statistics.  This is used by chroma_core in addition
-to its own models.
-
 plugins
 _______
 

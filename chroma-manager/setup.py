@@ -24,7 +24,7 @@
 from setuptools import setup, find_packages
 from scm_version import PACKAGE_VERSION
 
-excludes = ["*docs*", "*r3d*tests*"]
+excludes = ["*docs*"]
 
 setup(
     name = 'chroma-manager',

@@ -25,14 +25,10 @@ from chroma_core.lib.storage_plugin.base_statistic import BaseStatistic
 
 class Gauge(BaseStatistic):
     """A numerical time series which can go up or down"""
-    def r3d_type(self):
-        return 'Gauge'
 
 
 class Counter(BaseStatistic):
     """A monotonically increasing time series."""
-    def r3d_type(self):
-        return 'Counter'
 
 
 class BytesHistogram(BaseStatistic):
