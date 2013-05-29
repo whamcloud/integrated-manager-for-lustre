@@ -56,6 +56,7 @@ help_text = {
     'state_changed': 'Time at which the state last changed, either detected or as a result of user action.',
 
     'status': 'Indicates the status of high availability (HA) configuration for this volume (ha = available for HA, noha = not configured for HA).',
+    'status_light': 'Indicates current system health. <br /> Green: The file system is operating normally. <br />  Yellow: The system may be operating in a degraded mode. <br /> Red: This system may be down or is severely degraded. <br /> Click to view all system event and alert status messages.',
 
     'start_file_system': 'Start the metadata and object storage targets so the file system can be mounted by clients.,',
     'stop_file_system': 'Stop the metadata and object storage targets, thus making the file system unavailable to clients.',
