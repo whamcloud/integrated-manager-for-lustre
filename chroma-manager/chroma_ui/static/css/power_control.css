@@ -47,7 +47,6 @@ div[ng-controller="PowerCtrl"] th {
 div[ng-controller="PowerCtrl"] th a {
   float: right;
   cursor: pointer;
-  position: relative;
   text-decoration: none;
   color: #777777;
 }
@@ -61,12 +60,8 @@ div[ng-controller="PowerCtrl"] th a:hover {
 }
 
 div[ng-controller="PowerCtrl"] th a .tooltip {
-  top: 20px !important;
-  left: -44px !important;
-  display: block;
-  width: 100px;
   font-weight: normal;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 div[ng-controller="PowerCtrl"] tbody td:first-child {
@@ -118,6 +113,25 @@ div[ng-controller="PowerCtrl"] .select2-search-choice:before {
 
 
 /* Multi select tag start */
+
+div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices {
+  padding-right: 25px;
+}
+
+div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices:after {
+  font-family: FontAwesome;
+  content: "\f0d7";
+  position: absolute;
+  right: 10px;
+  height: 100%;
+  font-size: 14px;
+  color: #777777;
+  display: block;
+  top: -webkit-calc(50% - 6px);
+  top: -moz-calc(50% - 6px);
+  top: calc(50% - 6px);
+  line-height: 14px;
+}
 
 div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices .select2-search-choice {
   background-image: none;
