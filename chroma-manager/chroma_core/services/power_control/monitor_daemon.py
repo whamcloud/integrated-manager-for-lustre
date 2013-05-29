@@ -82,8 +82,8 @@ class PowerDeviceMonitor(threading.Thread):
             # Check to see if we can log into the PDU and that it's
             # responsive to commands.
             available = self._manager.check_device_availability(self.device)
-            PowerControlDeviceUnavailableAlert.notify(self.device,
-                                                      not available)
+            if available or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
+                PowerControlDeviceUnavailableAlert.notify(self.device, not available)
             log.debug("Checked on %s:%s: %s" % (self.device.sockaddr + tuple(["available" if available else "unavailable"])))
             self._stopping.wait(timeout = 10)
 
