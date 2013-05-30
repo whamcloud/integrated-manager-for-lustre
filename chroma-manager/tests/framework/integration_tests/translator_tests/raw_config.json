@@ -70,7 +70,7 @@
     "lustre_clients": {
         "client1": {
             "distro": "el6",
-            "lustre_client_version": "2.1.4"
+            "lustre_client_version": "2.3.0"
         }
     },
     "power_control_types": [
