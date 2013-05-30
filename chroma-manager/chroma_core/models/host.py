@@ -1469,13 +1469,6 @@ class HostContactAlert(AlertState):
         app_label = 'chroma_core'
         ordering = ['id']
 
-    def begin_event(self):
-        return AlertEvent(
-            message_str = "Lost contact with host %s" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.WARNING)
-
     def end_event(self):
         return AlertEvent(
             message_str = "Re-established contact with host %s" % self.alert_item,
@@ -1496,13 +1489,6 @@ class HostOfflineAlert(AlertState):
 
     class Meta:
         app_label = 'chroma_core'
-
-    def begin_event(self):
-        return AlertEvent(
-            message_str = "Host is offline %s" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.WARNING)
 
     def end_event(self):
         return AlertEvent(
@@ -1534,13 +1520,6 @@ class LNetOfflineAlert(AlertState):
         app_label = 'chroma_core'
         ordering = ['id']
 
-    def begin_event(self):
-        return AlertEvent(
-            message_str = "LNet stopped on server '%s'" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.WARNING)
-
     def end_event(self):
         return AlertEvent(
             message_str = "LNet started on server '%s'" % self.alert_item,
@@ -1556,13 +1535,6 @@ class LNetNidsChangedAlert(AlertState):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
-
-    def begin_event(self):
-        return AlertEvent(
-            message_str = "LNet NIDs changed on server %s" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.WARNING)
 
     def end_event(self):
         return AlertEvent(

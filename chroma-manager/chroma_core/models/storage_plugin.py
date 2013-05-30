@@ -359,13 +359,6 @@ class StorageResourceOffline(AlertState):
     def message(self):
         return "%s not contactable" % self.alert_item.alias_or_name()
 
-    def begin_event(self):
-        import logging
-        return AlertEvent(
-                message_str = "Lost contact with %s" % self.alert_item.alias_or_name(),
-                alert = self,
-                severity = logging.WARNING)
-
     def end_event(self):
         import logging
         return AlertEvent(
@@ -393,13 +386,6 @@ class StorageResourceAlert(AlertState):
         from chroma_core.lib.storage_plugin.query import ResourceQuery
         msg = ResourceQuery().record_alert_message(self.alert_item.pk, self.alert_class)
         return msg
-
-    def begin_event(self):
-        import logging
-        return AlertEvent(
-                message_str = "Storage alert: %s" % self.message(),
-                alert = self,
-                severity = logging.WARNING)
 
     def end_event(self):
         import logging

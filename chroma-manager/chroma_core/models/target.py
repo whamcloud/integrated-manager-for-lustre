@@ -1170,13 +1170,6 @@ class TargetOfflineAlert(AlertState):
         app_label = 'chroma_core'
         ordering = ['id']
 
-    def begin_event(self):
-        return AlertEvent(
-            message_str = "%s stopped" % self.alert_item,
-            host = self.alert_item.primary_server(),
-            alert = self,
-            severity = logging.WARNING)
-
     def end_event(self):
         return AlertEvent(
             message_str = "%s started" % self.alert_item,
@@ -1193,13 +1186,6 @@ class TargetFailoverAlert(AlertState):
         app_label = 'chroma_core'
         ordering = ['id']
 
-    def begin_event(self):
-        return AlertEvent(
-            message_str = "%s failover mounted" % self.alert_item,
-            host = self.alert_item.primary_server(),
-            alert = self,
-            severity = logging.WARNING)
-
     def end_event(self):
         return AlertEvent(
             message_str = "%s failover unmounted" % self.alert_item,
@@ -1215,13 +1201,6 @@ class TargetRecoveryAlert(AlertState):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
-
-    def begin_event(self):
-        return AlertEvent(
-            message_str = "Target '%s' went into recovery" % self.alert_item,
-            host = self.alert_item.primary_server(),
-            alert = self,
-            severity = logging.WARNING)
 
     def end_event(self):
         return AlertEvent(

@@ -99,9 +99,6 @@ class AlertState(models.Model):
     def duration(self):
         return self.end - self.begin
 
-    def begin_event(self):
-        return None
-
     def end_event(self):
         return None
 
@@ -198,8 +195,10 @@ class AlertState(models.Model):
             alert_state.end = now
             alert_state.active = None
             alert_state.save()
-            # Send end event, but note no begin event.
-            # The unified UI makes that
+
+            # We optionally emit an event when alerts are lowered: we don't do that
+            # for the beginning because that is implicit in the alert itself, whereas
+            # the end can reasonably have a different message.
             ee = alert_state.end_event()
             if ee:
                 ee.save()

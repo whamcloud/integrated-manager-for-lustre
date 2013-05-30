@@ -123,12 +123,6 @@ class PowerControlDeviceUnavailableAlert(AlertState):
     def message(self):
         return "Unable to monitor power control device %s" % self.alert_item
 
-    def begin_event(self):
-        return AlertEvent(
-            message_str = self.message(),
-            alert = self,
-            severity = logging.WARNING)
-
     def end_event(self):
         return AlertEvent(
             message_str = "Monitoring resumed for power control device %s" % self.alert_item,
