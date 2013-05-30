@@ -1,3 +1,5 @@
+DEV_REPO ?= $(shell PYTHONPATH=$(CURDIR)../chroma-manager python -c 'import settings; print settings.DEV_REPO_PATH')
+
 include ../include/Makefile.version
 
 # In development, we want to stop at first failure, but when running
@@ -47,3 +49,9 @@ docs:
 
 test:
 	@nosetests $(NOSE_ARGS)
+
+update_repo: rpms
+	@echo "Updating dev repo with new RPMs..."
+	rm -f $(DEV_REPO)/chroma-agent/chroma-agent-*.rpm
+	cp -a dist/chroma-agent-*.rpm $(DEV_REPO)/chroma-agent
+	cd $(DEV_REPO) && createrepo --pretty .
