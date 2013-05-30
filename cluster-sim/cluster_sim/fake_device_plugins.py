@@ -88,6 +88,9 @@ class BaseFakeLustrePlugin(DevicePlugin):
     _server = None
 
     def start_session(self):
+        return self.update_session(first=True)
+
+    def update_session(self, first=False):
         if self._server.state['lnet_up']:
             nids = self._server.nids
         else:
@@ -102,6 +105,11 @@ class BaseFakeLustrePlugin(DevicePlugin):
                 'recovery_status': {}
             })
 
+        if first:
+            packages = self._server.scan_packages()
+        else:
+            packages = None
+
         return {
             'resource_locations': self._server._cluster.resource_locations(),
             'lnet_loaded': self._server.state['lnet_loaded'],
@@ -113,14 +121,12 @@ class BaseFakeLustrePlugin(DevicePlugin):
                     'lustre': self._server.get_lustre_stats()
                 }
             },
+            'packages': packages,
             'mounts': mounts,
             'lnet_up': self._server.state['lnet_up'],
             'started_at': datetime.datetime.utcnow().isoformat() + "Z",
             'agent_version': 'dummy'
         }
-
-    def update_session(self):
-        return self.start_session()
 
 
 class BaseFakeCorosyncPlugin(DevicePlugin):

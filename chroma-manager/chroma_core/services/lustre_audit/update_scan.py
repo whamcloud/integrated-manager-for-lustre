@@ -30,6 +30,7 @@ from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryI
 from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount
+import chroma_core.models.package
 from chroma_core.services.stats import StatsQueue
 
 
@@ -59,6 +60,7 @@ class UpdateScan(object):
     def audit_host(self):
         self.update_capabilities()
 
+        self.update_packages(self.host_data['packages'])
         self.update_lnet()
         self.update_resource_locations()
         self.update_target_mounts()
@@ -72,6 +74,40 @@ class UpdateScan(object):
 
         self.audit_host()
         self.store_metrics()
+
+    def update_packages(self, packages):
+        if not packages:
+            # Packages is allowed to be None
+            # (means is not the initial message, or there was a problem talking to RPM or yum)
+            return
+
+        # An update is required if:
+        #  * A package is installed on the storage server for which there is a more recent version
+        #    available on the manager
+        #  or
+        #  * A package is available on the manager, and specified in the server's profile's list of
+        #    packages, but is not installed on the storage server.
+
+        # Update the package models
+        needs_update = chroma_core.models.package.update(self.host, packages)
+
+        # Check for any non-installed packages that should be installed
+        for package in self.host.server_profile.serverprofilepackage_set.all():
+            try:
+                package_data = packages[package.bundle.bundle_name][package.package_name]
+            except KeyError:
+                log.warning("Expected package %s/%s not found in report from %s" % (
+                    package.bundle.bundle_name, package.package_name, self.host))
+                continue
+            else:
+                if not package_data['installed']:
+                    log.info("Update available (not installed): %s/%s on %s" % (
+                        package.bundle.bundle_name, package.package_name, self.host))
+                    needs_update = True
+                    break
+
+        log.info("update_packages(%s): updates=%s" % (self.host, needs_update))
+        JobSchedulerClient.notify(self.host, self.started_at, {'needs_update': needs_update})
 
     def update_capabilities(self):
         """Update the host record from the capabilities reported by the agent"""

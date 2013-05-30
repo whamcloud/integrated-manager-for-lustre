@@ -5,7 +5,7 @@
     <div class='host_selection_list'>
         <ul class='host_selection_list'>
             <% _.each(hosts, function(host) { %>
-                <li><input type='checkbox' data-host_uri="<%= host.resource_uri %>"></input><%= host.label %></li>
+                <li><input type='checkbox' data-host_id="<%= host.id %>" data-host_uri="<%= host.resource_uri %>"></input><%= host.label %></li>
             <% }); %>
         </ul>
     </div>
@@ -94,6 +94,7 @@
                   help_topic: options.help_topic,
                   message: options.message,
                   job_class: options.job_class,
+                  multi_job: options.multi_job,
                   hosts: hosts,
                   el: mydiv.parent()});
               cd.render();
@@ -104,7 +105,8 @@
         ServerCommandPrompt({
             message: "Detecting File Systems",
             help_topic: 'detect_file_systems-dialog',
-            job_class: 'DetectTargetsJob'
+            job_class: 'DetectTargetsJob',
+            multi_job: false
         });
       });
 
@@ -112,7 +114,8 @@
         ServerCommandPrompt({
             help_topic: 'rescan_NIDs-dialog',
             message: "Re-scanning NIDs",
-            job_class: 'RelearnNidsJob'
+            job_class: 'RelearnNidsJob',
+            multi_job: false
         });
       });
 
@@ -120,14 +123,16 @@
             ServerCommandPrompt({
             help_topic: 'rewrite_target_configuration-dialog',
                 message: "Updating filesystem NIDs",
-                job_class: 'UpdateNidsJob'
+                job_class: 'UpdateNidsJob',
+                multi_job: false
             });
         });
 
         $('div#server_list button.updates_button').click(function() {
             ServerCommandPrompt({
                 message: "Install updates",
-                job_class: 'UpdateJob'
+                job_class: 'UpdateJob',
+                multi_job: true
             });
         });
     }
@@ -166,15 +171,33 @@
      },
      run: function() {
          var dialog = $(this.el);
-         var host_uris = [];
-         _.each($(this.el).find(":checked"), function(checkbox) {
-            host_uris.push($(checkbox).data('host_uri'));
-         });
+         var options = this.options;
+         var jobs;
+
+         if (options.multi_job) {
+           /* If multi_job is set, send N jobs with one 'host' attribute each */
+           jobs = _.map($(this.el).find(":checked"), function(cb) {
+             return {
+               'class_name': options.job_class,
+               'args': {
+                 'host_id': $(cb).data('host_id')
+               }
+             }
+           });
+         } else {
+           /* If multi_job is not set, send one job with N hosts in its 'hosts' attribute */
+           jobs = [{
+             class_name: options.job_class,
+             'args': {
+               hosts: _.map($(this.el).find(":checked"), function(cb) {return $(cb).data('host_uri')})
+             }
+           }];
+         }
 
          Api.post("command/",
              {
-                 'message': this.options.message,
-                 'jobs': [{'class_name': this.options.job_class, 'args': {'hosts': host_uris}}]
+                 'message': options.message,
+                 'jobs': jobs
              },
              function(command){
                  dialog.remove();

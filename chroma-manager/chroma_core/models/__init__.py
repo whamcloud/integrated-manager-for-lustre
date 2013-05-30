@@ -35,3 +35,4 @@ from ha_cluster import *
 from power_control import *
 from bundle import *
 from server_profile import *
+from package import *

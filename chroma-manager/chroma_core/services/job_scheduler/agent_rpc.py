@@ -172,16 +172,20 @@ class AgentRpcMessenger(object):
                 rpc.complete.set()
         del self._session_rpcs[old_session_id]
 
-    def await_restart(self, fqdn, timeout):
+    def get_session_id(self, fqdn):
+        with self._lock:
+            try:
+                return self._sessions[fqdn]
+            except KeyError:
+                return None
+
+    def await_restart(self, fqdn, timeout, old_session_id=None):
         """
         If there is currently an action_runner session, wait for a different one.  Else
         wait for any action_runner session to start."""
 
-        with self._lock:
-            try:
-                old_session_id = self._sessions[fqdn]
-            except KeyError:
-                old_session_id = None
+        if old_session_id is None:
+            old_session_id = self.get_session_id(fqdn)
 
         log.info("AgentRpcMessenger.await_restart: awaiting %s (old %s)" % (fqdn, old_session_id))
 
@@ -356,8 +360,12 @@ class AgentRpc(object):
         return cls._messenger.remove(fqdn)
 
     @classmethod
-    def await_restart(cls, fqdn, timeout):
-        return cls._messenger.await_restart(fqdn, timeout)
+    def get_session_id(cls, fqdn):
+        return cls._messenger.get_session_id(fqdn)
+
+    @classmethod
+    def await_restart(cls, fqdn, timeout, old_session_id=None):
+        return cls._messenger.await_restart(fqdn, timeout, old_session_id)
 
 
 class AgentCancellation(Exception):

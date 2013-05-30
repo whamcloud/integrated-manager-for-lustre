@@ -48,6 +48,9 @@ class ClusterSimulator(Persisted):
     start/stop/register operations for each simulated agent.
     """
     filename = 'simulator.json'
+    default_state = {
+        'packages': {}
+    }
 
     def __init__(self, folder, url):
         self.folder = folder
@@ -66,6 +69,24 @@ class ClusterSimulator(Persisted):
         self.controllers = {}
 
         self._load_servers()
+
+    def update_packages(self, packages):
+        log.info("Updating packages: %s" % packages)
+        for k, v in packages.items():
+            self.state['packages'][k] = v
+        self.save()
+
+        # The agent only reports new versions at the start of sessions
+        # IRL this is valid because when we install updates on the manager
+        # we restart the manager servers, causing new sessions.  In simulation,
+        # we don't control the manager, so instead restart the AgentClient instances.
+        for fqdn in self.servers.keys():
+            self.stop_server(fqdn)
+            self.start_server(fqdn)
+
+    @property
+    def available_packages(self):
+        return self.state['packages']
 
     def _get_cluster_for_server(self, server_id):
         cluster_id = server_id / self.state['cluster_size']
@@ -109,6 +130,12 @@ class ClusterSimulator(Persisted):
     def setup(self, server_count, volume_count, nid_count, cluster_size, psu_count):
         self.state['cluster_size'] = cluster_size
         self.save()
+
+        # Packages which the FakeServers will report as availble
+        self.state['packages'] = {
+            'lustre': (0, "2.1.4", "1", "x86_64"),
+            'lustre-modules': (0, "2.1.4", "1", "x86_64")
+        }
 
         self.power.setup(psu_count)
 

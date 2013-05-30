@@ -20,6 +20,11 @@
 # express and approved by Intel in writing.
 
 
+import subprocess
+from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
+from chroma_agent.device_plugins import lustre
+from chroma_agent.log import daemon_log
+
 import re
 import os
 from chroma_agent import shell
@@ -38,7 +43,7 @@ sslclientkey = {2}
 sslclientcert = {3}
 """
 
-REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Manager.repo"
+REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
 
 def configure_repo(remote_url, repo_path=REPO_PATH):
@@ -51,11 +56,51 @@ def unconfigure_repo(repo_path=REPO_PATH):
         os.remove(repo_path)
 
 
-def update_packages():
-    shell.try_run(['yum', '-y', 'update'])
+def update_packages(repos, packages):
+    """
+
+    Updates all packages from the repos in 'repos'.
+
+    :param repos: List of strings, each is a yum repos to include in the update
+    :param packages: List of packages to force dependencies for, e.g. specify
+                     lustre-modules here to insist that the dependencies of that
+                     are installed even if they're older than an installed package.
+    :return: None if no updates were installed, else a package report of the format
+             given by the lustre device plugin
+    """
+
+    yum_args = ['yum', '--disablerepo=*', "--enablerepo=%s" % ",".join(repos)]
+
+    # Clear the cache so that we definitely will get any updates available
+    shell.try_run(yum_args + ['clean', 'all'])
+
+    # Check if there are any updates available
+    rc, stdout, stderr = shell.run(yum_args + ['check-update'])
+    # yum check-update should return 0 for no updates, or 100 for updates
+    if rc == 0:
+        return None
+    elif rc != 100:
+        raise RuntimeError("Unexpected result from `yum check-update` (%s): '%s' '%s'" % (rc, stdout, stderr))
+
+    if packages:
+        out = shell.try_run(['repoquery', '--requires'] + list(packages))
+        force_installs = []
+        for requirement in [l.strip() for l in out.strip().split("\n")]:
+            match = re.match("([^\)/]*) = (.*)", requirement)
+            if match:
+                require_package, require_version = match.groups()
+                force_installs.append("%s-%s" % (require_package, require_version))
+
+        if force_installs:
+            shell.try_run(['yum', 'install', '-y'] + force_installs)
+
+    # Download and install updated packages
+    shell.try_run(yum_args + ['-y', 'update'])
+
+    return lustre.scan_packages()
 
 
-def install_packages(packages, force_dependencies = False):
+def install_packages(packages, force_dependencies=False):
     """
     force_dependencies causes explicit evaluation of dependencies, and installation
     of any specific-version dependencies are satisfied even if
@@ -66,7 +111,7 @@ def install_packages(packages, force_dependencies = False):
     :param packages: List of strings, yum package names
     :param force_dependencies: If True, ensure dependencies are installed even
                                if more recent versions are available.
-    :return:
+    :return: A package report of the format given by the lustre device plugin
     """
     if force_dependencies:
         out = shell.try_run(['repoquery', '--requires'] + list(packages))
@@ -80,6 +125,8 @@ def install_packages(packages, force_dependencies = False):
         shell.try_run(['yum', 'install', '-y'] + force_installs)
 
     shell.try_run(['yum', 'install', '-y'] + list(packages))
+
+    return lustre.scan_packages()
 
 
 def kernel_status(kernel_regex):
@@ -105,5 +152,15 @@ def kernel_status(kernel_regex):
     }
 
 
-ACTIONS = [configure_repo, unconfigure_repo, update_packages, install_packages, kernel_status]
+def restart_agent():
+    def _shutdown():
+        daemon_log.info("Restarting agent")
+        # Use subprocess.Popen instead of try_run because we don't want to
+        # wait for completion.
+        subprocess.Popen(['service', 'chroma-agent', 'restart'])
+
+    raise CallbackAfterResponse(None, _shutdown)
+
+
+ACTIONS = [configure_repo, unconfigure_repo, update_packages, install_packages, kernel_status, restart_agent]
 CAPABILITIES = ['manage_updates']

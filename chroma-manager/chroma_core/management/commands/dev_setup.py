@@ -23,6 +23,7 @@
 from StringIO import StringIO
 from optparse import make_option
 import tarfile
+from chroma_core.lib.util import site_dir
 import os
 
 from django.core.management import BaseCommand
@@ -90,17 +91,9 @@ that work.
     """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH}
                 return
 
-        # FIXME: having to copy-paste this because the production version is embedded in a .sh
-        base_profile = """
-        {
-            "name": "base_managed",
-            "bundles": ["lustre", "chroma-agent", "e2fsprogs"],
-            "ui_name": "Managed storage server",
-            "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
-            "managed": true
-        }
-"""
-        if not ServerProfile.objects.filter(name = 'base_managed').exists():
+        base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile")
+        base_profile = open(base_profile_path).read()
+        if not ServerProfile.objects.filter(name='base_managed').exists():
             chroma_core.lib.service_config.register_profile(StringIO(base_profile))
 
         print """Great success:

@@ -42,8 +42,5 @@ sys.path.append(agent_dir)
 
 from docs.conf_common import *
 
-project = u'Intel® Manager for Lustre* software Storage Plugin API'
+project = u'Intel® Manager for Lustre* software Packaging Guide'
 master_doc = 'index'
-
-from django.conf import settings
-rst_epilog += '.. |api_version| replace:: %d' % settings.STORAGE_API_VERSION

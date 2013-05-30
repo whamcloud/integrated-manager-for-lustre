@@ -1,0 +1,207 @@
+#!/usr/bin/env python
+
+import glob
+import logging
+import tempfile
+import shutil
+import subprocess
+import os
+import tarfile
+import sys
+import rpm
+import json
+
+
+PRODUCT_NAME = "Intel Manager for Lustre software"
+
+# Although we will upgrade everything, use this package as the 'it' when asking
+# what version of 'it' is installed.
+MAIN_PACKAGE = "chroma-manager"
+
+BUNDLE_ROOT = "/var/lib/chroma/repo"
+BUNDLE_BACKUP = "/var/lib/chroma/repo.bak"
+
+
+LOG_FILE = "/tmp/upgrade.log"
+log = logging.getLogger('upgrade')
+log.setLevel(logging.DEBUG)
+
+
+def _run(args, passthrough=False):
+    """
+    :param passthrough: If true, pass stdin+stdout through to the user rather
+    than capturing them.
+    """
+    log.debug("Running %s" % args)
+    if passthrough:
+        p = subprocess.Popen(args)
+    else:
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    rc = p.returncode
+    log.debug("rc=%s" % rc)
+    log.debug("stdout=%s" % stdout)
+    log.debug("stderr=%s" % stderr)
+    if rc != 0:
+        log.error("An error occurred running `{command}`, see {LOG_FILE} for details".format(
+            command=args[0],
+            LOG_FILE=LOG_FILE
+        ))
+        sys.exit(-1)
+
+    return rc, stdout, stderr
+
+
+def _check_root():
+    if os.geteuid() != 0:
+        log.error("This script must be run as root")
+        sys.exit(-1)
+
+
+def _setup_logging():
+    screen_output = logging.StreamHandler()
+    screen_output.setLevel(logging.INFO)
+    screen_output.setFormatter(logging.Formatter('\033[1m%(message)s\033[0m'))
+    log.addHandler(screen_output)
+    file_output = logging.FileHandler(LOG_FILE)
+    file_output.setLevel(logging.DEBUG)
+    file_output.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    log.addHandler(file_output)
+
+
+def _unpack_repo(tarball_path, destination):
+    log.debug("Extracting %s to %s" % (tarball_path, destination))
+    if not os.path.exists(destination):
+        os.makedirs(destination)
+    archive = tarfile.open(tarball_path, "r:gz")
+    archive.extractall(destination)
+
+
+def _print_version():
+    ts = rpm.TransactionSet()
+    headers = ts.dbMatch('name', MAIN_PACKAGE)
+    if not headers:
+        log.error("{MAIN_PACKAGE} is not installed, cannot upgrade".format(MAIN_PACKAGE=MAIN_PACKAGE))
+        sys.exit(-1)
+    else:
+        header = list(headers)[0]
+        log.info("{MAIN_PACKAGE} {version}-{release} is currently installed".format(
+            MAIN_PACKAGE=MAIN_PACKAGE,
+            version=header['version'],
+            release=header['release']
+        ))
+
+
+def _new_bundles():
+    bundles = []
+    log.debug("Bundles in upgrade package:")
+    bundle_files = glob.glob("*-bundle.tar.gz")
+    for bundle_file in bundle_files:
+        archive = tarfile.open(bundle_file, "r:gz")
+        try:
+            meta_file = archive.extractfile('./meta')
+        except KeyError:
+            log.error("Malformed bundle file %s:" % bundle_file)
+            log.error(archive.list())
+            sys.exit(-1)
+        meta = json.load(meta_file)
+        log.debug("{name}: {description}".format(
+            name=meta['name'],
+            description=meta['description']
+        ))
+        bundles.append(meta['name'])
+
+    return bundles
+
+
+def _old_bundles():
+    bundles = []
+    log.debug("Bundles currently installed:")
+    for bundle_meta_path in glob.glob(os.path.join(BUNDLE_ROOT, "*/meta")):
+        meta = json.load(open(bundle_meta_path))
+        log.debug("{name}: {description}".format(
+            name=meta['name'],
+            description=meta['description']
+        ))
+        bundles.append(meta['name'])
+
+    return bundles
+
+
+def _upgrade_packages():
+    manager_repo_dir = tempfile.mkdtemp()
+    log.debug("Temporary yum repo at %s" % manager_repo_dir)
+    try:
+        log.info("Unpacking update files")
+        _unpack_repo('chroma-manager.tar.gz', manager_repo_dir)
+
+        manager_repo_file = tempfile.NamedTemporaryFile(dir="/etc/yum.repos.d/", suffix=".repo")
+        log.debug("Temporary yum config at %s" % manager_repo_file.name)
+        repo_text = """
+# Temporary file
+# Created by Intel Manager for Lustre software upgrade script
+[chroma-manager]
+name=chroma-manager
+baseurl=file://{manager_repo_dir}
+gpgcheck=0
+enable=0
+    """.format(manager_repo_dir=manager_repo_dir)
+        manager_repo_file.write(repo_text)
+        manager_repo_file.flush()
+
+        p = subprocess.Popen(["yum", "-y", "--disablerepo=*", "--enablerepo=chroma-manager", "update", MAIN_PACKAGE])
+        p.communicate()
+    finally:
+        shutil.rmtree(manager_repo_dir)
+
+
+def _upgrade_bundles(old_bundles, new_bundles):
+    for bundle in new_bundles:
+        install_location = os.path.join(BUNDLE_ROOT, bundle)
+        if bundle in old_bundles:
+            backup_location = os.path.join(BUNDLE_BACKUP, bundle)
+
+            log.debug("Backing up %s to %s" % (install_location, backup_location))
+
+            # Ensure the backup location exists
+            if not os.path.exists(BUNDLE_BACKUP):
+                os.makedirs(BUNDLE_BACKUP)
+
+            # Remove any old backups
+            if os.path.exists(backup_location):
+                log.debug("Removing old backup %s" % backup_location)
+                shutil.rmtree(backup_location)
+
+            # Move the installed bundle to backup location
+            shutil.move(install_location, backup_location)
+
+        # Extract the new bundle
+        os.makedirs(install_location)
+        _unpack_repo("%s-bundle.tar.gz" % bundle, install_location)
+        _run(['chroma-config', 'bundle', 'register', install_location])
+
+_setup_logging()
+log.info("Starting {PRODUCT_NAME} upgrade".format(PRODUCT_NAME=PRODUCT_NAME))
+
+# Tell the user what the old version is
+_print_version()
+
+# See what new bundles we have on offer
+old_bundles = _old_bundles()
+new_bundles = _new_bundles()
+
+_run(['chroma-config', 'stop'])
+
+# Update RPMs
+_upgrade_packages()
+
+# Ensure database migrations are run (may prompt the user)
+_run(['chroma-config', 'setup'], passthrough=True)
+
+# Install/update bundles
+_upgrade_bundles(old_bundles, new_bundles)
+
+# Tell the user what the new version is
+_print_version()
+
+log.info("\n{PRODUCT_NAME} upgrade completed successfully\n".format(PRODUCT_NAME=PRODUCT_NAME))

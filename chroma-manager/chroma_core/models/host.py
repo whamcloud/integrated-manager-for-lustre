@@ -132,6 +132,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # FIXME: nullable to allow migration, but really shouldn't be
     server_profile = models.ForeignKey('ServerProfile', null=True, blank=True)
 
+    needs_update = models.BooleanField(default=False,
+                                       help_text="True if there are package updates available for this server")
+
     needs_fence_reconfiguration = models.BooleanField(default = False,
             help_text = "Indicates that the host's fencing configuration should be updated")
 
@@ -480,24 +483,6 @@ class ConfigureCorosyncStep(Step):
             self.invoke_agent(host, "configure_corosync", config)
 
 
-class AgentActionStep(Step):
-    idempotent = True
-
-    @classmethod
-    def describe(cls, kwargs):
-        if 'description' in kwargs:
-            return kwargs['description']
-        else:
-            return Step.describe(kwargs)
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        cmd = kwargs['command']
-        kwargs = kwargs.get('args', {})
-        if not host.immutable_state:
-            self.invoke_agent(host, cmd, args=kwargs)
-
-
 class ConfigureRsyslogStep(Step):
     idempotent = True
 
@@ -679,6 +664,9 @@ class DeployHostJob(StateChangeJob):
     state_verb = 'Deploy agent'
     auth_args = {}
 
+    # Not cancellable because uses SSH rather than usual agent comms
+    cancellable = False
+
     def __init__(self, *args, **kwargs):
         super(DeployHostJob, self).__init__(*args, **kwargs)
 
@@ -705,18 +693,48 @@ class DeployHostJob(StateChangeJob):
 
 
 class RebootIfNeededStep(Step):
-    def run(self, kwargs):
+    def _reboot_needed(self, host):
         # Check if we are running the latest (lustre) kernel
-        kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status', {'kernel_regex': '.*lustre.*'})
+        kernel_status = self.invoke_agent(host, 'kernel_status', {'kernel_regex': '.*lustre.*'})
 
-        if kernel_status['running'] != kernel_status['latest'] and kernel_status['latest']:
-            self.log("Rebooting %s to switch from running kernel %s to latest %s" % (
-                kwargs['host'], kernel_status['running'], kernel_status['latest']))
+        reboot_required = kernel_status['running'] != kernel_status['latest'] and kernel_status['latest']
+        if reboot_required:
+            self.log("Reboot of %s required to switch from running kernel %s to latest %s" % (
+                host, kernel_status['running'], kernel_status['latest']))
+
+        return reboot_required
+
+    def run(self, kwargs):
+        if self._reboot_needed(kwargs['host']):
             self.invoke_agent(kwargs['host'], 'reboot_server')
 
             from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
             AgentRpc.await_restart(kwargs['host'].fqdn, kwargs['timeout'])
+
+
+class InstallPackagesStep(Step):
+    # Require database because we update package records
+    database = True
+
+    @classmethod
+    def describe(cls, kwargs):
+        return "Installing packages on %s" % kwargs['host']
+
+    def run(self, kwargs):
+        from chroma_core.models import package
+
+        host = kwargs['host']
+        packages = kwargs['packages']
+
+        package_report = self.invoke_agent(host, 'install_packages', {
+            'packages': packages,
+            'force_dependencies': True
+        })
+
+        if package_report:
+            updates_available = package.update(host, package_report)
+            UpdatesAvailableAlert.notify(host, updates_available)
 
 
 class SetupHostJob(StateChangeJob):
@@ -733,17 +751,11 @@ class SetupHostJob(StateChangeJob):
                  (ConfigureRsyslogStep, {'host': self.managed_host}),
                  (LearnDevicesStep, {'host': self.managed_host})]
 
-        # TODO: store the list of packages to install on the profile
-        PACKAGES = ['lustre', 'lustre-modules']
-
         if self.managed_host.server_profile.managed:
-            steps.append((AgentActionStep, {'host': self.managed_host,
-                                            'description': "Installing packages on %s" % self.managed_host,
-                                            'command': 'install_packages',
-                                            'args': {
-                                                'packages': PACKAGES,
-                                                'force_dependencies': True
-                                            }}))
+            steps.append((InstallPackagesStep, {
+                'host': self.managed_host,
+                'packages': list(self.managed_host.server_profile.packages)
+            }))
 
             steps.append((RebootIfNeededStep, {'host': self.managed_host, 'timeout': settings.INSTALLATION_REBOOT_TIMEOUT}))
 
@@ -929,6 +941,7 @@ class DeleteHostStep(Step):
     database = True
 
     def run(self, kwargs):
+        from chroma_core.models import package
         from chroma_core.services.http_agent import HttpAgentRpc
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
@@ -949,6 +962,9 @@ class DeleteHostStep(Step):
         # The last receiver of AMQP messages to clean up is myself (JobScheduler, inside which
         # this code will execute)
         AgentRpc.remove(host.fqdn)
+
+        # Remove PackageAvailability and PackageInstallation records for this host
+        package.update(host, {})
 
         from chroma_core.models import StorageResourceRecord
         from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
@@ -1223,14 +1239,61 @@ class RelearnNidsJob(Job, HostListMixin):
         ordering = ['id']
 
 
-class UpdateJob(Job, HostListMixin):
+class UpdatePackagesStep(RebootIfNeededStep):
+    # Require database because we update package records
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.models import package
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+
+        host = kwargs['host']
+        package_report = self.invoke_agent(host, 'update_packages', {
+            'repos': kwargs['bundles'],
+            'packages': kwargs['packages']
+        })
+
+        if package_report:
+            package.update(host, package_report)
+
+        # Check if we are running the latest (lustre) kernel
+        kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status', {'kernel_regex': '.*lustre.*'})
+        reboot_needed = kernel_status['running'] != kernel_status['latest'] and kernel_status['latest']
+
+        if reboot_needed:
+            # If the kernel has been upgraded, then we must reboot the server
+            old_session_id = AgentRpc.get_session_id(host.fqdn)
+            self.invoke_agent(kwargs['host'], 'reboot_server')
+            AgentRpc.await_restart(kwargs['host'].fqdn, settings.INSTALLATION_REBOOT_TIMEOUT, old_session_id=old_session_id)
+        elif package_report is not None:
+            # If we have installed any updates at all, then assume it is necessary to restart the agent, as
+            # they could be things the agent uses/imports
+            old_session_id = AgentRpc.get_session_id(host.fqdn)
+            self.invoke_agent(host, 'restart_agent')
+            AgentRpc.await_restart(kwargs['host'].fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
+        else:
+            self.log("No updates installed on %s" % host)
+
+
+class UpdateJob(Job):
+    host = models.ForeignKey(ManagedHost)
+
     def description(self):
-        return "Update packages on hosts: %s" % ",".join([h.fqdn for h in self.hosts.all()])
+        return "Update packages on server %s" % self.host
 
     def get_steps(self):
-        steps_update = [(AgentActionStep, {'host': h, 'command': 'update_packages'}) for h in self.hosts.all()]
-        steps_restart = [(RebootIfNeededStep, {'host': h, 'timeout': settings.INSTALLATION_REBOOT_TIMEOUT}) for h in self.hosts.all()]
-        return steps_update + steps_restart
+        return [
+            (UpdatePackagesStep, {
+                'host': self.host,
+                'bundles': [b['bundle_name'] for b in self.host.server_profile.bundles.all().values('bundle_name')],
+                'packages': list(self.host.server_profile.packages)
+            })
+        ]
+
+    def on_success(self):
+        from chroma_core.models.host import UpdatesAvailableAlert
+
+        UpdatesAvailableAlert.notify(self.host, False)
 
     class Meta:
         app_label = 'chroma_core'
@@ -1495,6 +1558,15 @@ class LNetNidsChangedAlert(AlertState):
             host = self.alert_item,
             alert = self,
             severity = logging.INFO)
+
+
+class UpdatesAvailableAlert(AlertState):
+    def message(self):
+        return "Updates are ready for server %s" % self.alert_item
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class NoLNetInfo(Exception):

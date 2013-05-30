@@ -55,7 +55,8 @@ class FakeServer(Persisted):
         'starting_up': False,
         'lnet_loaded': False,
         'lnet_up': False,
-        'stats': None
+        'stats': None,
+        'packages': {}
     }
 
     def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nids):
@@ -89,6 +90,40 @@ class FakeServer(Persisted):
         self.state['nodename'] = nodename
         self.state['fqdn'] = fqdn
         self.save()
+
+    def scan_packages(self):
+        packages = {
+            'foobundle': {}
+        }
+        for package, available_version in self._simulator.available_packages.items():
+            try:
+                installed = [self.get_package_version(package)]
+            except KeyError:
+                installed = []
+
+            packages['foobundle'][package] = {
+                'available': [available_version],
+                'installed': installed
+            }
+
+        return packages
+
+    def install_packages(self, packages, force_dependencies=False):
+        for package in packages:
+            try:
+                self.state['packages'][package] = self._simulator.available_packages[package]
+            except KeyError:
+                raise RuntimeError("Package '%s' not found!" % package)
+
+        self.save()
+
+        return self.scan_packages()
+
+    def get_package_version(self, package):
+        return self.state['packages'][package]
+
+    def update_packages(self, repos, packages):
+        return self.install_packages(packages)
 
     def inject_log_message(self, message):
         log.debug("Injecting log message %s/%s" % (self.fqdn, message))

@@ -44,14 +44,7 @@ for bundle in $register_bundles; do
     chroma-config bundle register "$BUNDLE_ROOT/$bundle"
 done
 
-echo "Registering default profile"
-chroma-config profile register <(cat <<EOF
-{
- "name": "base_managed",
- "bundles": ["lustre", "chroma-agent", "e2fsprogs"],
- "ui_name": "Managed storage server",
- "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
- "managed": true
-}
-EOF
-)
+echo "Registering profiles"
+for profile in *.profile; do
+    chroma-config profile register $profile
+done

@@ -48,7 +48,7 @@ from chroma_core.services.http_agent.crypto import Crypto
 from supervisor.xmlrpc import SupervisorTransport
 
 from chroma_core.models.bundle import Bundle
-from chroma_core.models.server_profile import ServerProfile
+from chroma_core.models.server_profile import ServerProfile, ServerProfilePackage
 
 
 class SupervisorStatus(object):
@@ -326,7 +326,7 @@ class ServiceConfig(CommandLine):
             self.try_shell(['service', service, 'stop'])
 
         # Wait for supervisord to stop running
-        SUPERVISOR_STOP_TIMEOUT = 10
+        SUPERVISOR_STOP_TIMEOUT = 20
         t = 0
         stopped = False
         while True:
@@ -600,16 +600,21 @@ class ServiceConfig(CommandLine):
 
 def bundle(operation, path=None):
     if operation == "register":
-        # create new bundle record
+        # Create or update a bundle record
         meta_path = os.path.join(path, "meta")
         try:
             meta = json.load(open(meta_path))
         except (IOError, ValueError):
             raise RuntimeError("Could not read bundle metadata from %s" %
                                meta_path)
-        bundle = Bundle.objects.create(bundle_name = meta['name'],
-                                       location = path,
-                                       description = meta['description'])
+
+        if Bundle.objects.filter(bundle_name=meta['name']).exists():
+            Bundle.objects.filter(bundle_name=meta['name']).update(
+                location=path, description=meta['description'])
+        else:
+            Bundle.objects.create(bundle_name=meta['name'],
+                                  location=path,
+                                  description=meta['description'])
     else:
         # remove bundle record
         try:
@@ -626,20 +631,31 @@ def register_profile(profile_file):
         data = json.load(profile_file)
     except ValueError, e:
         raise RuntimeError("Malformed profile: %s" % e)
-    profile = ServerProfile.objects.create(name = data['name'],
-                                           ui_name = data['ui_name'],
-                                           ui_description =
-                                           data['ui_description'],
-                                           managed = data['managed'])
-    # validate and add the bundles
+
+    # Validate: check all referenced bundles exist
+    validate_bundles = set(data['bundles'] + [bundle for bundle, package in data['packages']])
+    missing_bundles = []
+    for bundle_name in validate_bundles:
+        if not Bundle.objects.filter(bundle_name=bundle_name).exists():
+            missing_bundles.append(bundle_name)
+
+    if missing_bundles:
+        log.error("Bundles not found for profile '%s': %s" % (data['name'], ", ".join(missing_bundles)))
+        sys.exit(-1)
+
+    # Validation OK: create records
+    profile = ServerProfile.objects.create(name=data['name'],
+                                           ui_name=data['ui_name'],
+                                           ui_description=data['ui_description'],
+                                           managed=data['managed'])
     for name in data['bundles']:
-        try:
-            bundle = Bundle.objects.get(bundle_name = name)
-        except Bundle.DoesNotExist:
-            profile.delete()
-            log.error("No such bundle named %s" % name)
-            sys.exit(-1)
-        profile.bundles.add(bundle)
+        profile.bundles.add(Bundle.objects.get(bundle_name=name))
+
+    for bundle_name, package_name in data['packages']:
+        ServerProfilePackage.objects.create(
+            server_profile=profile,
+            bundle=Bundle.objects.get(bundle_name=bundle_name),
+            package_name=package_name)
 
 
 def delete_profile(name):
@@ -650,6 +666,24 @@ def delete_profile(name):
     except ServerProfile.DoesNotExist:
         # doesn't exist anyway, so just exit silently
         return
+
+
+def default_profile(name):
+    """
+    Set the default flag on the named profile and clear the default
+    flag on all other profiles.
+
+    :param name: A server profile name
+    :return: None
+    """
+    try:
+        ServerProfile.objects.get(name=name)
+    except ServerProfile.DoesNotExist:
+        log.error("Profile '%s' not found" % name)
+        sys.exit(-1)
+
+    ServerProfile.objects.update(default=False)
+    ServerProfile.objects.filter(name=name).update(default=True)
 
 
 def chroma_config():
@@ -726,6 +760,8 @@ def chroma_config():
                 print "Error opening %s" % sys.argv[3]
         elif operation == 'delete':
             delete_profile(sys.argv[3])
+        elif operation == 'default':
+            default_profile(sys.argv[3])
         else:
             raise NotImplementedError(operation)
     else:

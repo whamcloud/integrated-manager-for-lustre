@@ -26,16 +26,16 @@ from chroma_core.models.bundle import Bundle
 
 class ServerProfile(models.Model):
     """
-    Authorization tokens handed out to servers to grant them
-    the right to register themselves with the manager.
+    Server profiles specify a set of configuration options to be applied to a storage server,
+    in particular which bundles and packages are installed.
     """
     name = models.CharField(
         primary_key=True,
         max_length = 50,
-        help_text = "String, server profile identifier")
+        help_text = "String, unique name")
     ui_name = models.CharField(
         max_length = 50,
-        help_text = "String, the name of the server profile")
+        help_text = "String, human readable name")
     ui_description = models.TextField(help_text = "Description of the server profile")
     managed = models.BooleanField(
         default=True,
@@ -47,15 +47,40 @@ class ServerProfile(models.Model):
     )
 
     @property
+    def packages(self):
+        """
+        Convenience for obtaining an iterable of package names from the ServerProfilePackage model
+        """
+        for package in self.serverprofilepackage_set.all().values('package_name'):
+            yield package['package_name']
+
+    default = models.BooleanField(default=False,
+                                  help_text="If True, this profile is presented as the default when adding"
+                                            "storage servers")
+
+    @property
     def id(self):
         """
         Work around tastypie bug, when calling get_resource_uri it looks for .id
         """
         return self.pk
 
-    # TODO: add a 'default' flag so that we can consistently
-    # present a default in the UI
-
     class Meta:
         app_label = 'chroma_core'
-        unique_together = ('name',)
+        unique_together = (('name',))
+
+
+class ServerProfilePackage(models.Model):
+    """
+    Represents the 'packages' attribute of a server profile JSON specification.
+
+    Each server profile has a set of ServerProfilePackage records identifying
+    which packages should be installed on servers using this profile.
+    """
+    class Meta:
+        app_label = 'chroma_core'
+        unique_together = ('bundle', 'server_profile', 'package_name')
+
+    bundle = models.ForeignKey(Bundle)
+    server_profile = models.ForeignKey(ServerProfile)
+    package_name = models.CharField(max_length=255)

@@ -48,7 +48,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
     ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob, ForceRemoveHostJob, \
-    DeployHostJob
+    DeployHostJob, UpdatesAvailableAlert
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -86,12 +86,31 @@ class NotificationBuffer(object):
             del(self._notifications[key])
 
     def drain_notifications_for_key(self, key):
+        """
+        :return: A list of argument lists for use in JobScheduler._notify
+        """
         notifications = []
         with self._lock:
             while not self._notifications[key].empty():
                 notifications.append(self._notifications[key].get())
             del(self._notifications[key])
-        return notifications
+
+        # For multiple notifications affecting the same set of attributes, drop all but the latest
+        seen_attr_tuples = set()
+        notifications.reverse()
+        trimmed_notifications = []
+        for notification in notifications:
+            update_attrs = notification[3]
+            attr_tuple = tuple(sorted(update_attrs.keys()))
+            if attr_tuple in seen_attr_tuples:
+                # There was a later update to this set of attributes, skip
+                continue
+            else:
+                trimmed_notifications.append(notification)
+                seen_attr_tuples.add(attr_tuple)
+        trimmed_notifications.reverse()
+
+        return trimmed_notifications
 
 
 class SimpleConnectionQuota(object):
@@ -642,6 +661,9 @@ class JobScheduler(object):
                 except RpcError:
                     log.error("Host volumes failed to rebalance: " + traceback.format_exc())
 
+            if 'needs_update' in updated_attrs:
+                UpdatesAvailableAlert.notify(changed_item, changed_item.needs_update)
+
             if changed_item.needs_fence_reconfiguration:
                 job = ConfigureHostFencingJob(host = changed_item)
                 command = Command.objects.create(message = "Configuring host fencing")
@@ -684,6 +706,7 @@ class JobScheduler(object):
                 continue
 
             notifications = self._notification_buffer.drain_notifications_for_key(buffer_key)
+
             log.info("Replaying %d buffered notifications for %s-%s" % (len(notifications), model_klass.__name__, instance.pk))
             for notification in notifications:
                 log.debug("Replaying buffered notification: %s" % (notification,))

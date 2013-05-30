@@ -97,6 +97,14 @@ class FakeActionPlugins():
                     server.shutdown(simulate_shutdown = True, reboot = True)
 
                 raise CallbackAfterResponse(None, _reboot)
+            elif cmd == 'restart_agent':
+                server = self._server
+
+                def _restart():
+                    # FIXME: don't actually want to simulate_shutdown but otherwise it tries to join from the current thread
+                    server.shutdown(simulate_shutdown=True, reboot=True)
+
+                raise CallbackAfterResponse(None, _restart)
             elif cmd == 'unconfigure_ntp':
                 return
             elif cmd == 'unconfigure_rsyslog':
@@ -118,8 +126,6 @@ class FakeActionPlugins():
             elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker']:
                 return
             elif cmd == 'configure_repo':
-                return
-            elif cmd in ['update_packages', 'install_packages']:
                 return
             elif cmd == 'kernel_status':
                 return {
