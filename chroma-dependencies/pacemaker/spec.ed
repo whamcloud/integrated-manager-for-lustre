@@ -1,3 +1,4 @@
+,s/python -c/%__python -c/g
 /^Name:/c
 Name:          pacemaker-iml
 .
