@@ -64,6 +64,15 @@ class TestAgentConfiguration(FencingTestCase):
             for key, val in agent.items():
                 self.try_run.assert_any_call(['crm_attribute', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', '%d_fence_%s' % (i, key), '-v', val])
 
+        # HYD-2104: Ensure that the N_fence_agent attribute was added
+        # last.
+        for i in xrange(len(agents)):
+            # We lost an attribute to pop()
+            attr_len = len(agents[0]) + 1
+            # Gnarly, but it works...
+            call_index = ((((len(agents) * attr_len) - (attr_len * i) - attr_len) + 1) * -1)
+            self.assertIn('%d_fence_agent' % i, self.try_run.mock_calls[call_index][1][0])
+
     def test_empty_agents_clears_fence_config(self):
         fake_attributes = {'0_fence_agent': 'fake_agent',
                            '0_fence_login': 'admin',
@@ -73,6 +82,11 @@ class TestAgentConfiguration(FencingTestCase):
         configure_fencing([])
         for key in fake_attributes:
             self.try_run.assert_any_call(['crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key])
+
+        # HYD-2104: Ensure that the N_fence_agent attribute was removed
+        # first.
+        call_index = len(fake_attributes) * -1
+        self.assertIn('0_fence_agent', self.try_run.mock_calls[call_index][1][0])
 
     def test_node_standby(self):
         set_node_standby(self.fake_node_hostname)

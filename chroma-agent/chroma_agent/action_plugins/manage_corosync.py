@@ -159,8 +159,7 @@ def configure_fencing(agents):
         agents = json.loads(agents)
 
     for idx, agent in enumerate(agents):
-        for attribute, value in agent.items():
-            node.set_fence_attribute(idx, attribute, value)
+        node.set_fence_attributes(idx, agent)
 
 
 def set_node_standby(node):
