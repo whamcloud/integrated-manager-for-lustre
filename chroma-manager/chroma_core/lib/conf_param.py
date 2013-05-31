@@ -49,9 +49,9 @@ class IntegerParam(ParamType):
             raise ValueError("Must be an integer")
 
         if self.min_val is not None and val < self.min_val:
-            raise ValueError("Must be greater than %s" % self.min_val)
+            raise ValueError("Must be greater than or equal to %s" % self.min_val)
         if self.max_val is not None and val > self.max_val:
-            raise ValueError("Must be less than %s" % self.max_val)
+            raise ValueError("Must be less than or equal to %s" % self.max_val)
 
     def test_vals(self):
         vals = []
@@ -172,7 +172,7 @@ from chroma_core.models import FilesystemClientConfParam, FilesystemGlobalConfPa
 all_params = {
     'lov.stripesize': (MdtConfParam, BytesParam(), "Default stripe size for the file system (specified as a value followed by a one-letter unit). Default is 4M. In the \"Lustre Operations Manual\", see Section 36.14: mkfs.lustre."),
     'lov.stripecount': (MdtConfParam, IntegerParam(), "Default stripe count for the file system. Default is 1. In the \"Lustre Operations Manual\", see Section 36.14: mkfs.lustre."),
-    'osc.active': (OstConfParam, IntegerParam(min_val = 0, max_val = 1), "Controls whether an OST is in or out of service. Setting Active to 0 causes the OST to be deactivated. Setting Active to 1, restores the OST to service. In the \"Lustre Operations Manual\", see Section 14.1.6.1: Removing an OST from the File System and Section 14.1.6.4: Returning a Deactivated OST to Service."),
+    'osc.active': (OstConfParam, BooleanParam(), "Controls whether an OST is in or out of service. Setting Active to 0 causes the OST to be deactivated. Setting Active to 1, restores the OST to service. In the \"Lustre Operations Manual\", see Section 14.1.6.1: Removing an OST from the File System and Section 14.1.6.4: Returning a Deactivated OST to Service."),
 
     # "Free Space Distribution"
     # =========================
