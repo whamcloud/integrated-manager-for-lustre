@@ -152,6 +152,7 @@ class ClusterSimulator(Persisted):
             'lustre': (0, "2.1.4", "1", "x86_64"),
             'lustre-modules': (0, "2.1.4", "1", "x86_64")
         }
+        self.save()
 
         self.power.setup(pdu_count)
 

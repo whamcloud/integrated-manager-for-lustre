@@ -120,7 +120,7 @@ class FakeServer(Persisted):
             try:
                 self.state['packages'][package] = self._simulator.available_packages[package]
             except KeyError:
-                raise RuntimeError("Package '%s' not found!" % package)
+                raise RuntimeError("Package '%s' not found (available: %s)!" % (package, self._simulator.available_packages))
 
         self.save()
 
