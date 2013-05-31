@@ -35,6 +35,28 @@ console_log = logging.getLogger('console')
 daemon_log.setLevel(logging.WARN)
 console_log.setLevel(logging.WARN)
 
+agent_loggers = [daemon_log, console_log]
+
+
+# these are signal handlers used to adjust loglevel at runtime
+def increase_loglevel(signal, frame):
+    for logger in agent_loggers:
+        # impossible to go below 10 -- logging resets to WARN
+        logger.setLevel(logger.getEffectiveLevel() - 10)
+        logger.critical("Log level set to %s" %
+                        logging.getLevelName(logger.getEffectiveLevel()))
+
+
+def decrease_loglevel(signal, frame):
+    for logger in agent_loggers:
+        current_level = logger.getEffectiveLevel()
+        # No point in setting higher than this
+        if current_level >= logging.CRITICAL:
+            return
+        logger.setLevel(current_level + 10)
+        logger.critical("Log level set to %s" %
+                        logging.getLevelName(logger.getEffectiveLevel()))
+
 
 # Not setting up logs at import time because we want to
 # set them up after daemonization
