@@ -48,14 +48,14 @@ ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
 # need to substitute in the el6.4 repo until this is all transitioned over
 sed -i -e 's/\(distro=el6\)\//\1.4\//' /etc/yum.repos.d/autotest.repo
-yum --disablerepo=\* --enablerepo=chroma makecache
+$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
 $PROXY yum -y install chroma-manager-integration-tests
 
 if $USE_FENCE_XVM; then
     # make sure the host has fence_virtd installed and configured
     ssh root@$HOST_IP "exec 2>&1; set -xe
     uname -a
-    yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
     mkdir -p /etc/cluster
     echo \"not secure\" > /etc/cluster/fence_xvm.key
     restorecon -Rv /etc/cluster/
@@ -189,7 +189,7 @@ if $MEASURE_COVERAGE; then
       rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
       cd /var/tmp/
       coverage combine
-      yum -y install pdsh" | dshbak -c
+      $PROXY yum -y install pdsh" | dshbak -c
     if [ ${PIPESTATUS[0]} != 0 ]; then
         exit 1
     fi
