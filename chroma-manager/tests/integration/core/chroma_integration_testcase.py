@@ -122,14 +122,18 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         """
         self.add_hosts([self.TEST_SERVERS[0]['address']])
 
+        def at_least_3_volumes():
+            return len(self.get_usable_volumes()) >= 3
+
+        self.wait_until_true(lambda: at_least_3_volumes())
+
         ha_volumes = self.get_usable_volumes()
-        self.assertGreaterEqual(len(ha_volumes), 3)
 
         mgt_volume = ha_volumes[0]
         mdt_volume = ha_volumes[1]
         ost_volumes = [ha_volumes[2]]
         return self.create_filesystem(
-                {
+            {
                 'name': name,
                 'mgt': {'volume_id': mgt_volume['id']},
                 'mdt': {
