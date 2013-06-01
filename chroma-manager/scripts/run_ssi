@@ -51,7 +51,7 @@ source_url = "/".join([JENKINS_URL, "job", opts.job, opts.build, "api/python"])
 source = get_build_data(opts, source_url)
 
 # Why, Jenkins, why?
-source_params = dict([(d['name'], d['value']) for d in [a for a in source['actions'] if "parameters" in a][0]['parameters']])
+source_params = dict([(d['name'], d['value']) for d in [a for a in source['actions'] if a is not None and "parameters" in a][0]['parameters']])
 args = {'BUILD_JOB_NAME': opts.job,
         'BUILD_JOB_BUILD_NUMBER': opts.build,
         'GIT_BRANCH': source_params['GERRIT_REFSPEC'],
