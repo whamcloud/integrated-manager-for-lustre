@@ -60,7 +60,6 @@ Target_start() {
         return $OCF_SUCCESS
     fi
 
-    $MODPROBE lustre >/dev/null 
     if ! grep -e 'lustre$' /proc/filesystems >/dev/null; then
         ocf_log err "Couldn't find the lustre module in /proc/filesystems"
         return $OCF_ERR_ARGS
