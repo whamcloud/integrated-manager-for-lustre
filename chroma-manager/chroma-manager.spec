@@ -104,6 +104,20 @@ cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
 cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
+# Nuke source code (HYD-1849), but preserve key .py files needed for operation
+preserve_patterns="settings.py manage.py chroma_core/migrations/* chroma_core/management/commands/* tests/*"
+backup_root=$RPM_BUILD_ROOT/tmp/preserve
+for pattern in $preserve_patterns; do
+    backup_dir=$backup_root/$(dirname "$pattern")
+    mkdir -p $backup_dir
+    cp -a $pattern $backup_dir
+done
+find $RPM_BUILD_ROOT/usr/share/chroma-manager/ -name "*.py" -exec rm -f {} \;
+for pattern in $preserve_patterns; do
+    restore_dir=$RPM_BUILD_ROOT/usr/share/chroma-manager/$(dirname "$pattern")
+    cp -a $backup_root/$pattern $restore_dir
+done
+rm -fr $backup_root
 
 # This is fugly, but it's cleaner than moving things around to get our
 # modules in the standard path.
@@ -174,7 +188,6 @@ echo "run \"chroma-config setup\""
 service chroma-supervisor stop
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf /usr/share/chroma-manager/static
-find /usr/share/chroma-manager/ -name "*.pyc" -exec rm -f {} \;
 
 %postun
 if [ $1 -lt 1 ]; then
@@ -198,7 +211,7 @@ fi
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
-%attr(0755,root,root)/usr/share/chroma-manager/manage.py
+%attr(0755,root,root)/usr/share/chroma-manager/manage.pyc
 # Stuff below goes into the -cli/-lib packages
 %exclude /usr/share/chroma-manager/chroma_cli
 %exclude %{python_sitelib}/*.egg-info/
@@ -216,7 +229,7 @@ fi
 
 %files integration-tests
 %defattr(-,root,root)
-/usr/share/chroma-manager/tests/__init__.py
+/usr/share/chroma-manager/tests/__init__.pyc
 /usr/share/chroma-manager/tests/utils/*
 /usr/share/chroma-manager/tests/sample_data/*
 /usr/share/chroma-manager/tests/plugins/*

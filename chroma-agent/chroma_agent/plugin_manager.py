@@ -51,7 +51,7 @@ class PluginManager(object):
             """Walk backwards up the tree to first non-module directory."""
             components = []
 
-            if os.path.isfile("%s/__init__.py" % dir):
+            if os.path.isfile("%s/__init__.pyc" % dir):
                 parent, child = os.path.split(dir)
                 components.append(child)
                 components.extend(_walk_parents(parent))
@@ -65,9 +65,9 @@ class PluginManager(object):
         names = []
 
         assert os.path.isdir(path)
-        for modfile in sorted(glob.glob("%s/*.py" % path)):
+        for modfile in sorted(glob.glob("%s/*.pyc" % path)):
             dir, filename = os.path.split(modfile)
-            module = filename.split(".py")[0]
+            module = filename.split(".pyc")[0]
             if not module in EXCLUDED_PLUGINS:
                 namespace = _build_namespace(dir)
                 name = "%s.%s" % (namespace, module)
@@ -220,7 +220,7 @@ class ActionPluginManager(object):
             """Walk backwards up the tree to first non-module directory."""
             components = []
 
-            if os.path.isfile("%s/__init__.py" % dir):
+            if os.path.isfile("%s/__init__.pyc" % dir):
                 parent, child = os.path.split(dir)
                 components.append(child)
                 components.extend(_walk_parents(parent))
@@ -234,9 +234,9 @@ class ActionPluginManager(object):
         names = []
 
         assert os.path.isdir(cls.path)
-        for modfile in sorted(glob.glob("%s/*.py" % cls.path)):
+        for modfile in sorted(glob.glob("%s/*.pyc" % cls.path)):
             dir, filename = os.path.split(modfile)
-            module = filename.split(".py")[0]
+            module = filename.split(".pyc")[0]
             if not module in EXCLUDED_PLUGINS:
                 namespace = _build_namespace(dir)
                 name = "%s.%s" % (namespace, module)

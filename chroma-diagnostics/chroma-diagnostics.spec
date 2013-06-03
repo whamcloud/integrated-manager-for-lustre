@@ -30,6 +30,9 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --install-scripts=%{_bindir} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 
+# Nuke source code (HYD-1849)
+find $RPM_BUILD_ROOT%{python_sitelib}/chroma_diagnostics -name "*.py" -exec rm -f {} \;
+
 %clean
 rm -rf %{buildroot}
 

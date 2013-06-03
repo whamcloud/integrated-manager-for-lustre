@@ -53,6 +53,8 @@ cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
 
+# Nuke source code (HYD-1849)
+find $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" -exec rm -f {} \;
 
 touch management.files
 cat <<EndOfList>>management.files
@@ -64,7 +66,7 @@ EndOfList
 
 touch base.files
 mgmt_patterns=$(cat management.files)
-for base_file in $(find $RPM_BUILD_ROOT -type f -name '*.py'); do
+for base_file in $(find $RPM_BUILD_ROOT -type f -name '*.pyc'); do
   install_file=${base_file/$RPM_BUILD_ROOT\///}
   for mgmt_pat in $mgmt_patterns; do
     if [[ $install_file == $mgmt_pat ]]; then
