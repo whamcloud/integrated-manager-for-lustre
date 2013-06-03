@@ -14,8 +14,20 @@ from tests.services.supervisor_test_case import SupervisorTestCase
 
 
 class HttpdTestCase(SupervisorTestCase):
-    SERVICES = ['httpd']
+    SERVICES = ['httpd', 'job_scheduler']
     PORTS = [settings.HTTPS_FRONTEND_PORT]
+
+
+class TestUi(HttpdTestCase):
+    # Require job_scheduler because it is queried for available_transitions
+    # when rendering /ui/
+    SERVICES = ['httpd', 'job_scheduler']
+
+    def test_simple_access(self):
+        """Test passthrough for /ui/ to the WSGI app"""
+
+        response = requests.get("https://localhost:%s/ui/" % settings.HTTPS_FRONTEND_PORT, verify = False)
+        self.assertEqual(response.status_code, 200)
 
 
 class TestInsecureUrls(HttpdTestCase):
@@ -42,10 +54,7 @@ class TestInsecureUrls(HttpdTestCase):
         self.assertEqual(response.headers['location'], without_slash + "/")
 
     def test_simple_access(self):
-        """Test passthrough for /ui/, /api/, /static/"""
-
-        response = requests.get("https://localhost:%s/ui/" % settings.HTTPS_FRONTEND_PORT, verify = False)
-        self.assertEqual(response.status_code, 200)
+        """Test passthrough for /api/, /static/"""
 
         response = requests.get("https://localhost:%s/static/images/intel-logo-white-trans-80x31.png" % settings.HTTPS_FRONTEND_PORT, verify = False)
         self.assertEqual(response.status_code, 200)

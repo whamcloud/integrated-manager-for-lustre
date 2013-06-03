@@ -17,7 +17,12 @@ class TestStartStop(SupervisorTestCase):
         program_ports['http_agent'] = [settings.HTTP_AGENT_PORT]
         program_ports['httpd'] = [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT]
 
-        for program_name in self.programs:
+        # httpd doesn't behave reliably with a fast start/stop (it doesn't like
+        # being stopped before it's fully started), exclude it from this test -- we
+        # are mainly interested in the behaviour of our own code.
+        clean_services = set(self.programs) - set(['httpd'])
+
+        for program_name in clean_services:
             self.start(program_name)
 
             # Try to avoid killing things while they're still starting, it's too much
