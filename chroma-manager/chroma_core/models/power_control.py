@@ -118,6 +118,12 @@ def delete_power_control_units(sender, instance, **kwargs):
 
 
 class PowerControlDeviceUnavailableAlert(AlertState):
+    # This is WARNING because if a power control device is out
+    # of touch it may be behaving in an undefined way, therefore
+    # may be unable to participate in a failover operation, resulting
+    # in a reduced level of filesystem availability.
+    default_severity = logging.WARNING
+
     class Meta:
         app_label = 'chroma_core'
 

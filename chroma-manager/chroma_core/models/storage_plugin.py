@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 
+import logging
 from django.db import models
 from django.db.models import Q
 
@@ -356,6 +357,12 @@ class StorageResourceClassStatistic(models.Model):
 
 
 class StorageResourceOffline(AlertState):
+    # Inability to contact a storage controller
+    # does not directly impact the availability of
+    # a filesystem, but it might hide issues which reduce it's performance,
+    # such as a RAID rebuild.  Be pessimistic, say WARNING.
+    default_severity = logging.WARNING
+
     def message(self):
         return "%s not contactable" % self.alert_item.alias_or_name()
 
@@ -373,6 +380,9 @@ class StorageResourceOffline(AlertState):
 
 class StorageResourceAlert(AlertState):
     """Used by chroma_core.lib.storage_plugin"""
+
+    # NB not setting default_severity because severity is derived from
+    # the AlertConditions of the plugin
 
     # Within the plugin referenced by the alert_item, what kind
     # of alert is this?

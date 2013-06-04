@@ -65,6 +65,9 @@ class AlertState(models.Model):
                                                 "one of %s") %
                                         conversion_util.STR_TO_SEVERITY.keys())
 
+    # Subclasses set this, used as a default in .notify()
+    default_severity = logging.INFO
+
     def get_active_bool(self):
         return bool(self.active)
 
@@ -171,6 +174,9 @@ class AlertState(models.Model):
             job_log.info("AlertState: Raised %s on %s" % (cls, alert_item))
             if not 'alert_type' in kwargs:
                 kwargs['alert_type'] = cls.__name__
+            if not 'severity' in kwargs:
+                kwargs['severity'] = cls.default_severity
+
             alert_state = cls(
                     active = True,
                     begin = now,

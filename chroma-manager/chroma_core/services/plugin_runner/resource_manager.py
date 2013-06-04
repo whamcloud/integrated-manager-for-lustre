@@ -833,18 +833,18 @@ class ResourceManager(object):
                     pass
             self._persist_lun_updates(scannable_id)
 
-    def session_notify_alert(self, scannable_id, resource_local_id, active, alert_class, attribute):
+    def session_notify_alert(self, scannable_id, resource_local_id, active, severity, alert_class, attribute):
         with self._instance_lock:
             session = self._sessions[scannable_id]
             record_pk = session.local_id_to_global_id[resource_local_id]
             if active:
                 if not (record_pk, alert_class) in self._active_alerts:
-                    alert_state = self._persist_alert(record_pk, active, alert_class, attribute)
+                    alert_state = self._persist_alert(record_pk, active, severity, alert_class, attribute)
                     if alert_state:
                         self._persist_alert_propagate(alert_state)
                         self._active_alerts[(record_pk, alert_class)] = alert_state.pk
             else:
-                alert_state = self._persist_alert(record_pk, active, alert_class, attribute)
+                alert_state = self._persist_alert(record_pk, active, severity, alert_class, attribute)
                 if alert_state:
                     self._persist_alert_unpropagate(alert_state)
                 if (record_pk, alert_class) in self._active_alerts:
@@ -882,9 +882,10 @@ class ResourceManager(object):
     #   removal where we check if there's something there, and if there is then we
     #   remove the propagated alerts, and then finally mark inactive the alert itself.
     @transaction.autocommit
-    def _persist_alert(self, record_pk, active, alert_class, attribute):
+    def _persist_alert(self, record_pk, active, severity, alert_class, attribute):
+        assert isinstance(alert_class, str)
         record = StorageResourceRecord.objects.get(pk = record_pk)
-        alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute, alert_type = "StorageResourceAlert_%s" % alert_class)
+        alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute, severity=severity, alert_type = "StorageResourceAlert_%s" % alert_class)
         return alert_state
 
     @transaction.autocommit

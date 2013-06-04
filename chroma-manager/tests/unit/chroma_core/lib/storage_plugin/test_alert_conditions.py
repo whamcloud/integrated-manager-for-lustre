@@ -29,21 +29,21 @@ class TestAlertConditions(TestCase):
 
         result = avac.test(FakeResource('OTHER'))
         self.assertListEqual(result, [
-            ['_avac_status_%s' % logging.ERROR, 'status', False],
-            ['_avac_status_%s' % logging.WARNING, 'status', False],
-            ['_avac_status_%s' % logging.INFO, 'status', False]])
+            ['_avac_status_%s' % logging.ERROR, 'status', False, logging.ERROR],
+            ['_avac_status_%s' % logging.WARNING, 'status', False, logging.WARNING],
+            ['_avac_status_%s' % logging.INFO, 'status', False, logging.INFO]])
         result = avac.test(FakeResource('ERROR'))
         self.assertListEqual(result, [
-            ['_avac_status_%s' % logging.ERROR, 'status', True],
-            ['_avac_status_%s' % logging.WARNING, 'status', False],
-            ['_avac_status_%s' % logging.INFO, 'status', False]])
+            ['_avac_status_%s' % logging.ERROR, 'status', True, logging.ERROR],
+            ['_avac_status_%s' % logging.WARNING, 'status', False, logging.WARNING],
+            ['_avac_status_%s' % logging.INFO, 'status', False, logging.INFO]])
         result = avac.test(FakeResource('WARN'))
         self.assertListEqual(result, [
-            ['_avac_status_%s' % logging.ERROR, 'status', False],
-            ['_avac_status_%s' % logging.WARNING, 'status', True],
-            ['_avac_status_%s' % logging.INFO, 'status', False]])
+            ['_avac_status_%s' % logging.ERROR, 'status', False, logging.ERROR],
+            ['_avac_status_%s' % logging.WARNING, 'status', True, logging.WARNING],
+            ['_avac_status_%s' % logging.INFO, 'status', False, logging.INFO]])
         result = avac.test(FakeResource('INFO'))
         self.assertListEqual(result, [
-            ['_avac_status_%s' % logging.ERROR, 'status', False],
-            ['_avac_status_%s' % logging.WARNING, 'status', False],
-            ['_avac_status_%s' % logging.INFO, 'status', True]])
+            ['_avac_status_%s' % logging.ERROR, 'status', False, logging.ERROR],
+            ['_avac_status_%s' % logging.WARNING, 'status', False, logging.WARNING],
+            ['_avac_status_%s' % logging.INFO, 'status', True, logging.INFO]])

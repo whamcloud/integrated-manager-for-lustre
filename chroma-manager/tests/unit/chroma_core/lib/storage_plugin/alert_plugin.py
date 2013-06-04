@@ -11,9 +11,9 @@ class Controller(resources.ScannableResource):
         identifier = GlobalId('address')
         alert_conditions = [
             alert_conditions.ValueCondition('status',
-               warn_states = ['FAILED'], message = "Controller failure"),
+               warn_states = ['FAILED'], error_states=['BADLY_FAILED'], message = "Controller failure"),
             alert_conditions.UpperBoundCondition('temperature',
-                warn_bound = 85, message = "High temperature warning", id = 'temp_high'),
+                warn_bound = 85, error_bound=95, message = "High temperature warning", id = 'temp_high'),
             alert_conditions.LowerBoundCondition('temperature',
                 warn_bound = 0, message = "Low temperature warning", id = 'temp_low'),
             alert_conditions.ValueCondition('multi_status',
@@ -25,7 +25,7 @@ class Controller(resources.ScannableResource):
         ]
 
     address = attributes.String()
-    status = attributes.Enum('OK', 'FAILED')
+    status = attributes.Enum('OK', 'FAILED', 'BADLY_FAILED')
     multi_status = attributes.Enum('OK', 'FAIL1', 'FAIL2')
     temperature = attributes.Integer(min_val = -274)
 

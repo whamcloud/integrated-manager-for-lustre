@@ -1,3 +1,4 @@
+import logging
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 from django.db import connection
@@ -640,8 +641,8 @@ class TestAlerts(ResourceManagerTestCase):
             if isinstance(ac, alert_klass):
                 alert_list = ac.test(resource)
 
-                for name, attribute, active in alert_list:
-                    resource_manager.session_notify_alert(scannable_pk, resource._handle, active, name, attribute)
+                for name, attribute, active, severity in alert_list:
+                    resource_manager.session_notify_alert(scannable_pk, resource._handle, active, severity, name, attribute)
                     result.append((name, attribute, active))
 
         return result
@@ -675,8 +676,8 @@ class TestAlerts(ResourceManagerTestCase):
         self.assertEqual(n, 2, alerts)
 
         # Check that the alert is now set on couplet
-        from chroma_core.models import AlertState
-        self.assertEqual(AlertState.objects.filter(active = True).count(), 2)
+        from chroma_core.models import StorageResourceAlert
+        self.assertEqual(StorageResourceAlert.objects.filter(active = True).count(), 2)
 
     def test_raise_alert(self):
         resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK', 'multi_status': 'OK'})
@@ -692,10 +693,15 @@ class TestAlerts(ResourceManagerTestCase):
         controller_resource.status = 'FAILED'
         self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
 
-        from chroma_core.models import AlertState, StorageAlertPropagated
+        from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
 
         # Check that the alert is now set on couplet
-        self.assertEqual(AlertState.objects.filter(active = True).count(), 1)
+        self.assertEqual(StorageResourceAlert.objects.filter(active=True).count(), 1)
+        self.assertEqual(StorageResourceAlert.objects.get().severity, logging.WARNING)
+
+        # FIXME: make this string more sensible
+        self.assertEqual(StorageResourceAlert.objects.get().message(), "Controller failure (Controller Controller foo)")
+
         # Check that the alert is now set on controller (propagation)
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 1)
 
@@ -704,9 +710,16 @@ class TestAlerts(ResourceManagerTestCase):
         self.assertEqual(False, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
 
         # Check that the alert is now unset on couplet
-        self.assertEqual(AlertState.objects.filter(active = True).count(), 0)
+        self.assertEqual(StorageResourceAlert.objects.filter(active = True).count(), 0)
         # Check that the alert is now unset on controller (propagation)
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 0)
+
+        # Now try setting something which should have a different severity (respect difference betwee
+        # warn_states and error_states on AlertCondition)
+        controller_resource.status = 'BADLY_FAILED'
+        self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(StorageResourceAlert.objects.filter(active=True).count(), 1)
+        self.assertEqual(StorageResourceAlert.objects.get(active=True).severity, logging.ERROR)
 
     def test_alert_deletion(self):
         resource_record, controller_resource = self._make_global_resource('alert_plugin', 'Controller', {'address': 'foo', 'temperature': 40, 'status': 'OK', 'multi_status': 'OK'})
@@ -722,17 +735,17 @@ class TestAlerts(ResourceManagerTestCase):
         controller_resource.status = 'FAILED'
         self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
 
-        from chroma_core.models import AlertState, StorageAlertPropagated
+        from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
 
         # Check that the alert is now set on couplet
-        self.assertEqual(AlertState.objects.filter(active = True).count(), 1)
+        self.assertEqual(StorageResourceAlert.objects.filter(active = True).count(), 1)
         # Check that the alert is now set on controller (propagation)
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 1)
 
         resource_manager.global_remove_resource(resource_record.pk)
 
         # Check that the alert is now unset on couplet
-        self.assertEqual(AlertState.objects.filter(active = True).count(), 0)
+        self.assertEqual(StorageResourceAlert.objects.filter(active = True).count(), 0)
         # Check that the alert is now unset on controller (propagation)
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 0)
 

@@ -48,6 +48,9 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
         self.wait_for_assert(lambda: self.assertHasAlert(mgt['resource_uri']))
         self.wait_for_assert(lambda: self.assertState(mgt['resource_uri'], 'unmounted'))
+        target_offline_alert = self.get_alert(mgt['resource_uri'], alert_type="TargetOfflineAlert")
+        self.assertEqual(target_offline_alert['severity'], 'ERROR')
+        self.assertEqual(target_offline_alert['alert_type'], 'TargetOfflineAlert')
 
         # Check the alert is cleared when restarting the target
         self.remote_operations.start_target(host['fqdn'], mgt['ha_label'])
@@ -67,6 +70,8 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.remote_operations.stop_lnet(host['fqdn'])
         self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri']))
         self.wait_for_assert(lambda: self.assertState(host['resource_uri'], 'lnet_down'))
+        lnet_offline_alert = self.get_alert(host['resource_uri'], alert_type="LNetOfflineAlert")
+        self.assertEqual(lnet_offline_alert['severity'], 'INFO')
 
         # Check that alert is dropped when lnet is brought back up
         self.set_state(host['resource_uri'], 'lnet_up')

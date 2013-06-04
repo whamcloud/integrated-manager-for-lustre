@@ -235,8 +235,8 @@ class BaseStoragePlugin(object):
             # Check if any AlertConditions are matched
             for ac in resource._meta.alert_conditions:
                 alert_list = ac.test(resource)
-                for name, attribute, active in alert_list:
-                    self.notify_alert(active, resource, name, attribute)
+                for name, attribute, active, severity in alert_list:
+                    self._notify_alert(active, severity, resource, name, attribute)
 
     def do_teardown(self):
         self.teardown()
@@ -280,11 +280,11 @@ class BaseStoragePlugin(object):
 
     def commit_alerts(self):
         with self._alerts_lock:
-            for (resource, attribute, alert_class) in self._delta_alerts:
-                active = self._alerts[(resource, attribute, alert_class)]
+            for (resource, attribute, alert_class, severity) in self._delta_alerts:
+                active = self._alerts[(resource, attribute, alert_class, severity)]
                 self._resource_manager.session_notify_alert(
-                        self._scannable_id, resource._handle,
-                        active, alert_class, attribute)
+                    self._scannable_id, resource._handle,
+                    active, severity, alert_class, attribute)
             self._delta_alerts.clear()
 
     def commit_resource_statistics(self):
@@ -336,19 +336,18 @@ class BaseStoragePlugin(object):
             # TODO: it would be useful if local resource instances had a
             # way to invalidate their handles to detect buggy plugins
 
-    def notify_alert(self, active, resource, alert_name, attribute = None):
+    def _notify_alert(self, active, severity, resource, alert_name, attribute = None):
         # This will be flushed through to the database by update_scan
-        key = (resource, attribute, alert_name)
-        value = active
+        key = (resource, attribute, alert_name, severity)
         with self._alerts_lock:
             try:
                 existing = self._alerts[key]
-                if existing == value:
+                if existing == active:
                     return
             except KeyError:
                 pass
 
-            self._alerts[key] = value
+            self._alerts[key] = active
             self._delta_alerts.add(key)
 
     def _register_resource(self, resource):

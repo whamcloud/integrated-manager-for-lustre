@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 import os
 import requests
 import shutil
@@ -283,6 +284,31 @@ class ApiTestCase(UtilityTestCase):
     def assertHasAlert(self, uri):
         alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
         self.assertIn(uri, [a['alert_item'] for a in alerts])
+
+    def get_alert(self, uri, regex=None, alert_type=None):
+        """Given that there is an active alert for object `uri` whose
+           message matches `regex`, return it.  Raise an AssertionError
+           if no such alert exists"""
+
+        all_alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False, 'limit': 0})
+        alerts = [a for a in all_alerts if a['alert_item'] == uri]
+        if not alerts:
+            raise AssertionError("No alerts for object %s (alerts are %s)" % (uri, all_alerts))
+
+        if regex is not None:
+            alerts = [a for a in alerts if re.match(regex, a['message'])]
+            if not alerts:
+                raise AssertionError("No alerts for object %s matching %s (alerts are %s)" % (uri, regex, all_alerts))
+
+        if alert_type is not None:
+            alerts = [a for a in alerts if a['alert_type'] == alert_type]
+            if not alerts:
+                raise AssertionError("No alerts of type %s found (alerts are %s)" % (alert_type, all_alerts))
+
+        if len(alerts) > 1:
+            raise AssertionError("Multiple alerts match: %s" % alerts)
+
+        return alerts[0]
 
     def assertState(self, uri, state):
         logger.debug("assertState %s %s" % (uri, state))

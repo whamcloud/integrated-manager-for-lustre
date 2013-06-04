@@ -1462,6 +1462,14 @@ class UpdateNidsJob(Job, HostListMixin):
 
 
 class HostContactAlert(AlertState):
+    # This is worse than INFO because it *could* indicate that
+    # a filesystem is unavailable, but it is not necessarily
+    # so:
+    # * Host can lose contact with us but still be servicing clients
+    # * Host can be offline entirely but filesystem remains available
+    #   if failover servers are available.
+    default_severity = logging.WARNING
+
     def message(self):
         return "Lost contact with host %s" % self.alert_item
 
@@ -1483,6 +1491,13 @@ class HostOfflineAlert(AlertState):
     When a corosync agent reports a peer is down in a cluster, the corresponding
     service will save a HostOfflineAlert.
     """
+
+    # This is worse than INFO because it *could* indicate that
+    # a filesystem is unavailable, but it is not necessarily
+    # so:
+    # * Host can be offline but filesystem remains available
+    #   if failover servers are available.
+    default_severity = logging.WARNING
 
     def message(self):
         return "Host is offline %s" % self.alert_item
@@ -1513,6 +1528,12 @@ class HostRebootEvent(Event):
 
 
 class LNetOfflineAlert(AlertState):
+    # LNET being offline is never solely responsible for a filesystem
+    # being unavailable: if a target is offline we will get a separate
+    # ERROR alert for that.  LNET being offline may indicate a configuration
+    # fault, but equally could just indicate that the host hasn't booted up that far yet.
+    default_severity = logging.INFO
+
     def message(self):
         return "LNet offline on server %s" % self.alert_item
 
@@ -1529,6 +1550,11 @@ class LNetOfflineAlert(AlertState):
 
 
 class LNetNidsChangedAlert(AlertState):
+    # This is WARNING because targets on this host will not work
+    # correctly until it is addressed, but the filesystem may still
+    # be available if a failover server is not in this conditon.
+    default_severity = logging.WARNING
+
     def message(self):
         return "NIDs changed on server %s" % self.alert_item
 
@@ -1545,6 +1571,10 @@ class LNetNidsChangedAlert(AlertState):
 
 
 class UpdatesAvailableAlert(AlertState):
+    # This is INFO because the system is unlikely to be suffering as a consequence
+    # of having an older software version installed.
+    default_severity = logging.INFO
+
     def message(self):
         return "Updates are ready for server %s" % self.alert_item
 

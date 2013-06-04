@@ -1171,6 +1171,10 @@ class ManagedTargetMount(models.Model):
 
 
 class TargetOfflineAlert(AlertState):
+    # When a target is offline, some or all files in the filesystem are inaccessible,
+    # therefore the filesystem is considered not fully available, therefore it's ERROR.
+    default_severity = logging.ERROR
+
     def message(self):
         return "Target %s offline" % (self.alert_item)
 
@@ -1187,6 +1191,10 @@ class TargetOfflineAlert(AlertState):
 
 
 class TargetFailoverAlert(AlertState):
+    # The filesystem should remain available while a target is failed over, but
+    # performance may be degraded, therefore it's worse than INFO, but not as bad as ERROR.
+    default_severity = logging.WARNING
+
     def message(self):
         return "Target %s running on secondary server" % self.alert_item
 
@@ -1203,6 +1211,11 @@ class TargetFailoverAlert(AlertState):
 
 
 class TargetRecoveryAlert(AlertState):
+    # While a target is in recovery, the filesystem is still available, but I/O operations
+    # from clients may block until recovery completes, effectively degrading performance.
+    # Therefore it's WARNING.
+    default_severity = logging.WARNING
+
     def message(self):
         return "Target %s in recovery" % self.alert_item
 

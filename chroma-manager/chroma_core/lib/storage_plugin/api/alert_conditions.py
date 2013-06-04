@@ -26,6 +26,8 @@ from chroma_core.lib.storage_plugin.base_alert_condition import AlertCondition
 
 
 class BoundCondition(AlertCondition):
+    upper = None
+
     def __init__(self, attribute, error_bound = None, warn_bound = None, info_bound = None, message = None, *args, **kwargs):
         self.error_bound = error_bound
         self.warn_bound = warn_bound
@@ -60,14 +62,13 @@ class BoundCondition(AlertCondition):
         for bound, sev in bound_sev:
             if bound == None:
                 continue
-            # FIXME: nowhere to put the severity for an alert yet
             alert_name = "_%s_%s_%s" % (self._id, self.attribute, sev)
             if self.upper:
                 active = getattr(resource, self.attribute) > bound
             else:
                 active = getattr(resource, self.attribute) < bound
 
-            result.append([alert_name, self.attribute, active])
+            result.append([alert_name, self.attribute, active, sev])
 
         return result
 
@@ -135,9 +136,8 @@ class ValueCondition(AlertCondition):
         for states, sev in states_sev:
             if len(states) == 0:
                 continue
-            # FIXME: nowhere to put the severity for an alert yet
             alert_name = "_%s_%s_%s" % (self._id, self.attribute, sev)
             active = getattr(resource, self.attribute) in states
-            result.append([alert_name, self.attribute, active])
+            result.append([alert_name, self.attribute, active, sev])
 
         return result
