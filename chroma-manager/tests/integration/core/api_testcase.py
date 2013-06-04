@@ -84,13 +84,6 @@ class ApiTestCase(UtilityTestCase):
                                                       "starting test %s "
                                                       "=====" % self)
 
-        if not 'filesystem' in config:
-            # Erase all volumes if the config does not indicate that there is already
-            # a pres-existing file system (in the case of the monitoring only tests).
-            for server in self.TEST_SERVERS:
-                for path in server['device_paths']:
-                    self.remote_operations.erase_block_device(server['fqdn'], path)
-
         reset = config.get('reset', True)
         if reset:
             self.reset_cluster()
@@ -100,6 +93,13 @@ class ApiTestCase(UtilityTestCase):
             self.remote_operations.unmount_clients()
             self.api_force_clear()
             self.remote_operations.clear_ha(self.TEST_SERVERS)
+
+        if not 'filesystem' in config:
+            # Erase all volumes if the config does not indicate that there is already
+            # a pres-existing file system (in the case of the monitoring only tests).
+            for server in self.TEST_SERVERS:
+                for path in server['device_paths']:
+                    self.remote_operations.erase_block_device(server['fqdn'], path)
 
         # Ensure that config from previous runs doesn't linger into
         # this one.

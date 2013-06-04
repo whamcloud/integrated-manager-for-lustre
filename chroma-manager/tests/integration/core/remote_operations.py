@@ -675,17 +675,39 @@ class RealRemoteOperations(RemoteOperations):
         for server in server_list:
             if self.has_pacemaker(server):
                 if config.get('pacemaker_hard_reset', False):
-                    self._ssh_address(
+                    result = self._ssh_address(
                         server['address'],
-                        '''
-                        service pacemaker stop;
-                        service corosync stop;
-                        ifdown eth1;
-                        rm -f /etc/sysconfig/network-scripts/ifcfg-eth1;
-                        rm -f /etc/corosync/corosync.conf;
-                        rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*
+                        '''set -ex
+                        service pacemaker stop &
+                        pid=$!
+                        timeout=120
+                        while kill -0 $pid && [ $timeout -gt 0 ]; do
+                            sleep 1
+                            let timeout=$timeout-1 || true
+                        done
+                        if kill -0 $pid; then
+                            # now start getting all medevil on it
+                            killall crmd
+                            timeout=5
+                            while killall -0 crmd && [ $timeout -gt 0 ]; do
+                                sleep 1
+                                let timeout=$timeout-1 || true
+                            done
+                            if killall -0 crmd; then
+                                # hrm.  what to do now?
+                                echo "even killing crmd didn't work" >&2
+                            fi
+                        fi
+                        service corosync stop
+                        ifconfig eth1 0.0.0.0 down
+                        rm -f /etc/sysconfig/network-scripts/ifcfg-eth1
+                        rm -f /etc/corosync/corosync.conf
+                        rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*;
+                        ! grep lustre /proc/mounts
                         '''
                     )
+                    logger.info(result.stderr.read())
+                    self._test_case.assertEqual(result.exit_status, 0)
                 else:
                     crm_targets = self.get_pacemaker_targets(server)
 
