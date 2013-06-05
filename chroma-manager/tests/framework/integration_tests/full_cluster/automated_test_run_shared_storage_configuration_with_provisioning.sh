@@ -127,7 +127,7 @@ ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
 # Install from the installation package
 cd /tmp
 tar xzvf chroma.tar.gz
-./install.sh <<EOF1
+./install <<EOF1
 $CHROMA_USER
 $CHROMA_EMAIL
 $CHROMA_PASS

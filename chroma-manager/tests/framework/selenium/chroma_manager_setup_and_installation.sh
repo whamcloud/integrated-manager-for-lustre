@@ -19,7 +19,7 @@ yum install -y python-mock
 # Install from the installation package
 cd /tmp
 tar xzvf chroma.tar.gz
-./install.sh <<EOF1
+./install <<EOF1
 $CHROMA_USER
 $CHROMA_EMAIL
 $CHROMA_PASS
