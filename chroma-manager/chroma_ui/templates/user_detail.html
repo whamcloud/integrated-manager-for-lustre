@@ -13,6 +13,9 @@
                     <tr><th>Email:</th><td><input name='email' type='text' value='<%= user.email %>'/></td></tr>
                     <tr><th>First name:</th><td><input name='first_name' type='text' value='<%= user.first_name %>'/></td></tr>
                     <tr><th>Last name:</th><td><input name='last_name' type='text' value='<%= user.last_name %>'/></td></tr>
+                    <% if (user.is_superuser) { %>
+                      <tr><th>Prompt for EULA at next login:</th><td><input type="checkbox" name="accepted_eula" <%= user.accepted_eula? '': 'checked' %> /></td></tr>
+                    <% } %>
                     <tr>
                         <th>&nbsp;</th>
                         <td>

@@ -1,4 +1,5 @@
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver import ActionChains
 
 from tests.selenium.base import wait_for_transition
 from tests.selenium.base_view import DatatableView
@@ -35,6 +36,7 @@ class Servers(DatatableView):
 
     def open_detect_prompt(self):
         self.driver.find_element_by_css_selector('#server_list button.detect_button').click()
+        ActionChains(self.driver).move_by_offset(0, -50).perform()
         self.quiesce()
 
     @property

@@ -1,0 +1,30 @@
+.eula {
+  font-size: 90%;
+  line-height: 18px;
+  color: #444444;
+}
+
+.eula .well {
+  max-height: 324px;
+  overflow-x: auto;
+}
+
+.eula ol {
+  padding-left: 25px;
+}
+
+.eula li {
+  margin-bottom: 20px;
+}
+
+.eula li h5 {
+  display: inline-block;
+  margin: 0;
+  font-size: inherit;
+}
+
+.eula .subtext {
+  font-size: 10px;
+  line-height: 12px;
+  color: #666666;
+}

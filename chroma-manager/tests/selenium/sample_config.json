@@ -1,6 +1,6 @@
 {
     "headless": false,
-    "screenshots": false,
+    "screenshots": true,
     "clean_up_on_failure": true,
     "chroma_managers": [
         {

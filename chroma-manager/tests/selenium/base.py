@@ -1,3 +1,5 @@
+import datetime
+import os
 import logging
 import time
 import sys
@@ -20,6 +22,33 @@ def quiesce_api(driver, timeout):
         else:
             time.sleep(1)
     raise RuntimeError('Timeout')
+
+
+def quiesce_http(driver, timeout, log):
+    script = """
+        var $http = angular.element('body').injector().get('$http');
+        return $http.pendingRequests.length === 0;
+    """
+
+    for i in xrange(timeout):
+        cleared = driver.execute_script(script)
+        if cleared:
+            log.debug('quiesced $http after %s iterations' % i)
+            return
+        else:
+            time.sleep(1)
+    raise RuntimeError("$http Timeout")
+
+
+def _disable_css3_transitions(driver):
+    script = """
+        var css = document.createElement('style');
+        css.type = 'text/css';
+        css.innerHTML = '* {-webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; transition: none !important;}';
+        document.body.appendChild(css);
+    """
+
+    driver.execute_script(script)
 
 
 def wait_for_transition(driver, timeout):
@@ -58,6 +87,7 @@ class SeleniumBaseTestCase(TestCase):
         self.standard_wait = wait_time['standard']
         self.medium_wait = wait_time['medium']
         self.long_wait = wait_time['long']
+        self.confirm_login = True
 
     def setUp(self):
         if not config['chroma_managers'][0]['server_http_url']:
@@ -79,23 +109,29 @@ class SeleniumBaseTestCase(TestCase):
 
         self.driver.get(config['chroma_managers'][0]['server_http_url'])
 
+        self.addCleanup(self.stop_driver)
+        self.addCleanup(self._take_screenshot_on_failure)
+        self.addCleanup(self.reset_eula)
+
         from tests.selenium.utils.navigation import Navigation
         self.navigation = Navigation(self.driver)
+
+        _disable_css3_transitions(self.driver)
 
         superuser_present = False
         for user in config['chroma_managers'][0]['users']:
             if user['is_superuser']:
-                self.navigation.login(user['username'], user['password'])
+                self.navigation.login(user['username'], user['password'], self.accept_eula, self.confirm_login)
                 superuser_present = True
         if not superuser_present:
             raise RuntimeError("No superuser in config file")
 
-        wait_for_element_by_css_selector(self.driver, '#user_info #authenticated', 10)
-        wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
+        if self.confirm_login:
+            self.wait_for_login()
 
         self.clear_all()
 
-    def tearDown(self):
+    def stop_driver(self):
         # It can be handy not to clean up after a failed test when a developer
         # is actively working on a test or troubleshooting a test failure and
         # to leave the browser window open. To provide for this, there is an
@@ -104,12 +140,36 @@ class SeleniumBaseTestCase(TestCase):
         # Beware that the un-cleaned-up tests will leave resources and processes
         # on your system that will not automatically be cleaned up.
         test_failed = False if sys.exc_info() == (None, None, None) else True
-        if config.get('clean_up_on_failure'):
-            self.log.info("Cleaning up after %s" % 'failure' if test_failed else 'success')
+        if config.get("clean_up_on_failure"):
+            self.log.info("Quitting driver after %s" % "failure" if test_failed else "success")
             self.driver.quit()
         elif not test_failed:
-            self.log.info("Cleaning up after success")
+            self.log.info("Closing driver after success")
             self.driver.close()
+
+    def wait_for_login(self):
+        wait_for_element_by_css_selector(self.driver, '#user_info #authenticated', 10)
+        wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
+
+    def accept_eula(self):
+        from tests.selenium.views.eula import Eula
+        eula = Eula(self.driver)
+        eula.accept_eula()
+
+    def reset_eula(self):
+        self.log.info("Resetting Eula Via API")
+
+        script = """
+            var user = Login.getUser();
+            var UserModel = angular.element('body').injector().get('UserModel');
+            var userModel = new UserModel(user);
+
+            userModel.accepted_eula = false;
+            userModel.$update();
+        """
+
+        self.driver.execute_script(script)
+        quiesce_http(self.driver, self.medium_wait, self.log)
 
     def clear_all(self):
         from tests.selenium.views.filesystem import Filesystem
@@ -210,3 +270,21 @@ class SeleniumBaseTestCase(TestCase):
             self.mdt_server_address, self.mdt_volume_name,
             self.ost_server_address, self.ost_volume_name,
             conf_params)
+
+    def _take_screenshot_on_failure(self):
+        test_failed = False if sys.exc_info() == (None, None, None) else True
+
+        if config['screenshots'] and test_failed:
+            failed_screen_shot_dir = "%s/failed-screen-shots" % os.getcwd()
+
+            if not os.path.exists(failed_screen_shot_dir):
+                os.makedirs(failed_screen_shot_dir)
+
+            filename = "%s/%s_%s.png" % (
+                failed_screen_shot_dir,
+                self.id(),
+                datetime.datetime.now().isoformat()
+            )
+
+            self.log.debug("Saving screen shot to %s", filename)
+            self.driver.get_screenshot_as_file(filename)

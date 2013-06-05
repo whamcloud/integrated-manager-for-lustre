@@ -33,6 +33,13 @@ class Testdata:
         return self.cluster_data['conf_params']
 
     @nottest
-    def get_test_data_for_user(self):
-        # read and return data from test data file for user
-        return self.cluster_data['user']
+    def get_test_data_for_user(self, username=None):
+        # read and return data from test data file for user.
+        # If a username is passed returns the cooresponding user.
+        # If username is not passed, returns the full list.
+        users = self.cluster_data['user']
+
+        if username:
+            return next(user for user in users if user['username'] == username)
+        else:
+            return users

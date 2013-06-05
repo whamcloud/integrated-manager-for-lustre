@@ -3,6 +3,9 @@ from tests.selenium.utils.element import wait_for_element_by_css_selector
 
 
 class Login(BaseView):
+    login_selector = "#user_info #anonymous #login"
+    logged_in_selector = "#username"
+
     def __init__(self, driver):
         super(Login, self).__init__(driver)
 
@@ -13,6 +16,7 @@ class Login(BaseView):
 
     def open_login_dialog(self):
         self.quiesce()
+        self.wait_for_removal("div.blockUI")
         self.open_dialog_button.click()
         wait_for_element_by_css_selector(self.driver, '#login_dialog input[name=username]', 10)
 

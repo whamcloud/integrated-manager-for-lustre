@@ -96,8 +96,8 @@ def enter_text_for_element(driver, selector_or_element, text_value):
 
 def select_element_option(driver, selector, index):
     element = driver.find_element_by_css_selector(selector)
-    element_options = element.find_elements_by_tag_name('option')
-    element_options[index].click()
+    select = Select(element)
+    select.select_by_index(index)
 
 
 def get_selected_option_text(driver, dropdown_element_selector):

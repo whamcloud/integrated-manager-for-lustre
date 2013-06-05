@@ -20,20 +20,23 @@
 # express and approved by Intel in writing.
 
 
-from jobs import *
-from host import *
-from target import *
-from filesystem import *
-from conf_param import *
-from storage_plugin import *
-from alert import *
-from event import *
-from log import *
-from registration_token import *
-from stats import *
-from ha_cluster import *
-from power_control import *
-from bundle import *
-from server_profile import *
-from package import *
-from user_profile import *
+from django.contrib.auth.models import User
+from django.db import models
+from django.db.models.signals import post_save
+
+
+class UserProfile(models.Model):
+    class Meta:
+        app_label = 'chroma_core'
+
+    # This field is required.
+    user = models.OneToOneField(User)
+
+    accepted_eula = models.BooleanField(default=False)
+
+
+def create_user_profile(sender, instance, created, **kwargs):
+    if instance.is_superuser:
+        UserProfile.objects.get_or_create(user=instance)
+
+post_save.connect(create_user_profile, sender=User)

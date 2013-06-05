@@ -52,11 +52,23 @@ var Login = function() {
   }
 
   function submit() {
-    var username = $('#login_dialog input[name=username]').val()
-    var password = $('#login_dialog input[name=password]').val()
-    Api.post('session/', {username: username, password: password},
-      success_callback = function() {
-        window.location.href = Api.UI_ROOT;
+    var username = $('#login_dialog input[name=username]').val();
+    var password = $('#login_dialog input[name=password]').val();
+    var credentials = {username: username, password: password};
+    Api.post('session/', credentials,
+      success_callback = function () {
+        var body = angular.element('body');
+
+        body.scope().safeApply(function () {
+          var shouldShowEula = body.injector().get('shouldShowEula');
+
+          function doneCallback() {
+            // @TODO: Shouldn't need a hard refresh after login.
+            window.location.href = Api.UI_ROOT;
+          }
+
+          shouldShowEula(credentials, doneCallback);
+        });
       },
       error_callback = {403: function(status, jqXHR) {
         $('#login_dialog #error').show()
@@ -124,7 +136,7 @@ var Login = function() {
     initUi();
 
     /* Discover information about the currently logged in user (if any)
-     * so that we can put the user interface in the right state and 
+     * so that we can put the user interface in the right state and
      * enable API calls */
     Api.get("/api/session/", {}, success_callback = function(session) {
       user = session.user

@@ -32,6 +32,7 @@ from tastypie import fields
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from tastypie.validation import Validation
 from tastypie.http import HttpBadRequest
+from chroma_core.models import UserProfile
 
 
 class ChromaUserChangeForm(UserChangeForm):
@@ -135,6 +136,10 @@ class UserResource(ModelResource):
             made by the same user or by a superuser)")
     new_password2 = fields.CharField(help_text = "Password confirmation, must match ``new_password1``")
 
+    is_superuser = fields.BooleanField(readonly=True, help_text="Is the user a superuser", attribute="is_superuser")
+
+    accepted_eula = fields.CharField(help_text="Has a superuser accepted the eula")
+
     def hydrate_groups(self, bundle):
         from chroma_api.group import GroupResource
 
@@ -194,8 +199,25 @@ class UserResource(ModelResource):
 
         return bundle
 
+    def obj_update(self, bundle, request=None, **kwargs):
+        bundle = super(UserResource, self).obj_update(bundle, request, **kwargs)
+
+        if bundle.obj.is_superuser:
+            accepted_eula = bundle.data["accepted_eula"]
+
+            if accepted_eula:
+                bundle.obj.userprofile.accepted_eula = accepted_eula
+                bundle.obj.userprofile.save()
+            else:
+                UserProfile.objects.filter(user__is_superuser=True, accepted_eula=True).update(accepted_eula=False)
+
+        return bundle
+
     def dehydrate_full_name(self, bundle):
         return bundle.obj.get_full_name()
+
+    def dehydrate_accepted_eula(self, bundle):
+        return User.objects.filter(is_superuser=True, userprofile__accepted_eula=True).exists()
 
     def delete_detail(self, request, **kwargs):
         if int(kwargs['pk']) == request.user.id:
@@ -208,7 +230,8 @@ class UserResource(ModelResource):
         authorization = UserAuthorization()
         queryset = User.objects.all()
         validation = UserValidation()
-        fields = ['first_name', 'full_name', 'groups', 'id', 'last_name', 'new_password1', 'new_password2', 'password1', 'password2', 'resource_uri', 'username', 'email']
+        fields = ['first_name', 'full_name', 'groups', 'id', 'last_name', 'new_password1',
+                  'new_password2', 'password1', 'password2', 'resource_uri', 'username', 'email']
         ordering = ['username', 'email']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']

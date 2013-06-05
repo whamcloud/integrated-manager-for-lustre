@@ -1,4 +1,3 @@
-import datetime
 from time import sleep
 
 from selenium.common.exceptions import StaleElementReferenceException
@@ -49,7 +48,7 @@ class Navigation(BaseView):
         # The fade-out of the blocking animation can still be in progress, wait for it to hide
         self.wait_for_removal("div.blockUI")
 
-    def login(self, username, password):
+    def login(self, username, password, after_login=None, confirm_login=True):
         """Login with given username and password"""
         self.log.debug("Logging in %s" % username)
         from tests.selenium.views.login import Login
@@ -58,7 +57,13 @@ class Navigation(BaseView):
         if not find_visible_element_by_css_selector(self.driver, '#login_dialog'):
             login_view.open_login_dialog()
         login_view.login_user(username, password)
-        wait_for_element_by_css_selector(self.driver, '#username', self.medium_wait)
+
+        if after_login:
+            after_login()
+
+        if confirm_login:
+            wait_for_element_by_css_selector(self.driver, '#username', self.medium_wait)
+
         self.quiesce()
         self._patch_api()
 
@@ -85,11 +90,6 @@ class Navigation(BaseView):
         for page in args:
             self.click(self.links[page])
         self.quiesce()
-
-    def screenshot(self):
-        if config['screenshots']:
-            filename = "%s_%s.png" % (datetime.datetime.now().isoformat(), self.driver.current_url.replace("/", "_"))
-            self.driver.get_screenshot_as_file(filename)
 
     def click(self, selector):
         """

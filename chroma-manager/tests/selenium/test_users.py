@@ -1,9 +1,12 @@
+from functools import partial
+from selenium.common.exceptions import NoSuchElementException
 from testconfig import config
 
 from utils.sample_data import Testdata
 from utils.messages_text import validation_messages
 
 from tests.selenium.views.users import Users
+from tests.selenium.views.eula import Eula
 from tests.selenium.base import SeleniumBaseTestCase
 from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.element import enter_text_for_element, select_element_option
@@ -27,9 +30,10 @@ class SampleUser(object):
 
 
 class wrapped_login(object):
-    def __init__(self, test_case, inner_user, outer_user=None):
+    def __init__(self, test_case, inner_user, outer_user=None, exit_after_login=None):
         self.test_case = test_case
         self.inner_user = self.test_case.users[inner_user]
+        self.exit_after_login = exit_after_login
         try:
             self.outer_user = self.test_case.users[outer_user]
         except KeyError:
@@ -57,7 +61,7 @@ class wrapped_login(object):
             except ElementNotVisibleException:
                 # I guess we're already logged out?
                 pass
-            self.test_case.navigation.login(self.outer_user.username, self.outer_user.password)
+            self.test_case.navigation.login(self.outer_user.username, self.outer_user.password, self.exit_after_login)
 
 
 class TestUsers(SeleniumBaseTestCase):
@@ -77,6 +81,7 @@ class TestUsers(SeleniumBaseTestCase):
 
         self.navigation.go('Configure', 'Users')
         self.user_page = Users(self.driver)
+        self.eula_page = Eula(self.driver)
 
     def test_mandatory_fields(self):
         # Test validation for all mandatory fields
@@ -166,6 +171,35 @@ class TestUsers(SeleniumBaseTestCase):
             self.edit_user_details(fsadmin)
             self.edit_alert_subscriptions(fsadmin)
         self.navigation.go('Configure', 'Users')
+        self.delete_user(fsadmin)
+
+    def test_resetting_eula(self):
+        """Tests that resetting the eula will make the eula appear on next superuser login"""
+        def exit_after_login():
+            self.assertTrue(self.eula_page.is_eula_visible())
+            self.eula_page.accept_eula()
+
+        superuser = self.users["superuser"]
+        self.add_user(superuser)
+        with wrapped_login(self, superuser.username, exit_after_login=exit_after_login):
+            self.user_page.reset_eula()
+
+        self.navigation.go("Configure", "Users")
+        self.delete_user(superuser)
+
+    def test_non_superuser_does_not_see_reset_eula(self):
+        """Tests that a non-superuser does not see the result eula checkbox in the account dialog"""
+        fsadmin = self.users["fsadmin"]
+        self.add_user(fsadmin)
+
+        the_call = partial(self.driver.find_element_by_css_selector, self.user_page.accept_eula_checkbox)
+
+        with wrapped_login(self, fsadmin.username):
+            self.user_page._open_account_dialog()
+            self.assertRaises(NoSuchElementException, the_call)
+            self.user_page.account_dialog_close()
+
+        self.navigation.go("Configure", "Users")
         self.delete_user(fsadmin)
 
     def add_user(self, user, all_fields=False):

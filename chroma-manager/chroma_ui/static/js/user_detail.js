@@ -118,12 +118,15 @@ var UserDetail = Backbone.View.extend({
     var view = this;
 
     UserAlertSubscriptions.init(function() {
-      var rendered = view.template({'user': view.model.toJSON()});
+      var rendered = view.template({
+        user: view.model.toJSON()
+      });
       $(view.el).find('.ui-dialog-content').html(rendered);
       $(view.el).find('.tabs').tabs({'show': function(event, ui) {view.tab_select(event, ui)}});
     });
     return this;
   },
+
   events: {
     "click button.save_user": "save_user",
     "click button.reset_user": "reset_user",
@@ -135,14 +138,32 @@ var UserDetail = Backbone.View.extend({
   },
   save_user: function() {
     var view = this;
-    ValidatedForm.save($(this.el).find(".user_detail_form"), Api.put, this.model.get('resource_uri'), this.model.toJSON(), function() {
+    var userDetailForm = $(this.el).find('.user_detail_form');
+
+    var obj = view.model.toJSON();
+
+    if (obj.is_superuser) {
+      //@FIXME: This is not great but with lacking test coverage I'm not willing to alter save.
+      Object.defineProperty(obj, 'accepted_eula', {
+        value: !userDetailForm.find('input:checkbox')[0].checked,
+        writable: false
+      });
+    }
+
+    ValidatedForm.save(userDetailForm, Api.put, this.model.get('resource_uri'), obj, function() {
       $(view.el).find('#user_save_result').html("Changes saved successfully.");
       // Ensure that the model is updated for other tabs.
       view.model.fetch();
     });
   },
   reset_user: function() {
-    ValidatedForm.reset($(this.el).find(".user_detail_form"), this.model);
+    var userDetailForm = $(this.el).find(".user_detail_form");
+
+    ValidatedForm.reset(userDetailForm, this.model);
+
+    if (this.model.get('is_superuser')) {
+      userDetailForm.find('input:checkbox').prop('checked', !this.model.get('accepted_eula'));
+    }
   },
   change_password: function() {
     var view = this;
