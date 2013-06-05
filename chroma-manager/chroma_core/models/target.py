@@ -990,7 +990,7 @@ class FormatTargetJob(StateChangeJob):
 class MigrateTargetJob(AdvertisedJob):
     target = models.ForeignKey(ManagedTarget)
 
-    requires_confirmation = False
+    requires_confirmation = True
 
     classes = ['ManagedTarget']
 
@@ -1066,6 +1066,10 @@ class FailbackTargetJob(MigrateTargetJob):
             'primary_mount': self.target.managedtargetmount_set.get(primary = True)
         })]
 
+    @classmethod
+    def get_confirmation(cls, instance):
+        return """Migrate the target back to its primary server. Clients attempting to access data on the target while the migration is occurring may experience delays until the migration completes."""
+
 
 class FailoverTargetStep(Step):
     idempotent = True
@@ -1111,6 +1115,10 @@ class FailoverTargetJob(MigrateTargetJob):
             'host': self.target.failover_hosts[0],
             'secondary_mount': self.target.managedtargetmount_set.get(primary = False)
         })]
+
+    @classmethod
+    def get_confirmation(cls, instance):
+        return """Forcibly migrate the target to its failover server. Clients attempting to access data on the target while the migration is occurring may experience delays until the migration completes."""
 
 
 class ManagedTargetMount(models.Model):
