@@ -1,0 +1,25 @@
+From 600e457180c6deb8bfa4e4870d94c6699abdc9c3 Mon Sep 17 00:00:00 2001
+From: Michael MacDonald <michael.macdonald@intel.com>
+Date: Thu, 6 Jun 2013 11:48:48 -0400
+Subject: [PATCH] list_includes_status
+
+---
+ fence/agents/lib/fencing.py.py |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/fence/agents/lib/fencing.py.py b/fence/agents/lib/fencing.py.py
+index cb8ec26..6501d16 100644
+--- a/fence/agents/lib/fencing.py.py
++++ b/fence/agents/lib/fencing.py.py
+@@ -790,7 +790,7 @@ def fence_action(tn, options, set_power_fn, get_power_fn, get_outlet_list = None
+ 		for o in outlets.keys():
+ 			(alias, status) = outlets[o]
+ 			if options["-o"] != "monitor":
+-				print o + options["-C"] + alias	
++				print o + options["-C"] + alias + options["-C"] + status
+ 		return
+ 
+ 	status = get_power_fn(tn, options)
+-- 
+1.7.1
+

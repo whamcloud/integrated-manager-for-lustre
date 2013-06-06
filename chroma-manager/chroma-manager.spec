@@ -49,7 +49,7 @@ Requires: django-picklefield
 Requires: chroma-manager-libs = %{version}
 Requires: policycoreutils-python
 Requires: python-gevent >= 0.13
-Requires: fence-agents
+Requires: fence-agents-iml
 Requires: system-config-firewall-base
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
