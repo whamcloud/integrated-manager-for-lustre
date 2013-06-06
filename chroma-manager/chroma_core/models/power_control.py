@@ -75,9 +75,10 @@ class PowerControlType(DeletablePowerControlModel):
     outlet_list_template = models.CharField(null = True, blank = True, max_length = 512, help_text = "Command template for listing all outlets on a PDU", default = "%(agent)s %(options)s -a %(address)s -u %(port)s -l %(username)s -p %(password)s -o list")
 
     def display_name(self):
-        def _pad(field):
-            return " %s" % field if field else ""
-        return "%s%s%s" % (self.agent, _pad(self.make), _pad(self.model))
+        make = self.make if self.make != "" else "Unknown Make"
+        model = self.model if self.model != "" else "Unknown Model"
+        count = self.max_outlets if self.max_outlets > 0 else "IPMI"
+        return "%s %s (%s)" % (make, model, count)
 
     def __str__(self):
         return self.display_name()

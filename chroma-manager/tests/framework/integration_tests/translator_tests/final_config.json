@@ -196,7 +196,7 @@
     {
       "address": "10.10.4.36",
       "port": "22",
-      "type": "fence_virsh KVM Virtual PDU"
+      "type": "KVM Virtual PDU (IPMI)"
     }
   ],
   "provision": true,
