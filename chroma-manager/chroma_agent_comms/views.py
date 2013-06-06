@@ -26,6 +26,7 @@ import traceback
 import datetime
 import dateutil
 import dateutil.tz
+import time
 
 from django.db import transaction
 from django.http import HttpResponseNotAllowed, HttpResponse, HttpResponseBadRequest
@@ -242,6 +243,12 @@ class MessageView(View):
 
 
 setup_script_template = """
+# Set the time, so certs work below ALWAYS.
+# Future NTP job will set it again,
+# so preserving host's date is unecessary
+import os
+os.system("date -s @{server_epoch_seconds}")
+
 import sys, httplib, urllib2, shlex, base64, json, os, socket, ssl, tempfile, json, traceback
 from subprocess import Popen, PIPE
 
@@ -445,9 +452,11 @@ proxy=_none_
     repo_url = os.path.join(base_url, 'repo/')
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
+    server_epoch_seconds = time.time()
     script_formatted = setup_script_template.format(reg_url = reg_url, cert_str = cert_str,
-                                                    repo_url= repo_url, base_url = base_url,
-                                                    repos = repos)
+        repo_url= repo_url, base_url = base_url,
+        repos = repos,
+        server_epoch_seconds = server_epoch_seconds)
 
     return HttpResponse(status = 201, content = script_formatted)
 
