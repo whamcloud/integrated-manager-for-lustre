@@ -88,7 +88,7 @@ have 3 options:
 Please note that the fake bundles can't be used to install real storage
 servers -- you'll need to use one of the first two methods in order to make
 that work.
-    """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH}
+    """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH}
                 return
 
         base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile")

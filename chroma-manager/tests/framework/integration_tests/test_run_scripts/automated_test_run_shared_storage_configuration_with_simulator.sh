@@ -23,21 +23,9 @@ ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
 
-# TEMPORARY until we get caught up with CentOS 6.4
-cat <<EOC > /etc/yum.repos.d/internal_epel.repo
-[addon-epel6-x86_64]
-name=addon-epel6-x86_64
-baseurl=http://10.10.0.6/cobbler/repo_mirror/addon-epel6-x86_64
-enabled=1
-gpgcheck=0
-EOC
-yum install -y rabbitmq-server
-rm -f /etc/yum.repos.d/internal_epel.repo
-#END TEMPORARY
-
 wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 yum install -y epel-release-6-8.noarch.rpm
-yum install -y git python-pip python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool
+yum install -y git python-pip python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server
 ln -s /usr/bin/pip-python /usr/bin/pip
 
 # Create a user so we can run chroma as non-root

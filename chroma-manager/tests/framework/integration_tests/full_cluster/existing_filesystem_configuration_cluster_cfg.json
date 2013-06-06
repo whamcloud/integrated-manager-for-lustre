@@ -7,7 +7,7 @@
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ],
             "repos": ["chroma"],
-            "distro": "el6"
+            "distro": "el6.4"
         }
     ],
     "lustre_servers": [
@@ -21,7 +21,7 @@
             "status_command": "virsh domstate hydra-2-efs-mgs-mds",
             "start_command": "virsh start hydra-2-efs-mgs-mds",
             "repos": ["chroma"],
-            "distro": "el6"
+            "distro": "el6.4"
         },
         {
             "address": "hydra-2-efs-oss1",
@@ -33,7 +33,7 @@
             "status_command": "virsh domstate hydra-2-efs-oss1",
             "start_command": "virsh start hydra-2-efs-oss1",
             "repos": ["chroma"],
-            "distro": "el6"
+            "distro": "el6.4"
         },
         {
             "address": "hydra-2-efs-oss2",
@@ -45,12 +45,12 @@
             "status_command": "virsh domstate hydra-2-efs-oss2",
             "start_command": "virsh start hydra-2-efs-oss2",
             "repos": ["chroma"],
-            "distro": "el6"
+            "distro": "el6.4"
         }
     ],
     "lustre_clients": {
         "hydra-2-efs-client-1": {
-            "distro": "el6",
+            "distro": "el6.4",
             "lustre_client_version": "2.3.0"
         }
     },
@@ -94,7 +94,7 @@
     },
     "test_runners": [
         {
-            "distro": "el6",
+            "distro": "el6.4",
             "repos": ["chroma"]
         }
     ],
