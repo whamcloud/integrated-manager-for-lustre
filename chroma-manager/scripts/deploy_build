@@ -25,7 +25,7 @@ BUILDER_URL=https://build.whamcloudlabs.com
 # NB: This default should probably be chroma-blessed for non-daily builds
 BUILD_JOB=${BUILD_JOB:-chroma}
 BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
-BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6"}
+BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6.4"}
 BUILD_URL=$BUILDER_URL/job/$BUILD_JOB/$BUILD_NUMBER/$BUILD_TARGET
 BUNDLE_TARBALL=${BUNDLE_FILE:-chroma.tar.gz}
 BUNDLE_URL=$BUILD_URL/artifact/chroma-bundles/$BUNDLE_TARBALL
