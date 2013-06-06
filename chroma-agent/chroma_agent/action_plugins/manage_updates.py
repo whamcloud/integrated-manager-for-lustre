@@ -69,18 +69,13 @@ def update_packages(repos, packages):
              given by the lustre device plugin
     """
 
-    yum_args = ['yum', '--disablerepo=*', "--enablerepo=%s" % ",".join(repos)]
+    shell.try_run(['yum', 'clean', 'all'])
 
-    # Clear the cache so that we definitely will get any updates available
-    shell.try_run(yum_args + ['clean', 'all'])
+    updates_stdout = shell.try_run(['repoquery', '--disablerepo=*', "--enablerepo=%s" % ",".join(repos), "--pkgnarrow=updates", "-a"])
+    update_packages = updates_stdout.strip().split("\n")
 
-    # Check if there are any updates available
-    rc, stdout, stderr = shell.run(yum_args + ['check-update'])
-    # yum check-update should return 0 for no updates, or 100 for updates
-    if rc == 0:
+    if not update_packages:
         return None
-    elif rc != 100:
-        raise RuntimeError("Unexpected result from `yum check-update` (%s): '%s' '%s'" % (rc, stdout, stderr))
 
     if packages:
         out = shell.try_run(['repoquery', '--requires'] + list(packages))
@@ -94,8 +89,10 @@ def update_packages(repos, packages):
         if force_installs:
             shell.try_run(['yum', 'install', '-y'] + force_installs)
 
-    # Download and install updated packages
-    shell.try_run(yum_args + ['-y', 'update'])
+    # We are only updating named packages from our repoquery of the specified repos, but
+    # this invokation of yum does not disable any repos, so we may pull in dependencies
+    # from other repos such as the main CentOS one.
+    shell.try_run(["yum", "-y", "update"] + update_packages)
 
     return lustre.scan_packages()
 

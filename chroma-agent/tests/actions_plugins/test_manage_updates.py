@@ -45,12 +45,20 @@ sslclientcert = /var/lib/chroma/self.crt
         self.assertFalse(os.path.exists(self.tmpRepo.name))
 
     def test_update_packages(self):
-        with patch('chroma_agent.shell.run', new=mock.Mock(side_effect=lambda args: (100, "", ""))):
-            with patch('chroma_agent.shell.try_run') as mock_try_run:
-                manage_updates.update_packages(['myrepo'], ['mypackage'])
-                self.assertListEqual(list(mock_try_run.call_args_list[0][0][0]), ['yum', '--disablerepo=*', '--enablerepo=myrepo', 'clean', 'all'])
-                self.assertListEqual(list(mock_try_run.call_args_list[1][0][0]), ['repoquery', '--requires', 'mypackage'])
-                self.assertListEqual(list(mock_try_run.call_args_list[2][0][0]), ['yum', '--disablerepo=*', '--enablerepo=myrepo', '-y', 'update'])
+        def try_run(args):
+            if args == ['repoquery', '--disablerepo=*', "--enablerepo=myrepo", "--pkgnarrow=updates", "-a"]:
+                return """chroma-agent-99.01-3061.noarch
+chroma-agent-management-99.01-3061.noarch
+"""
+            else:
+                return ""
+
+        with patch('chroma_agent.shell.try_run', side_effect=try_run) as mock_try_run:
+            manage_updates.update_packages(['myrepo'], ['mypackage'])
+            self.assertListEqual(list(mock_try_run.call_args_list[0][0][0]), ['yum', 'clean', 'all'])
+            self.assertListEqual(list(mock_try_run.call_args_list[1][0][0]), ['repoquery', '--disablerepo=*', "--enablerepo=myrepo", "--pkgnarrow=updates", "-a"])
+            self.assertListEqual(list(mock_try_run.call_args_list[2][0][0]), ['repoquery', '--requires', 'mypackage'])
+            self.assertListEqual(list(mock_try_run.call_args_list[3][0][0]), ['yum', '-y', 'update', "chroma-agent-99.01-3061.noarch", "chroma-agent-management-99.01-3061.noarch"])
 
     def test_install_packages(self):
         with patch('chroma_agent.shell.try_run') as mock_run:
