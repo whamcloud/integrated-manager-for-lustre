@@ -59,6 +59,27 @@ log = logging.getLogger('install')
 log.setLevel(logging.DEBUG)
 
 
+import time
+
+def spinner(p):
+    chars = '/-\|'
+    n = 0
+    prev_time = time.time()
+    line = p.stdout.readline()
+    while line:
+        char = chars[n % 4]
+        this_time = time.time()
+        log.debug("%f: %s" % (this_time - prev_time, line.rstrip()))
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        sys.stdout.write('\r')
+        line = p.stdout.readline()
+        n+=1
+        prev_time = this_time
+    p.wait()
+    print
+
+
 def _run(args, passthrough=False, drain_stdin=False):
     """
     :param passthrough: If true, pass stdin+stdout through to the user rather
@@ -225,8 +246,9 @@ def _install_or_upgrade_packages():
                                                                 else "Installing"))
         p = subprocess.Popen(["yum", "-y", "--enablerepo=chroma-manager",
                               "upgrade" if upgrade else "install",
-                              MAIN_PACKAGE], stdout=subprocess.PIPE)
-        p.wait()
+                              MAIN_PACKAGE], stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, bufsize=0)
+        spinner(p)
     finally:
         if manager_repo_dir:
             shutil.rmtree(manager_repo_dir)
