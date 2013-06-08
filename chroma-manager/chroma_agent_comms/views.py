@@ -246,8 +246,8 @@ setup_script_template = """
 # Set the time, so certs work below ALWAYS.
 # Future NTP job will set it again,
 # so preserving host's date is unecessary
-import os
-os.system("date -s @{server_epoch_seconds}")
+import subprocess
+ret = subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
 
 import sys, httplib, urllib2, shlex, base64, json, os, socket, ssl, tempfile, json, traceback
 from subprocess import Popen, PIPE
