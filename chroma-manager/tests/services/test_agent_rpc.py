@@ -49,6 +49,18 @@ class TestAgentRpc(SupervisorTestCase):
             "X-SSL-Client-Serial": self.CLIENT_CERT_SERIAL
         }
 
+    def _post(self, messages):
+        post_body = {
+            'server_boot_time': self.server_boot_time,
+            'client_start_time': self.client_start_time,
+            'messages': messages
+        }
+        return requests.post(self.URL, data=json.dumps(post_body), headers=self.headers)
+
+    def _get(self):
+        get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
+        return requests.get(self.URL, headers=self.headers, params=get_params)
+
     def _open_sessions(self, expect_initial = True, expect_reopen = False):
         message = {
             'fqdn': self.CLIENT_NAME,
@@ -60,11 +72,11 @@ class TestAgentRpc(SupervisorTestCase):
         }
 
         # Send a session create request on the RX channel
-        response = requests.post(self.URL, data = json.dumps({'messages': [message]}), headers = self.headers)
+        response = self._post([message])
         self.assertResponseOk(response)
 
         # Read from the TX channel
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
 
         expected_count = 1
@@ -125,7 +137,7 @@ class TestAgentRpc(SupervisorTestCase):
         time.sleep(RABBITMQ_GRACE_PERIOD)
 
         # Agent should see a termination (this will prompt it to request a new session)
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
         self.assertEqual(len(response.json()['messages']), 1)
         response_message = response.json()['messages'][0]
@@ -141,7 +153,7 @@ class TestAgentRpc(SupervisorTestCase):
         return command_id
 
     def _receive_agent_messages(self):
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         return response.json()['messages']
 
     def _handle_action_receive(self, session_id):
@@ -173,7 +185,7 @@ class TestAgentRpc(SupervisorTestCase):
                 'subprocesses': []
             }
         }
-        action_data_response = requests.post(self.URL, data = json.dumps({'messages': [success_message]}), headers = self.headers)
+        action_data_response = self._post([success_message])
         self.assertResponseOk(action_data_response)
 
     def _handle_action(self, session_id):
@@ -280,7 +292,7 @@ class TestAgentRpc(SupervisorTestCase):
         self.start('job_scheduler')
 
         # It should have the http_agent service cancel its sessions
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
         self.assertEqual(len(response.json()['messages']), 1)
         response_message = response.json()['messages'][0]
@@ -303,7 +315,7 @@ class TestAgentRpc(SupervisorTestCase):
         self.restart('http_agent')
 
         # The agent should be told to terminate all
-        response = requests.get(self.URL, headers = self.headers, params = self.get_params)
+        response = self._get()
         self.assertResponseOk(response)
         self.assertEqual(len(response.json()['messages']), 1)
         response_message = response.json()['messages'][0]
