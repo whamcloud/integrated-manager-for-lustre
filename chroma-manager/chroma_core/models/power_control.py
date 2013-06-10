@@ -180,6 +180,11 @@ class PowerControlDevice(DeletablePowerControlModel):
         super(PowerControlDevice, self).save(*args, **kwargs)
 
     @property
+    def all_outlets_known(self):
+        return all([True if o.has_power in [True, False] else False
+                   for o in self.outlets.all()])
+
+    @property
     def sockaddr(self):
         "Convenience method for getting at (self.address, self.port)"
         return (self.address, self.port)

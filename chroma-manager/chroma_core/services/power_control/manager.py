@@ -41,7 +41,6 @@ class PowerControlManager(CommandLine):
         # Per-device locks
         self._device_locks = defaultdict(threading.Lock)
         self._power_devices = {}
-        self._power_device_outlets = {}
         # Allow us to communicate with our monitoring threads
         self.monitor_task_queue = defaultdict(Queue)
 
@@ -76,7 +75,6 @@ class PowerControlManager(CommandLine):
 
         with self._lock:
             self._power_devices[sockaddr] = device
-            self._power_device_outlets[sockaddr] = device.outlets.count()
 
         log.info("Registered device: %s:%s" % sockaddr)
 
@@ -91,7 +89,6 @@ class PowerControlManager(CommandLine):
         with self._lock:
             try:
                 del self._power_devices[sockaddr]
-                del self._power_device_outlets[sockaddr]
                 del self._device_locks[sockaddr]
             except KeyError:
                 # Never registered with the Manager?
@@ -128,22 +125,10 @@ class PowerControlManager(CommandLine):
 
         raise RuntimeError("Attempt to re-register unregistered device: %s" % device_id)
 
-    def _check_for_new_outlets(self, device):
-        # This hack will go away when the monitor threads logic has been
-        # refactored to be less convoluted (HYD-1918).
-        try:
-            outlet_count = PowerControlDevice.objects.get(pk = device.pk).outlets.count()
-        except PowerControlDevice.DoesNotExist:
-            # Lingering thread
-            return
-
-        if outlet_count > self._power_device_outlets.get(device.sockaddr, 0):
-            log.info("Outlet count on %s:%s increased; scheduling query" % device.sockaddr)
-            self.add_monitor_task(device.sockaddr, ('query_device_outlets', {'device_id': device.id}))
-            self._power_device_outlets[device.sockaddr] = outlet_count
-
     def check_device_availability(self, device):
-        self._check_for_new_outlets(device)
+        if not device.all_outlets_known:
+            log.info("Scheduling query on %s:%s to resolve unknown outlet states." % device.sockaddr)
+            self.add_monitor_task(device.sockaddr, ('query_device_outlets', {'device_id': device.id}))
 
         with self._device_locks[device.sockaddr]:
             try:
