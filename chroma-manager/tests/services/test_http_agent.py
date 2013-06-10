@@ -8,9 +8,6 @@ from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
 from Queue import Empty
-import string
-import random
-import json
 import time
 import datetime
 import requests
@@ -23,6 +20,7 @@ from chroma_core.services.http_agent.host_state import HostState, HostStatePolle
 from chroma_core.services.http_agent import HttpAgentRpc
 
 from tests.services.supervisor_test_case import SupervisorTestCase
+from tests.services.agent_http_client import AgentHttpClient
 
 # The amount of time we allow rabbitmq to forward a message (including
 # the time it takes the receiving process to wake up and handle it)
@@ -53,7 +51,7 @@ class BackgroundGet(threading.Thread):
             self.messages = response.json()['messages']
 
 
-class TestHttpAgent(SupervisorTestCase):
+class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
     """
     Test that when everything is running and healthy, a session can be established and messages within
     it go back and forth
@@ -63,39 +61,10 @@ class TestHttpAgent(SupervisorTestCase):
     PLUGIN = 'test_messaging'
     RX_QUEUE_NAME = "agent_test_messaging_rx"
     TX_QUEUE_NAME = 'agent_tx'
-    CLIENT_NAME = 'myserver'
-
-    URL = "http://localhost:%s/agent/message/" % settings.HTTP_AGENT_PORT
 
     def __init__(self, *args, **kwargs):
-        super(TestHttpAgent, self).__init__(*args, **kwargs)
-        self.client_start_time = datetime.datetime.now().isoformat() + 'Z'
-        self.server_boot_time = datetime.datetime.now().isoformat() + 'Z'
-
-        # Serial must be different every time because once we use it in a test it is permanently
-        # revoked.
-        self.CLIENT_CERT_SERIAL = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(16))
-        self.headers = {
-            "Accept": "application/json",
-            "Content-type": "application/json",
-            "X-SSL-Client-Name": self.CLIENT_NAME,
-            "X-SSL-Client-Serial": self.CLIENT_CERT_SERIAL
-        }
-
-    def _mock_restart(self):
-        self.client_start_time = datetime.datetime.now().isoformat() + 'Z'
-
-    def _post(self, messages):
-        post_body = {
-            'server_boot_time': self.server_boot_time,
-            'client_start_time': self.client_start_time,
-            'messages': messages
-        }
-        return requests.post(self.URL, data = json.dumps(post_body), headers = self.headers)
-
-    def _get(self):
-        get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
-        return requests.get(self.URL, headers = self.headers, params = get_params)
+        SupervisorTestCase.__init__(self, *args, **kwargs)
+        AgentHttpClient.__init__(self)
 
     def _open_session(self, expect_termination = None, expect_initial = True):
         """

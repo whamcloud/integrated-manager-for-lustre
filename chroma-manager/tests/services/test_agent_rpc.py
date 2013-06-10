@@ -1,16 +1,14 @@
-import random
-import string
+
 from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
 import dateutil
-import json
 import datetime
 import time
-import requests
 from django.db import transaction
 
 from tests.services.supervisor_test_case import SupervisorTestCase
+from tests.services.agent_http_client import AgentHttpClient
 from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler import agent_rpc
@@ -20,7 +18,7 @@ from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfi
 RABBITMQ_GRACE_PERIOD = 1
 
 
-class TestAgentRpc(SupervisorTestCase):
+class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
     """
     This class tests the AgentRpc functionality.  This class starts the job_scheduler
     service because that is where AgentRpc lives, but is not intended to test the other
@@ -28,38 +26,11 @@ class TestAgentRpc(SupervisorTestCase):
     """
     SERVICES = ['http_agent', 'job_scheduler']
     PORTS = [settings.HTTP_AGENT_PORT]
-
-    CLIENT_NAME = 'myserver'
     PLUGIN = agent_rpc.ACTION_MANAGER_PLUGIN_NAME
-    URL = "http://localhost:%s/agent/message/" % settings.HTTP_AGENT_PORT
 
     def __init__(self, *args, **kwargs):
-        super(TestAgentRpc, self).__init__(*args, **kwargs)
-        self.client_start_time = datetime.datetime.now().isoformat() + 'Z'
-        self.server_boot_time = datetime.datetime.now().isoformat() + 'Z'
-        self.get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
-
-        # Serial must be different every time because once we use it in a test it is permanently
-        # revoked.
-        self.CLIENT_CERT_SERIAL = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(16))
-        self.headers = {
-            "Accept": "application/json",
-            "Content-type": "application/json",
-            "X-SSL-Client-Name": self.CLIENT_NAME,
-            "X-SSL-Client-Serial": self.CLIENT_CERT_SERIAL
-        }
-
-    def _post(self, messages):
-        post_body = {
-            'server_boot_time': self.server_boot_time,
-            'client_start_time': self.client_start_time,
-            'messages': messages
-        }
-        return requests.post(self.URL, data=json.dumps(post_body), headers=self.headers)
-
-    def _get(self):
-        get_params = {'server_boot_time': self.server_boot_time, 'client_start_time': self.client_start_time}
-        return requests.get(self.URL, headers=self.headers, params=get_params)
+        SupervisorTestCase.__init__(self, *args, **kwargs)
+        AgentHttpClient.__init__(self)
 
     def _open_sessions(self, expect_initial = True, expect_reopen = False):
         message = {
