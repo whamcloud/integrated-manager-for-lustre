@@ -122,7 +122,7 @@ var ChromaRouter = Backbone.Router.extend({
     "status/": "status",
     "system_status/": "system_status"
   },
-  object_detail: function(id, model_class, view_class, title_attr)
+  object_detail: function(id, model_class, view_class, title_attr, overridePropertiesFunc)
   {
     var c = new model_class({id: id});
     c.fetch({success: function(model, response) {
@@ -133,11 +133,13 @@ var ChromaRouter = Backbone.Router.extend({
 
       var title = (_.isFunction(title_attr)? title_attr(c): c.get(title_attr));
 
-      mydiv.dialog({
-        buttons: [{text: "Close", 'class': "close", click: function(){
-          $(this).dialog('close');
-        }}],
-        close: function(event, ui) {
+      var properties = {
+        buttons: [
+          {text: "Close", 'class': "close", click: function () {
+            $(this).dialog('close');
+          }}
+        ],
+        close: function (event, ui) {
           window.history.back();
           $(this).remove();
         },
@@ -145,7 +147,13 @@ var ChromaRouter = Backbone.Router.extend({
         height: 600,
         modal: true,
         title: title
-      });
+      };
+
+      properties = (_.isFunction(overridePropertiesFunc)?
+        overridePropertiesFunc.bind(null, c): _.identity
+      )(properties);
+
+      mydiv.dialog(properties);
       var cd = new view_class({model: c, el: mydiv.parent()});
       cd.render();
     }})
@@ -167,6 +175,16 @@ var ChromaRouter = Backbone.Router.extend({
       var label = c.get('label');
 
       return '%s: %s'.sprintf(kind, label);
+    },
+    function propertyFunc(c, properties) {
+      if (c.get('kind') === 'OST') {
+        properties.height = 710;
+        properties.open = function () {
+          $(this).css('overflow', 'hidden');
+        }
+      }
+
+      return properties;
     });
   },
   storage_resource_detail: function(id)
@@ -218,7 +236,7 @@ var ChromaRouter = Backbone.Router.extend({
   {
     if ( this.failed_filesystem_admin_check() )
       return;
-    
+
     this.configure('server');
   },
   toplevel: function(name)
