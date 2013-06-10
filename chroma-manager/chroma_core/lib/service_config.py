@@ -23,6 +23,7 @@
 import hashlib
 import logging
 import getpass
+import re
 import socket
 import sys
 import xmlrpclib
@@ -98,6 +99,27 @@ class NTPConfig:
             os.rename("/etc/ntp.conf", "/etc/ntp.conf.pre-chroma")
         os.chmod(tmp_name, 0644)
         os.rename(tmp_name, "/etc/ntp.conf")
+
+    def get_server(self):
+        """Return the currently IML set server found in the ntp conf file
+
+        if IML did not set the server or if any error occurs return None.
+        If IML did set the server, return that value
+        """
+
+        f = open(self.CONFIG_FILE, 'r')
+        ntp_conf_text = f.read()
+        server = None
+        if self.SENTINEL in ntp_conf_text:
+            #  Only consider returning if IML set the value
+            match = re.search('^server (.+)', ntp_conf_text, re.MULTILINE)
+            if match:
+                try:
+                    server = match.group(1)
+                except IndexError:
+                    pass
+
+        return server
 
     def remove(self):
         """Remove our config section from the ntp config file, or do
@@ -320,10 +342,18 @@ num  target     prot opt source               destination
                 raise
 
     def _setup_ntp(self, server = None):
-        if not server:
-            server = self.get_input(msg = "NTP Server", default = "localhost")
-        log.info("Writing ntp configuration")
+        """Save ntp server to config (e.g. /etc/ntp.conf)
+
+        Prompt for server if one was not provided (would have come from cli)
+        if a server was set by iml, use that as the default
+        otherwise use localhost
+        """
+
         ntp = NTPConfig()
+        if server is None and ntp.get_server() is None:
+            # Only if you haven't already set it, and don't want to changed it
+            server = self.get_input(msg = "NTP Server", default = 'localhost')
+        log.info("Writing ntp configuration")
         old_server = ntp.remove()
         if old_server == "localhost":
             self._del_firewall_rule(123, "udp", "ntp")
