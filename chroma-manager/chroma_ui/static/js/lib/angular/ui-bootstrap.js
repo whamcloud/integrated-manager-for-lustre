@@ -1451,6 +1451,11 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position' ] )
               element.bind( triggers.hide, hideTooltipBind );
             }
           });
+
+          scope.$on('$destroy', function onDestroyTooltip() {
+            hide();
+            element.remove();
+          });
         }
       };
     };
