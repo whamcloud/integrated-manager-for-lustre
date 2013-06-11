@@ -832,6 +832,7 @@ class JobScheduler(object):
             elif job.state == 'pending':
                 self._job_collection.update(job, 'complete', cancelled = True)
                 self._job_collection.update_commands(job)
+            self._lock_cache.remove_job(job)
 
         # Drop self._lock while the thread completes - it will need
         # this lock to send back its completion
