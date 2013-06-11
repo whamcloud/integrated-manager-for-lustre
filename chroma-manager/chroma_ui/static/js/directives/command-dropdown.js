@@ -63,7 +63,7 @@
         function generateHandler(type) {
           var handlerName = '%sClicked'.sprintf(type);
           scope[handlerName] = function ($event) {
-            $window.LiveObject[handlerName].apply($event.srcElement);
+            $window.LiveObject[handlerName].apply($event.target);
           };
         }
 
