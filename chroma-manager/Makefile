@@ -21,7 +21,7 @@ cleandist:
 version:
 	echo 'VERSION = "$(VERSION)"' > scm_version.py
 	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> scm_version.py
-	echo 'BUILD = $(BUILD_NUMBER)' >> scm_version.py
+	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
 develop: version

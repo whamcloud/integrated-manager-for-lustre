@@ -78,7 +78,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # Register the default bundles and profile again
             result = self.remote_command(
                 chroma_manager['address'],
-                "for bundle in lustre chroma-agent e2fsprogs; do chroma-config bundle register /var/lib/chroma/repo/$bundle; done &> config_bundle.log",
+                "for bundle_pat in lustre-* iml-*-agent e2fsprogs-*; do chroma-config bundle register /var/lib/chroma/repo/$bundle_pat; done &> config_bundle.log",
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
@@ -92,18 +92,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # FIXME: should reinstall the actual profiles from the installer, this is a hardcoded copy
             result = self.remote_command(
                 chroma_manager['address'],
-                """chroma-config profile register <(cat <<EOF
-{
- "name": "base_managed",
- "bundles": ["lustre", "chroma-agent", "e2fsprogs"],
- "packages": [["lustre", "lustre-modules"], ["lustre", "lustre"]],
- "ui_name": "Managed storage server",
- "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
- "managed": true
-}
-
-EOF
-) &> config_bundle.log""",
+                """chroma-config profile register /tmp/ieel-*/base_managed.profile &> config_bundle.log""",
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status

@@ -10,7 +10,7 @@ cleandist:
 version:
 	echo 'VERSION = "$(VERSION)"' > chroma_diagnostics/scm_version.py
 	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> chroma_diagnostics/scm_version.py
-	echo 'BUILD = $(BUILD_NUMBER)' >> chroma_diagnostics/scm_version.py
+	echo 'BUILD = "$(BUILD_NUMBER)"' >> chroma_diagnostics/scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> chroma_diagnostics/scm_version.py
 
 tarball: version

@@ -167,7 +167,8 @@ def _create_manager_repo():
     manager_repo_dir = tempfile.mkdtemp()
     log.debug("Temporary yum repo at %s" % manager_repo_dir)
     log.info("Unpacking installation package")
-    _unpack_repo('chroma-manager.tar.gz', manager_repo_dir)
+    manager_tarball = glob.glob('*-manager.tar.gz')[0]
+    _unpack_repo(manager_tarball, manager_repo_dir)
 
     manager_repo_file = tempfile.NamedTemporaryFile(dir="/etc/yum.repos.d/", suffix=".repo", delete=False)
     log.debug("Temporary yum config at %s" % manager_repo_file.name)

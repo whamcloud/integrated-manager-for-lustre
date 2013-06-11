@@ -754,7 +754,7 @@ def register_profile(profile_file):
         raise RuntimeError("Malformed profile: %s" % e)
 
     # Validate: check all referenced bundles exist
-    validate_bundles = set(data['bundles'] + [bundle for bundle, package in data['packages']])
+    validate_bundles = set(data['bundles'] + data['packages'].keys())
     missing_bundles = []
     for bundle_name in validate_bundles:
         if not Bundle.objects.filter(bundle_name=bundle_name).exists():
@@ -772,11 +772,12 @@ def register_profile(profile_file):
     for name in data['bundles']:
         profile.bundles.add(Bundle.objects.get(bundle_name=name))
 
-    for bundle_name, package_name in data['packages']:
-        ServerProfilePackage.objects.create(
-            server_profile=profile,
-            bundle=Bundle.objects.get(bundle_name=bundle_name),
-            package_name=package_name)
+    for bundle_name, package_list in data['packages'].items():
+        for package_name in package_list:
+            ServerProfilePackage.objects.create(
+                server_profile=profile,
+                bundle=Bundle.objects.get(bundle_name=bundle_name),
+                package_name=package_name)
 
 
 def delete_profile(name):

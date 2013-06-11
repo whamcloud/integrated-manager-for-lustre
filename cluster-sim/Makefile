@@ -14,7 +14,7 @@ cleandist:
 version:
 	echo 'VERSION = "$(VERSION)"' > cluster_sim/scm_version.py
 	echo 'PACKAGE_VERSION = "$(PACKAGE_VERSION)"' >> cluster_sim/scm_version.py
-	echo 'BUILD = $(BUILD_NUMBER)' >> cluster_sim/scm_version.py
+	echo 'BUILD = "$(BUILD_NUMBER)"' >> cluster_sim/scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> cluster_sim/scm_version.py
 
 develop: version

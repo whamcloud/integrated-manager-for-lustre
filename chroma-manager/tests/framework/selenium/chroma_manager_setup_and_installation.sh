@@ -2,6 +2,7 @@ set -ex
 
 [ -r localenv ] && . localenv
 
+ARCHIVE_NAME=ieel-1.0.0.tar.gz
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/selenium/cluster_config.json"}
 
@@ -13,12 +14,13 @@ echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
 
 # Install and setup chroma manager
-scp ../chroma.tar.gz root@$CHROMA_MANAGER:/tmp
+scp ../$ARCHIVE_NAME root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
 yum install -y python-mock
 # Install from the installation package
 cd /tmp
-tar xzvf chroma.tar.gz
+tar xzvf $ARCHIVE_NAME
+cd $(basename $ARCHIVE_NAME .tar.gz)
 ./install <<EOF1
 $CHROMA_USER
 $CHROMA_EMAIL

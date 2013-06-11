@@ -1,13 +1,17 @@
 REPO        := $(patsubst %/,%,$(REPO))
 RPMS        := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
-NAME        := $(notdir $(CURDIR))
+NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-bundle
+space		:=
+space		+=
+comma		:=,
 
 all: $(BUNDLE_NAME).tar.gz install
 
 $(BUNDLE_NAME).tar.gz: $(patsubst %,stamps/%.rpm,$(RPMS))
 	cd repo && createrepo --pretty .
-	echo "{\"name\": \"$(NAME)\", \"description\": \"$(DESC)\"}" > \
+	pkgs='$(if $(BUNDLE_PACKAGES),"packages": [$(subst $(space),$(comma),$(patsubst %,"%",$(BUNDLE_PACKAGES)))]$(comma) ,)'; \
+	echo "{$$pkgs\"name\": \"$(NAME)\", \"description\": \"$(DESC)\"}" > \
 		repo/meta
 	rm -f *.tar.gz
 	tar -C repo -czf $@ .

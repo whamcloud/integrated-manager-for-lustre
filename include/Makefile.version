@@ -1,11 +1,18 @@
 space :=
 space +=
 SCM_COMMIT_NUMBER	:= $(shell git rev-list HEAD | wc -l)
+BUILD_TAG			?= non-jenkins-build
+JENKINS_BUILD_TAG	:= $(subst -,_,$(shell echo $(BUILD_TAG) | sed -e 's/arch=[^,-]*,\?-\?//' -e 's/distro=[^,-]*,\?-\?//'))
 SCM_DESCRIPTION		:= $(subst -,$(space),$(shell git describe --match v[0-9]* | sed -e 's/^v//' -e 's/RC[0-9]*$$//'))
+ARCHIVE_NAME		:= Intel Enterprise Edition for Lustre Software
+SHORT_ARCHIVE_NAME	:= ieel
+ARCHIVE_VERSION		:= 1.0.0
+PRODUCT_NAME		:= Intel Manager for Lustre
+SHORT_PRODUCT_NAME	:= iml
 
 # Stable variable names exported to packaging and code
 BUILD_NUMBER		:= $(SCM_COMMIT_NUMBER)
-VERSION			:= $(subst $(space),-,$(SCM_DESCRIPTION))
+VERSION				:= $(subst $(space),-,$(SCM_DESCRIPTION))
 PACKAGE_VERSION		:= $(word 1, $(SCM_DESCRIPTION))
 PACKAGE_RELEASE		:= $(subst $(space),.,$(wordlist 2, 10, $(SCM_DESCRIPTION)))
 ifeq ($(strip $(PACKAGE_RELEASE)),)
@@ -22,5 +29,8 @@ else
 	# in order to easily understand the provenance of a package.
 	# The commits-since-tag number will ensure that newer packages
 	# are preferred, since RPM's version parsing works left-to-right.
-	PACKAGE_RELEASE := $(PACKAGE_RELEASE).$(BUILD_NUMBER)
+	PACKAGE_RELEASE := $(PACKAGE_RELEASE).$(BUILD_NUMBER).$(JENKINS_BUILD_TAG)
+
+	# Display this in the UI to make ID easier in dev/test
+	BUILD_NUMBER := $(JENKINS_BUILD_TAG)
 endif
