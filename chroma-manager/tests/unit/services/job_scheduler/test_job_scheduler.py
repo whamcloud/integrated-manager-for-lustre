@@ -193,6 +193,7 @@ class TestStateManager(JobTestCaseWithHost):
 
         pending_jobs = Job.objects.filter(state = 'pending')
         self.assertEqual(pending_jobs.count(), 0)
+        self.assertFalse(self.job_scheduler._lock_cache.get_by_job(cancelled_job))
 
     def test_cancel_complete(self):
         """Test cancelling a Job which is in state 'complete': should be
@@ -215,6 +216,7 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertEqual(job.state, 'complete')
         self.assertEqual(job.cancelled, False)
         self.assertEqual(job.errored, False)
+        self.assertFalse(self.job_scheduler._lock_cache.get_by_job(job))
 
     def test_cancel_tasked(self):
         """Test that cancelling a Job which is in state 'tasked' involves
@@ -241,6 +243,7 @@ class TestStateManager(JobTestCaseWithHost):
             JobSchedulerClient.cancel_job(job.id)
             # That call to cancel should have reached the thread
             self.assertEqual(self.job_scheduler._run_threads[job.id].cancel.call_count, 1)
+            self.assertFalse(self.job_scheduler._lock_cache.get_by_job(job))
         finally:
             RunJobThread.cancel = cancel_bak
             JobScheduler._spawn_job = spawn_bak
