@@ -30,6 +30,9 @@ from chroma_core.models import PowerControlDevice, PowerControlDeviceUnavailable
 
 log = log_register(__name__.split('.')[-1])
 
+# time, in seconds, between PDU monitor operations
+MONITORING_INTERVAL = 30
+
 
 class PowerDeviceMonitor(threading.Thread):
     """
@@ -43,6 +46,7 @@ class PowerDeviceMonitor(threading.Thread):
         self.device = device
         self._manager = power_control_manager
         self._stopping = threading.Event()
+        self._interval_ctr = 0
 
     def run(self):
         try:
@@ -62,7 +66,6 @@ class PowerDeviceMonitor(threading.Thread):
             # Check to see if the manager has scheduled something for
             # us to do besides monitoring.
             try:
-                log.debug("Checking for tasks for %s:%s" % self.device.sockaddr)
                 task, kwargs = self._manager.get_monitor_tasks(self.device.sockaddr).get_nowait()
                 log.debug("Found task for %s:%s: %s" % (self.device.sockaddr + tuple([task])))
                 if task == "stop":
@@ -79,13 +82,17 @@ class PowerDeviceMonitor(threading.Thread):
                 log.error("Caught and re-raising exception: %s" % traceback.format_exc())
                 raise e
 
-            # Check to see if we can log into the PDU and that it's
-            # responsive to commands.
-            available = self._manager.check_device_availability(self.device)
-            if available or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
-                PowerControlDeviceUnavailableAlert.notify(self.device, not available)
-            log.debug("Checked on %s:%s: %s" % (self.device.sockaddr + tuple(["available" if available else "unavailable"])))
-            self._stopping.wait(timeout = 10)
+            if self._interval_ctr >= MONITORING_INTERVAL:
+                self._interval_ctr = 0
+                # Check to see if we can log into the PDU and that it's
+                # responsive to commands.
+                available = self._manager.check_device_availability(self.device)
+                if available or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
+                    PowerControlDeviceUnavailableAlert.notify(self.device, not available)
+                log.debug("Checked on %s:%s: %s" % (self.device.sockaddr + tuple(["available" if available else "unavailable"])))
+
+            self._interval_ctr += 1
+            self._stopping.wait(timeout = 1)
 
     def stop(self):
         log.info("Stopping monitor for %s" % self.device)
@@ -134,7 +141,7 @@ class PowerMonitorDaemon(object):
                     monitor.join()
                     del self.device_monitors[sockaddr]
 
-            self._stopping.wait(timeout = 10)
+            self._stopping.wait(timeout = 1)
 
         for monitor in self.device_monitors.values():
             monitor.stop()

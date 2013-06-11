@@ -80,8 +80,6 @@ class PowerControlManager(CommandLine):
 
         log.info("Scheduling outlet query for new device: %s:%s" % sockaddr)
         self.add_monitor_task(sockaddr, ('query_device_outlets', {'device_id': device.id}))
-        # Once more, just to be sure. Sigh.
-        self.add_monitor_task(sockaddr, ('query_device_outlets', {'device_id': device.id}))
 
     def unregister_device(self, sockaddr):
         sockaddr = tuple(sockaddr)
