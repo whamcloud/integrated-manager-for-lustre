@@ -1,0 +1,6 @@
+#command
+q         invalid
+Q         invalid
+:q        invalid
+:Q        invalid
+ZZ        invalid

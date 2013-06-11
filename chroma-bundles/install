@@ -22,13 +22,32 @@ MAIN_PACKAGE = "chroma-manager"
 
 BUNDLE_ROOT = "/var/lib/chroma/repo"
 BUNDLE_BACKUP = "/var/lib/chroma/repo.previous"
-
 LOG_DIR = "/var/log/chroma"
+
+try:
+    p = subprocess.Popen(["less", "-F", "-X", "-e", "-k",
+                           "lesskey.out", "EULA.txt"])
+    p.wait()
+except KeyboardInterrupt:
+    print "\n\nYou must read all of the EULA and agree to the terms in order to install the software"
+    # less can leave the terminal in a weird state
+    subprocess.call(["stty", "sane"])
+    sys.exit(0)
+
+answer = ""
+while answer not in ["yes", "no"]:
+   answer = raw_input("Do you agree to the licence terms?  (yes/no) ")
+
+if answer != "yes":
+    print "Exiting without installing the software"
+    sys.exit(0)
+
 try:
     os.makedirs(LOG_DIR)
 except OSError, e:
-    if e.errno == errno.EEXIST and not os.path.isdir(LOG_DIR):
-        raise RuntimeError("Could not create log directory /var/log/chroma because it already exists but is not a directory")
+    if e.errno == errno.EEXIST:
+        if not os.path.isdir(LOG_DIR):
+            raise RuntimeError("Could not create log directory /var/log/chroma because it already exists but is not a directory")
     else:
         raise
 

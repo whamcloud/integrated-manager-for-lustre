@@ -23,12 +23,18 @@ clean install:: subdirs
 %.profile: %.profile.template $(patsubst %,%/repo/meta,$(SUBDIRS))
 	include/make_profile $@ $(subst chroma-manager/repo/meta,,$^)
 
-package: subdirs $(PROFILES)
+package: subdirs $(PROFILES) lesskey.out EULA.txt
 	tar  --transform 's|$(WORKDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)|' \
 		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(notdir $(shell echo $(subdir)/*.tar.gz))|') \
 		--show-transformed-names \
 		-C ../ \
-	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/install $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz))
+	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/install $(WORKDIR)/lesskey.out $(WORKDIR)/EULA.txt $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz))
+
+lesskey.out: lesskey.in
+	lesskey -o $@ $<
+
+EULA.txt: ../chroma-manager/chroma_help/help.py
+	python include/get_eula.py | html2text -o $@
 
 rpms:
 	@echo "I don't know how to make RPMS!"

@@ -123,19 +123,15 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
 fi
 
 # Install and setup chroma manager
-scp $ARCHIVE_NAME root@$CHROMA_MANAGER:/tmp
-ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
+scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
+set -ex
+yum -y install expect
 # Install from the installation package
 cd /tmp
 tar xzvf $ARCHIVE_NAME
 cd $(basename $ARCHIVE_NAME .tar.gz)
-./install <<EOF1
-$CHROMA_USER
-$CHROMA_EMAIL
-$CHROMA_PASS
-$CHROMA_PASS
-${CHROMA_NTP_SERVER:-localhost}
-EOF1
+expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}
 
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
