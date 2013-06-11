@@ -403,7 +403,7 @@ class ApiEndpoint(object):
     def resource_uri(self, subject):
         try:
             id = int(subject)
-            urljoin(self.uri, "%s/" % id)
+            return urljoin(self.uri, "%s/" % id)
         except (ValueError, TypeError):
             return urljoin(self.uri, self.resolve_uri(subject))
 
