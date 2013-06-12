@@ -46,7 +46,8 @@ class AgentPluginHandlerCollection(object):
     @transaction.commit_on_success
     def rebalance_host_volumes(self, host_id):
         from chroma_core.models import Volume
-        candidates = Volume.objects.filter(volumenode__host__id = host_id)
+
+        candidates = Volume.objects.filter(volumenode__host__id=host_id).distinct()
         self.resource_manager.balance_unweighted_volume_nodes(candidates)
 
 
