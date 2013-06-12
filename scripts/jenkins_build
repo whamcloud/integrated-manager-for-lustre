@@ -4,6 +4,7 @@
 # Jenkins job configurations.
 #
 # 2013-03-27, mjmac, first implementation, handles chroma-reviews
+# 2013-06-12, mjmac, scrub chroma-bundles/*.tar.gz before build
 
 set -x # enable xtrace
 set -u # undefined variables are errors
@@ -54,6 +55,8 @@ pre_build()
 {
     run_repo_maintenance
     clean_uncommitted_artifacts
+    # Nuke these tarballs to deal with name changes
+    rm -f chroma-bundles/*.tar.gz
     run_pre_commit_hook
 }
 
