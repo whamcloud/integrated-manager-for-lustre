@@ -191,6 +191,8 @@ enable=0
     return manager_repo_dir, manager_repo_file
 
 def _install_or_upgrade_packages():
+    manager_repo_dir = None
+    manager_repo_file = None
     try:
         manager_repo_dir, manager_repo_file = _create_manager_repo()
         log.info("{action} Intel(R) Manager for Lustre*".format(action="Upgrading" \
@@ -201,8 +203,10 @@ def _install_or_upgrade_packages():
                               MAIN_PACKAGE], stdout=subprocess.PIPE)
         p.wait()
     finally:
-        shutil.rmtree(manager_repo_dir)
-        os.remove(manager_repo_file.name)
+        if manager_repo_dir:
+            shutil.rmtree(manager_repo_dir)
+        if manager_repo_file:
+            os.remove(manager_repo_file.name)
 
 def _install_or_upgrade_bundles(old_bundles, new_bundles):
     for bundle in new_bundles:
