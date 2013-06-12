@@ -19,9 +19,7 @@ USE_FENCE_XVM=false
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
-# TODO: figure out how coverage fits into all of this new world order
-#MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
-MEASURE_COVERAGE=false
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
@@ -38,6 +36,14 @@ fi
 
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+if $MEASURE_COVERAGE; then
+    cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
+retries=50
+timeout=180
+EOF
+    $PROXY yum install -y python-setuptools
+    $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
+fi
 rm -f /etc/yum.repos.d/autotest.repo" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
@@ -91,27 +97,24 @@ EOF
 
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-# this can't be done here anymore since package installation is done
-# as part of adding storage servers to the manager
-#if $MEASURE_COVERAGE; then
-#    $PROXY yum install -y python-coverage
-#    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
-#[run]
-#data_file = /var/tmp/.coverage
-#parallel = True
-#source = /usr/lib/python2.6/site-packages/chroma_agent/
-#EOF
-#    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
-#import coverage
-#cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
-#cov.start()
-#cov._warn_no_data = False
-#cov._warn_unimported_source = False
-#EOF
-#else
-#    # Ensure that coverage is disabled
-#    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-#fi
+if $MEASURE_COVERAGE; then
+    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
+[run]
+data_file = /var/tmp/.coverage
+parallel = True
+source = /usr/lib/python2.6/site-packages/chroma_agent/
+EOF
+    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+import coverage
+cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/.coveragerc', auto_data=True)
+cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
+EOF
+else
+    # Ensure that coverage is disabled
+    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+fi
 
 if $USE_FENCE_XVM; then
     # fence_xvm support
@@ -138,9 +141,7 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-echo \"MEASURE_COVERAGE: $MEASURE_COVERAGE\"
 if $MEASURE_COVERAGE; then
-    $PROXY yum install -y python-coverage
     cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
@@ -184,13 +185,14 @@ if $MEASURE_COVERAGE; then
     pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "set -x
       rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
       cd /var/tmp/
-      coverage combine
-      $PROXY yum -y install pdsh" | dshbak -c
+      coverage combine" | dshbak -c
     if [ ${PIPESTATUS[0]} != 0 ]; then
         exit 1
     fi
 
-    rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) /var/tmp/.coverage $PWD
+    for SERVER in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
+        scp root@$SERVER:/var/tmp/.coverage .coverage.$SERVER
+    done
 
     ssh root@$CHROMA_MANAGER chroma-config start
 fi

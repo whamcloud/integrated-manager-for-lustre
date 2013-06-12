@@ -16,7 +16,14 @@ echo "Beginning installation and setup on $CHROMA_MANAGER..."
 scp ../$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
+cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
+retries=50
+timeout=180
+EOF
 yum install -y python-mock expect
+if $MEASURE_COVERAGE; then
+    yum install -y python-coverage
+fi
 rm -f /etc/yum.repos.d/autotest.repo
 yum clean metadata
 # Install from the installation package
@@ -40,7 +47,6 @@ ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
 cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
 
 if $MEASURE_COVERAGE; then
-  yum install -y python-coverage
   cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
 [run]
 data_file = /var/tmp/.coverage

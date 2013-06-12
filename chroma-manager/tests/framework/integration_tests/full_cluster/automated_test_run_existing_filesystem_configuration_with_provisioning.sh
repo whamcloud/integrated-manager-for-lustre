@@ -37,7 +37,7 @@ $PROXY yum install -y chroma-agent
 
 if $MEASURE_COVERAGE; then
     $PROXY yum install -y python-coverage
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/chroma_agent/.coveragerc
+    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
 [run]
 data_file = /var/tmp/.coverage
 parallel = True
@@ -45,7 +45,7 @@ source = /usr/lib/python2.6/site-packages/chroma_agent/
 EOF
     cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
 import coverage
-cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/chroma_agent/.coveragerc', auto_data=True)
+cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/.coveragerc', auto_data=True)
 cov.start()
 cov._warn_no_data = False
 cov._warn_unimported_source = False
@@ -70,7 +70,6 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-echo "MEASURE_COVERAGE: $MEASURE_COVERAGE"
 if $MEASURE_COVERAGE; then
     $PROXY yum install -y python-coverage
     cat <<"EOF1" > /usr/share/chroma-manager/.coveragerc
@@ -138,10 +137,11 @@ if $MEASURE_COVERAGE; then
     pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "set -x
       rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
       cd /var/tmp/
-      coverage combine
-      yum -y install pdsh" | dshbak -c
+      coverage combine" | dshbak -c
 
-    rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) /var/tmp/.coverage $PWD
+    for SERVER in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
+        scp $SERVER:/var/tmp/.coverage .coverage.$SERVER
+    done 
 
     ssh root@$CHROMA_MANAGER chroma-config start
 fi
