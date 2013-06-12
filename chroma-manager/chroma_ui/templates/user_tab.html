@@ -116,7 +116,7 @@
             "click": function(){
               var dialog = $(this);
               Api.delete('user/' + user.id + '/', {}, success_callback = function() {
-                dialog.dialog('close');
+                dialog.dialog('destroy');
                 reloadTable();
               });
            }
