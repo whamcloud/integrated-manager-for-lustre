@@ -1,0 +1,19 @@
+/* Chroma customizations */
+.ui-widget {
+  font-family: Verdana,Arial,sans-serif;
+  font-size: 10pt;
+}
+
+.ui-widget :active,
+.ui-tabs li a {
+  outline: none;
+}
+
+.ui-widget-header {
+  font-size: 12px;
+}
+
+.ui-button:focus, .ui-button:active {
+  outline-color: #DDDDDD;
+  outline-offset: -2px;
+}

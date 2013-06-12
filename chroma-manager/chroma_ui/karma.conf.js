@@ -8,6 +8,7 @@ files = [
   JASMINE,
   JASMINE_ADAPTER,
   'static/js/lib/lodash.custom.js',
+  'static/js/lib/jquery.js',
   'static/js/lib/xdate.js',
   'static/js/lib/angular/angular.js',
   'static/js/lib/angular/angular-resource.js',
