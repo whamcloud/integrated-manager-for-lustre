@@ -46,6 +46,11 @@ for div, mod in map(divmod, SAMPLES[1:], SAMPLES[:-1]):
     assert div > 1 and mod == 0, SAMPLES
 
 
+def timestamp(dt):
+    "Return utc timestamp from datetime."
+    return calendar.timegm(dt.utctimetuple())
+
+
 class Point(collections.namedtuple('Point', ('dt', 'sum', 'len'))):
     "Fast and small tuple wrapper for a single data point."
     __slots__ = ()
@@ -56,7 +61,7 @@ class Point(collections.namedtuple('Point', ('dt', 'sum', 'len'))):
 
     @property
     def timestamp(self):
-        return calendar.timegm(self.dt.utctimetuple())
+        return timestamp(self.dt)
 
     def __add__(self, other):
         return type(self)(self.dt, self.sum + other.sum, self.len + other.len)
@@ -126,14 +131,14 @@ class Sample(models.Model):
             return epoch
 
     @classmethod
-    def floor(cls, point):
-        "Return point's datetime rounded down to nearest sample size."
-        return point.dt - timedelta(seconds=point.timestamp % cls.step, microseconds=point.dt.microsecond)
+    def floor(cls, dt):
+        "Return datetime rounded down to nearest sample size."
+        return dt - timedelta(seconds=timestamp(dt) % cls.step, microseconds=dt.microsecond)
 
     @classmethod
     def reduce(cls, points):
         "Generate points grouped and summed by sample size."
-        for dt, points in itertools.groupby(points, key=cls.floor):
+        for dt, points in itertools.groupby(points, key=lambda point: cls.floor(point.dt)):
             yield Point(dt, *sum(points, Point.zero)[1:])
 
     @classmethod
@@ -188,7 +193,7 @@ class Stats(list):
             step = timedelta(seconds=model.step)
             for id in list(stats):
                 start = model.latest(id).dt + step
-                stop = model.floor(max(stats.pop(id)))
+                stop = model.floor(max(stats.pop(id)).dt)
                 cache = previous.cache[id]
                 # aggregate from previous Sample as necessary
                 if start < stop:
@@ -215,14 +220,14 @@ class Stats(list):
         for index, model in enumerate(self):
             if start >= model.start(id) and model.step >= minstep:
                 break
-        points = model.select(id, dt__gte=start, dt__lte=stop)
+        points = model.select(id, dt__gte=start, dt__lt=stop)
         points = list(points if index else model.reduce(points))
         return map(operator.sub, points[1:], points[:-1]) if rate else points
 
     def latest(self, id):
         "Return most recent data point."
         point = self[0].latest(id)
-        return Point(self[0].floor(point), *point[1:])
+        return Point(self[0].floor(point.dt), *point[1:])
 
     def delete(self, id):
         "Delete all stored points for a series."

@@ -84,6 +84,7 @@ class MetricStore(object):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
+        end = Stats[0].floor(end)  # exclude points from a partial sample
         for series in self.series(*fetch_metrics):
             types.add(series.type)
             minimum = 0.0 if series.type == 'Counter' else float('-inf')

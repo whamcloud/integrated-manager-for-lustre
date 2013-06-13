@@ -65,7 +65,7 @@ class TestModels(TestCase):
             model.cache.clear()
             self.assertEqual(point, model.latest(id))
         self.assertEqual(point, points[2])
-        floor = model.floor(point)
+        floor = model.floor(point.dt)
         self.assertLessEqual(floor, point.dt)
         self.assertFalse(floor.microsecond)
         with assertQueries('SELECT', 'DELETE', 'SELECT'):

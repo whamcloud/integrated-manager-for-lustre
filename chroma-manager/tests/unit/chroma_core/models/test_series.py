@@ -1,18 +1,13 @@
 import random
-import calendar
 from datetime import datetime, timedelta
 from django.utils.timezone import utc
 from django.test import TestCase
 from django.contrib.auth.models import User
 from chroma_core.lib import metrics
-from chroma_core.models import Series, Stats
+from chroma_core.models.stats import Series, Stats, timestamp
 
 fields = ('size', 'Gauge', 0, 1000), ('bandwith', 'Counter', 0, 100), ('speed', 'Derive', -100, 100)
 epoch = datetime.fromtimestamp(0, utc)
-
-
-def timestamp(dt):
-    return calendar.timegm(dt.utctimetuple())
 
 
 def gen_series(sample, rows):
@@ -49,7 +44,7 @@ class TestSeries(TestCase):
         for name, type, start, stop in fields:
             self.assertGreaterEqual(data[name], start)
             self.assertLessEqual(data[name], stop)
-        stats = self.store.fetch(names[:1], epoch, epoch + timedelta(seconds=10))
+        stats = self.store.fetch(names[:1], epoch, epoch + timedelta(seconds=20))
         self.assertEqual(len(stats), 2)
         dt = min(stats)
         data = stats[dt]
@@ -60,7 +55,7 @@ class TestSeries(TestCase):
                 self.assertLessEqual(data[name], stop)
             else:
                 self.assertNotIn(name, data)
-        stats = self.store.fetch(names, epoch, epoch + timedelta(seconds=10))
+        stats = self.store.fetch(names, epoch, epoch + timedelta(seconds=20))
         self.assertEqual(len(stats), 1)
         dt = min(stats)
         data = stats[dt]
@@ -76,6 +71,13 @@ class TestSeries(TestCase):
             else:
                 self.assertGreaterEqual(data[name], -delta)
                 self.assertLessEqual(data[name], delta)
+        # verify update queries would aggregate to the same result
+        stats = self.store.fetch(names, epoch, epoch + timedelta(seconds=40))
+        for delta in (0, 10, 20):
+            start = epoch + timedelta(seconds=delta)
+            (dt, data), = self.store.fetch(names, start, start + timedelta(seconds=25)).items()
+            self.assertEqual(stats.pop(dt), data)
+        self.assertEqual(stats, {})
 
     def test_slow(self):
         "Large data set with long intervals."
