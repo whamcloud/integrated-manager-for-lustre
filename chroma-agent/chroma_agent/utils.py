@@ -24,47 +24,27 @@ from chroma_agent import shell
 
 import os
 import re
+import glob
 
 
 def normalize_device(device):
-    """Try to convert device paths to their /dev/disk/by-id equivalent where
-        possible, so that the server can use this is the canonical identifier
-        for devices (it has the best chance of being the same between hosts
-        using shared storage"""
+    from chroma_agent.device_plugins.linux import DeviceHelper
+    _d = normalize_device._devices = getattr(normalize_device, '_devices', {})
 
-    # Exceptions where we prefer a symlink to the real node,
-    # to get more human-readable device nodes where possible
-    allowed_paths = ["/dev/disk/by-id", "/dev/mapper"]
-    if not hasattr(normalize_device, 'device_lookup'):
-        normalize_device.device_lookup = {}
-        for allowed_path in allowed_paths:
-            # Lookup devices to their by-id equivalent if possible
-            try:
-                for f in os.listdir(allowed_path):
-                    normalize_device.device_lookup[os.path.realpath(os.path.join(allowed_path, f))] = os.path.join(allowed_path, f)
-            except OSError:
-                # Doesn't exist, don't add anything to device_lookup
-                pass
+    d_majmin = DeviceHelper()._dev_major_minor(device)
+    u_device = os.path.realpath(device)
+    if not _d or u_device not in _d or d_majmin != DeviceHelper()._dev_major_minor(_d[u_device]):
+        lookup_paths = ["/dev/disk/by-id/*", "/dev/mapper/*"]
 
-        # Resolve the /dev/root node to its real device
-        # NB /dev/root may be a symlink on your system, but it's not on all!
-        try:
-            root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
-            # TODO: resolve UUID= type arguments a la ubuntu
-            try:
-                normalize_device.device_lookup['/dev/root'] = normalize_device.device_lookup[os.path.realpath(root)]
-            except KeyError:
-                normalize_device.device_lookup['/dev/root'] = root
-        except:
-            pass
+        for p in lookup_paths:
+            for f in glob.glob(p):
+                _d[os.path.realpath(f)] = f
 
-    device = device.strip()
-    try:
-        return normalize_device.device_lookup[os.path.realpath(device)]
-    except KeyError:
-        pass
+        root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
+        if '/dev/root' not in _d and os.path.exists(root):
+            _d['/dev/root'] = root
 
-    return os.path.realpath(device)
+    return _d.get(u_device, u_device)
 
 
 class Mounts(object):
