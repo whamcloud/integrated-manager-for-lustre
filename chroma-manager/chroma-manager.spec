@@ -177,21 +177,14 @@ find /usr/share/chroma-manager/ -name "*.pyc" -exec rm -f {} \;
 %postun
 if [ $1 -lt 1 ]; then
     # close previously opened ports in the firewall for access to the manager
-    ed /etc/sysconfig/iptables <<EOF
-/-A INPUT -m state --state NEW -m udp -p tcp --dport 80 -j ACCEPT/d
-/-A INPUT -m state --state NEW -m udp -p tcp --dport 443 -j ACCEPT/d
-w
-q
-EOF
-    ed /etc/sysconfig/system-config-firewall <<EOF
-/--port=80/d
-/--port=443/d
-/
-w
-q
-EOF
+    sed -i \
+        -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT/d'\
+        -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT/d' \
+        -e '/INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT/d' \
+        /etc/sysconfig/iptables 
+    sed -i -e '/--port=80:tcp/d' -e '/--port=443:tcp/d' \
+           -e '/--port=123:udp/d' /etc/sysconfig/system-config-firewall
 fi
-
 
 %files
 %defattr(-,root,root)
