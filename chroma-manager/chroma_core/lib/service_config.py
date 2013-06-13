@@ -286,7 +286,11 @@ num  target     prot opt source               destination
 
             cmdlist = ["/sbin/iptables", op_arg, chain]
             cmdlist.extend(args)
-            self.try_shell(cmdlist)
+            rc, out, err = self.shell(cmdlist)
+            if rc != 0:
+                if op == "del" and err.startswith("iptables: Bad rule"):
+                    return
+                raise RuntimeError("iptables error %s: %s " % (rc, err))
 
     # TODO: abstract out and generalize these next two functions
     # since these will be needed in the manager UI in the future
