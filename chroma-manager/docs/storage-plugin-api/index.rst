@@ -1,6 +1,4 @@
 
-.. include:: <isonum.txt>
-
 Storage Plugin Developer's Guide for Intel® Manager for Lustre* software
 ========================================================================
 

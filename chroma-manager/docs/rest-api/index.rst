@@ -1,6 +1,4 @@
 
-.. include:: <isonum.txt>
-
 REST API for Intel\ |reg| Manager for Lustre* software
 ======================================================
 

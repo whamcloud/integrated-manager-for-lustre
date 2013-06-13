@@ -1,5 +1,5 @@
 
-all: api storage_plugin internals
+all: api storage_plugin internals packaging
 
 dist:
 	mkdir -p dist
@@ -36,3 +36,14 @@ internals: dist/
 	cp -r internals/_build/html dist/chroma-doc-internals
 	pushd dist ;\
 	tar czf chroma-doc-internals.tar.gz chroma-doc-internals
+
+.PHONY: packaging
+packaging: dist/
+	pushd packaging &&\
+	rm -rf _build &&\
+	make html &&\
+	popd
+	rm -rf dist/packaging
+	cp -r packaging/_build/html dist/chroma-doc-packaging
+	pushd dist ;\
+	tar czf chroma-doc-packaging.tar.gz chroma-doc-packaging
