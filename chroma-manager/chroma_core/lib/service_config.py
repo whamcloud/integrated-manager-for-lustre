@@ -267,13 +267,13 @@ class ServiceConfig(CommandLine):
         rc, stdout, stderr = self.shell(["service", "iptables", "status"])
         if rc == 0 and stdout != '''Table: filter
 Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination         
+num  target     prot opt source               destination
 
 Chain FORWARD (policy ACCEPT)
-num  target     prot opt source               destination         
+num  target     prot opt source               destination
 
 Chain OUTPUT (policy ACCEPT)
-num  target     prot opt source               destination         
+num  target     prot opt source               destination
 
 ''':
             op_arg = ""
@@ -819,6 +819,10 @@ def chroma_config():
         command = sys.argv[1]
     except IndexError:
         log.error("Usage: %s <setup|validate|start|restart|stop>" % sys.argv[0])
+        sys.exit(-1)
+
+    if command in ('stop', 'start', 'restart') and os.geteuid():
+        log.error("You must be root to run this command.")
         sys.exit(-1)
 
     def print_errors(errors):
