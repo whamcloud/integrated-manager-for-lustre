@@ -694,7 +694,9 @@ num  target     prot opt source               destination
                 errors.append("Service %s not found" % s)
 
         # Check supervisor-controlled services are up
-        if service_config['chroma-supervisor']['running']:
+        if 'chroma-supervisor' not in service_config:
+            errors.append("Service supervisor is not configured. Please run the command: 'chroma-config setup' prior")
+        elif service_config['chroma-supervisor']['running']:
             for process in SupervisorStatus().get_all_process_info():
                 if process['statename'] != 'RUNNING':
                     errors.append("Service %s is not running (status %s)" % (process['name'], process['statename']))
