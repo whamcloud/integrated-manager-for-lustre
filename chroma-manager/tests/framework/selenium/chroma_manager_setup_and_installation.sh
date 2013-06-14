@@ -12,12 +12,13 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 
 echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
-
 # Install and setup chroma manager
 scp ../$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum install -y python-mock expect
+rm -f /etc/yum.repos.d/autotest.repo
+yum clean metadata
 # Install from the installation package
 cd /tmp
 tar xzvf $ARCHIVE_NAME
