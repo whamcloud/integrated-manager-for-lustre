@@ -29,7 +29,7 @@
 
       session.$promise
         .then(function () {
-          return session.$delete().$promise;
+          return session.$delete();
         })
         .then(callback);
 

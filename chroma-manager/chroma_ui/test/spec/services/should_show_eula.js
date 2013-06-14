@@ -48,10 +48,10 @@ describe('Should Show Eula service', function () {
       user: userObj
     });
 
-    $httpBackend.expectDELETE('/api/session/').respond({});
+    $httpBackend.expectDELETE('/api/session/').respond(204);
 
     if (userObj.accepted_eula) {
-      $httpBackend.expectPOST('/api/session/').respond({});
+      $httpBackend.expectPOST('/api/session/').respond(201);
     }
   }
 
