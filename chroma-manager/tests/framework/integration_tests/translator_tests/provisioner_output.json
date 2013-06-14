@@ -17,7 +17,7 @@
   "power_distribution_units": [
     {
       "address": "VM_HOST_IP",
-      "type": "fence_virsh KVM Virtual PDU",
+      "type": "KVM Virtual PDU (IPMI)",
       "port": "22"
     }
   ],
