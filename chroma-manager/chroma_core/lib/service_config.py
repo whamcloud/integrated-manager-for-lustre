@@ -100,22 +100,24 @@ class NTPConfig:
         os.chmod(tmp_name, 0644)
         os.rename(tmp_name, "/etc/ntp.conf")
 
-    def get_server(self):
+    def get_configured_server(self):
         """Return the currently IML set server found in the ntp conf file
 
         if IML did not set the server or if any error occurs return None.
         If IML did set the server, return that value
         """
 
-        f = open(self.CONFIG_FILE, 'r')
-        ntp_conf_text = f.read()
+        with open(self.config_file, 'r') as f:
+            ntp_conf_text = f.read()
         server = None
         if self.SENTINEL in ntp_conf_text:
             #  Only consider returning if IML set the value
-            match = re.search('^server (.+)', ntp_conf_text, re.MULTILINE)
+            match = re.search('^\s*server\s+(\S+)', ntp_conf_text, re.MULTILINE)
             if match:
                 try:
                     server = match.group(1)
+                    if server == "127.127.1.0":
+                        server = "localhost"
                 except IndexError:
                     pass
 
@@ -349,22 +351,28 @@ num  target     prot opt source               destination
         """Save ntp server to config (e.g. /etc/ntp.conf)
 
         Prompt for server if one was not provided (would have come from cli)
-        if a server was set by iml, use that as the default
-        otherwise use localhost
         """
 
         ntp = NTPConfig()
-        if server is None and ntp.get_server() is None:
-            # Only if you haven't already set it, and don't want to changed it
-            server = self.get_input(msg = "NTP Server", default = 'localhost')
-        log.info("Writing ntp configuration")
-        old_server = ntp.remove()
-        if old_server == "localhost":
-            self._del_firewall_rule(123, "udp", "ntp")
-        ntp.add(server)
-        if server == "localhost":
-            self._add_firewall_rule(123, "udp", "ntp")
-        self._start_ntp(old_server != server)
+        existing_server = ntp.get_configured_server()
+
+        if not server:
+            if existing_server:
+                log.info("Using existing ntp server: %s" % existing_server)
+                return
+            else:
+                # Only if you haven't already set it
+                server = self.get_input(msg = "NTP Server", default = 'localhost')
+
+        if server and server != existing_server:
+            log.info("Writing ntp configuration: %s " % server)
+            old_server = ntp.remove()
+            if old_server == "localhost":
+                self._del_firewall_rule(123, "udp", "ntp")
+            ntp.add(server)
+            if server == "localhost":
+                self._add_firewall_rule(123, "udp", "ntp")
+            self._start_ntp(old_server != server)
 
     def _start_ntp(self, restart):
         self.try_shell(["chkconfig", "ntpd", "on"])
