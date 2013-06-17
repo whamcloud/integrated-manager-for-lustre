@@ -12,6 +12,8 @@ import rpm
 import json
 import errno
 import select
+import yum
+import urllib2
 
 
 PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
@@ -264,6 +266,39 @@ def _install_or_upgrade_profiles(new_profiles):
     for profile in new_profiles:
         _run(['chroma-config', 'profile', 'register', profile])
 
+def _test_yum():
+
+    log.info("Testing YUM")
+
+    yb = yum.YumBase()
+    yb.setCacheDir()
+
+    failed_urls = []
+    for repo in yb.repos.listEnabled():
+        # set up a proxy handler if necessary
+        if repo.proxy_dict:
+            urllib2.install_opener(urllib2.build_opener(urllib2.ProxyHandler(repo.proxy_dict)))
+
+        if repo.mirrorlist:
+            urls = [repo.mirrorlist]
+        else: # baseurl[s]
+            urls = [url + "/" + "repodata/repomd.xml" for url in repo.baseurl]
+
+        failures = 0
+        for url in urls:
+            try:
+                urllib2.urlopen(url, timeout=5)
+            except urllib2.URLError:
+                failures += 1
+                failed_urls.append(url)
+            else:
+                continue
+
+        if failures == len(urls):
+            log.debug("Failed to read information for repository %s." % repo.id)
+            return False, failed_urls
+
+    return True, []
 
 _setup_logging()
 
@@ -278,6 +313,13 @@ log.info("Starting {PRODUCT_NAME} {action}".format(PRODUCT_NAME=PRODUCT_NAME,
                                                    action = "upgrade" \
                                                        if upgrade \
                                                        else "installation"))
+
+yum_ok, urls = _test_yum()
+if not yum_ok:
+    log.info("Yum does not seem to be able to find required network resources.  Please check your network and yum configuration and try again.  Perhaps you need ot disable some repositories that are not reachable.")
+    log.info("URLs that failed: %s" % ' '.join(urls))
+    sys.exit(1)
+
 if upgrade:
     # Tell the user what the old version is
     _print_version(version=version, release=release)
