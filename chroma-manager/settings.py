@@ -231,8 +231,8 @@ EMAIL_ALERTS_PERIOD = 300
 
 SQL_RETRY_PERIOD = 10
 
-LUSTRE_MKFS_OPTIONS_MDT = None
-LUSTRE_MKFS_OPTIONS_OST = None
+LUSTRE_MKFS_OPTIONS_MDT = "-t ext4 -J size=2048"
+LUSTRE_MKFS_OPTIONS_OST = "-t ext4 -J size=2048"
 
 CELERY_ROUTES = (
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
