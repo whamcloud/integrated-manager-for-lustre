@@ -88,12 +88,13 @@ if __name__ == '__main__':
 
     # Ensure all of the jobs required to be run to land are passing
     logging.info("Requiring these tests: '%s'" % required_tests)
-    found_tests = [t.job.name for t in test_runs]
+    # found_tests = list of test job names for all runs we found test reports for
+    found_tests = [t.job.name for t in test_runs if os.listdir("test_reports/%s" % t.job.name)]
     logging.info("Found these test runs: '%s'" % found_tests)
-    for required_test in required_tests:
-        if not required_test in found_tests:
-            print "MISSING TEST RESULTS! Expected to see results from [%s] and only found results from [%s]." % (required_tests, found_tests)
-            exit(1)
+    missing_tests = set(required_tests).difference(set(found_tests))
+    if missing_tests:
+        print "MISSING TEST RESULTS! Did not find a test report for these tests: '%s'." % ', '.join(missing_tests)
+        exit(1)
 
     # Check if there were test failures
     passing_tests = [t for t in test_runs if t.is_good()]
