@@ -134,7 +134,11 @@ yum -y install expect
 cd /tmp
 tar xzvf $ARCHIVE_NAME
 cd $(basename $ARCHIVE_NAME .tar.gz)
-expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}
+if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
+    rc=${PIPESTATUS[0]}
+    cat /var/log/chroma/install.log
+    exit $rc
+fi
 
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
