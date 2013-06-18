@@ -78,7 +78,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # Register the default bundles and profile again
             result = self.remote_command(
                 chroma_manager['address'],
-                "for bundle_pat in lustre-* iml-*-agent e2fsprogs-*; do chroma-config bundle register /var/lib/chroma/repo/$bundle_pat; done &> config_bundle.log",
+                "for bundle_pat in lustre* iml-agent* e2fsprogs*; do chroma-config bundle register /var/lib/chroma/repo/$bundle_pat; done &> config_bundle.log",
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status

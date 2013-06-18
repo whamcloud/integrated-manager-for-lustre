@@ -20,9 +20,6 @@ $(SUBDIRS):
 
 clean install:: subdirs
 
-%.profile: %.profile.template $(patsubst %,%/repo/meta,$(SUBDIRS))
-	include/make_profile $@ $(subst chroma-manager/repo/meta,,$^)
-
 package: subdirs $(PROFILES) lesskey.out EULA.txt
 	tar  --transform 's|$(WORKDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)|' \
 		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(notdir $(shell echo $(subdir)/*.tar.gz))|') \

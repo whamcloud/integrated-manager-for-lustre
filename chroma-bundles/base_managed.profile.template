@@ -1,8 +1,0 @@
-{
- "name": "base_managed",
- "bundles": [],
- "packages": {},
- "ui_name": "Managed storage server",
- "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
- "managed": true
-}

@@ -51,52 +51,58 @@ class Command(BaseCommand):
         import chroma_core.lib.service_config
         from chroma_core.models import Bundle, ServerProfile
 
+        # default, works for --no-bundles
+        base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile")
+
         if options['no_bundles']:
-            for bundle in ['lustre', 'chroma-agent', 'e2fsprogs']:
+            for bundle in ['lustre', 'iml-agent', 'e2fsprogs']:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
+            # override the default path if we have unpacked a real archive
+            base_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
             import json
-            with open(os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')) as f:
+            import glob
+            with open(base_profile_path) as f:
                 bundle_names = json.load(f)['bundles']
-            missing_bundles = []
-            for bundle_name in bundle_names:
-                path = os.path.join(settings.DEV_REPO_PATH, bundle_name)
-                if not os.path.exists(os.path.join(path, 'meta')):
-                    tarball_path = os.path.join(settings.DEV_REPO_PATH, bundle_name) + "-bundle.tar.gz"
-                    if os.path.exists(tarball_path):
-                        print "Extracting %s" % bundle_name
-                        if not os.path.exists(path):
-                            os.makedirs(path)
-                        archive = tarfile.open(tarball_path, "r:gz")
-                        archive.list()
-                        archive.extractall(path)
-                    else:
-                        print "Missing bundle %s" % bundle_name
-                        missing_bundles.append(path)
+            missing_bundles = bundle_names
 
-                if (not path in missing_bundles and
-                    not Bundle.objects.filter(location=path).exists()):
-                    chroma_core.lib.service_config.bundle('register', path)
+            bundle_files = glob.glob(os.path.join(settings.DEV_REPO_PATH, "*-bundle.tar.gz"))
+            for bundle_file in bundle_files:
+                archive = tarfile.open(bundle_file, "r:gz")
+                meta = json.load(archive.extractfile("./meta"))
+                repo = os.path.join(settings.DEV_REPO_PATH, meta['name'])
+
+                if not os.path.exists(os.path.join(repo, 'meta')):
+                    print "Extracting %s" % meta['name']
+                    if not os.path.exists(repo):
+                        os.makedirs(repo)
+
+                    #archive.list()
+                    archive.extractall(repo)
+                    archive.close()
+
+                if not Bundle.objects.filter(location=repo).exists():
+                    chroma_core.lib.service_config.bundle('register', repo)
+
+                missing_bundles.remove(meta['name'])
 
             if len(missing_bundles):
                 print """
+Missing bundles: %(bundles)s
+
 Package bundles are required for installation. In order to proceed, you
 have 3 options:
-    1. Download a bundle from %(bundle_url)s and unpack it in %(repo_path)s
-    2. Build a bundle locally and unpack it in %(repo_path)s
+    1. Download an installer from %(bundle_url)s and unpack it in %(repo_path)s
+    2. Build an installer locally and unpack it in %(repo_path)s
     3. Run ./manage.py dev_setup --no-bundles to generate a set of fake
        bundles for simulated servers
 
 Please note that the fake bundles can't be used to install real storage
 servers -- you'll need to use one of the first two methods in order to make
 that work.
-    """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH}
+    """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
                 sys.exit(1)
 
-        if os.path.exists(os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')):
-            base_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
-        else:
-            base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile.template")
         base_profile = open(base_profile_path).read()
         if not ServerProfile.objects.filter(name='base_managed').exists():
             chroma_core.lib.service_config.register_profile(StringIO(base_profile))

@@ -35,12 +35,15 @@ The format of the ``meta`` file is as follows:
 
     {
       "name": "acme_drivers",
+      "version": "x.y.z",
       "description": "Acme Corporation networking drivers"
     }
 
 The ``name`` attribute serves as a unique identifier for a bundle within an Intel® Manager for Lustre
 installation.  It is wise to include the name of your organization in this string to reduce
 the likelihood of name collisions.
+
+The ``version`` attribute is provided to allow identification of a bundle by version.
 
 The 'description' attribute is a human-readable description of the bundle.  This may be visible
 to system administrators of the Intel® Manager for Lustre installation, so it should be something

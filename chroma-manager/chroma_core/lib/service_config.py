@@ -735,11 +735,18 @@ def bundle(operation, path=None):
             raise RuntimeError("Could not read bundle metadata from %s" %
                                meta_path)
 
+        log.debug("Loaded bundle meta for %s from %s" % (meta['name'], meta_path))
+
+        # Bundle version is optional, defaults to "0.0.0"
+        version = meta.get('version', "0.0.0")
         if Bundle.objects.filter(bundle_name=meta['name']).exists():
+            log.debug("Updating bundle %s" % meta['name'])
             Bundle.objects.filter(bundle_name=meta['name']).update(
-                location=path, description=meta['description'])
+                version=version, location=path, description=meta['description'])
         else:
+            log.debug("Creating bundle %s" % meta['name'])
             Bundle.objects.create(bundle_name=meta['name'],
+                                  version=version,
                                   location=path,
                                   description=meta['description'])
     else:
@@ -759,6 +766,8 @@ def register_profile(profile_file):
     except ValueError, e:
         raise RuntimeError("Malformed profile: %s" % e)
 
+    log.debug("Loaded profile '%s' from %s" % (data['name'], profile_file))
+
     # Validate: check all referenced bundles exist
     validate_bundles = set(data['bundles'] + data['packages'].keys())
     missing_bundles = []
@@ -770,17 +779,25 @@ def register_profile(profile_file):
         log.error("Bundles not found for profile '%s': %s" % (data['name'], ", ".join(missing_bundles)))
         sys.exit(-1)
 
-    # Validation OK: create records
-    profile = ServerProfile.objects.create(name=data['name'],
-                                           ui_name=data['ui_name'],
-                                           ui_description=data['ui_description'],
-                                           managed=data['managed'])
+    profile_fields = ['ui_name', 'ui_description', 'managed']
+    try:
+        profile = ServerProfile.objects.get(name=data['name'])
+        log.debug("Updating profile %s" % data['name'])
+        for field in profile_fields:
+            setattr(profile, field, data[field])
+        profile.save()
+    except ServerProfile.DoesNotExist:
+        log.debug("Creating profile %s" % data['name'])
+        kwargs = dict([(f, data[f]) for f in profile_fields])
+        kwargs['name'] = data['name']
+        profile = ServerProfile.objects.create(**kwargs)
+
     for name in data['bundles']:
         profile.bundles.add(Bundle.objects.get(bundle_name=name))
 
     for bundle_name, package_list in data['packages'].items():
         for package_name in package_list:
-            ServerProfilePackage.objects.create(
+            ServerProfilePackage.objects.get_or_create(
                 server_profile=profile,
                 bundle=Bundle.objects.get(bundle_name=bundle_name),
                 package_name=package_name)
