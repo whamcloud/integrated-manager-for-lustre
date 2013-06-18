@@ -47,17 +47,18 @@ class Command(BaseCommand):
         sc._setup_crypto()
         sc._syncdb()
 
-        BUNDLE_NAMES = ['lustre', 'chroma-agent', 'e2fsprogs']
-
         import chroma_core.lib.service_config
         from chroma_core.models import Bundle, ServerProfile
 
         if options['no_bundles']:
-            for bundle in BUNDLE_NAMES:
+            for bundle in ['lustre', 'chroma-agent', 'e2fsprogs']:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
+            import json
+            with open(os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')) as f:
+                bundle_names = json.load(f)['bundles']
             missing_bundles = []
-            for bundle_name in BUNDLE_NAMES:
+            for bundle_name in bundle_names:
                 path = os.path.join(settings.DEV_REPO_PATH, bundle_name)
                 if not os.path.exists(os.path.join(path, 'meta')):
                     tarball_path = os.path.join(settings.DEV_REPO_PATH, bundle_name) + "-bundle.tar.gz"
@@ -91,7 +92,10 @@ that work.
     """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH}
                 return
 
-        base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile.template")
+        if os.path.exists(os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')):
+            base_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
+        else:
+            base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile.template")
         base_profile = open(base_profile_path).read()
         if not ServerProfile.objects.filter(name='base_managed').exists():
             chroma_core.lib.service_config.register_profile(StringIO(base_profile))
