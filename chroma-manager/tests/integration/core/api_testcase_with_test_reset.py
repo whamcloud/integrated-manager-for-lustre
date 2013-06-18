@@ -136,6 +136,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             '/api/target/',
             params = {'kind': 'MGT', 'limit': 0}
         )
+        self.assertTrue(response.successful, response.text)
         mgts = response.json['objects']
 
         if len(mgts) > 0:
