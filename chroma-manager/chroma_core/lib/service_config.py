@@ -423,12 +423,12 @@ num  target     prot opt source               destination
     CONTROLLED_SERVICES = ['chroma-supervisor', 'httpd']
 
     def _enable_services(self):
-        log.info("Enabling Chroma daemons")
+        log.info("Enabling daemons")
         for service in self.CONTROLLED_SERVICES:
             self.try_shell(['chkconfig', '--add', service])
 
     def _start_services(self):
-        log.info("Starting Chroma daemons")
+        log.info("Starting daemons")
         for service in self.CONTROLLED_SERVICES:
             self.try_shell(['service', service, 'start'])
 
@@ -446,7 +446,7 @@ num  target     prot opt source               destination
                     raise RuntimeError(msg)
 
     def _stop_services(self):
-        log.info("Stopping Chroma daemons")
+        log.info("Stopping daemons")
         for service in self.CONTROLLED_SERVICES:
             self.try_shell(['service', service, 'stop'])
 
@@ -566,12 +566,12 @@ num  target     prot opt source               destination
                 return pass1
 
     def _user_account_prompt(self):
-        log.info("Chroma will now create an initial administrative user using the " +
+        log.info("An administrative user account will now be created using the " +
                  "credentials which you provide.")
 
         valid_username = False
         while not valid_username:
-            username = self.get_input(msg = "Chroma superuser", empty_allowed = False)
+            username = self.get_input(msg = "IML superuser", empty_allowed = False)
             if username.find(" ") > -1:
                 print "Username cannot contain spaces"
                 continue
