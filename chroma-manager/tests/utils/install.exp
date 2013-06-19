@@ -27,7 +27,7 @@ expect {
     }
 }
 set timeout 900
-expect "superuser: "
+expect "Username: "
 send $user\n
 expect "Email: "
 send $email\n
