@@ -105,6 +105,9 @@ class TestHttpWriter(unittest.TestCase):
 
         TestPlugin = mock.Mock()
 
+        mock_plugin_instance = mock.Mock()
+        mock_plugin_instance.start_session = mock.Mock(return_value={'foo': 'bar'})
+        client.device_plugins.get = mock.Mock(return_value=lambda(plugin_name): mock_plugin_instance)
         client.device_plugins.get_plugins = mock.Mock(return_value={'test_plugin': TestPlugin})
         client.sessions = SessionTable(client)
 

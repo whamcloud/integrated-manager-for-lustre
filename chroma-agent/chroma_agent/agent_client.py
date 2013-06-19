@@ -34,7 +34,7 @@ from chroma_agent import version
 from chroma_agent.log import daemon_log, console_log
 
 
-MAX_MESSAGES_PER_POST = 10
+MAX_BYTES_PER_POST = 1024 * 64
 
 MIN_SESSION_BACKOFF = datetime.timedelta(seconds = 10)
 MAX_SESSION_BACKOFF = datetime.timedelta(seconds = 60)
@@ -286,6 +286,7 @@ class HttpWriter(ExceptionCatchingThread):
         self._stopping = threading.Event()
         self._last_poll = defaultdict(lambda: None)
         self._messages = Queue.PriorityQueue()
+        self._retry_messages = Queue.Queue()
 
     def put(self, message):
         """Called from a different thread context than the main loop"""
@@ -315,24 +316,38 @@ class HttpWriter(ExceptionCatchingThread):
         messages = []
         completion_callbacks = []
 
+        post_envelope = {
+            'messages': [],
+            'server_boot_time': self._client.boot_time.isoformat() + "Z",
+            'client_start_time': self._client.start_time.isoformat() + "Z"
+        }
+
+        messages_bytes = len(json.dumps(post_envelope))
         while True:
             try:
-                message = self._messages.get_nowait()
-                if message.callback:
-                    completion_callbacks.append(message.callback)
-                messages.append(message)
-                if len(messages) >= MAX_MESSAGES_PER_POST:
-                    break
+                message = self._retry_messages.get_nowait()
             except Queue.Empty:
+                try:
+                    message = self._messages.get_nowait()
+                except Queue.Empty:
+                    break
+
+            if message.callback:
+                completion_callbacks.append(message.callback)
+            message_length = len(json.dumps(message.dump(self._client._fqdn)))
+
+            if message_length > MAX_BYTES_PER_POST - messages_bytes:
+                # This message will not fit into this POST: pop it back into the queue
+                self._retry_messages.put(message)
                 break
+
+            messages.append(message)
+            messages_bytes += message_length
 
         daemon_log.debug("HttpWriter sending %s messages" % len(messages))
         try:
-            self._client.post({
-                'messages': [m.dump(self._client._fqdn) for m in messages],
-                'server_boot_time': self._client.boot_time.isoformat() + "Z",
-                'client_start_time': self._client.start_time.isoformat() + "Z"
-            })
+            post_envelope['messages'] = [m.dump(self._client._fqdn) for m in messages]
+            self._client.post(post_envelope)
         except HttpError:
             # Terminate any sessions which we've just droppped messages for
             kill_sessions = set()
