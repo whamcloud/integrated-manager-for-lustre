@@ -87,6 +87,9 @@ help_text = {
     'access_denied_eula': 'To proceed, a superuser must first login and accept the EULA.',
 
     'eula': """
+        <h3>Intel&reg; Enterprise Edition for Lustre* software</h3>
+        <h3>End User License Agreement Terms</h3>
+
         <h4>IMPORTANT - READ BEFORE COPYING, INSTALLING OR USING THE SOFTWARE</h4>
 
         <p>Do not use or load this software and any associated documentation (collectively, the "Software" or "Materials")
