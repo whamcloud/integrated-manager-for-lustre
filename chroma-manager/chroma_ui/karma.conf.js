@@ -7,12 +7,14 @@ basePath = '';
 files = [
   JASMINE,
   JASMINE_ADAPTER,
+  'static/js/lib/underscore-min.js',
   'static/js/lib/lodash.custom.js',
   'static/js/lib/jquery.js',
   'static/js/lib/xdate.js',
   'static/js/lib/angular/angular.js',
   'static/js/lib/angular/angular-resource.js',
   'static/js/lib/angular/ui-bootstrap.js',
+  'static/js/lib/highcharts.js',
   'test/lib/angular-mocks.js',
   'static/js/lib/sprintf/*.js',
   'static/js/constants.js',
@@ -25,6 +27,7 @@ files = [
   'static/js/controllers/**/*.js',
   'static/js/directives/directive_module.js',
   'static/js/directives/*.js',
+  'static/js/chart_manager.js',
   'test/mock/**/*.js',
   'test/spec/**/*.js',
   'test/leak/**/*.js'

@@ -443,6 +443,25 @@ var ChartManager = function(options) {
               }
             );
 
+            // Remove lingering stackItems
+            var stackItemsLists = lodash(['yAxis', 'xAxis'])
+              .map(lodash.result.bind(null, chart.instance))
+              .flatten()
+              .map(function (axee) {
+                return (axee ? axee.stacks : undefined);
+              })
+              .map(lodash.pairs)
+              .flatten()
+              .filter(lodash.isObject).value();
+
+            stackItemsLists.forEach(function (itemsList) {
+              Object.keys(itemsList).filter(function (ts) {
+                return ts < (latest_ts - global_time_boundary);
+              }).map(function (ts) {
+                  delete itemsList[ts];
+                });
+            });
+
             // Update highcharts from series_data
             _.each(
               chart.instance.series,
