@@ -23,7 +23,7 @@
 (function (_) {
   'use strict';
 
-  function CreatePduCtrl($scope, dialog, PowerControlTypeModel, PowerControlDeviceModel, devices, device) {
+  function CreatePduCtrl($scope, dialog, PowerControlTypeModel, PowerControlDeviceModel, devices, device, ipmi) {
     /**
      * @description A generic error callback that can be called for an update or a save.
      * @param {object} resp the error response.
@@ -36,7 +36,6 @@
     }
 
     $scope.createPduCtrl = {
-      powerControlTypes: PowerControlTypeModel.query(),
       close: dialog.close.bind(dialog),
       closeAlert: function (index) {
         this.err.__all__.splice(index, 1);
@@ -58,6 +57,7 @@
           }, errback);
         },
         type: 'edit',
+        ipmi: ipmi,
         title: 'Edit Pdu: %s'.sprintf(device.name)
       };
 
@@ -78,20 +78,41 @@
           }, errback);
         },
         type: 'add',
-        title: 'New Pdu'
+        ipmi: ipmi,
+        title: ipmi ? 'Configure IPMI' : 'New PDU'
       };
 
-      getDeviceType = _.first;
+      if (ipmi != null) {
+        // Special case for IPMI support -- force-select the IPMI type.
+        getDeviceType = function (resp) {
+          return _.find(resp, function (type) {
+            return type.max_outlets === 0;
+          });
+        };
+      } else {
+        getDeviceType = _.first;
+      }
     }
 
     _.extend($scope.createPduCtrl, extension);
 
-    $scope.createPduCtrl.powerControlTypes.$promise.then(function (resp) {
+    PowerControlTypeModel.query().$promise.then(function (resp) {
+      if (ipmi != null) {
+        $scope.createPduCtrl.powerControlTypes = resp;
+        extension.form.name = 'IPMI';
+        extension.form.address = '0.0.0.0';
+      } else {
+        // Filter out IPMI types for non-IPMI PDU creation
+        $scope.createPduCtrl.powerControlTypes = resp.filter(function (type) {
+          return type.max_outlets > 0;
+        });
+      }
+
       extension.form.device_type = getDeviceType(resp);
     });
   }
 
   angular.module('controllers').controller('CreatePduCtrl',
-    ['$scope', 'dialog', 'PowerControlTypeModel', 'PowerControlDeviceModel', 'devices', 'device', CreatePduCtrl]
+    ['$scope', 'dialog', 'PowerControlTypeModel', 'PowerControlDeviceModel', 'devices', 'device', 'ipmi', CreatePduCtrl]
   );
 }(window.lodash));

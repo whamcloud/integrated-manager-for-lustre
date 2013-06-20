@@ -78,5 +78,19 @@
         "max_outlets": 24,
         "default_username": "apc",
         "default_password": "apc"
+    },
+    {
+        "agent": "fence_ipmilan",
+        "make": "Generic",
+        "model": "IPMI",
+        "max_outlets": 0,
+        "default_port": 22,
+        "default_username": "root",
+        "default_password": "calvin",
+        "poweron_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o on",
+        "poweroff_template": "%(agent)s %(options)s -a %(identifier)s -u %(port)s -l %(username)s -p %(password)s -o off",
+        "powercycle_template": "%(agent)s %(options)s -a %(identifier)s -u %(port)s -l %(username)s -p %(password)s -o reboot",
+        "monitor_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o monitor",
+        "outlet_query_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o status"
     }
 ]

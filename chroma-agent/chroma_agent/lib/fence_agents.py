@@ -63,3 +63,11 @@ class fence_virsh(FenceAgent):
         else:
             raise RuntimeError("Neither password nor identity_file were supplied")
         self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-x'] + auth
+
+
+class fence_ipmilan(FenceAgent):
+    def __init__(self, agent, login, password, ipaddr):
+        self.base_cmd = [agent, '-a', ipaddr, '-l', login, '-p', password]
+
+    def toggle_outlet(self, state):
+        shell.try_run(self.base_cmd + ['-o', state])

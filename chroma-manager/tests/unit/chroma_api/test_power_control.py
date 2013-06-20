@@ -3,6 +3,8 @@ import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helper import synthetic_host, log
 
+from chroma_core.models.power_control import PowerControlDevice
+
 
 class PowerControlResourceTestCase(ChromaApiTestCase):
     def setUp(self):
@@ -41,48 +43,50 @@ class PowerControlResourceTestCase(ChromaApiTestCase):
 
 class BasicPowerControlResourceTests(PowerControlResourceTestCase):
     def test_creation_with_inherited_values(self):
-        self._create_power_type(agent = 'fence_apc',
-                                make = 'FAKE',
-                                model = 'FAKE',
-                                max_outlets = 8,
-                                default_username = 'apc',
-                                default_password = 'apc',
-                                default_options = 'foo=x')
+        default_username = 'apc'
+        default_password = 'apc'
+        power_type = self._create_power_type(agent = 'fence_apc',
+                                             make = 'FAKE',
+                                             model = 'FAKE',
+                                             max_outlets = 8,
+                                             default_username = default_username,
+                                             default_password = default_password,
+                                             default_options = 'foo=x')
 
-        power_type = self.api_get_list("/api/power_control_type/")[0]
-        self._create_power_device(device_type = power_type['resource_uri'],
-                                  address = '1.2.3.4')
+        new_pdu = self._create_power_device(device_type = power_type['resource_uri'],
+                                            address = '1.2.3.4')
 
-        new_pdu = self.api_get_list("/api/power_control_device/")[0]
+        db_pdu = PowerControlDevice.objects.get(id=new_pdu['id'])
         self.assertEqual(new_pdu['name'], new_pdu['address'])
         self.assertEqual(new_pdu['port'], power_type['default_port'])
-        self.assertEqual(new_pdu['username'], power_type['default_username'])
-        self.assertEqual(new_pdu['password'], power_type['default_password'])
+        self.assertEqual(db_pdu.username, default_username)
+        self.assertEqual(db_pdu.password, default_password)
         self.assertEqual(new_pdu['options'], power_type['default_options'])
 
     def test_creation_with_all_values_supplied(self):
-        self._create_power_type(agent = 'fence_apc',
-                                make = 'FAKE',
-                                model = 'FAKE',
-                                max_outlets = 8,
-                                default_username = 'apc',
-                                default_password = 'apc',
-                                default_options = "foo=x")
+        username = 'super'
+        password = 's3kr3t'
+        power_type = self._create_power_type(agent = 'fence_apc',
+                                             make = 'FAKE',
+                                             model = 'FAKE',
+                                             max_outlets = 8,
+                                             default_username = 'apc',
+                                             default_password = 'apc',
+                                             default_options = "foo=x")
 
-        power_type = self.api_get_list("/api/power_control_type/")[0]
-        self._create_power_device(device_type = power_type['resource_uri'],
-                                  name = 'foopdu',
-                                  address = '1.2.3.4',
-                                  port = 2300,
-                                  username = 'super',
-                                  password = 's3kr3t',
-                                  options = "foo=y")
+        new_pdu = self._create_power_device(device_type = power_type['resource_uri'],
+                                            name = 'foopdu',
+                                            address = '1.2.3.4',
+                                            port = 2300,
+                                            username = username,
+                                            password = password,
+                                            options = "foo=y")
 
-        new_pdu = self.api_get_list("/api/power_control_device/")[0]
+        db_pdu = PowerControlDevice.objects.get(id=new_pdu['id'])
         self.assertEqual(new_pdu['name'], 'foopdu')
         self.assertEqual(new_pdu['port'], 2300)
-        self.assertEqual(new_pdu['username'], 'super')
-        self.assertEqual(new_pdu['password'], 's3kr3t')
+        self.assertEqual(db_pdu.username, username)
+        self.assertEqual(db_pdu.password, password)
         self.assertEqual(new_pdu['options'], 'foo=y')
 
 
@@ -92,14 +96,12 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
 
         self.max_outlets = 8
 
-        self._create_power_type(agent = 'fence_apc',
-                                default_username = 'apc',
-                                default_password = 'apc',
-                                max_outlets = self.max_outlets)
-        self.pdu_type = self.api_get_list("/api/power_control_type/")[0]
-        self._create_power_device(device_type = self.pdu_type['resource_uri'],
-                                  address = '1.2.3.4')
-        self.pdu = self.api_get_list("/api/power_control_device/")[0]
+        self.pdu_type = self._create_power_type(agent = 'fence_apc',
+                                                default_username = 'apc',
+                                                default_password = 'apc',
+                                                max_outlets = self.max_outlets)
+        self.pdu = self._create_power_device(device_type = self.pdu_type['resource_uri'],
+                                             address = '1.2.3.4')
 
     def test_pdu_devices_prepopulate_outlets(self):
         outlets = self.api_get(self.pdu['resource_uri'])['outlets']
@@ -143,7 +145,7 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
     def test_pdu_modifications(self):
         # After it's been created, it should be possible to modify most of a
         # PDU's attributes.
-        test_fields = ["name", "address", "port", "username", "password", "options"]
+        test_fields = ["name", "address", "port", "options"]
         pdu = self.api_get_list("/api/power_control_device/")[0]
 
         new_values = dict([(f, str(pdu[f]) + "changed") for f in test_fields])
@@ -187,3 +189,125 @@ class PowerControlResourceTests(PowerControlResourceTestCase):
             kwargs = {'device_type': self.pdu_type['resource_uri'],
                       'address': '1.2.3.4'}
             self._create_power_device(**kwargs)
+
+
+class IpmiResourceTests(PowerControlResourceTestCase):
+    def setUp(self):
+        super(IpmiResourceTests, self).setUp()
+
+        self.ipmi_type = self._create_power_type(agent = 'fence_ipmilan',
+                                                default_username = 'foo',
+                                                default_password = 'bar',
+                                                max_outlets = 0)
+
+        self.ipmi = self._create_power_device(device_type = self.ipmi_type['resource_uri'],
+                                             address = '0.0.0.0',
+                                             username = 'baz',
+                                             password = 'qux')
+
+        synthetic_host(address = 'foo')
+        self.host = self.api_get_list("/api/host/")[0]
+
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    def test_new_bmc_triggers_fence_reconfig(self, notify):
+        bmc = self._create_power_outlet(host = self.host['resource_uri'],
+                                        device = self.ipmi['resource_uri'],
+                                        identifier = '1.2.3.4')
+
+        self.assertEqual(bmc['identifier'], '1.2.3.4')
+        self.assertEqual(bmc['host'], self.host['resource_uri'])
+        self.assertEqual(bmc['device'], self.ipmi['resource_uri'])
+
+        self.assertTrue(notify.called)
+
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    def test_bmc_identifier_stored_as_ipaddr(self, notify):
+        bmc = self._create_power_outlet(host = self.host['resource_uri'],
+                                        device = self.ipmi['resource_uri'],
+                                        identifier = 'localhost')
+        self.assertEqual(bmc['identifier'], '127.0.0.1')
+
+        self.assertTrue(notify.called)
+
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    def test_deleting_bmc(self, notify):
+        bmc = self._create_power_outlet(host = self.host['resource_uri'],
+                                        device = self.ipmi['resource_uri'],
+                                        identifier = 'localhost')
+        self.assertEqual(1, notify.call_count)
+
+        self.api_client.delete(bmc['resource_uri'])
+        # Ensure that deleting the BMC triggers a fencing update too
+        self.assertEqual(2, notify.call_count)
+
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    def test_duplicate_bmc_address_rejected(self, notify):
+        self._create_power_outlet(host = self.host['resource_uri'],
+                                  device = self.ipmi['resource_uri'],
+                                  identifier = 'localhost')
+
+        with self.assertRaises(AssertionError):
+            self._create_power_outlet(host = self.host['resource_uri'],
+                                      device = self.ipmi['resource_uri'],
+                                      identifier = 'localhost')
+
+        self.assertEqual(1, notify.call_count)
+
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    def test_adding_outlet_with_existing_bmc_is_rejected(self, notify):
+        pdu_type = self._create_power_type(agent = 'fence_apc',
+                                           default_username = 'foo',
+                                           default_password = 'bar',
+                                           max_outlets = 1)
+
+        pdu = self._create_power_device(device_type = pdu_type['resource_uri'],
+                                        address = '1.2.3.4',
+                                        username = 'baz',
+                                        password = 'qux')
+
+        self._create_power_outlet(host = self.host['resource_uri'],
+                                  device = self.ipmi['resource_uri'],
+                                  identifier = 'localhost')
+
+        outlet = pdu['outlets'][0]
+        outlet['host'] = self.host['resource_uri']
+        r = self.api_client.put(outlet['resource_uri'], data = outlet)
+        self.assertHttpBadRequest(r)
+
+        self.assertEqual(1, notify.call_count)
+
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    def test_adding_bmc_with_existing_outlet_is_rejected(self, notify):
+        pdu_type = self._create_power_type(agent = 'fence_apc',
+                                           default_username = 'foo',
+                                           default_password = 'bar',
+                                           max_outlets = 1)
+
+        pdu = self._create_power_device(device_type = pdu_type['resource_uri'],
+                                        address = '1.2.3.4',
+                                        username = 'baz',
+                                        password = 'qux')
+
+        outlet = pdu['outlets'][0]
+        outlet['host'] = self.host['resource_uri']
+        r = self.api_client.put(outlet['resource_uri'], data = outlet)
+        self.assertHttpAccepted(r)
+
+        with self.assertRaises(AssertionError):
+            self._create_power_outlet(host = self.host['resource_uri'],
+                                      device = self.ipmi['resource_uri'],
+                                      identifier = 'localhost')
+
+        self.assertEqual(1, notify.call_count)
+
+    def test_unresolvable_bmc_identifier_invalid(self):
+        with self.assertRaises(AssertionError):
+            self._create_power_outlet(host = self.host['resource_uri'],
+                                      device = self.ipmi['resource_uri'],
+                                      identifier = 'not valid')
+
+    def test_confused_bmc_identifier_invalid(self):
+        with self.assertRaises(AssertionError):
+            self._create_power_outlet(host = self.host['resource_uri'],
+                                      device = self.ipmi['resource_uri'],
+                                      identifier = '1')

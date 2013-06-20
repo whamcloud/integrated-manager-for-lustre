@@ -130,7 +130,11 @@ class PowerControlManager(CommandLine):
 
         with self._device_locks[device.sockaddr]:
             try:
-                self.try_shell(device.monitor_command())
+                if device.device_type.max_outlets == 0:
+                    for outlet in device.outlets.all():
+                        self.try_shell(device.monitor_command(outlet.identifier))
+                else:
+                    self.try_shell(device.monitor_command())
             except CommandError, e:
                 log.error("Device %s did not respond to monitor: %s" % (device, e))
                 return False
