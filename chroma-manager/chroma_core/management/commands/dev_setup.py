@@ -25,6 +25,7 @@ from optparse import make_option
 import tarfile
 from chroma_core.lib.util import site_dir
 import os
+import sys
 
 from django.core.management import BaseCommand
 import settings
@@ -90,7 +91,7 @@ Please note that the fake bundles can't be used to install real storage
 servers -- you'll need to use one of the first two methods in order to make
 that work.
     """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH}
-                return
+                sys.exit(1)
 
         if os.path.exists(os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')):
             base_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
