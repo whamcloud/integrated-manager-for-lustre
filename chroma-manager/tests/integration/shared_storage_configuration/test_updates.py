@@ -5,7 +5,7 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 
 
 @skipIf(not config.get('simulator', False), "Automated test of upgrades is HYD-1739")
-class TestConfParams(ChromaIntegrationTestCase):
+class TestUpdates(ChromaIntegrationTestCase):
     TEST_SERVERS = [config['lustre_servers'][0]]
 
     def test_upgrade_alerting(self):
