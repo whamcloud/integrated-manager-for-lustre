@@ -53,34 +53,6 @@ describe('Power Control Device', function () {
     expect(powerControlDeviceModels[0].outlets[0].$update).toBeDefined();
   }));
 
-  it('should have a method to reassign outlets by host and identifier', inject(function (PowerControlDeviceModel) {
-    function getOutlet(host, identifier) {
-      return {
-        host: host,
-        identifier: identifier,
-        $update: jasmine.createSpy('$update')
-      };
-    }
-
-    var powerControlDeviceModel = new PowerControlDeviceModel({
-      outlets: [
-        getOutlet('1/2/3', 'outlet 1'),
-        getOutlet('4/5/6', 'outlet 2'),
-        getOutlet('1/2/3', 'outlet 3')
-      ]
-    });
-
-    powerControlDeviceModel.reAssignOutletHostIntersection({
-      resource_uri: '1/2/3'
-    }, ['outlet 3']);
-
-    expect(powerControlDeviceModel.outlets[0].$update).toHaveBeenCalled();
-    expect(powerControlDeviceModel.outlets[1].$update).not.toHaveBeenCalled();
-    expect(powerControlDeviceModel.outlets[2].$update).not.toHaveBeenCalled();
-
-    expect(powerControlDeviceModel.outlets[0].host).toEqual(null);
-  }));
-
   it('should have a method to calculate the outlets intersection of a host and pdu',
     inject(function (PowerControlDeviceModel) {
       var data = {

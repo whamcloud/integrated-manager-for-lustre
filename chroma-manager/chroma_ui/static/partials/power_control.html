@@ -29,22 +29,13 @@
         <tr ng-repeat="host in powerCtrl.hosts | orderBy: 'nodename'">
           <td>((host.nodename))</td>
           <td class="outlets" ng-repeat="device in powerCtrl.powerControlDevices | orderBy: 'name'">
-            <select
-              tabindex="(($index + 1))"
-              ng-init="outletHostIntersection = device.getOutletHostIntersection(host)"
-              ng-model="outletHostIntersection"
-              ng-change="device.reAssignOutletHostIntersection(host, outletHostIntersection)"
-              ui-select2="{formatTagCssClass: powerCtrl.formatTagCssClass, formatResult: powerCtrl.formatResult, dropdownCssClass: 'config-outlets'}"
-              style="width: 100%; display: none;"
-              transform-model="{formatter: device.format}"
-              multiple="true"
-            >
-              <option
-                ng-class="powerCtrl.getOptionClass(outlet)"
-                ng-repeat="outlet in device.outlets | orderBy: 'identifier'"
-                value="((outlet.identifier))">(( outlet.identifier ))
-              </option>
-            </select>
+            <power-control-autocomplete
+              tab-index="(($index + 1))"
+              device="device"
+              host="host"
+              on-add="device.addOutlet(outlet, host)"
+              on-remove="device.removeOutlet(outlet)"
+              ></power-control-autocomplete>
           </td>
         </tr>
       </tbody>

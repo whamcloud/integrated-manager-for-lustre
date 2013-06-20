@@ -88,42 +88,7 @@
       },
       methods: {
         /**
-         * @description Re-assigns the outlets based on a new assignment list.
-         * @param {object} host
-         * @param {[]} outletIdentifiers
-         */
-        reAssignOutletHostIntersection: function (host, outletIdentifiers) {
-          function findOutlets(notAssigned, outlet) {
-            var alreadyAssigned = (outlet.host === host.resource_uri);
-            var notInNewList = (outletIdentifiers.indexOf(outlet.identifier) === -1);
-
-            return notAssigned ?
-              !alreadyAssigned && !notInNewList :
-              alreadyAssigned && notInNewList;
-          }
-
-          // find outlets that were plugged into host but are now removed.
-          var toUpdate = this.outlets
-            .filter(findOutlets.bind(null, false))
-            .map(function unassignOutlets(outlet) {
-              outlet.host = null;
-              return outlet;
-            });
-
-          // Assign new identifiers and update.
-          this.outlets
-            .filter(findOutlets.bind(null, true))
-            .forEach(function assignOutlet(outlet) {
-              outlet.host = host.resource_uri;
-              toUpdate.push(outlet);
-            });
-
-          toUpdate.forEach(function runUpdate(outlet) {
-            angular.copy(outlet).$update();
-          });
-        },
-        /**
-         * @description Returns a flat list of what outlets are assigned at the intersection of a host and pdu.
+         * Returns a flat list of what outlets are assigned at the intersection of a host and pdu.
          * @param {object} host
          * @returns {Array}
          */
@@ -131,6 +96,34 @@
           return this.outlets.filter(function (outlet) {
             return outlet.host === host.resource_uri;
           });
+        },
+        /**
+         * Returns a list of outlets that do not have a host.
+         * @returns {Array}
+         */
+        getUnassignedOutlets: function () {
+          return this.outlets.filter(function (outlet) {
+            return outlet.host == null;
+          });
+        },
+        /**
+         * Removes the outlet from it's host.
+         * @param {PowerControlDeviceOutlet} outlet
+         * @returns {*}
+         */
+        removeOutlet: function (outlet) {
+          outlet.host = null;
+          return outlet.$update();
+        },
+        /**
+         * Adds an outlet to a host.
+         * @param {PowerControlDeviceOutlet} outlet
+         * @param {hostModel} host
+         * @returns {*}
+         */
+        addOutlet: function (outlet, host) {
+          outlet.host = host.resource_uri;
+          return outlet.$update();
         },
         format: function (value) {
           return _.pluck(value, 'identifier');

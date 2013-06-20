@@ -1,29 +1,3 @@
-/* Outlets drop-down start */
-
-.config-outlets .select2-result {
-  border-radius: 3px;
-
-  font-size: 12px;
-
-  -webkit-transition: all .2s ease-in-out;
-  -moz-transition: all .2s ease-in-out;
-  -o-transition: all .2s ease-in-out;
-  -ms-transition: all .2s ease-in-out;
-  transition: all .2s ease-in-out;
-}
-
-div.config-outlets .select2-result.select2-highlighted:before {
-  color: #FFFFFF;
-}
-
-.config-outlets .select2-result:before {
-  float: left;
-  padding: 5px 15px 0 5px;
-}
-
-/* Outlets drop-down end */
-
-
 /* General page styles start */
 
 div[ng-controller="PowerCtrl"] .page-header {
@@ -85,44 +59,61 @@ div[ng-controller="PowerCtrl"] .well span {
 
 /* General page styles end */
 
-/* General psuedo element start */
 
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:before,
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:after,
-div[ng-controller="PowerCtrl"] .select2-search-choice:before,
-.config-outlets .select2-result:before {
-  font-family: "FontAwesome";
-  font-weight: normal;
-  -webkit-font-smoothing: antialiased;
-
-  -webkit-transition: color .2s ease-in-out;
-  -moz-transition: color .2s ease-in-out;
-  -o-transition: color .2s ease-in-out;
-  -ms-transition: color .2s ease-in-out;
-  transition: color .2s ease-in-out;
+/* Power State dropdown start */
+div[ng-controller="PowerCtrl"] .power-states-container {
+  position: relative;
 }
 
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:before,
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:after,
-div[ng-controller="PowerCtrl"] .select2-search-choice:before {
+div[ng-controller="PowerCtrl"] .power-states {
+  display: inline-block;
+  list-style-type: none;
+  border: 1px solid #CCCCCC;
+  padding-left: 0;
+  padding-right: 14px;
+  border-radius: 3px;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+}
+
+div[ng-controller="PowerCtrl"] .power-states-dropdown {
+  list-style-type: none;
+  padding-left: 0;
+  border: 1px solid #CCCCCC;
+  border-radius: 3px;
+  display: none;
   position: absolute;
-  font-size: 12px;
+  width: 100%;
+  z-index: 2;
+  background-color: #FFFFFF;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
 }
 
-/* General psuedo element end */
-
-
-/* Multi select tag start */
-
-div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices {
-  padding-right: 25px;
+div[ng-controller="PowerCtrl"] .power-states-dropdown.active {
+  display: block;
 }
 
-div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices:after {
+div[ng-controller="PowerCtrl"] .power-states.active,
+div[ng-controller="PowerCtrl"] .power-states-dropdown {
+  border-color: rgba(82, 168, 236, 0.8);
+  outline: none;
+  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+  -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+}
+
+div[ng-controller="PowerCtrl"] .power-states:hover {
+  cursor: text;
+}
+
+div[ng-controller="PowerCtrl"] .power-states:after {
   font-family: FontAwesome;
   content: "\f0d7";
   position: absolute;
-  right: 10px;
+  right: 5px;
   height: 100%;
   font-size: 14px;
   color: #777777;
@@ -133,95 +124,106 @@ div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices:after {
   line-height: 14px;
 }
 
-div[ng-controller="PowerCtrl"] .select2-container-multi .select2-choices .select2-search-choice {
-  background-image: none;
-  box-shadow: none;
-  border: 0;
-  color: #FFFFFF;
-}
-
-div[ng-controller="PowerCtrl"] .select2-search-choice div {
-  vertical-align: top;
-}
-
-div[ng-controller="PowerCtrl"] .select2-search-choice div,
-div[ng-controller="PowerCtrl"] .select2-search-choice-close {
+div[ng-controller="PowerCtrl"] .power-state {
   display: inline-block;
-}
-
-div[ng-controller="PowerCtrl"] .select2-search-choice-close {
-  background: none;
-  text-decoration: none;
-  position: relative;
-  top: 1px;
-}
-
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:before,
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:after {
-  left: 0;
-}
-
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:before {
-  z-index: 2;
-  content: "\f057";
-}
-
-div[ng-controller="PowerCtrl"] .select2-search-choice-close:after {
+  border-radius: 3px;
   color: #FFFFFF;
-  content: "\f111";
+  height: 20px;
+  padding: 2px;
+  margin: 5px 5px;
 }
 
-div[ng-controller="PowerCtrl"] .select2-search-choice-focus .select2-search-choice-close:before {
-  color: #555555;
+div[ng-controller="PowerCtrl"] .power-state i.icon- {
+  margin-right: 5px;
 }
 
-div[ng-controller="PowerCtrl"] .select2-search-choice:before {
-  top: 4px;
-  left: 4px;
-}
-
-/* Multi select tag end */
-
-
-/* Power State colors and iconography start */
-
-div[ng-controller="PowerCtrl"] .select2-choices .on {
+div[ng-controller="PowerCtrl"] .power-state.on {
   background-color: #1AAB47;
 }
 
-.config-outlets .select2-result.on:before {
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.on i.icon-:before {
   color: #1AAB47;
 }
 
-.config-outlets .select2-result.on:before,
-div[ng-controller="PowerCtrl"] .select2-search-choice.on:before {
-  content: "\f011";
-}
-
-div[ng-controller="PowerCtrl"] .select2-choices .off {
-  background-color: #555555;
-}
-
-.config-outlets .select2-result.off:before {
-  color: #555555;
-}
-
-div[ng-controller="PowerCtrl"] .select2-choices .unknown {
+div[ng-controller="PowerCtrl"] .power-state.unknown {
   background-color: #F3B600;
 }
 
-.config-outlets .select2-result.unknown:before {
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.unknown i.icon-:before {
   color: #F3B600;
 }
 
-.config-outlets .select2-result.unknown:before,
-div[ng-controller="PowerCtrl"] .select2-search-choice.unknown:before {
+div[ng-controller="PowerCtrl"] .power-state.off {
+  background-color: #555555;
+}
+
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.off i.icon-:before {
+  color: #555555;
+}
+
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.active i.icon-:before {
+  color: #FFFFFF;
+}
+
+div[ng-controller="PowerCtrl"] .power-state.on i.icon-:before,
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.on i.icon-:before {
+  content: "\f011";
+}
+
+div[ng-controller="PowerCtrl"] .power-state.unknown i.icon-:before,
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.unknown i.icon-:before {
   content: "\f059";
 }
 
-.config-outlets .select2-result.off:before,
-div[ng-controller="PowerCtrl"] .select2-search-choice.off:before{
-  content : "\f10c";
+div[ng-controller="PowerCtrl"] .power-state.off i.icon-:before,
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.off i.icon-:before {
+  content: "\f10c";
 }
 
-/* Power State colors and iconography end */
+div[ng-controller="PowerCtrl"] .power-state .close-button:hover {
+  cursor: pointer;
+}
+
+div[ng-controller="PowerCtrl"] .power-state .close-button {
+  position: relative;
+  display: inline-block;
+  height: 14px;
+  width: 17px;
+  vertical-align: middle;
+  margin-left: 5px;
+  text-decoration: none;
+}
+
+div[ng-controller="PowerCtrl"] .power-state .close-button .icon-remove-sign,
+div[ng-controller="PowerCtrl"] .power-state .close-button .icon-circle {
+  position: absolute;
+}
+
+div[ng-controller="PowerCtrl"] .power-state .close-button .icon-circle {
+  color: #FFFFFF;
+}
+
+div[ng-controller="PowerCtrl"] .field {
+  display: inline-block;
+  height: 20px;
+  margin: 7px 5px;
+}
+
+div[ng-controller="PowerCtrl"] .field input {
+  outline: none;
+  border: 0;
+}
+
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice {
+  padding-left: 10px;
+}
+
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice:hover {
+  cursor: pointer;
+}
+
+div[ng-controller="PowerCtrl"] .power-states-dropdown .choice.active {
+  background-color: #1E90FF;
+  color: #FFFFFF;
+}
+/* Power State dropdown end */
