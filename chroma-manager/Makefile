@@ -1,16 +1,27 @@
 include ../include/Makefile.version
 
-DEVELOPER_BUNDLES = lustre chroma-agent e2fsprogs
+# Override this if you don't want to use detected bundles
+USE_DETECTED_BUNDLES ?= true
+DEV_SETUP_BUNDLES ?= $(shell $(USE_DETECTED_BUNDLES) && { ls $(CURDIR)/repo/*.profile >/dev/null 2>&1 || echo "--no-bundles"; } || echo "--no-bundles")
 
-# In development, we want to stop at first failure, but when running
-# in a Jenkins job we want all the gory details.
-ifdef JENKINS_URL
-	BEHAVE_ARGS ?= --junit --junit-directory $$WORKSPACE/test_reports --format plain
-	NOSE_ARGS ?= --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml
-else
-	BEHAVE_ARGS ?= -q --stop
-	NOSE_ARGS ?= --stop
-endif
+# Always nuke the DB when running tests?
+ALWAYS_NUKE_DB ?= false
+
+# Always nuke logs when running tests?
+ALWAYS_NUKE_LOGS ?= false
+
+# Location of cluster configs
+SIM_CLUSTER_CONFIG ?= $(CURDIR)/tests/simulator.json
+FCI_CLUSTER_CONFIG ?= $(CURDIR)/tests/full_cluster.json
+
+# Misc test config
+DB_NAME ?= chroma
+DB_USER ?= $(DB_NAME)
+TEST_HTTPD_PORT ?= 8000
+
+# Test runner options
+BEHAVE_ARGS ?= -q --stop
+NOSE_ARGS ?= --verbose
 
 all: rpms docs
 
@@ -28,13 +39,54 @@ develop: version
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
-	./manage.py dev_setup --no-bundles
+	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
 
-integration_tests:
+nuke_db:
+	@$(ALWAYS_NUKE_DB) && { \
+		echo "Wiping $(DB_NAME) DB..."; \
+		dropdb $(DB_NAME); \
+		createdb -O $(DB_USER) $(DB_NAME); \
+	} || true
+
+nuke_logs:
+	@$(ALWAYS_NUKE_LOGS) && { \
+		echo "Scrubbing devel logs..."; \
+		rm -f $(CURDIR)/*.log; \
+	} || true
+
+dev_setup: nuke_db nuke_logs
+	@./manage.py dev_setup $(DEV_SETUP_BUNDLES) || exit $$?
+
+supervisor: dev_setup
+	@./manage.py supervisor || exit $$?
+
+running_supervisor:
+	@nc -w1 -d localhost $(TEST_HTTPD_PORT) || { \
+		echo "You need to run 'make supervisor' in another terminal, then restart the tests."; \
+		exit 1; \
+	}
+
+$(FCI_CLUSTER_CONFIG):
+	@echo "In order to run these tests, you must create $(FCI_CLUSTER_CONFIG) yourself."
+	@exit 1
+
+fci full_cluster_integration: $(FCI_CLUSTER_CONFIG) running_supervisor
+	@echo "Running integration tests against a full cluster ..."
+	@$(CURDIR)/tests/integration/run_tests -c $(FCI_CLUSTER_CONFIG) \
+		$(CURDIR)/tests/integration/shared_storage_configuration \
+		2>&1 | tee fci-integration.log; \
+	exit $${PIPESTATUS[0]}
+
+integration_tests: running_supervisor
 	@echo "Running integration tests against the simulator..."
-	@nosetests $(NOSE_ARGS) --tc-file=tests/simulator.json --tc-format=json \
-		       tests/integration/shared_storage_configuration 2>&1 \
-			   | tee integration.log; \
+	$(CURDIR)/tests/integration/run_tests -c $(SIM_CLUSTER_CONFIG) \
+		$(CURDIR)/tests/integration/shared_storage_configuration \
+		2>&1 | tee sim-integration.log; \
+	exit $${PIPESTATUS[0]}
+
+service_tests: dev_setup
+	@echo "Running service tests..."
+	@nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
 	exit $${PIPESTATUS[0]}
 
 agent_tests:
@@ -63,7 +115,7 @@ feature_tests:
 	done; \
 	exit $$brc
 
-tests test: unit_tests agent_tests feature_tests integration_tests
+tests test: unit_tests agent_tests feature_tests service_tests integration_tests
 
 tarball: version
 	rm -f MANIFEST
