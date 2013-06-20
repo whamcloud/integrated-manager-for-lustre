@@ -92,6 +92,12 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # FIXME: should reinstall the actual profiles from the installer, this is a hardcoded copy
             result = self.remote_command(
                 chroma_manager['address'],
+                "ls /tmp/ieel-*/",
+                expected_return_code = None
+            )
+            self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (result.stdout.read(), result.stderr.read()))
+            result = self.remote_command(
+                chroma_manager['address'],
                 """chroma-config profile register /tmp/ieel-*/base_managed.profile &> config_bundle.log""",
                 expected_return_code = None
             )
