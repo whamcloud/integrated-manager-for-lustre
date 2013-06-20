@@ -26,7 +26,8 @@ files = [
   'static/js/directives/directive_module.js',
   'static/js/directives/*.js',
   'test/mock/**/*.js',
-  'test/spec/**/*.js'
+  'test/spec/**/*.js',
+  'test/leak/**/*.js'
 ];
 
 // list of files to exclude
