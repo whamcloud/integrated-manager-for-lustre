@@ -58,8 +58,8 @@ class TestConfParams(ChromaIntegrationTestCase):
             self.assertEqual("16", self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"))
 
             server_address = self.hosts[0]['address']
-            self.assertEqual("2097152", self.remote_operations.read_proc(server_address, "/proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize"))
-            self.assertEqual("0", self.remote_operations.read_proc(server_address, "/proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable"))
+            self.wait_until_true(lambda: "2097152" == self.remote_operations.read_proc(server_address, "/proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize"))
+            self.wait_until_true(lambda: "0" == self.remote_operations.read_proc(server_address, "/proc/fs/lustre/obdfilter/testfs-OST0000/writethrough_cache_enable"))
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
