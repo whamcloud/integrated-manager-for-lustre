@@ -1,8 +1,12 @@
 import logging
 
 from django.test import TestCase
+import mock
 from chroma_core.models import ManagedHost, HostOfflineAlert
 from chroma_core.services.corosync import Service as CorosyncService
+from chroma_core.services.job_scheduler.job_scheduler_client import \
+    JobSchedulerClient
+from tests.unit.chroma_core.helper import load_default_profile, synthetic_host
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +71,7 @@ class CorosyncTestCase(TestCase):
                                                 corosync_reported_up=status)
 
     def setUp(self):
+        load_default_profile()
 
         #  The object being tested
         self.corosync_service = CorosyncService()
@@ -267,3 +272,83 @@ class CorosyncTests(CorosyncTestCase):
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 0)
+
+
+class TestCorosyncLnetState(CorosyncTestCase):
+    """Corosync changes lnet state of hosts when connectivity is lost
+
+    Corosync should mark a hosts state to 'lnet_down' in only one case:
+    when a host has just changed from up to down
+    """
+
+    def setUp(self):
+        super(TestCorosyncLnetState, self).setUp()
+
+        self.old_notify = JobSchedulerClient.notify
+
+        def _save(instance, time, update_attrs, from_states = []):
+            """Simulate the saving of attrs on models objects by the JS"""
+
+            print instance, time, update_attrs, from_states
+            obj = instance.__class__.objects.get(pk=instance.id)
+            for attr, value in update_attrs.items():
+                print obj, attr, value
+                obj.__setattr__(attr, value)
+                obj.save()
+
+        JobSchedulerClient.notify = mock.Mock(side_effect=_save)
+
+    def tearDown(self):
+        JobSchedulerClient.notify = self.old_notify
+
+    def make_two_hosts(self,
+                       target_state='lnet_up',
+                       target_corosync_up=False):
+        """Create two hosts with target set to 'state' and 'corosync_up'"""
+
+        self.host_target = synthetic_host('target')
+        self.host_peer = synthetic_host('peer')
+        self.host_target.state = target_state
+        self.host_target.corosync_reported_up = target_corosync_up
+        self.host_target.save()
+
+    def test_lnet_status_default(self):
+        """Test lnet status is correct based on contectivity with a clustered system
+
+        A managed server has the advantage of corosync running to control
+        the lnet state when connectivity is lost.  Check that in only the one
+        case:  host.corosync_reported_up going from True to False results in
+        host.state going to 'lnet_down'.  In other cases, it is unchanged.
+        """
+
+        #  simulate default state - target is up, lustre_audit has reported that
+        #  corosync has not reported yet.
+        self.make_two_hosts(target_state='lnet_up',
+                            target_corosync_up=False)
+
+        #  simulate the peer sending report about itself and the the target
+        nodes = ((self.host_target, ONLINE), (self.host_peer, ONLINE))
+        self.corosync_service.on_data(None,
+            self.get_test_message(node_status_list=nodes))
+
+        host_target = ManagedHost.objects.get(pk=self.host_target.id)
+        self.assertEqual(host_target.state, 'lnet_up')
+
+    def test_lnet_status_online_to_offline(self):
+        """Test that corosync reporting offline after a node is online
+
+        Should set host.state to 'lnet_down'
+        """
+
+        #  simulate default state - target is up, lustre_audit has reported that
+        #  corosync has not reported yet.
+        self.make_two_hosts(target_state='lnet_up',
+                            target_corosync_up=True)
+
+        #  simulate the peer sending report about itself and the the target
+        nodes = ((self.host_target, OFFLINE), (self.host_peer, ONLINE))
+        self.corosync_service.on_data(None,
+            self.get_test_message(node_status_list=nodes))
+
+        host_target = ManagedHost.objects.get(pk=self.host_target.id)
+        self.assertEqual(host_target.state, 'lnet_down')

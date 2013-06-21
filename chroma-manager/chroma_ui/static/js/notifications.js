@@ -167,11 +167,7 @@ var LiveObject = function()
       unconfigured  : { icon: 'plug--exclamation',  label: 'Unconfigured' }
     };
 
-    // When peers think the host is down, lnet can't be up.
-    // It is down or will be fenced
     var host_state = obj.state;
-    if(!obj.corosync_reported_up)
-        host_state = 'lnet_down';
 
     // host status is the Lnet Status which we convert into an icon
     if ( resourceType(obj) === 'host' ) {
