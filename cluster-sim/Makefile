@@ -49,6 +49,8 @@ $(FENCE_APC): $(RPM2CPIO)
 	cd $$tmpdir && curl -o $(FENCE_AGENTS_RPM) $(FENCE_AGENTS_URL); \
 	rpm2cpio $(FENCE_AGENTS_RPM) | cpio -id; \
 	mkdir -p $$venv/share/fence && cp usr/share/fence/*.py $$venv/share/fence; \
+	sed -e "s/\(print o + options\[\"-C\"\] + alias\)/\1 + options[\"-C\"] + status/" \
+		< usr/share/fence/fencing.py > $$venv/share/fence/fencing.py; \
 	cp usr/sbin/$$(basename $(FENCE_APC)) $(FENCE_APC); \
 	sed -e "s:/usr/share/fence:$$venv/share/fence:" \
 	    -e "s:/usr/bin/python:/usr/bin/env python:" \

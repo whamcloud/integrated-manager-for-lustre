@@ -1,0 +1,26 @@
+/^Name:/c
+Name:          fence-agents-iml
+.
+/^Release:/s/^\(.*\)\(%{?alphatag:\.%{alphatag}}%{?dist}.*\)$/\1.wc1\2/
+,s/%{name}/fence-agents/g
+/^ExclusiveArch:/i
+
+# custom patches
+Patch99: 0001-list_includes_status.patch
+
+.
+/^%build/i
+
+# custom patches
+%patch99 -p1
+
+.
+/^## Setup\/build bits/i
+Obsoletes:     fence-agents
+
+.
+/^%changelog/a
+* Thu Jun 06 2013 Michael J. MacDonald <michael.macdonald@intel.com> - 2.1.5-25.wc1.el6_4.2
+- Rebuild for Intel Manager for Lustre
+
+.

@@ -130,7 +130,7 @@ class PowerControlManager(CommandLine):
 
         with self._device_locks[device.sockaddr]:
             try:
-                if device.device_type.max_outlets == 0:
+                if device.is_ipmi:
                     for outlet in device.outlets.all():
                         self.try_shell(device.monitor_command(outlet.identifier))
                 else:
@@ -168,30 +168,55 @@ class PowerControlManager(CommandLine):
 
     @transaction.commit_on_success
     def query_device_outlets(self, device_id):
-        device = PowerControlDevice.objects.get(pk = device_id)
+        device = PowerControlDevice.objects.select_related().get(pk = device_id)
 
-        # Blah. https://bugzilla.redhat.com/show_bug.cgi?id=908455
-        # The current assumption is that this query will only be run
-        # infrequently, so the iterative interrogation, while annoying,
-        # isn't a problem. If it turns out that we need to query PDU
-        # outlet state more often, then we'll want to evaluate
-        # whether or not we should patch fence_apc.
+        # With HYD-2089 landed, we can query PDU outlet states in one
+        # shot, rather than sequentially.
         #
-        # On the other hand, if we're forced to support IPMI, we'll have
-        # to query each BMC individually anyhow. We may need to implement
-        # some sort of fanout rather than doing it serially.
+        # IPMI is another story. We're landing rudimentary support for
+        # IPMI with HYD-2099, but longer-term we will probably want to
+        # improve query performance with some kind of fanout.
         with self._device_locks[device.sockaddr]:
-            for outlet in device.outlets.order_by("identifier"):
-                rc, stdout, stderr = self.shell(device.outlet_query_command(outlet.identifier))
+            if device.is_ipmi:
+                # IPMI -- query sequentially
+                for outlet in device.outlets.order_by("identifier"):
+                    rc, stdout, stderr = self.shell(device.outlet_query_command(outlet.identifier))
 
-                # These RCs seem to be common across agents.
-                # Verified: fence_apc, fence_wti, fence_xvm
-                if rc == 0:
-                    outlet.has_power = True
-                elif rc == 2:
-                    outlet.has_power = False
-                else:
-                    log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([outlet.identifier, rc, stdout, stderr])))
-                    outlet.has_power = None
-                log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
-                outlet.save()
+                    # These RCs seem to be common across agents.
+                    # Verified: fence_apc, fence_wti, fence_xvm
+                    if rc == 0:
+                        outlet.has_power = True
+                    elif rc == 2:
+                        outlet.has_power = False
+                    else:
+                        log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([outlet.identifier, rc, stdout, stderr])))
+                        outlet.has_power = None
+                    log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
+                    outlet.save()
+            else:
+                # PDU -- one-shot query
+                rc, stdout, stderr = self.try_shell(device.outlet_list_command())
+                for line in stdout.split("\n"):
+                    try:
+                        id, name, status = line.split(",")
+                    except ValueError:
+                        # garbage line
+                        log.debug("Garbage line in agent stdout: %s" % line)
+                        continue
+
+                    try:
+                        outlet = [o for o in device.outlets.all() if o.identifier == id][0]
+                    except IndexError:
+                        log.debug("Skipping unknown outlet %s:%s:%s" % (device.sockaddr + tuple([id])))
+                        continue
+
+                    if status == "ON":
+                        outlet.has_power = True
+                    elif status == "OFF":
+                        outlet.has_power = False
+                    else:
+                        log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([id, rc, stdout, stderr])))
+                        outlet.has_power = None
+
+                    log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
+                    outlet.save()

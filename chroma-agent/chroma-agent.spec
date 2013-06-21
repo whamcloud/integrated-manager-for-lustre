@@ -32,10 +32,7 @@ This is the Whamcloud monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents yum-utils system-config-firewall-base
-%if 0%{?rhel} > 5
-Requires: fence-agents
-%endif
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents-iml yum-utils system-config-firewall-base
 %description management
 This package layers on management capabilities for Whamcloud Chroma Agent.
 
