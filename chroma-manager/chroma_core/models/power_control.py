@@ -28,6 +28,7 @@ from django.db.models.signals import post_save, post_delete, pre_delete
 from south.signals import post_migrate
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
+from django.template.defaultfilters import pluralize
 
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
@@ -95,7 +96,7 @@ class PowerControlType(DeletablePowerControlModel):
     def display_name(self):
         make = self.make if self.make != "" else "Unknown Make"
         model = self.model if self.model != "" else "Unknown Model"
-        count = self.max_outlets if self.max_outlets > 0 else "IPMI"
+        count = "%s outlet%s" % (self.max_outlets, pluralize(self.max_outlets)) if self.max_outlets > 0 else "IPMI"
         return "%s %s (%s)" % (make, model, count)
 
     def __str__(self):
