@@ -133,19 +133,20 @@ def configure_pacemaker():
         else:
             raise
 
-    shell.try_run(["crm", "configure", "property",
-                   "no-quorum-policy=\"%s\"" % no_quorum_policy])
-    shell.try_run(["crm", "configure", "property",
-                   "symmetric-cluster=\"true\""])
-    shell.try_run(["crm", "configure", "property",
-                   "cluster-infrastructure=\"openais\""])
-    shell.try_run(["crm", "configure", "property", "stonith-enabled=\"true\""])
-    shell.try_run(["crm", "configure", "rsc_defaults",
-                   "resource-stickiness=1000"])
-    shell.try_run(["crm", "configure", "rsc_defaults",
-                   "failure-timeout=%s" % RSRC_FAIL_WINDOW])
-    shell.try_run(["crm", "configure", "rsc_defaults",
-                   "migration-threshold=%s" % RSRC_FAIL_MIGRATION_COUNT])
+    cibadmin(["--modify", "--allow-create", "-o", "crm_config", "-X",
+              '''<cluster_property_set id="cib-bootstrap-options">
+<nvpair id="cib-bootstrap-options-no-quorum-policy" name="no-quorum-policy" value="%s"/>
+<nvpair id="cib-bootstrap-options-symmetric-cluster" name="symmetric-cluster" value="true"/>
+<nvpair id="cib-bootstrap-options-cluster-infrastructure" name="cluster-infrastructure" value="openais"/>
+<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"/>
+</cluster_property_set>''' % no_quorum_policy])
+
+    def set_rsc_default(name, value):
+        shell.try_run(["crm_attribute", "--type", "rsc_defaults",
+                       "--attr-name", name, "--attr-value", value])
+    set_rsc_default("resource-stickiness", "1000")
+    set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW)
+    set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
 
 
 def configure_fencing(agents):
