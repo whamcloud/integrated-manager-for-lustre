@@ -101,21 +101,30 @@ class CorosyncPlugin(DevicePlugin):
         return dt
 
     def _read_crm__mod_as_xml(self):
-        """ Run crm_mon --one-shot --as-xml  and return raw output"""
+        """Run crm_mon --one-shot --as-xml, return raw output or None
+
+        For expected return values (0, 10), return the stdout from output.
+        If the return value is unexpected, log a warning, and return None
+        """
 
         crm_command = ['crm_mon', '--one-shot', '--as-xml']
         rc, stdout, stderr = shell.run(crm_command)
         if rc not in [0, 10]:  # 10 Corosync is not running on this node
-            raise RuntimeError("Error (%s) running '%s': '%s' '%s'" %
+            daemon_log.warning("rc=%s running '%s': '%s' '%s'" %
                                       (rc, crm_command, stdout, stderr))
+            stdout = None
+
         return stdout
 
     def start_session(self):
         return self.update_session()
 
     def update_session(self):
-        raw_output = self._read_crm__mod_as_xml()
-        dict_status = self._parse_crm_as_xml(raw_output)
+        """Respond to poll.  Only return if has valid data"""
 
-        if dict_status:
-            return dict_status
+        raw_output = self._read_crm__mod_as_xml()
+        if raw_output:
+            dict_status = self._parse_crm_as_xml(raw_output)
+
+            if dict_status:
+                return dict_status

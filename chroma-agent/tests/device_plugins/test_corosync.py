@@ -128,3 +128,23 @@ Connection to cluster failed: connection failed"""
             self.assertTrue(isinstance(result_dict['nodes'], dict))
             self.assertEqual(len(result_dict['nodes']), 0)
             self.assertEqual(result_dict['datetime'], '')
+
+    def test_corosync_causes_session_to_reestablish(self):
+        """Connecting to crm_mon fails
+
+        Could not establish cib_ro connection: Connection refused rc=107
+
+        This represents any case that is unknown; which is rc: 0, 10.  In this
+        case, the response should be treated like an SPI boundary.  This means
+        log it and re-raise.  But, raising is what causes the trashing, so
+        instead just return None
+
+        see also:  https://jira.hpdd.intel.com/browse/HYD-1914
+
+        """
+
+        #  Simulate crm_mon returning an unexcepted error code
+        with patch_run(expected_args=CMD, rc=107):
+            plugin = CorosyncPlugin(None)
+            result_dict = plugin.start_session()
+            self.assertTrue(result_dict is None)
