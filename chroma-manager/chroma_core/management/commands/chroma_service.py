@@ -133,11 +133,17 @@ class Command(BaseCommand):
         # Respond to Ctrl+C
         stopped = threading.Event()
 
+        # Ensure that threads are .start()ed before we possibly try to .join() them
+        setup_complete = threading.Event()
+
         def signal_handler(*args, **kwargs):
             """Params undefined because gevent vs. threading pass
             different things to handler
 
             """
+            if not setup_complete.is_set():
+                log.warning("Terminated during setup, exiting hard")
+                os._exit(0)
 
             if not options['lightweight_rpc']:
                 RpcClientFactory.shutdown_threads()
@@ -176,6 +182,8 @@ class Command(BaseCommand):
             service_thread = ServiceThread(service)
             service_thread.start()
             service_mains.append(service_thread)
+
+        setup_complete.set()
 
         while not stopped.is_set():
             # Using a timeout changes the behaviour of CPython's waiting so that it will
