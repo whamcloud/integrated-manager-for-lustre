@@ -35,17 +35,25 @@ describe('Eula', function () {
   });
 
   it('should perform the appropriate actions on accept', inject(function (doneCallback, dialog, $httpBackend) {
-    $httpBackend.expectPOST('/api/session/').respond({});
+    $httpBackend.expectPOST('/api/session/').respond(201);
     $httpBackend.expectGET('/api/session/').respond({
       user: {
         accepted_eula: false
       }
     });
-    $httpBackend.expectPUT('/api/user/', {accepted_eula: true}).respond({});
+    $httpBackend.expectPUT('/api/user/', {accepted_eula: true}).respond(202);
 
     $scope.eulaCtrl.accept();
 
-    $httpBackend.flush();
+    // Flush the POST and GET
+    $httpBackend.flush(2);
+
+    expect(dialog.close).not.toHaveBeenCalled();
+
+    expect(doneCallback).not.toHaveBeenCalled();
+
+    // Flush the PUT
+    $httpBackend.flush(1);
 
     expect(dialog.close).toHaveBeenCalled();
 
@@ -53,14 +61,14 @@ describe('Eula', function () {
   }));
 
   it('should perform the appropriate actions on reject', inject(function (doneCallback, dialog, $httpBackend) {
-    $httpBackend.expectPOST('/api/session/').respond({});
+    $httpBackend.expectPOST('/api/session/').respond(201);
     $httpBackend.expectGET('/api/session/').respond({
       user: {
         accepted_eula: true
       }
     });
-    $httpBackend.expectPUT('/api/user/', {accepted_eula: false}).respond({});
-    $httpBackend.expectDELETE('/api/session/').respond({});
+    $httpBackend.expectPUT('/api/user/', {accepted_eula: false}).respond(202);
+    $httpBackend.expectDELETE('/api/session/').respond(204);
 
     $scope.eulaCtrl.reject();
 

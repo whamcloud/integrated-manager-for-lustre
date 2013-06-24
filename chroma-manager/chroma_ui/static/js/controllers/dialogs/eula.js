@@ -32,15 +32,18 @@
      */
     function createAction(state, afterUpdateCallback) {
       return function () {
-        var promise = SessionModel.save(credentials).$promise.then(function () {
-          return SessionModel.get().$promise;
-        }).then(function (resp) {
-          var user = resp.user;
+        var promise = SessionModel.save(credentials).$promise
+          .then(function () {
+            return SessionModel.get().$promise;
+          })
+          .then(function (resp) {
+            var user = resp.user;
 
-          user.accepted_eula = state;
+            user.accepted_eula = state;
 
-          return user.$update().then(dialog.close.bind(dialog));
-        });
+            return user.$update();
+          })
+          .then(dialog.close.bind(dialog));
 
         if (afterUpdateCallback) {
           promise = promise.then(afterUpdateCallback);

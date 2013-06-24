@@ -30,7 +30,7 @@ class Eula(BaseView):
 
         eula_modal.find_element_by_css_selector(selector_to_click).click()
 
-        wait_for_element_by_css_selector(self.driver, wait_for_selector, self.medium_wait)
+        wait_for_element_by_css_selector(self.driver, wait_for_selector, self.long_wait)
         Navigation(self.driver)._patch_api()
         self.quiesce()
 
