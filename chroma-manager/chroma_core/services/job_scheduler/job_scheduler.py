@@ -917,7 +917,7 @@ class JobScheduler(object):
         """
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
-        agent_ssh = AgentSsh(address)
+        agent_ssh = AgentSsh(address, timeout=5)
         user, hostname, port = agent_ssh.ssh_params()
 
         auth = False
@@ -1100,7 +1100,7 @@ class JobScheduler(object):
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
         fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
-        agent_ssh = AgentSsh(address)
+        agent_ssh = AgentSsh(address, timeout = 5)
         auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
         rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
         log.info("Getting FQDN for '%s': %s" % (address, stdout))
