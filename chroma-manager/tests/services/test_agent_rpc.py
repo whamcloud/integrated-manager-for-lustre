@@ -46,10 +46,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         response = self._post([message])
         self.assertResponseOk(response)
 
-        # Read from the TX channel
-        response = self._get()
-        self.assertResponseOk(response)
-
         expected_count = 1
         if expect_initial:
             # On the first connection from a host that this http_agent hasn't
@@ -57,14 +53,18 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
             # and then the SESSION_CREATE_RESPONSE
             expected_count += 1
 
-        self.assertEqual(len(response.json()['messages']), expected_count)
+        # Read from the TX channel
+        messages = self._receive_messages(expected_count, allow_extras=True)
 
-        create_response = response.json()['messages'][-1]
+        create_response = messages[expected_count - 1]
         self.assertEqual(create_response['type'], 'SESSION_CREATE_RESPONSE')
         self.assertEqual(create_response['plugin'], self.PLUGIN)
         self.assertEqual(create_response['session_seq'], None)
         self.assertEqual(create_response['body'], None)
         session_id = create_response['session_id']
+
+        for excess_message in messages[expected_count:]:
+            self._tx_messages.put(excess_message)
 
         return session_id
 
@@ -108,10 +108,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         time.sleep(RABBITMQ_GRACE_PERIOD)
 
         # Agent should see a termination (this will prompt it to request a new session)
-        response = self._get()
-        self.assertResponseOk(response)
-        self.assertEqual(len(response.json()['messages']), 1)
-        response_message = response.json()['messages'][0]
+        response_message = self._receive_messages(1)[0]
         self.assertEqual(response_message['type'], 'SESSION_TERMINATE')
         self.assertEqual(response_message['plugin'], self.PLUGIN)
         self.assertEqual(response_message['session_seq'], None)
@@ -123,14 +120,9 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         command_id = JobSchedulerClient.command_set_state([(self.host.content_type.natural_key(), self.host.id, state)], "Test")
         return command_id
 
-    def _receive_agent_messages(self):
-        response = self._get()
-        return response.json()['messages']
-
     def _handle_action_receive(self, session_id):
         # Listen for the action
-        messages = self._receive_agent_messages()
-        self.assertEqual(len(messages), 1)
+        messages = self._receive_messages(1)
         action_rpc_request = messages[0]
         self.assertEqual(action_rpc_request['type'], 'DATA')
         self.assertEqual(action_rpc_request['plugin'], self.PLUGIN)
@@ -263,10 +255,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self.start('job_scheduler')
 
         # It should have the http_agent service cancel its sessions
-        response = self._get()
-        self.assertResponseOk(response)
-        self.assertEqual(len(response.json()['messages']), 1)
-        response_message = response.json()['messages'][0]
+        response_message = self._receive_messages(1)[0]
         self.assertEqual(response_message['type'], 'SESSION_TERMINATE')
         self.assertEqual(response_message['plugin'], self.PLUGIN)
         self.assertEqual(response_message['session_seq'], None)
@@ -286,10 +275,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self.restart('http_agent')
 
         # The agent should be told to terminate all
-        response = self._get()
-        self.assertResponseOk(response)
-        self.assertEqual(len(response.json()['messages']), 1)
-        response_message = response.json()['messages'][0]
+        response_message = self._receive_messages(1)[0]
         self.assertEqual(response_message['type'], 'SESSION_TERMINATE_ALL')
         self.assertEqual(response_message['plugin'], None)
         self.assertEqual(response_message['session_seq'], None)
@@ -379,9 +365,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self.assertFalse(command.errored)
 
         # A cancellation for the agent rpc should have been sent to the agent
-        messages = self._receive_agent_messages()
-        self.assertEqual(len(messages), 1)
-        cancellation_message = messages[0]
+        cancellation_message = self._receive_messages(1)[0]
         self.assertDictEqual(
             cancellation_message['body'],
             {
