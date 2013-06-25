@@ -841,3 +841,17 @@ sed -i -e '/--port=%s:%s/d' /etc/sysconfig/system-config-firewall""" %
         for server in server_list:
             self._ssh_address(server['address'],
                               "rm -f /tmp/chroma-agent-debug")
+
+    def omping(self, server, servers, count=5, timeout=30):
+        r = self._ssh_address(server['address'], """exec 2>&1
+iptables -I INPUT -p udp --dport 4321 -j ACCEPT
+omping -T %s -c %s %s
+iptables -D INPUT -p udp --dport 4321 -j ACCEPT""" % (timeout, count,
+                              " ".join([s['nodename'] for s in servers])))
+        mc_replies = 0
+        stdout = r.stdout.read()
+        for line in stdout.split('\n'):
+            if "multicast, seq=" in line:
+                mc_replies += 1
+
+        return mc_replies, stdout

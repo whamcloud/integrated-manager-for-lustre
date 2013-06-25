@@ -36,7 +36,8 @@ fi
 
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-if $MEASURE_COVERAGE; then
+$PROXY yum install -y omping
+if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
     cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
 retries=50
 timeout=180
@@ -44,7 +45,9 @@ EOF
     $PROXY yum install -y python-setuptools
     $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
 fi
-rm -f /etc/yum.repos.d/autotest.repo" | dshbak -c
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    rm -f /etc/yum.repos.d/autotest.repo
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
@@ -171,12 +174,10 @@ set -x
 
 echo "Begin running tests..."
 
-ssh root@$TEST_RUNNER <<EOF
+ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-set -x
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS
-EOF
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS"
 
 echo "End running tests."
 echo "Collecting reports..."

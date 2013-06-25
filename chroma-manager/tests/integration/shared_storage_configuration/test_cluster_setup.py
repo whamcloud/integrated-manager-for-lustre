@@ -1,6 +1,11 @@
 from django.utils.unittest import TestCase
 
 from testconfig import config
+from tests.integration.core.remote_operations import RealRemoteOperations
+
+import logging
+logger = logging.getLogger('test')
+logger.setLevel(logging.DEBUG)
 
 
 class TestClusterSetup(TestCase):
@@ -26,14 +31,61 @@ class TestClusterSetup(TestCase):
 
         # If we indicate failover is set up, ensure we have the proper
         # information configured to test it.
-        if config['failover_is_configured']:
-            if not config.get('simulator', False):
-                self.assertGreaterEqual(len(config['hosts']), 1)
-                for lustre_server in config['lustre_servers']:
-                    self.assertTrue(lustre_server['host'])
-                    self.assertTrue(lustre_server['destroy_command'])
+        if config['failover_is_configured'] and not config.get('simulator'):
+            self.assertGreaterEqual(len(config['hosts']), 1)
+            for lustre_server in config['lustre_servers']:
+                self.assertTrue(lustre_server['host'])
+                self.assertTrue(lustre_server['destroy_command'])
 
         # TODO(kelsey): I'd like to add a lot more validation of the cluster.
         #   - devices mounted properly
         #   - can ssh to the hosts
         #   - ...
+
+    def test_multicast_works(self):
+        import multiprocessing
+        import json
+
+        def run_omping(pipe, server, num_requests):
+            response = {}
+            response['num_replies'], response['stdout'] = \
+                self.remote_operations.omping(server,
+                                              config['lustre_servers'],
+                                              count=num_requests)
+            pipe.send(json.dumps(response))
+
+        num_requests = 5
+        if config['failover_is_configured'] and not config.get('simulator'):
+            self.remote_operations = RealRemoteOperations(self)
+            pipe_outs = {}
+            processes = {}
+            # TODO: This is basically pdsh.  Generalize it so that everyone
+            #       can use it.
+            for server in config['lustre_servers']:
+                pout, pin = multiprocessing.Pipe()
+                process = multiprocessing.Process(target=run_omping,
+                                                  args=(pin, server, num_requests))
+                pipe_outs[server['nodename']] = pout
+                processes[server['nodename']] = process
+                process.start()
+
+            passed = True
+            stdouts = []
+            for server in config['lustre_servers']:
+                response = json.loads(pipe_outs[server['nodename']].recv())
+                if response['num_replies'] < num_requests * (len(config['lustre_servers']) - 1):
+                    passed = False
+                stdouts.append("""----------------
+%s
+----------------
+%s""" % (server['nodename'], response['stdout']))
+                processes[server['nodename']].join()
+
+                logger.debug("%s num_replies: %s" %
+                             (server['nodename'], response['num_replies']))
+
+            message = ""
+            if not passed:
+                message = "\n" + " ".join([stdout for stdout in stdouts])
+
+            self.assertTrue(passed, message)
