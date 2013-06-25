@@ -21,6 +21,7 @@
 
 
 import logging
+import os
 
 # This log is for messages about the internal machinations of our
 # daemon and messaging systems, the user would only be interested
@@ -32,8 +33,12 @@ daemon_log = logging.getLogger('daemon')
 # doing for them
 console_log = logging.getLogger('console')
 
-daemon_log.setLevel(logging.WARN)
-console_log.setLevel(logging.WARN)
+if os.path.exists("/tmp/chroma-agent-debug"):
+    daemon_log.setLevel(logging.DEBUG)
+    console_log.setLevel(logging.DEBUG)
+else:
+    daemon_log.setLevel(logging.WARN)
+    console_log.setLevel(logging.WARN)
 
 agent_loggers = [daemon_log, console_log]
 

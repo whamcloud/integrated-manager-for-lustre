@@ -166,6 +166,13 @@ class SimulatorRemoteOperations(RemoteOperations):
     def get_package_version(self, fqdn, package):
         return self._simulator.servers[fqdn].get_package_version(package)
 
+    def enable_agent_debug(self, server_list):
+        # Already handled elsewhere
+        pass
+
+    def disable_agent_debug(self, server_list):
+        pass
+
 
 class RealRemoteOperations(RemoteOperations):
     def __init__(self, test_case):
@@ -824,3 +831,13 @@ fi
 sed -i -e '/-A INPUT -m state --state NEW -m %s -p %s --dport %s -j ACCEPT/d' /etc/sysconfig/iptables
 sed -i -e '/--port=%s:%s/d' /etc/sysconfig/system-config-firewall""" %
                           (proto, port, proto, port, proto, proto, port, port, proto))
+
+    def enable_agent_debug(self, server_list):
+        for server in server_list:
+            self._ssh_address(server['address'],
+                              "touch /tmp/chroma-agent-debug")
+
+    def disable_agent_debug(self, server_list):
+        for server in server_list:
+            self._ssh_address(server['address'],
+                              "rm -f /tmp/chroma-agent-debug")
