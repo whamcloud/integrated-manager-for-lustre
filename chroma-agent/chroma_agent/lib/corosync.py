@@ -195,35 +195,32 @@ def create_talker_thread(ring1):
     one of the peers starts corosync.
     """
     import threading
-    import socket
 
     class TalkerThread(threading.Thread):
-        def __init__(self, group, port):
+        def __init__(self, interface):
             super(TalkerThread, self).__init__()
             self._stop = threading.Event()
-            self.mcast_group = group
-            self.mcast_port = port
+            self.interface = interface
 
         def stop(self):
+            console_log.debug("Stopping talker thread")
             self._stop.set()
 
         def run(self):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            console_log.debug("Starting talker thread")
+            sock = subscribe_multicast(self.interface)
             while not self._stop.is_set():
-                sock.sendto("%d\n\0" % self.mcast_port, (self.mcast_group, self.mcast_port))
+                sock.sendto("%d\n\0" % self.interface.mcastport,
+                            (self.interface.mcastaddr, self.interface.mcastport))
                 self._stop.wait(0.25)
 
-    talker = TalkerThread(ring1.mcastaddr, ring1.mcastport)
-
-    return talker
+    return TalkerThread(ring1)
 
 
 def discover_existing_mcastport(ring1, timeout = 10):
-    dest_addr = ring1.mcastaddr
-
     subscribe_multicast(ring1)
-    console_log.debug("Sniffing for packets to %s on %s" % (dest_addr, ring1.name))
-    cap = start_cap(ring1, timeout, "host %s and udp" % dest_addr)
+    console_log.debug("Sniffing for packets to %s on %s" % (ring1.mcastaddr, ring1.name))
+    cap = start_cap(ring1, timeout / 10.0, "ip multicast and dst host %s and not src host %s" % (ring1.mcastaddr, ring1.ipv4_address))
 
     def recv_packets(header, data):
         ring1.mcastport = get_dport_from_packet(data)
@@ -251,15 +248,17 @@ def discover_existing_mcastport(ring1, timeout = 10):
         if talker_thread.is_alive():
             talker_thread.stop()
             talker_thread.join()
+            console_log.debug("Stopped talker thread")
 
 
 def subscribe_multicast(interface):
     # subscribe to the mcast addr
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('', 52122))
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface.ipv4_address))
     mreq = socket.inet_aton(interface.mcastaddr) + socket.inet_aton(interface.ipv4_address)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    sock.bind(('', 52122))
     return sock
 
 
