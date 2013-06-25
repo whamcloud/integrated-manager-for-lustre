@@ -107,9 +107,10 @@ class ServerProfileResource(ModelResource):
         resource_name = 'server_profile'
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
+        ordering = ['managed', 'default']
         list_allowed_methods = ['get']
         readonly = ['ui_name']
-        filtering = {'name': ['exact']}
+        filtering = {'name': ['exact'], 'managed': ['exact'], 'default': ['exact']}
 
 
 class HostResource(MetricResource, StatefulModelResource):

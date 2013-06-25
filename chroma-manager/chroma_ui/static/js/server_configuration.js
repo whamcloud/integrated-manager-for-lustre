@@ -208,7 +208,7 @@ function add_host_dialog() {
   });
 
   function get_profiles() {
-    Api.get("server_profile/", {limit: 0}, success_callback = function(data) {
+    Api.get("server_profile/?order_by=default&order_by=managed", {limit: 0}, success_callback = function(data) {
       $.each(data.objects, function(i, profile) {
         var option = "<option value='" + profile.resource_uri + "'>"+ profile.ui_name + "</option>";
         $('div.add_host_dialog select[name=\'server_profile\']').prepend(option)

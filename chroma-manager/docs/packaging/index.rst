@@ -109,8 +109,8 @@ bundles
   to packages in all the bundles referenced here.
 
 packages
-  A list of 2-item lists (pairs).  The first item in each pair is the name of a bundle, the second item
-  is the name of an RPM package.  These are the packages to be installed on storage servers using this
+  A dict wherein the keys are the names of a bundle, and the values are a list of names
+  of associated RPM packages.  These are the packages to be installed on storage servers using this
   profile.  Note that it is usually not necessary to list all packages: ``yum`` is used to install packages,
   so dependencies are respected.  For example, when installing ``lustre`` we do not also name ``e2fsprogs``
   because it is a dependency of ``lustre`` and therefore installed automatically.  The reason we name
@@ -170,8 +170,8 @@ might be called acme-core and acme-scsi.
    {
      "name": "acme_storage",
      "bundles": ["acme_lustre", "acme_drivers", "chroma-agent", "e2fsprogs"],
-     "packages": [["acme_lustre", "lustre-modules"], ["acme_lustre", "lustre"],
-                  ["acme_drivers", "acme-core"], ["acme_drivers", "acme-scsi"]],
+     "packages": {"acme_lustre": ["lustre-modules", "lustre"],
+                  "acme_drivers": ["acme-core", "acme-scsi"]},
      "ui_name": "Acme storage server",
      "ui_description": "A storage server using Acme SCSI drivers, using Acme Lustre extensions",
      "managed": true

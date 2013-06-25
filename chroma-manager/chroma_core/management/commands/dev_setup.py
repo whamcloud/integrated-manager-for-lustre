@@ -20,7 +20,6 @@
 # express and approved by Intel in writing.
 
 
-from StringIO import StringIO
 from optparse import make_option
 import tarfile
 from chroma_core.lib.util import site_dir
@@ -103,9 +102,10 @@ that work.
     """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
                 sys.exit(1)
 
-        base_profile = open(base_profile_path).read()
-        if not ServerProfile.objects.filter(name='base_managed').exists():
-            chroma_core.lib.service_config.register_profile(StringIO(base_profile))
+        for name in ('base_managed', 'base_monitored'):
+            base_profile_path = os.path.join(os.path.dirname(base_profile_path), name + '.profile')
+            if not ServerProfile.objects.filter(name=name).exists():
+                chroma_core.lib.service_config.register_profile(open(base_profile_path))
 
         print """Great success:
  * run `./manage.py supervisor`

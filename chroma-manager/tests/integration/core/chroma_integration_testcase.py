@@ -29,7 +29,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(response.successful, True, response.text)
         pre_existing_hosts = response.json['objects']
 
-        response = self.chroma_manager.get("/api/server_profile/")
+        response = self.chroma_manager.get("/api/server_profile/?managed=true")
         profile = response.json['objects'][0]
 
         host_create_command_ids = []
