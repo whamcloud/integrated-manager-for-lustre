@@ -96,7 +96,7 @@ class BaseView(object):
         if find_visible_element_by_css_selector(self.driver, '#transition_confirm_button'):
             self.driver.find_element_by_css_selector('#transition_confirm_button').click()
             self.quiesce()
-        wait_for_transition(self.driver, self.standard_wait)
+        wait_for_transition(self.driver, self.long_wait)
 
         try:
             anchor.is_displayed()
