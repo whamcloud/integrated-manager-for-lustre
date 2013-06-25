@@ -100,6 +100,12 @@ def select_element_option(driver, selector, index):
     select.select_by_index(index)
 
 
+def select_element_by_visible_text(driver, selector, text):
+    element = driver.find_element_by_css_selector(selector)
+    select = Select(element)
+    select.select_by_visible_text(text)
+
+
 def get_selected_option_text(driver, dropdown_element_selector):
     selectbox_element = Select(driver.find_element_by_css_selector(dropdown_element_selector))
     return selectbox_element.first_selected_option.text

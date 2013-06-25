@@ -22,12 +22,6 @@ class SampleUser(object):
     def __setattr__(self, key, val):
         self.__dict__[key] = val
 
-    @property
-    def user_group_idx(self):
-        return {'superusers': 0,
-                'filesystem_users': 1,
-                'filesystem_administrators': 2}[self.user_group]
-
 
 class wrapped_login(object):
     def __init__(self, test_case, inner_user, outer_user=None, exit_after_login=None):
@@ -206,12 +200,12 @@ class TestUsers(SeleniumBaseTestCase):
         # Add user
         self.user_page.create_new_user_button.click()
         if all_fields:
-            self.user_page.add(user.user_group_idx, user.username,
+            self.user_page.add(user.user_group, user.username,
                                user.first_name, user.last_name, user.email,
                                user.password, user.confirm_password)
         else:
             # leave some fields blank to test that editing works
-            self.user_page.add(user.user_group_idx, user.username,
+            self.user_page.add(user.user_group, user.username,
                                '', '', '', user.password, user.confirm_password)
         self.assertFalse(self.driver.find_element_by_css_selector(self.user_page.create_user_dialog).is_displayed())
         self.user_page = Users(self.driver)

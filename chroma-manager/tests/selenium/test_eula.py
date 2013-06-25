@@ -28,9 +28,8 @@ class TestEula(SeleniumBaseTestCase):
     def test_non_superuser_is_blocked(self):
         """Tests that a non-super user cannot access the application without a superuser accepting the eula."""
         fsuser = SampleUser(Testdata().get_test_data_for_user("fsuser"))
-        wanted_keys = ["username", "first_name", "last_name", "email", "password", "confirm_password"]
+        wanted_keys = ["username", "first_name", "last_name", "email", "password", "confirm_password", "user_group"]
         kwargs = dict([(i, fsuser.__dict__[i]) for i in wanted_keys if i in fsuser.__dict__])
-        kwargs["user_group"] = fsuser.user_group_idx
 
         self.eula_page.accept_eula()
         self.wait_for_login()

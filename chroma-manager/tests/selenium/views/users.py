@@ -3,7 +3,7 @@ from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
 from tests.selenium.utils.element import (
     enter_text_for_element, find_visible_element_by_css_selector,
-    select_element_option, wait_for_element_by_css_selector,
+    select_element_by_visible_text, wait_for_element_by_css_selector,
     wait_for_element_by_xpath
 )
 
@@ -96,7 +96,7 @@ class Users(DatatableView):
     def add(self, user_group, username, first_name, last_name, email, password, confirm_password):
         # Enter data for adding new user
 
-        select_element_option(self.driver, self.user_group, user_group)
+        select_element_by_visible_text(self.driver, self.user_group, user_group)
         enter_text_for_element(self.driver, self.username, username)
         enter_text_for_element(self.driver, self.first_name, first_name)
         enter_text_for_element(self.driver, self.last_name, last_name)

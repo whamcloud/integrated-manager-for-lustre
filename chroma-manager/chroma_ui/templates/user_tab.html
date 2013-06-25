@@ -86,7 +86,7 @@
         }
       });
 
-      Api.get("group/", {limit: 0}, success_callback = function(data) {
+      Api.get("group/", {limit: 0, order_by: 'name'}, success_callback = function(data) {
         $.each(data.objects, function(i, group) {
           var option = "<option value='" + group.resource_uri + "'>"+ group.name + "</option>";
           $('div.create_user_dialog select[name=group]').prepend(option)

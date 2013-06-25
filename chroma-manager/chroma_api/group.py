@@ -41,6 +41,7 @@ class GroupResource(ModelResource):
         authorization = ReadOnlyAuthorization()
         queryset = Group.objects.all()
         filtering = {'name': ['exact', 'iexact']}
+        ordering = ['name']
 
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get']
