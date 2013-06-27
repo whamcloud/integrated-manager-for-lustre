@@ -146,6 +146,7 @@ fi
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
 LOG_LEVEL = logging.DEBUG
+$LOCAL_SETTINGS
 EOF1
 
 if $MEASURE_COVERAGE; then
