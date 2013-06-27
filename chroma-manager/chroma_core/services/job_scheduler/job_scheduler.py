@@ -59,7 +59,6 @@ from chroma_core.services.log import log_register
 import chroma_core.lib.conf_param
 import settings
 
-
 log = log_register(__name__.split('.')[-1])
 
 
@@ -880,6 +879,13 @@ class JobScheduler(object):
                         else:
                             log.debug("Job %d: updating write-locked %s/%s" %
                                      (job.id, lock.locked_item.__class__, lock.locked_item.id))
+
+                            # Ensure that any notifications prior to release of the writelock are not
+                            # applied
+                            if hasattr(lock.locked_item, 'state_updated_at'):
+                                lock.locked_item.__class__.objects.filter(pk=lock.locked_item.pk).update(
+                                    state_updated_at=django.utils.timezone.now())
+
                             ObjectCache.update(lock.locked_item)
 
                 if job.state != 'tasked':
