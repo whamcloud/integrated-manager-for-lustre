@@ -88,8 +88,8 @@
         "default_username": "root",
         "default_password": "calvin",
         "poweron_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o on",
-        "poweroff_template": "%(agent)s %(options)s -a %(identifier)s -u %(port)s -l %(username)s -p %(password)s -o off",
-        "powercycle_template": "%(agent)s %(options)s -a %(identifier)s -u %(port)s -l %(username)s -p %(password)s -o reboot",
+        "poweroff_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o off",
+        "powercycle_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o reboot",
         "monitor_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o monitor",
         "outlet_query_template": "%(agent)s %(options)s -a %(identifier)s -l %(username)s -p %(password)s -o status"
     }
