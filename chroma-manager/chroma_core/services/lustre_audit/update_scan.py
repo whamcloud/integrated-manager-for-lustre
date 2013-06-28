@@ -58,8 +58,6 @@ class UpdateScan(object):
 
     @transaction.commit_on_success
     def audit_host(self):
-        self.update_capabilities()
-
         self.update_packages(self.host_data['packages'])
         self.update_lnet()
         self.update_resource_locations()
@@ -108,14 +106,6 @@ class UpdateScan(object):
 
         log.info("update_packages(%s): updates=%s" % (self.host, needs_update))
         JobSchedulerClient.notify(self.host, self.started_at, {'needs_update': needs_update})
-
-    def update_capabilities(self):
-        """Update the host record from the capabilities reported by the agent"""
-        immutable_state = len([c for c in self.host_data['capabilities'] if "manage_" in c]) == 0
-        if self.host.immutable_state != immutable_state:
-            log.debug("Setting immutable_state=%s on %s" % (immutable_state, self.host))
-            self.host.immutable_state = True
-            self.host.save()
 
     def update_lnet(self):
         # Update LNet status

@@ -110,6 +110,7 @@ class AgentClient(object):
         daemon_log.debug("Client joined")
 
     def register(self, address = None):
+        # FIXME: At this time the 'capabilities' attribute is unused on the manager
         data = {
             'address': address,
             'fqdn': self._fqdn,

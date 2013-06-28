@@ -178,39 +178,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return super(ManagedHost, self).get_available_states(begin_state)
 
     @classmethod
-    def create(cls, fqdn, nodename, capabilities, **kwargs):
-        # Single transaction for creating Host and related database objects
-        # * Firstly because we don't want any of these unless they're all setup
-        # * Secondly because we want them committed before creating any Jobs which
-        #   will try to use them.
-        if 'immutable_state' in kwargs:
-            immutable_state = kwargs['immutable_state']
-            del kwargs['immutable_state']
-        else:
-            immutable_state = not any("manage_" in c for c in capabilities)
-
-        # The address of a host isn't something we can learn from it (the
-        # address is specifically how the host is to be reached from the manager
-        # for outbound connections, not just its FQDN).  If during creation we know
-        # the address, then great, accept it.  Else default to FQDN, it's a reasonable guess.
-        if not 'address' in kwargs or kwargs['address'] is None:
-            kwargs['address'] = fqdn
-
-        with transaction.commit_on_success():
-            host = ManagedHost.objects.create(
-                fqdn = fqdn,
-                nodename = nodename,
-                immutable_state = immutable_state,
-                **kwargs)
-            lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = host)
-
-        # Attempt some initial setup jobs
-        from chroma_core.models.jobs import Command
-        command = Command.set_state([(host, 'configured')], "Setting up host %s" % host)
-
-        return host, command
-
-    @classmethod
     def get_by_nid(cls, nid_string):
         """Resolve a NID string to a ManagedHost (best effort).  Not guaranteed to work:
          * The NID might not exist for any host

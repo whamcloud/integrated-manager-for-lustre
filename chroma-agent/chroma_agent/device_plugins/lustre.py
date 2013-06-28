@@ -173,6 +173,7 @@ class LustrePlugin(DevicePlugin):
             packages = None
 
         # FIXME: HYD-1095 we should be sending a delta instead of a full dump every time
+        # FIXME: At this time the 'capabilities' attribute is unused on the manager
         return {
             "started_at": started_at,
             "agent_version": agent_version(),

@@ -1074,8 +1074,6 @@ class JobScheduler(object):
 
         return [target.id for target in targets], command.id
 
-    # FIXME: jcs @ 2013-04 I removed 'capabilities' from here, is it now used anywhere?
-
     def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
         """
         Create a ManagedHost object and deploy the agent to its address using SSH.
@@ -1100,12 +1098,14 @@ class JobScheduler(object):
 
         with self._lock:
             with transaction.commit_on_success():
+                server_profile = ServerProfile.objects.get(name=profile)
                 host = ManagedHost.objects.create(
                     state='undeployed',
                     address=address,
                     nodename=nodename,
                     fqdn=fqdn,
-                    server_profile=ServerProfile.objects.get(name=profile))
+                    immutable_state=not server_profile.managed,
+                    server_profile=server_profile)
                 lnet_configuration = LNetConfiguration.objects.create(host=host)
             ObjectCache.add(LNetConfiguration, lnet_configuration)
             ObjectCache.add(ManagedHost, host)
