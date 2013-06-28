@@ -295,10 +295,14 @@ class RunJobThread(threading.Thread):
         finish_step = -1
         while step_index < len(self.steps) and not self._cancel.is_set():
             klass, args = self.steps[step_index]
+
+            # Do not persist any sensitive arguments (prefixed with __)
+            clean_args = dict([(k, v) for k, v in args.items() if not k.startswith('__')])
+
             self._job_progress.start_step(
                 self.job.id,
                 step_klass=klass,
-                args=args,
+                args=clean_args,
                 step_index=step_index,
                 step_count=len(self.steps))
 

@@ -604,7 +604,7 @@ class DeployStep(Step):
 
         rc, stdout, stderr = AgentSsh(kwargs['address']).ssh('curl -k %s/agent/setup/%s/ | python' %
                                                              (settings.SERVER_HTTP_URL, kwargs['token'].secret),
-                                                             auth_args=kwargs.get('auth_args'))
+                                                             auth_args=kwargs['__auth_args'])
 
         if rc == 0:
             try:
@@ -651,7 +651,7 @@ class DeployHostJob(StateChangeJob):
             (DeployStep, {
                 'token': token,
                 'address': self.managed_host.address,
-                'auth_args': self.auth_args},)
+                '__auth_args': self.auth_args},)
         ]
 
     class Meta:
