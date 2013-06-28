@@ -1,70 +1,129 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
-   <title>Getting Started</title>
-   <meta name="generator" content="Help &amp; Manual" />
-   <meta name="keywords" content="Chroma Manager,chroma-agent package,monitoring an existing Lustre file system" />
-   <meta name="description" content="Getting Started" />
-   <meta name="copyright" content="Copyright © 2012 Intel Corporation. All rights Reserved." />
-   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <title>Getting started</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <meta name="generator" content="Help &amp; Manual" />
+   <meta name="keywords" content="chroma-agent package,Command Center,monitoring an existing Lustre file system" />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="description" content="Note: All references herein to the &quot;manager&quot; refer to the Intel® Manager for Lustre* software." />
+   <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
-   <link type="text/css" href="custom.css" rel="stylesheet" />
-   <script type="text/javascript" src="jquery.js"></script>
-   <script type="text/javascript" src="jquery.scrollTo-min.js"></script>
-   <script type="text/javascript" src="nsh.js"></script>
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
+<style type="text/css">
+/* No header topics */
 
+/* Breadcrumb trail */
+p#breadcrumbs {
+font-family: Verdana, Tahoma, Helvetica, Sans-Serif;   padding: 2px 0 1px 2px;
+   margin: 0;
+   font-size: 8pt; 
+   color: #999;
+   }   
+p#breadcrumbs a { color: #999; text-decoration: none;}
+p#breadcrumbs a:visited {color: #999;}
+p#breadcrumbs a:hover { color: #333; border-bottom: 1px dotted #333; }
 
-   <script type="text/javascript">
+/* Search hightlight color */
+span.highlight {background-color: #ffff40;}
+  div#hmsocialmedia {
+  min-width: 606px;
+  }
+</style>
+<script type="text/javascript">
+var hmHeaderTopic = true;
 
-var togTocButton = "";
-$(document).ready(function() {
-  chromeBugCheck("workaround",false);
+</script> 
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->	
+<script src="jquery.js"></script>
+<script type="text/javascript" src="jquery.tools.min.js"></script>
+<script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+<script type="text/javascript"> 
+// General topic variables
+var tVars = {
+   hmHelpPage: "index.html",
+   nextP: "creating_user_accounts.htm",
+   prevP: "the_graphical_user_interface.htm",
+   currP: "getting_started.htm",
+   defP: "intel_manager_for_lustre.htm",
+   mailUrl: "",
+   mailUrlQuery: "",
+   titleP: "Getting started",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Getting started",
+   sharesubject: "Intel® Manager for Lustre* - Getting started",
+   simplesubject: "Documentation%20Feedback",
+   mailid: "getting_started",
+   mailpath: "Getting started /",
+   mailbody: "Dear Support Staff,",
+   fbtype: false,
+   header: true,
+   background: "bg.png",
+   tablesReady: false,
+   togglesReady: false,
+   webRedirect: true,
+   topicTitleBar: true,
+   printFooter: true,
+   zoomTip: "Click to view full size image",
+   autoPrint: true,
+   printButton: "Print",
+   printButtonTip: "Print the current topic"
+   }
+// Popup configuration
+ var hmpBShadow = true;
+ var hmPopSmallDim = 500;
+ var hmPopKillVideo = true;
+ // AutoTOC variables
+ var hmatocvars = {
+   atoc_show: true,
+   atoc_title: "Contents",
+   atoc_tip: "Jump to:&nbsp;",
+   atoc_minHeaders: 3,
+   atoc_btntip_off: "No contents entries on this page",
+   atoc_btntip_on: "Display/hide topic directory",
+   atoc_toptip: "Jump to top of page",
+   atoc_top: "Scroll to Top of Page",
+   atoc_bg: "#f6f6f6",
+   atoc_border: "silver",
+   atoc_linkcolor: "#444",
+   atoc_linklimit: 45,
+   atoc_hovercolor: "#000",
+   atoc_hoverbgcolor: "#e0e0e0"
+}
+// Sortable tables
+var sortVars = {
+   europeandate: false,
+   germanNumbers: false,
+   imagePath: "",
+   image_up: "arrow-up.gif",
+   image_down: "arrow-down.gif",
+   image_empty: "arrow-empty.gif",
+   image_none: "arrow-none.gif",
+   sort_tip: "Click to sort on this column",
+   umlauts: "false"
+   }
 
-   togTocButton = 'not used' == "button" ? true : false;
-   togTOCinit('280','Show Navigation Pane','Hide Navigation Pane',togTocButton);
-   });
 </script>
 
+<script type="text/javascript">
+if (tVars.topicTitleBar) { 
+$(document).ready(function() {
+var doc = document;  
+try {
+if (parent.hmWebHelp.navWidth != null) doc = parent.document;
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Getting started").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+} catch(err) {}
+});
+}
+</script>
 
-
-<!-- CSS set with project variables and local attributes -->
-<style type="text/css">
-   body { background: #fff; }
-   #breadcrumbs { width: 100%; background-color: white; border: 1px solid #636363; padding: 2px 0 1px 2px;
-   margin: 3px 0; font-size: 8pt; color: #636363;}
-   #breadcrumbs a { color: #636363; text-decoration: none;}
-   #breadcrumbs a:visited { color: #636363; }
-   #breadcrumbs a:hover { color: #000; text-decoration: none; }
-   .help-url { font-size: 8pt; font-family: Verdana, Helvetica, sans-serif;
-               color: #636363; text-align: center; margin: 15px 15px 0px 15px;
-               padding-top: 5px; padding-bottom: 15px; border-top: 1px solid #000;}
-   .help-url a { color: #636363; text-decoration: none; }
-   .help-url a:visited { color: #636363; }
-   .help-url a:hover { color: #636363; text-decoration: underline; }
-   .highlight {background-color: #ffff40;}
-</style>
-
-
-
-<!-- Adjustment for IE -->
-<!--[if lte IE 8]>
-<style type="text/css">
-.topichead { padding-right: 0; }
-#autoTocWrapper ul li { padding: 3px 3px 4px 3px;}
-</style>
-<![endif]-->
-<!--[if lte IE 7]>
-<style type="text/css">
-#innerdiv {height: 100%;}
-</style>
-<![endif]-->
-
-
-
-   <script type="text/javascript" src="helpman_settings.js"></script>
-   <script type="text/javascript" src="helpman_topicinit.js"></script>
+<script type="text/javascript" src="//platform.linkedin.com/in.js"></script>
+<script type="text/javascript" src="helpman_settings.js"></script>
+<script type="text/javascript" src="helpman_topicinit.js"></script>
+<script type="text/javascript" src="hmtopic.js"></script>
 
    <script type="text/javascript">
      HMSyncTOC("index.html", "getting_started.htm");
@@ -76,146 +135,73 @@ $(document).ready(function() {
 </head>
 <body>
 <!--ZOOMSTOP-->
+<div id="hmsocialmedia">
+	<ul class="social-buttons">
+	<li>
+		<div class="fb-button">
+		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?getting_started.htm"
+        scrolling="no" frameborder="0"
+        style="border:none; width:300px; height:26px"></iframe>
+		</div>
+	</li>
+	<li>
+	<div class="twitter-button">
+		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?getting_started.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
+		<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}})(document,"script","twitter-wjs");</script>
+	</div>
+	</li>
+	<li>
+		<div class="googleplusone-button">
+                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?getting_started.htm"></g:plusone>
+                </div>
+		<script type="text/javascript">
+		window.___gcfg = {lang: 'en-US'};
+      (function(){var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = 'https://apis.google.com/js/plusone.js';var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);})();
+    </script>
+                
+	</li> 
+	<li>
+		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?getting_started.htm"></script></div>
+	</li>
+	<li>
+		<div id="mailthisbutton"><a href="mailto:?body=http://www.ec-software.com/help/index.html%3F<%HREF_CURRENT_PAGE%" class="sbutton">
+		<span id="sbuttontext">Mail This</span>
+		</a></div>
+	</li> 
+	</ul>
+	</div>
 
-<div id="printheader">
-<span id="printtitle">Chroma Enterprise User Guide</span><br />
-<h1 class="p_Heading1"><span class="f_Heading1">Getting Started</span></h1>
+
+<ul id="topictabs" class="tabs">
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Getting started</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hmheader">
+<div id="hmheadercontents">
+ 
+<h1 class="p_Heading1"><span class="f_Heading1">Getting started</span></h1>
+
 </div>
-<div id="idheader" style= "background: #e4e4e4 url('bg_topichd.gif') repeat-x bottom;">
-<table id="breadtable" width="100%" border="0" cellspacing="0" cellpadding="0">
-  <tr >
-  <td align="left" class="breadhead" height="5">
+<div id="atocIcon" class="navdivs">
+<img class="navicon" id="hmAtocLink" src="contents_off.png" alt="No contents entries on this page" title="No contents entries on this page" />
+<br /><span>Contents</span>
+</div>
+</div>
+<div id="autoTocWrapper" class="topicmenu"></div>
+<div id="idcontent">
+<div id="unclicker"></div>
 
-  </td>
-  </tr>
-</table>
-<table width="100%" border="0" cellspacing="0" cellpadding="0" id="headtable">
-
-<!-- Script version of NavHeader -->
-<tr id="scriptNavHead" valign="middle" style="height: auto;">
-
-    <td id="togbuttoncell" style="display: none;" align="left" class="idnav" width="10">
-	<img href="#" id="togtocbutton" border="0" title="Show/Hide Contents" alt="Show/Hide Contents" src="toc.gif" />
-   </td>
-   <td align="left" id="togtocheader" class="topichead" style="padding-left: 10px;" >
-  <div id="togtocbox"><img name="togtoc" id="togtoc" src="togtoc_hide.gif" align="left" border="0" alt="Hide Navigation Pane" title="Hide Navigation Pane" />
-   <h1 class="p_Heading1"><span class="f_Heading1">Getting Started</span></h1>
-
-   </div>
-   </td>
-   <td align="center" width="20" class="idnav" valign="bottom">
-     <a href="enterprise_lustre_overview.htm"
-        onmouseover="document.images.prev.src='button_prev_h.gif'"
-        onmouseout="document.images.prev.src='button_prev.gif'">
-        <img name="prev" src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
-
-   </td>
-
-   <td align="center" width="20" class="idnav" valign="bottom">
-     <a href="configuring_the_chroma_manage2.htm"
-        onmouseover="document.images.next.src='button_next_h.gif'"
-        onmouseout="document.images.next.src='button_next.gif'"><img name="next" src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
-
-   </td>
-
-
-   <td id="tgnav" align="center" width="20" class="idnav" valign="bottom">
-
-   <img name="toggletoggler" src="toggle_d.gif" border="0" alt="No expanding text in this topic" title="No expanding text in this topic" />
-   </td>
-
-
-   <td id="print-button" align="center" width="20" class="idnav" valign="bottom">
-     <a href="javascript:printTopic('getting_started.htm?toc=0&printWindow'); "
-     onmouseover="document.images.printbutton.src='print_h.gif'"
-     onmouseout="document.images.printbutton.src='print.gif'"><img name="printbutton" border="0" alt="Print this topic" title="Print this topic" src="print.gif" /></a>
-   </td>
-
-
-   <td id="mail-feedback" align="center" width="20" class="idnav" valign="bottom">
-   <span id="mailsubject" style="display:none;">Feedback on: Chroma Enterprise User Guide - Getting Started</span>
-   <span id="mailid" style="display:none;">Getting_Started</span>
-   <span id="mailpath" style="display:none;">Getting Started /</span>
-   <span id="mailbody" style="display:none;">&lt;Describe the issue or enhancement you would like to tell us about related to this topic. If you need help with Chroma Enterprise, please contact your storage solution provider.&gt;</span>
-   <script type="text/javascript">
-   var recipient = 'chroma-docs@intel.com';
-   var mailtip = 'Mail us feedback on this topic!';
-   var subjectnojs = 'Documentation%20feedback';
-   var fbtype = false;
-   try {mailFB(fbtype);}
-   catch(err) {var loadErr = err;}
-   </script>
-   </td>
-
-   <td width="4">&nbsp;</td>
-  </tr>
-<!-- End script navheader version -->
-
-<!-- NoScript version of navheader -->
-  <tr id="noScriptNavHead" valign="middle" style="height: auto;">
-    <td align="left" class="topichead">
-    <h1 class="p_Heading1"><span class="f_Heading1">Getting Started</span></h1>
-
-    </td>
-    <td align="center" width="20" class="idnav" valign="bottom">
-     <a href="enterprise_lustre_overview.htm">
-        <img src="button_prev.gif" border="0" alt="Previous topic" title="Previous topic" /></a>
-
-   </td>
-   <td align="center" width="20" class="idnav" valign="bottom">
-     <a href="configuring_the_chroma_manage2.htm">
-        <img src="button_next.gif" border="0" alt="Next topic" title="Next topic" /></a>
-
-   </td>
-
-
-   <td align="center" width="20" class="idnav" valign="bottom">
-   <img name="toggler" src="toggle_d.gif" border="0" alt="JavaScript is required for expanding text" title="JavaScript is required for expanding text" />
-   </td>
-
-
-   <td align="center" width="20" class="idnav" valign="bottom">
-   <img border="0" alt="JavaScript is required for the print function" title="JavaScript is required for the print function" src="print_d.gif" />
-   </td>
-
-
-   <td align="center" width="20" class="idnav" valign="bottom">
-   <a href="mailto:chroma-docs@intel.com?subject=Documentation%20feedback&body=Ref%20ID:%20Getting_Started%0D%0D" target="_blank"><img src="mail.gif" border="0" alt="Mail us feedback on this topic!" title="Mail us feedback on this topic!" /></a>
-   </td>
-
-   <td width="4">&nbsp;</td>
-  </tr>
-<!-- End noscript navheader version -->
-  </table>
-<div id="autoTocWrapper"></div></div>
-
-<div id="idcontent"><div id="innerdiv">
-
-<!--[if lt IE 7]><div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;'><a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode"><img src="http://storage.ie6countdown.com/assets/100/images/banners/warning_bar_0000_us.jpg" border="0" height="42" width="820" alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today." /></a></div><![endif]-->
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">Chroma Manager can be used to:</span></p>
-<p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">Manage and monitor a Chroma Storage software appliance that has been created using Chroma Manager.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">Monitor an existing Lustre file system.</span></p><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Managing and Monitoring a Chroma Storage Appliance</span></p>
-<p class="p_BodyText"><span class="f_BodyText">To set up a system for managing and monitoring a Chroma Storage appliance, follow these steps:</span></p>
-<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">For procedures for installing and configuring the Chroma Enterprise software on your Chroma Manager and Chroma Storage servers, refer to the documentation provided by your storage solution provider. </span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">To finish configuring Chroma Manager, go to <a href="configuring_the_chroma_manage2.htm" class="topiclink">Configuring Chroma Manager</a>.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">3.</span><span class="f_BodyText">To create a Lustre file system, go to <a href="creating_a_file_system.htm" class="topiclink">Creating a Lustre File System</a>.</span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">4.</span><span class="f_BodyText">To mount the the client compute servers, go to <a href="mounting_file_system_clients.htm" class="topiclink">Mounting File System Clients</a>.</span></p><div style="text-align: left; text-indent: 0px; padding: 0px 0px 0px 0px; margin: 0px 0px 6px 0px;"><table style="background-color:#fbfd9b; border:none; border-spacing:0px;">
-<tr style="text-align:left;vertical-align:top;">
-<td style="vertical-align:top; padding:0px;"><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">To manage a Lustre file system that has been created in Chroma from the command line, you must use the Chroma Manager command line interface (CLI).</span><span class="f_BodyText"> Modifying the Lustre file system manually from a shell on a Chroma Storage server will interfere with the ability of Chroma Manager to manage and monitor the file system.</span></p>
-</td>
-</tr>
-</table>
-</div>
-<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Monitoring Only</span></p>
-<p class="p_BodyText"><span class="f_BodyText">To monitor an existing file system, the </span><span class="f_CodeExample">chroma-agent</span><span class="f_BodyText"> &nbsp;package must be installed on the storage servers in the system. The st</span><span class="f_BodyText">orage servers are then registered with the Chroma</span><span class="f_BodyText"> Manager to allow Chroma Manager to </span><span class="f_BodyText">monitor performance and other metrics. </span></p>
-<p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">1.</span><span class="f_BodyText">For a procedure to install </span><span class="f_CodeExample">chroma-agent</span><span class="f_BodyText"> on your storage servers, </span><span class="f_BodyText">refer to the documentation provided by your storage solution provider. </span></p><p style="text-align: left; padding: 0px 0px 0px 16px; margin: 0px 0px 6px 24px;"><span style="font-size:11pt; font-family: 'Arial';color:#000000;display:inline-block;width:16px;margin-left:-16px">2.</span><span class="f_BodyText">To complete the setup, see <a href="configuring_an_existing_lustr2.htm" class="topiclink">Configuring an Existing Lustre File System</a>.</span></p><p class="p_BodyText"><span class="f_BodyText">Lustre commands can be used to manage metadata or object storage servers in an existing Lustre storage system that has been set up outside Chroma Manager and is being monitored, but not managed, in Chroma Manager.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: All references herein to the &quot;manager&quot; refer to the Intel® Manager for Lustre* software.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The Intel® Manager for Lustre* software can be used to:</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">Create, monitor and manage high availability Lustre* file systems.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 27px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">Monitor existing Lustre* file systems that have not been configured from the manager GUI.</span></p><p class="p_BodyText"><span class="f_BodyText">&nbsp;</span><br />
+<span class="f_BodyText">See the following information to get started:</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">For procedures for installing the Intel® Enterprise Edition for Lustre* software, including Intel® Manager for Lustre* software, and for completing initial configuration steps, see the documentation provided by your storage solution provider. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">To set up superuser, administrator, and user accounts on &nbsp;Intel® Manager for Lustre* software see: <a href="creating_user_accounts.htm" class="topiclink">Creating user accounts</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">Also see: <a href="setting_up_email_notifications.htm" class="topiclink">Setting up email notifications of alerts</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">To create a new Lustre file system using Intel® Manager for Lustre* software, see: <a href="creating_a_file_system2.htm" class="topiclink">Creating a new Lustre* file system</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">To detect and monitor an existing Lustre file system using Intel® Manager for Lustre* software, see: <a href="detecting_and_monitoring_exist.htm" class="topiclink">Detect and monitor existing Lustre* file systems</a>.</span><br />
+<span class="f_BodyText">&nbsp;</span></p><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">WARNING</span><span class="f_BodyText">: For Lustre* file systems created and managed by Intel® Manager for Lustre* software, the only supported command line interface is the CLI provided by Intel® Manager for Lustre* software. &nbsp;Modifying such a Lustre file system manually from a UNIX shell will interfere with the ability of the Intel® Manager for Lustre* software to manage and monitor the file system. </span></p>
 
 <!--ZOOMSTOP-->
 
-</div></div>
+</div> <!-- idcontent -->
+</div><!-- hmbox --> 
 </body>
-<!--[if IE]>
-<script type="text/javascript" defer="defer">
-$("#hmcontent",window.parent.document).ready(function() {
-var doTogJump=setTimeout("toggleJump()", 0);
-      });
-</script>
-<![endif]-->
 </html>

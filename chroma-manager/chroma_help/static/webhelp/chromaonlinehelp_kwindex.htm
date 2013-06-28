@@ -1,232 +1,100 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-   <title>Chroma Enterprise User Guide</title>
-   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+<!DOCTYPE html>
+<html><head>
+   <title>Intel® Manager for Lustre*</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="robots" content="noarchive,noindex,nofollow" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
-   <meta name="robots" content="noindex, nofollow" />
-   <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
    <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript" src="jquery.tools.min.js"></script>
    <script type="text/javascript" src="jquery.scrollTo-min.js"></script>
-
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->
 <style type="text/css">
-
-/* Tabbed Browsing */
-
-a {outline: 0 none;}
-
-  body {
-    padding: 0;
-    margin: 0;
-    font: 11px/1.5em Verdana,Tahoma,Arial,Helvetica,Sans-Serif;
-    background-color: #e4e4e4;
-    background-image: url("lines.gif");
-    background-attachment: fixed;
-    }
-
- #ns-header {
-   width: 100%;
-   min-width: 280px;
-   position: fixed;
-   top: 0; left: 0;
-   padding:0;
-   margin: 0;
-   float: left;
-   clear: both;
-   z-index: 1;
- }
-  #header {
-    overflow: auto;
-    float:left;
-    width:100%;
-    background: #e4e4e4 url("nav_bg.gif") repeat-x bottom;
-   }
-
-#header ul {
-    margin:0;
-    padding:10px 10px 0;
-    list-style:none;
-    }
-  #header li {
-    float:left;
-    background:url("tableft.gif") no-repeat left top;
-    padding: 0 2px 0 4px;
-    margin-bottom: 5px;
-    }
-
-  a.tablink {
-    display:block;
-    background:url("tabright.gif")
-    no-repeat right top;
-    padding:5px 10px 2px 3px;
-    text-decoration:none;
-    font-size: 8pt;
-    font-weight: bold;
-    }
-  a.tablink:hover {
-	text-decoration: none;
+html, body {
+	overflow: hidden; 
+	font-family: Verdana, Tahoma, Helvetica, Sans-Serif;  
 	}
-  #header #current {
-    background-position: 0% -42px;
-    }
-  #header #current a {
-    background-position: 100% -42px;
-    padding-bottom: 3px;}
+div#hmidxheader {
+	position: absolute;
+	background: transparent;
+	top: 10px; left: 10px; right: 18px;
+	}
+div#idxheader { 
+	position: relative;
+	top: 0px; left: 0px; right: 0px;
+	display: none;
+	background-color: white;
+	z-index: 100;
+	}
+div#idxbody {
+	position: absolute;
+	top: 85px; bottom: 0; left: 9px; right: 0;
+	overflow-y: scroll;
+	margin-right: 2px;
+	padding-bottom: 5px;
+	border-top: 1px solid silver;
+	}
+.navtitle { font-size: 13pt; font-weight: bold; margin-bottom: 10px; }
+.nojstitle { font-size: 11pt; white-space: nowrap; margin-top: -8px; }
+.nojstitle a { color: black; text-decoration: none; }
+.nojstitle a:visited {color: black;}
+.nojstitle a:hover {text-decoration: underline; }
+#idx          { margin: 0; padding: 0; }     /* div tag that wraps the keyword index */
+#idx a        { color: #000; text-decoration: none; outline: none;}  /* all links in index appear as text */
+#idx a:visited { color: #000; } 
+#idx a:hover        { color: #000; text-decoration: underline; } 
 
-  #header #current a:hover {
-    color: #000;
-    }
-
-  #header li.noncurrent a {
-  color: #636363
-  }
-
-  #header li.noncurrent:hover {
-    background-position: 0% -42px;
-    margin: -2px 0 0 0;
-    }
-
-  #header li.noncurrent:hover a {
-    background-position: 100% -42px;
-    padding-bottom: 4px;
-    color: #000;
-    }
-
-
-   #body-shift {
-   margin: 0;
-   padding: 88px 0 0 0;
-   }
-
-    #body-wrap {
-      position: relative;
-      padding: 0 5px 5px 10px;
-      float:left;
-      clear:left;
-      height: 100%;
-      width: 100%;
-      }
-
-   #callout-wrap {
-     display: none;
-     position: relative;
-     width: auto;
-     }
-
-   #callout {
-    position: absolute;
-    top: 5px;
-    left: 30px;
-    display: block;
-    background: #fbf8a9;
-    border: 1px solid #757575;
-    padding: 3px;
-    }
-
-   #scrollPadder {
-     margin: 0;
-     padding: 0;
-     float: left;
-   }
-
-   #indexRefs, #indexRefsNoJS {
-      width: 100%;
-      background-color: #fff;
-      padding: 3px 5px 0px 15px;
-      float: left;
-   }
-   a.idxrefs {
-     font-weight: bold;
-   }
-
-
-/* End Tabbed Browsing */
-
-/* Suppress Index underlines in non-IE browsers */
-
-	a { color: black; text-decoration: none }
-	a:visited {color: black}
-	a:hover { text-decoration: underline }
-
-/* Styles for Index components (you can edit these) */
-
-       .navtitle    { font-size: 12pt; font-weight: bold; margin: 12px 0 0 10px; color: #000; }
-       .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; }
-
-       .navbar      { font-size: 10pt; }
-       .idxsection  { font-family: Arial,Helvetica; font-weight: bold; font-size: 11pt; color: #000000; text-decoration: none;
-                      margin-top: 8px; margin-bottom: 3px; white-space: nowrap;}
-       .idxkeyword  { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; }
-       .idxkeyword2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; }
-       .idxlink     { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #000000;  }
-
-       TABLE.idxtable { background: #fff; border-width: 1px; border-color: #000000; border-collapse: collapse; }
-       TD.idxtable    { background: #fff; }
-   </style>
-
-<!-- Adjust for MSIE -->
-<!--[if lte IE 8]>
-<style type="text/css">
-  #header, #header #current a {
-    padding-bottom: 5px;
-   }
-  #header a {
-    padding: 4px 10px 4px 3px;
-    margin-bottom: -2px;
-    }
-  #header li.noncurrent:hover a  {
-    padding-bottom: 6px; }
-
-  TABLE.idxtable { filter: progid:DXImageTransform.Microsoft.Shadow(color=B0B0B0, Direction=135, Strength=4); }
-
+#idx p             { margin: 2px; }       /* keywords and secondary keywords */
+#idx p.idxkeyword2 { margin-left: 20px }  /* indentation for secondary keywords */
+.idxsection  { font-family: Arial,Helvetica; font-weight: normal; font-size: 14pt; color: #000000; text-decoration: none;
+			  margin-top: 15px; margin-bottom: 5px; }
+.idxkeyword  { font-family: Arial,Helvetica; font-weight: normal; font-size: 11pt; color: #000000; text-decoration: none; }
+.idxkeyword2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 11pt; color: #000000; text-decoration: none; }
+.idxlink     { font-family: Arial,Helvetica; font-weight: normal; font-size: 9pt; color: #000000; text-decoration: none; }
+p.idxkeyword a:link, p.idxkeyword2 a:link { color: black; text-decoration: none;}
+p.idxkeyword a:visited, p.idxkeyword2 a:visited {color: black;}
+p.idxkeyword a:hover, p.idxkeyword2 a:hover { color: black; text-decoration: underline;}
+span.idxlabel { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt;}
+table\.idxtable { background: #F4F4F4;
+	border: 1px solid #000000;
+	border-collapse: collapse;
+	-moz-box-shadow: 2px 2px 2px #B0B0B0;
+	-webkit-box-shadow: 2px 2px 2px #B0B0B0;
+	box-shadow: 2px 2px 2px #B0B0B0;
+	filter: progid:DXImageTransform.Microsoft.Shadow(color=B0B0B0, Direction=135, Strength=4); 
+	}
+td.idxtable    { background: #F4F4F4; }
+td.idxtable a:link { color: black; text-decoration: none;}
+td.idxtable a:visited {color: black;}
+td.idxtable a:hover { color: black; text-decoration: underline;}
+a.idxrefs:link {color: black; text-decoration: none;}
+a.idxrefs:visited {color: black;}
+a.idxrefs:hover {color: black; text-decoration: underline;}
 </style>
-<![endif]-->
-<!--[if lte IE 6]>
-<style type="text/css">
-   #indexRefs, #indexRefsNoJS {
-      width: auto;
-      float: none;
-   }
-   #callout-wrap, #callout { z-index: 1000; }
-   #body-wrap { height: auto; }
-   #body-shift { margin: 0; padding:0; }
-</style>
-<![endif]-->
-
-<!-- Static page display when JavaScript is off -->
-<noscript>
-<style type="text/css">
-#ns-header {
-position: static;
-min-width: 0; }
-#indexRefs {
-display: none;
-}
-#indexRefsNoJS {
-  width: auto;
-  background-color: transparent;
-  }
-#body-shift { margin: 0; padding:0; }
-</style>
-</noscript>
-<script type="text/javascript">var headElement="ns-header",idxCallout="No index entries<br />beginning with",idxHl="#ffff00";</script>
-<script type="text/javascript" src="navinith.js"></script>
-<script type="text/javascript" src="idxinit.js"></script>
+<script type="text/javascript">
+/*! Keyword index init functions for HM Premium Pack Version 2.15
+Copyright (c) 2008-2013 by Tim Green 
+All rights reserved. */
+function ffFix(){if(!$.browser.mozilla){return}var a=document.location.search;if(a.indexOf("r2d2")>-1){return}else{a=a==""?"?r2d2":a+"&r2d2";document.location.search=a}}if(parent.window.hmnavpages&&parent.window.hmnavpages.ffCacheFix){ffFix()}var clicked=[];var idxTMP="";var idxCount=0;try{var Parent=parent.hmWebHelp?parent:window.opener.hmWebHelp?window.opener:false}catch(err){var Parent=false;document.location.replace("index.html")}function gotoIndex(a){if($(a).length>0){$("span.idxkeyword,span.idxkeyword2").css("backgroundColor","transparent");$("div#idxbody").scrollTo($(a),400)}else{alert("No index entries starting with "+a.replace("#",""))}}function hmScrollToKey(){var c=$("div#idxbody").height();var a=$("#idxSearch").val();var b=$("span.idxkeyword,span.idxkeyword2").filter(function(){return(new RegExp(a,"i")).test($(this).text())});if($(b[idxCount]).offset()&&a!=""){var d=$(b[idxCount]).offset();while(d&&d.top<(c+$("#idxSearch").scrollTop())){idxCount++;d=$(b[idxCount]).offset()}if($(b[idxCount]).html()!=null){$("div#idxbody").scrollTo(b[idxCount],400,{offset:-10})}else{idxCount=0;$("div#idxbody").scrollTo(b[idxCount],400,{offset:-10})}}}function hmFindKey(){var a=$("#idxSearch").val();$("span.idxkeyword,span.idxkeyword2").css("backgroundColor","transparent");var b=$("span.idxkeyword,span.idxkeyword2").filter(function(){return(new RegExp(a,"i")).test($(this).text())});var c=$(b)[0];if(b.length>0&&a.length>0){$(b).css("background-color","yellow");$("div#idxbody").scrollTo(c,400,{offset:-10})}else{if(a.length==0){$("div#idxbody").scrollTo({top:"0px",left:"0px"},400)}}}function idxIncr(a){if((idxTMP==a)&&(a!="")){idxCount++}else{idxCount=0;idxTMP=a}}function indexSearch(){var a=$("#idxSearch").val();idxIncr(a);if(a==""){hmFindKey()}if(idxCount>0&&a!=""){hmScrollToKey()}else{hmFindKey()}}function nsHeader(){var a=$("div#idxheader").outerHeight()+10;$("div#idxbody").css("top",a+"px")}$(document).ready(function(){$("div#hmidxheader").hide();$("div#idxbody").css("margin","5px 0px 2px 0px");$("div#idxheader").css("display","block");$("table.idxtable").css("position","absolute");nsHeader();$(window).bind("resize",function(){nsHeader()});if(window.opener){$("ul.tabs").show();$("ul.tabs a").css("cursor","default");$("div#hmbox").css("padding","10px");$("link#tabscheme").attr("href","hm_webhelp_undocked.css");$("body,html").css("backgroundImage","url('bg.png')");var a=setInterval(function(){function e(){clearInterval(a);window.close()}try{var c=window.opener.hmWebHelp.openWindows.length}catch(d){e()}if(!window.opener||c<1){e()}},500)}$("a[target='hmcontent']").click(function(){var c=$(this).attr("href");Parent.hmWebHelp.tocWin.tocScroller(c)});$("#idxSearch").keydown(function(c){if(c.keyCode==13){c.preventDefault();indexSearch()}});if(window.frameElement&&Parent.hmLayout.hmIndexArg!=""){var b=setInterval(function(){var d=document.getElementById("idxSearch");try{if(d.name){clearInterval(b);d.value=Parent.hmLayout.hmIndexArg;Parent.hmLayout.hmIndexArg="";if(document.all&&!window.opera){setTimeout(function(){indexSearch()},200)}else{indexSearch()}}}catch(c){}},100)}$("a[target='hmcontent']").click(function(){var c=parent.hmWebHelp?parent.window:window.opener?window.opener:false;var d=$(this).attr("href");var e=d.substr(0,d.indexOf("#"));if(c){if(e==c.hmWebHelp.currentPage){c.hmWebHelp.tabsapi.click(0)}}})});
+</script>
    <script type="text/javascript" src="helpman_settings.js"></script>
 </head>
 <body>
-  <div id="ns-header">
-  <div id="header">
-  <p class="navtitle">Chroma Enterprise User Guide</p>
-
-    <ul>
-      <li class="noncurrent"><a href="chromaonlinehelp_content.htm" class="tablink" title="Table of Contents">Contents</a></li>
-      <li id="current"><a href="#" class="tablink" title="Keyword Index">Index</a></li>
-      <li class="noncurrent"><a href="chromaonlinehelp_ftsearch.htm" class="tablink" title="Full-text Search">Search</a></li>
-    </ul>
-  </div>
+<ul id="topictabs" class="tabs">
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Index</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hmidxheader">
+<p class="navtitle">Intel® Manager for Lustre*</p>
+<p class="nojstitle"><a href="chromaonlinehelp_content.htm" target="_self">Contents</a> | <b>Index</b></p>
+</div>
+<div id="hminnerbox">
+<div id="idxheader">
 <div id="indexRefs">
   <a href="javascript:gotoIndex('#A')" class="idxrefs">A</a>
   <a href="javascript:gotoIndex('#B')" class="idxrefs">B</a>
@@ -242,7 +110,6 @@ display: none;
   <a href="javascript:gotoIndex('#L')" class="idxrefs">L</a>
   <a href="javascript:gotoIndex('#M')" class="idxrefs">M</a>
   <a href="javascript:gotoIndex('#N')" class="idxrefs">N</a>
-  <br />
   <a href="javascript:gotoIndex('#O')" class="idxrefs">O</a>
   <a href="javascript:gotoIndex('#P')" class="idxrefs">P</a>
   <a href="javascript:gotoIndex('#Q')" class="idxrefs">Q</a>
@@ -259,61 +126,14 @@ display: none;
 <div id="callout">
 </div>
 </div>
-<script type="text/javascript">
-document.write('<form id="searchForm" style="margin-top: 2px; margin-bottom: 2px;">' +
-'<input type="text" name="idxSearch" size="20" value="" id="idxSearch" class="zoom_searchbox" />' +
-'&nbsp;<button type="button" onclick="hmGoIndex();">Search</button></form>');
-// Index args checker
-if (window.frameElement) {
-if (parent.hmIndexArg != "") {
-  var indexCheck = setInterval(function(){
-    var box = document.getElementById("idxSearch");
-  try {if (box.name) {
-       clearInterval(indexCheck);
-       box.value = parent.hmIndexArg;
-       parent.hmIndexArg = "";
-       hmGoIndex();
-    }
-  } catch(err) {}
-  },100);
-} } // Index args checker
-</script>
+<form id="searchForm" style="margin-top: 2px; margin-bottom: 2px;">
+<input type="text" name="idxSearch" size="20" value="" id="idxSearch" />
+&nbsp;<button type="button" onclick="indexSearch();" title="Click again or press ENTER to scroll to the next highlighted item">Search Keywords</button>
+</form>
 </div>
-<!-- Noscript version of the index links -->
-<noscript>
-<div id="indexRefsNoJS">
-  <a href="#A" class="idxrefs">A</a>
-  <a href="#B" class="idxrefs">B</a>
-  <a href="#C" class="idxrefs">C</a>
-  <a href="#D" class="idxrefs">D</a>
-  <a href="#E" class="idxrefs">E</a>
-  <a href="#F" class="idxrefs">F</a>
-  <a href="#G" class="idxrefs">G</a>
-  <a href="#H" class="idxrefs">H</a>
-  <a href="#I" class="idxrefs">I</a>
-  <a href="#J" class="idxrefs">J</a>
-  <a href="#K" class="idxrefs">K</a>
-  <a href="#L" class="idxrefs">L</a>
-  <a href="#M" class="idxrefs">M</a>
-  <a href="#N" class="idxrefs">N</a>
-  <br />
-  <a href="#O" class="idxrefs">O</a>
-  <a href="#P" class="idxrefs">P</a>
-  <a href="#Q" class="idxrefs">Q</a>
-  <a href="#R" class="idxrefs">R</a>
-  <a href="#S" class="idxrefs">S</a>
-  <a href="#T" class="idxrefs">T</a>
-  <a href="#U" class="idxrefs">U</a>
-  <a href="#V" class="idxrefs">V</a>
-  <a href="#W" class="idxrefs">W</a>
-  <a href="#X" class="idxrefs">X</a>
-  <a href="#Y" class="idxrefs">Y</a>
-  <a href="#Z" class="idxrefs">Z</a>
 </div>
-</noscript>
-</div>
-<div id="body-shift">
-<table id="body-wrap" cellpadding="0" border="0"><tr><td valign="top">
+<div id="idxbody">
+<!-- Place holder for the keyword index - this variable is REQUIRED! -->
 <script type="text/javascript">
 
   function hmInitHideLinks(cssCode) {
@@ -359,106 +179,59 @@ if (parent.hmIndexArg != "") {
 </script>
 <div id="idx" style="margin:0;padding:0;border:none">
 <a name="A" id="A"></a><p class="idxsection">- A -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">adding a server</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_an_existing_lustr2.htm" target="hmcontent"><span class="idxkeyword">adding Lustre storage servers</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">adding storage targets</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Alerts page</span></a></p>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">adding storage targets</span></a></p>
 <a name="C" id="C"></a><p class="idxsection">- C -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">Chroma CLI</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k6')"><span class="idxkeyword">Chroma Manager</span></a></p>
-<div id="k6" style="position:relative;margin:0 0 0 20px;top:-3px">
-<table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="introducing_chroma.htm" target="hmcontent"><span class="idxlink">Introducing Chroma Enterprise</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="getting_started.htm" target="hmcontent"><span class="idxlink">Getting Started</span></a></td></tr></table></td></tr></table>
-</div>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="introducing_chroma.htm" target="hmcontent"><span class="idxkeyword">Chroma Storage appliance</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">Chroma Storage server</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k9')"><span class="idxkeyword">chroma-agent package</span></a></p>
-<div id="k9" style="position:relative;margin:0 0 0 20px;top:-3px">
-<table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="getting_started.htm" target="hmcontent"><span class="idxlink">Getting Started</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="configuring_an_existing_lustr2.htm" target="hmcontent"><span class="idxlink">Adding Existing Lustre Storage Servers</span></a></td></tr></table></td></tr></table>
-</div>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="mounting_file_system_clients.htm" target="hmcontent"><span class="idxkeyword">client mount information</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k11')"><span class="idxkeyword">command line interface (CLI)</span></a></p>
-<div id="k11" style="position:relative;margin:0 0 0 20px;top:-3px">
-<table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="introducing_chroma.htm" target="hmcontent"><span class="idxlink">Introducing Chroma Enterprise</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxlink">Managing Chroma Storage</span></a></td></tr></table></td></tr></table>
-</div>
-<p class="idxkeyword" style="margin:0 0 0 0px"><span class="idxkeyword">Configuration page</span></p>
-<p class="idxkeyword2" style="margin:0 0 0 20px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword2">File Systems</span></a></p>
-<p class="idxkeyword2" style="margin:0 0 0 20px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword2">MGTs (management targets)</span></a></p>
-<p class="idxkeyword2" style="margin:0 0 0 20px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword2">Servers</span></a></p>
-<p class="idxkeyword2" style="margin:0 0 0 20px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword2">Storage</span></a></p>
-<p class="idxkeyword2" style="margin:0 0 0 20px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword2">Volumes</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">configuring failover servers</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">configuring roles</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">configuring users</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">configuring volumes</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">creating a new file system</span></a></p>
+<p class="idxkeyword"><a href="getting_started.htm" target="hmcontent"><span class="idxkeyword">chroma-agent package</span></a></p>
+<p class="idxkeyword"><a href="mounting_file_system_clients.htm" target="hmcontent"><span class="idxkeyword">client mount information</span></a></p>
+<p class="idxkeyword"><a href="getting_started.htm" target="hmcontent"><span class="idxkeyword">Command Center</span></a></p>
+<p class="idxkeyword"><a href="javascript:void(0)" onclick="return hmshowLinks('k5')"><span class="idxkeyword">command line interface (CLI)</span></a></p>
+<div id="k5" style="position:relative;margin:0 0 0 20px;top:-3px">
+<table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding:0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxlink">Introducing Intel® Manager for Lustre*</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="managing_storage.htm" target="hmcontent"><span class="idxlink">Managing Storage</span></a></td></tr></table></td></tr></table></div>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">configuring failover servers</span></a></p>
 <a name="D" id="D"></a><p class="idxsection">- D -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Dashboard</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">decommissioning a server</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_an_existing_lustr2.htm" target="hmcontent"><span class="idxkeyword">detecting a file system</span></a></p>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">decommissioning a server</span></a></p>
 <a name="E" id="E"></a><p class="idxsection">- E -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="introducing_chroma.htm" target="hmcontent"><span class="idxkeyword">Enterprise Lustre</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Event History</span></a></p>
+<p class="idxkeyword"><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxkeyword">Enterprise Lustre</span></a></p>
 <a name="F" id="F"></a><p class="idxsection">- F -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><span class="idxkeyword">file system</span></p>
-<p class="idxkeyword2" style="margin:0 0 0 20px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword2">starting or stopping</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">file system administrator</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">file system user</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">File Systems</span></a></p>
-<a name="H" id="H"></a><p class="idxsection">- H -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">high availability</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">History page</span></a></p>
+<p class="idxkeyword"><span class="idxkeyword">file system</span></p>
+<p class="idxkeyword2"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword2">starting or stopping</span></a></p>
+<a name="I" id="I"></a><p class="idxsection">- I -</p>
+<p class="idxkeyword"><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxkeyword">Intel Manager for Lustre</span></a></p>
 <a name="L" id="L"></a><p class="idxsection">- L -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Logs page</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k30')"><span class="idxkeyword">Lustre client</span></a></p>
-<div id="k30" style="position:relative;margin:0 0 0 20px;top:-3px">
-<table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxlink">What Is Lustre?</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="mounting_file_system_clients.htm" target="hmcontent"><span class="idxlink">Mounting File System Clients</span></a></td></tr></table></td></tr></table>
-</div>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="introducing_chroma.htm" target="hmcontent"><span class="idxkeyword">Lustre file system</span></a></p>
+<p class="idxkeyword"><a href="mounting_file_system_clients.htm" target="hmcontent"><span class="idxkeyword">Lustre client</span></a></p>
+<p class="idxkeyword"><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxkeyword">Lustre file system</span></a></p>
 <a name="M" id="M"></a><p class="idxsection">- M -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">management target</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">management target (MGT)</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxkeyword">metadata operations</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="javascript:void(0)" onclick="return hmshowLinks('k35')"><span class="idxkeyword">metadata server</span></a></p>
-<div id="k35" style="position:relative;margin:0 0 0 20px;top:-3px">
-<table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="introducing_chroma.htm" target="hmcontent"><span class="idxlink">Introducing Chroma Enterprise</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxlink">Configuring Chroma Manager</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxlink">Creating a Lustre File System</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="configuring_an_existing_lustr2.htm" target="hmcontent"><span class="idxlink">Adding Existing Lustre Storage Servers</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxlink">Monitoring a Lustre File System</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxlink">Managing Chroma Storage</span></a></td></tr></table></td></tr></table>
-</div>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">metadata target</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">MGTs page</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxkeyword">monitoring a file system</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="getting_started.htm" target="hmcontent"><span class="idxkeyword">monitoring an existing Lustre file system</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="mounting_file_system_clients.htm" target="hmcontent"><span class="idxkeyword">mounting a client</span></a></p>
+<p class="idxkeyword"><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxkeyword">metadata operations</span></a></p>
+<p class="idxkeyword"><a href="javascript:void(0)" onclick="return hmshowLinks('k14')"><span class="idxkeyword">metadata server</span></a></p>
+<div id="k14" style="position:relative;margin:0 0 0 20px;top:-3px">
+<table class="idxtable" style="padding:4px"><tr><td class="idxtable"><table style="border:none;padding:0"><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxlink">Introducing Intel® Manager for Lustre*</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxlink">Monitoring Lustre* file systems</span></a></td></tr><tr style="vertical-align:baseline"><td><img src="ciconidx.gif" style="border:none" alt="Icon"></td><td><a href="managing_storage.htm" target="hmcontent"><span class="idxlink">Managing Storage</span></a></td></tr></table></td></tr></table></div>
+<p class="idxkeyword"><a href="monitoring_a_file_system.htm" target="hmcontent"><span class="idxkeyword">monitoring a file system</span></a></p>
+<p class="idxkeyword"><a href="getting_started.htm" target="hmcontent"><span class="idxkeyword">monitoring an existing Lustre file system</span></a></p>
+<p class="idxkeyword"><a href="mounting_file_system_clients.htm" target="hmcontent"><span class="idxkeyword">mounting a client</span></a></p>
 <a name="O" id="O"></a><p class="idxsection">- O -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="introducing_chroma.htm" target="hmcontent"><span class="idxkeyword">object storage server</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="enterprise_lustre_overview.htm" target="hmcontent"><span class="idxkeyword">object storage target</span></a></p>
-<a name="R" id="R"></a><p class="idxsection">- R -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">roles</span></a></p>
+<p class="idxkeyword"><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxkeyword">object storage server</span></a></p>
 <a name="S" id="S"></a><p class="idxsection">- S -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Servers page</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">starting a file system</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">starting a target server</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">stopping a file system</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">stopping a target server</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Storage page</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="idxkeyword">superuser</span></a></p>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">starting a file system</span></a></p>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">starting a target server</span></a></p>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">stopping a file system</span></a></p>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">stopping a target server</span></a></p>
+<p class="idxkeyword"><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxkeyword">storage appliance</span></a></p>
 <a name="T" id="T"></a><p class="idxsection">- T -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><span class="idxkeyword">target server</span></p>
-<p class="idxkeyword2" style="margin:0 0 0 20px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword2">starting or stopping</span></a></p>
+<p class="idxkeyword"><span class="idxkeyword">target server</span></p>
+<p class="idxkeyword2"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword2">starting or stopping</span></a></p>
 <a name="U" id="U"></a><p class="idxsection">- U -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="introducing_chroma.htm" target="hmcontent"><span class="idxkeyword">user interface (UI)</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="managing_chroma_storage.htm" target="hmcontent"><span class="idxkeyword">using command line</span></a></p>
-<a name="V" id="V"></a><p class="idxsection">- V -</p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">view file system</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="creating_a_file_system.htm" target="hmcontent"><span class="idxkeyword">volumes</span></a></p>
-<p class="idxkeyword" style="margin:0 0 0 0px"><a href="a_quick_tour.htm" target="hmcontent"><span class="idxkeyword">Volumes page</span></a></p>
+<p class="idxkeyword"><a href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="idxkeyword">user interface (UI)</span></a></p>
+<p class="idxkeyword"><a href="managing_storage.htm" target="hmcontent"><span class="idxkeyword">using command line</span></a></p>
 </div>
 
-</td></tr></table><!--  body-wrap -->
-</div>
-<div id="scrollPadder" >&nbsp; </div>
-</body>
-<!--[if gt IE 6]>
+</div> <!-- idxbody --> 
+</div><!-- hminnerbox -->
+</div><!-- hmbox -->
 <script type="text/javascript">
-headResizeIDX();
+$(document).ready(function() {
+// Close popups when clicked so they are not orphaned
+$("span.idxlink").click(function() { setTimeout(function(){hmhideLinks();},500)});
+});
 </script>
-<![endif]-->
+</body>
 </html>

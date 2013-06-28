@@ -1,0 +1,222 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+   <title>Configure PDUs and Outlets to Support HA and Failover</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <meta name="generator" content="Help &amp; Manual" />
+   <meta name="keywords" content="" />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="description" content="Use this tool to add power distribution units (PDUs) and to assign specific PDU power outlets to individual servers. &nbsp;Once configured, this feature lets you check the status of..." />
+   <meta http-equiv="Content-Style-Type" content="text/css" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
+<style type="text/css">
+/* No header topics */
+
+/* Breadcrumb trail */
+p#breadcrumbs {
+font-family: Verdana, Tahoma, Helvetica, Sans-Serif;   padding: 2px 0 1px 2px;
+   margin: 0;
+   font-size: 8pt; 
+   color: #999;
+   }   
+p#breadcrumbs a { color: #999; text-decoration: none;}
+p#breadcrumbs a:visited {color: #999;}
+p#breadcrumbs a:hover { color: #333; border-bottom: 1px dotted #333; }
+
+/* Search hightlight color */
+span.highlight {background-color: #ffff40;}
+  div#hmsocialmedia {
+  min-width: 606px;
+  }
+</style>
+<script type="text/javascript">
+var hmHeaderTopic = true;
+
+</script> 
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->	
+<script src="jquery.js"></script>
+<script type="text/javascript" src="jquery.tools.min.js"></script>
+<script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+<script type="text/javascript"> 
+// General topic variables
+var tVars = {
+   hmHelpPage: "index.html",
+   nextP: "adding_a_storage_target_to_a_f_5.htm",
+   prevP: "adding_a_storage_target_to_a_f.htm",
+   currP: "adding_and_configuring_power_d.htm",
+   defP: "intel_manager_for_lustre.htm",
+   mailUrl: "",
+   mailUrlQuery: "",
+   titleP: "Configure PDUs and Outlets to Support HA and Failover",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Configure PDUs and Outlets to Support HA and Failover",
+   sharesubject: "Intel® Manager for Lustre* - Configure PDUs and Outlets to Support HA and Failover",
+   simplesubject: "Documentation%20Feedback",
+   mailid: "Adding_and_Configuring_Power_D",
+   mailpath: "Managing Storage &gt; Configure PDUs and Outlets to Support HA and Failover /",
+   mailbody: "Dear Support Staff,",
+   fbtype: false,
+   header: true,
+   background: "bg.png",
+   tablesReady: false,
+   togglesReady: false,
+   webRedirect: true,
+   topicTitleBar: true,
+   printFooter: true,
+   zoomTip: "Click to view full size image",
+   autoPrint: true,
+   printButton: "Print",
+   printButtonTip: "Print the current topic"
+   }
+// Popup configuration
+ var hmpBShadow = true;
+ var hmPopSmallDim = 500;
+ var hmPopKillVideo = true;
+ // AutoTOC variables
+ var hmatocvars = {
+   atoc_show: true,
+   atoc_title: "Contents",
+   atoc_tip: "Jump to:&nbsp;",
+   atoc_minHeaders: 3,
+   atoc_btntip_off: "No contents entries on this page",
+   atoc_btntip_on: "Display/hide topic directory",
+   atoc_toptip: "Jump to top of page",
+   atoc_top: "Scroll to Top of Page",
+   atoc_bg: "#f6f6f6",
+   atoc_border: "silver",
+   atoc_linkcolor: "#444",
+   atoc_linklimit: 45,
+   atoc_hovercolor: "#000",
+   atoc_hoverbgcolor: "#e0e0e0"
+}
+// Sortable tables
+var sortVars = {
+   europeandate: false,
+   germanNumbers: false,
+   imagePath: "",
+   image_up: "arrow-up.gif",
+   image_down: "arrow-down.gif",
+   image_empty: "arrow-empty.gif",
+   image_none: "arrow-none.gif",
+   sort_tip: "Click to sort on this column",
+   umlauts: "false"
+   }
+
+</script>
+
+<script type="text/javascript">
+if (tVars.topicTitleBar) { 
+$(document).ready(function() {
+var doc = document;  
+try {
+if (parent.hmWebHelp.navWidth != null) doc = parent.document;
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Configure PDUs and Outlets to Support HA and Failover").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+} catch(err) {}
+});
+}
+</script>
+
+<script type="text/javascript" src="//platform.linkedin.com/in.js"></script>
+<script type="text/javascript" src="helpman_settings.js"></script>
+<script type="text/javascript" src="helpman_topicinit.js"></script>
+<script type="text/javascript" src="hmtopic.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "adding_and_configuring_power_d.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head>
+<body>
+<!--ZOOMSTOP-->
+<div id="hmsocialmedia">
+	<ul class="social-buttons">
+	<li>
+		<div class="fb-button">
+		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?adding_and_configuring_power_d.htm"
+        scrolling="no" frameborder="0"
+        style="border:none; width:300px; height:26px"></iframe>
+		</div>
+	</li>
+	<li>
+	<div class="twitter-button">
+		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?adding_and_configuring_power_d.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
+		<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}})(document,"script","twitter-wjs");</script>
+	</div>
+	</li>
+	<li>
+		<div class="googleplusone-button">
+                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?adding_and_configuring_power_d.htm"></g:plusone>
+                </div>
+		<script type="text/javascript">
+		window.___gcfg = {lang: 'en-US'};
+      (function(){var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = 'https://apis.google.com/js/plusone.js';var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);})();
+    </script>
+                
+	</li> 
+	<li>
+		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?adding_and_configuring_power_d.htm"></script></div>
+	</li>
+	<li>
+		<div id="mailthisbutton"><a href="mailto:?body=http://www.ec-software.com/help/index.html%3F<%HREF_CURRENT_PAGE%" class="sbutton">
+		<span id="sbuttontext">Mail This</span>
+		</a></div>
+	</li> 
+	</ul>
+	</div>
+
+
+<ul id="topictabs" class="tabs">
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Configure PDUs and Outlets to Support HA and Failover</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hmheader">
+<div id="hmheadercontents">
+ 
+<h1 class="p_Heading1"><span class="f_Heading1">Configure PDUs and Outlets to Support HA and Failover</span></h1>
+
+</div>
+<div id="atocIcon" class="navdivs">
+<img class="navicon" id="hmAtocLink" src="contents_off.png" alt="No contents entries on this page" title="No contents entries on this page" />
+<br /><span>Contents</span>
+</div>
+</div>
+<div id="autoTocWrapper" class="topicmenu"></div>
+<div id="idcontent">
+<div id="unclicker"></div>
+
+<!--ZOOMRESTART-->
+<p class="p_BodyText"><span class="f_BodyText">Use this tool to add power distribution units (PDUs) and to assign specific PDU power outlets to individual servers. &nbsp;Once configured, this feature lets you check the status of PDUs and individual outlets. &nbsp;Based on server power requirements and your failover configuration, you may want to assign more than one outlet to a server. &nbsp;For improved failover performance, consider assigning the failover outlet from a different PDU than the primary outlet. &nbsp;When you associate PDU failover outlets with servers using this tool, STONITH is automatically configured.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: All references herein to the manager refer to the Intel® Manager for Lustre* software.</span></p>
+<h2 class="p_Heading2"><span class="f_Heading2">Add PDUs</span></h2>
+<p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">Go to </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> &gt; </span><span class="f_BodyText" style="font-weight: bold;">PDUs</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">With no power distribution units recognized, this tab will read: </span><span class="f_BodyText" style="font-style: italic;">No power distribution units are configured</span><span class="f_BodyText">. &nbsp;Click </span><span class="f_BodyText" style="font-weight: bold;">Add PDU</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">At the Add PDU dialogue, select the Device type from the drop-down list.</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">Enter a name for this PDU. (If not entered, this field will default to the IP address.)</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">5.</span><span class="f_BodyText">Enter the IP address for the PDU. If not known, enter a DNS-resolvable hostname. &nbsp;The address is stored as an IPv4 address. Note: If this IP address later changes in DNS, it will not automatically update here and you will need to update this address. </span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">6.</span><span class="f_BodyText">Enter the port number. &nbsp;This port number must be unique to this PDU.</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">7.</span><span class="f_BodyText">Enter your Management user name.</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">8.</span><span class="f_BodyText">Enter your Management password. Then click </span><span class="f_BodyText" style="font-weight: bold;">Save</span><span class="f_BodyText">.</span></p><h2 class="p_Heading2"><span class="f_Heading2">Assign PDU outlets to servers</span></h2>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: Electrical connection between a given PDU outlet and a specific server is performed by a qualified technician before PDUs are configured and assigned by this software. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">At the next screen, you can assign PDU outlets to servers. &nbsp;The left column shows all servers used in all file systems that you're currently managing. &nbsp; Each column to the right of the Server column shows outlet assignments for one PDU. &nbsp;If you have four PDUs configured, then there are four PDU columns. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">Each row represents an outlet-to-server assignment. &nbsp;To assign PDU outlets to servers:</span></p>
+<p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">Pick a server row for which you want to assign outlets. </span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Mouse over to the PDU column and click within the drop-down box to expose the outlets available from this PDU. &nbsp;Now select the desired outlet. &nbsp;(You can also use the tab key to tab to the desired server/PDU. &nbsp;Then begin to enter the outlet name. This field auto-fills. &nbsp;Tab or press Enter to confirm this selection.)</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">Move to down to the next server and assign outlets in the same way. &nbsp;Note that as an outlet is assigned to a server, it becomes unavailable for reassignment.</span></p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">To remove an outlet from a server, click the &lt;insert icon&gt; next to the outlet name. &nbsp; It now becomes available to reassign.</span></p><h2 class="p_Heading2"><span class="f_Heading2">Remove an outlet</span></h2>
+<p class="p_BodyText"><span class="f_BodyText">To remove the outlet from this server assignment, click the &lt;insert icon&gt; next to the outlet name. &nbsp;This action makes this outlet available for assignment again (assuming the outlet is available).</span></p>
+<h2 class="p_Heading2"><span class="f_Heading2">Learn the IP address of a PDU outlet</span></h2>
+<p class="p_BodyText"><span class="f_BodyText">Hover over the outlet icon &lt;insert icon&gt;.</span></p>
+<h2 class="p_Heading2"><span class="f_Heading2">Edit this PDU's parameters </span></h2>
+<p class="p_BodyText"><span class="f_BodyText">Click &lt;insert icon&gt; to open a dialogue and edit the PDU's parameters.</span></p>
+<h2 class="p_Heading2"><span class="f_Heading2">Remove a PDU</span></h2>
+<p class="p_BodyText"><span class="f_BodyText">Click &nbsp;&lt;insert icon&gt; to remove the PDU.  </span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: Removing the PDU will remove all monitoring of the PDU's outlets by the manager.</span></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<!--ZOOMSTOP-->
+
+</div> <!-- idcontent -->
+</div><!-- hmbox --> 
+</body>
+</html>

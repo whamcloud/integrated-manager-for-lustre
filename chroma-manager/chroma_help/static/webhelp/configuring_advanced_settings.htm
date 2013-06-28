@@ -1,0 +1,213 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+   <title>Configuring Advanced Settings // in process</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <meta name="generator" content="Help &amp; Manual" />
+   <meta name="keywords" content="" />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="description" content="/// This text would cover the Configuration &gt; File Systems &gt; Advanced Settings pop-up menu. &nbsp;This has Tuneable Settings and Timeout Settings. &nbsp;I may not cover this as this..." />
+   <meta http-equiv="Content-Style-Type" content="text/css" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
+<style type="text/css">
+/* No header topics */
+
+/* Breadcrumb trail */
+p#breadcrumbs {
+font-family: Verdana, Tahoma, Helvetica, Sans-Serif;   padding: 2px 0 1px 2px;
+   margin: 0;
+   font-size: 8pt; 
+   color: #999;
+   }   
+p#breadcrumbs a { color: #999; text-decoration: none;}
+p#breadcrumbs a:visited {color: #999;}
+p#breadcrumbs a:hover { color: #333; border-bottom: 1px dotted #333; }
+
+/* Search hightlight color */
+span.highlight {background-color: #ffff40;}
+  div#hmsocialmedia {
+  min-width: 606px;
+  }
+</style>
+<script type="text/javascript">
+var hmHeaderTopic = true;
+
+</script> 
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->	
+<script src="jquery.js"></script>
+<script type="text/javascript" src="jquery.tools.min.js"></script>
+<script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+<script type="text/javascript"> 
+// General topic variables
+var tVars = {
+   hmHelpPage: "index.html",
+   nextP: "monitoring_a_file_system.htm",
+   prevP: "adding_existing_lustre_storage_servers.htm",
+   currP: "configuring_advanced_settings.htm",
+   defP: "intel_manager_for_lustre.htm",
+   mailUrl: "",
+   mailUrlQuery: "",
+   titleP: "Configuring Advanced Settings // in process",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Configuring Advanced Settings",
+   sharesubject: "Intel® Manager for Lustre* - Configuring Advanced Settings",
+   simplesubject: "Documentation%20Feedback",
+   mailid: "Configuring_Advanced_Settings",
+   mailpath: "Getting Started &gt; Configuring Advanced Settings // in process /",
+   mailbody: "Dear Support Staff,",
+   fbtype: false,
+   header: true,
+   background: "bg.png",
+   tablesReady: false,
+   togglesReady: false,
+   webRedirect: true,
+   topicTitleBar: true,
+   printFooter: true,
+   zoomTip: "Click to view full size image",
+   autoPrint: true,
+   printButton: "Print",
+   printButtonTip: "Print the current topic"
+   }
+// Popup configuration
+ var hmpBShadow = true;
+ var hmPopSmallDim = 500;
+ var hmPopKillVideo = true;
+ // AutoTOC variables
+ var hmatocvars = {
+   atoc_show: true,
+   atoc_title: "Contents",
+   atoc_tip: "Jump to:&nbsp;",
+   atoc_minHeaders: 3,
+   atoc_btntip_off: "No contents entries on this page",
+   atoc_btntip_on: "Display/hide topic directory",
+   atoc_toptip: "Jump to top of page",
+   atoc_top: "Scroll to Top of Page",
+   atoc_bg: "#f6f6f6",
+   atoc_border: "silver",
+   atoc_linkcolor: "#444",
+   atoc_linklimit: 45,
+   atoc_hovercolor: "#000",
+   atoc_hoverbgcolor: "#e0e0e0"
+}
+// Sortable tables
+var sortVars = {
+   europeandate: false,
+   germanNumbers: false,
+   imagePath: "",
+   image_up: "arrow-up.gif",
+   image_down: "arrow-down.gif",
+   image_empty: "arrow-empty.gif",
+   image_none: "arrow-none.gif",
+   sort_tip: "Click to sort on this column",
+   umlauts: "false"
+   }
+
+</script>
+
+<script type="text/javascript">
+if (tVars.topicTitleBar) { 
+$(document).ready(function() {
+var doc = document;  
+try {
+if (parent.hmWebHelp.navWidth != null) doc = parent.document;
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Configuring Advanced Settings // in process").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+} catch(err) {}
+});
+}
+</script>
+
+<script type="text/javascript" src="//platform.linkedin.com/in.js"></script>
+<script type="text/javascript" src="helpman_settings.js"></script>
+<script type="text/javascript" src="helpman_topicinit.js"></script>
+<script type="text/javascript" src="hmtopic.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "configuring_advanced_settings.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head>
+<body>
+<!--ZOOMSTOP-->
+<div id="hmsocialmedia">
+	<ul class="social-buttons">
+	<li>
+		<div class="fb-button">
+		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?configuring_advanced_settings.htm"
+        scrolling="no" frameborder="0"
+        style="border:none; width:300px; height:26px"></iframe>
+		</div>
+	</li>
+	<li>
+	<div class="twitter-button">
+		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?configuring_advanced_settings.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
+		<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}})(document,"script","twitter-wjs");</script>
+	</div>
+	</li>
+	<li>
+		<div class="googleplusone-button">
+                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?configuring_advanced_settings.htm"></g:plusone>
+                </div>
+		<script type="text/javascript">
+		window.___gcfg = {lang: 'en-US'};
+      (function(){var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = 'https://apis.google.com/js/plusone.js';var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);})();
+    </script>
+                
+	</li> 
+	<li>
+		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?configuring_advanced_settings.htm"></script></div>
+	</li>
+	<li>
+		<div id="mailthisbutton"><a href="mailto:?body=http://www.ec-software.com/help/index.html%3F<%HREF_CURRENT_PAGE%" class="sbutton">
+		<span id="sbuttontext">Mail This</span>
+		</a></div>
+	</li> 
+	</ul>
+	</div>
+
+
+<ul id="topictabs" class="tabs">
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Configuring Advanced Settings // in process</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hmheader">
+<div id="hmheadercontents">
+ 
+<h1 class="p_Heading1"><span class="f_Heading1">Configuring Advanced Settings</span></h1>
+
+</div>
+<div id="atocIcon" class="navdivs">
+<img class="navicon" id="hmAtocLink" src="contents_off.png" alt="No contents entries on this page" title="No contents entries on this page" />
+<br /><span>Contents</span>
+</div>
+</div>
+<div id="autoTocWrapper" class="topicmenu"></div>
+<div id="idcontent">
+<div id="unclicker"></div>
+
+<!--ZOOMRESTART-->
+<p>/// This text would cover the Configuration &gt; File Systems &gt; Advanced Settings pop-up menu. &nbsp;This has Tuneable Settings and Timeout Settings. &nbsp;I may not cover this as this information is almost identical to the context help snippets (pop-ups) - Dan///</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p><span style="font-weight: bold;">Tuneable Settings</span></p>
+<p>These settings:</p>
+<p>&nbsp;</p>
+<p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>max_cached_mb - This tunable is the maximum amount of inactive data cached by the client. &nbsp;Entered in megabytes. The &nbsp;default is 3/4 of existing RAM). /// dan /// &nbsp;which RAM?</p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>max_read_ahead_mb - File readahead is triggered when two or more sequential reads by an application fail to be satisfied by the Linux buffer cache. The initial size of the readahead is 1 MB. Additional readaheads grow linearly, and increment until the readahead cache on the client is full at 40 MB. This tunable setting controls the maximum amount of data readahead permitted on a file. Files are read ahead in RPC-sized chunks (1 MB or the size of read() call, if larger) after the second sequential read on a file descriptor. &nbsp;Random reads are done at the size of the read() call only (no readahead). Reads to non-contiguous regions of the file reset the readahead algorithm, and readahead is not triggered again until there are sequential reads again. To disable readahead, set this tunable to 0. The default value is 40 MB. </p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>max_read_ahead_whole_mb - This tunable setting controls the maximum size of a file that is read in its entirety, regardless of the size of the read().</p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>statahead_max - Many system commands will traverse a directory sequentially. To make these commands run efficiently, the &nbsp;directory statahead and AGL (asynchronous glimpse lock) are enabled to improve the performance of traversing. &nbsp;This tuneable sets the maximum statahead windows size (which means how many files can be pre-fetched by the statahead thread). By default, satahead_max is 32. Can set to this 0 to disable? &nbsp;Can I set this to n to hit max? &nbsp;What is max? 8192? &nbsp;8192 what?</p><p>&nbsp;</p>
+<p><span style="font-weight: bold;">Timeout Settings</span></p>
+<p>These setting are pre-set to default values. &nbsp;Most of these settings are automatically adaptive so that an administrator should not need to change them. </p>
+<p>&nbsp;</p>
+<p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>at_early_margin - Sets how far before the deadline Lustre sends an early reply. Default value is 5. &nbsp;(5 what?)</p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>at_extra - Sets the incremental amount of time that a server asks for, with each early reply. The server does not know how much time the RPC will take, so it asks for a fixed value. Default value is 30 </p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>at_history - Sets a time period (in seconds) within which adaptive timeouts remember the slowest event that</p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>occurred. Default value is 600.</p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>at_max - Sets the maximum adaptive timeout (in seconds). The at_max parameter is an upper-limit on the service time estimate, and is used as a 'failsafe' in case of bad code that would lead to never-ending estimate increases.</p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>at_min - Sets the minimum adaptive timeout (in seconds). Default value is 0. The at_min parameter is the minimum processing time that a server will report. </p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>Idlm_timeout - /// this is not discussed in the Lustre manual. Is this related to ldlm_enqueue_min?</p><p style="text-align: left; line-height: 1.20; padding: 0px 0px 0px 13px; margin: 0px 0px 0px 0px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span>timeout - /// which timeout is this? &nbsp;where in the manual?</p><p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<!--ZOOMSTOP-->
+
+</div> <!-- idcontent -->
+</div><!-- hmbox --> 
+</body>
+</html>

@@ -1,9 +1,9 @@
 /* ------------ Script copyright 2005-2012 EC Software -------------
-   This script was created by Help & Manual and is part of the
-   Webhelp export format. This script is designed for use in
-   combination with the output of Help & Manual and must not
-   be used outside this context. http://www.helpandmanual.com
-
+   This script was created by Help & Manual and is part of the      
+   Webhelp export format. This script is designed for use in 
+   combination with the output of Help & Manual and must not 
+   be used outside this context. http://www.helpandmanual.com   
+                                                                    
    Do not modify this file! It will be overwritten by Help & Manual.
    ----------------------------------------------------------------- */
 
@@ -30,7 +30,7 @@ function hmAddCss(adoc, cssCode) {
   styleElement.type = "text/css";
   if (styleElement.styleSheet) {
     styleElement.styleSheet.cssText = cssCode;
-  }
+  }  
   else {
     styleElement.appendChild(adoc.createTextNode(cssCode));
   }
@@ -38,7 +38,7 @@ function hmAddCss(adoc, cssCode) {
 }
 
 function hmSupportsAbspos() {
-  if (abspossupported==0) {
+  if (abspossupported==0) {	
     tmp = $('<div style="position:absolute;left:0;right:0;display:none">&nbsp;</div>').appendTo('body');
     if (($(tmp).outerWidth()+30) > $(window).width()) abspossupported = 1;
     else abspossupported = -1;
@@ -52,7 +52,7 @@ function hmNoAbsposResize(jdiv, w, h) {
   var windowWidth, windowHeight;
   if (self.innerHeight) {	// all except Explorer
     if(document.documentElement.clientWidth){
-	  windowWidth = document.documentElement.clientWidth;
+	  windowWidth = document.documentElement.clientWidth; 
     } else {
       windowWidth = self.innerWidth;
     }
@@ -63,25 +63,25 @@ function hmNoAbsposResize(jdiv, w, h) {
   } else if (document.body) { // other Explorers
     windowWidth = document.body.clientWidth;
     windowHeight = document.body.clientHeight;
-  }
+  }	
   if (w) jdiv.css('width', ( windowWidth - parseInt(jdiv.css('left')) - parseInt(jdiv.css('right')) ));
   if (h) jdiv.css('height', ( windowHeight - parseInt(jdiv.css('top')) - parseInt(jdiv.css('bottom')) ));
-}
+}	
 
 function hmNavigationFrame() {
   for (var i=0;i<frames.length;i++) {
-  	if (frames[i].name=='hmnavigation') return frames[i];
-  }
-  return self;
+  	if (frames[i].name=='hmnavigation') return frames[i];  
+  }   	  
+  return self;  	
 }
 
 function hmContentFrame() {
   if (!document.getElementById("hmcontent")) return null;
-  return hmcontent;
+  return hmcontent;  	
 }
 
 function track(action, data) {
-  if (gaaccount != "") {
+  if (gaaccount != "") {	
     if (window._gat) {
       var pageTracker = window._gat._getTracker(gaaccount);
       switch(action) {
@@ -111,13 +111,13 @@ function fullexpand(animate) { switchall(true, animate); }
 function fullcollapse(animate) { switchall(false, animate); }
 
 function levelexpand(divID, animate) {
-	var thisDIV = hmNavigationFrame().document.getElementById(divID);
+	var thisDIV = hmNavigationFrame().document.getElementById(divID); 
     var items = thisDIV.getElementsByTagName("li");
     for(var i = 0; i < items.length; i++) {
       if (items[i].parentNode==thisDIV) {
-        var thisUL = hmULfromID(items[i].id);
+        var thisUL = hmULfromID(items[i].id);	
         if (thisUL) hmSwitchNode(thisUL, true, animate);
-      }
+      }	
     }
 }
 
@@ -134,12 +134,12 @@ function loadstate(toc) {
 	var tmpAnimate = hmAnimate;
     hmAnimate = false;
     currentselection = null;
-
+   
     if (currenttocstate=="") {
       if (usecookie) currenttocstate = document.cookie;
       else { /* load default toc state */
 	    if (initialtocstate == 'expandall') fullexpand(false);
-	    else {
+	    else { 
 	      if (initialtocstate == 'expandtoplevel') { fullcollapse(false); levelexpand('toc', false); }
 	      else fullcollapse(false);
         }
@@ -193,7 +193,7 @@ function hmNodeClicked(node, event) {
       var thisClicked = ( (event.clientY+scrOfY > $(node).offset().top) && (event.clientY+scrOfY < ($(node).offset().top+offset)) &&
                           (event.clientX+scrOfX < $(node).offset().left+nodeW) && (event.clientX+scrOfX > ($(node).offset().left+nodeW-offset-textW)) );
       var iconClicked = (thisClicked && (event.clientX+scrOfX < $(node).offset().left+nodeW) && (event.clientX+scrOfX > ($(node).offset().left+nodeW-offset)));
-	}
+	}	
     var thisID = node.id;
     if (iconClicked) {
       toggle('ul'+thisID.substring(1,thisID.length));
@@ -204,14 +204,14 @@ function hmNodeClicked(node, event) {
       }
       else {
         hilight('s'+thisID.substring(1,thisID.length));
-      }
+      }    
     }
-}
+}		
 
 function hmNodeDblclicked(node) {
     thisID = node.id;
     toggle('ul'+thisID.substring(1,thisID.length));
-}
+}		
 
 function hmLIfromID(thisID) {
   return hmNavigationFrame().document.getElementById('i'+thisID.replace(/[isaul]/g,''));
@@ -222,18 +222,18 @@ function hmULfromID(thisID) {
 }
 
 function hmSwitchNode(thisUL, nodevisible, animate) {
-  if ((thisUL.style.display!='none')!=nodevisible) {
+  if ((thisUL.style.display!='none')!=nodevisible) { 
     var thisLI = hmLIfromID(thisUL.id);
-    if (thisLI) {
+    if (thisLI) { 
        var thisIcon = thisLI.getAttribute('data-bg');
-       if (thisIcon!='') $(thisLI).css('background-image', 'url(' + (nodevisible ? thisIcon.substr(thisIcon.indexOf(';')+1, thisIcon.length) : thisIcon.substr(0, thisIcon.indexOf(';')) ) + ')');
+       if (thisIcon!='') $(thisLI).css('background-image', 'url(' + (nodevisible ? thisIcon.substr(thisIcon.indexOf(';')+1, thisIcon.length) : thisIcon.substr(0, thisIcon.indexOf(';')) ) + ')'); 
 
        if (nodevisible) {
-         if (animate && hmAnimate) $(thisUL).slideDown('fast');
+         if (animate && hmAnimate) $(thisUL).slideDown('fast'); 
          else thisUL.style.display = 'block';
        }
        else {
-         if (animate && hmAnimate) $(thisUL).slideUp('fast');
+         if (animate && hmAnimate) $(thisUL).slideUp('fast'); 
          else thisUL.style.display = 'none';
        }
     }
@@ -246,7 +246,7 @@ function hilightexpand(spanID) {
       if (thisUL) hmSwitchNode(thisUL, true, true);
       return true;
     }
-    else return false;
+    else return false; 
 }
 
 function hilight(spanID) {
@@ -278,7 +278,7 @@ function intoview(thisnode, tree, selectionchanged) {
     var bt = (hmNavigationFrame().window.pageYOffset)?hmNavigationFrame().window.pageYOffset:hmNavigationFrame().document.body.scrollTop;
     var bh = (hmNavigationFrame().window.innerHeight)?hmNavigationFrame().window.innerHeight:hmNavigationFrame().document.body.offsetHeight;
     if ((t+thisnode.offsetHeight-bt) > bh) hmNavigationFrame().window.scrollTo(0,(t+24-bh))
-    else if (t < bt) hmNavigationFrame().window.scrollTo(0,t);
+    else if (t < bt) hmNavigationFrame().window.scrollTo(0,t);              
 }
 
 function collapseunfocused(toc, selectedID) {
@@ -325,7 +325,7 @@ function lazysync(topicID) {
               if (hmTocSingleClick) {
                 selectionchanged = hilightexpand(currentSpanID);
               }
-              else {
+              else { 
                 selectionchanged = hilight(currentSpanID);
               }
               intoview(currentTopic[0], toc, selectionchanged);
@@ -368,11 +368,11 @@ function hmCreateVSplitter(leftdiv, rightdiv) {
     var split = $('#hmsplitter');
 
 	$(window).resize(function() {  /* resize splitter when window changes */
-      split.css('height', $(leftdiv).outerHeight()+'px');
-	});
+      split.css('height', $(leftdiv).outerHeight()+'px'); 
+	}); 
 
-    split.bind('mousedown', startDrag);
-
+    split.bind('mousedown', startDrag); 
+    
     function startDrag(e) {
 		oldX = (!document.all) ? e.clientX : event.clientX;
 	  	navWidth = parseInt($(leftdiv).css('width'),10);
@@ -380,19 +380,19 @@ function hmCreateVSplitter(leftdiv, rightdiv) {
 		oldLeft  = $(rightdiv).offset().left;
 		oldWidth = $(rightdiv).outerWidth();
 		oldSplitL = split.offset().left;
-
+		
         var bg = $('<div id="hmcurtain" style="border:none;padding:0;margin:0;position:absolute;cursor:col-resize;width:100%;height:100%;background-color:transparent;background:url(blank.gif)"></div>').appendTo('body');
-		bg.bind('mousemove', performDrag);
+		bg.bind('mousemove', performDrag); 
 		bg.bind('mouseup', endDrag);
-		split.bind('mousemove', performDrag);
+		split.bind('mousemove', performDrag); 
 		split.bind('mouseup', endDrag);
-
+		
 		function endDrag() {
 		  bg.unbind('mousemove').unbind('mouseup').remove();
 		  split.unbind('mousemove').unbind('mouseup');
 		}
 	}
-
+	
 	function performDrag(e) {
     	//deselect:
 		if (window.getSelection) window.getSelection().removeAllRanges();
@@ -405,7 +405,7 @@ function hmCreateVSplitter(leftdiv, rightdiv) {
 		split.css('left', (oldSplitL + newNavW - navWidth) + 'px');
 
 		$(rightdiv).css('left', (oldLeft + newNavW - navWidth) + 'px');
-		if (!hmSupportsAbspos()) $(rightdiv).css('width', (oldWidth - newNavW + navWidth) + 'px');
+		if (!hmSupportsAbspos()) $(rightdiv).css('width', (oldWidth - newNavW + navWidth) + 'px'); 
 	}
-
+	
 }

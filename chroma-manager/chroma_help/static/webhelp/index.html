@@ -1,84 +1,236 @@
-﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">
+﻿<!DOCTYPE html>
 <html>
 <head>
-<title>Chroma Enterprise User Guide</title>
-<!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
-<style type="text/css">
-body, html { overflow: hidden; }
-</style>
+<title>Intel® Manager for Lustre*</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="jquery.tools.min.js"></script>
+<script type="text/javascript" src="jquery.easing.1.3.js"></script>
+<meta http-equiv="content-language" content="en-us" />
+<meta name="robots" content="noarchive,index,follow" />
+<meta name="description" content="&nbsp;" />
+<link id="colorscheme" rel="stylesheet" type="text/css" href="hm_webhelp.css" />
+<style type="text/css">
+body {
+	background-image: url('bg.png');
+}
+div#hmbanner { 
+	height: 45px;
+	background-color: #ffffff;
+	background: url("banner_company.jpg");
+	}
+div#hmtopicpane {
+	top: 45px; /* Top must match banner width, same variable */
+  	margin-top: 0px;
+}
+div#hmnavbox {
+   top: 45px; /* Top must match banner width, same variable */
+   margin-top: 4px;
+}
+
+</style> 
+<script type="text/javascript">
+// HM WebHelp Configuration Variables
+
+// Layout control variables
+var hmLayout = {
+	// Show/hide speed for banner header
+	bannerSpeed: 250
+	// Permalink option in toolbar
+	// permalink: true
+}
+
+// Permalink function
+var hmpldata =  {
+   show: true,
+   auto: true,
+   copy: "Copy permalink to current topic",
+   hurl: "http://www.ec-software.com/help/index.html",
+   sorry: "Sorry, your browser can't bookmark pages using this function. Right-click to copy the permalink, then press Ctrl+D to bookmark the topic with the copied permalink.",
+   noserver: "No web server. Please right-click on the selected permalink below to copy.",
+   manualcopy: "Auto-copy not supported in your browser configuration. <br />Please right-click on the permalink to copy.",
+   select: "Copy Permalink",
+   bookmark: "Bookmark Topic",
+   close: "Close Dialog",
+   copied: "Permalink copied to clipboard:",
+   title: "Permalink"
+}
+
+// Navigation pages
+var hmnavpages = {
+   toc: "chromaonlinehelp_content.htm",
+   tocWidth: 275,
+   idx: "chromaonlinehelp_kwindex.htm",
+   sch: "chromaonlinehelp_ftsearch.htm",
+   top: "index.html",
+   def: "intel_manager_for_lustre.htm",
+   autoTabs: "<%AUTO_TABS%>",
+   userReload: false,
+   checkChrome: true,
+   ffCacheFix: false,
+   printHL: true,
+   share: true,
+   banneroff: false
+}
+
+// Mobile device redirects
+
+var mobRe = {
+	smart: "",
+	ipad: ""
+}
+
+// General messages
+var hminfo = {
+	tabopen: "This topic is already open in an additional tab!",
+	tabclose: "Close this tab",
+	noundock: "You can\'t undock the main tab!",
+	webfile: "Web File",
+	hidenav: "Hide contents pane",
+	shownav: "Show contents pane",
+ 	currtopic: "Current Topic"
+}
+
+// Feedback addresses
+var hmfb = {
+    mailrecipient: "Support Staff <support@ec-software.com>",
+    simplerecipient: "support@ec-software.com"
+}
+
+
+
+
+
+</script>
 <script type="text/javascript" src="helpman_settings.js"></script>
 <script type="text/javascript" src="helpman_navigation.js"></script>
-<script type="text/javascript" src="mobileInit.js"></script>
-<script type="text/javascript">
-var hmContents = document.getElementById ? "chromaonlinehelp_content.htm" : "chromaonlinehelp_content.htm";
-var indexPage = "chromaonlinehelp_kwindex.htm";
-var searchPage = "chromaonlinehelp_ftsearch.htm";
-var defaulttopic="introducing_chroma.htm";
-var IE6 = /msie 6|MSIE 6/.test(navigator.userAgent);
-var frSpace = /Opera|opera/.test(navigator.userAgent) ? "5" : "2";
-// Normal init for good browsers
-var wkResize = "";
-var WebKit = /WebKit|webkit/.test(navigator.userAgent);
-wkResize = (WebKit && ("workaround" == "workaround")) ? 'noresize="noresize"' : "";
-if (!IE6) {
-   parseUrl(document.location.search);
-
-    document.write('<frameset name="hmframeset" id="hmframeset" cols="280,*" border="6" frameborder="1" framespacing="'+frSpace+'">');
-    document.write('<frame name="hmnavigation" id="hmnavigation" src="'+hmContents+'" title="Navigation frame"'+wkResize+' />');
-    document.write('<frame name="hmcontent" id="hmcontent" src="' + defaulttopic + '" title="Content frame" />');
-    document.write('</frameset>');
-
-    }
-// Special init for IE6
-else {
-   parseUrl(document.location.search);
-
-    document.write('<frameset name="hmframeset" id="hmframeset" cols="280,*" frameborder="1" framespacing="1">');
-    document.write('<frame name="hmnavigation" id="hmnavigation" src="'+hmContents+'" title="Navigation frame" scrolling="yes" noresize="noresize" />');
-    document.write('<frame name="hmcontent" id="hmcontent" src="' + defaulttopic + '" title="Content frame" />');
-    document.write('</frameset>');
-
-}
-$(document).ready(function() {
-   if (!document.all) {
-      mobDat = {
-      iOSalert : "Use two fingers to scroll contents and topics on iPad and iPhone!",
-      aOSalert : "Sorry, this online help is not compatible with your mobile browser!",
-      aOSredirect : "",
-      mobRedirect : "",
-      iPhRedirect : "",
-      iPdRedirect : ""
-      }
-   mobInit(mobDat);
-} else {
-   var hmIsTOC = false;
-   try {
-      var navDoc = document.getElementById("hmnavigation");
-      if (navDoc && navDoc.src.indexOf("_content.htm") > 0) hmIsTOC = true;
-   } catch(err) {}
-   if (false && hmIsTOC){
-      setTimeout(function() {hmnavigation.location = hmContents;}, 200);
-      }
-   }
-});
-</script>
+<script type="text/javascript" src="hmwebhelp.js"></script>
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />	
+<![endif]-->
 </head>
-<noscript>
+<body>
+<div id="hmcontainer">
 
-  <frameset cols="280,*" frameborder="0" framespacing="0">
-    <frame name="hmnavigation" id="hmnavigation" src="chromaonlinehelp_content.htm" title="Navigation frame" scrolling="yes" />
-    <frame name="hmcontent" id="hmcontent" src="introducing_chroma.htm" title="Content frame" />
-    <noframes>
-    <body>
-      <p>This page requires frames<br /><a href="chromaonlinehelp_content.htm">Click here to view the table of contents without frames</a></p>
-    </body>
-    </noframes>
-  </frameset>
+<div id="hmtoolbar" class="bannerToolbar">
+<table id="tbtable"><tr>
+  <td class="tbsearch">
+  <div id="hmsearch" class="searchTextOn">
+  Quick Search:<br />
+  &nbsp;<span id="quickSearch" onclick="hmWebHelp.remoteSearch()"><img id="qsearch_on" class="navicon" src="search.png" alt="Search help topics" title="Search help topics" /><img id="qsearch_off" src="searchoff.png" /></span><input type="text" name="searchinput" id="searchinput" autocapitalize="off" autocorrect="off" />
+  </div>
+  </td>
+  <td class="tbleft">
+  <div class="naviconboxL">
+     <span id="navicon_topic" onclick="hmWebHelp.topicsPane()" title="Select main topic tab"><img class="navicon" id="topic_on" src="browse.png" /></span>
+     <br /><span id="indexText" class="navtextOn">Browse</span>
+     </div>
+     
+     <div class="naviconboxL">
+     <span id="navicon_index" onclick="hmWebHelp.indexPane()" title="Keyword Index"><img class="navicon" id="index_on" src="index.png" /></span>
+     <img id="index_off" src="index_off.png" />
+     <br /><span id="indexText" class="navtextOn">Index</span>
+     </div>   
+     		
+     <div class="naviconboxL">
+     <span id="navicon_search" onclick="hmWebHelp.searchPane()"><img class="navicon" id="search_on" title="Search help topics" alt="Search help topics" src="search.png" /></span>
+     <img id="search_off" src="searchoff.png" />
+     <br /><span id="searchText" class="navtextOn">Search</span>
+     </div>
+     
+     <div class="naviconboxL" id="undocktabtool">
+     <span id="navicon_undocktab" onclick="hmWebHelp.undockTab()"><img class="navicon" id="undock_on" src="undock.png" title="Undock Current Tab" alt="Undock Current Tab" /></span>
+     <img id="undock_off" src="undock_off.png" />
+     <br /><span id="undockText" class="navtextOn">Undock</span>
+     </div>
+     <div class="naviconboxL" id="newtabtool">
+     <span id="navicon_newtab" onclick="hmWebHelp.newTab()"><img class="navicon" id="newtab_on" src="newtab.png" title="Open current topic in a new tab" alt="Open current topic in a new tab"/></span>
+     <img id="newtab_off" src="newtab_off.png" title="Select main tab to activate this function" alt="Select main tab to activate this function" />
+     <br /><span id="newtabText" class="navtextOn">New Tab</span>
+     </div>
+   </td>
+   <td class="tbcenter">
+<div class="naviconboxR">
+     <span id="navicon_toggle" onclick="hmWebHelp.toggleToggles();"><img id="togtog_on" class="navicon" src="showhide.png" alt="Show/hide hidden text in current topic" title="Show/hide hidden text in current topic" /></span>
+     <img id="togtog_off" src="showhideoff.png" />
+     <br /><span id="togtogText" class="navtextOn">Show/Hide</span>
+     </div>
+<div class="naviconboxR">
+     <a id="navicon_feedback" href="javascript:void(0);" onclick="hmWebHelp.mailFB(false);"><img id="feedback_on" class="navicon" src="email.png" title="Email us feedback on the current topic" alt="Email us feedback on the current topic"/></a>
+     <img id="feedback_off" src="emailoff.png" />
+     <br /><span id="feedbackText" class="navtextOn">Feedback</span>
+     </div>
 
-</noscript>
+<div class="naviconboxR">
+     <a id="navicon_social" href="javascript:void(0);" onclick="hmWebHelp.doSocial();"><img id="social_on" class="navicon" src="share.png" title="Show social sharing buttons" alt="Show social sharing buttons"/></a>
+     <img id="social_off" src="share_off.png" title="Share button disabled - registered server not found" />
+     <br /><span id="socialText" class="navtextOn">Share</span>
+     </div>
+<div class="naviconboxR">
+     <a id="navicon_printer" href="javascript:void(0);" onclick="hmWebHelp.printTopic(hmWebHelp.activePage);"><img id="printer_on" class="navicon" src="printer.png" title="Print the current topic" alt="Print the current topic"/></a>
+     <img id="printer_off" src="printer_off.png" />
+     <br /><span id="printerText" class="navtextOn">Print</span>
+     </div>
+
+   </td>
+   <td class="tbright" id="topicNavTD">
+     <div class="naviconboxR">
+     <a id="navicon_home" href="#" target="hmcontent" onclick="hmWebHelp.tocWin.tocScroller(this.href)"><img class="navicon" src="home.png" title="Go to home topic" alt="Go to home topic" /></a>
+     <br /><span class="navtextOn">Home</span>
+     </div>
+     <div class="naviconboxR" title="Previous topic">
+     <a id="navicon_previous" href="#" target="hmcontent" onclick="hmWebHelp.tocWin.tocScroller(this.href)"><img class="navicon" src="arrow_left.png" title="Go to previous topic" alt="Go to previous topic" /></a>
+     <br /><span class="navtextOn">Previous</span>
+     </div>
+     <div class="naviconboxR" >
+     <a id="navicon_next" href="#" target="hmcontent" onclick="hmWebHelp.tocWin.tocScroller(this.href)"><img class="navicon" src="arrow_right.png" title="Go to next topic" alt="Go to next topic" /></a>
+     <br /><span class="navtextOn">Next</span>
+     </div>
+   </td>
+   </tr></table>
+</div>
+<div id="hmnavbox">
+<div id="hmnavborder">
+<iframe name="hmnavigation" id="hmnavigation" class="scrollpane" src="chromaonlinehelp_content.htm" title="Navigation Pane" frameborder="0" scrolling="auto"></iframe> 
+</div>
+</div>
+<div id="hmtopicpane" >
+<div id="hmtabscontrols">
+<div id="hmtabsCtab">
+<div id="hmTabsCtabRight">
+<img class="tabPlayer" id="tabEndLeft" src="tabendleft.png" alt="Start of tab bar" title="Start of tab bar"/>
+<img class="tabPlayer" id="tabLeft" src="tableft.png" alt="Next tab left" title="Next tab left" />
+<img class="tabPlayer" id="toggleTabMenu" src="tabs_menu.png" alt="Tabs Menu" title="Tabs Menu" />
+<img class="tabPlayer" id="tabRight" src="tabright.png" alt="Next tab right" title="Next tab right" />
+<img class="tabPlayer" id="tabEndRight" src="tabendright.png" alt="End of tab bar" title="End of tab bar" />
+</div>
+</div>
+<div id="tabsMenuBox">
+	<div id="tabsMenu" class="hmMenu">
+	<ul id="tabsList">
+	</ul>
+	</div>
+	</div>
+<div id="hmtabswindow">
+<div id="hmtabslider">
+<ul id="topictabs" class="tabs">
+<li id="topictab" class="hmtabs" ondblclick="alert('You can\'t undock the main tab!')" onclick="hmWebHelp.activePage = hmWebHelp.currentPage;"><a href="#topictablink" id="topictablink"><span>Topic Text</span></a></li>
+<li id="indextab" class="hmtabs" onclick="hmWebHelp.activePage ='index';" hpage="index"><img class="closetab" src="closetaboff.png" alt="Close this tab" title="Close this tab" /><a href="#indextablink" id="indextablink" ondblclick="hmWebHelp.undockTab()" title="Double-click to undock Index tab"><span>Keyword Index</span></a></li>
+<li id="searchtab" class="hmtabs" onclick="hmWebHelp.activePage='search';" hpage="search"><img class="closetab" src="closetaboff.png" alt="Close this tab" title="Close this tab" /><a href="#searchtablink" id="searchtablink" ondblclick="hmWebHelp.undockTab()" title="Double-click to undock Search tab"><span>Search</span></a></li>
+</ul>
+</div>
+</div>
+<!--<img class="tabPlayer" id="tabEndRight" src="tabendright.png" alt="End of tab bar" title="End of tab bar" />
+<img class="tabPlayer" id="tabEndLeft" src="tabendleft.png" alt="Start of tab bar" title="Start of tab bar"/> -->
+</div>
+<div id="hmtopicbox">
+<div id="hmcontentbox" >
+<iframe name="hmcontent" id="hmcontent" class="scrollpane" src="intel_manager_for_lustre.htm" title="Content Tab" height="100%" width="100%" frameborder="0" scrolling="auto"></iframe>
+</div>
+</div> <!-- End hmcontentbox --> 
+</div>
+</div>
+</body>
 </html>
 

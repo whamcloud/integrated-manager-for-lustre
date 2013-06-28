@@ -1,254 +1,100 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-   <title>Chroma Enterprise User Guide</title>
-   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+﻿<!DOCTYPE html>
+<html><head>
+   <title>Intel® Manager for Lustre*</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="robots" content="noarchive,noindex,nofollow" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
-   <meta name="robots" content="noindex, nofollow" />
-   <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+   <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript" src="jquery.tools.min.js"></script>
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->
 <style type="text/css">
-
-/* Tabbed Browsing */
-
-a {outline: 0 none;}
-
-  body {
-    padding: 0;
-    margin: 0;
-    font: 11px/1.5em Verdana,Tahoma,Arial,Helvetica,Sans-Serif;
-    background-color: #e4e4e4;
-    background-image: url("lines.gif");
-    background-attachment: fixed;
-    }
-
- #ns-header {
-   width: 100%;
-   min-width: 280px;
-   position: fixed;
-   top: 0; left: 0;
-   padding:0;
-   margin: 0;
-   float: left;
-   clear: both;
-   z-index: 1;
- }
-  #header {
-    overflow: auto;
-    float:left;
-    width:100%;
-    background: #e4e4e4 url("nav_bg.gif") repeat-x bottom;
-   }
-
-#header ul {
-    margin:0;
-    padding:10px 10px 0;
-    list-style:none;
-    }
-  #header li {
-    float:left;
-    background:url("tableft.gif") no-repeat left top;
-    padding: 0 2px 0 4px;
-    margin-bottom: 5px;
-    }
-
-  a.tablink {
-    display:block;
-    background:url("tabright.gif")
-    no-repeat right top;
-    padding:5px 10px 2px 3px;
-    text-decoration:none;
-    font-size: 8pt;
-    font-weight: bold;
-    }
-  a.tablink:hover {
-	text-decoration: none;
+body,html { 
+	overflow: hidden;
+	font-family: Verdana, Tahoma, Helvetica, Sans-Serif;  
 	}
-  #header #current {
-    background-position: 0% -42px;
-    }
-  #header #current a {
-    background-position: 100% -42px;
-    padding-bottom: 3px;}
+a { color: blue; }
+a:visited {color: blue;}
+a:hover {color: blue;}
 
-  #header #current a:hover {
-    color: black;
-    }
+.submit { font-size: 9pt; margin: 5px 0; }
+input.zoom_searchbox {  }
+input.zoom_button {  }
+.zoom_results_per_page { font-size: 80%; }
+.zoom_match { font-size: 80%; line-height: 10%; margin-left: 10px;}
 
-  #header li.noncurrent, #header li.noncurrent a {
-    color: #636363}
+.searchheading { font-size: 9pt; font-weight: bold; margin-top: 7px; }
+.summary { font-size: 9pt; margin-bottom: 5px; float: left;}
+.result_pagescount { font-size: 100%; }
+.suggestion { font-size: 9pt; clear: both;}
+.sorting { text-align: right; float: right; font-size: 9pt; font-weight: bold; }
 
-  #header li.noncurrent:hover, #header li.noncurrent:hover a {
-    background-position: 0% -42px;
-    color: #000;
-    }
+.result_pages { clear: left; font-size: 80%; white-space: nowrap; font-weight: bold; }
+.result_pages a:link { text-decoration: none; color: blue;}
+.result_pages a:visited { color: blue;}
+.result_pages a:hover { text-decoration: underline;}
+.searchtime { font-size: 80%; }
 
-  #header li.noncurrent:hover a {
-    background-position: 100% -42px;
-    }
+p.zoom_ad { text-align: center;}
+p.zoom_advertising { display: none;}
 
-   #header li.noncurrent:hover  {
-    margin: -2px 0 0 0;
-   }
-  #header li.noncurrent:hover a  {
-    padding-bottom: 4px;
-    }
 
-   #body-shift {
-   margin: 0;
-   padding: 88px 0 0 0;
-   }
+div.results { position: absolute; left: 0; right: 0; bottom: 0; overflow-y: scroll; padding-right: 5px; padding-top: 5px; padding-left: 7px;}
+.navtitle { font-size: 14pt; font-weight: bold; margin-bottom: 16px; }
+.navbar { font-size: 10pt; }
+.highlight { background: #FFFF40; }
+.results { font-size: 9pt; }
+.description { font-size: 9pt; }
+.context { font-size: 9pt; }
+.result_title { font-size: 9pt; }
+.category { color: #999999; }
+.zoom_searchform { font-size: 100%; }
+.zoom_match input {margin-left: 3px;}
+.zoom_categories { font-size: 80%; }
+.zoom_categories ul { display: inline; margin: 0px; padding: 0px;}
+.zoom_categories li { display: inline; margin-left: 15px; list-style-type: none; }
+input#zoom_searchbox, input.zoom_button { margin-bottom: 5px;}
+.result_image { float: left; display: block; }
+.result_image img { margin: 10px; width: 80px; border: 0px; }
+.result_block { margin-top: 0px; margin-bottom: 10px; clear: left; }
+div.result_title { font-size: 110%;}
+div.description { font-style: italic;}
+div.infoline { font-weight: bold; margin-top: 2px;}
+.result_altblock { margin-top: 0px; margin-bottom: 10px; clear: left; }
 
-    #body-wrap {
-      position: relative;
-      padding: 0 5px 5px 10px;
-      float:left;
-      clear:left;
-      height: 100%;
-      width: 100%;
-      }
-
-/* End Tabbed Browsing */
-
-/* Suppress Index underlines in non-IE browsers */
-
-	a { color: black; text-decoration: none }
-	a:visited {color: black}
-	a:hover { text-decoration: underline }
-
-/* Styles for Search components (you can edit these) */
-
-        .navtitle { font-size: 12pt; font-weight: bold; margin: 12px 0 0 10px; color: #000; }
-        .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; }
-
-        .navbar { font-size: 10pt; }
-
-        .submit { font-size: 9pt; line-height: 98%; margin:0; padding-bottom:8px;}
-        .highlight { background: #ffff40;}
-        .searchheading { font-size: 9pt; font-weight: bold; }
-        .summary { font-size: 9pt; font-style: italic; line-height: 98%; width: 100%; }
-        .results { font-size: 9pt; line-height: 100%; padding-bottom: 12px; }
-        .description { font-size: 9pt; line-height: 98%; }
-        .context { font-size: 9pt; }
-        .result_title { font-size: 9pt; font-weight: bold; line-height: 98%; padding: 0; padding-bottom: 2px;}
-        .infoline {padding-top: 3px; font-weight: bold;}
-        .highlight {background-color: #ffff40;}
-
-	       .suggestion { font-size: 100%; }
-	       .category { color: #999999; }
-	       .sorting { text-align: right; }
-	       .zoom_searchform { font-size: 100%; }
-	       .zoom_results_per_page { font-size: 100%; font-weight: bold; }
-	       .zoom_match { font-size: 100%; font-weight: bold;}
-	       .zoom_categories { font-size: 90%; }
-	       .zoom_categories ul { display: inline; margin: 0px; padding: 0px;}
-	       .zoom_categories li { display: inline; margin-left: 15px; list-style-type: none; }
-	       input.zoom_button {  }
-	       input.zoom_searchbox {  }
-	       .result_image { float: left; display: block; }
-	       .result_image img { font-size: 90%; margin: 10px; width: 80px; border: 0px; }
-	       .result_block { font-size: 90%; margin-top: 15px; margin-bottom: 15px; clear: left; }
-	       .result_altblock { font-size: 90%; margin-top: 15px; margin-bottom: 15px; clear: left; }
-	       .result_pages { font-size: 90%; font-weight: bold; }
-	       .result_pagescount { font-size: 9pt; font-style: italic; }
-	       .searchtime { font-size: 80%; }
-	       .recommended
-	       {
-		        background: #dfffbf;
-	       		border-top: 1px dotted #808080;
-	       		border-bottom: 1px dotted #808080;
-	       		margin-top: 15px;
-	       		margin-bottom: 15px;
-	       }
-	       .recommended_heading { float: right; font-weight: bold; }
-	       .recommend_block { margin-top: 15px; margin-bottom: 15px; clear: left; }
-	       .recommend_title { font-size: 90%; }
-	       .recommend_description { font-size: 100%; color: #008000; }
-	       .recommend_infoline { font-size: 80%; font-style: normal; color: #808080;}
-
- </style>
-<!-- Adjust for MSIE -->
-<!--[if lte IE 8]>
-<style type="text/css">
-  #header, #header #current a {
-    padding-bottom: 5px;
-   }
-  #header a {
-    padding:4px 10px 4px 3px;
-    margin-bottom: -2px;
-    }
-  #header li.noncurrent:hover a  {
-    padding-bottom: 6px;
+.recommended {
+	background: #DFFFBF;
+	border-top: 1px dotted #808080;
+	border-bottom: 1px dotted #808080;
+	margin-top: 15px;
+	margin-bottom: 15px;
+	}
+.recommended_heading { float: right; font-weight: bold; }
+.recommend_block { margin-top: 15px; margin-bottom: 15px; clear: left; }
+.recommend_title { font-size: 100%; }
+.recommend_description { font-size: 100%; color: #008000; }
+.recommend_infoline { font-size: 80%; font-style: normal; color: #808080;}
+span.highlight {background-color: #ffff40;}
 </style>
-<![endif]-->
-<!--[if lte IE 6]>
-<style type="text/css">
-#body-wrap { height: auto; }
-#body-shift { margin: 0; padding:0; }
-</style>
-<![endif]-->
-
-<!-- Static page display when JavaScript is off -->
-<noscript>
-<style type="text/css">
-#ns-header {
-  position: static;
-  }
-#body-shift { margin: 0; padding:0; }
-</style>
-</noscript>
-
-<!-- Adjust for MSIE -->
-<!--[if lte IE 8]>
-<style type="text/css">
-    #body-wrap {
-    padding-top: 0;
-    }
-    .submit {
-    margin-bottom: -18px;
-    }
-</style>
-<![endif]-->
-
-<!-- Dynamic adjustment of body position for changing header height. Off for brain-dead IE6 and earlier -->
-<script type="text/javascript" src="navinith.js"></script>
 <script type="text/javascript">
-// Initialize the page
-var IE6 = /msie 6|MSIE 6/.test(navigator.userAgent);
-if (!IE6) {
-   addEvent(window, "load", headResizeSCH);
-   addEvent(window, "resize", headResizeSCH);
-   }
-// Search args checker
-if (window.frameElement) {
-if (parent.hmSearchArg != "") {
-  var searchCheck = setInterval(function(){
-    var box = document.getElementById("zoom_searchbox");
-  try { if (box.name) {
-       clearInterval(searchCheck);
-       box.value = parent.hmSearchArg;
-       parent.hmSearchArg = "";
-       document.forms[0].submit();
-       }
-    } catch(err) {}
-  },100);
-} } // Search args checker
-</script></head>
-<body>
-  <div id="ns-header">
-  <div id="header">
-  <p class="navtitle">Chroma Enterprise User Guide</p>
+/*! Full-text search init functions for HM Premium Pack Version 2.15
+Copyright (c) 2008-2013 by Tim Green 
+All rights reserved. */
+var resizeForm;$(document).ready(function(){resizeForm=function(){var f=$("input#zoom_searchbox").attr("size");var g=$(".zoom_button").width()+90;var h=$(".zoom_button").width()+80;var i=$(document).width();while(($("input#zoom_searchbox").width()+g)>i){$("input#zoom_searchbox").attr("size",f--)}while(($("input#zoom_searchbox").width()+h)<i){$("input#zoom_searchbox").attr("size",f++)}};try{var d=parent.hmWebHelp?parent:window.opener.hmWebHelp?window.opener:false}catch(e){document.location.replace("index.html")}var c=$("form.zoom_searchform")[0];$(c).attr("id","hmsearchform");$("body").css("visibility","hidden");setTimeout(function(){if($("div.results").length<1){if($("input#zoom_searchbox").width()>10&&$(document).width()>10){resizeForm()}$("span br, div.searchheading br").remove()}else{if($("div.results").children().length>0){(function(){var k="";var l=$("div.result_pagescount").html()?$("div.result_pagescount").html():"";var j=$("div.suggestion").html()?$("div.suggestion").html():"";var m=$("div.searchtime").html()?(" "+$("div.searchtime").html()):"";var i=$("p.zoom_advertising").html()?('<p class="zoom_ad">'+$("p.zoom_advertising").html()+"</p><p>&nbsp;</p>"):"";$("div.summary").each(function(n){if($(this).html()){k+=$(this).html()+" "}if(n>0){$(this).remove()}});k+=l+j+m;k=k.replace(/<br\s?\/?>/gi,"");$("div.summary").html(k);$("div.result_pagescount, div.suggestion, div.searchtime, p.zoom_advertising").remove();$($("div.results")[0]).append(i)})();var h=$("div.results")[0];var f=($("div.result_pages").length>0);if(f){$(h).css("top",($("div.result_pages").position().top+$("div.result_pages").height()+7)+"px").css("border-top","1px solid silver");$(window).bind("resize",function(){$(h).css("top",($("div.result_pages").position().top+$("div.result_pages").height()+7)+"px")})}else{$(h).css("top",($("div.summary").position().top+$("div.summary").height()+7)+"px").css("border-top","1px solid silver");$(window).bind("resize",function(){$(h).css("top",($("div.summary").position().top+$("div.summary").height()+7)+"px")})}$("#dummy").remove();$("div.results a[target='hmcontent']").click(function(){var i=$(this).attr("href");d.hmWebHelp.tocWin.tocScroller(i)});resizeForm()}else{var h=$("div.results")[0];$("span br, div.searchheading br").remove();$(h).css("overflow","hidden")}}$("body").css("visibility","visible");if(d.hmLayout.hmSearchArg!=""){var g=setInterval(function(){var j=document.getElementById("zoom_searchbox");try{if(j.name){clearInterval(g);j.value=d.hmLayout.hmSearchArg;d.hmLayout.hmSearchArg="";document.forms[0].submit()}}catch(i){}},100)}},100);if(window.opener){$("ul.tabs").show();$("ul.tabs a").css("cursor","default");$("div#hmbox").css("padding","10px");$("div.results").css("padding","5px 2px 5px 5px");var b=window.opener.window.hmWebHelp.searchArgs;$("form#hmsearchform").submit(function(){window.opener.window.hmWebHelp.searchReturnArgs=$("input#zoom_searchbox").val()});if(b){window.opener.window.hmWebHelp.searchArgs=null;$("input#zoom_searchbox").val(b);$("form#hmsearchform").submit()}$("link#tabscheme").attr("href","hm_webhelp_undocked.css");$("body,html").css("backgroundImage","url('bg.png')");var a=setInterval(function(){function h(){clearInterval(a);window.close()}try{var f=window.opener.hmWebHelp.openWindows.length}catch(g){h()}if(!window.opener||f<1){h()}},500)}$(window).bind("resize",resizeForm)});
+</script>
+</head>
+<body bgcolor="#FFFFFF">
+<ul id="topictabs" class="tabs">
+<li id="searchtab" class="hmtabs"><a href="#" id="searchtablink" class="current"><span>Search</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hminnerbox">
 
-    <ul>
-      <li class="noncurrent"><a href="chromaonlinehelp_content.htm" class="tablink" title="Table of Contents">Contents</a></li>
-      <li class="noncurrent"><a href="chromaonlinehelp_kwindex.htm" class="tablink" title="Keyword Index">Index</a></li>
-      <li id="current"><a href="#" class="tablink" title="Full-text Search">Search</a></li>
-    </ul>
-  </div>
-  </div>
-<div id="body-shift">
-<table id="body-wrap" cellpadding="5"><tr><td valign="top">
 <p class="submit">Enter one or more keywords to search ('*' and '?' wildcards are supported):</p>
 <!-- This is where the search form and results will appear -->
 <div id="loadingmsg" align="center"><img src="cicon_loadindex_ani.gif" style="border:none" alt="Loading..." /></div>
@@ -256,16 +102,11 @@ if (parent.hmSearchArg != "") {
 <script type="text/javascript" src="zoom_search.js"></script>
 <script type="text/javascript">ZoomSearch();</script>
 
+<p id="dummy">&nbsp;&nbsp;&nbsp;</p>
 <noscript>
-<p>JavaScript is required for the search function!</p>
+<p>You must have JavaScript enabled to use WebHelp search</p>
 </noscript>
-<br/>
-</td></tr></table><!--  body-wrap -->
-</div>
+</div><!-- hminnerbox -->
+</div><!-- hmbox -->
 </body>
-<!--[if gt IE 6]>
-<script type="text/javascript">
-headResizeSCH();
-</script>
-<![endif]-->
 </html>

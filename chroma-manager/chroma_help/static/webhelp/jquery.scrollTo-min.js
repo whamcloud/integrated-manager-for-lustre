@@ -1,4 +1,4 @@
-/**
+/*!
  * jQuery.ScrollTo - Easy element scrolling using jQuery.
  * Copyright (c) 2007-2009 Ariel Flesler - aflesler(at)gmail(dot)com | http://flesler.blogspot.com
  * Dual licensed under MIT and GPL.

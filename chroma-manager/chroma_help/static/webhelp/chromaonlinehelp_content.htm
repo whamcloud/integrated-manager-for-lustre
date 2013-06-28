@@ -1,195 +1,163 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-   <title>Chroma Enterprise User Guide</title>
-   <!-- Premium Pack Version 1.51 for HM6 Template design Copyright (c) 2008-2011 by Tim Green -->
+﻿<!DOCTYPE html>
+<html><head>
+   <title>Intel® Manager for Lustre*</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="description" content="&nbsp;" />
+   <meta name="robots" content="noarchive,noindex,follow" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
-   <meta name="robots" content="noindex, follow" />
-   <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+   <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript" language="Javascript" src="jquery.tools.min.js"></script>
+   <script type="text/javascript" language="Javascript" src="jquery.scrollTo-min.js"></script>
    <link type="text/css" href="default.css" rel="stylesheet" />
-
-<style type="text/css">
-
-/* HM6 TOC Styles */
-/* TOC LIST CSS */
-   #toc    { margin: 0; padding: 0; } /* General margin of the TOC (root entry) */
-   #toc li { margin: 1px 0 1px 0; padding: 0; background-position: center center;} /* Vertical spacing between TOC items */
-   #toc ul { margin: 0 0 0 -20px; padding: 0;  } /* Indentation per level (negative value) */
-/* TOC LIST CSS */
-
-/* Tabbed Browsing */
-
-a {outline: 0 none;}
-
-  body {
-    padding: 0;
-    margin: 0;
-    font: 11px/1.5em Verdana,Tahoma,Arial,Helvetica,Sans-Serif;
-    background-color: #f3f3f2;
-    background-image: url("lines.gif");
-    background-attachment: fixed;
-    }
-
- #ns-header {
-   width: 100%;
-   min-width: 280px;
-   position: fixed;
-   top: 0; left: 0;
-   padding:0;
-   margin: 0;
-   float: left;
-   clear: both;
-   z-index: 1;
- }
-  #header {
-    overflow: auto;
-    float:left;
-    width:100%;
-    background: #e4e4e4 url("nav_bg.gif") repeat-x bottom;
-   }
-
-#header ul {
-    margin:0;
-    padding:10px 10px 0;
-    list-style:none;
-    }
-  #header li {
-    float:left;
-    background:url("tableft.gif") no-repeat left top;
-    padding: 0 2px 0 4px;
-    margin-bottom: 5px;
-    }
-
-  a.tablink {
-    display:block;
-    background:url("tabright.gif")
-    no-repeat right top;
-    padding:5px 10px 2px 3px;
-    text-decoration:none;
-    font-size: 8pt;
-    font-weight: bold;
-    }
-  a.tablink:hover {
-	text-decoration: none;
+   <style type="text/css">
+   body, html {        
+	background-color: transparent;
+	overflow: hidden;    
+	font-family: Verdana, Tahoma, Helvetica, Sans-Serif;  
 	}
-  #header #current {
-    background-position: 0% -42px;
-    }
-  #header #current a {
-    background-position: 100% -42px;
-    padding-bottom: 3px;}
+/* General links */
+	a { color: black; text-decoration: none;  }
+	a:visited {color: black;}
+	a:hover { color: black; text-decoration: underline; }
+	a:focus { outline: #707070 dashed thin; }
 
-  #header #current a:hover {
-    color: #000;
-    }
+/* TOC LIST CSS */
+	#toc    { margin: 0; padding: 0; } /* General margin of the TOC (root entry) */
+	#toc li { margin:  0 0 0 0; padding: 0 0 0 0; background-position: left center; vertical-align: bottom;} /* Vertical spacing between TOC items */
+	#toc ul { margin: 2px 0 0 0; padding: 0; vertical-align: bottom; } /* Indentation per level (negative value) */
+/* TOC LIST CSS */
+div#hmtocheader {
+	position: absolute; 
+	top: 10px; left: 10px; right: 18px;
+	}
+div#hmtocbody {
+	position: absolute;
+	background-image: url('tocbg.gif');
+	top: 85px; left: 7px; right: 0; bottom: 35px;
+	overflow-y: auto;
+	border-style: solid;
+	border-color: silver;
+	border-width: 1px 0 1px 0;
+	padding-top: 7px;
+	margin-right: 2px;
+	}
+div#tree {
+	overflow-y: hidden;
+	}
+div#hmtocfooter {
+	position: absolute;
+	bottom: 0; left: 8px; right: 8px;
+	background-color: transparent;
+	}
+div#hmtocfooter p {
+	font-size: 0.7em; 
+	text-align: center;
+	margin-bottom: 5px;   
+	color: #737373;
+	}
+.navtitle { font-size: 13pt; font-weight: bold; margin-bottom: 10px; line-height: 93%; }      
+.navsubtitle { display: none; font-size: 9pt; font-weight: bold; padding: 0; margin: -8px 0 0 0; color: silver;}
+.nojstitle { font-size: 11pt; white-space: nowrap; margin-top: -8px; }
+.nojstitle a { color: black; text-decoration: none; }
+.nojstitle a:visited {color: black;}
+.nojstitle a:hover {text-decoration: underline; }
+li.heading1 {background-position: 1px 1px !important;}
+.heading1 { font-family: Arial,Helvetica; font-weight: normal; font-size: 11pt; color: #000000; text-decoration: none; }
+.heading2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; text-decoration: none; }
+.heading3 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; text-decoration: none; }
+.heading4 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; text-decoration: none; }
+.heading5 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; text-decoration: none; }
+.heading6 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000; text-decoration: none; }
 
-  #header li.noncurrent a {
-  color: #636363
-  }
-
-  #header li.noncurrent:hover {
-    background-position: 0% -42px;
-    margin: -2px 0 0 0;
-    }
-
-  #header li.noncurrent:hover a {
-    background-position: 100% -42px;
-    padding-bottom: 4px;
-    color: #000;
-    }
-
-   #body-shift {
-   margin: 0;
-   padding: 88px 0 0 0;
-   }
-
-    #body-wrap {
-      position: relative;
-      padding: 8px 5px 5px 8px;
-      float:left;
-      clear:left;
-      height: 100%;
-      width: 100%;
-      }
-
-/* End Tabbed Browsing */
-
-/* Suppress TOC underlines in non-IE browsers */
-
-	a { color: black; text-decoration: none }
-	a:visited {color: black}
-	a:hover { text-decoration: underline }
-
-/* Styles for TOC components (you can edit these) */
-
-       .navtitle { font-size: 12pt; font-weight: bold; margin: 12px 0 0 10px; color: #000; }
-       .nav-subtitle { font-size: 8pt; font-weight: bold; line-height: 95%; margin: 5px 0 0 10px; color: #5e687e; }
-
-       .navbar   { font-size: 10pt; }
-       .copyright { color: #636363; font-size: 8pt; text-align: center;  margin: 0; margin-top: 7px;
-		    border-top: 1px solid #000; padding-top: 2px; padding-bottom: 8px;}
-       .heading1 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #000000;  }
-       .heading2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 9pt; color: #000000;  }
-       .heading3 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #000000;  }
-       .heading4 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #000000;  }
-       .heading5 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #000000; }
-       .heading6 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #000000;  }
-
-       .hilight1 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #ffffff; background: #002682; }
-       .hilight2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 9pt; color: #ffffff; background: #002682;  }
-       .hilight3 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #ffffff; background: #002682;  }
-       .hilight4 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #ffffff; background: #002682;  }
-       .hilight5 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #ffffff; background: #002682;  }
-       .hilight6 { font-family: Arial,Helvetica; font-weight: normal; font-size: 8pt; color: #ffffff; background: #002682;  }
+.hilight1 { font-family: Arial,Helvetica; font-weight: normal; font-size: 11pt; color: #FFFFFF; background: #002682; text-decoration: none; }
+.hilight2 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #FFFFFF; background: #002682; text-decoration: none; }
+.hilight3 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #FFFFFF; background: #002682; text-decoration: none; }
+.hilight4 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #FFFFFF; background: #002682; text-decoration: none; }
+.hilight5 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #FFFFFF; background: #002682; text-decoration: none; }
+.hilight6 { font-family: Arial,Helvetica; font-weight: normal; font-size: 10pt; color: #FFFFFF; background: #002682; text-decoration: none; }
 
    </style>
+   <script type="text/javascript">
+   /*! Table of contents init functions for HM Premium Pack Version 2.15
+Copyright (c) 2008-2013 by Tim Green 
+All rights reserved. */
+function nshResize(test) {
+	var bodyTop = $("div#hmtocheader").outerHeight()+15;
+	var bodyBottom = $("div#hmtocfooter").outerHeight()+5;
+	$("div#hmtocbody").css("top", bodyTop+"px").css("bottom", bodyBottom+"px");
+	if (test) $("span#operabug").html("bloop").hide();
+	}
+function tocScroller(target) {
+	if (target.lastIndexOf("/") > -1) {
+		target = target.substr(target.lastIndexOf("/")+1);
+		}
+	if (target.lastIndexOf("#") > -1) {
+		target = target.substr(0,target.lastIndexOf("#"));
+	}
+	if (target.lastIndexOf("?") > -1) {
+		target = target.substr(0,target.lastIndexOf("?"));
+	}
+	var scrollTarget = $("a[href*='"+target+"']");
+	var scrollTimer = setInterval(function() {
+	if ($(scrollTarget).is(":visible")) {
+		$("div#hmtocbody").scrollTo(scrollTarget,400,{offset:{top:-10, left:0},onAfter:
+		// Necessary for poor retarded Internet Explorer...
+		function() {
+		if ($(scrollTarget).position().top > $("#hmtocbody").height())
+			$("div#hmtocbody").scrollTo(scrollTarget,400,{offset:{top:-10, left:0}});
+			}
+		});
+		clearInterval(scrollTimer);			
+		if ($(scrollTarget).position().top > $("#hmtocbody").height());
+	}
+	},100);
+}
 
-<!-- Adjust for MSIE -->
-<!--[if lte IE 8]>
-<style type="text/css">
-  #header, #header #current a {
-    padding-bottom: 5px;
-   }
-  #header a {
-    padding:4px 10px 4px 3px;
-    margin-bottom: -2px;
-    }
-  #header li.noncurrent:hover a  {
-    padding-bottom: 6px;  }
-</style>
-<![endif]-->
-<!--[if lte IE 6]>
-<style type="text/css">
-body { width: 99%; }
-#ns-header { width: 100%; }
-#body-wrap { height: auto; }
-#body-shift { margin: 0; padding:0; }
-</style>
-<![endif]-->
+// Prevent FireFox from loading iFrame from cache when topics have been updated
+function ffFix() {
+	if (!$.browser.mozilla) return;
+	var loc = document.location.search;
+	 if (loc.indexOf("r2d2") > -1) return;
+	 else {
+	 loc = loc == "" ? "?r2d2" : loc + "&r2d2";
+	document.location.search = loc;
+	}
+}
 
-<!-- Static page display when JavaScript is off -->
-<noscript>
-<style type="text/css">
-#ns-header {
-  position: static;
-  min-width: 0;
-  }
-#body-shift { margin: 0; padding:0; }
-</style>
-</noscript>
+$(document).ready(function() {
+if (parent.window.hmnavpages && parent.window.hmnavpages.ffCacheFix) ffFix();
+$(".nojstitle").hide();
+$(".navsubtitle").show();
+var tocExtLinks = false;
 
-<script type="text/javascript" src="navinith.js"></script>
-<script type="text/javascript">
-// Initialize the page
-var IE6 = /msie 6|MSIE 6/.test(navigator.userAgent);
-if (!IE6) {
-    addEvent(window, "load", headResizeTOC);
-    addEvent(window, "resize", headResizeTOC);
-    }
-</script>
-   <script type="text/javascript" src="jquery.js"></script>
+// Manage external files in TOC and tabs
+if (tocExtLinks) {
+	var topicExtn = parent.hmWebHelp.textn;
+	topicExtn = topicExtn.replace("\.","");
+	var $filelinks = $("a[target='hmcontent']").not("[href^='http'], [href$='"+topicExtn+"']");
+	var $weblinks = $("a[target='hmcontent']").filter("[href^='http']");
+	$.merge($filelinks,$weblinks);
+	$filelinks.each(function() {
+		$(this).click(function() {
+		var caption = $(this).children("span").text();
+		$("a#topictablink",parent.document).html("<span>"+caption+"</span>");
+		parent.hmWebHelp.external=$(this).attr("href");
+		});
+	});
+} // TOC external links
+
+
+nshResize(false);
+$(window).bind("resize",function() {
+		nshResize(true);
+		});
+
+// Scroll down to default topic or URL-targeted topic
+tocScroller(parent.hmnavpages.def);
+});
+   </script> 
    <script type="text/javascript" src="helpman_settings.js"></script>
    <script type="text/javascript">
      var parentScope = (parent.hmNavigationFrame);
@@ -214,59 +182,164 @@ if (!IE6) {
      });
    </script>
 </head>
-
-<body>
-  <div id="ns-header">
-  <div id="header">
-  <p class="navtitle">Chroma Enterprise User Guide</p>
-
-    <ul>
-      <li id="current"><a href="#" class="tablink" title="Table of Contents">Contents</a></li>
-      <li class="noncurrent"><a href="chromaonlinehelp_kwindex.htm" class="tablink" title="Keyword Index">Index</a></li>
-      <li class="noncurrent"><a href="chromaonlinehelp_ftsearch.htm" class="tablink" title="Full-text Search">Search</a></li>
-    </ul>
-  </div>
-  </div>
-
-<div id="body-shift">
-<table id="body-wrap" cellpadding="0"><tr><td valign="top">
-<!-- Placeholder for the TOC - this variable is REQUIRED! -->
-<ul id="toc" style="list-style-type:none;display:block;padding-left:0">
-<li class="heading1" id="i1" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a1" href="introducing_chroma.htm" target="hmcontent"><span class="heading1" id="s1">Introducing Chroma Enterprise</span></a>
-</li>
-<li class="heading1" id="i2" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a2" href="a_quick_tour.htm" target="hmcontent"><span class="heading1" id="s2">A Quick Tour</span></a>
-</li>
-<li class="heading1" id="i3" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a3" href="enterprise_lustre_overview.htm" target="hmcontent"><span class="heading1" id="s3">Enterprise Lustre Overview</span></a>
-</li>
-<li class="heading1" id="i4" data-bg="toc_closedbook.gif;toc_openbook.gif" style="background:url(toc_openbook.gif) no-repeat;cursor:pointer;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a4" href="getting_started.htm" target="hmcontent"><span class="heading1" id="s4" ondblclick="return dblclicked(this)">Getting Started</span></a>
-<ul id="ul4" style="list-style-type:none">
-<li class="heading2" id="i4.1" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading2" id="a4.1" href="configuring_the_chroma_manage2.htm" target="hmcontent"><span class="heading2" id="s4.1">Configuring Chroma Manager</span></a>
-</li>
-<li class="heading2" id="i4.2" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading2" id="a4.2" href="creating_a_file_system.htm" target="hmcontent"><span class="heading2" id="s4.2">Creating a Lustre File System</span></a>
-</li>
-<li class="heading2" id="i4.3" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading2" id="a4.3" href="mounting_file_system_clients.htm" target="hmcontent"><span class="heading2" id="s4.3">Mounting File System Clients</span></a>
-</li>
-<li class="heading2" id="i4.4" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading2" id="a4.4" href="configuring_an_existing_lustr2.htm" target="hmcontent"><span class="heading2" id="s4.4">Adding Existing Lustre Storage Servers</span></a>
-</li>
-</ul>
-</li>
-<li class="heading1" id="i5" data-bg="toc_closedbook.gif;toc_openbook.gif" style="background:url(toc_openbook.gif) no-repeat;cursor:pointer;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a5" href="monitoring_a_file_system.htm" target="hmcontent"><span class="heading1" id="s5" ondblclick="return dblclicked(this)">Monitoring a Lustre File System</span></a>
-<ul id="ul5" style="list-style-type:none">
-<li class="heading2" id="i5.1" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading2" id="a5.1" href="managing_chroma_storage.htm" target="hmcontent"><span class="heading2" id="s5.1">Managing Chroma Storage</span></a>
-</li>
-</ul>
-</li>
-<li class="heading1" id="i6" style="background:url(toc_topic.gif) no-repeat;padding-left:34px" onclick="return clicked(this,event)"><a class="heading1" id="a6" href="getting_help2.htm" target="hmcontent"><span class="heading1" id="s6">Getting Help</span></a>
-</li>
-</ul>
-<script type="text/javascript">loadicons('toc_topic.gif','toc_openbook.gif','toc_closedbook.gif');</script>
-<p class="copyright">Copyright © 2012 Intel Corporation. All rights Reserved.</p>
-</td></tr></table><!--  body-wrap -->
+<body style="background-color: transparent;">
+<div id="hmtocheader">
+<p class="navtitle">Intel® Manager for Lustre*</p> 
+<span id="operabug" style="display:none;">Opera Bug</span>
+<p class="nojstitle"><b>Contents</b> | <a href="chromaonlinehelp_kwindex.htm" target="_self">Index</a></p>
 </div>
+<!-- Placeholder for the TOC - this variable is REQUIRED! -->
+<div id="hmtocbody">
+<ul id="toc" style="list-style-type:none;display:block;padding-left:0;margin:0">
+<li class="heading1" id="i1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a1" href="intel_manager_for_lustre.htm" target="hmcontent"><span class="heading1" id="s1">Cover</span></a>
+</li>
+<li class="heading1" id="i2" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a2" href="introducing_intel_manager_for_lustre.htm" target="hmcontent"><span class="heading1" id="s2" ondblclick="return dblclicked(this)">Introducing Intel® Manager for Lustre*</span></a>
+<ul id="ul2" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i2.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a2.1" href="enterprise_lustre_overview2.htm" target="hmcontent"><span class="heading2" id="s2.1">Overview of Intel® Enterprise Edition for Lustre* software</span></a>
+</li>
+<li class="heading2" id="i2.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a2.2" href="new_features_in_this_release.htm" target="hmcontent"><span class="heading2" id="s2.2">Major new features in this release</span></a>
+</li>
+<li class="heading2" id="i2.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a2.3" href="the_graphical_user_interface.htm" target="hmcontent"><span class="heading2" id="s2.3">Overview of the graphical user interface</span></a>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i3" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a3" href="getting_started.htm" target="hmcontent"><span class="heading1" id="s3" ondblclick="return dblclicked(this)">Getting started</span></a>
+<ul id="ul3" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i3.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a3.1" href="creating_user_accounts.htm" target="hmcontent"><span class="heading2" id="s3.1">Creating user accounts</span></a>
+</li>
+<li class="heading2" id="i3.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a3.2" href="setting_up_email_notifications.htm" target="hmcontent"><span class="heading2" id="s3.2">Setting up email notifications of alerts</span></a>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i4" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a4" href="creating_a_file_system2.htm" target="hmcontent"><span class="heading1" id="s4" ondblclick="return dblclicked(this)">Creating a new Lustre* file system</span></a>
+<ul id="ul4" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i4.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.1" href="configure_storage_servers.htm" target="hmcontent"><span class="heading2" id="s4.1">Add storage servers</span></a>
+</li>
+<li class="heading2" id="i4.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.2" href="configure_the_volumes.htm" target="hmcontent"><span class="heading2" id="s4.2">Configure primary and failover servers</span></a>
+</li>
+<li class="heading2" id="i4.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.3" href="configure_power_distribution_u.htm" target="hmcontent"><span class="heading2" id="s4.3">Add power distribution units</span></a>
+</li>
+<li class="heading2" id="i4.4" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.4" href="assign_pdu_outlets_to_servers.htm" target="hmcontent"><span class="heading2" id="s4.4">Assign PDU outlets to servers</span></a>
+</li>
+<li class="heading2" id="i4.5" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.5" href="configure_ipmi_and_add_bmcs.htm" target="hmcontent"><span class="heading2" id="s4.5">Configure IPMI and add BMCs</span></a>
+</li>
+<li class="heading2" id="i4.6" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.6" href="create_the_file_system.htm" target="hmcontent"><span class="heading2" id="s4.6">Create the new Lustre* file system</span></a>
+</li>
+<li class="heading2" id="i4.7" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.7" href="view_the_file_system.htm" target="hmcontent"><span class="heading2" id="s4.7">View the New File System</span></a>
+</li>
+<li class="heading2" id="i4.8" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a4.8" href="mounting_file_system_clients.htm" target="hmcontent"><span class="heading2" id="s4.8">Mount file system clients</span></a>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i5" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a5" href="monitoring_a_file_system.htm" target="hmcontent"><span class="heading1" id="s5" ondblclick="return dblclicked(this)">Monitoring Lustre* file systems</span></a>
+<ul id="ul5" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i5.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.1" href="view_charts.htm" target="hmcontent"><span class="heading2" id="s5.1">View charts on the Dashboard</span></a>
+</li>
+<li class="heading2" id="i5.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.2" href="view_file_system_status.htm" target="hmcontent"><span class="heading2" id="s5.2">Check file systems status</span></a>
+</li>
+<li class="heading2" id="i5.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.3" href="alerts__events__and_informatio.htm" target="hmcontent"><span class="heading2" id="s5.3">View alert and event status messages</span></a>
+</li>
+<li class="heading2" id="i5.4" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.4" href="view_commmands.htm" target="hmcontent"><span class="heading2" id="s5.4">View commands on the Status page</span></a>
+</li>
+<li class="heading2" id="i5.5" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.5" href="view_history.htm" target="hmcontent"><span class="heading2" id="s5.5">View History</span></a>
+</li>
+<li class="heading2" id="i5.6" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.6" href="view_logs.htm" target="hmcontent"><span class="heading2" id="s5.6">View Logs</span></a>
+</li>
+<li class="heading2" id="i5.7" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.7" href="view_all_file_system_parameter.htm" target="hmcontent"><span class="heading2" id="s5.7">View and change file system parameters</span></a>
+</li>
+<li class="heading2" id="i5.8" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a5.8" href="view_a_servers_parameters.htm" target="hmcontent"><span class="heading2" id="s5.8">View a server's parameters</span></a>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i6" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a6" href="managing_storage.htm" target="hmcontent"><span class="heading1" id="s6" ondblclick="return dblclicked(this)">Managing Storage</span></a>
+<ul id="ul6" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i6.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.1" href="ha_and_failover_support_provid.htm" target="hmcontent"><span class="heading2" id="s6.1">High-availability file system support</span></a>
+</li>
+<li class="heading2" id="i6.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.2" href="starting_or_stopping_a_file_sy.htm" target="hmcontent"><span class="heading2" id="s6.2">Start, stop, or remove a file system</span></a>
+</li>
+<li class="heading2" id="i6.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.3" href="start_or_stop_a_server_for_a_m.htm" target="hmcontent"><span class="heading2" id="s6.3">Start or stop an MGT, MDT, or OST</span></a>
+</li>
+<li class="heading2" id="i6.4" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.4" href="remove_an_ost.htm" target="hmcontent"><span class="heading2" id="s6.4">Remove an OST from a file system</span></a>
+</li>
+<li class="heading2" id="i6.5" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.5" href="perform_a_manual_failover.htm" target="hmcontent"><span class="heading2" id="s6.5">Perform a manual failover</span></a>
+</li>
+<li class="heading2" id="i6.6" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.6" href="perform_a_manual_failback.htm" target="hmcontent"><span class="heading2" id="s6.6">Perform a manual failback</span></a>
+</li>
+<li class="heading2" id="i6.7" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.7" href="decommissioning_a_server_for_a.htm" target="hmcontent"><span class="heading2" id="s6.7">Decommission a server for an MGT, MDT, or OST</span></a>
+</li>
+<li class="heading2" id="i6.8" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a6.8" href="handling_network_address_chang.htm" target="hmcontent"><span class="heading2" id="s6.8">Handling network address changes (updating NIDs)</span></a>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i7" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a7" href="gui_pages_and_tabs.htm" target="hmcontent"><span class="heading1" id="s7" ondblclick="return dblclicked(this)">All GUI pages and tabs</span></a>
+<ul id="ul7" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i7.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a7.1" href="dashboard_page.htm" target="hmcontent"><span class="heading2" id="s7.1">Dashboard page</span></a>
+</li>
+<li class="heading2" id="i7.2" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a7.2" href="configuration_page.htm" target="hmcontent"><span class="heading2" id="s7.2" ondblclick="return dblclicked(this)">Configuration page</span></a>
+<ul id="ul7.2" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading3" id="i7.2.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a7.2.1" href="server_tab.htm" target="hmcontent"><span class="heading3" id="s7.2.1">Server tab</span></a>
+</li>
+<li class="heading3" id="i7.2.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a7.2.2" href="volumes_tab.htm" target="hmcontent"><span class="heading3" id="s7.2.2">Volumes tab</span></a>
+</li>
+<li class="heading3" id="i7.2.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a7.2.3" href="power_control_tab.htm" target="hmcontent"><span class="heading3" id="s7.2.3">Power Control tab</span></a>
+</li>
+<li class="heading3" id="i7.2.4" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a7.2.4" href="mgts_tab.htm" target="hmcontent"><span class="heading3" id="s7.2.4">MGTs tab</span></a>
+</li>
+<li class="heading3" id="i7.2.5" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a7.2.5" href="file_systems_tab.htm" target="hmcontent"><span class="heading3" id="s7.2.5">File Systems tab</span></a>
+</li>
+<li class="heading3" id="i7.2.6" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a7.2.6" href="storage_tab.htm" target="hmcontent"><span class="heading3" id="s7.2.6">Storage tab</span></a>
+</li>
+<li class="heading3" id="i7.2.7" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a7.2.7" href="users_tab.htm" target="hmcontent"><span class="heading3" id="s7.2.7">Users</span></a>
+</li>
+</ul>
+</li>
+<li class="heading2" id="i7.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a7.3" href="alerts_page.htm" target="hmcontent"><span class="heading2" id="s7.3">Alerts page</span></a>
+</li>
+<li class="heading2" id="i7.4" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a7.4" href="history_page.htm" target="hmcontent"><span class="heading2" id="s7.4">History page</span></a>
+</li>
+<li class="heading2" id="i7.5" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a7.5" href="logs_page.htm" target="hmcontent"><span class="heading2" id="s7.5">Logs page</span></a>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i8" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a8" href="advanced_topics.htm" target="hmcontent"><span class="heading1" id="s8" ondblclick="return dblclicked(this)">Advanced topics</span></a>
+<ul id="ul8" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i8.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a8.1" href="increasing_the_file_systems_ca.htm" target="hmcontent"><span class="heading2" id="s8.1">Increase a file system's capacity</span></a>
+</li>
+<li class="heading2" id="i8.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a8.2" href="file_system_advanced_settings.htm" target="hmcontent"><span class="heading2" id="s8.2">File system advanced settings</span></a>
+</li>
+<li class="heading2" id="i8.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a8.3" href="configure_the_management_targe.htm" target="hmcontent"><span class="heading2" id="s8.3">Configure a new management target</span></a>
+</li>
+<li class="heading2" id="i8.4" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a8.4" href="detecting_and_monitoring_exist.htm" target="hmcontent"><span class="heading2" id="s8.4" ondblclick="return dblclicked(this)">Detect and monitor existing Lustre* file systems</span></a>
+<ul id="ul8.4" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading3" id="i8.4.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a8.4.1" href="add_servers_to_be_monitored.htm" target="hmcontent"><span class="heading3" id="s8.4.1">Add servers to be monitored only</span></a>
+</li>
+<li class="heading3" id="i8.4.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading3" id="a8.4.2" href="detect_file_systems.htm" target="hmcontent"><span class="heading3" id="s8.4.2">Detect file systems</span></a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i9" data-bg="toc_closedbook.png;toc_openbook.png" style="background:url(toc_openbook.png) no-repeat;cursor:pointer;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a9" href="using_the_command_line_interfa.htm" target="hmcontent"><span class="heading1" id="s9" ondblclick="return dblclicked(this)">Using the Intel® Manager for Lustre* command line interface</span></a>
+<ul id="ul9" style="list-style-type:none;margin-left:0px;padding:0">
+<li class="heading2" id="i9.1" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a9.1" href="accessing_the_command_line_int.htm" target="hmcontent"><span class="heading2" id="s9.1">Accessing the command line interface</span></a>
+</li>
+<li class="heading2" id="i9.2" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a9.2" href="creating_a_configuration_file_.htm" target="hmcontent"><span class="heading2" id="s9.2">Creating a configuration file with login information</span></a>
+</li>
+<li class="heading2" id="i9.3" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a9.3" href="getting_help_for_cli_commands.htm" target="hmcontent"><span class="heading2" id="s9.3">Getting help for CLI commands</span></a>
+</li>
+<li class="heading2" id="i9.4" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading2" id="a9.4" href="cli_command_example.htm" target="hmcontent"><span class="heading2" id="s9.4">CLI command examples</span></a>
+</li>
+</ul>
+</li>
+<li class="heading1" id="i10" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a10" href="glossary.htm" target="hmcontent"><span class="heading1" id="s10">Glossary</span></a>
+</li>
+<li class="heading1" id="i11" style="background:url(toc_topic.png) no-repeat;margin-top:2px;margin-left:0;padding-left:20px" onclick="return clicked(this,event)"><a class="heading1" id="a11" href="getting_help.htm" target="hmcontent"><span class="heading1" id="s11">Getting Help</span></a>
+</li>
+</ul>
+<script type="text/javascript">loadicons('toc_topic.png','toc_openbook.png','toc_closedbook.png');</script>
+</div>
+<div id="hmtocfooter" >
+<p>Copyright © 2012-2013 Intel Corporation. All rights Reserved.</p>
+</div> 
 </body>
-<!--[if gt IE 6]>
-<script type="text/javascript">
-headResizeTOC();
-</script>
-<![endif]-->
 </html>
