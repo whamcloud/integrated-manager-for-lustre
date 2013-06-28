@@ -16,7 +16,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
         for host in config['lustre_servers']:
             self.remote_command(
                 host['address'],
-                "mount -a",
+                "mount -a -t lustre",
                 expected_return_code = None
             )
 
@@ -156,7 +156,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
         for host in config['lustre_servers']:
             self.remote_command(
                 host['address'],
-                "mount -a"
+                "mount -a -t lustre"
             )
 
         # Wait for audit
