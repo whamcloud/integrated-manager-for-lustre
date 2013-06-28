@@ -316,7 +316,7 @@ def register_target(mount_point, device):
 
 
 def unconfigure_target_ha(primary, ha_label, uuid):
-    from chroma_agent.action_plugins.manage_corosync import cibadmin
+    from chroma_agent.lib.pacemaker import cibadmin
 
     if get_resource_location(ha_label):
         raise RuntimeError("cannot unconfigure-ha: %s is still running " %

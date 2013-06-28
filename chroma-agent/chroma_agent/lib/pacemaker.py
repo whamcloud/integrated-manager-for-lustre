@@ -25,6 +25,8 @@ from xml.parsers.expat import ExpatError as ParseError
 
 from chroma_agent import shell
 from chroma_agent.lib import fence_agents
+from time import sleep
+import socket
 
 
 class PacemakerNode(object):
@@ -74,7 +76,7 @@ class PacemakerNode(object):
         for agent in [k for k in self.attributes if 'agent' in k]:
             index = agent[0:agent.find('_')]
             agents.append(dict([t for t in self.attributes.items()
-                                    if t[0].startswith("%s_fence_" % index)]))
+                                if t[0].startswith("%s_fence_" % index)]))
 
         return agents
 
@@ -116,7 +118,7 @@ class PacemakerNode(object):
 class PacemakerConfig(object):
     @property
     def root(self):
-        raw = shell.try_run(["cibadmin", "--query"])
+        rc, raw, stderr = cibadmin(["--query"])
         try:
             return xml.fromstring(raw)
         except ParseError:
@@ -143,6 +145,10 @@ class PacemakerConfig(object):
         return nodes
 
     @property
+    def dc(self):
+        return self.root.get('dc-uuid')
+
+    @property
     def fenceable_nodes(self):
         return [n for n in self.nodes if len(n.fence_agents) > 0]
 
@@ -151,3 +157,28 @@ class PacemakerConfig(object):
             return [n for n in self.nodes if n.name == node_name][0]
         except IndexError:
             raise RuntimeError("%s does not exist in pacemaker" % node_name)
+
+    @property
+    def is_dc(self):
+        return self.dc == self.get_node(socket.gethostname()).name
+
+
+def cibadmin(command_args):
+    from chroma_agent import shell
+
+    # try at most, 100 times
+    n = 100
+    rc = 10
+
+    while (rc == 10 or rc == 41) and n > 0:
+        rc, stdout, stderr = shell.run(['cibadmin'] + command_args)
+        if rc == 0:
+            break
+        sleep(1)
+        n -= 1
+
+    if rc != 0:
+        raise RuntimeError("Error (%s) running 'cibadmin %s': '%s' '%s'" %
+                           (rc, " ".join(command_args), stdout, stderr))
+
+    return rc, stdout, stderr

@@ -25,10 +25,11 @@ Corosync verification
 """
 
 from netaddr import IPNetwork
-from time import sleep
 
 from chroma_agent import shell
 from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
+from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
+from chroma_agent.log import daemon_log
 
 # The window of time in which we count resource monitor failures
 RSRC_FAIL_WINDOW = "20m"
@@ -94,26 +95,17 @@ def configure_pacemaker():
         shell.try_run(['/sbin/service', 'corosync', 'restart'])
         shell.try_run(['/sbin/service', 'corosync', 'status'])
 
-    shell.try_run(['/sbin/service', 'pacemaker', 'restart'])
-    # need to wait for the CIB to be ready
-    timeout = 120
-    while timeout > 0:
-        rc, stdout, stderr = shell.run(['crm', 'status'])
-        for line in stdout.split('\n'):
-            if line.startswith("Current DC:"):
-                if line[line.find(":") + 2:] != "NONE":
-                    timeout = -1
-                    break
-        sleep(1)
-        timeout = timeout - 1
-
-    if timeout == 0:
-        raise RuntimeError("Failed to start pacemaker")
-
     shell.try_run(['/sbin/chkconfig', 'pacemaker', 'on'])
+    shell.try_run(['/sbin/service', 'pacemaker', 'restart'])
+
+    pc = PacemakerConfig()
+
+    if not pc.is_dc:
+        daemon_log.info("Skipping (global) pacemaker configuration because I am not the DC")
+        return
 
     # ignoring quorum should only be done on clusters of 2
-    if get_cluster_size() > 2:
+    if len(pc.nodes) > 2:
         no_quorum_policy = "stop"
     else:
         no_quorum_policy = "ignore"
@@ -259,28 +251,6 @@ def delete_node(nodename):
               "<node uname=\"%s\"/>" % nodename])
     cibadmin(["--delete", "--obj_type", "nodes", "--crm_xml",
               "<node_state uname=\"%s\"/>" % nodename])
-
-
-def cibadmin(command_args):
-    from time import sleep
-    from chroma_agent import shell
-
-    # try at most, 100 times
-    n = 100
-    rc = 10
-
-    while rc == 10 and n > 0:
-        rc, stdout, stderr = shell.run(['cibadmin'] + command_args)
-        if rc == 0:
-            break
-        sleep(1)
-        n -= 1
-
-    if rc != 0:
-        raise RuntimeError("Error (%s) running 'cibadmin %s': '%s' '%s'" %
-                           (rc, " ".join(command_args), stdout, stderr))
-
-    return rc, stdout, stderr
 
 
 def host_corosync_config():
