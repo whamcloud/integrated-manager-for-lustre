@@ -20,13 +20,16 @@
 # express and approved by Intel in writing.
 
 
+from chroma_cli.api import DEFAULT_API_URL
+
+
 # These aren't user-configurable, but this is a handy place to stash them.
 RC_FILES = [".chroma", ".chromarc"]
 PROXY_VARIABLES = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']
 
 defaults = dict()
 
-defaults['api_url'] = "http://localhost/api/"
+defaults['api_url'] = DEFAULT_API_URL
 defaults['username'] = ""
 defaults['password'] = ""
 defaults['output'] = "human"

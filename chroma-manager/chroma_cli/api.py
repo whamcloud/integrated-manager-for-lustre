@@ -26,6 +26,9 @@ from urlparse import urljoin
 from chroma_cli.exceptions import InvalidApiResource, UnsupportedFormat, NotFound, TooManyMatches, BadRequest, InternalError, UnauthorizedRequest, AuthenticationFailure, ApiConnectionError
 
 
+DEFAULT_API_URL = "https://localhost/api/"
+
+
 class JsonSerializer(object):
     """
     Simple JSON serializer which implements the important parts of TastyPie's Serializer API.
@@ -58,7 +61,7 @@ class JsonSerializer(object):
 class ChromaSessionClient(object):
     def __init__(self):
         self.is_authenticated = False
-        self.api_uri = "http://localhost/api/"
+        self.api_uri = DEFAULT_API_URL
 
         import requests
         self.session = requests.session()
@@ -207,7 +210,7 @@ class ApiHandle(object):
         self.__schema = None
         self.base_url = self._fix_base_uri(api_uri)
         if not self.base_url:
-            self.base_url = "http://localhost/api/"
+            self.base_url = DEFAULT_API_URL
         self.authentication = authentication
         self.endpoints = ApiEndpointGenerator(self)
         self.serializer = JsonSerializer()
@@ -222,13 +225,13 @@ class ApiHandle(object):
 
         >>> ah = ApiHandle()
         >>> ah.base_url
-        'http://localhost/api/'
+        'https://localhost/api/'
         >>> ah = ApiHandle(api_uri="http://some.server")
         >>> ah.base_url
         'http://some.server/api/'
         >>> ah = ApiHandle(api_uri="some.server")
         >>> ah.base_url
-        'http://some.server/api/'
+        'https://some.server/api/'
         >>> ah = ApiHandle(api_uri="http://localhost:8000/api/")
         >>> ah.base_url
         'http://localhost:8000/api/'
@@ -238,7 +241,7 @@ class ApiHandle(object):
 
         import re
         if not re.search(r"^http(s)?://", base_uri):
-            base_uri = "http://" + base_uri
+            base_uri = "https://" + base_uri
         if not re.search(r"/api(/?)$", base_uri):
             base_uri = urljoin(base_uri, "/api/")
 
