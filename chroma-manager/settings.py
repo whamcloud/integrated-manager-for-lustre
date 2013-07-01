@@ -231,8 +231,15 @@ EMAIL_ALERTS_PERIOD = 300
 
 SQL_RETRY_PERIOD = 10
 
-LUSTRE_MKFS_OPTIONS_MDT = "-t ext4 -J size=2048"
-LUSTRE_MKFS_OPTIONS_OST = "-t ext4 -J size=2048"
+# Note: overriding the LUSTRE_MKFS_* settings will squash
+# our own use of -I and -J for inode/journal size, so you
+# must specify *all* the options you want, not just the ones
+# you want to change.
+LUSTRE_MKFS_OPTIONS_MDT = None
+LUSTRE_MKFS_OPTIONS_OST = None
+
+# Argument to mkfs.ext4 '-J' option
+JOURNAL_SIZE = "2048"
 
 CELERY_ROUTES = (
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},

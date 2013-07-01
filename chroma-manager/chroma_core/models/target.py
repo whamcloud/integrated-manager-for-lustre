@@ -861,6 +861,10 @@ class MkfsStep(Step):
             mkfsoptions.append("-i %s" % target.bytes_per_inode)
         if target.inode_count:
             mkfsoptions.append("-N %s" % target.inode_count)
+
+        if settings.JOURNAL_SIZE and issubclass(target.downcast_class, FilesystemMember):
+            # Journal setting only applies to MDT and OST
+            mkfsoptions.append("-J size=%s" % settings.JOURNAL_SIZE)
         if mkfsoptions:
             mkfs_args['mkfsoptions'] = " ".join(mkfsoptions)
 
