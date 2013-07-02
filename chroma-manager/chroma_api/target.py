@@ -239,7 +239,9 @@ class TargetResource(MetricResource, ConfParamResource):
         always_return_data = True
         readonly = ['active_host', 'failover_server_name', 'volume_name',
                     'primary_server_name', 'active_host_name', 'filesystems',
-                    'name', 'uuid', 'primary_server', 'failover_servers', 'active_host_name']
+                    'name', 'uuid', 'primary_server', 'failover_servers',
+                    'active_host_name', 'ha_label', 'filesystem_name',
+                    'filesystem_id']
 
     def override_urls(self):
         urls = super(TargetResource, self).override_urls()

@@ -144,7 +144,11 @@ class HostResource(MetricResource, StatefulModelResource):
         ordering = ['fqdn']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
-        readonly = ['nodename', 'fqdn', 'nids', 'last_contact']
+        readonly = ['nodename', 'fqdn', 'nids', 'last_contact',
+                    'needs_fence_reconfiguration', 'needs_update', 'boot_time',
+                    'corosync_reported_up']
+        # HYD-2256: remove these fields when other auth schemes work
+        readonly += ['root_pw', 'private_key_passphrase', 'private_key']
         validation = HostValidation()
         always_return_data = True
 

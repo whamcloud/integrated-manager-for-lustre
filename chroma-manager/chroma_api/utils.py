@@ -120,11 +120,12 @@ class CustomModelDeclarativeMetaclass(ModelDeclarativeMetaclass):
         # stupid de-dupe tricks
         new_class._meta.readonly = list(set(new_class._meta.readonly +
                                             parent_readonly))
-        try:
-            for field in new_class._meta.readonly:
+
+        for field in new_class._meta.readonly:
+            try:
                 new_class.base_fields[field].readonly = True
-        except KeyError:
-            pass
+            except KeyError:
+                pass
 
         return new_class
 

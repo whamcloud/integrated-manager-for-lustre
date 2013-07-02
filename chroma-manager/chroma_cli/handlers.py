@@ -267,6 +267,7 @@ class ServerHandler(Handler):
 
     def test_host(self, ns, endpoint=None, **kwargs):
         failure_text = {
+            'auth': "The manager was unable to login to %s on your behalf",
             'resolve': "Unable to resolve fqdn for %s",
             'reverse_resolve': "The agent on %s was unable to resolve the manager's IP address",
             'ping': "The manager was unable to ping %s",
