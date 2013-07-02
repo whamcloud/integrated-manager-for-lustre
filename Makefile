@@ -44,5 +44,5 @@ tags:
 	ctags --python-kinds=-i -R --exclude=chroma-\*/myenv\* --exclude=chroma-dependencies .
 
 # build the chroma-{agent,management} subdirs before the chroma-dependencies subdir
-chroma-dependencies: chroma-agent chroma-manager
+chroma-dependencies: chroma-agent chroma-manager chroma-diagnostics
 chroma-bundles: chroma-dependencies

@@ -48,6 +48,7 @@ Requires: django-celery >= 3.0.10
 Requires: django-picklefield
 Requires: chroma-manager-libs = %{version}
 Requires: chroma-manager-cli = %{version}
+Requires: chroma-diagnostics >= %{version}
 Requires: policycoreutils-python
 Requires: python-gevent >= 0.13
 Requires: fence-agents-iml

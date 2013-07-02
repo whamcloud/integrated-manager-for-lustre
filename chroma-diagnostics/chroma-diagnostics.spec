@@ -14,6 +14,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Intel(R) Corporation
+Requires: python-argparse
 
 %description
 Commandline tool to collect and save data on manager or storage servers for diagnostic analysis. Intended for administrators.
