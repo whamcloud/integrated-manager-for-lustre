@@ -27,7 +27,7 @@ WARNING:
     this module unless you're really going to use it.
 """
 import logging
-from chroma_core.lib.storage_plugin.api.resources import LogicalDrive
+from chroma_core.lib.storage_plugin.api.resources import LogicalDrive, LogicalDriveSlice
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
@@ -538,8 +538,9 @@ class ResourceManager(object):
                     # If this logicaldrive has one and only one ancestor which is
                     # also a logicaldrive, then inherit the label from that ancestor
                     ancestors = self._record_find_ancestors(logicaldrive_id, LogicalDrive)
+                    record_class = self._class_index.get(logicaldrive_id)
                     ancestors.remove(logicaldrive_id)
-                    if len(ancestors) == 1:
+                    if len(ancestors) == 1 and not issubclass(record_class, LogicalDriveSlice):
                         label = self.get_label(ancestors[0])
                     else:
                         label = self.get_label(logicaldrive_id)
