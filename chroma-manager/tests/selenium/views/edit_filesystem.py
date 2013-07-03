@@ -1,3 +1,5 @@
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.expected_conditions import presence_of_element_located
 from selenium.webdriver.support.ui import WebDriverWait
 
 from tests.selenium.base import wait_for_transition
@@ -38,7 +40,11 @@ class EditFilesystem(BaseView):
         self.quiesce()
 
     def open_target_conf_params(self, target_name):
-        link = WebDriverWait(self.driver, self.standard_wait).until(lambda driver: driver.find_element_by_link_text(target_name))
+        self.quiesce()
+        link = WebDriverWait(self.driver, self.standard_wait).until(
+            lambda driver: driver.find_element_by_link_text(target_name),
+            "The target link %s could not be found!" % target_name
+        )
         link.click()
         self.quiesce()
         self.config_param_tab = self.driver.find_element_by_css_selector('div.target_detail a[href="#target_dialog_config_param_tab"]')
@@ -62,11 +68,18 @@ class EditFilesystem(BaseView):
         """Given that a target detail dialog is visible, and on the conf params tab click its apply button"""
         self.get_visible_element_by_css_selector("div.ui-dialog-buttonset button.close").click()
         # Closing the dialog is a history.back() operation so wait for the reload
+        self.wait_for_conf_param_target_dialog_close()
         self.quiesce()
 
     def conf_param_dialog_visible(self):
         element = find_visible_element_by_css_selector(self.driver, self.conf_param_apply_button)
         return bool(element)
+
+    def wait_for_conf_param_target_dialog_close(self):
+        WebDriverWait(self.driver, self.standard_wait).until_not(
+            presence_of_element_located((By.CSS_SELECTOR, self.target_conf_param_apply_button)),
+            "The target dialog is still visible!"
+        )
 
     def open_fs_conf_param_dialog(self):
         self.driver.find_element_by_css_selector("div#filesystem_detail button.advanced").click()

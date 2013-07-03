@@ -141,7 +141,7 @@ var ChromaRouter = Backbone.Router.extend({
         ],
         close: function (event, ui) {
           window.history.back();
-          $(this).remove();
+          $(this).dialog('destroy').remove();
         },
         width: 600,
         height: 600,

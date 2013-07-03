@@ -136,8 +136,6 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         self.edit_filesystem_page.apply_target_conf_params()
         self.edit_filesystem_page.close_target_conf_params()
 
-        self.assertFalse(self.edit_filesystem_page.conf_param_dialog_visible())
-
         # Re-open dialog and check params are present
         self.edit_filesystem_page.open_target_conf_params(target_name)
 
