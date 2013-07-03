@@ -41,7 +41,7 @@ class BaseView(object):
             else:
                 time.sleep(1)
 
-        raise RuntimeError("Timed out waiting for API operations to complete after %s seconds" % self.standard_wait)
+        raise RuntimeError("Timed out waiting for API operations to complete after %s seconds" % self.long_wait)
 
     def wait_for_removal(self, selector):
         """Wait for all elements matching selector to be removed from the DOM"""
@@ -76,7 +76,7 @@ class BaseView(object):
 
         self.quiesce()
 
-        wait_for_element_by_css_selector(container, self.dropdown_selector, self.short_wait)
+        wait_for_element_by_css_selector(container, self.dropdown_selector, self.standard_wait)
 
         dropdown = container.find_element_by_class_name(self.dropdown_class_name)
         dropdown_menu = dropdown.find_element_by_class_name(self.dropdown_menu_class_name)

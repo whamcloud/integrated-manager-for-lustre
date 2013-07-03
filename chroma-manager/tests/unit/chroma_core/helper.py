@@ -43,7 +43,7 @@ def synthetic_volume(serial=None, with_storage=True):
         serial = "foobar%d" % volume.id
 
     attrs = {'serial': serial,
-             'size': 1024000}
+             'size': 8192000}
 
     if with_storage:
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager

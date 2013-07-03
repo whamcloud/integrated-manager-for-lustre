@@ -19,8 +19,8 @@ static_text = {
 
 # Wait time duration in seconds
 wait_time = {
-    'long': 300,
-    'standard': 60,
-    'medium': 30,
-    'short': 15,
+    'long': 900,
+    'standard': 300,
+    'medium': 60,
+    'short': 30,
 }
