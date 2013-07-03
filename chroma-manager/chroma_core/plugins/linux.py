@@ -82,7 +82,7 @@ class LinuxDeviceNode(resources.DeviceNode):
         identifier = ScopedId('path')
 
 
-class Partition(resources.LogicalDrive):
+class Partition(resources.LogicalDriveSlice):
     class Meta:
         identifier = GlobalId('container', 'number')
 
@@ -123,7 +123,7 @@ class LvmGroup(resources.StoragePool):
         return self.name
 
 
-class LvmVolume(resources.LogicalDrive):
+class LvmVolume(resources.LogicalDriveSlice):
     # Q: Why is this identified by LV UUID and VG UUID rather than just
     #    LV UUID?  Isn't the LV UUID unique enough?
     # A: We're matching LVM2's behaviour.  If you e.g. image a machine that
