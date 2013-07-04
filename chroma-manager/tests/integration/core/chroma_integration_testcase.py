@@ -95,7 +95,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         # Wait for the host setup to complete
         # Rather a long timeout because this may include installing Lustre and rebooting
-        self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=600)
+        self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=900)
 
         # Verify there are now n hosts in the database.
         response = self.chroma_manager.get(
