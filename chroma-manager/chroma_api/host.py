@@ -115,7 +115,7 @@ class ServerProfileResource(ModelResource):
 
 class HostResource(MetricResource, StatefulModelResource):
     """
-    Represents a Lustre server that is being monitored and managed from the Command Center.
+    Represents a Lustre server that is being monitored and managed from the manager server.
 
     PUTs to this resource must have the ``state`` attribute set.
 

@@ -47,7 +47,7 @@ class String(BaseResourceAttribute):
 
 class Password(String):
     """A password.  Plugins must provide their own obfuscation function.
-    The encryption function will be called by the Command Center when processing user input (e.g.
+    The encryption function will be called by the manager server when processing user input (e.g.
     when a resource is added in the UI).  The obfuscated text will be seen by
     the plugin when the resource is retrieved.
 

@@ -232,7 +232,7 @@ class SimulatorCli(object):
         register_parser.add_argument('--secret', required = False, help = "Registration token secret")
         register_parser.add_argument('--username', required = False, help = "API username")
         register_parser.add_argument('--password', required = False, help = "API password")
-        register_parser.add_argument('--create_pdu_entries', action='store_true', help = "Create PDU entries in the command center")
+        register_parser.add_argument('--create_pdu_entries', action='store_true', help = "Create PDU entries on the manager")
         register_parser.set_defaults(func = self.register)
 
         run_parser = subparsers.add_parser("run")

@@ -5,12 +5,12 @@ REST API for Intel\ |reg| Manager for Lustre* software
 Introduction
 ------------
 
-The Command Center web interface and command line interface (CLI) included with the 
+The manager server web interface and command line interface (CLI) included with the 
 Intel\ |reg| Manager for Lustre* software are built on the REST API, which is accessed
 via HTTP.  This API is available for integration with third party applications.  The 
 types of operations possible using the API include creating a file system, checking
 the system for alert conditions, and downloading performance metrics.  All functionality
-provided in the Command Center web interface is based on this API, so anything 
+provided in the manager server web interface is based on this API, so anything 
 that can be done using the web interface can also potentially be done from third party 
 applications.
 
@@ -26,7 +26,7 @@ available functionality.
 Prerequisites
 ~~~~~~~~~~~~~
 
-* Familiarity with managing Lustre using the Command Center web interface provided 
+* Familiarity with managing Lustre using the manager server web interface provided 
   with the Intel Manager for Lustre software.
 * Familiarity with HTTP, including the meanings and conventions around the 
   methods (e.g. GET, POST, DELETE) and status codes (e.g. 404, 200).
@@ -103,8 +103,8 @@ This type of operation is referred to in this document as a _list_ operation.
 Use of HTTPS
 ~~~~~~~~~~~~
 
-By default, the Command Center uses a server certificate signed by its built-in CA.  To verify this
-certificate in an API client, you must download the Command Center CA.  The CA is available for
+By default, the manager server uses a server certificate signed by its built-in CA.  To verify this
+certificate in an API client, you must download the manager server CA.  The CA is available for
 download from the manager server at the ``/certificate/`` path.
 
 Filtering and Ordering
@@ -117,7 +117,7 @@ Ordering of results is done using the ``order_by`` URL parameter set to the name
 of the attribute by which the results are to be ordered, prefixed with ``-`` to reverse the order.  For example, 
 to get all targets in reverse name order, use the URL ``/api/target/?order_by=-name``.
 
-More advanced filtering is also possible (Note: The Command Center server uses the Django``*`` framework
+More advanced filtering is also possible (Note: The manager server server uses the Django``*`` framework
 to access its database, so `'django style' queries <https://docs.djangoproject.com/en/dev/ref/models/querysets/#field-lookups>`_ are used).  They use double-underscore
 suffixes to field names to indicate the type of filtering. Some commonly used filters
 are shown in the following list:
@@ -150,7 +150,7 @@ JSON does not define an encoding for dates and times. The API uses the `ISO8601 
 for dates and times, with the caveat that the timezone must be specified in values or behaviour is undefined.
 
 You may find it useful to browse the API using a web browser.  To do this on a running
-system, first log into the Command Center web interface, and then point your browser at
+system, first log into the manager server web interface, and then point your browser at
 ``http://my-command-center/api/host/?format=json``.  The resulting output is best browsed
 using a plugin like ``JSONView`` for the Google``*`` Chrome``*`` browser.  Note that using ``format=json`` is
 only necessary when using a browser: your own client will set the ``Accept`` header instead.
@@ -305,7 +305,7 @@ If your application requires write access (methods other than GET) to the API, o
 is configured to prevent anonymous users from reading, then your application must
 authenticate itself to the server.
 
-User accounts and credentials can be created and managed using the Command Center web
+User accounts and credentials can be created and managed using the manager server web
 interface -- we assume here that a suitable account has already been created.  Create
 an account for your application with the lowest possible privilege level.
 
@@ -378,7 +378,7 @@ Exceptions
 ~~~~~~~~~~
 
 If an unhandled exception, INTERNAL SERVER ERROR (500), occurs during an API call, and the 
-Command Center is running in development mode, the exception and traceback will be serialized and returned as JSON:
+manager server is running in development mode, the exception and traceback will be serialized and returned as JSON:
 
 .. code-block:: javascript
 
@@ -403,7 +403,7 @@ API Reference
 -------------
 
 Note: in addition to the information in this document, you may inspect the 
-available API resources and their fields on a running Command Center server.  To enumerate 
+available API resources and their fields on a running manager server server.  To enumerate 
 available resources, use GET ``/api/``.  The resulting list includes links to 
 individual resource schemas like ``/api/host/schema``.
 

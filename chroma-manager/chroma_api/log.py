@@ -48,7 +48,7 @@ class LogAuthorization(DjangoAuthorization):
 
 class LogResource(ModelResource):
     """
-    syslog messages collected by the Command Center.
+    syslog messages collected by the manager server.
 
 
 

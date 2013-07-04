@@ -34,7 +34,7 @@ class TestValidateApiVersion(TestCase):
     """Test StoragePluginManager._validate_api_version method"""
 
     def test_version_match(self):
-        """Test that both the plugin and command center api match versions"""
+        """Test that both the plugin and manager api match versions"""
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager as mgr
 
         name, mod = make_plugin_module(version=1)
@@ -87,7 +87,7 @@ class TestValidateApiVersion(TestCase):
         for c in [1.2, '"version1"', [1, 2, 3], {'version': 1}]:
             name, mod = make_plugin_module(version=c)
 
-            #  initialize command center to accept only version 1 plugins
+            #  initialize manager to accept only version 1 plugins
             settings.STORAGE_API_VERSION = 1
 
         self.assertRaises(VersionMismatchError,

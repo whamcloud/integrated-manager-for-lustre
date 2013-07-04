@@ -10,7 +10,7 @@ entities that are not part of the Linux\*/Lustre\* stack.  This primarily means
 storage controllers and network devices, but the plugin system is generic and 
 does not limit the type of objects that can be reported.
 
-To present device information to the Command Center, a Python\* module is written using
+To present device information to the manager server, a Python\* module is written using
 the Storage Plugin API described in this document:
 
 * The objects to be reported are described by declaring a series of
@@ -46,8 +46,8 @@ way up to the Lustre file system level and an appropriate drill-down user interf
 
 The API may change over time.  To ensure plugins are able to run against a particular
 version of the API, each plugin module must declare the version of the API it intends to use.
-The Command Center will check the version of each plugin when loading and write a message to
-the log if there is a problem.  The Command Center supports version |api_version| of the API.
+The manager server will check the version of each plugin when loading and write a message to
+the log if there is a problem.  The manager server supports version |api_version| of the API.
 The plugin needs to declare the version in the top level module file where the
 plugins and resources are defined.  Note, that if you have Python errors that prevent the plugin module
 from importing, the version is not checked.  The version is only validated on cleanly imported plugins.
@@ -103,7 +103,7 @@ The ``serial_number`` and ``capacity`` attributes of the HardDrive class are
 from the ``attributes`` module.  These are special classes which:
 
 * Apply validation conditions to the attributes
-* Act as metadata for the presentation of the attribute in the Command Center user interface
+* Act as metadata for the presentation of the attribute in the manager server user interface
 
 Various attribute classes are available for use, see :ref:`storage_plugin_attribute_classes`.
 
@@ -174,7 +174,7 @@ Alert Conditions
 
 Plugins can communicate error states by declaring *Alert conditions*,
 which monitor the values of resource attributes and display alerts in the
-Command Center user interface when an error condition is encountered.
+manager server user interface when an error condition is encountered.
 
 Alert conditions are specified for each resource in the Meta section, like this:
 ::
@@ -219,7 +219,7 @@ Declaring a ScannableResource
 
 Certain storage resources are considered 'scannable':
 
-* They can be added by the administrator using the Command Center user interface
+* They can be added by the administrator using the manager server user interface
 * Plugins contact this resource to learn about other resources
 * This resource 'owns' some other resources
 
@@ -327,7 +327,7 @@ function on the storage resource class, returning a string or unicode string for
 Charts
 ~~~~~~
 
-By default, the Command Center web interface presents a separate chart for each statistic
+By default, the manager server web interface presents a separate chart for each statistic
 of a resource.  However, it is often desirable to group statistics on the same
 chart, such as a read/write bandwidth graph.  This may be done by setting the ``charts``
 attribute on a resource class to a list of dictionaries, where each dictionary
@@ -364,7 +364,7 @@ Running a Plugin
 Validating
 ~~~~~~~~~~
 
-Before running your plugin as part of a Command Center instance, it is a good idea to check it over
+Before running your plugin as part of a manager server instance, it is a good idea to check it over
 using the `validate_storage_plugin` command:
 
 ::
@@ -388,13 +388,13 @@ from RPM) with the following content:
     sys.path.append("/home/developer/project/")
     INSTALLED_STORAGE_PLUGINS.append('my_plugin')
 
-After modifying this setting, restart the Command Center services.
+After modifying this setting, restart the manager server services.
 
 Errors from the storage plugin subsystem, including any errors output
 from your plugin can be found in `/var/log/chroma/storage_plugin.log`. To
 increase the verbosity of the log output (by default only WARN and above
 is output), add your plugin to ``settings.STORAGE_PLUGIN_DEBUG_PLUGINS``.
-Changes to these settings take effect when the Command Center services are
+Changes to these settings take effect when the manager server services are
 restarted.
 
 Running the Plugin Process Separately
@@ -436,7 +436,7 @@ which stores the device's WWID as the `serial` attribute.
 
 The `provide_to` argument to `Provide` can either be a resource class, or a 2-tuple of `([plugin name], [class name])`
 for referring to resources in another plugin.  In this case, we are referring to a resource in the 'linux' plugin, which
-is what the Command Center uses for detecting standard devices and device nodes on Linux servers.  Note that these
+is what the manager server uses for detecting standard devices and device nodes on Linux servers.  Note that these
 relations are case sensitive.
 
 Example Plugin
@@ -530,7 +530,7 @@ of your plugin with `chroma-agent device-plugin --plugin=my_controller` (if for 
 your plugin file was called my_controller.py).
 
 The name of the agent plugin module must exactly match the name of the plugin module running
-on the Command Center server.
+on the manager server server.
 
 Handling Data from Agent Plugins
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -571,7 +571,7 @@ subclasses `resources.VirtualMachine`.
             self.update_or_create(MyVirtualMachine, vm_id = 0, controller = controller, address = "192.168.1.11")
 
 When a new VirtualMachine resource is created by a plugin, the configuration
-process is the same as if the host had been added via the Command Center user interface, and the added host 
+process is the same as if the host had been added via the manager server user interface, and the added host 
 will appear in the list of servers in the user interface.
 
 Advanced: Specifying Homing Information
@@ -584,7 +584,7 @@ of access to a storage device.  For example:
   may be preferable to a device node on a host connected to the other port.
 * If a LUN is accessible via two device nodes on a single server, one may be preferable to the other.
 
-This type of information allows the Command Center to make an intelligent selection of primary/secondary Lustre servers.
+This type of information allows the manager server to make an intelligent selection of primary/secondary Lustre servers.
 
 To express this information, create a PathWeight resource that is a parent of the device node and has as its
 parent the LUN.

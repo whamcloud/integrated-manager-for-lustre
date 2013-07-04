@@ -262,7 +262,7 @@ class StoragePluginManager(object):
             plugin_version = e.version
             command_center_version = settings.STORAGE_API_VERSION
             errors.append("The plugin declares version %s. "
-                          "However, this Command Center version supports "
+                          "However, this manager server version supports "
                           "version %s of the Plugin API." % (plugin_version,
                                                      command_center_version))
         except PluginProgrammingError, e:
