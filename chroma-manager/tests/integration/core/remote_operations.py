@@ -440,9 +440,10 @@ class RealRemoteOperations(RemoteOperations):
     def host_contactable(self, address):
         try:
             #TODO: Better way to check this?
-            self._ssh_address(
+            result = self._ssh_address(
                 address,
-                "echo 'Checking if node is ready to receive commands.'"
+                "echo 'Checking if node is ready to receive commands.'",
+                expected_return_code=None
             )
 
         except socket.error:
@@ -452,6 +453,10 @@ class RealRemoteOperations(RemoteOperations):
             return False
         else:
             return True
+
+        if not result.exit_status == 0:
+            # Wait, what?  echo returned !0?  How is that possible?
+            return False
 
     def host_up_secs(self, address):
         result = self._ssh_address(address, "cat /proc/uptime")
