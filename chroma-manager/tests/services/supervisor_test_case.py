@@ -164,4 +164,15 @@ class SupervisorTestCase(TestCase):
         except AssertionError:
             log.error("%s stdout: %s" % (program_name, self._xmlrpc.supervisor.readProcessStdoutLog(program_name, 0, 4096)))
             log.error("%s stderr: %s" % (program_name, self._xmlrpc.supervisor.readProcessStderrLog(program_name, 0, 4096)))
+            log.error(self.tail_log("%s.log" % program_name))
+            log.error(self.tail_log("supervisord.log"))
             raise
+
+    def tail_log(self, log_name):
+        with open(log_name) as log_file:
+            log_tail = ''.join(log_file.readlines()[-20:])
+        return """
+Tail for %s:
+------------------------------
+%s
+""" % (log_name, log_tail)

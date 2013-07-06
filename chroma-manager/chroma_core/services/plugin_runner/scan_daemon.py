@@ -159,6 +159,7 @@ class ScanDaemon(object):
             if session.isAlive():
                 log.warning("session failed to return in %s seconds, forcing exit" % JOIN_TIMEOUT)
                 os._exit(-1)
+        log.info("stop sessions done")
 
     def stop(self):
         self.stopping = True

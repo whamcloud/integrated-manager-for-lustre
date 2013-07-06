@@ -68,6 +68,11 @@ class ServiceThread(threading.Thread):
         super(ServiceThread, self).__init__()
         self.service = service
         self.log = log_register('service_thread')
+        self._started = False
+
+    def start(self):
+        super(ServiceThread, self).start()
+        self._started = True
 
     def run(self):
         if hasattr(self.service, 'name'):
@@ -89,7 +94,11 @@ class ServiceThread(threading.Thread):
             os._exit(-1)
 
     def stop(self):
-        self.service.stop()
+        if not self._started:
+            self.log.error("Attempted to stop ServiceThread '%s' before it was started." % self.service.__class__.__name__)
+            os._exit(-1)
+        else:
+            self.service.stop()
 
 
 def _amqp_connection():

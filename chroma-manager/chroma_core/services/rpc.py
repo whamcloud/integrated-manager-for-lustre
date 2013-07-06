@@ -504,6 +504,7 @@ class ServiceRpcInterface(object):
     """
 
     def __init__(self, wrapped = None):
+        self.worker = None
         self.wrapped = wrapped
 
         if wrapped:
@@ -554,4 +555,6 @@ class ServiceRpcInterface(object):
             self.worker.run()
 
     def stop(self):
-        self.worker.stop()
+        # self.worker could be None if thread stopped before run() gets to the point of setting it
+        if self.worker is not None:
+            self.worker.stop()

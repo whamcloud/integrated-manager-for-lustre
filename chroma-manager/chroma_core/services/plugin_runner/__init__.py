@@ -55,6 +55,7 @@ class Service(ChromaService):
     def __init__(self):
         super(Service, self).__init__()
         self.threads = []
+        self._children_started = threading.Event()
         self._complete = threading.Event()
 
     def run(self):
@@ -84,10 +85,14 @@ class Service(ChromaService):
         for thread in self.threads:
             thread.start()
 
+        self._children_started.set()
         self._complete.wait()
         self.log.debug("Leaving main loop")
 
     def stop(self):
+        # Guard against trying to stop after child threads are created, but before they are started.
+        self._children_started.wait()
+
         self.log.debug("Stopping...")
         for thread in self.threads:
             thread.stop()
