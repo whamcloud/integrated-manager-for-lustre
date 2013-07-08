@@ -33,8 +33,8 @@ class TestConfigureCorosync(unittest.TestCase):
         super(TestConfigureCorosync, self).setUp()
 
         import chroma_agent.shell
-        patcher = mock.patch.object(chroma_agent.shell, 'try_run')
-        self.try_run = patcher.start()
+        patcher = mock.patch.object(chroma_agent.shell, 'run', return_value=(0, '', ''))
+        self.run = patcher.start()
 
         from chroma_agent.lib.corosync import CorosyncRingInterface
 
