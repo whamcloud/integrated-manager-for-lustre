@@ -2,16 +2,16 @@
 """
 Tests for the inter-service interactions that occur through the lifetime of an agent device_plugin session
 """
-from copy import deepcopy
+import json
+import httplib
+import urllib
+import urlparse
 
 from chroma_core.lib.util import chroma_settings
 settings = chroma_settings()
 
 from Queue import Empty
 import time
-import datetime
-import requests
-import threading
 from django.db import transaction
 
 from chroma_core.models import ManagedHost, HostContactAlert, ClientCertificate
@@ -28,27 +28,19 @@ from tests.services.agent_http_client import AgentHttpClient
 RABBITMQ_GRACE_PERIOD = 1
 
 
-class BackgroundGet(threading.Thread):
+class BackgroundGet(httplib.HTTPConnection):
+    "Send request immediately.  Get response on demand."
     def __init__(self, test_case):
-        super(BackgroundGet, self).__init__()
-        self.test_case = test_case
-        self.headers = deepcopy(test_case.headers)
-        self.get_params = {'client_start_time': test_case.client_start_time, 'server_boot_time': test_case.server_boot_time}
+        parts = urlparse.urlparse(test_case.URL)
+        httplib.HTTPConnection.__init__(self, parts.netloc)
+        params = {'client_start_time': test_case.client_start_time, 'server_boot_time': test_case.server_boot_time}
+        self.request('GET', parts.path + '?' + urllib.urlencode(params), headers=test_case.headers)
 
-        self.complete = False
-        self.messages = None
-        self.response = None
-
-    def run(self):
-        start_time = datetime.datetime.now()
-        response = requests.get(self.test_case.URL, headers=self.headers, params=self.get_params)
-        end_time = datetime.datetime.now()
-        print "Response after %s" % (end_time - start_time)
-
-        self.complete = True
-        self.response = response
-        if response.ok:
-            self.messages = response.json()['messages']
+    @property
+    def messages(self):
+        response = self.getresponse()
+        assert response.status == httplib.OK
+        return json.load(response)['messages']
 
 
 class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
@@ -239,31 +231,14 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
         # Pretend to be the first agent instance
         zombie_session_id = self._open_session()
         # Start doing a GET
-        self._zombie = BackgroundGet(self)
-        self.addCleanup(lambda: self._zombie.join())
-        self._zombie.start()
+        zombie = BackgroundGet(self)
 
         # Leaving that GET open, imagine the agent now gets killed hard
         self._mock_restart()
 
         # The agent restarts, now I pretend to be the second agent instance
-        try:
-            healthy_session_id = self._open_session(expect_termination=zombie_session_id)
-        except AssertionError:
-            # A session creation failure, could be that the SESSION_CREATE_RESPONSE
-            # got sent to the zombie
-            self._zombie.join()
-            self.assertResponseOk(self._zombie.response)
-
-            # If the HYD-2063 bug happens then the zombie was sent some messages
-            self.assertListEqual(self._zombie.messages, [])
-
-            # No message to the zombie?  In that case maybe something else went wrong
-            raise
-
-        self._healthy = BackgroundGet(self)
-        self.addCleanup(lambda: self._healthy.join())
-        self._healthy.start()
+        healthy_session_id = self._open_session(expect_termination=zombie_session_id)
+        healthy = BackgroundGet(self)
 
         # In the HYD-2063 case, there are now two HTTP GET handlers subscribed to the
         # TX messages for our host, so when we send a message, it might go to the healthy
@@ -285,22 +260,13 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
             # multiple handelrs in flight
             time.sleep(0.1)
 
-        self._zombie.join()
-        self.assertResponseOk(self._zombie.response)
-        self._healthy.join()
-        self.assertResponseOk(self._healthy.response)
-
-        self.assertListEqual(self._zombie.messages, [])
-        healthy_messages = len(self._healthy.messages)
-        get_attempts = 9
-        while healthy_messages < message_count and get_attempts > 0:
-            get_attempts -= 1
-            response = self._get()
-            self.assertResponseOk(response)
-            healthy_messages += len(response.json()['messages'])
-            if not response.json()['messages']:
-                # This was a GET timeout
-                break
+        self.assertListEqual(zombie.messages, [])
+        healthy_messages = len(healthy.messages)
+        for attempt in range(9):
+            messages = BackgroundGet(self).messages
+            healthy_messages += len(messages)
+            if healthy_messages >= message_count or not messages:
+                break  # retrieved them all, or a GET timeout
 
         self.assertEqual(healthy_messages, message_count)
 
