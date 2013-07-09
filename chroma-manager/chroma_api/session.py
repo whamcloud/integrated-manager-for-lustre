@@ -22,6 +22,8 @@
 
 import settings
 
+from collections import defaultdict
+
 import django.contrib.auth as auth
 
 from chroma_api.authentication import CsrfAuthentication
@@ -30,6 +32,7 @@ from tastypie.resources import Resource
 from tastypie import fields
 from tastypie import http
 from tastypie.exceptions import ImmediateHttpResponse
+from tastypie.validation import Validation
 
 
 class Session:
@@ -39,6 +42,32 @@ class Session:
             self.read_enabled = True
         else:
             self.read_enabled = (user != None)
+
+
+class SessionValidation(Validation):
+    """
+    Validates user credentials
+    """
+    def is_valid(self, bundle, request=None):
+        errors = defaultdict(list)
+
+        def check_field_exists(field_name):
+            """
+            Check the field has been populated.
+            If not add it to the errors dict.
+            """
+            field = bundle.data.get(field_name, "").strip()
+
+            if not field:
+                errors[field_name].append("This field is mandatory")
+
+        if request.method != "POST":
+            return errors
+
+        check_field_exists("username")
+        check_field_exists("password")
+
+        return errors
 
 
 class SessionResource(Resource):
@@ -75,6 +104,7 @@ class SessionResource(Resource):
         list_allowed_methods = ['get', 'post', 'delete']
         detail_allowed_methods = []
         resource_name = 'session'
+        validation = SessionValidation()
 
     def get_resource_uri(self, bundle):
         return self.get_resource_list_uri()
@@ -85,10 +115,10 @@ class SessionResource(Resource):
         password = bundle.data['password']
 
         user = auth.authenticate(username = username, password = password)
-        if not user:
-            raise ImmediateHttpResponse(response=http.HttpForbidden())
-        elif not user.is_active:
-            raise ImmediateHttpResponse(response=http.HttpForbidden())
+        if not user or not user.is_active:
+            error = {"__all__": "Authentication Failed."}
+            resp = self.create_response(request, error, response_class=http.HttpForbidden)
+            raise ImmediateHttpResponse(response=resp)
 
         auth.login(request, user)
 
