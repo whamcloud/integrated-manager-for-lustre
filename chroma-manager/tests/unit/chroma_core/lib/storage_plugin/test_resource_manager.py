@@ -578,28 +578,19 @@ class TestVolumeNaming(ResourceManagerTestCase):
 
         resource_manager.session_open(couplet_record.pk, [couplet_resource, lun_resource], 60)
 
-    def _start_host_session(self, lvm=False, partition=False):
+    def _start_host_session(self, lvm = False):
         resource_manager = ResourceManager()
 
         host_record, host_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
 
         dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial=self.SERIAL, size=4096)
-        node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo", parents = [dev_resource], host_id = self.host.id, logical_drive = dev_resource)
-
+        node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo", parents = [dev_resource], host_id = self.host.id)
         resources = [host_resource, dev_resource, node_resource]
         if lvm:
             vg_resource = self._make_local_resource('linux', 'LvmGroup', parents = [node_resource], name = self.VG, uuid = 'b44f7d8e-a40d-4b96-b241-2ab462b4c1c1', size = 4096)
             lv_resource = self._make_local_resource('linux', 'LvmVolume', parents = [vg_resource], name = self.LV, vg = vg_resource, uuid = 'b44f7d8e-a40d-4b96-b241-2ab462b4c1c1', size = 4096)
             lv_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', parents = [lv_resource], path = "/dev/mapper/%s-%s" % (self.VG, self.LV), host_id = self.host.id)
             resources.extend([vg_resource, lv_resource, lv_node_resource])
-
-        if partition:
-            partition_resource = self._make_local_resource('linux', 'Partition', number=1,
-                                                           container=dev_resource, size=20000, parents=[node_resource])
-            partition_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode',
-                                                                parents=[partition_resource], path="/dev/foo1",
-                                                                host_id=self.host.id)
-            resources.extend([partition_resource, partition_node_resource])
 
         resource_manager.session_open(host_record.pk, resources, 60)
 
@@ -613,17 +604,6 @@ class TestVolumeNaming(ResourceManagerTestCase):
         """In the absence of a plugin-supplied LUN, name should come from SCSI ID"""
         self._start_host_session()
         self.assertVolumeName(self.SERIAL)
-
-    def test_name_from_partition(self):
-        self._start_host_session(partition=True)
-
-        # Partition is named as its ancestor LogicalDrive with a -N suffix
-        partition_label = "%s-1" % self.SERIAL
-
-        partition_obj = StorageResourceRecord.objects.get(
-            resource_class_id=self.manager.get_plugin_resource_class('linux', 'Partition')[1])
-        self.assertEqual(partition_label, partition_obj.to_resource().get_label())
-        self.assertVolumeName(partition_label)
 
     def test_name_from_plugin_host_first(self):
         """When a plugin supplies a LUN which hooks up via SCSI ID, name should come from the LUN,

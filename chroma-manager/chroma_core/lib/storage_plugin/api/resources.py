@@ -96,11 +96,6 @@ class LogicalDrive(BaseStorageResource):
     filesystem_type = attributes.Boolean(optional=True)
 
 
-class LogicalDriveSlice(LogicalDrive):
-    """A part of a slicable device like partition or lvm"""
-    pass
-
-
 class Enclosure(BaseStorageResource):
     """A physical enclosure/drawer/shelf"""
     pass
