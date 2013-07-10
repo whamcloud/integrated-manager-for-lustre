@@ -886,9 +886,9 @@ class JobScheduler(object):
 
                             # Ensure that any notifications prior to release of the writelock are not
                             # applied
-                            if hasattr(lock.locked_item, 'state_updated_at'):
+                            if hasattr(lock.locked_item, 'state_modified_at'):
                                 lock.locked_item.__class__.objects.filter(pk=lock.locked_item.pk).update(
-                                    state_updated_at=django.utils.timezone.now())
+                                    state_modified_at=django.utils.timezone.now())
 
                             ObjectCache.update(lock.locked_item)
 
