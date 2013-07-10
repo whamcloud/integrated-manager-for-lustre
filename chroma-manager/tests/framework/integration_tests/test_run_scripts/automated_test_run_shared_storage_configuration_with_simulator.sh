@@ -135,7 +135,7 @@ echo "End running tests."
 set +e
 scp chromatest@$CHROMA_MANAGER:test_report.xml ./test_reports/
 mkdir -p test_logs
-scp chromatest@$CHROMA_MANAGER:chroma_test_env/chroma/chroma-manager/*.log ./test_logs/
+scp chromatest@$CHROMA_MANAGER:chroma_test_env/chroma/chroma-manager/*[._]log ./test_logs/
 scp root@$CHROMA_MANAGER:/var/log/messages ./test_logs/
 if $MEASURE_COVERAGE; then
   mkdir -p coverage_reports
