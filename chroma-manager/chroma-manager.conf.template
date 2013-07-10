@@ -158,6 +158,12 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
         RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
         RewriteRule .* - [E=SSLC_NAME:%1]
     </Location>
+
+    Alias /client {{REPO_PATH}}/lustre-client
+    <Location /client >
+        SSLVerifyClient none
+        Options +Indexes
+    </Location>
 </VirtualHost>
 
 <VirtualHost *:{{HTTP_API_PORT}}>
