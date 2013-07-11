@@ -21,7 +21,7 @@ TEST_HTTPD_PORT ?= 8000
 
 # Test runner options
 BEHAVE_ARGS ?= -q --stop
-NOSE_ARGS ?= --verbose
+NOSE_ARGS ?= --stop
 
 all: rpms docs
 
@@ -85,13 +85,18 @@ integration_tests: running_supervisor
 	exit $${PIPESTATUS[0]}
 
 service_tests: dev_setup
+	@while $(MAKE) running_supervisor >/dev/null; do \
+		spid=`ps aux | awk '/p[y]thon .\/manage.py supervisor/ {print $$2}'`; \
+		kill $$spid; \
+		sleep 1; \
+	done
 	@echo "Running service tests..."
 	@nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
 	exit $${PIPESTATUS[0]}
 
 agent_tests:
 	@echo "Running agent tests..."
-	@$(MAKE) -C ../chroma-agent test $(NOSE_ARGS) 2>&1 \
+	@NOSE_ARGS=$(NOSE_ARGS) $(MAKE) -C ../chroma-agent test 2>&1 \
 			| tee ../chroma-agent/unit.log; \
 	exit $${PIPESTATUS[0]}
 
@@ -115,7 +120,7 @@ feature_tests:
 	done; \
 	exit $$brc
 
-tests test: unit_tests agent_tests feature_tests service_tests integration_tests
+tests test: unit_tests agent_tests feature_tests integration_tests service_tests 
 
 tarball: version
 	rm -f MANIFEST
