@@ -10,8 +10,6 @@
 import json
 import subprocess
 import sys
-# TODO - work out the details of being able to use await_server_boot() here
-#from tests.integration.core.remote_operations import RealRemoteOperations
 
 
 class ChromaLogCollector(object):
@@ -22,31 +20,33 @@ class ChromaLogCollector(object):
         self.chroma_managers = chroma_managers
         self.lustre_servers = lustre_servers
         self.test_runners = test_runners
-        #self.remote_operations = RealRemoteOperations(self)
 
     def collect_logs(self):
         subprocess.call(['rm', '-rf', "%s/*.log" % destination_path])
 
         for test_runner in self.test_runners:
-            #self.await_server_boot(test_runner, restart = True)
             self.fetch_log(test_runner, '/var/log/chroma_test.log', "%s-chroma_test.log" % test_runner)
+            self.fetch_log(test_runner, '/var/log/messages', '%s-messages.log' % test_runner)
 
         for chroma_manager in self.chroma_managers:
-            #self.await_server_boot(chroma_manager, restart = True)
-            logs = subprocess.Popen(['ssh', chroma_manager, 'ls /var/log/chroma/*.log | xargs -n1 basename'], stdout=subprocess.PIPE).communicate()[0]
-            for log in logs.split():
-                self.fetch_log(chroma_manager, '/var/log/chroma/%s' % log, "%s-%s" % (chroma_manager, log))
+            self.fetch_log_dir(chroma_manager, '/var/log/chroma/')
             self.fetch_log(chroma_manager, '/var/log/messages', '%s-messages.log' % chroma_manager)
+            self.fetch_log_dir(chroma_manager, '/var/log/httpd/')
 
         for lustre_server in self.lustre_servers:
-            #self.await_server_boot(lustre_server, restart = True)
             self.fetch_log(lustre_server, '/var/log/chroma-agent.log', '%s-chroma-agent.log' % lustre_server)
             self.fetch_log(lustre_server, '/var/log/messages', '%s-messages.log' % lustre_server)
             self.fetch_pacemaker_configuration(lustre_server)
 
-    def fetch_log(self, source_address, source_log_path, destination_log_filename):
-        print "Fetching %s from %s to %s/%s" % (source_log_path, source_address, self.destination_path, destination_log_filename)
-        subprocess.call(['scp', "%s:%s" % (source_address, source_log_path), "%s/%s" % (self.destination_path, destination_log_filename)])
+    def fetch_log(self, server, source_log_path, destination_log_filename):
+        print "Fetching %s from %s to %s/%s" % (source_log_path, server, self.destination_path, destination_log_filename)
+        subprocess.call(['scp', "%s:%s" % (server, source_log_path), "%s/%s" % (self.destination_path, destination_log_filename)])
+
+    def fetch_log_dir(self, server, dir):
+        logs = subprocess.Popen(['ssh', server, "ls %s | xargs -n1 basename" % dir], stdout=subprocess.PIPE).communicate()[0]
+        for log in logs.split():
+            destination_log_filename = "%s-%s-%s" % (server, dir.strip('/').split('/')[-1], log)
+            self.fetch_log(server, '%s/%s' % (dir, log), destination_log_filename)
 
     def fetch_pacemaker_configuration(self, lustre_server):
         # Only attempt to fetch if pacemaker exists on the lustre server
