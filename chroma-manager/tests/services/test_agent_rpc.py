@@ -24,7 +24,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
     service because that is where AgentRpc lives, but is not intended to test the other
     functionality in JobScheduler.
     """
-    SERVICES = ['http_agent', 'job_scheduler']
+    SERVICES = ['job_scheduler', 'http_agent']
     PORTS = [settings.HTTP_AGENT_PORT]
     PLUGIN = agent_rpc.ACTION_MANAGER_PLUGIN_NAME
 
@@ -42,31 +42,26 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
             'body': None
         }
 
+        # On the first connection from a host that this http_agent hasn't seen before, http_agent sends a TERMINATE_ALL
+        # In that case, send a session-less DATA request expecting a TERMINATE
+        # In addition to flushing the TERMINATE_ALL, this gives the job_scheduler time to reset all sessions
+        if expect_initial:
+            response = self._post([dict(message, type='DATA')])
+            self.assertResponseOk(response)
+            messages = self._receive_messages(2, allow_extras=True)
+            self.assertEqual([m['type'] for m in messages], ['SESSION_TERMINATE_ALL', 'SESSION_TERMINATE'])
+
         # Send a session create request on the RX channel
         response = self._post([message])
         self.assertResponseOk(response)
 
-        expected_count = 1
-        if expect_initial:
-            # On the first connection from a host that this http_agent hasn't
-            # seen before, http_agent sends a TERMINATE_ALL
-            # and then the SESSION_CREATE_RESPONSE
-            expected_count += 1
-
         # Read from the TX channel
-        messages = self._receive_messages(expected_count, allow_extras=True)
-
-        create_response = messages[expected_count - 1]
+        create_response, = self._receive_messages(allow_extras=True)
         self.assertEqual(create_response['type'], 'SESSION_CREATE_RESPONSE')
         self.assertEqual(create_response['plugin'], self.PLUGIN)
         self.assertEqual(create_response['session_seq'], None)
         self.assertEqual(create_response['body'], None)
-        session_id = create_response['session_id']
-
-        for excess_message in messages[expected_count:]:
-            self._tx_messages.put(excess_message)
-
-        return session_id
+        return create_response['session_id']
 
     def setUp(self):
         if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
@@ -173,14 +168,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         raise AssertionError("Command didn't complete")
 
     def test_run_action(self):
-        # Let things start up to avoid our new session getting caught in
-        # the service-start cleardown
-        time.sleep(5)
-        # FIXME: if agents are quick, then their very first session will tend
-        # to be killed by the job_scheduler as it starts up (if http_agent
-        # and job_scheduler) are started concurrently and http_agent starts
-        # listening first.
-
         # Prepare to receive actions
         agent_session_id = self._open_sessions()
 
@@ -273,6 +260,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
         # Clean stop
         self.restart('http_agent')
+        self._wait_for_port(settings.HTTP_AGENT_PORT)
 
         # The agent should be told to terminate all
         response_message = self._receive_messages(1)[0]
