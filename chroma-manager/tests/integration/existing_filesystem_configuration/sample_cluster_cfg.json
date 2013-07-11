@@ -90,7 +90,9 @@
             "fqdn": "hydra-2-lustre-1-8-oss4.lab.whamcloud.com
         }
     ],
-    "lustre_clients": {
-        "hydra-2-lustre-1-8-client": {}
-    }
+    "lustre_clients": [
+        {
+            "address": "hydra-2-lustre-1-8-client"
+        }
+    ]
 }

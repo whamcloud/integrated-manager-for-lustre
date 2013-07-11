@@ -79,9 +79,10 @@ class SimulatorRemoteOperations(RemoteOperations):
             if server['address'] == address:
                 fqdn = server['fqdn']
 
-        if fqdn is None and not address in config['lustre_clients']:
+        lustre_clients = [c['address'] for c in config['lustre_clients']]
+        if fqdn is None and not address in lustre_clients:
             raise KeyError("No server with address %s" % address)
-        elif fqdn is None and address in config['lustre_clients']:
+        elif fqdn is None and address in lustre_clients:
             client = self._simulator.get_lustre_client(address)
             return client.read_proc(path)
         else:
@@ -576,17 +577,16 @@ class RealRemoteOperations(RemoteOperations):
         """
         Unmount all filesystems of type lustre from all clients in the config.
         """
-        for client in config['lustre_clients'].keys():
+        for client in config['lustre_clients']:
             self._ssh_address(
-                client,
+                client['address'],
                 'umount -t lustre -a'
             )
-
             if not client in [server['address'] for server in config['lustre_servers']]:
                 # Skip this check if the client is also a server, because
                 # both targets and clients look like 'lustre' mounts
                 result = self._ssh_address(
-                    client,
+                    client['address'],
                     'mount'
                 )
                 self._test_case.assertNotRegexpMatches(

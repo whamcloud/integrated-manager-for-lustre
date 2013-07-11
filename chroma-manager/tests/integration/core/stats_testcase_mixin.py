@@ -30,7 +30,7 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
             return
 
         filesystem = self.get_filesystem(filesystem_id)
-        client = config['lustre_clients'].keys()[0]
+        client = config['lustre_clients'][0]['address']
 
         # Make sure client cache is flushed and stats up to date
         self.remote_operations.unmount_filesystem(client, filesystem)

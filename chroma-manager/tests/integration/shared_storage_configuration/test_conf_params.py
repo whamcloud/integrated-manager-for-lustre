@@ -51,7 +51,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(len(response.json['objects']), 1)
         filesystem = response.json['objects'][0]
-        client = config['lustre_clients'].keys()[0]
+        client = config['lustre_clients'][0]['address']
         self.remote_operations.mount_filesystem(client, filesystem)
 
         try:
@@ -124,7 +124,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         )
         self.assertEqual(response.successful, True, response.text)
         filesystem = response.json
-        client = config['lustre_clients'].keys()[0]
+        client = config['lustre_clients'][0]['address']
 
         # Mount and check that the existing value is different to what we will set
         self.remote_operations.mount_filesystem(client, filesystem)

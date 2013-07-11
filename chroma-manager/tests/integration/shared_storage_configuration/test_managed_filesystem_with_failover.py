@@ -127,7 +127,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         filesystem = self.get_filesystem(filesystem_id)
         self.assertTrue(filesystem['mount_command'])
 
-        client = config['lustre_clients'].keys()[0]
+        client = config['lustre_clients'][0]['address']
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
             self.remote_operations.exercise_filesystem(client, filesystem)

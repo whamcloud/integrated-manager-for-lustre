@@ -67,14 +67,6 @@ if config.get('chroma_managers') and config.get('simulator'):
     for manager in config['chroma_managers']:
         manager['server_http_url'] = "%s:8000/" % manager['server_http_url']
 
-if config.get('lustre_clients'):
-    # Convert 'dict' style lustre_clients to a list of dicts.
-    new_clients = {}
-    for client in config['lustre_clients']:
-        client_address = client['address']
-        new_clients[client_address] = client
-    config['lustre_clients'] = new_clients
-
 if config.get('lustre_servers'):
     for server in config['lustre_servers']:
         start_command = config.get('start_command', None)

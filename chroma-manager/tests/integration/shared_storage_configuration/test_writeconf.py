@@ -5,7 +5,7 @@ from tests.integration.core.chroma_integration_testcase import ChromaIntegration
 class TestWriteconf(ChromaIntegrationTestCase):
     def _exercise_simple(self, fs_id):
         filesystem = self.get_filesystem(fs_id)
-        client = config['lustre_clients'].keys()[0]
+        client = config['lustre_clients'][0]['address']
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
             self.remote_operations.exercise_filesystem(client, filesystem)

@@ -56,11 +56,15 @@
             "repos": ["chroma"]
         }
     ],
-    "lustre_clients": {
-        "client1": {
+    "lustre_clients": [
+        {
+            "address": "hydra-2-efs-client-1",
             "distro": "el6.4",
             "lustre_client_version": "2.3.0"
         }
+    ],
+    "hosts": {
+        "hydra-2": {}
     },
     "managed": false,
     "filesystem": {

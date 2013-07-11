@@ -96,7 +96,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
         self.assertEqual('available', filesystem['state'])
 
         # Verify a client can use the filesystem using the mount command provided
-        client = config['lustre_clients'].keys()[0]
+        client = config['lustre_clients'][0]['address']
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
             self.remote_command(

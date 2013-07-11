@@ -86,9 +86,11 @@
             "start_command": "virsh start hydra-2-ss2-storage-appliance-4"
         }
     ],
-    "lustre_clients": {
-        "hydra-2-ss2-client-1": {}
-    },
+    "lustre_clients": [
+        {
+            "address": "hydra-2-ss2-client-1"
+        }
+    ]
     "hosts": {
         "hydra-2": {}
     }

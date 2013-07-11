@@ -75,11 +75,12 @@
             "distro": "mock"
         }
     ],
-    "lustre_clients": {
-        "imaginary_client": {
+    "lustre_clients": [
+        {
+            "address": "imaginary_client",
             "distro": "mock"
         }
-    },
+    ],
     "hosts": {
     },
     "provision": true,

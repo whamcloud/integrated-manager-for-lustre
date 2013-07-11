@@ -78,12 +78,13 @@
             }
         }
     ],
-    "lustre_clients": {
-        "client1": {
+    "lustre_clients": [
+        {
+            "address": "client1",
             "distro": "el6.4",
             "lustre_client_version": "2.3.0"
         }
-    },
+    ],
     "power_control_types": [
         {
             "agent": "fence_virsh",
