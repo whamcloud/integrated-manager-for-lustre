@@ -340,6 +340,13 @@ def unconfigure_target_ha(primary, ha_label, uuid):
                                        "<rsc_location id=\"%s-secondary\">" %
                                        ha_label])
 
+    try:
+        os.rmdir(AgentStore.get_target_info(uuid)['mntpt'])
+    except AgentStore.AgentStoreException:
+        console_log.warn("Cannot retrieve target information")
+    except IOError:
+        console_log.warn("Cannot remove target mount folder: %s" % AgentStore.get_target_info(uuid)['mntpt'])
+
     AgentStore.remove_target_info(uuid)
 
 

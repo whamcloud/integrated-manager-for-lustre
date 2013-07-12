@@ -25,9 +25,14 @@ import os
 import errno
 
 
+class AgentStoreException(Exception):
+    pass
+
+
 class AgentStore(object):
     server_conf_mtime = None
     _dir_setup = False
+    AgentStoreException = AgentStoreException
 
     @classmethod
     def libdir(cls):
@@ -101,7 +106,7 @@ class AgentStore(object):
             j = json.load(file)
             file.close()
         except IOError, e:
-            raise RuntimeError("Failed to read target data for '%s', is it configured? (%s)" % (name, e))
+            raise AgentStoreException("Failed to read target data for '%s', is it configured? (%s)" % (name, e))
 
         return j
 
