@@ -29,9 +29,15 @@ files = [
   'static/js/directives/*.js',
   'static/js/chart_manager.js',
   'test/mock/**/*.js',
+  'test/lib/matchers.js',
   'test/spec/**/*.js',
-  'test/leak/**/*.js'
+  'test/leak/**/*.js',
+  'test/templates/*.html'
 ];
+
+preprocessors = {
+  '**/*.html': 'html2js'
+};
 
 // list of files to exclude
 exclude = [];
