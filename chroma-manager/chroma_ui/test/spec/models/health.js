@@ -1,12 +1,13 @@
 describe('Health model', function () {
   'use strict';
 
-  var $httpBackend, healthSpy, WARN, ERROR, GOOD;
-
-  beforeEach(module('constants', 'models', 'ngResource', 'services', 'interceptors', function ($provide) {
-    // Mock out this dep.
-    $provide.value('paging', jasmine.createSpy('paging'));
-  }));
+  var $httpBackend;
+  var healthSpy;
+  var WARN;
+  var ERROR;
+  var GOOD;
+  var healthModel;
+  var flush;
 
   var urls = {
     event: '/api/event/?dismissed=false&limit=1&severity__in=WARNING&severity__in=ERROR',
@@ -15,6 +16,10 @@ describe('Health model', function () {
     command: '/api/command/?dismissed=false&errored=true&limit=1'
   };
 
+  /**
+   * Sets up $httpBackend responses for the passed in config object.
+   * @param {object} [config]
+   */
   function expectReqRes(config) {
     config = config || {};
 
@@ -25,16 +30,34 @@ describe('Health model', function () {
     });
   }
 
-  beforeEach(inject(function ($injector, $rootScope) {
-    $httpBackend = $injector.get('$httpBackend');
-    var STATES = $injector.get('STATES');
-    WARN = STATES.WARN;
-    ERROR = STATES.ERROR;
-    GOOD = STATES.GOOD;
+  beforeEach(module('constants', 'models', 'ngResource', 'services', 'interceptors', function ($provide) {
+    // Mock out this dep.
+    $provide.value('paging', jasmine.createSpy('paging'));
+
+    // Spy on $q.all to make sure all expected api calls are being waited on.
+    $provide.decorator('$q', function ($delegate) {
+      spyOn($delegate, 'all').andCallThrough();
+
+      return $delegate;
+    });
+  }));
+
+  beforeEach(inject(function (_$httpBackend_, _STATES_, _healthModel_, $timeout, $rootScope) {
+    $httpBackend = _$httpBackend_;
+    WARN = _STATES_.WARN;
+    ERROR = _STATES_.ERROR;
+    GOOD = _STATES_.GOOD;
 
     healthSpy = jasmine.createSpy('health');
     var scope = $rootScope.$new();
     scope.$on('health', healthSpy);
+
+    healthModel = _healthModel_;
+
+    flush = function flusher() {
+      $timeout.flush();
+      $httpBackend.flush();
+    };
   }));
 
   afterEach(function () {
@@ -43,19 +66,6 @@ describe('Health model', function () {
   });
 
   describe('working with health', function () {
-    var healthModel;
-    var flush;
-
-    beforeEach(inject(function ($injector) {
-      healthModel = $injector.get('healthModel');
-      var $timeout = $injector.get('$timeout');
-
-      flush = function () {
-        $timeout.flush();
-        $httpBackend.flush();
-      };
-    }));
-
     it('should broadcast a health event as a listening mechanism', function () {
       expectReqRes();
       flush();
@@ -145,7 +155,7 @@ describe('Health model', function () {
       expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
     });
 
-    it('should be in warn when there are  1 or more unacknowledged failed commands: amber', function () {
+    it('should be in warn when there are 1 or more unacknowledged failed commands: amber', function () {
       expectReqRes({
         command: [{}]
       });
@@ -174,5 +184,15 @@ describe('Health model', function () {
       flush();
       expect(healthSpy.mostRecentCall.args[1]).toBe(ERROR);
     });
+  });
+
+  describe('promise resolution', function () {
+    it('should wait for all calls to resolve', inject(function ($q) {
+      expectReqRes();
+      flush();
+
+      expect($q.all.callCount).toBe(1);
+      expect($q.all.mostRecentCall.args[0].length).toEqual(Object.keys(urls).length);
+    }));
   });
 });
