@@ -91,7 +91,7 @@ service_tests: dev_setup
 		sleep 1; \
 	done
 	@echo "Running service tests..."
-	@nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
+	@PYTHONPATH=. nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
 	exit $${PIPESTATUS[0]}
 
 agent_tests:
