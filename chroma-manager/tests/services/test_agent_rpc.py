@@ -24,7 +24,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
     service because that is where AgentRpc lives, but is not intended to test the other
     functionality in JobScheduler.
     """
-    SERVICES = ['job_scheduler', 'http_agent']
+    SERVICES = ['http_agent', 'job_scheduler']
     PORTS = [settings.HTTP_AGENT_PORT]
     PLUGIN = agent_rpc.ACTION_MANAGER_PLUGIN_NAME
 

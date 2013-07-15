@@ -66,7 +66,7 @@ class AgentHttpClient(object):
             response = self._get()
             remaining_messages = required_messages - len(messages)
             messages.extend(response.json()['messages'][0:remaining_messages])
-            if not allow_extras and len(response.json()['messages']) != remaining_messages:
+            if not allow_extras and len(response.json()['messages']) > remaining_messages:
                 raise RuntimeError("Too many messages in GET: %s" % response.json()['messages'])
 
             for extra_message in response.json()['messages'][remaining_messages:]:
