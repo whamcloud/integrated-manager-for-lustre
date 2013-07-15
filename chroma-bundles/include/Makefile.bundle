@@ -1,6 +1,6 @@
 REPO        := $(patsubst %/,%,$(REPO))
 RPMS        := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
-VERSION		?= 0.0.0
+VERSION     ?= 0.0.0
 NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
 
