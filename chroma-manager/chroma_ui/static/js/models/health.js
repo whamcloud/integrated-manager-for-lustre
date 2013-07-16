@@ -53,7 +53,7 @@
       inactiveAlerts = alertModel.query({active: false, severity__in: [STATES.WARN], limit: 1});
       commands = commandModel.query({errored: true, dismissed: false, limit: 1});
 
-      $q.all([events.$promise, alerts.$promise, commands.$promise]).then(broadcastHealth);
+      $q.all([events.$promise, alerts.$promise, inactiveAlerts.$promise, commands.$promise]).then(broadcastHealth);
     }
 
     /**
