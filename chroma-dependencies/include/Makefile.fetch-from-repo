@@ -49,4 +49,4 @@ $(REPO)/%.rpm:
 %.rpm:
 	rm -f $$(echo $@ | sed -e 's/-[^-]*-[^-]*\.rpm$$//')-[0-9]*
 	CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
-	cache_get $(SRC_REPO)/$@ "RPM v3.0 bin i386/x86_64"
+	cache_get $(SRC_REPO)/$@ "RPM v3.0 bin "
