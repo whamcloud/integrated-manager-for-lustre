@@ -1,0 +1,24 @@
+.error-tooltip.top .tooltip-arrow {
+  border-top-color: #B94A48;
+}
+
+.error-tooltip.right .tooltip-arrow {
+  border-right-color: #B94A48;
+}
+
+.error-tooltip.bottom .tooltip-arrow {
+  border-bottom-color: #B94A48;
+}
+
+.error-tooltip.left .tooltip-arrow {
+  border-left-color: #B94A48;
+}
+
+.error-tooltip .tooltip-inner {
+  background-color: #B94A48;
+}
+
+.error-tooltip ul {
+  list-style-type: none;
+  margin: 0;
+}
