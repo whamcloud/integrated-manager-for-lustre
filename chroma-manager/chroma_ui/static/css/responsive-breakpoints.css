@@ -1,0 +1,27 @@
+body:after {
+  display: none;
+
+  /* Large desktop */
+  content: "desktop";
+}
+
+/* Portrait tablet to landscape and desktop */
+@media (min-width: 768px) and (max-width: 979px) {
+  body:after {
+    content: "desktop-small";
+  }
+}
+
+/* Landscape phone to portrait tablet */
+@media (max-width: 767px) {
+  body:after {
+    content: "tablet";
+  }
+}
+
+/* Landscape phones and down */
+@media (max-width: 480px) {
+  body:after {
+    content: "phone";
+  }
+}
