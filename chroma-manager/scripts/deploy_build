@@ -27,12 +27,43 @@ BUILD_JOB=${BUILD_JOB:-chroma}
 BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
 BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6.4"}
 BUILD_URL=$BUILDER_URL/job/$BUILD_JOB/$BUILD_NUMBER/$BUILD_TARGET
-BUNDLE_TARBALL=${BUNDLE_FILE:-chroma.tar.gz}
+BUNDLE_TARBALL=${BUNDLE_TARBALL:-ieel-1.0.0.tar.gz}
 BUNDLE_URL=$BUILD_URL/artifact/chroma-bundles/$BUNDLE_TARBALL
+BUILD_META_CHANGES=
+
+usage()
+{
+    cat <<EndOfUsage
+Usage $(basename $0) [I] [-j build_job] [-n build_number]
+    -I                  Skip manager installation (just download)
+    -j build_job        Specify the build job to pull from (default: chroma)
+    -n build_number     Specify the build number to pull (default: latest)
+EndOfUsage
+
+    exit 1
+}
+
+handle_options()
+{
+    while getopts ":hj:n:" option; do
+        case "$option" in
+            h)
+                usage ;;
+            I)
+                INSTALL_MGR=false ;;
+            j)
+                BUILD_JOB=$OPTARG ;;
+            n)
+                BUILD_NUMBER=$OPTARG ;;
+            *)
+                usage ;;
+        esac
+    done
+}
 
 get_metadata()
 {
-    last_build=$(ls -r $CACHE_ROOT | head -1 | sed -e "s/$BUILD_JOB-//" -e "s/-$BUNDLE_TARBALL//")
+    last_build=$(ls -r $CACHE_ROOT/${BUILD_JOB}* | head -1 | sed -e "s,$CACHE_ROOT/$BUILD_JOB-,," -e "s/-$BUNDLE_TARBALL//")
     export BUILDER_USERNAME BUILDER_PASSWORD
     eval $($SCRIPT_DIR/get_metadata "$1/api/python" $last_build)
 }
@@ -78,16 +109,20 @@ remote_shell()
 scrub_manager()
 {
     remote_shell $IML_NODE chroma-config stop
-    remote_shell $IML_NODE yum erase -y chroma-manager-libs
+    remote_shell $IML_NODE yum clean all --enablerepo=*
+    remote_shell $IML_NODE yum erase -y chroma* fence-agents*
     remote_shell $IML_NODE su - postgres -c "'dropdb chroma'"
     remote_shell $IML_NODE rm -f /var/log/chroma/*
+    remote_shell $IML_NODE rm -fr /var/lib/chroma/*
+    remote_shell $IML_NODE rm -fr /var/lib/chroma/*
 }
 
 scrub_servers()
 {
     server_list=$(h2hl $SERVERS)
     remote_shell $server_list service chroma-agent stop
-    remote_shell $server_list yum erase -y chroma-agent
+    remote_shell $server_list yum clean all --enablerepo=*
+    remote_shell $server_list yum erase -y chroma* fence-agents*
     remote_shell $server_list rm -f /var/log/chroma* /var/lib/chroma/*
     remote_shell $server_list cibadmin -f -E
     remote_shell $server_list killall -9 pacemaker\; killall -9 corosync
@@ -123,6 +158,58 @@ EOF
     set -e
 }
 
+setup_expect()
+{
+    remote_shell $IML_NODE yum -y install expect
+    cat<<EndOfScript>/tmp/install.exp
+#!/usr/bin/expect
+set user [lindex \$argv 0]
+set email [lindex \$argv 1]
+set pass [lindex \$argv 2]
+set ntp [lindex \$argv 3]
+spawn ./install
+expect {
+    "(press RETURN)" {
+        send "\\r"
+        exp_continue
+    }
+    "EULA.txt" {
+        send " "
+    }
+}
+expect {
+    "\\n:" {
+        send " "
+        exp_continue
+    }
+    "(END)" {
+        send " "
+        exp_continue
+    }
+    "(yes/no) " {
+        send "yes\\n"
+    }
+}
+set timeout 900
+expect "Username: "
+send \$user\\n
+expect "Email: "
+send \$email\\n
+expect "Password: "
+send \$pass\\n
+expect "password: "
+send \$pass\\n
+expect "\\\\\\[localhost\\\\\\]: "
+send \$ntp\\n
+expect "software installation completed successfully"
+catch wait reason
+set rc [lindex \$reason 3]
+puts "installation complete: \$rc"
+exit \$rc
+EndOfScript
+    scp /tmp/install.exp root@$IML_NODE:/tmp
+}
+
 setup()
 {
     mkdir -p $CACHE_ROOT
@@ -132,6 +219,7 @@ setup()
         exit 1
     fi
     disable_ssh_host_verification
+    setup_expect
 }
 
 copy_bundle()
@@ -144,22 +232,15 @@ install_manager()
     bundle_dir=/tmp/$(basename $BUNDLE .tar.gz)
     remote_shell $IML_NODE mkdir -p $bundle_dir
     remote_shell $IML_NODE tar -C $bundle_dir -xzf $bundle_dir.tar.gz
-    tmp=$(mktemp -t deploy.XXXXX)
-    cat<<EOF>$tmp
-$IML_USERNAME
-iml-$IML_USERNAME@intel.com
-$IML_PASSWORD
-$IML_PASSWORD
-localhost
-EOF
-    scp $tmp root@$IML_NODE:$bundle_dir/input.txt
-    rm -f $tmp
+    installer_dir=$bundle_dir/$(basename $BUNDLE_TARBALL .tar.gz)
     tmp=$(mktemp -t deploy.XXXXX)
     echo -e "Changes since last build:\n$BUILD_META_CHANGES" > $tmp
     scp $tmp root@$IML_NODE:$bundle_dir/ChangeLog.txt
     rm -f $tmp
-    remote_shell $IML_NODE cd $bundle_dir\; $bundle_dir/install.sh \< $bundle_dir/input.txt
+    remote_shell $IML_NODE cd $installer_dir\; expect /tmp/install.exp $IML_USERNAME iml-$IML_USERNAME@intel.com $IML_PASSWORD localhost
 }
+
+handle_options $*
 
 setup
 scrub_cluster
