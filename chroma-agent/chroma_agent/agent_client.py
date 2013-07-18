@@ -303,7 +303,7 @@ class HttpWriter(ExceptionCatchingThread):
 
             self.poll()
 
-            while not self._messages.empty():
+            while not (self._messages.empty() and self._retry_messages.empty()):
                 self.send()
 
             # Ensure that we poll at most every POLL_PERIOD
@@ -323,13 +323,18 @@ class HttpWriter(ExceptionCatchingThread):
             'client_start_time': self._client.start_time.isoformat() + "Z"
         }
 
+        # Any message we drop will need its session killed
+        kill_sessions = set()
+
         messages_bytes = len(json.dumps(post_envelope))
         while True:
             try:
                 message = self._retry_messages.get_nowait()
+                daemon_log.debug("HttpWriter got message from retry queue")
             except Queue.Empty:
                 try:
                     message = self._messages.get_nowait()
+                    daemon_log.debug("HttpWriter got message from primary queue")
                 except Queue.Empty:
                     break
 
@@ -337,8 +342,18 @@ class HttpWriter(ExceptionCatchingThread):
                 completion_callbacks.append(message.callback)
             message_length = len(json.dumps(message.dump(self._client._fqdn)))
 
+            if message_length > MAX_BYTES_PER_POST:
+                daemon_log.error("Dropping oversized message %s/%s: %s" % (message_length, MAX_BYTES_PER_POST, message.dump(self._client._fqdn)))
+                kill_sessions.add(message.plugin_name)
+                continue
+
             if message_length > MAX_BYTES_PER_POST - messages_bytes:
                 # This message will not fit into this POST: pop it back into the queue
+                daemon_log.info(
+                    "HttpWriter message %s overflowed POST %s/%s (%d "
+                    "messages), enqueuing" % (
+                    message.dump(self._client._fqdn), message_length,
+                    MAX_BYTES_PER_POST, len(messages)))
                 self._retry_messages.put(message)
                 break
 
@@ -351,7 +366,6 @@ class HttpWriter(ExceptionCatchingThread):
             self._client.post(post_envelope)
         except HttpError:
             # Terminate any sessions which we've just droppped messages for
-            kill_sessions = set()
             for message in messages:
                 if message.type == 'DATA':
                     kill_sessions.add(message.plugin_name)
