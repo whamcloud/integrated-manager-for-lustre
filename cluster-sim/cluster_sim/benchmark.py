@@ -638,6 +638,11 @@ def main():
     try:
         log.info("Starting benchmark...")
         args.func(args, simulator)
+    except:
+        # Because we do a hard exit at the end here, explicitly log terminating
+        # exceptions or they would get lost.
+        log.error(traceback.format_exc())
+        raise
     finally:
         # Do a hard exit to avoid dealing with lingering threads (not the cleanest, but
         # this isn't production code).
