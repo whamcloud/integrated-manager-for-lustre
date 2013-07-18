@@ -140,9 +140,9 @@ var Sidebar = function(){
       var dataTable = $('div.leftpanel table#alerts').dataTable()
       var alert_info = dataTable.fnGetData($(dismiss_icon).closest('tr').get(0));
       alert_info.dismissed = true;
-      Api.put(
+      Api.patch(
         'alert/' + alert_info.id + '/',
-        api_params = alert_info,
+        {'dismissed': true},
         // remove the dismiss image, deactivate the alert
         success_callback = function() {
           $(dismiss_icon).parents('tr:eq(0)').removeClass('odd even').addClass('alert_row_dismissed');
