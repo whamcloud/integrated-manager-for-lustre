@@ -42,6 +42,7 @@ distclean:
 # but instead, it seems we have to do this:
 $(REPO)/%.rpm:
 	make $*.rpm
+	mkdir -p $(REPO)
 	ln $*.rpm $(REPO)/
 
 # and!!! the order of the above rule and this rule matter!  this is fixed
