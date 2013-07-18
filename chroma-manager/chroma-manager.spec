@@ -218,6 +218,7 @@ fi
 # will go into the -tests packages
 %exclude /usr/share/chroma-manager/example_storage_plugin_package
 %exclude /usr/share/chroma-manager/tests
+%doc licenses/*
 
 %files libs
 %{python_sitelib}/*.egg-info/*
