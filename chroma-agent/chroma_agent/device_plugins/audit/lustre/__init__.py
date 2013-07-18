@@ -26,6 +26,10 @@ from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 
+# HYD-2307 workaround
+DISABLE_BRW_STATS = True
+
+
 def local_audit_classes(fscontext=None):
     import chroma_agent.device_plugins.audit.lustre
     return [cls for cls in
@@ -385,7 +389,8 @@ class ObdfilterAudit(TargetAudit):
         for ost in [dev for dev in self.devices() if dev['type'] == 'obdfilter']:
             self.raw_metrics['lustre']['target'][ost['name']] = self.read_int_metrics(ost['name'])
             self.raw_metrics['lustre']['target'][ost['name']]['stats'] = self.read_stats(ost['name'])
-            self.raw_metrics['lustre']['target'][ost['name']]['brw_stats'] = self.read_brw_stats(ost['name'])
+            if not DISABLE_BRW_STATS:
+                self.raw_metrics['lustre']['target'][ost['name']]['brw_stats'] = self.read_brw_stats(ost['name'])
 
 
 class LnetAudit(LustreAudit):
