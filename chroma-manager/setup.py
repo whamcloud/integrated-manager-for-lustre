@@ -52,7 +52,7 @@ setup(
                       "static/js/models/*.js", "static/js/services/*.js",
                       "static/partials/*.html", "static/partials/dialogs/*.html",
                       "static/partials/directives/*.html",
-                      "static/fonts/*", "static/css/bootstrap/*.css",
+                      "static/font/*", "static/css/font-awesome/*.css", "static/css/bootstrap/*.css",
                       "static/css/smoothness/images/*",
                       "static/css/smoothness/*.css", "static/css/images/*.gif",
                       "static/css/*.css", "static/images/fugue/*.png",
