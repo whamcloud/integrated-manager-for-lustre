@@ -30,38 +30,43 @@
  * @name atScrollBoundary
  *
  */
-angular.module('directives').directive('atScrollBoundary', function factory() {
+(function (_) {
   'use strict';
 
-  var BOTTOM = 'bottom';
+  angular.module('directives').directive('atScrollBoundary', function factory() {
+    var BOTTOM = 'bottom';
 
-  return {
-    restrict: 'A',
-    link: function postLink(scope, el, attrs) {
-      _.defaults(scope, {scrollDirection: BOTTOM, hitBoundary: false});
+    return {
+      restrict: 'A',
+      link: function postLink(scope, el, attrs) {
+        _.defaults(scope, {scrollDirection: BOTTOM, hitBoundary: false});
 
-      var oneHit = scope.$eval(attrs.oneHit);
-
-      //@TODO: Add other directions as needed.
-      var directions = {};
-      directions[BOTTOM] = function isAtBottom() {
+        var oneHit = scope.$eval(attrs.oneHit);
         var unwrappedEl = el[0];
-        return unwrappedEl.scrollTop + unwrappedEl.clientHeight >= unwrappedEl.scrollHeight - 20;
-      };
 
-      var scrollFunc = scope.$apply.bind(scope, function onScroll() {
-        scope.hitBoundary = (directions[scope.scrollDirection] || angular.identity.bind(false))(el[0]);
+        //@TODO: Add other directions as needed.
+        var directions = {};
+        directions[BOTTOM] = function isAtBottom() {
+          return unwrappedEl.scrollTop + unwrappedEl.clientHeight >= unwrappedEl.scrollHeight - 20;
+        };
 
-        if (oneHit && scope.hitBoundary) {
-          cleanup();
+        var scrollFunc = scope.$apply.bind(scope, function onScroll() {
+          scope.hitBoundary = (directions[scope.scrollDirection] || angular.identity.bind(null, false))();
+
+          if (oneHit && scope.hitBoundary) {
+            cleanup();
+          }
+        });
+
+        function cleanup() {
+          unwrappedEl.removeEventListener('scroll', scrollFunc, true);
+          unwrappedEl = null;
         }
-      });
 
-      var cleanup = el.unbind.bind(el, 'scroll', scrollFunc);
+        unwrappedEl.addEventListener('scroll', scrollFunc, true);
 
-      el.scroll(scrollFunc);
-
-      scope.$on('$destroy', cleanup);
-    }
-  };
-});
+        scope.$on('$destroy', cleanup);
+      }
+    };
+  });
+}(window.lodash));
