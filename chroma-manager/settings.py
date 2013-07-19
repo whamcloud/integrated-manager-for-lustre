@@ -116,7 +116,10 @@ TEMPLATE_LOADERS = (
 )
 
 from django.conf import global_settings
-TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + ("django.core.context_processors.request",)
+TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
+    "django.core.context_processors.request",
+    "chroma_ui.context_processors.default"
+)
 
 ROOT_URLCONF = 'urls'
 

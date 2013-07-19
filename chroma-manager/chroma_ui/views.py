@@ -33,11 +33,16 @@ from chroma_core.lib.service_config import ServiceConfig
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.core.serializers import json as django_json
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.http import HttpResponseRedirect
+from django.core.urlresolvers import reverse
+from django.contrib import auth
+
+from chroma_core.models import UserProfile
 
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
 from chroma_api.target import TargetResource
-from chroma_help.help import help_text
 import settings
 
 
@@ -53,7 +58,7 @@ def _build_cache(request):
             resource_instance = resource()
 
             to_be_serialized = defaultdict(list)
-            to_be_serialized['objects'] = [resource_instance.full_dehydrate(resource_instance.build_bundle(obj=m))  for m in
+            to_be_serialized['objects'] = [resource_instance.full_dehydrate(resource_instance.build_bundle(obj=m)) for m in
                                            resource.Meta.queryset._clone()]
             to_be_serialized = resource_instance.alter_list_data_to_serialize(request, to_be_serialized)
 
@@ -88,11 +93,7 @@ def _debug_info(request):
     return sorted(info.items(), key=lambda v: v[0])
 
 
-def index(request):
-    """Serve either the javascript UI, an advice HTML page
-    if the backend isn't ready yet, or a blocking error page
-    if the backend is in a bad state."""
-
+def _check_for_problems(request):
     if not ServiceConfig().configured():
         return render_to_response("installation.html",
                                   RequestContext(request, {}))
@@ -112,23 +113,58 @@ def index(request):
                     [" * %s" % svc for svc in stopped_services]),
                 'debug_info': _debug_info(request)
             }))
-        else:
-            try:
-                cache = json.dumps(_build_cache(request), cls=django_json.DjangoJSONEncoder)
-            except:
-                # An exception here indicates an internal error (bug or fatal config problem)
-                # in any of the chroma_api resource classes
-                return render_to_response("backend_error.html", RequestContext(request, {
-                    'description': "Exception rendering resources: %s" % traceback.format_exc(),
-                    'debug_info': _debug_info(request)
-                }))
 
-            return render_to_response("base.html",
-                                      RequestContext(request,
-                                                     {'cache': cache,
-                                                      'help_text': json.dumps(help_text),
-                                                      'server_time': datetime.datetime.utcnow(),
-                                                      'BUILD': settings.BUILD,
-                                                      'VERSION': settings.VERSION,
-                                                      'IS_RELEASE': settings.IS_RELEASE
-                                                     }))
+
+@ensure_csrf_cookie
+def login(request):
+    """
+        Serves a login page, checking for problems first.
+        If the user is already authenticated and the eula is accepted, redirects to index page.
+        If the user is already authenticated and the eula is not accepted, logs the user out.
+    """
+
+    if request.user.is_authenticated():
+        state = request.user.get_profile().get_state()
+
+        if state == UserProfile.PASS:
+            return HttpResponseRedirect(reverse(index))
+        else:
+            auth.logout(request)
+
+    problem = _check_for_problems(request)
+
+    if problem:
+        return problem
+
+    return render_to_response("login.html", RequestContext(request))
+
+
+def index(request):
+    """
+        Serve either the javascript UI, an advice HTML page
+        if the backend isn't ready yet, or a blocking error page
+        if the backend is in a bad state.
+
+        Alternatively redirect to login if the user is not
+        authenticated and anonymous users are forbidden.
+    """
+
+    if not request.user.is_authenticated() and not settings.ALLOW_ANONYMOUS_READ:
+        return HttpResponseRedirect(reverse(login))
+
+    problem = _check_for_problems(request)
+
+    if problem:
+        return problem
+
+    try:
+        cache = json.dumps(_build_cache(request), cls=django_json.DjangoJSONEncoder)
+    except:
+        # An exception here indicates an internal error (bug or fatal config problem)
+        # in any of the chroma_api resource classes
+        return render_to_response("backend_error.html", RequestContext(request, {
+            'description': "Exception rendering resources: %s" % traceback.format_exc(),
+            'debug_info': _debug_info(request)
+        }))
+
+    return render_to_response("base.html", RequestContext(request, {'cache': cache}))

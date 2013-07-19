@@ -91,6 +91,7 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
 
     <Location /ui/>
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
+        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/ui/
         ProxyPass http://localhost:{{HTTP_API_PORT}}/ui/
     </Location>
     <Location /api/>

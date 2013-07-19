@@ -20,10 +20,22 @@
 # express and approved by Intel in writing.
 
 
-from django.conf.urls.defaults import patterns
-import chroma_ui.views as views
+import json
+import datetime
+import settings
 
-urlpatterns = patterns('',
-    (r'^login/', views.login),
-    (r'^.*', views.index),
-)
+from chroma_help.help import help_text
+
+
+def default(request):
+    """
+    Returns Default context variables.
+    """
+
+    return {
+        'help_text': json.dumps(help_text),
+        'server_time': datetime.datetime.utcnow(),
+        'BUILD': settings.BUILD,
+        'VERSION': settings.VERSION,
+        'IS_RELEASE': settings.IS_RELEASE
+    }

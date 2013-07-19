@@ -132,13 +132,17 @@ class UserResource(ModelResource):
 
     password1 = fields.CharField(help_text = "Used when creating a user (request must be made by a superuser)")
     password2 = fields.CharField(help_text = "Password confirmation, must match ``password1``")
-    new_password1 = fields.CharField(help_text = "Used for modifying password (request must be\
-            made by the same user or by a superuser)")
+    new_password1 = fields.CharField(help_text = "Used for modifying password (request must be "
+                                                 "made by the same user or by a superuser)")
     new_password2 = fields.CharField(help_text = "Password confirmation, must match ``new_password1``")
 
     is_superuser = fields.BooleanField(readonly=True, help_text="Is the user a superuser", attribute="is_superuser")
 
     accepted_eula = fields.CharField(help_text="Has a superuser accepted the eula")
+
+    eula_state = fields.CharField(readonly=True, help_text="Should a eula be displayed for this user?"
+                                                           " Returns one of %s." %
+                                                           ", ".join(str(x) for x in UserProfile.STATES))
 
     def hydrate_groups(self, bundle):
         from chroma_api.group import GroupResource
@@ -217,7 +221,10 @@ class UserResource(ModelResource):
         return bundle.obj.get_full_name()
 
     def dehydrate_accepted_eula(self, bundle):
-        return User.objects.filter(is_superuser=True, userprofile__accepted_eula=True).exists()
+        return UserProfile.objects.eula_accepted()
+
+    def dehydrate_eula_state(self, bundle):
+        return bundle.obj.get_profile().get_state()
 
     def delete_detail(self, request, **kwargs):
         if int(kwargs['pk']) == request.user.id:
