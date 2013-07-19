@@ -17,6 +17,8 @@ files = [
   'static/js/lib/highcharts.js',
   'test/lib/angular-mocks.js',
   'static/js/lib/sprintf/*.js',
+  'static/js/modules/**/*-module.js',
+  'static/js/modules/**/*.js',
   'static/js/constants.js',
   'static/js/interceptors/*.js',
   'static/js/models/models_module.js',

@@ -37,5 +37,6 @@ def default(request):
         'server_time': datetime.datetime.utcnow(),
         'BUILD': settings.BUILD,
         'VERSION': settings.VERSION,
-        'IS_RELEASE': settings.IS_RELEASE
+        'IS_RELEASE': settings.IS_RELEASE,
+        'ALLOW_ANONYMOUS_READ': settings.ALLOW_ANONYMOUS_READ
     }

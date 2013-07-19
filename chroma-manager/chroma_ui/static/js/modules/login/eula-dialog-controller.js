@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  function EulaCtrl(SessionModel, $scope, dialog, HELP_TEXT, credentials, doneCallback) {
+  function EulaCtrl($scope, $window, $location, dialog, SessionModel, HELP_TEXT, doneCallback, user) {
     /**
      * Wrapper function that creates an action for EULA buttons.
      * @param {boolean} state
@@ -32,36 +32,26 @@
      */
     function createAction(state, afterUpdateCallback) {
       return function () {
-        var promise = SessionModel.save(credentials).$promise
-          .then(function () {
-            return SessionModel.get().$promise;
-          })
-          .then(function (resp) {
-            var user = resp.user;
+        user.accepted_eula = state;
 
-            user.accepted_eula = state;
-
-            return user.$update();
-          })
-          .then(dialog.close.bind(dialog));
-
-        if (afterUpdateCallback) {
-          promise = promise.then(afterUpdateCallback);
-        }
-
-        promise.then(doneCallback);
+        user.$update()
+          .then(dialog.close.bind(dialog))
+          .then(afterUpdateCallback);
       };
     }
 
     $scope.eulaCtrl = {
-      accept: createAction(true),
+      accept: createAction(true, doneCallback),
       reject: createAction(false, function () {
-        return SessionModel.delete().$promise;
+        return SessionModel.remove().$promise.then(function () {
+          $window.location.href = $location.absUrl();
+        });
       }),
       eula: HELP_TEXT.eula
     };
   }
 
-  angular.module('controllers')
-    .controller('EulaCtrl', ['SessionModel', '$scope', 'dialog', 'HELP_TEXT', 'credentials', 'doneCallback', EulaCtrl]);
+  angular.module('login')
+    .controller('EulaCtrl',
+      ['$scope', '$window', '$location', 'dialog', 'SessionModel', 'HELP_TEXT', 'doneCallback', 'user', EulaCtrl]);
 }());

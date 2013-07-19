@@ -248,20 +248,23 @@ class Users(DatatableView):
         self._fill_out_alerts_form(alerts_form, user_subscriptions)
 
     @open_and_save_account()
-    def _work_with_reset_eula_checkbox(self, sel_filter):
+    def _work_with_reset_eula_checkbox(self, check=False):
         self.log.debug("Resetting Eula")
-        eula_checkbox = wait_for_element_by_css_selector(
-            self.driver,
-            "%s%s" % (self.accept_eula_checkbox, sel_filter),
-            self.medium_wait
-        )
-        eula_checkbox.click()
+
+        prompt_for_eula_checkbox = wait_for_element_by_css_selector(self.driver,
+                                                                    self.accept_eula_checkbox,
+                                                                    self.medium_wait)
+
+        is_selected = prompt_for_eula_checkbox.is_selected()
+
+        if (is_selected and not check) or (not is_selected and check):
+            prompt_for_eula_checkbox.click()
 
     def reset_eula(self):
-        self._work_with_reset_eula_checkbox(":not(:checked)")
+        self._work_with_reset_eula_checkbox(True)
 
     def unreset_eula(self):
-        self._work_with_reset_eula_checkbox(":checked")
+        self._work_with_reset_eula_checkbox(False)
 
     @property
     def username_error(self):

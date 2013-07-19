@@ -1,6 +1,7 @@
 
 import logging
 import time
+from urlparse import urlparse
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
@@ -16,6 +17,9 @@ log.setLevel(logging.DEBUG)
 
 
 class BaseView(object):
+    #@FIXME: should abstract this path "/ui/" to the config file.
+    path = "/ui/"
+
     def __init__(self, driver):
         self.driver = driver
         self.log = log
@@ -168,6 +172,90 @@ class BaseView(object):
             return parent.find_element_by_css_selector("span.error").text
         except NoSuchElementException:
             return None
+
+    def _get_url_parts(self):
+        return list(urlparse(self.driver.current_url))
+
+    def on_page(self, path=None):
+        if not path:
+            path = self.path
+
+        parts = self._get_url_parts()
+
+        return parts[2].endswith(path)
+
+    def patch_api(self):
+        """Modify the JS behaviour to be more cooperative for
+           testing -- call this after any non-ajax navigation"""
+        self.quiesce()
+        self.log.debug("Calling testMode")
+        self.driver.execute_script('return Api.testMode(true);')
+        # The fade-out of the blocking animation can still be in progress, wait for it to hide
+        self.wait_for_removal("div.blockUI")
+
+    def wait_for_angular(self):
+        """
+            Puts Angular in a usable state by executing all poll functions
+            and making sure the http queue is clear.
+        """
+
+        script = """
+            var callback = arguments[arguments.length - 1];
+
+            angular.element(document.body).injector().get('$browser').
+            notifyWhenNoOutstandingRequests(callback);
+        """
+
+        return self.driver.execute_async_script(script)
+
+    def test_for_angular(self):
+        """
+            Waits for Angular to be available.
+        """
+
+        script = """
+            var callback = arguments[arguments.length - 1];
+            var retry = function(n) {
+                if (window.angular && window.angular.resumeBootstrap) {
+                    callback(true);
+                } else if (n < 1) {
+                    callback(false);
+                } else {
+                    window.setTimeout(function() {retry(n - 1)}, 1000);
+                }
+            };
+
+            if (window.angular && window.angular.resumeBootstrap) {
+                callback(true);
+            } else {
+                retry(3);
+            }
+        """
+
+        return self.driver.execute_async_script(script)
+
+    def disable_css3_transitions(self):
+        """
+            Adds a style rule to the DOM disabling all css3 transitions.
+        """
+
+        script = """
+            var css = document.createElement('style');
+            css.type = 'text/css';
+            css.innerHTML = '* {-webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; transition: none !important;}';
+            document.body.appendChild(css);
+        """
+
+        self.driver.execute_script(script)
+
+    def _reset_ui(self, angular_only=False):
+        self.test_for_angular()
+        self.wait_for_angular()
+        self.disable_css3_transitions()
+
+        if not angular_only:
+            self.patch_api()
+            self.quiesce()
 
 
 class DatatableView(BaseView):

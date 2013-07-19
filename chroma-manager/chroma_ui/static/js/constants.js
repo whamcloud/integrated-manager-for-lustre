@@ -34,5 +34,6 @@
       COMPLETE: 'COMPLETE'
     })
     .constant('STATIC_URL', window.STATIC_URL)
+    .constant('UI_ROOT', '/ui/')
     .constant('HELP_TEXT', window.HELP_TEXT);
 }());

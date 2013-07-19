@@ -5,17 +5,17 @@ from selenium.common.exceptions import NoSuchElementException
 from testconfig import config
 
 from tests.selenium.base_view import BaseView
-from tests.selenium.utils.element import (
-    find_visible_element_by_css_selector, wait_for_element_by_css_selector,
-    wait_for_any_element_by_css_selector
-)
+from tests.selenium.views.login import Login
+
+from tests.selenium.utils.element import wait_for_element_by_css_selector
 
 
 class Navigation(BaseView):
-    def __init__(self, driver):
+    def __init__(self, driver, needs_patching=True):
         """
         List of clickable UI elements in menus/tabs/pages
-        @param: driver - Instance of the webdriver
+        @param driver: Instance of the webdriver
+        @param needs_patching: Should the api be patched (not needed for new code).
         """
         super(Navigation, self).__init__(driver)
 
@@ -37,59 +37,34 @@ class Navigation(BaseView):
             'Create_new_filesystem': "#create_new_fs",
         }
 
-        self._patch_api()
+        if needs_patching:
+            self.patch_api()
 
-    def _patch_api(self):
-        """Modify the JS behaviour to be more cooperative for
-           testing -- call this after any non-ajax navigation"""
-        self.quiesce()
-        self.log.debug("Calling testMode")
-        self.driver.execute_script('return Api.testMode(true);')
-        # The fade-out of the blocking animation can still be in progress, wait for it to hide
-        self.wait_for_removal("div.blockUI")
+    def login(self, username, password):
+        login = Login(self.driver)
 
-    def login(self, username, password, after_login=None, confirm_login=True):
-        """Login with given username and password"""
-        self.log.debug("Logging in %s" % username)
-        from tests.selenium.views.login import Login
-        wait_for_any_element_by_css_selector(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
-        login_view = Login(self.driver)
-        if not find_visible_element_by_css_selector(self.driver, '#login_dialog'):
-            login_view.open_login_dialog()
-        login_view.login_user(username, password)
-
-        if after_login:
-            after_login()
-
-        if confirm_login:
-            wait_for_element_by_css_selector(self.driver, '#username', self.medium_wait)
-
-        self.quiesce()
-        self._patch_api()
+        login.go_to_page().login_and_accept_eula_if_presented(username, password)
 
     def logout(self):
-        self.log.debug("Logging out")
-        self.driver.find_element_by_css_selector("#logout").click()
-        wait_for_any_element_by_css_selector(self.driver, ['#login_dialog', '#user_info #anonymous #login'], 10)
-        self._patch_api()
+        login = Login(self.driver)
+        login.logout()
 
-    def refresh(self):
+    def refresh(self, angular_only=False):
         self.log.info("Navigation.refresh %s" % self.driver.execute_script('return window.location.href;'))
         self.driver.refresh()
-        self._patch_api()
-        self.quiesce()
+        self._reset_ui(angular_only)
 
     def reset(self):
         self.driver.get(config['chroma_managers'][0]['server_http_url'])
         wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
-        self._patch_api()
-        self.quiesce()
+        self._reset_ui()
 
     def go(self, *args):
         self.log.info("Navigation.go: %s" % (args,))
         for page in args:
             self.click(self.links[page])
         self.quiesce()
+        self.wait_for_angular()
 
     def click(self, selector):
         """

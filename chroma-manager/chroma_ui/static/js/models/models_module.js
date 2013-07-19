@@ -26,5 +26,5 @@
   /**
    * Models module definition.
    */
-  angular.module('models', []);
+  angular.module('models', ['ngResource']);
 }());

@@ -541,19 +541,6 @@ table.chart_grid td table {
   font-size: 9px;
 }
 
-#login_dialog label {
-  font-size: 12px;
-}
-
-#login_dialog input {
-  font-size: 12px;
-}
-
-#login_dialog div#error {
-  font-size: 12px;
-  padding: 3px;
-}
-
 /* Only visible for users who can read from the API */
 .read_enabled_only {
   display: none;

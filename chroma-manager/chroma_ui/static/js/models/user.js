@@ -20,27 +20,27 @@
 // express and approved by Intel in writing.
 
 
-angular.module('models').factory('UserModel', ['baseModel', function (baseModel) {
+(function () {
   'use strict';
 
-  /**
-   * @description Represents a user.
-   * @class UserModel
-   * @returns {UserModel}
-   * @constructor
-   */
-  return baseModel({
-    url: '/api/user/:userId',
-    params: {userId: '@id'},
-    methods: {
+  angular.module('models')
+    .constant('user_EULA_STATES', {
+      EULA: 'eula',
+      PASS: 'pass',
+      DENIED: 'denied'
+    })
+    .factory('UserModel', ['baseModel', function (baseModel) {
       /**
-       * Determines whether this user should have the eula displayed.
-       * @returns {boolean}
+       * @description Represents a user.
+       * @class UserModel
+       * @returns {UserModel}
+       * @constructor
        */
-      shouldShowEula: function () {
-        return this.is_superuser && !this.accepted_eula;
-      }
-    }
-  });
-}]);
+      return baseModel({
+        url: '/api/user/:userId',
+        params: {userId: '@id'}
+      });
+    }]);
+}());
+
 

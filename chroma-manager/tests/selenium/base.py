@@ -9,9 +9,7 @@ from selenium import webdriver
 from testconfig import config
 
 from tests.selenium.utils.constants import wait_time
-from tests.selenium.utils.element import (
-    find_visible_element_by_css_selector, wait_for_element_by_css_selector
-)
+from tests.selenium.utils.element import find_visible_element_by_css_selector
 
 
 def quiesce_api(driver, timeout):
@@ -22,33 +20,6 @@ def quiesce_api(driver, timeout):
         else:
             time.sleep(1)
     raise RuntimeError('Timeout')
-
-
-def quiesce_http(driver, timeout, log):
-    script = """
-        var $http = angular.element('body').injector().get('$http');
-        return $http.pendingRequests.length === 0;
-    """
-
-    for i in xrange(timeout):
-        cleared = driver.execute_script(script)
-        if cleared:
-            log.debug('quiesced $http after %s iterations' % i)
-            return
-        else:
-            time.sleep(1)
-    raise RuntimeError("$http Timeout")
-
-
-def _disable_css3_transitions(driver):
-    script = """
-        var css = document.createElement('style');
-        css.type = 'text/css';
-        css.innerHTML = '* {-webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; transition: none !important;}';
-        document.body.appendChild(css);
-    """
-
-    driver.execute_script(script)
 
 
 def wait_for_transition(driver, timeout):
@@ -87,7 +58,6 @@ class SeleniumBaseTestCase(TestCase):
         self.standard_wait = wait_time['standard']
         self.medium_wait = wait_time['medium']
         self.long_wait = wait_time['long']
-        self.confirm_login = True
 
     def setUp(self):
         if not config['chroma_managers'][0]['server_http_url']:
@@ -111,23 +81,19 @@ class SeleniumBaseTestCase(TestCase):
 
         self.addCleanup(self.stop_driver)
         self.addCleanup(self._take_screenshot_on_failure)
-        self.addCleanup(self.reset_eula)
+
+        self.driver.set_script_timeout(90)
 
         from tests.selenium.utils.navigation import Navigation
-        self.navigation = Navigation(self.driver)
-
-        _disable_css3_transitions(self.driver)
+        self.navigation = Navigation(self.driver, False)
 
         superuser_present = False
         for user in config['chroma_managers'][0]['users']:
             if user['is_superuser']:
-                self.navigation.login(user['username'], user['password'], self.accept_eula, self.confirm_login)
+                self.navigation.login(user['username'], user['password'])
                 superuser_present = True
         if not superuser_present:
             raise RuntimeError("No superuser in config file")
-
-        if self.confirm_login:
-            self.wait_for_login()
 
         self.clear_all()
 
@@ -146,30 +112,6 @@ class SeleniumBaseTestCase(TestCase):
         elif not test_failed:
             self.log.info("Closing driver after success")
             self.driver.close()
-
-    def wait_for_login(self):
-        wait_for_element_by_css_selector(self.driver, '#user_info #authenticated', 10)
-        wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
-
-    def accept_eula(self):
-        from tests.selenium.views.eula import Eula
-        eula = Eula(self.driver)
-        eula.accept_eula()
-
-    def reset_eula(self):
-        self.log.info("Resetting Eula Via API")
-
-        script = """
-            var user = Login.getUser();
-            var UserModel = angular.element('body').injector().get('UserModel');
-            var userModel = new UserModel(user);
-
-            userModel.accepted_eula = false;
-            userModel.$update();
-        """
-
-        self.driver.execute_script(script)
-        quiesce_http(self.driver, self.medium_wait, self.log)
 
     def clear_all(self):
         from tests.selenium.views.filesystem import Filesystem

@@ -24,7 +24,7 @@
    all ajax completions */
 $(document).ajaxComplete(function(){Login.updateVisibility();});
 
-var Login = function() {
+var Login = (function () {
   var user = null;
 
   function userHasGroup(required_group) {
@@ -42,89 +42,21 @@ var Login = function() {
     }
   }
 
-  function open() {
-    $('#login_dialog').prev().find('.ui-dialog-titlebar-close').hide()
-    $('#login_dialog #error').hide()
-    $('#login_dialog input[name=username]').val("")
-    $('#login_dialog input[name=password]').val("")
-    $('#login_dialog').dialog('open');
-    $("#login_dialog input[name=username]").focus();
-  }
-
-  function submit() {
-    var username = $('#login_dialog input[name=username]').val();
-    var password = $('#login_dialog input[name=password]').val();
-    var credentials = {username: username, password: password};
-    Api.post('session/', credentials,
-      success_callback = function () {
-        var body = angular.element('body');
-
-        body.scope().safeApply(function () {
-          var shouldShowEula = body.injector().get('shouldShowEula');
-
-          function doneCallback() {
-            // @TODO: Shouldn't need a hard refresh after login.
-            window.location.href = Api.UI_ROOT;
-          }
-
-          shouldShowEula(credentials, doneCallback);
-        });
-      },
-      error_callback = {403: function(status, jqXHR) {
-        $('#login_dialog #error').show()
-        $("#login_dialog input[name=username]").focus();
-      }},
-      true, true
-    );
-  }
-
   function initUi() {
     $('#user_info #authenticated').hide();
     $('#user_info #anonymous').show();
 
     $('#user_info #authenticated #logout').click(function(event) {
       Api.delete("session/", {}, success_callback = function() {
-        window.location.href = Api.UI_ROOT;
+        window.location.href = '%slogin/'.sprintf(Api.UI_ROOT);
       });
       event.preventDefault();
     });
 
-    $('#user_info #anonymous #login').click(function(event) {
-      open();
-      event.preventDefault();
-    });
-
-    $("#login_dialog input[name=username]").keyup(function(event){
-      if(event.keyCode == 13){
-        $("#login_dialog input[name=password]").focus();
-      }
-    });
-
-    $("#login_dialog input[name=password]").keyup(function(event){
-      if(event.keyCode == 13){
-        submit();
-      }
-    });
-
-    $('#login_dialog').dialog({
-      autoOpen: false,
-      modal: true,
-      title: "Login",
-      draggable: false,
-      resizable: false,
-      buttons: {
-        'Cancel': function() {$('#login_dialog').dialog('close')},
-        'Login': submit
-      }
-    });
-    $('#login_dialog + div button:first').attr('id', 'cancel');
-    $('#login_dialog + div button:last').attr('id', 'submit');
-
-    $('#user_info #authenticated #account').click(function(ev)
-    {
+    $('#user_info #authenticated #account').click(function (ev) {
       Backbone.history.navigate("/user/" + Login.getUser().id + "/", true);
       ev.preventDefault();
-    })
+    });
   }
 
   function updateVisibility() {
@@ -138,30 +70,24 @@ var Login = function() {
     /* Discover information about the currently logged in user (if any)
      * so that we can put the user interface in the right state and
      * enable API calls */
-    Api.get("/api/session/", {}, success_callback = function(session) {
-      user = session.user
+    Api.get("/api/session/", {}, success_callback = function (session) {
+      user = session.user;
       $('.read_enabled_only').toggle(session.read_enabled);
 
-      if (!session.read_enabled) {
-        /* User can do nothing until they log in */
-        open();
-        $('#login_dialog').next().find('button:first').hide()
+      if (!user) {
+        $('#user_info #authenticated').hide();
+        $('#user_info #anonymous').show();
       } else {
-        if (!user) {
-          $('#user_info #authenticated').hide();
-          $('#user_info #anonymous').show();
-        } else {
-          $('#user_info #authenticated #username').html(user.username)
-          $('#user_info #authenticated').show();
-          $('#user_info #anonymous').hide();
-        }
-
-        Api.enable();
+        $('#user_info #authenticated #username').html(user.username);
+        $('#user_info #authenticated').show();
+        $('#user_info #anonymous').hide();
       }
+
+      Api.enable();
     }, undefined, false, true);
   }
 
-  function getUser(){
+  function getUser() {
     return user;
   }
 
@@ -170,8 +96,8 @@ var Login = function() {
     getUser: getUser,
     userHasGroup: userHasGroup,
     updateVisibility: updateVisibility
-  }
-}();
+  };
+}());
 
 var ValidatedForm = function() {
   function add_error(input, message) {

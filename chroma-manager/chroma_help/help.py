@@ -152,5 +152,6 @@ help_text = {
         <p>The English language version of this License Agreement shall be the only legally binding version and in the event of a conflict, inconsistency or difference of interpretation between the English language version and any other translation, the English language version shall prevail over such other translation.  Any translation of this License Agreement is provided for convenience only and shall not be used in the interpretation or construction of this License Agreement and shall not be binding on the parties. </p>
 
         <p class="subtext">Intel and the Intel logo are trademarks or registered trademarks of Intel Corporation or its subsidiaries in the United States and other countries. *Other names and brands may be claimed as the property of others.</p>
-    """
+    """,
+    "continue_as_anonymous": "Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Intel&reg; Manager for Lustre* software."
 }

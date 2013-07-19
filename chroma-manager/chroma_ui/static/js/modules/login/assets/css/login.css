@@ -1,0 +1,52 @@
+html, body, .login-container, .login {
+  height: 100%;
+}
+
+.login-container {
+  display: table;
+  vertical-align: middle;
+}
+
+@media (max-width: 767px) {
+  .login-container {
+    width: 100%;
+  }
+}
+
+.login {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.login .logo {
+  background: url('../../../../../images/intel-logo-blue-trans-160x62.png') no-repeat 50% 0;
+  height: 62px;
+  margin-bottom: 25px;
+}
+
+.login .alert {
+  padding-right: 15px;
+}
+
+.login .skip-login {
+  padding-top: 25px;
+}
+
+.login small a {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.logo-footer {
+  position: relative;
+}
+
+.logo-footer > div {
+  position: absolute;
+  bottom: 0;
+  padding-bottom: 10px;
+}
+
+.logo-footer small {
+  color: #888888;
+}

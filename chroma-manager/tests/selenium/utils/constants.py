@@ -22,5 +22,5 @@ wait_time = {
     'long': 900,
     'standard': 300,
     'medium': 60,
-    'short': 30,
+    'short': 30
 }

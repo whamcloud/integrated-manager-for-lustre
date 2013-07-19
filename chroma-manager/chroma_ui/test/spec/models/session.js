@@ -18,6 +18,6 @@ describe('Session model', function () {
 
     $httpBackend.flush();
 
-    expect(model.user.shouldShowEula).toBeDefined();
+    expect(model.user.$update).toBeDefined();
   }));
 });

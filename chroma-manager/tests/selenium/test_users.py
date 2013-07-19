@@ -1,12 +1,12 @@
 from functools import partial
 from selenium.common.exceptions import NoSuchElementException
 from testconfig import config
+from tests.selenium.views.login import Login
 
 from utils.sample_data import Testdata
 from utils.messages_text import validation_messages
 
 from tests.selenium.views.users import Users
-from tests.selenium.views.eula import Eula
 from tests.selenium.base import SeleniumBaseTestCase
 from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.element import enter_text_for_element, select_element_option
@@ -24,10 +24,11 @@ class SampleUser(object):
 
 
 class wrapped_login(object):
-    def __init__(self, test_case, inner_user, outer_user=None, exit_after_login=None):
+    def __init__(self, test_case, inner_user, outer_user=None, expecting_eula=False):
         self.test_case = test_case
+        self.login_page = test_case.login_page
         self.inner_user = self.test_case.users[inner_user]
-        self.exit_after_login = exit_after_login
+        self.expecting_eula = expecting_eula
         try:
             self.outer_user = self.test_case.users[outer_user]
         except KeyError:
@@ -38,9 +39,7 @@ class wrapped_login(object):
                 self.outer_user = None
 
     def __enter__(self):
-        self.test_case.navigation.logout()
-
-        self.test_case.navigation.login(self.inner_user.username, self.inner_user.password)
+        self.login_page.logout().login_and_accept_eula_if_presented(self.inner_user.username, self.inner_user.password)
         return self.inner_user
 
     def __exit__(self, type, value, tb):
@@ -55,7 +54,10 @@ class wrapped_login(object):
             except ElementNotVisibleException:
                 # I guess we're already logged out?
                 pass
-            self.test_case.navigation.login(self.outer_user.username, self.outer_user.password, self.exit_after_login)
+
+            self.login_page.login_and_accept_eula_if_presented(self.outer_user.username,
+                                                               self.outer_user.password,
+                                                               self.expecting_eula)
 
 
 class TestUsers(SeleniumBaseTestCase):
@@ -74,8 +76,8 @@ class TestUsers(SeleniumBaseTestCase):
                 self.users['debug'] = SampleUser(user)
 
         self.navigation.go('Configure', 'Users')
+        self.login_page = Login(self.driver)
         self.user_page = Users(self.driver)
-        self.eula_page = Eula(self.driver)
 
     def test_mandatory_fields(self):
         # Test validation for all mandatory fields
@@ -169,13 +171,9 @@ class TestUsers(SeleniumBaseTestCase):
 
     def test_resetting_eula(self):
         """Tests that resetting the eula will make the eula appear on next superuser login"""
-        def exit_after_login():
-            self.assertTrue(self.eula_page.is_eula_visible())
-            self.eula_page.accept_eula()
-
         superuser = self.users["superuser"]
         self.add_user(superuser)
-        with wrapped_login(self, superuser.username, exit_after_login=exit_after_login):
+        with wrapped_login(self, superuser.username, True):
             self.user_page.reset_eula()
 
         self.navigation.go("Configure", "Users")

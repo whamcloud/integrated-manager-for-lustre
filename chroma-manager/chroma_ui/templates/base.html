@@ -19,6 +19,10 @@
       // the max size to which we will scale up our content
       var MAX_WIDTH = 800;
       var MAX_HEIGHT = 600;
+
+      // Set Dependencies for this portion of the application
+      window.dependencies = ['controllers', 'models', 'interceptors', 'ngResource', 'constants',
+        'ui.bootstrap', 'services', 'filters', 'ui', 'directives', 'timing'];
     </script>
 
     <link rel="stylesheet" href="{{STATIC_URL}}css/base.css" type="text/css" />
@@ -46,7 +50,6 @@
     <link rel="stylesheet" href="{{STATIC_URL}}css/outlet_info.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}css/status.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}css/create_pdu.css" type="text/css" />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/eula.css" type="text/css" />
 
     {% block css %}{% endblock %}
     <link rel="icon" href="{{STATIC_URL}}images/intel.ico" />
@@ -66,6 +69,7 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/xdate.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/sprintf/sprintf.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/app.js"></script>
+    <script type="text/javascript" src="{{STATIC_URL}}js/app-compatibility.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/constants.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/interceptors/interceptor_module.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/interceptors/tastypie.js"></script>
@@ -74,7 +78,6 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/status.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/power_control.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/dialogs/create_pdu.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/controllers/dialogs/eula.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/dialogs/access_denied.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/controllers/dialogs/create_bmc.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/models/models_module.js"></script>
@@ -94,7 +97,6 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/services/compile_template.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/safe_apply.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/paging.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/services/should_show_eula.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/generate_command_dropdown.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/services/interval.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/filters/filters_module.js"></script>
@@ -147,10 +149,6 @@
     {% block scripts %}{% endblock %}
     <title>Intel&reg; Manager for Lustre* software</title>
   </head>
-
-  <div style="display:none">
-      {% include 'login_dialog.html' %}
-  </div>
 
   <script type='text/javascript'>
         function updateSizes() {
