@@ -29,6 +29,30 @@ from time import sleep
 import socket
 
 
+class PacemakerObject(object):
+    def __init__(self, element=None):
+        if element:
+            self.element = element
+
+    def __getattr__(self, attr):
+        for source in [self.__dict__, self.element.attrib]:
+            try:
+                return source[attr]
+            except KeyError, AttributeError:
+                pass
+
+        raise AttributeError("'%s' has no attribute '%s'" % (self.__class__.__name__, attr))
+
+
+class LustreTarget(PacemakerObject):
+    @property
+    def uuid(self):
+        for nvpair in self.element.findall('./instance_attributes/nvpair'):
+            if nvpair.get('name') == "target":
+                return nvpair.get('value')
+
+
+# TODO: Refactor this class to use PacemakerObject
 class PacemakerNode(object):
     def __init__(self, name, attributes=None):
         self.name = name
@@ -143,6 +167,15 @@ class PacemakerConfig(object):
             nodes.append(nodeobj)
 
         return nodes
+
+    @property
+    def lustre_targets(self):
+        targets = []
+        for primitive in self.configuration.findall("./resources/primitive"):
+            if primitive.attrib['type'] == "Target":
+                targets.append(LustreTarget(primitive))
+
+        return targets
 
     @property
     def dc(self):
