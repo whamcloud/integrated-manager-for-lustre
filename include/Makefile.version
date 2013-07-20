@@ -3,7 +3,7 @@ space +=
 SCM_COMMIT_NUMBER	:= $(shell git rev-list HEAD | wc -l)
 BUILD_TAG			?= non-jenkins-build
 JENKINS_BUILD_TAG	:= $(shell echo jenkins-$(JOB_NAME)-$(BUILD_NUMBER) | sed -e 's/arch=[^,-]*,\?-\?//' -e 's/distro=[^,-]*,\?-\?//' -e 's,[/-],_,g')
-SCM_DESCRIPTION		:= $(subst -,$(space),$(shell git describe --match v[0-9]* | sed -e 's/^v//' -e 's/RC[0-9]*$$//'))
+SCM_DESCRIPTION		:= $(subst -,$(space),$(shell git describe --match v[0-9]* | sed -e 's/^v//' -e 's/RC[0-9]*//'))
 ARCHIVE_NAME		:= Intel Enterprise Edition for Lustre Software
 SHORT_ARCHIVE_NAME	:= ieel
 ARCHIVE_VERSION		:= 1.0.0
