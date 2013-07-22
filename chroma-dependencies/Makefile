@@ -37,8 +37,11 @@ cleanrepo:
 force :;
 
 repo: install
-	cd $(REPO); \
-	createrepo --pretty .
+	for dir in repo*; do           \
+		pushd $$dir;           \
+		createrepo --pretty .; \
+		popd;                  \
+	done
 
 FORCE:
 
