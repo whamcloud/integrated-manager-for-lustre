@@ -12,7 +12,7 @@ describe('Health model', function () {
   var urls = {
     event: '/api/event/?dismissed=false&limit=1&severity__in=WARNING&severity__in=ERROR',
     alert: '/api/alert/?active=true&limit=0&severity__in=WARNING&severity__in=ERROR',
-    inactiveAlert: '/api/alert/?active=false&limit=1&severity__in=WARNING',
+    inactiveAlert: '/api/alert/?active=false&dismissed=false&limit=1&severity__in=WARNING',
     command: '/api/command/?dismissed=false&errored=true&limit=1'
   };
 
@@ -86,27 +86,6 @@ describe('Health model', function () {
       expect(healthSpy.callCount).toBe(2);
     });
 
-    it('should listen for checkHealth events', function () {
-      expectReqRes();
-      flush();
-      expect(healthSpy.callCount).toBe(1);
-    });
-
-    it('should be in error when 1 or more error alerts are active', function () {
-      expectReqRes({
-        alert: [
-          {
-            severity: ERROR
-          },
-          {
-            severity: WARN
-          }
-        ]
-      });
-      flush();
-      expect(healthSpy.mostRecentCall.args[1]).toBe(ERROR);
-    });
-
     it('should be in error when 1 or more error alerts are active', function () {
       expectReqRes({
         alert: [
@@ -132,7 +111,7 @@ describe('Health model', function () {
       expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
     });
 
-    it('should be in warn when 1 or more WARN alerts are inactive but have not been dismissed', function() {
+    it('should be in warn when 1 or more WARN alerts are inactive but have not been dismissed', function () {
       expectReqRes({
         inactiveAlert: [{}]
       });
