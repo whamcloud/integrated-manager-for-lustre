@@ -22,8 +22,7 @@ IML_USERNAME=${IML_USERNAME:-"admin"}
 IML_PASSWORD=${IML_PASSWORD:-"lustre"}
 
 BUILDER_URL=https://build.whamcloudlabs.com
-# NB: This default should probably be chroma-blessed for non-daily builds
-BUILD_JOB=${BUILD_JOB:-chroma}
+BUILD_JOB=${BUILD_JOB:-chroma-blessed}
 BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
 BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6.4"}
 BUILD_URL=$BUILDER_URL/job/$BUILD_JOB/$BUILD_NUMBER/$BUILD_TARGET
@@ -34,10 +33,10 @@ BUILD_META_CHANGES=
 usage()
 {
     cat <<EndOfUsage
-Usage $(basename $0) [I] [-j build_job] [-n build_number]
+Usage $(basename $0) [-I] [-j build_job] [-n build_number]
     -I                  Skip manager installation (just download)
-    -j build_job        Specify the build job to pull from (default: chroma)
-    -n build_number     Specify the build number to pull (default: latest)
+    -j build_job        Specify the build job to pull from (default: $BUILD_JOB)
+    -n build_number     Specify the build number to pull (default: $BUILD_NUMBER)
 EndOfUsage
 
     exit 1
