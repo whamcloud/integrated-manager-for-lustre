@@ -25,10 +25,13 @@
 
   /*
    Color rules:
+   1 or more unacknowledged WARN or higher events: amber
+
    1 or more ERROR alerts are active: red
    else: 1 or more WARN alerts are active: amber
+
    1 or more WARN alerts are inactive but have not been dismissed: amber
-   1 or more unacknowledged WARN or higher events: amber
+
    1 or more unacknowledged failed commands: amber
    else: green
    */
@@ -48,9 +51,16 @@
      * Loads the relevant services.
      */
     function getHealth() {
+      //1 or more unacknowledged WARN or higher events: amber
       events = eventModel.query({dismissed: false, severity__in: [STATES.WARN, STATES.ERROR], limit: 1});
+
+      //1 or more ERROR alerts are active: red else: 1 or more WARN alerts are active: amber
       alerts = alertModel.query({active: true, severity__in: [STATES.WARN, STATES.ERROR], limit: 0});
-      inactiveAlerts = alertModel.query({active: false, severity__in: [STATES.WARN], limit: 1});
+
+      //1 or more WARN alerts are inactive but have not been dismissed: amber
+      inactiveAlerts = alertModel.query({active: false, dismissed: false, severity__in: [STATES.WARN], limit: 1});
+
+      //1 or more unacknowledged failed commands: amber
       commands = commandModel.query({errored: true, dismissed: false, limit: 1});
 
       $q.all([events.$promise, alerts.$promise, inactiveAlerts.$promise, commands.$promise]).then(broadcastHealth);
@@ -63,16 +73,20 @@
       var states = [STATES.GOOD, STATES.WARN, STATES.ERROR];
       var health = [states.indexOf(STATES.GOOD)];
 
+      //1 or more unacknowledged WARN or higher events: amber
       events.forEach(function () {
         health.push(states.indexOf(STATES.WARN));
       });
 
+      //1 or more ERROR alerts are active: red else: 1 or more WARN alerts are active: amber
       alerts.some(function (alertModel) {
         health.push(states.indexOf(alertModel.severity));
 
         return alertModel.severity === STATES.ERROR;
       });
 
+      // 1 or more WARN alerts are inactive but have not been dismissed: amber
+      // 1 or more unacknowledged failed commands: amber
       [inactiveAlerts, commands].forEach(function (group) {
         if (group.length) {
           health.push(states.indexOf(STATES.WARN));
@@ -87,10 +101,6 @@
     }
   }
 
-  var deps = [
-    'alertModel', 'commandModel', 'eventModel',
-    '$timeout', '$q', '$rootScope', 'STATES',
-    healthFactory
-  ];
+  var deps = ['alertModel', 'commandModel', 'eventModel', '$timeout', '$q', '$rootScope', 'STATES', healthFactory];
   angular.module('models').factory('healthModel', deps);
 }(window.lodash));
