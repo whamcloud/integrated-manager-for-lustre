@@ -10,6 +10,7 @@ from chroma_core.models import (Command, HostOfflineAlert, ManagedHost,
 from chroma_core.models.event import SyslogEvent
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.tastypie_test import ResourceTestCase
 from tests.unit.chroma_core.helper import freshen
 
 INFO = logging.INFO
@@ -17,7 +18,7 @@ WARNING = logging.WARNING
 ERROR = logging.ERROR
 
 
-class DismissableTestCase(ChromaApiTestCase):
+class DismissableTestSupport():
     """TestCase to hold state constructors, and helper methods """
 
     def make_dismissable(self, obj_type, dismissed=False, severity=INFO,
@@ -112,7 +113,7 @@ class DismissableTestCase(ChromaApiTestCase):
         return "\n" + "\n\n".join([repr(o) for o in objects])
 
 
-class TestInitialLoadDismissables(DismissableTestCase):
+class TestInitialLoadDismissables(ChromaApiTestCase, DismissableTestSupport):
     """Test initial load of data
 
     Any unread events, alerts or commands in the system should be returned
@@ -174,7 +175,7 @@ class TestInitialLoadDismissables(DismissableTestCase):
             self.assertEqual(ev['dismissed'], False)
 
 
-class TestSubsequentLoadDismissables(DismissableTestCase):
+class TestSubsequentLoadDismissables(ChromaApiTestCase, DismissableTestSupport):
     """After the first load the UI can request updates based on date
 
     Sending all fields as strings to simulate what I think the FE does
@@ -244,7 +245,7 @@ class TestSubsequentLoadDismissables(DismissableTestCase):
             self.assertTrue(parse(ev['created_at']) >= self.sample_date)
 
 
-class TestPatchDismissables(DismissableTestCase):
+class TestPatchDismissables(ChromaApiTestCase, DismissableTestSupport):
     """After the first load the UI can request updates based on date
 
     Sending all fields as strings to simulate what I think the FE does
@@ -292,7 +293,7 @@ class TestPatchDismissables(DismissableTestCase):
         self.assertEqual(event.dismissed, True)
 
 
-class TestPatchDismissablesWithDeletedRelatedObject(DismissableTestCase):
+class TestPatchDismissablesWithDeletedRelatedObject(ChromaApiTestCase, DismissableTestSupport):
     """After the first load the UI can request updates based on date
 
     Sending all fields as strings to simulate what I think the FE does
@@ -345,3 +346,124 @@ class TestPatchDismissablesWithDeletedRelatedObject(DismissableTestCase):
 
         event = freshen(event)
         self.assertEqual(event.dismissed, True)
+
+
+class TestNotLoggedInUsersCannotDismiss(ResourceTestCase, DismissableTestSupport):
+    """Make sure non-logged in users cannot Dismiss or Dismiss all alerts
+
+    This test characterizes a bug in django-tastypie v0.9.11.
+    See HYD-2339 for details.
+
+    When we decided to update tastypie, we can disable
+    the fix for this, and run this test to too verify is unnecessary.
+    See HYD-2354
+    """
+
+    def test_dismissing_alert(self):
+        """Test dismissing alert, not logged in is prevented"""
+
+        alert = self.make_dismissable(AlertState, dismissed=False,
+            severity=WARNING, date=timezone.now())
+        self.assertEqual(alert.dismissed, False)
+
+        # ensure logged off
+        self.assertFalse(self.api_client.client.session)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
+        self.assertHttpUnauthorized(response)
+
+        alert = freshen(alert)
+        self.assertEqual(alert.dismissed, False)
+
+    def test_dismissing_command(self):
+        """Test dismissing command, not logged in is prevented"""
+
+        command = self.make_dismissable(Command, dismissed=False, failed=True)
+        self.assertEqual(command.dismissed, False)
+
+        # ensure logged off
+        self.assertFalse(self.api_client.client.session)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/command/%s/" % command.pk,
+            data=data)
+        self.assertHttpUnauthorized(response)
+
+        command = freshen(command)
+        self.assertEqual(command.dismissed, False)
+
+    def test_dismissing_event(self):
+        """Test dismissing event, not logged in is prevented"""
+
+        event = self.make_dismissable(Event, dismissed=False, severity=WARNING)
+        self.assertEqual(event.dismissed, False)
+
+        # ensure logged off
+        self.assertFalse(self.api_client.client.session)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/event/%s/" % event.pk,
+            data=data)
+        self.assertHttpUnauthorized(response)
+
+        event = freshen(event)
+        self.assertEqual(event.dismissed, False)
+
+
+class TestFSUsersCannotDismiss(ChromaApiTestCase, DismissableTestSupport):
+    """Make sure filesystem_users cannot Dismiss or Dismiss all alerts
+
+    This test characterizes a bug in django-tastypie v0.9.11.
+    See HYD-2339 for details.
+
+    When we decided to update tastypie, we can disable
+    the fix for this, and run this test to too verify is unnecessary.
+    See HYD-2354
+    """
+
+    def __init__(self, methodName=None):
+        super(TestFSUsersCannotDismiss, self).__init__(
+            methodName, username='user', password='chr0m4_d3bug')
+
+    def test_dismissing_alert(self):
+        """Test dismissing alert by fs users is prevented"""
+
+        alert = self.make_dismissable(AlertState, dismissed=False,
+            severity=WARNING, date=timezone.now())
+        self.assertEqual(alert.dismissed, False)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
+        self.assertHttpUnauthorized(response)
+
+        alert = freshen(alert)
+        self.assertEqual(alert.dismissed, False)
+
+    def test_dismissing_command(self):
+        """Test dismissing command by fs users is prevented"""
+
+        command = self.make_dismissable(Command, dismissed=False, failed=True)
+        self.assertEqual(command.dismissed, False)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/command/%s/" % command.pk,
+            data=data)
+        self.assertHttpUnauthorized(response)
+
+        command = freshen(command)
+        self.assertEqual(command.dismissed, False)
+
+    def test_dismissing_event(self):
+        """Test dismissing event by fs users is prevented"""
+
+        event = self.make_dismissable(Event, dismissed=False, severity=WARNING)
+        self.assertEqual(event.dismissed, False)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/event/%s/" % event.pk,
+            data=data)
+        self.assertHttpUnauthorized(response)
+
+        event = freshen(event)
+        self.assertEqual(event.dismissed, False)

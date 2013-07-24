@@ -30,7 +30,8 @@ from tastypie.resources import Resource, ModelResource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, \
+    PATCHSupportDjangoAuth
 from chroma_core.models.target import ManagedTargetMount
 
 
@@ -268,7 +269,7 @@ class AlertResource(SeverityResource):
                      'alert_item_id': ['exact', 'in'],
                      'alert_item_content_type_id': ['exact', 'in']}
         ordering = ['begin', 'end', 'active']
-        authorization = DjangoAuthorization()
+        authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'patch', 'put']

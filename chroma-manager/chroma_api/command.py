@@ -22,9 +22,9 @@
 
 from collections import defaultdict
 from django.contrib.contenttypes.models import ContentType
-from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, \
+    PATCHSupportDjangoAuth
 from chroma_api.utils import custom_response
 from chroma_api.host import HostResource
 
@@ -95,7 +95,7 @@ class CommandResource(ModelResource):
                      'dismissed': ['exact'],
                      'errored': ['exact'],
                      'created_at': ['gte']}
-        authorization = DjangoAuthorization()
+        authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()
         validation = CommandValidation()
         always_return_data = True

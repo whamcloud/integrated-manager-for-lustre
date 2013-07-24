@@ -22,11 +22,11 @@
 
 from tastypie.constants import ALL_WITH_RELATIONS
 from tastypie import fields
-from tastypie.authorization import DjangoAuthorization
 
 from chroma_core.models.event import Event
 from chroma_api.utils import SeverityResource
-from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import AnonymousAuthentication, \
+    PATCHSupportDjangoAuth
 
 
 class EventResource(SeverityResource):
@@ -54,7 +54,7 @@ class EventResource(SeverityResource):
 
     class Meta:
         queryset = Event.objects.all()
-        authorization = DjangoAuthorization()
+        authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()
         ordering = ['created_at', 'host', 'host_name']
         filtering = {

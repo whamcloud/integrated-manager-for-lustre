@@ -23,7 +23,7 @@
 import settings
 
 from tastypie.authentication import Authentication
-from tastypie.authorization import Authorization
+from tastypie.authorization import Authorization, DjangoAuthorization
 from django.utils.crypto import constant_time_compare
 
 
@@ -88,3 +88,52 @@ class PermissionAuthorization(Authorization):
 
     def is_authorized(self, request, object = None):
         return request.user.has_perm(self.perm_name)
+
+
+class PATCHSupportDjangoAuth(DjangoAuthorization):
+    """Fixing v0.9.11 tasypie's django auth not handling PATCH
+
+    This is an implementation of this fix:
+    https://github.com/toastdriven/django-tastypie/pull/345/files
+
+    When we rev tastypie to >0.9.11, we should try to run without this code.
+    There is test covering this to check.  See
+    chroma-manager/tests/unit/chroma_api/test_dismissed.py
+
+    The procedure to remove this code is simply to change PATCHSupportDjangoAuth
+    to DjangoAuthorization in the 3 resources that define it.  And run the tests.
+    See HYD-2354
+    """
+
+    def is_authorized(self, request, object=None):
+        # GET is always allowed
+        if request.method == 'GET':
+            return True
+
+        klass = self.resource_meta.object_class
+
+        # cannot check permissions if we don't know the model
+        if not klass or not getattr(klass, '_meta', None):
+            return True
+
+        permission_codes = {
+            'POST': '%s.add_%s',
+            'PUT': '%s.change_%s',
+            'PATCH': '%s.change_%s',
+            'DELETE': '%s.delete_%s',
+            }
+
+        # cannot map request method to permission code name
+        if request.method not in permission_codes:
+            return True
+
+        permission_code = permission_codes[request.method] % (
+            klass._meta.app_label,
+            klass._meta.module_name)
+
+        # user must be logged in to check permissions
+        # authentication backend must set request.user
+        if not hasattr(request, 'user'):
+            return False
+
+        return request.user.has_perm(permission_code)
