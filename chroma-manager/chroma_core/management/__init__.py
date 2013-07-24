@@ -66,6 +66,8 @@ def setup_groups(app, **kwargs):
         user.groups.add(auth.models.Group.objects.get(name='superusers'))
         user = auth.models.User.objects.create_user("admin", "admin@debug.co.eh", "chr0m4_d3bug")
         user.groups.add(auth.models.Group.objects.get(name='filesystem_administrators'))
+        user = auth.models.User.objects.create_user("user", "user@debug.co.eh", "chr0m4_d3bug")
+        user.groups.add(auth.models.Group.objects.get(name='filesystem_users'))
 
 
 ## Ensure that the auto post_syncdb hook is installed
