@@ -15,6 +15,8 @@ class FakeEtherInfo(object):
 
 
 class fake_ethtool(object):
+    IFF_SLAVE = 2048
+
     def __init__(self, interfaces={}):
         self.interfaces = interfaces
 
@@ -26,6 +28,10 @@ class fake_ethtool(object):
 
     def get_hwaddr(self, name):
         return self.interfaces[name]['mac_address']
+
+    def get_flags(self, name):
+        # just hard-code this for now
+        return 4163
 
 
 class TestConfigureCorosync(unittest.TestCase):
@@ -49,14 +55,16 @@ class TestConfigureCorosync(unittest.TestCase):
                     'mac_address': 'de:ad:be:ef:ca:fe',
                     'ipv4_address': '192.168.1.1',
                     'ipv4_netmask': '255.255.255.0',
-                    'has_link': True
+                    'has_link': True,
+                    'is_slave': False
                 },
                 'eth1': {
                     'device': 'eth1',
                     'mac_address': 'ba:db:ee:fb:aa:af',
                     'ipv4_address': None,
                     'ipv4_netmask': 0,
-                    'has_link': True
+                    'has_link': True,
+                    'is_slave': False
                 }
             }
 

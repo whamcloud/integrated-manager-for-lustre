@@ -89,7 +89,7 @@ def detect_ring1(ring0, ring1_address, ring1_prefix):
     # are unconfigured and have positive link status.
     if ring1_address not in [i.ipv4_address for i in all_interfaces]:
         for iface in all_interfaces:
-            if not iface.ipv4_address and iface.has_link:
+            if not iface.ipv4_address and iface.has_link and not iface.is_slave:
                 ring1_candidates.append(iface)
 
     # If we've found exactly 1 unconfigured interface with link, we'll
