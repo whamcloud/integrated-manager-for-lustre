@@ -19,15 +19,33 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
+(function () {
+  'use strict';
 
-angular.module('controllers').controller('BigGreenButtonCtrl', ['$scope', 'healthModel',
-  function ($scope, healthModel) {
-    'use strict';
+  angular.module('imlMocks', ['ng']).factory('interval', function () {
+    var queue = [];
 
-    $scope.$root.$on('health', function (ev, health) {
-      $scope.state = health;
-    });
+    function run(func, delay, callBeforeDelay) {
+      //Push function into the queue
+      queue.push(func);
 
-    healthModel();
-  }]
-);
+      if (callBeforeDelay) {
+        func();
+      }
+
+      return function clear() {
+        queue.splice(queue.indexOf(func), 1);
+      };
+    }
+
+    //@TODO: Take parameter to advance interval timer.
+    run.flush = function flush() {
+      queue.forEach(function (func) {
+        func();
+      });
+    };
+
+    return run;
+  });
+
+}());

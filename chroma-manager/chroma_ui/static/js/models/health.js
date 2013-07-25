@@ -36,16 +36,9 @@
    else: green
    */
 
-  function healthFactory(alertModel, commandModel, eventModel, $timeout, $q, $rootScope, STATES) {
+  function healthFactory(alertModel, commandModel, eventModel, $q, $rootScope, STATES, interval) {
     var events, alerts, inactiveAlerts, commands;
 
-    $timeout(function timesUp() {
-      getHealth();
-
-      $timeout(timesUp, 10000);
-    }, 0);
-
-    $rootScope.$on('checkHealth', getHealth);
 
     /**
      * Loads the relevant services.
@@ -99,8 +92,16 @@
 
       $rootScope.$broadcast('health', states[currentHealth]);
     }
+
+    return function start() {
+      var clear = interval(getHealth, 10000, true);
+
+      $rootScope.$on('checkHealth', getHealth);
+      $rootScope.$on('$destroy', clear);
+    };
   }
 
-  var deps = ['alertModel', 'commandModel', 'eventModel', '$timeout', '$q', '$rootScope', 'STATES', healthFactory];
-  angular.module('models').factory('healthModel', deps);
+  angular.module('models').factory('healthModel',
+    ['alertModel', 'commandModel', 'eventModel', '$q', '$rootScope', 'STATES', 'interval', healthFactory]
+  );
 }(window.lodash));

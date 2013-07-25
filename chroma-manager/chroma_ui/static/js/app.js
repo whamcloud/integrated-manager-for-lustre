@@ -28,7 +28,7 @@
    */
   angular.module('iml',
       ['controllers', 'models', 'interceptors', 'ngResource', 'constants',
-        'ui.bootstrap', 'services', 'filters', 'ui', 'directives']
+        'ui.bootstrap', 'services', 'filters', 'ui', 'directives', 'timing']
     )
     .config(['$interpolateProvider', function ($interpolateProvider) {
       $interpolateProvider.startSymbol('((');

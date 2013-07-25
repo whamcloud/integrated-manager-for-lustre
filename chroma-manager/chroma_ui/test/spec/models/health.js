@@ -7,7 +7,7 @@ describe('Health model', function () {
   var ERROR;
   var GOOD;
   var healthModel;
-  var flush;
+  var interval;
 
   var urls = {
     event: '/api/event/?dismissed=false&limit=1&severity__in=WARNING&severity__in=ERROR',
@@ -42,22 +42,18 @@ describe('Health model', function () {
     });
   }));
 
-  beforeEach(inject(function (_$httpBackend_, _STATES_, _healthModel_, $timeout, $rootScope) {
+  beforeEach(inject(function (_$httpBackend_, _STATES_, _healthModel_, _interval_, $rootScope) {
     $httpBackend = _$httpBackend_;
     WARN = _STATES_.WARN;
     ERROR = _STATES_.ERROR;
     GOOD = _STATES_.GOOD;
 
+    interval = _interval_;
     healthSpy = jasmine.createSpy('health');
     var scope = $rootScope.$new();
     scope.$on('health', healthSpy);
 
     healthModel = _healthModel_;
-
-    flush = function flusher() {
-      $timeout.flush();
-      $httpBackend.flush();
-    };
   }));
 
   afterEach(function () {
@@ -68,21 +64,27 @@ describe('Health model', function () {
   describe('working with health', function () {
     it('should broadcast a health event as a listening mechanism', function () {
       expectReqRes();
-      flush();
+      healthModel();
+      $httpBackend.flush();
       expect(healthSpy).toHaveBeenCalledWith(jasmine.any(Object), GOOD);
     });
 
-    it('should provide a timeout that periodically emits a health event', function () {
+    it('should it should emit a health event after calling', function () {
       expectReqRes();
-      flush();
+      healthModel();
+      $httpBackend.flush();
       expect(healthSpy.callCount).toBe(1);
     });
 
-    it('should register another timeout after the first one fires', function () {
+    it('should emit a health event after each interval', function () {
       expectReqRes();
-      flush();
+      healthModel();
+      $httpBackend.flush();
+
       expectReqRes();
-      flush();
+      interval.flush();
+      $httpBackend.flush();
+
       expect(healthSpy.callCount).toBe(2);
     });
 
@@ -97,7 +99,10 @@ describe('Health model', function () {
           }
         ]
       });
-      flush();
+
+      healthModel();
+      $httpBackend.flush();
+
       expect(healthSpy.mostRecentCall.args[1]).toBe(ERROR);
     });
 
@@ -107,7 +112,9 @@ describe('Health model', function () {
           severity: WARN
         }]
       });
-      flush();
+
+      healthModel();
+      $httpBackend.flush();
       expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
     });
 
@@ -115,7 +122,9 @@ describe('Health model', function () {
       expectReqRes({
         inactiveAlert: [{}]
       });
-      flush();
+
+      healthModel();
+      $httpBackend.flush();
       expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
     });
 
@@ -130,7 +139,9 @@ describe('Health model', function () {
           }
         ]
       });
-      flush();
+
+      healthModel();
+      $httpBackend.flush();
       expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
     });
 
@@ -138,7 +149,9 @@ describe('Health model', function () {
       expectReqRes({
         command: [{}]
       });
-      flush();
+
+      healthModel();
+      $httpBackend.flush();
       expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
     });
 
@@ -160,7 +173,9 @@ describe('Health model', function () {
         ],
         command: [{}]
       });
-      flush();
+
+      healthModel();
+      $httpBackend.flush();
       expect(healthSpy.mostRecentCall.args[1]).toBe(ERROR);
     });
   });
@@ -168,7 +183,8 @@ describe('Health model', function () {
   describe('promise resolution', function () {
     it('should wait for all calls to resolve', inject(function ($q) {
       expectReqRes();
-      flush();
+      healthModel();
+      $httpBackend.flush();
 
       expect($q.all.callCount).toBe(1);
       expect($q.all.mostRecentCall.args[0].length).toEqual(Object.keys(urls).length);
