@@ -37,6 +37,13 @@ Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil 
 %description management
 This package layers on management capabilities for Intel Manager for Lustre Agent.
 
+%package devel
+Summary: Contains stripped .py files
+Group: Development
+Requires: %{name} = %{version}-%{release}
+%description devel
+This package contains the .py files stripped out of the production build.
+
 %prep
 %setup -n %{name}-%{version}
 
@@ -54,26 +61,25 @@ cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
 
 # Nuke source code (HYD-1849)
-find $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" -exec rm -f {} \;
+find $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
 
 touch management.files
 cat <<EndOfList>>management.files
-%{python_sitelib}/chroma_agent/action_plugins/manage_*
+%{python_sitelib}/chroma_agent/action_plugins/manage_*.py[c,o]
 %{python_sitelib}/chroma_agent/templates/
 /usr/lib/ocf/resource.d/chroma/Target
 %{_sbindir}/fence_chroma
 EndOfList
 
 touch base.files
-mgmt_patterns=$(cat management.files)
 for base_file in $(find $RPM_BUILD_ROOT -type f -name '*.pyc'); do
   install_file=${base_file/$RPM_BUILD_ROOT\///}
-  for mgmt_pat in $mgmt_patterns; do
+  for mgmt_pat in $(<management.files); do
     if [[ $install_file == $mgmt_pat ]]; then
       continue 2
     fi
   done
-  echo "${install_file%.py*}.py*" >> base.files
+  echo "${install_file%.py*}.py[c,o]" >> base.files
 done
 
 %clean
@@ -119,4 +125,7 @@ fi
 %attr(0644,root,root)/etc/logrotate.d/chroma-agent
 
 %files -f management.files management
+%defattr(-,root,root)
+
+%files -f devel.files devel
 %defattr(-,root,root)
