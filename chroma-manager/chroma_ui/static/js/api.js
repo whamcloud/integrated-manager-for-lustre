@@ -332,7 +332,7 @@ var Api = function() {
     });
   }
 
-  var call = function(verb, url, api_args, success_callback, error_callback, blocking, force)
+  var call = function(verb, url, api_args, success_callback, error_callback, blocking, force, cache)
   {
     /* Allow user to pass either /filesystem or /api/filesystem */
     if (!(url.indexOf(API_PREFIX) == 0)) {
@@ -377,6 +377,10 @@ var Api = function() {
       ajax_args.contentType ="application/json; charset=utf-8"
     }
 
+    if (_.isBoolean(cache)) {
+      ajax_args.cache = cache;
+    }
+
     if (blocking) {
       startBlocking();
     }
@@ -417,7 +421,7 @@ var Api = function() {
           calls_waiting += 1;
           $('body').bind('api_available', function() {
             calls_waiting -= 1;
-            call(verb, url, api_args, success_callback, error_callback, blocking)
+            call(verb, url, api_args, success_callback, error_callback, blocking, undefined, false)
           });
           return;
         }
