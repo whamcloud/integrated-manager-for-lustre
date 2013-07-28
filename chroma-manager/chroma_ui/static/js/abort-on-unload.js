@@ -23,9 +23,16 @@
 (function () {
   'use strict';
 
+  var pageIsUnloading = false;
   var xhrs = [];
 
   $(document).ajaxSend(function (e, jqXHR) {
+    if (pageIsUnloading) {
+      jqXHR.abort();
+
+      return;
+    }
+
     xhrs.push(jqXHR);
   })
   .ajaxComplete(function (e, jqXHR) {
@@ -37,6 +44,8 @@
   });
 
   window.onbeforeunload = function () {
+    pageIsUnloading = true;
+
     xhrs.forEach(function (xhr) {
       xhr.abort();
     });
