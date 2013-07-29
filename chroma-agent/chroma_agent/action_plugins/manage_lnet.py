@@ -91,6 +91,9 @@ def stop_lnet():
 
 def load_lnet():
     shell.try_run(["modprobe", "lnet"])
+    # hack for HYD-1263 - Fix or work around LU-1279 - failure trying to mount
+    # should be removed when LU-1279 is fixed
+    shell.try_run(["modprobe", "lustre"])
 
 
 def unload_lnet():
