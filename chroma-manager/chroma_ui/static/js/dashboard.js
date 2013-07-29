@@ -807,9 +807,9 @@ var Dashboard = (function() {
 
           tooltip_data.percent_free = Math.round(free) + '%';
           tooltip_data.percent_used = Math.round(used) + '%';
-          tooltip_data.bytes_free   = formatKBytes(current_data.kbytesfree,1);
-          tooltip_data.bytes_used   = formatKBytes(current_data.kbytestotal - current_data.kbytesfree,1);
-          tooltip_data.bytes_total  = formatKBytes(current_data.kbytestotal,1);
+          tooltip_data.bytes_free   = formatKBytes(current_data.kbytesfree, 4);
+          tooltip_data.bytes_used   = formatKBytes(current_data.kbytestotal - current_data.kbytesfree, 4);
+          tooltip_data.bytes_total  = formatKBytes(current_data.kbytestotal, 4);
         }
 
         // "tooltip_data" will be added to this.point[0].point.config object in the tooltip callback
