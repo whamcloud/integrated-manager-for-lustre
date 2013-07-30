@@ -74,8 +74,11 @@ class ApplyConfParams(Job):
             # If we have some new params, create N ConfParamSteps and one ConfParamVersionStep
             highest_version = 0
             for param in new_params:
-                steps.append((ConfParamStep, {"conf_param_id": param.id}))
-                highest_version = max(highest_version, param.version)
+                # We must check that the parameter's object is still alive, to avoid trying
+                # to set params on things that don't exist (HYD-2365)
+                if param.object_exists():
+                    steps.append((ConfParamStep, {"conf_param_id": param.id}))
+                    highest_version = max(highest_version, param.version)
             steps.append((ConfParamVersionStep, {"mgs_id": self.mgs.id, "version": highest_version}))
         else:
             # If we have no new params, no-op
@@ -137,6 +140,13 @@ class ConfParam(models.Model):
            prepends the filesystem name to self.key"""
         return self.key
 
+    def object_exists(self):
+        """
+        Check that the affected object has not been deleted, to avoid trying to set
+        params for things that don't exist any more.
+        """
+        return self.downcast().object_exists()
+
 
 class FilesystemClientConfParam(ConfParam):
     filesystem = models.ForeignKey(ManagedFilesystem)
@@ -152,6 +162,9 @@ class FilesystemClientConfParam(ConfParam):
     def get_key(self):
         return "%s.%s" % (self.filesystem.name, self.key)
 
+    def object_exists(self):
+        return self.filesystem.not_deleted
+
 
 class FilesystemGlobalConfParam(ConfParam):
     filesystem = models.ForeignKey(ManagedFilesystem)
@@ -166,6 +179,9 @@ class FilesystemGlobalConfParam(ConfParam):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    def object_exists(self):
+        return self.filesystem.not_deleted
 
 
 class MdtConfParam(ConfParam):
@@ -184,6 +200,9 @@ class MdtConfParam(ConfParam):
         app_label = 'chroma_core'
         ordering = ['id']
 
+    def object_exists(self):
+        return self.mdt.not_deleted
+
 
 class OstConfParam(ConfParam):
     # TODO: allow setting OST to None to allow setting the param for
@@ -200,3 +219,6 @@ class OstConfParam(ConfParam):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    def object_exists(self):
+        return self.ost.not_deleted
