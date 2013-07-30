@@ -367,11 +367,8 @@ num  target     prot opt source               destination
         if server and server != existing_server:
             log.info("Writing ntp configuration: %s " % server)
             old_server = ntp.remove()
-            if old_server == "localhost":
-                self._del_firewall_rule(123, "udp", "ntp")
             ntp.add(server)
-            if server == "localhost":
-                self._add_firewall_rule(123, "udp", "ntp")
+            self._add_firewall_rule(123, "udp", "ntp")
             self._start_ntp(old_server != server)
 
     def _start_ntp(self, restart):
