@@ -39,6 +39,8 @@ MAX_BYTES_PER_POST = 1024 * 64
 MIN_SESSION_BACKOFF = datetime.timedelta(seconds = 10)
 MAX_SESSION_BACKOFF = datetime.timedelta(seconds = 60)
 
+GET_REQUEST_TIMEOUT = 60.0
+
 # FIXME: this file needs a concurrency review pass
 
 
@@ -62,6 +64,7 @@ class AgentClient(object):
         self.stopped = threading.Event()
 
     def get(self, **kwargs):
+        kwargs['timeout'] = GET_REQUEST_TIMEOUT
         return self.request('get', **kwargs)
 
     def post(self, data, **kwargs):
