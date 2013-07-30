@@ -51,7 +51,12 @@
         $('#mgt_chooser').volumeChooser('clear');
         $('#mdt_chooser').volumeChooser('clear');
         $('#ost_chooser').volumeChooser('clear');
-        conf_param_dialog = undefined;
+
+        if (conf_param_dialog) {
+          conf_param_dialog.destroy();
+          conf_param_dialog = null;
+        }
+
         advanced_tab_clicked = false;
 
         $('#filesystem_create_form').find('span.error').remove();

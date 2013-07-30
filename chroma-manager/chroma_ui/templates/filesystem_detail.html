@@ -15,7 +15,11 @@
       $('#mdt').dataTable().fnClearTable();
       $('#mgt_configuration_view').dataTable().fnClearTable();
 
-      conf_param_dialog = undefined;
+      if (conf_param_dialog) {
+        conf_param_dialog.destroy();
+        conf_param_dialog = null;
+      }
+
       loadFilesystem(id);
     }
 
