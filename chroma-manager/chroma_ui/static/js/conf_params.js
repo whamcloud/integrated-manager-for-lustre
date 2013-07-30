@@ -44,11 +44,13 @@ var ConfParamDialog = function(options) {
   }
 
   if (_options.help) {
-    var blank_data = {};
-    $.each(_options.help, function(name, help) {
-      blank_data[name] = null;
-    });
-    populate_conf_param_table(blank_data, el.find('table'), _options.help)
+    (function () {
+      var blank_data = {};
+      $.each(_options.help, function (name, help) {
+        blank_data[name] = null;
+      });
+      populate_conf_param_table(blank_data, el.find('table'), _options.help);
+    }());
   }
 
   // initialize (but don't open) settings dialog
@@ -87,32 +89,34 @@ var ConfParamDialog = function(options) {
     });
 
   if (_options.object) {
-    var buttonsGetterSetter = el.dialog.bind(el, 'option', 'buttons');
-    var buttons = buttonsGetterSetter();
-    var dataTable = el.find('table').dataTable();
+    (function () {
+      var buttonsGetterSetter = el.dialog.bind(el, 'option', 'buttons');
+      var buttons = buttonsGetterSetter();
+      var dataTable = el.find('table').dataTable();
 
-    _.extend(buttons, {
-      Reset: {
-        text: 'Reset To Defaults',
-        click: function handleReset() {
-          dataTable.fnGetNodes().forEach(function (node) {
-            $(node).find('input').val('');
-          });
+      _.extend(buttons, {
+        Reset: {
+          text: 'Reset To Defaults',
+          click: function handleReset() {
+            dataTable.fnGetNodes().forEach(function (node) {
+              $(node).find('input').val('');
+            });
 
-          // Call the apply button click handler.
-          $(this).dialog('option', 'buttons').Apply.click.call(this);
+            // Call the apply button click handler.
+            $(this).dialog('option', 'buttons').Apply.click.call(this);
+          }
         }
-      }
-    });
+      });
 
-    // Reorder the buttons object literal.
-    var cancelButton = buttons.Cancel;
-    delete buttons.Cancel;
-    buttons.Cancel = cancelButton;
+      // Reorder the buttons object literal.
+      var cancelButton = buttons.Cancel;
+      delete buttons.Cancel;
+      buttons.Cancel = cancelButton;
 
-    buttonsGetterSetter(buttons);
+      buttonsGetterSetter(buttons);
 
-    el.bind('dialogclose', cancel_config_params.bind(null, dataTable));
+      el.bind('dialogclose', cancel_config_params.bind(null, dataTable));
+    }());
   }
 
   //populate help snippets
@@ -133,10 +137,10 @@ var ConfParamDialog = function(options) {
       // If conf_param_name is null, this is one of the title rows not
       // a data row.
       if (conf_param_name) {
-        var input_val = $("input[id='conf_param_" + conf_param_name + "']").val();
+        var input_val = el.find("input[id='conf_param_" + conf_param_name + "']").val();
         if(oSetting.aoData[i]._aData[2] != input_val)
         {
-          result[conf_param_name] = $.trim(input_val);
+          result[conf_param_name] = input_val.trim();
         }
       }
     }
@@ -147,10 +151,24 @@ var ConfParamDialog = function(options) {
   function clear() {
     var oSetting = el.find('table').dataTable().fnSettings();
     for (var i=0, iLen=oSetting.aoData.length; i<iLen; i++) {
-      if(oSetting.aoData[i]._aData[2] != $("input#"+i).val()) {
-        $("input#"+i).val('');
+      var input = el.find('input#' + i);
+
+      if(oSetting.aoData[i]._aData[2] != input.val()) {
+        input.val('');
       }
     }
+  }
+
+  function destroy() {
+    get_datatable().fnDestroy(true);
+
+    el
+      .unbind('dialogclose')
+      .dialog('destroy')
+      .remove();
+
+    _options = null;
+    el = null;
   }
 
   function get_datatable() {
@@ -161,7 +179,8 @@ var ConfParamDialog = function(options) {
     open: open,
     get: get,
     get_datatable: get_datatable,
-    clear: clear
+    clear: clear,
+    destroy: destroy
   }
 };
 
