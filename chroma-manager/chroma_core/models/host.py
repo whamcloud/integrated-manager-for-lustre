@@ -1285,12 +1285,12 @@ class WriteConfStep(Step):
         target = args['target']
 
         agent_args = {
-            'writeconf': True,
             'erase_params': True,
             'device': args['path']}
 
         if issubclass(target.downcast_class, FilesystemMember):
             agent_args['mgsnode'] = args['mgsnode']
+            agent_args['writeconf'] = True
 
         fail_nids = args['fail_nids']
         if fail_nids:
@@ -1321,9 +1321,9 @@ class UpdateNidsJob(Job, HostListMixin):
         from chroma_core.models.filesystem import ManagedFilesystem
 
         filesystems = set()
-        targets = []
+        targets = set()
         for target in ManagedTarget.objects.filter(managedtargetmount__host__in = self.hosts.all()):
-            targets.append(target)
+            targets.add(target)
             if issubclass(target.downcast_class, FilesystemMember):
                 # FIXME: N downcasts :-(
                 filesystems.add(target.downcast().filesystem)
@@ -1331,6 +1331,9 @@ class UpdateNidsJob(Job, HostListMixin):
             if issubclass(target.downcast_class, ManagedMgs):
                 for fs in target.downcast().managedfilesystem_set.all():
                     filesystems.add(fs)
+
+        for fs in filesystems:
+            targets |= set(fs.get_targets())
 
         targets = [ObjectCache.get_by_id(ManagedTarget, t.id) for t in targets]
         filesystems = [ObjectCache.get_by_id(ManagedFilesystem, f.id) for f in filesystems]
@@ -1377,13 +1380,9 @@ class UpdateNidsJob(Job, HostListMixin):
         from chroma_core.models.target import FilesystemMember
 
         filesystems, targets = self._targets_on_hosts()
-        all_targets = set()
-        for fs in filesystems:
-            all_targets |= set(fs.get_targets())
-        all_targets |= set(targets)
 
         steps = []
-        for target in all_targets:
+        for target in targets:
             target = target.downcast()
             primary_tm = target.managedtargetmount_set.get(primary = True)
             steps.append((WriteConfStep, {
