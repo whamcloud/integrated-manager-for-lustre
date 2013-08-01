@@ -107,7 +107,9 @@ class SessionCollection(object):
 
     def reset_fqdn_sessions(self, victim_fqdn):
         """
-        This is a reset in the RX direction, to tell services that an agent session has gone away
+        This is a reset in both directions:
+         * the RX direction, to tell services that an agent session has gone away
+         * the TX direction, to tell the agent that we left it for dead, if it comes back.
         """
         with self._lock:
             remove_keys = []
@@ -125,7 +127,7 @@ class SessionCollection(object):
                     remove_keys.append((fqdn, plugin))
 
             for key in remove_keys:
-                del self._sessions[key]
+                self._reset_session(key[0], key[1], None)
 
 
 class Session(object):

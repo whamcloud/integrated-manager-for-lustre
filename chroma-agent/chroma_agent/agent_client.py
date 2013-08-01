@@ -483,6 +483,12 @@ class HttpReader(ExceptionCatchingThread):
                 body = self._client.get(params = get_args)
             except HttpError:
                 daemon_log.warning("HttpReader: request failed")
+                # We potentially dropped TX messages if this happened, which could include
+                # session control messages, so have to completely reset.
+                # NB could change this to only terminate_all if an HTTP request was started: there is
+                # no need to do the teardown if we didn't even get a TCP connection to the manager.
+                self._client.sessions.terminate_all()
+
                 self._stopping.wait(timeout = self.HTTP_RETRY_PERIOD)
                 continue
             else:
