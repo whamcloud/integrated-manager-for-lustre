@@ -43,6 +43,64 @@ class SimulatorRemoteOperations(RemoteOperations):
         else:
             return False
 
+    def fail_connections(self, fail):
+        """
+        Cause all agent attempts at HTTP requests to fail to connect to the manager before
+        sending the request.
+        """
+        # NB could make this more targeted to a specific host
+        import requests
+        if fail:
+            logger.info("Disabling agent connections")
+            # Monkey patch requests.request to throw requests.exceptions.ConnectionError
+            self._old_request_fn = requests.request
+
+            def fail_connection(*_, **__):
+                raise requests.exceptions.ConnectionError("Synthetic connection failure")
+            requests.request = fail_connection
+        else:
+            logger.info("Enabling agent connections")
+            # Revert requests.request to its real implementation
+            requests.request = self._old_request_fn
+
+    def drop_responses(self, drop):
+        """
+        Allow the agent to issue one HTTP POST and one HTTP GET, send those requests to the manager,
+        drop the responses, and fail outright on subsequent requests.
+
+        This models the case where connectivity is lost in the middle of an HTTP request: the manager
+        has built the response, potentially consuming messages which will now be dropped when the agent
+        loses the response.
+        """
+        import requests
+
+        send_request = {
+            'get': True,
+            'post': True
+        }
+
+        if drop:
+            logger.info("Dropping responses to agent HTTP requests")
+            # Monkey patch requests.request to throw requests.exceptions.ConnectionError
+            self._old_request_fn = requests.request
+
+            def drop_response(method, *args, **kwargs):
+                try:
+                    if send_request[method]:
+                        logger.info("drop_response: Letting through first %s" % method)
+                        self._old_request_fn(method, *args, **kwargs)
+                        send_request[method] = False
+                    else:
+                        logger.info("drop_response: Dropping subsequent %s" % method)
+
+                finally:
+                    raise socket.error("Synthetic connection timeout after issuing request")
+            requests.request = drop_response
+        else:
+            logger.info("Enabling responses to agent HTTP requests")
+            # Revert requests.request to its real implementation
+            requests.request = self._old_request_fn
+
     def erase_block_device(self, fqdn, path):
         self._simulator.format_block_device(fqdn, path, None)
 
@@ -177,6 +235,20 @@ class SimulatorRemoteOperations(RemoteOperations):
 class RealRemoteOperations(RemoteOperations):
     def __init__(self, test_case):
         self._test_case = test_case
+
+    def fail_connections(self, fail):
+        # Ways to implement this outside simulation:
+        #  * Insert a firewall rule to drop packages between agent and manager
+        #  * Stop the management network interface on the storage server
+        #  * Switch off the management switch port that the storage server is connected to
+        raise NotImplementedError()
+
+    def drop_responses(self, fail):
+        # Ways to implement this outside simulation:
+        #  * Insert a transparent HTTP proxy between agent and manager, which drops responses
+        #  * Use a firewall rule to drop manager->agent TCP streams after N bytes to cause responses
+        #    to be mangled.
+        raise NotImplementedError()
 
     # TODO: reconcile this with the one in UtilityTestCase, ideally all remote
     # operations would flow through here to avoid rogue SSH calls

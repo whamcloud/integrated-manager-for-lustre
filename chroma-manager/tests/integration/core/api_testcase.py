@@ -265,7 +265,7 @@ class ApiTestCase(UtilityTestCase):
         self.assertEqual(response.status_code, 200, response.content)
         return response.json
 
-    def set_state(self, uri, state):
+    def set_state(self, uri, state, verify_successful=True):
         logger.debug("set_state %s %s" % (uri, state))
         object = self.get_by_uri(uri)
         object['state'] = state
@@ -273,11 +273,15 @@ class ApiTestCase(UtilityTestCase):
         response = self.chroma_manager.put(uri, body = object)
         if response.status_code == 204:
             logger.warning("set_state %s %s - no-op" % (uri, state))
+            command = None
         else:
             self.assertEquals(response.status_code, 202, response.content)
-            self.wait_for_command(self.chroma_manager, response.json['command']['id'])
+            command = self.wait_for_command(self.chroma_manager, response.json['command']['id'], verify_successful=verify_successful)
 
-        self.assertState(uri, state)
+        if verify_successful:
+            self.assertState(uri, state)
+
+        return command
 
     def assertNoAlerts(self, uri):
         alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
