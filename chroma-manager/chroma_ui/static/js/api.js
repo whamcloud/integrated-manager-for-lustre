@@ -284,7 +284,6 @@ var Api = function() {
     kwargs.offset = kwargs.iDisplayStart
     delete kwargs.iDisplayStart
 
-    console.log("get:  "+url);
     get(url, kwargs, success_callback = function(data) {
       var datatables_data = {}
       datatables_data.aaData = data.objects;
