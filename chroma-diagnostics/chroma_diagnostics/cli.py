@@ -46,7 +46,8 @@ chroma_log_locations = ['/var/log/chroma-agent.log',
                  '/var/log/chroma/power_control.log',
                  '/var/log/chroma/stats.log',
                  '/var/log/chroma/supervisord.log',
-                 '/var/log/syslog.log', ]
+                 '/var/log/syslog.log',
+                 '/var/log/messages', ]
 
 
 def run_command(cmd, out, err):
@@ -167,3 +168,7 @@ def main():
 
     log.info("\nThe diagnostic report tgz file can be "
              "emailed to Chroma support for analysis.")
+
+
+if __name__ == "__main__":
+    main()
