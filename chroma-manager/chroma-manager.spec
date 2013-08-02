@@ -3,6 +3,9 @@
 %{?!release: %define release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
+# The install directory for the manager
+%{?!manager_root: %define manager_root /usr/share/chroma-manager}
+
 Summary: The Intel Manager for Lustre Monitoring and Adminisration Interface
 Name: %{name}
 Version: %{version}
@@ -81,6 +84,13 @@ Requires: python-dateutil python-requests python-nose python-nose-testconfig pyt
 This package contains the Chroma Manager integration tests and scripts and is intended
 to be used by the Chroma test framework.
 
+%package devel
+Summary: Contains stripped .py files
+Group: Development
+Requires: %{name} = %{version}-%{release}
+%description devel
+This package contains the .py files stripped out of the production build.
+
 %prep
 %setup -n %{name}-%{version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
@@ -94,10 +104,10 @@ cp -a production_supervisord.conf build/lib
 
 %install
 %{__python} setup.py install --skip-build --root=%{buildroot}
-install -d -p $RPM_BUILD_ROOT/usr/share/chroma-manager
-mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT/usr/share/chroma-manager
+install -d -p $RPM_BUILD_ROOT%{manager_root}
+mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
-mv $RPM_BUILD_ROOT/usr/share/chroma-manager/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
+mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,httpd/conf}.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/chroma-manager.conf
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
@@ -105,19 +115,22 @@ cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
 # Nuke source code (HYD-1849), but preserve key .py files needed for operation
-preserve_patterns="settings.py manage.py chroma_core/migrations/* chroma_core/management/commands/* tests/*"
-backup_root=$RPM_BUILD_ROOT/tmp/preserve
-for pattern in $preserve_patterns; do
-    backup_dir=$backup_root/$(dirname "$pattern")
-    mkdir -p $backup_dir
-    cp -a $pattern $backup_dir
+preserve_patterns="settings.py manage.py chroma_core/migrations/*.py chroma_core/management/commands/*.py"
+
+# Stash .py files for -devel package
+find $RPM_BUILD_ROOT%{manager_root}/ -name "*.py" \
+    | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
+
+# only include compiled modules in the main package 
+for manager_file in $(find $RPM_BUILD_ROOT%{manager_root}/ -name "*.pyc"); do
+    install_file=${manager_file/$RPM_BUILD_ROOT\///}
+    echo "${install_file%.py*}.py[c,o]" >> manager.files
 done
-find $RPM_BUILD_ROOT/usr/share/chroma-manager/ -name "*.py" -exec rm -f {} \;
+
+# ... except for these files which are required for operation
 for pattern in $preserve_patterns; do
-    restore_dir=$RPM_BUILD_ROOT/usr/share/chroma-manager/$(dirname "$pattern")
-    cp -a $backup_root/$pattern $restore_dir
+    echo "%{manager_root}/$pattern" >> manager.files
 done
-rm -fr $backup_root
 
 # This is fugly, but it's cleaner than moving things around to get our
 # modules in the standard path.
@@ -125,7 +138,7 @@ entry_scripts="/usr/bin/chroma-config /usr/bin/chroma"
 for script in $entry_scripts; do
   ed $RPM_BUILD_ROOT$script <<EOF
 /import load_entry_point/ a
-sys.path.insert(0, "/usr/share/chroma-manager")
+sys.path.insert(0, "%{manager_root}")
 .
 w
 q
@@ -187,7 +200,7 @@ echo "run \"chroma-config setup\""
 %preun
 service chroma-supervisor stop
 # remove the /static/ dir of files that was created by Django's collectstatic
-rm -rf /usr/share/chroma-manager/static
+rm -rf %{manager_root}/static
 
 %postun
 if [ $1 -lt 1 ]; then
@@ -201,23 +214,29 @@ if [ $1 -lt 1 ]; then
            -e '/--port=123:udp/d' /etc/sysconfig/system-config-firewall
 fi
 
-%files
+%files -f manager.files
 %defattr(-,root,root)
 %{_bindir}/chroma-host-discover
 %{_bindir}/chroma-config
-%dir %attr(0755,apache,apache)/usr/share/chroma-manager
-/usr/share/chroma-manager/*
+%dir %attr(0755,apache,apache)%{manager_root}
 /etc/httpd/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
-%attr(0755,root,root)/usr/share/chroma-manager/manage.pyc
+%attr(0755,root,root)%{manager_root}/manage.pyc
+%{manager_root}/*.conf
+%{manager_root}/*.wsgi
+%{manager_root}/chroma_ui/templates/*
+%{manager_root}/chroma_ui/static/*
+%{manager_root}/chroma_help/*
+%{manager_root}/chroma_core/fixtures/*
+%{manager_root}/polymorphic/COPYING
 # Stuff below goes into the -cli/-lib packages
-%exclude /usr/share/chroma-manager/chroma_cli
+%exclude %{manager_root}/chroma_cli
 %exclude %{python_sitelib}/*.egg-info/
 # will go into the -tests packages
-%exclude /usr/share/chroma-manager/example_storage_plugin_package
-%exclude /usr/share/chroma-manager/tests
+%exclude %{manager_root}/example_storage_plugin_package
+%exclude %{manager_root}/tests
 
 %files libs
 %{python_sitelib}/*.egg-info/*
@@ -225,13 +244,16 @@ fi
 %files cli
 %defattr(-,root,root)
 %{_bindir}/chroma
-/usr/share/chroma-manager/chroma_cli/*
+%{manager_root}/chroma_cli/*
 
 %files integration-tests
 %defattr(-,root,root)
-/usr/share/chroma-manager/tests/__init__.pyc
-/usr/share/chroma-manager/tests/utils/*
-/usr/share/chroma-manager/tests/sample_data/*
-/usr/share/chroma-manager/tests/plugins/*
-/usr/share/chroma-manager/tests/integration/*
-%attr(0755,root,root)/usr/share/chroma-manager/tests/integration/run_tests
+%{manager_root}/tests/__init__.pyc
+%{manager_root}/tests/utils/*
+%{manager_root}/tests/sample_data/*
+%{manager_root}/tests/plugins/*
+%{manager_root}/tests/integration/*
+%attr(0755,root,root)%{manager_root}/tests/integration/run_tests
+
+%files -f devel.files devel
+%defattr(-,root,root)

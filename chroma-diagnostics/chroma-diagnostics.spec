@@ -19,6 +19,13 @@ Requires: python-argparse
 %description
 Commandline tool to collect and save data on manager or storage servers for diagnostic analysis. Intended for administrators.
 
+%package devel
+Summary: Contains stripped .py files
+Group: Development
+Requires: %{name} = %{version}-%{release}
+%description devel
+This package contains the .py files stripped out of the production build.
+
 %prep
 %setup -n %{name}-%{version}
 
@@ -31,7 +38,8 @@ rm -rf %{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 
 # Nuke source code (HYD-1849)
-find $RPM_BUILD_ROOT%{python_sitelib}/chroma_diagnostics -name "*.py" -exec rm -f {} \;
+find $RPM_BUILD_ROOT%{python_sitelib}/chroma_diagnostics -name "*.py" \
+    | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
 
 %clean
 rm -rf %{buildroot}
@@ -40,4 +48,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root)
 %{_bindir}/chroma-diagnostics
 %{python_sitelib}/chroma_diagnostics-*.egg-info/*
-%{python_sitelib}/chroma_diagnostics/*
+%{python_sitelib}/chroma_diagnostics/*.py[c,o]
+
+%files -f devel.files devel
+%defattr(-,root,root)
