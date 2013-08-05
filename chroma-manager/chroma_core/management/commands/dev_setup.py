@@ -83,7 +83,11 @@ class Command(BaseCommand):
                 if not Bundle.objects.filter(location=repo).exists():
                     chroma_core.lib.service_config.bundle('register', repo)
 
-                missing_bundles.remove(meta['name'])
+                try:
+                    missing_bundles.remove(meta['name'])
+                except ValueError:
+                    # Bundles not associated with a profile are OK
+                    pass
 
             if len(missing_bundles):
                 print """
