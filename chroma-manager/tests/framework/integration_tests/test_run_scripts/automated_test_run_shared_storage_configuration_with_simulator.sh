@@ -26,7 +26,6 @@ set -ex
 wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 yum install -y epel-release-6-8.noarch.rpm
 yum install -y git python-pip python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server
-ln -s /usr/bin/pip-python /usr/bin/pip
 
 # Create a user so we can run chroma as non-root
 useradd chromatest

@@ -32,7 +32,6 @@ priority=99
 EOC
 yum clean metadata
 yum install -y git python-pip python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool
-ln -s /usr/bin/pip-python /usr/bin/pip
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
