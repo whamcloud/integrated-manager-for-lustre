@@ -60,11 +60,8 @@ def step(context):
 @then('I should see output containing "{message}"')
 def step(context, message):
     context.stdout.seek(0)
-    try:
-        ok_(message in "".join(context.stdout.readlines()))
-    except AssertionError:
-        context.stdout.seek(0)
-        raise
+    stdout = context.stdout.read()
+    assert message in stdout, stdout
 
 
 @then('I should not see output containing "{message}"')

@@ -126,8 +126,13 @@ Scenario: View a specific target
   When I run chroma target-show secondfs-MDT0000
   Then I should see output containing "scsi-1IET_000b0001"
 
+Scenario: List usable volumes
+  When I run chroma volume list
+  Then I should see output containing "Found 0 results"
+  And there should be 0 lines of output
+
 Scenario: List all volumes
-  When I run chroma volume-list
+  When I run chroma volume list --all
   Then I should see output containing "scsi-1IET_00010001"
   And I should see output containing "scsi-1IET_000f0001"
   And I should see output containing "firstfs-mds.lab.whamcloud.com:/dev/disk/by-id/scsi-1IET_00020001"

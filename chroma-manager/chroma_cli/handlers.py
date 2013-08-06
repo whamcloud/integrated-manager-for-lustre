@@ -114,6 +114,7 @@ class Dispatcher(object):
                     verb_parser.add_argument("subject", metavar=key)
 
                 verb_parser.set_defaults(handler=handler['klass'])
+                handler['klass'].add_args(verb_parser, verb)
 
             if len(handler['klass'].contextual_actions()) > 0:
                 ctx_parser = verb_subparsers.add_parser("context", help="%s_name action (e.g. ost-list, vol-list, etc.)" % key)
@@ -136,6 +137,11 @@ class Handler(object):
     def contextual_actions(cls):
         # Really, the only verb that makes sense in general context is list
         return ["%s-%s" % t for t in product(*[cls.contextual_nouns, ["list"]])]
+
+    @classmethod
+    def add_args(cls, parser, verb):
+        "Add custom arguments for given verb."
+        pass
 
     def __init__(self, api, formatter=None):
         self.api = api
@@ -487,6 +493,16 @@ class VolumeHandler(Handler):
     def __init__(self, *args, **kwargs):
         super(VolumeHandler, self).__init__(*args, **kwargs)
         self.api_endpoint = self.api.endpoints['volume']
+
+    @classmethod
+    def add_args(cls, parser, verb):
+        if verb == 'list':
+            parser.add_argument('--all', action='store_true', help="list all volumes")
+
+    def list(self, ns, endpoint=None, **kwargs):
+        if not ns.all:
+            kwargs['category'] = 'usable'
+        Handler.list(self, ns, endpoint, **kwargs)
 
 
 class NidsHandler(Handler):
