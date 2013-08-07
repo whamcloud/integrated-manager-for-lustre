@@ -7,6 +7,7 @@ from tests.selenium.base_view import BaseView
 from tests.selenium.utils.element import (
     find_visible_element_by_css_selector, wait_for_any_element_by_css_selector
 )
+from selenium.common.exceptions import StaleElementReferenceException
 
 
 class EditFilesystem(BaseView):
@@ -41,11 +42,22 @@ class EditFilesystem(BaseView):
 
     def open_target_conf_params(self, target_name):
         self.quiesce()
-        link = WebDriverWait(self.driver, self.standard_wait).until(
-            lambda driver: driver.find_element_by_link_text(target_name),
-            "The target link %s could not be found!" % target_name
-        )
-        link.click()
+
+        def get_link():
+            return WebDriverWait(self.driver, self.standard_wait).until(
+                       lambda driver: driver.find_element_by_link_text(target_name),
+                       "The target link %s could not be found!" % target_name
+                       )
+
+        link = get_link()
+
+        try:
+            link.click()
+        except StaleElementReferenceException:
+            # Try a second time, since the reference might be staled
+            new_link = get_link()
+            new_link.click()
+
         self.quiesce()
         self.config_param_tab = self.driver.find_element_by_css_selector('div.target_detail a[href="#target_dialog_config_param_tab"]')
         self.config_param_tab.click()
