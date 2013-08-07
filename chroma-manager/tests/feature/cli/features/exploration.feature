@@ -13,6 +13,7 @@ Scenario: List all servers
   And I should see output containing "firstfs-oss0"
   And I should see output containing "secondfs-mds"
   And I should see output containing "secondfs-oss1"
+  And I should not see output containing "last_contact"
 
 Scenario: List all servers for a given filesystem
   When I run chroma filesystem firstfs server-list

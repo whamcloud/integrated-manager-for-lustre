@@ -108,15 +108,7 @@ class Host(ApiResource):
         # FIXME: Figure out bad interaction between role as a resource
         # field and as a filter.
         #self.list_columns.extend(["fqdn", "role", "state", "nids", "last_contact"])
-        self.list_columns.extend(["fqdn", "state", "nids", "last_contact"])
-
-    def last_contact(self):
-        from dateutil.parser import parse
-        last_contact = self.all_attributes['last_contact']
-        if last_contact is not None:
-            return self.pretty_time(parse(last_contact))
-        else:
-            return "Never"
+        self.list_columns += 'fqdn', 'state', 'nids'
 
     def nids(self):
         return ",".join(self.all_attributes['nids'])

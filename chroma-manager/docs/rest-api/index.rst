@@ -285,7 +285,6 @@ For example, consider this host object:
         fqdn: "flint02",
         id: "10",
         label: "flint02",
-        last_contact: "2012-02-14T20:52:41",
         nodename: "flint02",
         resource_uri: "/api/host/10/",
         state: "lnet_up"

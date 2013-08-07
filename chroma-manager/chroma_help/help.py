@@ -32,7 +32,6 @@ help_text = {
     'inode_size': 'Size (in bytes) of the inodes used to store Lustre metadata on the MDS for each file. The default is 512 bytes. In the "Lustre Operations Manual", see 5.3.1: Setting the Number of Inodes for the MDS.',
     'force_remove': 'This action removes the record for the storage server in the manager database, without attempting to contact the storage server. All targets that depend on this server will also be removed without any attempt to unconfigure them.  <b>You should only perform this action if the server is permanently unavailable.</b>',
     'invoke_agent': 'Indicates that the chroma-agent service can be accessed on this server.',
-    'last_contact': 'The time that the manager GUI last received a status update from this server.',
     'nids': 'The Lustre network identifier(s) for the LNet network(s) to which this node belongs.',
     'ping': 'Indicates if an ICMP ping from the server running Intel(R) Manager for Lustre, to the server, succeeded.',
     'type': 'The type of storage device.',
