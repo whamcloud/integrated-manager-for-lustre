@@ -232,6 +232,9 @@ class SimulatorRemoteOperations(RemoteOperations):
     def disable_agent_debug(self, server_list):
         pass
 
+    def sync_disks(self, server_list):
+        pass
+
 
 class RealRemoteOperations(RemoteOperations):
     def __init__(self, test_case):
@@ -744,12 +747,17 @@ class RealRemoteOperations(RemoteOperations):
                     'cat > /etc/chroma.cfg',
                     buffer = cfg_str.getvalue()
                 )
-                # Make sure the config gets to disk!
-                self._ssh_address(
-                    server['address'],
-                    'sync; sync',
-                    buffer = cfg_str.getvalue()
-                )
+
+        self.sync_disks(server_list)
+
+    def sync_disks(self, server_list):
+        """
+        Runs a 'sync' on the targeted server(s) to ensure that caches
+        are flushed. Usually not necessary, but can help to avoid races
+        between configs getting to disk and powercycle operations.
+        """
+        for server in server_list:
+            self._ssh_address(server['address'], 'sync; sync')
 
     def clear_ha(self, server_list):
         """

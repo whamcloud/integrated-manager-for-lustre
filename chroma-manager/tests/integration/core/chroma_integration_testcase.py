@@ -118,6 +118,9 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         new_hosts = [h for h in hosts if h['id'] not in [s['id'] for s in pre_existing_hosts]]
 
+        # Make sure the agent config is flushed to disk
+        self.remote_operations.sync_disks(new_hosts)
+
         return new_hosts
 
     def create_filesystem_simple(self, name = 'testfs'):
