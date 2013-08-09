@@ -275,20 +275,19 @@ class ApiHandle(object):
             self.api_client.client.login(**self.authentication)
             r = method(full_url, data=data)
 
+        decoded = self.data_or_text(r.content)
         if 200 <= r.status_code < 304:
-            return self.data_or_text(r.content)
+            return decoded
         elif r.status_code == 400:
-            raise BadRequest(self.data_or_text(r.content))
+            raise BadRequest(decoded)
         elif r.status_code == 401:
-            raise UnauthorizedRequest(self.data_or_text(r.content))
+            raise UnauthorizedRequest(decoded)
         elif r.status_code == 404:
-            decoded = self.data_or_text(r.content)
             try:
-                raise NotFound(decoded['traceback'])
-            except KeyError:
+                raise NotFound(decoded['error_message'])
+            except (KeyError, TypeError):
                 raise NotFound("Not found (%s)" % decoded)
         elif r.status_code == 500:
-            decoded = self.data_or_text(r.content)
             try:
                 raise InternalError(decoded['traceback'])
             except KeyError:
