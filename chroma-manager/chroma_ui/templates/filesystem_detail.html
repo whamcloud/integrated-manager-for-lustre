@@ -23,34 +23,6 @@
       loadFilesystem(id);
     }
 
-    function create_osts(osts)
-    {
-      var i;
-      function chain_creation(i) {
-          if (i == undefined) {
-              i = 0;
-          }
-
-          Api.post("target/", osts[i],
-                  function(data)
-                  {
-                      if (i == osts.length - 1) {
-                          // Last POST succeeded, reload table
-                          $('#ost').dataTable().fnClearTable();
-                          $('#mdt').dataTable().fnClearTable();
-                          $('#mgt_configuration_view').dataTable().fnClearTable();
-                          volume_chooser_store.reload();
-                          loadFilesystem(filesystem.id);
-                      } else {
-                          // POST the next OST creation
-                          chain_creation(i + 1);
-                      }
-                  });
-      }
-
-      chain_creation();
-    }
-
     function init()
     {
       $('div#filesystem_detail button.advanced').click(function() {
@@ -241,30 +213,38 @@
       Api.get("target/", {filesystem_id : id, limit: 0},
       success_callback = function(data)
       {
-        var targets = data.objects;
-        $.each(targets, function(i, target)
-        {
-          var tooltip = "";
-          $.each(target.volume.volume_nodes, function(i, node) {
-            tooltip = tooltip + node.host_label + ":" + node.path + "\n";
-          });
-          var volume_markup = "<span title='" + $.trim(tooltip) + "'>" + target.volume.label + "</span>"
-          var row = [
-                  RouteUtils.object_properties_link(target),
-                  volume_markup,
-                  RouteUtils.uri_properties_link(target.primary_server, target.primary_server_name),
-                  RouteUtils.uri_properties_link(target.failover_servers[0], target.failover_server_name),
-                  LiveObject.active_host(target),
-                  target,
-                  LiveObject.icons(target)
-                ];
-          if (target.kind == "OST") {
-            $('#ost').dataTable().fnAddData(row);
-          } else if (target.kind == "MGT") {
-            $('#mgt_configuration_view').dataTable().fnAddData(row);
-          } else if (target.kind == "MDT") {
-            $('#mdt').dataTable().fnAddData(row);
+        var types = data.objects.reduce(function iterateTargets(obj, target) {
+          if (!obj.hasOwnProperty(target.kind)) {
+            return obj;
           }
+
+          var tooltip = target.volume.volume_nodes.reduce(function makeTooltip(str, node) {
+            return '%s%s:%s\n'.sprintf(str, node.host_label, node.path);
+          }, '');
+
+          var volumeMarkup = '<span title="%s">%s</span>'.sprintf(tooltip.trim(), target.volume.label);
+
+          obj[target.kind].push([
+            RouteUtils.object_properties_link(target),
+            volumeMarkup,
+            RouteUtils.uri_properties_link(target.primary_server, target.primary_server_name),
+            RouteUtils.uri_properties_link(target.failover_servers[0], target.failover_server_name),
+            LiveObject.active_host(target),
+            target,
+            LiveObject.icons(target)
+          ]);
+
+          return obj;
+        }, {OST: [], MGT: [], MDT: []});
+
+        var ids = {
+          OST: 'ost',
+          MGT: 'mgt_configuration_view',
+          MDT: 'mdt'
+        };
+
+        Object.keys(types).forEach(function (key) {
+          $('#' + ids[key]).dataTable().fnAddData(types[key]);
         });
       });
     }
