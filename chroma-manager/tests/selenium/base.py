@@ -1,8 +1,9 @@
 import datetime
-import os
 import logging
-import time
+import os
+import shutil
 import sys
+import time
 
 from django.utils.unittest import TestCase
 from selenium import webdriver
@@ -43,6 +44,9 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 
+DEFAULT_CHROME_USER_DATA_DIR_LINUX = os.path.join(os.path.expanduser('~'), ".config/google-chrome/")
+DEFAULT_CHROME_USER_DATA_DIR_OSX = os.path.join(os.path.expanduser('~'), "Library/Application Support/Google/Chrome")
+
 
 class SeleniumBaseTestCase(TestCase):
     """This is the base class for the test classes.
@@ -73,6 +77,24 @@ class SeleniumBaseTestCase(TestCase):
             if browser == 'Chrome':
                 options = webdriver.ChromeOptions()
                 options.add_argument('no-proxy-server')
+
+                options.add_argument('enable-logging=stderr')
+                options.add_argument('log-level=""')  # log-level interferes with v=1
+                options.add_argument('v=1')
+
+                if os.path.exists(DEFAULT_CHROME_USER_DATA_DIR_LINUX):
+                    options.add_argument('user-data-dir=%s' % DEFAULT_CHROME_USER_DATA_DIR_LINUX)
+                elif os.path.exists(DEFAULT_CHROME_USER_DATA_DIR_OSX):
+                    options.add_argument('user-data-dir=%s' % DEFAULT_CHROME_USER_DATA_DIR_OSX)
+                else:
+                    raise RuntimeError(
+                        "Could not locate the default Chrome user-data-dir at either '%s' or '%s'" % (
+                            DEFAULT_CHROME_USER_DATA_DIR_LINUX,
+                            DEFAULT_CHROME_USER_DATA_DIR_OSX
+                        )
+                    )
+                options.add_argument('incognito')
+
                 self.driver = getattr(webdriver, browser)(chrome_options=options)
             elif browser == 'Firefox':
                 self.driver = webdriver.Firefox()
@@ -81,6 +103,7 @@ class SeleniumBaseTestCase(TestCase):
 
         self.addCleanup(self.stop_driver)
         self.addCleanup(self._take_screenshot_on_failure)
+        self.addCleanup(self._capture_browser_log_on_failure)
 
         self.driver.set_script_timeout(90)
 
@@ -230,3 +253,29 @@ class SeleniumBaseTestCase(TestCase):
 
             self.log.debug("Saving screen shot to %s", filename)
             self.driver.get_screenshot_as_file(filename)
+
+    def _capture_browser_log_on_failure(self):
+        test_failed = False if sys.exc_info() == (None, None, None) else True
+
+        if test_failed and config['chroma_managers'][0]['browser'] == 'Chrome':
+            failed_browser_log_dir = os.path.join(os.getcwd(), 'failed-browser-logs')
+
+            if not os.path.exists(failed_browser_log_dir):
+                os.makedirs(failed_browser_log_dir)
+
+            filename = os.path.join(
+                failed_browser_log_dir,
+                "%s_%s_chrome_debug.log" % (
+                    self.id(),
+                    datetime.datetime.now().isoformat()
+                )
+            )
+
+            self.log.debug("Saving log file to %s" % filename)
+            try:
+                shutil.copy(os.path.join(DEFAULT_CHROME_USER_DATA_DIR_LINUX, "chrome_debug.log"), filename)
+            except:
+                try:
+                    shutil.copy(os.path.join(DEFAULT_CHROME_USER_DATA_DIR_OSX, "chrome_debug.log"), filename)
+                except:
+                    raise RuntimeError("Did not find Chrome user-data-dir in the expected location.")
