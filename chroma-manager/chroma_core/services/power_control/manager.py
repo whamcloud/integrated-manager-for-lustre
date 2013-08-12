@@ -164,7 +164,7 @@ class PowerControlManager(CommandLine):
                 except CommandError, e:
                     log.error("Failed to toggle %s:%s -> %s: %s" % (device, outlet.identifier, toggle_state, e.stderr))
                     outlet.has_power = None
-                outlet.save()
+                outlet.save(skip_reconfigure = True)
 
     @transaction.commit_on_success
     def query_device_outlets(self, device_id):
@@ -192,7 +192,7 @@ class PowerControlManager(CommandLine):
                         log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([outlet.identifier, rc, stdout, stderr])))
                         outlet.has_power = None
                     log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
-                    outlet.save()
+                    outlet.save(skip_reconfigure = True)
             else:
                 # PDU -- one-shot query
                 rc, stdout, stderr = self.try_shell(device.outlet_list_command())
@@ -219,4 +219,4 @@ class PowerControlManager(CommandLine):
                         outlet.has_power = None
 
                     log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
-                    outlet.save()
+                    outlet.save(skip_reconfigure = True)

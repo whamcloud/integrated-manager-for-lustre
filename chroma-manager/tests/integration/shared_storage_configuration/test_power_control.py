@@ -68,6 +68,8 @@ class TestPduSetup(ChromaPowerControlTestCase):
             outlet = self.get_by_uri(outlet_uri)
             self.assertEqual(outlet['host'], None)
 
+
+class TestHostFencingConfig(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
     @unittest.skipIf(config.get('simulator', False), "Can't be simulated")
     def test_saved_outlet_triggers_fencing_update(self):
@@ -83,7 +85,6 @@ class TestPduSetup(ChromaPowerControlTestCase):
             # A host can't fence itself, but its name will show up in the
             # list of fenceable nodes.
             nodes = self.remote_operations.get_fence_nodes_list(server['address'])
-            print "looking for %s in %s" % (server['nodename'], nodes)
             return server['nodename'] in nodes
 
         # The host should initially be set up for fencing, due to the
@@ -107,6 +108,44 @@ class TestPduSetup(ChromaPowerControlTestCase):
         # After being reassociated with its outlets, the host should
         # be set up for fencing again
         self.wait_until_true(lambda: host_can_be_fenced(self.server))
+
+    @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
+    def test_toggled_outlet_does_not_trigger_fencing_update(self):
+        def _fencing_job_count():
+            return len([j for j in
+                        self.get_list("/api/job/", args = {'state': "complete"})
+                        if j['class_name'] == "ConfigureHostFencingJob"])
+
+        self.wait_until_true(self.all_outlets_known)
+
+        start_count = _fencing_job_count()
+
+        def get_powercycle_job():
+            # Refresh the server so we get an accurate list of available jobs.
+            self.server = self.get_by_uri(self.server['resource_uri'])
+
+            for job in self.server['available_jobs']:
+                if job['class_name'] == 'PowercycleHostJob':
+                    return job
+
+            return None
+
+        self.wait_until_true(lambda: get_powercycle_job() != None)
+        powercycle_job = get_powercycle_job()
+
+        command = self.chroma_manager.post("/api/command/", body = {
+            'jobs': [powercycle_job],
+            'message': "Test PowercycleHostJob (%s)" % self.server['address']
+        }).json
+
+        self.wait_for_command(self.chroma_manager, command['id'])
+
+        end_count = _fencing_job_count()
+
+        self.assertEqual(start_count, end_count)
+
+        # Not strictly part of the test, but avoids AWOL node failures
+        self.wait_until_true(lambda: self.remote_operations.host_contactable(self.server['address']))
 
 
 class TestPduOperations(ChromaPowerControlTestCase):

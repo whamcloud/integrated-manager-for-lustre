@@ -33,7 +33,7 @@ from django.template.defaultfilters import pluralize
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
-from chroma_core.models.jobs import Job, AdvertisedJob
+from chroma_core.models.jobs import Job, AdvertisedJob, job_log
 from chroma_core.models.utils import DeletableMetaclass
 
 from chroma_core.lib.job import Step, DependOn
@@ -337,21 +337,29 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
 
         super(PowerControlDeviceOutlet, self).save(*args, **kwargs)
 
-        if skip_reconfigure:
-            return
+        # Need to force a commit here to ensure that the updated outlet
+        # configuration is available to other threads (e.g. fence reconfig).
+        from django.db import transaction
+        transaction.commit()
 
-        # FIXME (HYD-2187): Don't force a pointless fence reconfig on state
-        # changes that don't affect the host's fence configuration.
+        if skip_reconfigure:
+            job_log.debug("Skipping reconfigure due to skip_reconfigure = True")
+            return
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
         from django.utils.timezone import now
         reconfigure = {'needs_fence_reconfiguration': True}
         if self.host is not None:
             if old_self and old_self.host and old_self.host != self.host:
+                job_log.debug("Triggering reconfigure on %s due to host change" % old_self.host)
                 JobSchedulerClient.notify(old_self.host, now(), reconfigure)
+            elif not old_self:
+                job_log.debug("Triggering reconfigure on %s for new outlet" % self.host)
+            job_log.debug("Triggering reconfigure on %s" % self.host)
             JobSchedulerClient.notify(self.host, now(), reconfigure)
         elif self.host is None and old_self is not None:
             if old_self.host is not None:
+                job_log.debug("Triggering reconfigure on %s due to disassociation" % old_self.host)
                 JobSchedulerClient.notify(old_self.host, now(), reconfigure)
 
     def force_host_disassociation(self):
