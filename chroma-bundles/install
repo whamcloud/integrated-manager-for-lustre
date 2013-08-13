@@ -17,6 +17,8 @@ from urlparse import urlparse, urlunparse
 import yum
 import urllib2
 import time
+import xmlrpclib
+import httplib
 
 
 PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
@@ -295,7 +297,42 @@ def _install_or_upgrade_profiles(new_profiles):
     for profile in new_profiles:
         _run(['chroma-config', 'profile', 'register', profile])
 
-def _test_yum():
+def _test_channels():
+    import platform
+
+    if platform.dist()[0] != "redhat":
+        return True
+
+    log.info("Testing for RHEL optional channel (or equivalent)")
+
+    yb = yum.YumBase()
+    yb.setCacheDir()
+
+    return len(yb.searchGenerator(["name"], ["avahi-ui-tools"])) > 0
+
+def _test_repos():
+
+    class ProxiedTransport(xmlrpclib.Transport):
+        def set_proxy(self, proxy):
+            self.proxy = proxy
+        def make_connection(self, host):
+            self.realhost = host
+            h = httplib.HTTP(self.proxy)
+            return h
+        def send_request(self, connection, handler, request_body):
+            connection.putrequest("POST", 'http://%s%s' % (self.realhost, handler))
+        def send_host(self, connection, host):
+            connection.putheader('Host', self.realhost)
+
+    class SSLHandler(urllib2.HTTPSHandler):
+        def __init__(self, k, c):
+            urllib2.HTTPSHandler.__init__(self)
+            self.k = k
+            self.c = c
+        def https_open(self, r):
+            return self.do_open(self.getConnection, r)
+        def getConnection(self, h, timeout=None):
+            return httplib.HTTPSConnection(h, key_file=self.k, cert_file=self.c)
 
     log.info("Testing YUM")
 
@@ -303,40 +340,63 @@ def _test_yum():
     yb.setCacheDir()
 
     failed_urls = []
+    transport_proxy = None
     for repo in yb.repos.listEnabled():
         # set up a proxy handler if necessary
         if repo.proxy_dict:
             urllib2.install_opener(urllib2.build_opener(urllib2.ProxyHandler(repo.proxy_dict)))
+            transport_proxy = ProxiedTransport()
+            transport_proxy.set_proxy(repo.proxy_dict['https'][8:])
 
+        urls = []
         if repo.mirrorlist:
             urls = [repo.mirrorlist]
         else: # baseurl[s]
-            urls = [url + "/" + "repodata/repomd.xml" for url in repo.baseurl]
+            for url in repo.baseurl:
+                if url.find("/XMLRPC/") > -1:
+                    urls.append(url)
+                else: # regular yum repo
+                    urls.append(url + "/" + "repodata/repomd.xml")
 
         failures = 0
         for url in urls:
-            parse_result = urlparse(url)
-
-            # if the url has a user-information component split it out and auth with it.
-            # ex: https://username:password@example.com'
-            if parse_result.username:
-                l = list(parse_result)
-                # replace netloc with hostname
-                l[1] = parse_result.hostname
-
-                url = urllib2.Request(urlunparse(tuple(l)))
-                base64string = base64.encodestring(
-                    '%s:%s' % (parse_result.username, parse_result.password)
-                ).replace('\n', '')
-                url.add_header("Authorization", "Basic %s" % base64string)
-
-            try:
-                urllib2.urlopen(url, timeout=5)
-            except urllib2.URLError:
-                failures += 1
-                failed_urls.append(url)
+            xmlrpc = url.find("/XMLRPC/")
+            if xmlrpc != -1:
+                url = url[0:xmlrpc] + "/rpc/api"
+                try:
+                    server = xmlrpclib.ServerProxy(url, transport = transport_proxy)
+                    server.api.systemVersion()
+                except:
+                    failures += 1
+                    failed_urls.append(url)
             else:
-                continue
+                parse_result = urlparse(url)
+
+                # if the url has a user-information component split it out and auth with it.
+                # ex: https://username:password@example.com'
+                if parse_result.username:
+                    l = list(parse_result)
+                    # replace netloc with hostname
+                    l[1] = parse_result.hostname
+
+                    url = urllib2.Request(urlunparse(tuple(l)))
+                    base64string = base64.encodestring(
+                        '%s:%s' % (parse_result.username, parse_result.password)
+                    ).replace('\n', '')
+                    url.add_header("Authorization", "Basic %s" % base64string)
+
+                if repo.sslclientkey and repo.sslclientcert:
+                    urllib2.install_opener(
+                        urllib2.build_opener(
+                            SSLHandler(repo.sslclientkey, repo.sslclientcert)))
+
+                try:
+                    urllib2.urlopen(url, timeout=5)
+                except urllib2.URLError:
+                    failures += 1
+                    failed_urls.append(url)
+                else:
+                    continue
 
         if failures == len(urls):
             log.debug("Failed to read information for repository %s." % repo.id)
@@ -360,10 +420,15 @@ log.info("Starting {PRODUCT_NAME} {action}".format(PRODUCT_NAME=PRODUCT_NAME,
                                                        if upgrade \
                                                        else "installation"))
 
-yum_ok, urls = _test_yum()
+yum_ok, urls = _test_repos()
 if not yum_ok:
-    log.info("Yum does not seem to be able to find required network resources.  Please check your network and yum configuration and try again.  Perhaps you need ot disable some repositories that are not reachable.")
+    log.info("Yum does not seem to be able to find required network resources.  Please check your network and yum configuration and try again.  Perhaps you need to disable some repositories that are not reachable.")
     log.info("URLs that failed: %s" % ' '.join(urls))
+    sys.exit(1)
+
+yum_ok = _test_channels()
+if not yum_ok:
+    log.info("Yum does not seem to be able to find the RHEL optional packages.  Perhaps you need to add the rhel-x86_64-server-optional-6 channel.")
     sys.exit(1)
 
 if upgrade:
