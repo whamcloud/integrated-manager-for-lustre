@@ -78,10 +78,15 @@ class EditFilesystem(BaseView):
 
     def close_target_conf_params(self):
         """Given that a target detail dialog is visible, and on the conf params tab click its apply button"""
+        dialog_url = self.driver.current_url
+
         self.get_visible_element_by_css_selector("div.ui-dialog-buttonset button.close").click()
         # Closing the dialog is a history.back() operation so wait for the reload
         self.wait_for_conf_param_target_dialog_close()
         self.quiesce()
+
+        #In the case of a race condition, wait some more
+        WebDriverWait(self.driver, self.standard_wait).until_not(lambda driver: driver.current_url == dialog_url, "Dialog url did not change!")
 
     def conf_param_dialog_visible(self):
         element = find_visible_element_by_css_selector(self.driver, self.conf_param_apply_button)
