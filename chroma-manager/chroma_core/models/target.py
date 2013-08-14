@@ -76,7 +76,7 @@ class ManagedTarget(StatefulObject):
     inode_size = models.IntegerField(null = True, blank = True, help_text = "Size in bytes per inode")
     bytes_per_inode = models.IntegerField(null = True, blank = True, help_text = "Constant used during formatting to "
                                           "determine inode count by dividing the volume size by ``bytes_per_inode``")
-    inode_count = models.IntegerField(null = True, blank = True, help_text = "The number of inodes in this target's"
+    inode_count = models.BigIntegerField(null = True, blank = True, help_text = "The number of inodes in this target's"
                                       "backing store")
 
     def get_hosts(self, primary=True):

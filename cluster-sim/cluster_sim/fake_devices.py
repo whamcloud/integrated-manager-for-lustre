@@ -23,6 +23,7 @@
 from copy import deepcopy
 import random
 import threading
+import re
 from cluster_sim.log import log
 
 from cluster_sim.utils import Persisted, load_data, perturb
@@ -110,14 +111,33 @@ class FakeDevices(Persisted):
 
             self.state['local_filesystems'][serial] = filesystem_type
 
-    def format(self, fqdn, path, target_data):
+    def format(self, fqdn, path, mkfs_options, target_data):
+        # defaults to what an OST would look like
+        e2fs_dump = {
+            'uuid': target_data['uuid'],
+            'filesystem_type': "ext4",
+            'inode_size': 256,
+            'bytes_per_inode': 16384
+        }
+        # overrides for MDT
+        if mkfs_options:
+            for pattern in [r'-I\s*(?P<inode_size>\d+)', r'-i\s*(?P<bytes_per_inode>\d+)']:
+                match = re.search(pattern, mkfs_options)
+                if match:
+                    for k, v in match.groupdict().items():
+                        e2fs_dump[k] = int(v)
+
         """Format a Lustre target"""
         with self._lock:
             serial = self.get_by_path(fqdn, path)['serial_80']
+            device = self.get_device(serial)
+            e2fs_dump['inode_count'] = device['size'] / e2fs_dump['bytes_per_inode']
 
             log.info("format: %s" % serial)
             self.state['targets'][serial] = target_data
             self.save()
+
+        return e2fs_dump
 
     def register(self, fqdn, path, nid):
         with self._lock:

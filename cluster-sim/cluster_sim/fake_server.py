@@ -544,14 +544,7 @@ class FakeServer(Persisted):
             'primary_nid': None
         }
 
-        self._devices.format(self.fqdn, device, target)
-
-        return {
-            'uuid': tgt_uuid,
-            'inode_size': 512,
-            'inode_count': 6666666,
-            'filesystem_type': 'ext4'
-        }
+        return self._devices.format(self.fqdn, device, mkfsoptions, target)
 
     def register_target(self, device = None, mount_point = None):
 
