@@ -4,10 +4,6 @@ set -ex
 
 [ -r localenv ] && . localenv
 
-# Remove test results and coverage reports from previous run
-rm -rfv $PWD/test_reports/*
-mkdir -p $PWD/test_reports
-
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/simulator.json"}
 
@@ -25,7 +21,7 @@ set -ex
 
 wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 yum install -y epel-release-6-8.noarch.rpm
-yum install -y git python-pip python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
@@ -61,25 +57,18 @@ local   all         chroma                            trust' /var/lib/pgsql/data
 service postgresql restart
 EOF
 
-tar -czf chroma.tgz chroma
-scp chroma.tgz chromatest@$CHROMA_MANAGER:~
+virtualenv --relocatable .
+tar -czf ../chroma_test_env.tgz .
+scp ../chroma_test_env.tgz chromatest@$CHROMA_MANAGER:~
 
 ssh chromatest@$CHROMA_MANAGER <<EOF
 set -ex
 mkdir -p chroma_test_env
-virtualenv --no-site-packages chroma_test_env
 cd chroma_test_env
+tar -xzf ~/chroma_test_env.tgz
+virtualenv --no-site-packages .
 source bin/activate
-tar -xzf ~/chroma.tgz
-
-cd ~/chroma_test_env/chroma/chroma-manager
-if [ ! -f requirements.txt ]; then
-  make requirements
-fi
-pip install -r requirements.txt || {
-    cat \$HOME/.pip/pip.log
-    exit 1
-}
+cd chroma/chroma-manager/
 
 unset http_proxy
 unset https_proxy
@@ -132,6 +121,8 @@ integration_test_status=$?
 echo "End running tests."
 
 set +e
+cd $CHROMA_DIR/../..
+mkdir -p test_reports
 scp chromatest@$CHROMA_MANAGER:test_report.xml ./test_reports/
 mkdir -p test_logs
 scp chromatest@$CHROMA_MANAGER:chroma_test_env/chroma/chroma-manager/*[._]log ./test_logs/

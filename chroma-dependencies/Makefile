@@ -21,9 +21,10 @@ requirements::
 	echo "paramiko==1.7.5"
 	echo "pycrypto==2.0.1"
 	echo "psycopg2==2.0.14"
-	echo "python>=2.6.5"
 	echo "simplejson==2.0.9"
 	sed -e '/^#/d' < ../chroma-manager/requirements.dev
+	# can't pip install the right versions for these dependencies:
+	# echo "python>=2.6.5"
 
 $(SUBDIRS): cleanrepo force
 	$(MAKE) TOP=$(TOP) REPO=$(REPO) -C $@ $(TARGET)
