@@ -10,14 +10,25 @@ ALWAYS_NUKE_DB ?= false
 # Always nuke logs when running tests?
 ALWAYS_NUKE_LOGS ?= false
 
+# Always wipe the simulated cluster config before starting?
+ALWAYS_NUKE_SIM_CFG ?= true
+
 # Location of cluster configs
 SIM_CLUSTER_CONFIG ?= $(CURDIR)/tests/simulator.json
 FCI_CLUSTER_CONFIG ?= $(CURDIR)/tests/full_cluster.json
+
+# Location of the cluster-sim script
+CLUSTER_SIM_BIN := $(shell if which cluster-sim 2>/dev/null; then true; else echo $(word 1,$(subst :, ,$(PATH)))/cluster-sim; fi)
+CLUSTER_SIM_CFG ?= $(CURDIR)/cluster_sim
+CLUSTER_SIM_SETUP_ARGS ?= --cluster_size 2 --psu_count 2
+CLUSTER_SIM_REGISTER_ARGS ?= --username $(DEV_USERNAME) --password $(DEV_PASSWORD) --create_pdu_entries
 
 # Misc test config
 DB_NAME ?= chroma
 DB_USER ?= $(DB_NAME)
 TEST_HTTPD_PORT ?= 8000
+DEV_USERNAME = debug
+DEV_PASSWORD = chr0m4_d3bug
 
 # Test runner options
 BEHAVE_ARGS ?= -q --stop
@@ -54,6 +65,21 @@ nuke_logs:
 		rm -f $(CURDIR)/*.log; \
 	} || true
 
+$(CLUSTER_SIM_BIN):
+	$(MAKE) develop
+
+sim simulator: $(CLUSTER_SIM_BIN) running_supervisor
+	@if [ -d $(CLUSTER_SIM_CFG) ]; then \
+		if $(ALWAYS_NUKE_SIM_CFG); then \
+			echo "Nuking old cluster sim cfg..."; \
+			rm -fr $(CLUSTER_SIM_CFG); \
+			cluster-sim --config $(CLUSTER_SIM_CFG) setup $(CLUSTER_SIM_SETUP_ARGS); \
+		fi; \
+	else \
+			cluster-sim --config $(CLUSTER_SIM_CFG) setup $(CLUSTER_SIM_SETUP_ARGS); \
+	fi; \
+	cluster-sim --config $(CLUSTER_SIM_CFG) register $(CLUSTER_SIM_REGISTER_ARGS)
+
 dev_setup: nuke_db nuke_logs
 	@./manage.py dev_setup $(DEV_SETUP_BUNDLES) || exit $$?
 
@@ -62,7 +88,7 @@ supervisor: dev_setup
 
 running_supervisor:
 	@nc -w1 -d localhost $(TEST_HTTPD_PORT) || { \
-		echo "You need to run 'make supervisor' in another terminal, then restart the tests."; \
+		echo "You need to run 'make supervisor' in another terminal, then retry this command."; \
 		exit 1; \
 	}
 

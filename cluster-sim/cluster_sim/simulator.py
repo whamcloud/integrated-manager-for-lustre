@@ -240,12 +240,18 @@ class ClusterSimulator(Persisted):
             raise
 
     def register_all(self, secret):
+        register_count = 0
         self.power.start()
         for fqdn, server in self.servers.items():
             if server.crypto.certificate_file is None:
                 self.register(fqdn, secret)
+                register_count += 1
             else:
                 self.start_server(fqdn)
+
+        # Useful for some callers to know if servers were registered or
+        # just started.
+        return register_count
 
     def register(self, fqdn, secret):
         try:

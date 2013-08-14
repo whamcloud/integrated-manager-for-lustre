@@ -129,9 +129,9 @@ class SimulatorCli(object):
             sys.exit(-1)
 
         log.info("Registering %s servers in %s/" % (server_count, args.config))
-        simulator.register_all(secret)
+        register_count = simulator.register_all(secret)
 
-        if args.create_pdu_entries:
+        if args.create_pdu_entries and register_count > 0:
             self.create_pdu_entries(simulator, args)
 
         return simulator
@@ -144,15 +144,22 @@ class SimulatorCli(object):
         session = self._get_authenticated_session(args.url, args.username, args.password)
 
         log.info("Creating PDU entries and associating PDU outlets with servers...")
+        outlet_count = len(simulator.servers)
 
-        # keep it stupid for now...
+        if outlet_count < 1:
+            log.error("Skipping PDU creation (no servers)")
+            return
+
+        # Create a custom type to ensure that it has enough outlets.
+        # NB: If more servers are added later this won't work correctly,
+        # but it should handle most use cases for simulated clusters.
         response = session.post("%s/api/power_control_type/" % args.url, data = json.dumps({
             'agent': "fence_apc",
-            'make': "APC",
-            'model': "7901",
+            'make': "Fake",
+            'model': "PDU",
             'default_username': "apc",
             'default_password': "apc",
-            'max_outlets': 8
+            'max_outlets': outlet_count
         }))
 
         assert 200 <= response.status_code < 300, response.text
