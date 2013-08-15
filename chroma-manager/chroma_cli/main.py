@@ -29,6 +29,7 @@ from chroma_cli.config import Configuration
 from chroma_cli.api import ApiHandle
 from chroma_cli.output import StandardFormatter
 from chroma_cli.handlers import Dispatcher
+from chroma_cli.exceptions import ApiException, AbnormalCommandCompletion, UserConfirmationRequired
 
 
 def detect_proxies():
@@ -97,9 +98,17 @@ def standard_cli(args=None, config=None):
     elif proxies:
         sys.stderr.write("WARNING: Detected the following proxy variables: %s (--noproxy to disable them)\n" % ", ".join(proxies))
 
-    from chroma_cli.exceptions import ApiException, AbnormalCommandCompletion
     try:
         ns.handler(api=api, formatter=formatter)(parser=parser, args=args, ns=ns)
+    except UserConfirmationRequired, e:
+        print e
+        response = ""
+        while response not in ['yes', 'no']:
+            response = raw_input("Do you want to proceed (--force to avoid prompt)? (yes/no) ").lower()
+
+        if response == "yes":
+            ns.force = True
+            ns.handler(api=api, formatter=formatter)(parser=parser, args=args, ns=ns)
     except (AbnormalCommandCompletion, ApiException), e:
         print e
         sys.exit(1)

@@ -17,6 +17,7 @@ Scenario: Create new filesystem
 Scenario: Stop an available filesystem
   Given the filesystem state on ohbehave should be available
   When I run chroma filesystem-stop ohbehave
+  Then I should be prompted to proceed
   Then the filesystem state on ohbehave should be stopped
 
 Scenario: Start a stopped filesystem
@@ -27,6 +28,7 @@ Scenario: Start a stopped filesystem
 Scenario: Remove filesystem
   Given the filesystem count should be 1
   When I run chroma filesystem-remove ohbehave
+  Then I should be prompted to proceed
   Then the filesystem count should be 0
   And the ost count should be 0
   And the mdt count should be 0
@@ -35,6 +37,7 @@ Scenario: Remove filesystem
 Scenario: Remove lingering MGT
   Given the mgt count should be 1
   When I run chroma mgt-remove MGS
+  Then I should be prompted to proceed
   Then the mgt count should be 0
 
 Scenario: Create a standalone MGS

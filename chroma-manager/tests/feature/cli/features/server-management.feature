@@ -45,6 +45,7 @@ Scenario: Start LNet on a server
 Scenario: Remove a server
   Given the server count should be 1
   When I run chroma server-remove setup-mgs.lab.whamcloud.com
+  #Then I should be prompted to proceed # FIXME: HYD-2409
   Then the server count should be 0
 
 Scenario: Fail to add non-resolving server

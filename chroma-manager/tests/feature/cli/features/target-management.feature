@@ -10,6 +10,7 @@ Scenario: Stop an OST using target-stop
   Given the filesystem state on firstfs should be available
   And the target state on firstfs-OST0000 should be mounted
   When I run chroma target-stop firstfs-OST0000
+  Then I should be prompted to proceed
   Then the target state on firstfs-OST0000 should be unmounted
   And the filesystem state on firstfs should be unavailable
 
@@ -22,6 +23,7 @@ Scenario: Start an OST using ost-start
 Scenario: Stop a MGT using mgt-stop
   Given the target state on MGS should be mounted
   When I run chroma mgt-stop MGS
+  Then I should be prompted to proceed
   Then the target state on MGS should be unmounted
 
 Scenario: Start a MGT using target-start
@@ -32,6 +34,7 @@ Scenario: Start a MGT using target-start
 Scenario: Remove an OST
   Given the ost count should be 24
   When I run chroma ost-remove secondfs-OST0000
+  Then I should be prompted to proceed
   Then the ost count should be 23
   And the filesystem state on secondfs should be available
 
