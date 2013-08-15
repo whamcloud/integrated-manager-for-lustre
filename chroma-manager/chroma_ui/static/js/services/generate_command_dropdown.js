@@ -74,7 +74,7 @@
 
         var template = (isElement ?
           parentOrElement:
-          '<div command-dropdown command-placement="%s" command-data="((data))"></div>'.sprintf(placement));
+          '<div command-dropdown command-placement="%s" command-data="data"></div>'.sprintf(placement));
 
         var insertfunc = (isElement ? angular.noop: function (fragment) { parentOrElement.html(fragment); });
 
@@ -89,11 +89,11 @@
           insertfunc(fragment);
 
           return fragment.bind('$destroy', function () {
-            $scope.safeApply(function () { $scope.$destroy(); });
+            $scope.safeApply(function () { $scope.$destroy(); }, $scope);
 
             fragment.unbind('$destroy');
           });
-        });
+        }, $scope);
       }
     };
   }

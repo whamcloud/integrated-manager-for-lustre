@@ -754,11 +754,19 @@ var CommandNotification = function() {
           $(".notification_object_icon[data-resource_uri='" + uri + "']").each(function () {
             var dt_wrapper = $(this).closest("div.dataTables_wrapper");
             if (dt_wrapper.length == 1) {
-              // We are inside a datatable, remove the row and call its refresh method.
-              var table_el = dt_wrapper.find('table')[0];
-              var dataTable = $(table_el).dataTable();
-              dataTable.fnDeleteRow($(this).parents('tr')[0]);
-              dataTable.fnDraw();
+              // We are inside a datatable. Move pagination pointer if necessary and re-draw.
+              var dataTable = dt_wrapper.find('table').eq(0).dataTable();
+              var settings = dataTable.fnSettings();
+
+              if (settings._iDisplayStart + 1 >= settings.fnRecordsDisplay()) {
+                settings._iDisplayStart -= settings._iDisplayLength;
+                if (settings._iDisplayStart < 0) {
+                  settings._iDisplayStart = 0;
+                }
+              }
+
+              $(this).parents('tr').find('.ng-scope').remove();
+              dataTable.fnDraw(false);
             }
           });
 

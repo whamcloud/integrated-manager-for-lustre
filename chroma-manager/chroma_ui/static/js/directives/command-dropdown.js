@@ -69,13 +69,15 @@
 
         scope.toJson = angular.toJson;
 
-        scope.$on('disableCommandDropdown', function (ev, uri) {
+        var deregistrationFunctions = [];
+
+        deregistrationFunctions[0] = scope.$on('disableCommandDropdown', function (ev, uri) {
           if (scope.data.resource_uri === uri) {
             el.addClass('hide');
           }
         });
 
-        scope.$on('updateCommandDropdown', function (ev, uri, obj) {
+        deregistrationFunctions[1] = scope.$on('updateCommandDropdown', function (ev, uri, obj) {
           function runUpdate() {
             scope.data = obj;
             buildList();
@@ -100,6 +102,9 @@
           scope.$broadcast('disableCommandDropdown', scope.data.resource_uri);
         }
 
+        scope.$on('$destroy', function () {
+          deregistrationFunctions.forEach(function (func) { func(); });
+        });
       }
     };
   }
