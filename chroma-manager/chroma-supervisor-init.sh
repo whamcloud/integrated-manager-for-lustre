@@ -28,12 +28,30 @@ start() {
     echo
 }
 
-stop() {
+graceful_stop() {
     # Use -TERM to prevent killproc -KILL'ing supervisord when it doesn't
     # exit immediately: that would orphan supervisor's children.
-    action "Stopping ${SERVICE_NAME}: " killproc -p ${PID_FILE} ${SERVICE_NAME} -TERM
-    echo
+    (killproc -p ${PID_FILE} ${SERVICE_NAME} -TERM) > /dev/null
+
+    #  Kill proc does wait for services to stop before removing pid, but it doesn't block.
+    #  Wait here and watch that pid through status calls.  It's one when status says so.
+    SECONDS=0
+    while [ $SECONDS -lt 60 ]; do
+        status -p ${PID_FILE} ${SERVICE_NAME} > /dev/null 2>&1
+        if [ $? -eq 3 ]; then
+            return 0  #  Stopped cleanly
+        fi
+        echo -n '.'
+        sleep 2
+    done
+    return 124 # did not stop, or did not stop cleanly
 }
+
+stop() {
+    action "Stopping ${SERVICE_NAME}: " graceful_stop
+}
+
+
 
 case "$1" in
     start)
