@@ -282,12 +282,24 @@ class CommandPlan(object):
         """Return a Job or None if the object is already in new_state.
         command_id should refer to a command instance or be None."""
 
-        log.info("set_state: %s-%s to state %s" % (instance.__class__, instance.id, new_state))
+        log.info("set_state: %s-%s transitioning from %s to %s" % (instance.__class__, instance.id, instance.state, new_state))
 
         from chroma_core.models import StatefulObject
         assert(isinstance(instance, StatefulObject))
-        if new_state not in instance.states:
-            raise SchedulingError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, instance.states))
+
+        # Get the computed list of valid transition states away from the
+        # current state.
+        try:
+            available_states = instance.downcast().get_available_states(instance.state)
+        except AttributeError:
+            available_states = instance.get_available_states(instance.state)
+
+        # Append the current state as a valid transition state; there is
+        # specific code to deal with that scenario later.
+        available_states += [instance.state]
+
+        if new_state not in available_states:
+            raise SchedulingError("State '%s' is invalid for %s, must be one of %s" % (new_state, instance.__class__, available_states))
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue

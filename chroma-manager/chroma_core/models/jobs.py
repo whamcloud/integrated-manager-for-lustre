@@ -21,6 +21,7 @@
 
 
 from collections import defaultdict
+import traceback
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
@@ -31,6 +32,7 @@ from polymorphic.models import DowncastMetaclass
 
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
+from chroma_core.services.rpc import RpcError
 
 MAX_STATE_STRING = 32
 
@@ -79,10 +81,6 @@ class Command(models.Model):
                 dirty = True
                 break
 
-            # Check if the new state is valid
-            if state not in object.states:
-                raise SchedulingError("'%s' is an invalid state for %s, valid states are %s" % (state, object, object.states))
-
         if not dirty:
             return None
 
@@ -95,7 +93,17 @@ class Command(models.Model):
             message = job.description()
 
         object_ids = [(ContentType.objects.get_for_model(object).natural_key(), object.id, state) for object, state in objects]
-        command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
+        try:
+            command_id = JobSchedulerClient.command_set_state(object_ids, message, **kwargs)
+        except RpcError, e:
+            job_log.error("Failed to set object state: " + traceback.format_exc())
+            # FIXME: Would be better to have a generalized mechanism
+            # for reconstituting remote exceptions, as this sort of thing
+            # won't scale.
+            if e.remote_exception_type == "SchedulingError":
+                raise SchedulingError(e.description)
+            else:
+                raise
 
         return Command.objects.get(pk = command_id)
 

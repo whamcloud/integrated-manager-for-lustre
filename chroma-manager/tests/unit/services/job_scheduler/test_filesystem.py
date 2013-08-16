@@ -146,11 +146,6 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertState(self.ost, 'mounted')
         self.assertState(self.fs, 'available')
 
-    def test_mgs_removal(self):
-        """Test that removing an MGS takes the filesystems with it"""
-        self.set_state(self.mgt.managedtarget_ptr, 'removed')
-        self.assertEqual(ManagedFilesystem.objects.count(), 0)
-
     def test_fs_removal(self):
         """Test that removing a filesystem takes its targets with it"""
         from chroma_core.models import ManagedMdt, ManagedOst, ManagedFilesystem
@@ -279,10 +274,12 @@ class TestDetectedFSTransitions(JobTestCaseWithHost):
             obj.immutable_state = True
             obj.save()
 
-    def test_remove(self):
+    def test_forget(self):
         from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst
 
-        self.set_state(self.mgt.managedtarget_ptr, 'removed')
+        self.set_state(self.fs, 'forgotten')
+        self.set_state(self.mgt.managedtarget_ptr, 'forgotten')
+
         with self.assertRaises(ManagedMgs.DoesNotExist):
             freshen(self.mgt)
         with self.assertRaises(ManagedFilesystem.DoesNotExist):

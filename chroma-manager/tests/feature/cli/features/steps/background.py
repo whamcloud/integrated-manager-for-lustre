@@ -87,12 +87,6 @@ def step(context, sample_name):
     MockAgentRpc.mock_servers = dict([[h['address'], h] for h in data['hosts']])
     load_filesystem_from_json(data)
 
-    from chroma_core.models.target import ManagedTarget
-    # NB: This can take a while -- fixtures would be faster, but then we'd
-    # need to maintain them.
-    for target in ManagedTarget.objects.all():
-        context.test_case.set_state(target, "mounted")
-
     from chroma_core.models.host import Volume
     # We need to do this in order to generate the labels, apparently.
     for volume in Volume.objects.all():

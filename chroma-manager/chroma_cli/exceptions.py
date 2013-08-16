@@ -86,6 +86,8 @@ class BadRequest(ApiException):
                 try:
                     lines.extend(["  %s: %s" % (field, ", ".join(errors.values()[0]))])
                 except (AttributeError, IndexError):
+                    if isinstance(errors, basestring):
+                        errors = [errors]
                     for error in errors:
                         if error:
                             lines.extend(["  %s: %s" % (field, error)])

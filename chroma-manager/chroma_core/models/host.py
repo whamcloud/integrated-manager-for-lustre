@@ -170,7 +170,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def get_available_states(self, begin_state):
         if self.immutable_state:
-            if begin_state == 'unconfigured':
+            if begin_state in ['undeployed', 'unconfigured']:
                 return ['removed', 'configured']
             else:
                 return ['removed']
