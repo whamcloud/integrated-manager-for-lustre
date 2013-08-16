@@ -309,7 +309,10 @@ class DatatableView(BaseView):
         # none are left.
         row = self.first_row
         while row:
+            prev_id = row.id
             label = row.find_elements_by_tag_name("td")[self.label_column].text
             self.log.info("Removing object %s" % label)
             self.click_command_button(row, 'removed')
             row = self.first_row
+            if row and row.id == prev_id:
+                raise StaleElementReferenceException("The element %s hasn't been removed" % row.text)
