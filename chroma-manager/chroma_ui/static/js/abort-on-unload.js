@@ -26,13 +26,13 @@
   var pageIsUnloading = false;
   var xhrs = [];
 
-  $(document).ajaxSend(function (e, jqXHR) {
+  $.ajaxPrefilter(function (options, originalOptions, jqXHR) {
     if (pageIsUnloading) {
       jqXHR.abort();
-
-      return;
     }
+  });
 
+  $(document).ajaxSend(function (e, jqXHR) {
     xhrs.push(jqXHR);
   })
   .ajaxComplete(function (e, jqXHR) {
