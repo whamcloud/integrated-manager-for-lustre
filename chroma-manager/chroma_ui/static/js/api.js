@@ -427,7 +427,7 @@ var Api = function() {
         // For non-idempotent operations fall through to 'something has
         // gone wrong' to prompt the user to reload the UI as we can
         // no longer be sure of the state.
-      } else if (jqXHR.status == 0 && jqXHR.statusText == "abort"){
+      } else if (jqXHR.status == 0 && (["abort", "canceled"].indexOf(jqXHR.statusText) !== -1)) {
         // Assume aborts are on purpose and let them pass without incident
         return;
       }
