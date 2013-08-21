@@ -85,9 +85,11 @@ class SeleniumBaseTestCase(TestCase):
                 options = webdriver.ChromeOptions()
                 options.add_argument('no-proxy-server')
 
+                options.add_argument('enable-crash-reporter')
+                options.add_argument('full-memory-crash-report')
                 options.add_argument('enable-logging=stderr')
                 options.add_argument('log-level=""')  # log-level interferes with v=1
-                options.add_argument('v=1')
+                options.add_argument('v=1000')  # Get all levels of vlogs
 
                 if os.path.exists(CHROME_USER_DATA_DIR_LOC_LINUX):
                     options.add_argument('user-data-dir=%s' % os.path.join(CHROME_USER_DATA_DIR_LOC_LINUX, CHROME_TEST_PROFILE))
