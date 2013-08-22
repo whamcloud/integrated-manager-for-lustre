@@ -58,7 +58,10 @@ class Command(BaseCommand):
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
             # override the default path if we have unpacked a real archive
-            base_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
+            repo_profile_path = os.path.join(settings.DEV_REPO_PATH, 'base_managed.profile')
+            if os.path.isfile(repo_profile_path):
+                base_profile_path = repo_profile_path
+
             import json
             import glob
             with open(base_profile_path) as f:
