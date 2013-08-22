@@ -132,6 +132,7 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
         ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/message/
 
         SSLVerifyClient require
+        SSLRenegBufferSize 8388608
         RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
         RewriteRule .* - [E=SSLC_ON:%1]
         RequestHeader add X-SSL-Client-On %{SSLC_ON}e

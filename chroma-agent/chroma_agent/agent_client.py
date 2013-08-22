@@ -34,7 +34,7 @@ from chroma_agent import version
 from chroma_agent.log import daemon_log, console_log
 
 
-MAX_BYTES_PER_POST = 1024 * 64
+MAX_BYTES_PER_POST = 8 * 1024 ** 2  # 8MiB, should be <= SSLRenegBufferSize
 
 MIN_SESSION_BACKOFF = datetime.timedelta(seconds = 10)
 MAX_SESSION_BACKOFF = datetime.timedelta(seconds = 60)
@@ -346,11 +346,9 @@ class HttpWriter(ExceptionCatchingThread):
             message_length = len(json.dumps(message.dump(self._client._fqdn)))
 
             if message_length > MAX_BYTES_PER_POST:
-                daemon_log.error("Dropping oversized message %s/%s: %s" % (message_length, MAX_BYTES_PER_POST, message.dump(self._client._fqdn)))
-                kill_sessions.add(message.plugin_name)
-                continue
+                daemon_log.warning("Oversized message %s/%s: %s" % (message_length, MAX_BYTES_PER_POST, message.dump(self._client._fqdn)))
 
-            if message_length > MAX_BYTES_PER_POST - messages_bytes:
+            if messages and message_length > MAX_BYTES_PER_POST - messages_bytes:
                 # This message will not fit into this POST: pop it back into the queue
                 daemon_log.info(
                     "HttpWriter message %s overflowed POST %s/%s (%d "
