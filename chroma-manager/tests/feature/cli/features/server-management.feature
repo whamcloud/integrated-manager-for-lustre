@@ -64,9 +64,17 @@ Scenario: Reboot a server
   Given the server count should be 1
   And the boot_time on setup-mgs has been recorded
   When I run chroma server-reboot setup-mgs
+  Then I should be prompted to proceed
   Then the boot_time on setup-mgs should reflect a reboot
 
 Scenario: Shutdown a server
   Given the server count should be 1
   When I run chroma server-shutdown setup-mgs
+  Then I should be prompted to proceed
   Then I should see output containing ": Finished"
+
+Scenario: Force-remove a server
+  Given the server count should be 1
+  When I run chroma server-force_remove setup-mgs
+  Then I should be prompted to proceed
+  Then the server count should be 0

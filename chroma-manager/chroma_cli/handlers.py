@@ -21,10 +21,11 @@
 
 
 from itertools import product
+from functools import partial
 from argparse import REMAINDER, SUPPRESS
 
 from chroma_cli.output import StandardFormatter
-from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound, StateChangeConfirmationRequired, InvalidStateChange
+from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound, StateChangeConfirmationRequired, JobConfirmationRequired, InvalidStateChange, InvalidJobError
 
 
 class Dispatcher(object):
@@ -129,6 +130,7 @@ class Dispatcher(object):
 class Handler(object):
     nouns = []
     contextual_nouns = []
+    job_map = {}
     verbs = ["show", "list", "add", "remove"]
     intransitive_verbs = ["list"]
     irregular_verbs = []
@@ -152,6 +154,9 @@ class Handler(object):
 
         self.errors = []
 
+        for verb, job_class in self.job_map.items():
+            setattr(self, verb, partial(self._run_advertised_job, job_class))
+
     def __call__(self, parser, ns, args=None):
         try:
             ns.contextual_noun, ns.verb = ns.contextual_action.split("-")
@@ -165,6 +170,22 @@ class Handler(object):
 
         verb_method = getattr(self, ns.verb)
         verb_method(ns)
+
+    def _run_advertised_job(self, job_class, ns):
+        subject = self.api_endpoint.show(ns.subject)
+        try:
+            job = [j for j in subject['available_jobs'] if j['class_name'] == job_class][0]
+        except IndexError:
+            raise InvalidJobError(job_class, [j['class_name'] for j in subject['available_jobs']])
+
+        if job['confirmation'] and not ns.force:
+            raise JobConfirmationRequired(ns.verb, ns.subject, job['confirmation'])
+
+        kwargs = {
+                'jobs': [job],
+                'message': "%s created by CLI" % job['class_name']
+        }
+        self.output(self.api.endpoints['command'].create(**kwargs))
 
     def _api_fields_to_parser_args(self, parser, add_help=False):
         if add_help:
@@ -238,7 +259,13 @@ class Handler(object):
 
 class ServerHandler(Handler):
     nouns = ["server", "srv", "mgs", "mds", "oss"]
-    verbs = ["show", "list", "add", "remove", "reboot", "shutdown"]
+    job_map = {
+            'reboot': "RebootHostJob", 'shutdown': "ShutdownHostJob",
+            'poweroff': "PoweroffHostJob", 'poweron': "PoweronHostJob",
+            'powercycle': "PowercycleHostJob",
+            'force_remove': "ForceRemoveHostJob"
+    }
+    verbs = ["show", "list", "add", "remove"] + job_map.keys()
     contextual_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol"]
     lnet_actions = ["lnet-stop", "lnet-start", "lnet-load", "lnet-unload"]
 
@@ -311,24 +338,6 @@ class ServerHandler(Handler):
         if not ns.force:
             self.test_host(ns, **kwargs)
         self.output(self.api_endpoint.create(**kwargs))
-
-    def reboot(self, ns):
-        host = self.api.endpoints['host'].show(ns.subject)
-        kwargs = {
-            'jobs': [{'class_name': "RebootHostJob",
-                      'args': {'host_id': host.id}}],
-            'message': "Initiating a reboot on host %s" % host.label
-        }
-        self.output(self.api.endpoints['command'].create(**kwargs))
-
-    def shutdown(self, ns):
-        host = self.api.endpoints['host'].show(ns.subject)
-        kwargs = {
-            'jobs': [{'class_name': "ShutdownHostJob",
-                      'args': {'host_id': host.id}}],
-            'message': "Initiating a shutdown on host %s" % host.label
-        }
-        self.output(self.api.endpoints['command'].create(**kwargs))
 
 
 class ServerProfileHandler(Handler):
@@ -442,29 +451,14 @@ class FilesystemHandler(Handler):
 
 class TargetHandler(Handler):
     nouns = ["target", "tgt", "mgt", "mdt", "ost"]
-    verbs = ["list", "show", "add", "remove", "start", "stop", "failover", "failback"]
+    job_map = {
+            'failover': "FailoverTargetJob", 'failback': "FailbackTargetJob"
+    }
+    verbs = ["list", "show", "add", "remove", "start", "stop"] + job_map.keys()
 
     def __init__(self, *args, **kwargs):
         super(TargetHandler, self).__init__(*args, **kwargs)
         self.api_endpoint = self.api.endpoints['target']
-
-    def failover(self, ns):
-        target = self.api.endpoints['target'].show(ns.subject)
-        kwargs = {
-            'jobs': [{'class_name': "FailoverTargetJob",
-                      'args': {'target_id': target.id}}],
-            'message': "Failing %s over to secondary" % target.label
-        }
-        self.output(self.api.endpoints['command'].create(**kwargs))
-
-    def failback(self, ns):
-        target = self.api.endpoints['target'].show(ns.subject)
-        kwargs = {
-            'jobs': [{'class_name': "FailbackTargetJob",
-                      'args': {'target_id': target.id}}],
-            'message': "Failing %s back to primary" % target.label
-        }
-        self.output(self.api.endpoints['command'].create(**kwargs))
 
     def stop(self, ns):
         self.change_state(ns.subject, "unmounted", ns.force)

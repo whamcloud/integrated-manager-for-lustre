@@ -20,6 +20,9 @@
 # express and approved by Intel in writing.
 
 
+from textwrap import fill
+
+
 class ApiException(Exception):
     pass
 
@@ -140,6 +143,15 @@ class InvalidStateChange(ApiException):
         return "The requested state (%s) is not one of the available states: %s" % (self.requested_state, ", ".join(self.available_states))
 
 
+class InvalidJobError(ApiException):
+    def __init__(self, requested_job, available_jobs):
+        self.requested_job = requested_job
+        self.available_jobs = available_jobs
+
+    def __str__(self):
+        return "The requested job (%s) is not one of the available jobs: %s" % (self.requested_job, ", ".join(self.available_jobs))
+
+
 class AbnormalCommandCompletion(Exception):
     def __init__(self, command, status):
         self.status = status
@@ -153,6 +165,16 @@ class AbnormalCommandCompletion(Exception):
 class UserConfirmationRequired(ApiException):
     def __str__(self):
         return "Confirmation required."
+
+
+class JobConfirmationRequired(UserConfirmationRequired):
+    def __init__(self, verb, subject, confirmation):
+        self.verb = verb
+        self.subject = subject
+        self.confirmation = confirmation
+
+    def __str__(self):
+        return "Running %s on %s requires confirmation of the following:\n%s" % (self.verb, self.subject, fill(self.confirmation, initial_indent="    ", subsequent_indent="  "))
 
 
 class StateChangeConfirmationRequired(UserConfirmationRequired):
