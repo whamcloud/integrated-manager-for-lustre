@@ -83,8 +83,12 @@ class BadRequest(ApiException):
         lines = ["The server rejected the request with the following error(s):"]
         try:
             for field, errors in self.error_dict.items():
-                for error in errors:
-                    lines.extend(["  %s: %s" % (field, error)])
+                try:
+                    lines.extend(["  %s: %s" % (field, ", ".join(errors.values()[0]))])
+                except (AttributeError, IndexError):
+                    for error in errors:
+                        if error:
+                            lines.extend(["  %s: %s" % (field, error)])
         except AttributeError:
             # Sometimes what comes back is just a string.
             lines.append(self.error_dict)
@@ -163,6 +167,8 @@ class AbnormalCommandCompletion(Exception):
 
 
 class UserConfirmationRequired(ApiException):
+    skip_argument = "force"
+
     def __str__(self):
         return "Confirmation required."
 
@@ -190,3 +196,18 @@ class StateChangeConfirmationRequired(UserConfirmationRequired):
 This action (%s) has the following consequences:
 %s
 ''' % (self.report['transition_job']['description'], "\n".join(["  * %s" % c for c in self.consequences]))
+
+
+class ReformatVolumesConfirmationRequired(UserConfirmationRequired):
+    skip_argument = "reformat"
+
+    def __init__(self, volumes):
+        self.volumes = volumes
+
+    def __str__(self):
+        return '''
+One or more of the selected volumes already contains a filesystem, but may
+not actually be in use. Please check the following list of volumes and
+verify that they are suitable for use as Lustre targets:
+%s
+''' % "\n".join(["  %s" % v for v in self.volumes])

@@ -25,7 +25,7 @@ from functools import partial
 from argparse import REMAINDER, SUPPRESS
 
 from chroma_cli.output import StandardFormatter
-from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound, StateChangeConfirmationRequired, JobConfirmationRequired, InvalidStateChange, InvalidJobError
+from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound, StateChangeConfirmationRequired, JobConfirmationRequired, InvalidStateChange, InvalidJobError, ReformatVolumesConfirmationRequired
 
 
 class Dispatcher(object):
@@ -357,6 +357,11 @@ class FilesystemHandler(Handler):
     intransitive_verbs = ["list", "detect"]
     irregular_verbs = ["mountspec"]
 
+    @classmethod
+    def add_args(cls, parser, verb):
+        if verb == 'add':
+            parser.add_argument('--reformat', action='store_true', help="reformat volumes without prompting")
+
     def __init__(self, *args, **kwargs):
         super(FilesystemHandler, self).__init__(*args, **kwargs)
         self.api_endpoint = self.api.endpoints['filesystem']
@@ -442,6 +447,27 @@ class FilesystemHandler(Handler):
         kwargs['mgt'] = self._resolve_mgt(ns)
         kwargs['mdt'] = self._resolve_mdt(ns)
         kwargs['osts'] = self._resolve_osts(ns)
+
+        formatted_volumes = []
+        for target in [kwargs['mgt'], kwargs['mdt']] + kwargs['osts']:
+            # Skip resolved MGS host
+            if not 'volume_id' in target:
+                continue
+
+            if ns.reformat:
+                target['reformat'] = True
+            else:
+                volume = self.api.endpoints['volume'].show(target['volume_id'])
+                if volume['filesystem_type']:
+                    formatted_volumes.append(volume)
+
+        if formatted_volumes:
+            # Bit of a hack -- let these be rebuilt from args on the next
+            # pass. Otherwise we get duplicates and that makes the API sad.
+            for attr in ['mgt', 'mdts', 'osts']:
+                delattr(ns, attr)
+            raise ReformatVolumesConfirmationRequired(formatted_volumes)
+
         self.output(self.api_endpoint.create(**kwargs))
 
     def mountspec(self, ns):
