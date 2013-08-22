@@ -158,15 +158,17 @@ class TestSecureUrls(HttpdTestCase):
         rc, stdout, stderr = self._openssl(['x509', '-in', cert, '-serial', '-noout'])
         client_cert_serial = stdout.strip().split("=")[1]
 
+        url = "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
-            response = requests.get(
-                "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT,
-                verify = False,
-                cert = (cert, key))
+            response = requests.post(url, data=' ' * 16 * 1024, verify=False, cert=(cert, key))
+            self.assertEqual(response.status_code, 200)
+            response = requests.post(url, data=' ' * 16 * 1024 ** 2, verify=False, cert=(cert, key))
+            self.assertEqual(response.status_code, 413)
+            response = requests.get(url, verify=False, cert=(cert, key))
             # My request succeeded
             self.assertEqual(response.status_code, 200)
             # A request was forwarded
-            self.assertEqual(len(listener.requests), 1)
+            self.assertEqual(len(listener.requests), 2)
             self.assertEqual(listener.last_request.path, "/agent/message/")
             # The client name header was set
             self.assertEqual(listener.last_request.headers.getheader('X-SSL-Client-On'), "SUCCESS")
