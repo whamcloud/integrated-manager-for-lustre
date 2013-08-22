@@ -24,7 +24,7 @@ from itertools import product
 from argparse import REMAINDER, SUPPRESS
 
 from chroma_cli.output import StandardFormatter
-from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound
+from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound, StateChangeConfirmationRequired, InvalidStateChange
 
 
 class Dispatcher(object):
@@ -220,7 +220,20 @@ class Handler(object):
     def remove(self, ns, endpoint=None):
         if not endpoint:
             endpoint = self.api_endpoint
-        self.output(endpoint.delete(ns.subject))
+        self.change_state(ns.subject, "removed", ns.force)
+
+    def change_state(self, subject, end_state, force=False):
+        available_states = [t['state'] for t in self.api_endpoint.show(subject)['available_transitions']]
+
+        if end_state not in available_states:
+            raise InvalidStateChange(end_state, available_states)
+
+        if not force:
+            report = self.api_endpoint.update(subject, state=end_state, dry_run=True)
+            if report and (any(j['requires_confirmation'] for j in report['dependency_jobs']) or report['transition_job']['requires_confirmation']):
+                raise StateChangeConfirmationRequired(report)
+
+        self.output(self.api_endpoint.update(subject, state=end_state))
 
 
 class ServerHandler(Handler):
@@ -247,8 +260,7 @@ class ServerHandler(Handler):
                       'start': "lnet_up",
                       'unload': "lnet_unloaded",
                       'load': "lnet_down"}
-        kwargs = {'state': lnet_state[ns.verb]}
-        self.output(self.api_endpoint.update(ns.subject, **kwargs))
+        self.change_state(ns.subject, lnet_state[ns.verb], ns.force)
 
     def list(self, ns, endpoint=None, **kwargs):
         try:
@@ -341,12 +353,10 @@ class FilesystemHandler(Handler):
         self.api_endpoint = self.api.endpoints['filesystem']
 
     def stop(self, ns):
-        kwargs = {'state': "stopped"}
-        self.output(self.api_endpoint.update(ns.subject, **kwargs))
+        self.change_state(ns.subject, "stopped", ns.force)
 
     def start(self, ns):
-        kwargs = {'state': "available"}
-        self.output(self.api_endpoint.update(ns.subject, **kwargs))
+        self.change_state(ns.subject, "available", ns.force)
 
     def detect(self, ns):
         kwargs = {'message': "Detecting filesystems",
@@ -457,17 +467,10 @@ class TargetHandler(Handler):
         self.output(self.api.endpoints['command'].create(**kwargs))
 
     def stop(self, ns):
-        kwargs = {'state': "unmounted"}
-        self.output(self.api_endpoint.update(ns.subject, **kwargs))
+        self.change_state(ns.subject, "unmounted", ns.force)
 
     def start(self, ns):
-        kwargs = {'state': "mounted"}
-        self.output(self.api_endpoint.update(ns.subject, **kwargs))
-
-    def remove(self, ns):
-        # HTTP DELETE doesn't seem to work -- some downcasting problem?
-        kwargs = {'state': "removed"}
-        self.output(self.api_endpoint.update(ns.subject, **kwargs))
+        self.change_state(ns.subject, "mounted", ns.force)
 
     def add(self, ns):
         vn = self._resolve_volume_node(ns.subject)

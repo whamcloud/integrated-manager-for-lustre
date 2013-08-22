@@ -2,7 +2,6 @@
 # ========================================================
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
-from chroma_cli.exceptions import BadUserInput
 
 import os
 from behave import *
@@ -15,12 +14,23 @@ from chroma_cli.main import standard_cli
 def step(context, args):
     from StringIO import StringIO
     import sys
+    context.stdin = StringIO()
     context.stdout = StringIO()
     context.stderr = StringIO()
 
     try:
+        sys.stdin = context.stdin
         sys.stdout = context.stdout
         sys.stderr = context.stderr
+
+        if [s for s in context.scenario.steps if 'should be prompted' in s.name]:
+            # Fake this out for scenarios that expect a prompt
+            sys.stdin.write("yes\n")
+        else:
+            # Scenarios that don't expect a prompt but get one will fail
+            sys.stdin.write("no\n")
+        sys.stdin.seek(0)
+
         if 'cli_config' in context and context.cli_config:
             standard_cli(args=args.split(), config=context.cli_config)
         else:
@@ -29,6 +39,7 @@ def step(context, args):
             os.environ['CHROMA_USERNAME'] = 'debug'
             os.environ['CHROMA_PASSWORD'] = 'chr0m4_d3bug'
             standard_cli(args.split())
+
     except SystemExit, e:
         context.stdout.seek(0)
         context.stderr.seek(0)
@@ -48,7 +59,8 @@ def step(context, args):
               "".join(context.stdout.readlines()),
               "".join(context.stderr.readlines())))
 
-    sys.__stdout__ = sys.__stdout__
+    sys.stdin = sys.__stdin__
+    sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
 
 
@@ -62,6 +74,13 @@ def step(context, message):
     context.stdout.seek(0)
     stdout = context.stdout.read()
     assert message in stdout, stdout
+
+
+@then('I should be prompted to proceed')
+def step(context):
+    context.stdout.seek(0)
+    stdout = context.stdout.read()
+    assert 'Do you want to proceed' in stdout, stdout
 
 
 @then('I should not see output containing "{message}"')

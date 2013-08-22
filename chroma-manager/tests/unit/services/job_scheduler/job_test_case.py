@@ -1,3 +1,4 @@
+import json
 from contextlib import contextmanager
 from itertools import chain
 from chroma_core.lib.cache import ObjectCache
@@ -97,7 +98,9 @@ class JobTestCase(TestCase):
         def patch_daemon_rpc(rpc_class, test_daemon):
             # Patch AgentDaemonRpc to call our instance instead of trying to do an RPC
             def rpc_local(fn_name, *args, **kwargs):
-                retval = getattr(test_daemon, fn_name)(*args, **kwargs)
+                # Run the response through a serialize/deserialize cycle to
+                # give it that special RPC flavor.
+                retval = json.loads(json.dumps(getattr(test_daemon, fn_name)(*args, **kwargs)))
                 log.info("patch_daemon_rpc: %s(%s %s) -> %s" % (fn_name, args, kwargs, retval))
                 return retval
 

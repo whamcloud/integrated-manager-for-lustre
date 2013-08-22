@@ -131,6 +131,15 @@ class ApiConnectionError(ApiException):
         return "Failed to connect to %s (is --api_url correct?)" % self.api_url
 
 
+class InvalidStateChange(ApiException):
+    def __init__(self, requested_state, available_states):
+        self.requested_state = requested_state
+        self.available_states = available_states
+
+    def __str__(self):
+        return "The requested state (%s) is not one of the available states: %s" % (self.requested_state, ", ".join(self.available_states))
+
+
 class AbnormalCommandCompletion(Exception):
     def __init__(self, command, status):
         self.status = status
@@ -139,3 +148,23 @@ class AbnormalCommandCompletion(Exception):
 
     def __str__(self):
         return "Command completed with abnormal status: %s (%s)" % (self.status, self.command['message'])
+
+
+class UserConfirmationRequired(ApiException):
+    def __str__(self):
+        return "Confirmation required."
+
+
+class StateChangeConfirmationRequired(UserConfirmationRequired):
+    def __init__(self, report):
+        self.report = report
+
+    @property
+    def consequences(self):
+        return sorted([j['description'] for j in self.report['dependency_jobs'] + [self.report['transition_job']]])
+
+    def __str__(self):
+        return '''
+This action (%s) has the following consequences:
+%s
+''' % (self.report['transition_job']['description'], "\n".join(["  * %s" % c for c in self.consequences]))
