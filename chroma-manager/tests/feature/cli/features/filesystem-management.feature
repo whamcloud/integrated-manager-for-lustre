@@ -29,7 +29,7 @@ Scenario: Remove filesystem
   Given the filesystem count should be 1
   When I run chroma filesystem-remove ohbehave
   Then I should be prompted to proceed
-  Then the filesystem count should be 0
+  And the filesystem count should be 0
   And the ost count should be 0
   And the mdt count should be 0
   But the mgt count should be 1
@@ -49,6 +49,24 @@ Scenario: Create new filesystem with existing MGT
   Given the mgt count should be 1
   And the filesystem count should be 0
   When I run chroma filesystem-add behave1 --mgt setup-mgs --mdt setup-mds:/fake/path/1 --ost setup-oss0:/fake/path/3 --ost setup-oss1:/fake/path/4
+  Then I should be prompted to proceed
+  And the filesystem count should be 1
+  And the target count should be 4
+  And the mgt count should be 1
+  And the ost count should be 2
+
+Scenario: Remove filesystem with --force
+  Given the filesystem count should be 1
+  When I run chroma --force filesystem-remove behave1
+  Then the filesystem count should be 0
+  And the ost count should be 0
+  And the mdt count should be 0
+  But the mgt count should be 1
+
+Scenario: Create new filesystem with existing MGT and --reformat
+  Given the mgt count should be 1
+  And the filesystem count should be 0
+  When I run chroma filesystem-add --reformat behave2 --mgt setup-mgs --mdt setup-mds:/fake/path/1 --ost setup-oss0:/fake/path/3 --ost setup-oss1:/fake/path/4
   Then the filesystem count should be 1
   And the target count should be 4
   And the mgt count should be 1

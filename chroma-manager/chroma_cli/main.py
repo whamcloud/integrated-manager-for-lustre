@@ -104,10 +104,10 @@ def standard_cli(args=None, config=None):
         print e
         response = ""
         while response not in ['yes', 'no']:
-            response = raw_input("Do you want to proceed (--force to avoid prompt)? (yes/no) ").lower()
+            response = raw_input("Do you want to proceed (--%s to avoid prompt)? (yes/no) " % e.skip_argument).lower()
 
         if response == "yes":
-            ns.force = True
+            setattr(ns, e.skip_argument, True)
             ns.handler(api=api, formatter=formatter)(parser=parser, args=args, ns=ns)
     except (AbnormalCommandCompletion, ApiException), e:
         print e

@@ -172,6 +172,7 @@ class CommandMonitor(object):
         return {
             (True, False, False): "Finished",
             (True, True, False): "Canceled",
+            (True, True, True): "Canceled due to error",
             (True, False, True): "Failed",
             (False, False, False): "Tasked",
             (False, True, False): "Canceling",

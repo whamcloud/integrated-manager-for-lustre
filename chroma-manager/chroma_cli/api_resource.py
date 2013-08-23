@@ -154,7 +154,7 @@ class Filesystem(ApiResource):
 class Volume(ApiResource):
     def __init__(self, *args, **kwargs):
         super(Volume, self).__init__(*args, **kwargs)
-        self.list_columns.extend(["name", "size", "primary", "failover", "status"])
+        self.list_columns.extend(["name", "size", "filesystem_type", "primary", "failover", "status"])
 
     def name(self):
         return " ".join(self.label.split())
