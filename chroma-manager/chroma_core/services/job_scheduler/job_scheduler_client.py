@@ -115,34 +115,41 @@ class JobSchedulerClient(object):
 
         """
 
-        if (not from_states) or instance.state in from_states:
+        if (not from_states) or (instance.state in from_states):
             log.info("Enqueuing notify %s at %s:" % (instance, time))
-            for attr, value in update_attrs.items():
-                log.info("  .%s %s->%s" % (attr, getattr(instance, attr), value))
 
-            # Encode datetimes
             encoded_attrs = {}
             for attr, value in update_attrs.items():
-                try:
-                    field = [f for f in instance._meta.fields if f.name == attr][0]
-                except IndexError:
-                    # e.g. _id names, they can't be datetimes so pass through
-                    encoded_attrs[attr] = value
-                else:
-                    if isinstance(field, DateTimeField):
-                        assert isinstance(value, datetime.datetime), "Attribute %s of %s must be datetime" % (attr, instance.__class__)
-                        encoded_attrs[attr] = value.isoformat()
-                    else:
-                        encoded_attrs[attr] = value
+                current_value = getattr(instance, attr)
 
-            time_serialized = time.isoformat()
-            NotificationQueue().put({
-                'instance_natural_key': ContentType.objects.get_for_model(instance).natural_key(),
-                'instance_id': instance.id,
-                'time': time_serialized,
-                'update_attrs': encoded_attrs,
-                'from_states': from_states
-            })
+                #  Only tee up the state change if necessary
+                if value != current_value:
+                    log.info("  .%s %s->%s" % (attr, current_value, value))
+
+                    # Date fields converted to isoformat
+                    # all other field not converted in preparation for tx
+                    try:
+                        field = [f for f in instance._meta.fields if f.name == attr][0]
+                    except IndexError:
+                        # e.g. _id names, they can't be datetimes so pass through
+                        encoded_attrs[attr] = value
+                    else:
+                        if isinstance(field, DateTimeField):
+                            assert isinstance(value, datetime.datetime), "Attribute %s of %s must be datetime" % (attr, instance.__class__)
+                            encoded_attrs[attr] = value.isoformat()
+                        else:
+                            encoded_attrs[attr] = value
+
+            # only states that will be changed are sent, if any
+            if encoded_attrs:
+                time_serialized = time.isoformat()
+                NotificationQueue().put({
+                    'instance_natural_key': ContentType.objects.get_for_model(instance).natural_key(),
+                    'instance_id': instance.id,
+                    'time': time_serialized,
+                    'update_attrs': encoded_attrs,
+                    'from_states': from_states
+                })
 
     @classmethod
     def available_transitions(cls, object_list):
