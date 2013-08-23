@@ -1,5 +1,6 @@
 import logging
 import time
+import json
 import datetime
 from chroma_agent.agent_client import HttpWriter, Message, HttpReader, SessionTable, HttpError
 from chroma_agent.log import daemon_log
@@ -210,6 +211,86 @@ class TestHttpWriter(unittest.TestCase):
             expect_message_at(t_4)
         finally:
             datetime.datetime = old_datetime
+
+    def test_oversized_messages(self):
+        """
+        Test that oversized messages are dropped and the session is terminated
+        """
+        # Monkey-patch this setting to a lower limit to make testing easier
+        MAX_BYTES_PER_POST = 1024
+        from chroma_agent.agent_client import MAX_BYTES_PER_POST as LARGE_MAX_BYTES_PER_POST
+
+        def set_post_limit(size):
+            import chroma_agent.agent_client
+            chroma_agent.agent_client.MAX_BYTES_PER_POST = size
+        self.addCleanup(set_post_limit, LARGE_MAX_BYTES_PER_POST)
+        set_post_limit(MAX_BYTES_PER_POST)
+
+        client = mock.Mock()
+        client._fqdn = "test_server"
+        client.boot_time = datetime.datetime.utcnow()
+        client.start_time = datetime.datetime.utcnow()
+
+        writer = HttpWriter(client)
+
+        def fake_post(envelope):
+            if len(json.dumps(envelope)) > MAX_BYTES_PER_POST:
+                daemon_log.info("fake_post(): rejecting oversized message")
+                raise HttpError()
+
+        client.post = mock.Mock(side_effect=fake_post)
+        TestPlugin = mock.Mock()
+
+        mock_plugin_instance = mock.Mock()
+        mock_plugin_instance.start_session = mock.Mock(return_value={'foo': 'bar'})
+        client.device_plugins.get = mock.Mock(return_value=lambda(plugin_name): mock_plugin_instance)
+        client.device_plugins.get_plugins = mock.Mock(return_value={'test_plugin': TestPlugin})
+        client.sessions = SessionTable(client)
+
+        daemon_log.setLevel(logging.DEBUG)
+
+        import string
+        from random import choice
+        oversized_string = "".join(choice(string.printable) for i in range(MAX_BYTES_PER_POST))
+
+        # There should be one message to set up the session
+        writer.poll()
+        self.assertTrue(writer.send())
+        self.assertEqual(client.post.call_count, 1)
+        messages = client.post.call_args[0][0]['messages']
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]['type'], "SESSION_CREATE_REQUEST")
+        # Pretend we got a SESSION_CREATE_RESPONSE
+        client.sessions.create('test_plugin', 'id_foo')
+        self.assertEqual(len(client.sessions._sessions), 1)
+
+        # Inject a normal and an oversized message
+        normal_body = DevicePluginMessage('normal', PRIO_NORMAL)
+        oversized_body = DevicePluginMessage(oversized_string, PRIO_NORMAL)
+        writer.put(Message("DATA", "test_plugin", normal_body, "id_foo", 0))
+        writer.put(Message("DATA", "test_plugin", oversized_body, "id_foo", 1))
+
+        # Only the normal message should get through
+        self.assertTrue(writer.send())
+        self.assertEqual(client.post.call_count, 2)
+        messages = client.post.call_args[0][0]['messages']
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]['type'], "DATA")
+
+        # The oversized message should be dropped and the session
+        # terminated
+        self.assertFalse(writer.send())
+        self.assertEqual(client.post.call_count, 3)
+        self.assertEqual(len(client.sessions._sessions), 0)
+
+        # However, we should eventually get a new session for the
+        # offending plugin
+        writer.poll()
+        self.assertTrue(writer.send())
+        self.assertEqual(client.post.call_count, 4)
+        messages = client.post.call_args[0][0]['messages']
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]['type'], "SESSION_CREATE_REQUEST")
 
 
 class TestHttpReader(unittest.TestCase):
