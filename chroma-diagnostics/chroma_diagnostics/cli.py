@@ -22,7 +22,8 @@
 
 import logging
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
 import argparse
 import os
 
@@ -33,21 +34,26 @@ handler = logging.FileHandler("chroma-diagnostics.log")
 handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
 log.addHandler(handler)
 
-chroma_log_locations = ['/var/log/chroma-agent.log',
-                 '/var/log/chroma-agent-console.log',
-                 '/var/log/chroma-agent-daemon.log',
-                 '/var/log/chroma/job_scheduler.log',
-                 '/var/log/chroma/http.log',
-                 '/var/log/chroma/corosync.log',
-                 '/var/log/chroma/http_agent.log',
-                 '/var/log/chroma/lustre_audit.log',
-                 '/var/log/chroma/messages',
-                 '/var/log/chroma/plugin_runner.log',
-                 '/var/log/chroma/power_control.log',
-                 '/var/log/chroma/stats.log',
-                 '/var/log/chroma/supervisord.log',
-                 '/var/log/syslog.log',
-                 '/var/log/messages', ]
+# Filenames included
+# if a log file in the directory (key) starts with any string in the list (value)
+# then include the log.  This is used below to match rolled over copies of the
+# logs
+tracked_logs = {'/var/log/chroma/': ['chroma-agent',
+                                     'chroma-agent-console',
+                                     'chroma-agent-daemon',
+                                     'job_scheduler',
+                                     'http',
+                                     'corosync',
+                                     'http_agent',
+                                     'lustre_audit',
+                                     'messages',
+                                     'plugin_runner',
+                                     'power_control',
+                                     'stats',
+                                     'supervisord', ],
+                '/var/log/': ['syslog',
+                              'messages',
+                              'system', ]}
 
 
 def run_command(cmd, out, err):
@@ -58,7 +64,7 @@ def run_command(cmd, out, err):
             stderr = err)
     except OSError:
         #  The cmd in this case could not run on this platform, skipping
-        log.debug("Skipping: %s" % cmd)
+#        log.info("Skipping: %s" % cmd)
         return None
     else:
         p.wait()
@@ -90,6 +96,49 @@ def execute(cmd):
     return run_command(cmd, subprocess.PIPE, subprocess.PIPE)
 
 
+def copy_logs(output_directory, days_back=1, verbose=0):
+    """Go days_back to find logs files to be copied.
+
+    Note:  Chose to use nieve dates here, since this will run on the same
+    host that the file was created they are likely to match.  The server is
+    probably in UTC anyway.
+    """
+
+    if days_back < 0:
+        return 0
+
+    # Create a cutoff date by step back from now the requested number of days
+    # and then setting the time to the beginning of that day.
+    # For example, if you run it as 3pm today, and ask for 1 day back, the
+    # default you get a cut off of the beginning of the day yesterday all 24
+    # hours of yesterday, up to right now, today.
+    cutoff_date = datetime.now() - timedelta(days=days_back)
+    cutoff_date = cutoff_date.replace(hour=0, minute=0, second=0)
+    cutoff_date_seconds = time.mktime(cutoff_date.timetuple())
+
+    collected_files = []
+
+    # Consider each log path
+    for path, file_roots in tracked_logs.items():
+        if os.path.exists(path):
+            for file in os.listdir(path):
+                file_root = file.split('.')[0]
+                valid_name = file_root in file_roots
+                if valid_name:
+                    abs_path = os.path.join(path, file)
+                    last_modified = os.path.getmtime(abs_path)
+                    if last_modified >= cutoff_date_seconds:
+                        collected_files.append(abs_path)
+        else:
+            if verbose > 0:
+                log.info("%s does not exist." % path)
+
+    if verbose > 1:
+        log.info("Copy %s" % "\t\n".join(collected_files))
+
+    execute(['cp', ] + collected_files + [output_directory, ])
+    return len(collected_files)
+
 DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
 
 PACKAGES = ['chroma-agent',
@@ -107,7 +156,25 @@ def main():
             % DEFAULT_OUTPUT_DIRECTORY)
 
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('--verbose', '-v', action='count')
+    parser.add_argument('--verbose', '-v', action='count', required=False,
+        help="More output for troubleshooting.")
+
+    def _check_days_back(arg):
+        try:
+            days_back = int(arg)
+        except ValueError:
+            msg = "%s is not a valid number of days."
+            raise argparse.ArgumentTypeError(msg % arg)
+        else:
+            if days_back < 0:
+                msg = "Number of days must not be less than zero."
+                raise argparse.ArgumentTypeError(msg)
+            else:
+                return days_back
+    parser.add_argument('--days-back', '-d', required=False,
+        type=_check_days_back,
+        default=1, help="Number of days back to collect logs. default is 1.  0 "
+                        "would mean today's logs only.")
     args = parser.parse_args()
 
     time_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
@@ -154,8 +221,9 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to finger print chroma installation")
 
-    if execute(['cp', ] + chroma_log_locations + [output_directory, ]):
-        log.info("Copied all log files")
+    log_count = copy_logs(output_directory, args.days_back, args.verbose)
+    if log_count > 0:
+        log.info("Copied %s log files." % log_count)
     elif args.verbose > 0:
         log.info("Failed to copy logs")
 
