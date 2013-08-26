@@ -5,6 +5,7 @@ settings = chroma_settings()
 import dateutil
 import datetime
 import time
+import itertools
 from django.db import transaction
 
 from tests.services.supervisor_test_case import SupervisorTestCase
@@ -16,6 +17,18 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration, ClientCertificate
 
 RABBITMQ_GRACE_PERIOD = 1
+
+
+def wait(timeout=float('inf'), count=None, minwait=0.1, maxwait=1.0):
+    "Generate an exponentially backing-off enumeration with optional timeout or count."
+    timeout += time.time()
+    for index in itertools.islice(itertools.count(), count):
+        yield index
+        remaining = timeout - time.time()
+        if remaining < 0:
+            break
+        time.sleep(min(minwait, maxwait, remaining))
+        minwait *= 2
 
 
 class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
@@ -115,10 +128,16 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         command_id = JobSchedulerClient.command_set_state([(self.host.content_type.natural_key(), self.host.id, state)], "Test")
         return command_id
 
-    def _handle_action_receive(self, session_id):
-        # Listen for the action
-        messages = self._receive_messages(1)
-        action_rpc_request = messages[0]
+    def _handle_action_receive(self, session_id, timeout=1):
+        # Listen and wait for the action
+        for index in wait(timeout):
+            try:
+                action_rpc_request, = self._receive_messages(1)
+                break
+            except RuntimeError as exc:
+                print 'attempt', index, exc
+        else:
+            raise
         self.assertEqual(action_rpc_request['type'], 'DATA')
         self.assertEqual(action_rpc_request['plugin'], self.PLUGIN)
         self.assertEqual(action_rpc_request['session_seq'], None)
@@ -157,14 +176,10 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
     def _wait_for_command(self, command_id, timeout):
         """Wait for at least timeout"""
-        i = 0
-        while i < timeout + 1:
+        for index in wait(timeout):
             command = self._get_command(command_id)
             if command.complete:
                 return command
-            else:
-                time.sleep(1)
-                i += 1
         raise AssertionError("Command didn't complete")
 
     def test_run_action(self):
@@ -363,3 +378,9 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
                 'args': None
             }
         )
+
+    def test_(self):
+        "Initial test to check if HYD-2389 only reproduces on first run."
+        agent_session_id = self._open_sessions()
+        self._request_action()
+        self._handle_action_receive(agent_session_id)
