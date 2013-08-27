@@ -493,9 +493,10 @@ class RealRemoteOperations(RemoteOperations):
         Currently this only verifies that we can write to a filesystem as a
         sanity check that it was configured correctly.
         """
-        # TODO: Expand on this. Perhaps use existing lustre client tests.
-        if filesystem.get('bytes_free') is None:
-            self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free') is not None)
+        # TODO: Expand on entire function. Perhaps use existing lustre client tests.
+
+        if not filesystem.get('bytes_free'):
+            self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free'))
             filesystem = self._test_case.get_filesystem(filesystem['id'])
 
         self._ssh_address(
