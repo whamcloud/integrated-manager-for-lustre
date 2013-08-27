@@ -19,6 +19,8 @@ import urllib2
 import time
 import xmlrpclib
 import httplib
+import platform
+import itertools
 
 
 PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
@@ -33,6 +35,30 @@ BUNDLE_BACKUP = "/var/lib/chroma/repo.previous"
 LOG_DIR = "/var/log/chroma"
 LOG_FILE = os.path.join(LOG_DIR, "install.log")
 
+
+def _check_platform():
+    # This is the place to run tests for validating that this is a sane
+    # installation target.
+
+    # TODO: Memory/CPU/Disk checks?
+
+    # Seems unlikely that someone will be trying to install this on their
+    # old SPARC 5, but who knows?
+    SUPPORTED_ARCHES = ['64bit_ELF']
+    # Might work for SL too, but hasn't been tested.
+    SUPPORTED_DISTROS = ['redhat', 'centos']
+    # Keep the version locked down for now -- if we can go with a minimum
+    # version that'd be better, but we can't assume (c.f. pacemaker).
+    SUPPORTED_VERSIONS = ['6.4']
+    # This will work assuming we have version parity across all supported
+    # distributions.
+    SUPPORTED_PLATFORMS = ["%s-%s-%s" % p for p in itertools.product(SUPPORTED_DISTROS, SUPPORTED_VERSIONS, SUPPORTED_ARCHES)]
+
+    detected_platform = "%s-%s-%s_%s" % (platform.dist()[0:2]
+                                         + platform.architecture())
+    if detected_platform not in SUPPORTED_PLATFORMS:
+        log.error("%s is not a supported platform for %s. Please refer to the installation guide for a list of supported platforms." % (detected_platform, PRODUCT_NAME))
+        sys.exit(1)
 
 def _display_eula():
     try:
@@ -298,8 +324,6 @@ def _install_or_upgrade_profiles(new_profiles):
         _run(['chroma-config', 'profile', 'register', profile])
 
 def _test_channels():
-    import platform
-
     if platform.dist()[0] != "redhat":
         return True
 
@@ -405,6 +429,8 @@ def _test_repos():
     return True, []
 
 log = _setup_logging()
+
+_check_platform()
 
 _display_eula()
 
