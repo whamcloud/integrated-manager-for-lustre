@@ -179,7 +179,19 @@ var Api = function() {
     var message = "We are sorry, but something has gone wrong.";
     message += "<dl>";
     $.each(kwargs, function(key, value) {
-      var s = String(value);
+      var s;
+
+      if (_.isObject(value)) {
+        try {
+          s = JSON.stringify(value, null, 2);
+        } catch (e) {
+          // Does the object have a circular reference?
+          s = String(value);
+        }
+      } else {
+        s = String(value);
+      }
+
       if (s.length > 160) {
         s = "<textarea rows='8' cols='40'>" + s + "</textarea>"
       }
