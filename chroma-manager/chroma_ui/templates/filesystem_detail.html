@@ -5,6 +5,12 @@
     var conf_param_dialog;
     var volume_chooser_store;
     var filesystem;
+    var spinner = '<div style="text-align: center"><img src="/static/images/loading.gif"> Loading</div>';
+
+    // cached selectors
+    var $bytes_text;
+    var $inodes_text;
+    var $charts;
 
 
     /**
@@ -183,6 +189,9 @@
         initialized = true;
       }
 
+      $charts.html(spinner);
+      $bytes_text.add($inodes_text).html('');
+
       if (conf_param_dialog) {
         conf_param_dialog.destroy();
         conf_param_dialog = null;
@@ -193,6 +202,11 @@
 
     function init()
     {
+
+      $bytes_text = $('#filesystem_bytes_used_total');
+      $inodes_text = $('#filesystem_files_used_total');
+      $charts = $('#editfs_space_usage,#editfs_inode_usage');
+
       $('div#filesystem_detail button.advanced').click(function() {
         conf_param_dialog.open();
       });
@@ -202,7 +216,7 @@
           // initially, we _should_ have the mount_command available
           var template_data = {
             name: filesystem.name,
-            mount_command: '<div style="text-align: center"><img src="/static/images/loading.gif"> Loading</div>'
+            mount_command: spinner
           };
           if ( filesystem.mount_command ) {
             template_data.mount_command = _.escape(filesystem.mount_command);
@@ -319,15 +333,12 @@
     }
 
     function loadFilesystem(id) {
-      Api.get("filesystem/" + id + "/", {},
+      var filesystem_uri = "filesystem/" + id + "/";
+      Api.get(filesystem_uri, {},
       success_callback = function(filesystem_data)
       {
         filesystem = filesystem_data;
         /* FS summary fields */
-        $('#bytes_used').html(formatBytes(filesystem.bytes_total - filesystem.bytes_free));
-        $('#bytes_total').html(formatBytes(filesystem.bytes_total));
-        $('#inodes_used').html(formatBigNumber(filesystem.files_total - filesystem.files_free));
-        $('#inodes_total').html(formatBigNumber(filesystem.files_total));
         $('#ost_count').html(filesystem.osts.length);
         $('#mgs_name').html(RouteUtils.uri_properties_link(filesystem.mgt.primary_server, filesystem.mgt.primary_server_name));
         $('#mds_name').html(RouteUtils.uri_properties_link(filesystem.mdts[0].primary_server, filesystem.mdts[0].primary_server_name));
@@ -351,8 +362,49 @@
         // Monitored filesystems can't edit conf params
         $('div#filesystem_detail button.advanced').button('option', 'disabled', filesystem.immutable_state);
 
-        // Free space pie charts
-        LoadFSGraph_EditFS(filesystem);
+        // Free space/inode pie charts
+        function render_charts(filesystem) {
+          $bytes_text.html(
+            "%s/%s".sprintf(
+              formatBytes(filesystem.bytes_total - filesystem.bytes_free),
+              formatBytes(filesystem.bytes_total)
+            )
+          );
+          $inodes_text.html(
+            "%s/%s inodes".sprintf(
+              formatBytes(filesystem.files_total - filesystem.files_free),
+              formatBytes(filesystem.files_total)
+            )
+          );
+          LoadFSGraph_EditFS(filesystem);
+        }
+
+        // wait on data to exists for charts before rendering
+        function get_filesystem_chart_data(delay_seconds) {
+          if ( _.isNull(filesystem.bytes_total) || _.isNull(filesystem.files_total) ) {
+            setTimeout(
+              function() {
+                Api.get(filesystem_uri, {},
+                  success_callback = function(filesystem_data) {
+                    filesystem = filesystem_data;
+                    get_filesystem_chart_data(delay_seconds);
+                  },
+                  // ignore the error and stop fetching
+                  // this prevents a 404 on filesystem delete if the stats haven't populated
+                  error_callback = { '404': function() {} },
+                  blocking = false
+                );
+              },
+              delay_seconds * 1000
+            );
+          }
+          else {
+            render_charts(filesystem);
+          }
+        }
+
+        get_filesystem_chart_data(5);
+
       });
 
       if (!tables) {
@@ -410,11 +462,11 @@
 
 <div style='float:left; margin-left: 12px;'>
   <div id="editfs_space_usage"></div>
-  <p align=center><span id="bytes_used"></span>/<span id="bytes_total"></span></p>
+  <p align='center' id='filesystem_bytes_used_total'></p>
 </div>
 <div style='float:left; margin-left: 12px;'>
   <div id="editfs_inode_usage"></div>
-  <p align=center><span id="inodes_used"></span>/<span id="inodes_total"></span>&nbsp;inodes</p>
+  <p align='center' id='filesystem_files_used_total'></p>
 </div>
 
 <div style='clear:both;'></div>
