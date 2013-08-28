@@ -152,5 +152,6 @@ help_text = {
 
         <p class="subtext">Intel and the Intel logo are trademarks or registered trademarks of Intel Corporation or its subsidiaries in the United States and other countries. *Other names and brands may be claimed as the property of others.</p>
     """,
-    "continue_as_anonymous": "Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Intel&reg; Manager for Lustre* software."
+    "continue_as_anonymous": "Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Intel&reg; Manager for Lustre* software.",
+    "no_dismiss_message": "This alert relates to an active problem. When the problem is fixed you may dismiss."
 }

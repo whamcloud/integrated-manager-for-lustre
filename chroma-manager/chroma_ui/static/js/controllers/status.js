@@ -152,6 +152,12 @@
        * @param {boolean} noUpdate Whether an update should be triggered after this call.
        */
       dismiss: function (message, noUpdate) {
+
+        if (message.notDismissable && message.notDismissable()) {
+          // If we can't dismiss return early with success.
+          return $q.defer().resolve();
+        }
+
         message.dismissed = true;
 
         function success() { $scope.$emit('checkHealth'); }

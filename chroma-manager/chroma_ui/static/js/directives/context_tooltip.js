@@ -23,13 +23,19 @@
 (function () {
   'use strict';
 
+  var contextTooltipName = 'contextTT';
+  function nameSuffix(suffix) { return contextTooltipName + suffix; }
+
   function factory($tooltip, HELP_TEXT) {
     return {
       restrict: 'A',
       scope: true,
       link: function postLink(scope, el, attrs) {
-        attrs.contextTooltip = HELP_TEXT[attrs.contextTooltip];
-        $tooltip('contextTooltip', 'tooltip', 'mouseenter').link(scope, el, attrs);
+        attrs.$observe('contextTooltip', function (value) {
+          attrs.$set(contextTooltipName, HELP_TEXT[value]);
+        });
+
+        $tooltip(contextTooltipName, 'tooltip', 'mouseenter').link(scope, el, attrs);
       }
     };
   }
@@ -52,7 +58,7 @@
   /**
    * @description Interfaces with the tooltip directive to render the correct tooltip.
    */
-  angular.module('directives').directive('contextTooltipPopup', function () {
+  angular.module('directives').directive(nameSuffix('Popup'), function () {
     return {
       restrict: 'E',
       replace: true,

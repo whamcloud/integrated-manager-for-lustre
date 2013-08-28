@@ -39,6 +39,13 @@ angular.module('models').factory('alertModel', ['baseModel', 'STATES', function 
       },
       getName: function () {
         return 'alert';
+      },
+      /**
+       * Alert should not be dismissed if it's active and has an error or warn level.
+       * @returns {boolean}
+       */
+      notDismissable: function () {
+        return (this.severity === STATES.ERROR || this.severity === STATES.WARN) && this.active;
       }
     }
   });
