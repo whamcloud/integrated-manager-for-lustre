@@ -256,7 +256,11 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None,
         if value is not None:
             options.append("--%s=%s" % (name, value))
 
-    shell.try_run(['modprobe', 'ldiskfs'])  # TEI-469: Race loading the ldiskfs module during mkfs.lustre
+    try:
+        # osd_ldiskfs will load ldiskfs in Lustre 2.4.0+
+        shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the ldiskfs module during mkfs.lustre
+    except shell.CommandExecutionError:
+        shell.try_run(['modprobe', 'ldiskfs'])  # TEI-469: Race loading the ldiskfs module during mkfs.lustre
     shell.try_run(['mkfs.lustre'] + options + [device])
 
     blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "UUID", "-s", "TYPE", device])

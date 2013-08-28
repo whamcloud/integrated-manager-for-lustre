@@ -57,11 +57,11 @@ class CreateLustreFilesystem(UtilityTestCase):
             # TODO: Create the separate MDT
             raise RuntimeError("Separate MGT and MDT configuration not implemented yet.")
 
-        for ost in osts:
+        for index, ost in enumerate(osts):
             ost_device = self.get_unused_device(ost['primary_server'], used_devices)
             result = self.remote_command(
                 ost['primary_server'],
-                'mkfs.lustre --reformat --ost --fsname=%s --mgsnode=%s@tcp0 %s' % (fsname, mgs_ip, ost_device)
+                'mkfs.lustre --reformat --ost --index=%s --fsname=%s --mgsnode=%s@tcp0 %s' % (index, fsname, mgs_ip, ost_device)
             )
             logger.info("mkfs.lustre output:\n %s" % result.stdout.read())
             used_devices.append(ost_device)
