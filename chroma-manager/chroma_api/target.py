@@ -321,7 +321,8 @@ class TargetResource(MetricResource, ConfParamResource):
         return bundle.obj.primary_host.get_label()
 
     def dehydrate_failover_servers(self, bundle):
-        return bundle.obj.failover_hosts
+        from chroma_api.urls import api
+        return [api.get_resource_uri(host) for host in bundle.obj.failover_hosts]
 
     def dehydrate_failover_server_name(self, bundle):
         try:
