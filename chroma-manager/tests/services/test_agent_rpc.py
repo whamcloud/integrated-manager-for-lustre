@@ -5,11 +5,11 @@ settings = chroma_settings()
 import dateutil
 import datetime
 import time
-import itertools
 from django.db import transaction
 
 from tests.services.supervisor_test_case import SupervisorTestCase
 from tests.services.agent_http_client import AgentHttpClient
+from tests.utils import wait
 from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler import agent_rpc
@@ -17,18 +17,6 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration, ClientCertificate
 
 RABBITMQ_GRACE_PERIOD = 1
-
-
-def wait(timeout=float('inf'), count=None, minwait=0.1, maxwait=1.0):
-    "Generate an exponentially backing-off enumeration with optional timeout or count."
-    timeout += time.time()
-    for index in itertools.islice(itertools.count(), count):
-        yield index
-        remaining = timeout - time.time()
-        if remaining < 0:
-            break
-        time.sleep(min(minwait, maxwait, remaining))
-        minwait *= 2
 
 
 class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
