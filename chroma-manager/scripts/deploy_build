@@ -25,9 +25,7 @@ BUILDER_URL=https://build.whamcloudlabs.com
 BUILD_JOB=${BUILD_JOB:-chroma-blessed}
 BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
 BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6.4"}
-BUILD_URL=$BUILDER_URL/job/$BUILD_JOB/$BUILD_NUMBER/$BUILD_TARGET
 BUNDLE_TARBALL=${BUNDLE_TARBALL:-ieel-1.0.0.tar.gz}
-BUNDLE_URL=$BUILD_URL/artifact/chroma-bundles/$BUNDLE_TARBALL
 BUILD_META_CHANGES=
 
 usage()
@@ -240,6 +238,9 @@ install_manager()
 }
 
 handle_options $*
+
+BUILD_URL=$BUILDER_URL/job/$BUILD_JOB/$BUILD_NUMBER/$BUILD_TARGET
+BUNDLE_URL=$BUILD_URL/artifact/chroma-bundles/$BUNDLE_TARBALL
 
 setup
 scrub_cluster
