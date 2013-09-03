@@ -402,6 +402,11 @@ class DmsetupTable(object):
             parent_block_device = self.block_devices.node_block_devices["/dev/mapper/%s" % parent_mpath_name]
             self.block_devices.block_device_nodes[block_device]['parent'] = parent_block_device
 
+        # Make a note of which VGs/LVs are in the table so that we can
+        # filter out nonlocal LVM components.
+        local_lvs = set()
+        local_vgs = set()
+
         for line in dm_lines:
             tokens = line.split()
             name = tokens[0].strip(":")
@@ -450,12 +455,14 @@ class DmsetupTable(object):
                     lv_name = lv_name.replace("--", "-")
                     try:
                         vg_lv_info = self.lvs[vg_name]
+                        local_vgs.add(vg_name)
                     except KeyError:
                         # Part before the hyphen is not a VG, so this can't be an LV
                         pass
                     else:
                         if lv_name in vg_lv_info:
                             _read_lv(block_device, lv_name, vg_name, devices)
+                            local_lvs.add(lv_name)
                             continue
                         else:
                             # It's not an LV, but it matched a VG, could it be an LV partition?
@@ -465,6 +472,7 @@ class DmsetupTable(object):
                                 if lv_name in vg_lv_info:
                                     # This could be an LV partition.
                                     _read_lv_partition(block_device, lv_name, vg_name)
+                                    local_lvs.add(lv_name)
                                     continue
                 else:
                     # If it isn't an LV or an LV partition, see if it looks like an mpath partition
@@ -492,3 +500,14 @@ class DmsetupTable(object):
                 }
             else:
                 continue
+
+        # Filter out nonlocal LVM components (HYD-2431)
+        for vg_name, vg_lvs in self.lvs.items():
+            if vg_name not in local_vgs:
+                del self.lvs[vg_name]
+                del self.vgs[vg_name]
+                continue
+
+            for lv_name in vg_lvs:
+                if lv_name not in local_lvs:
+                    del self.lvs[vg_name][lv_name]
