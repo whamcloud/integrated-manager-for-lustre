@@ -39,8 +39,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         fs = self.get_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]
 
-        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
-        self.assertListEqual(alerts, [])
+        self.wait_until_true(lambda: not self.get_list("/api/alert/", {'active': True, 'dismissed': False}))
 
         mgt = fs['mgt']
 
