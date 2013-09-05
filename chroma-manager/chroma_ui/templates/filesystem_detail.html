@@ -129,7 +129,25 @@
         bServerSide: true,
         fnRowCallback: generateCommandDropdown.dataTableCallback(6, _.identity, _.isEmpty),
         fnServerData: function (url, data, callback, settings) {
-          Api.get_datatables(url, data, callback, settings, {filesystem_id: that.id, kind: that.kind})
+          var tableInstance = this;
+
+          var callbacks = {
+            success: callback,
+            error: {
+              '404': function () {
+                // If we 404 here then the target we are looking for no longer exists.
+                // In this case we should empty the table.
+                var settings = tableInstance.fnSettings();
+
+                if (!settings.bDestroying) {
+                  settings.bDestroying = true;
+                  tableInstance.fnClearTable();
+                }
+              }
+            }
+          };
+
+          Api.get_datatables(url, data, callbacks, settings, {filesystem_id: that.id, kind: that.kind})
         },
         iDisplayLength: 10,
         sAjaxSource: 'target/'
@@ -145,6 +163,7 @@
 
       this.id = id || this.id;
 
+      this.$selector.fnSettings().bDestroying = false;
       this.$selector.fnClearTable();
     };
 

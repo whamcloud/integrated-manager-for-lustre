@@ -262,7 +262,17 @@ var Api = function() {
 
   /* Wrap API calls to tastypie paginated methods such that
      jquery.Datatables understands the resulting format */
-  var get_datatables = function(url, data, callback, settings, kwargs, datatable) {
+  var get_datatables = function(url, data, callbacks, settings, kwargs, datatable) {
+    var success = function () {},
+      error = null;
+
+    if (typeof callbacks !== 'function') {
+      success = callbacks.success;
+      error = callbacks.error;
+    } else {
+      success = callbacks
+    }
+
     if (kwargs == undefined) {
       kwargs = {}
     }
@@ -301,8 +311,8 @@ var Api = function() {
       datatables_data.aaData = data.objects;
       datatables_data.iTotalRecords = data.meta.total_count
       datatables_data.iTotalDisplayRecords = data.meta.total_count
-      callback(datatables_data);
-    }, null, false);
+      success(datatables_data);
+    }, error, false);
   };
 
   function lostContact ()
