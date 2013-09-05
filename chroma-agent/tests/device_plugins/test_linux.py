@@ -17,7 +17,7 @@ class MockDmsetupTable(DmsetupTable):
         self._parse_dm_table(dmsetup_data)
 
 
-class TestDmSetupParse(unittest.TestCase):
+class DummyDataTestCase(unittest.TestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/device_plugins/linux")
@@ -25,6 +25,8 @@ class TestDmSetupParse(unittest.TestCase):
     def load(self, filename):
         return open(os.path.join(self.test_root, filename)).read()
 
+
+class TestDmSetupParse(DummyDataTestCase):
     def test_dmsetup_table(self):
         """This is a regression test using data from a test/dev machine which includes LVs and multipath, all the data
            is just as it is when run through on Chroma 1.0.0.0: this really is a *regression* test rather than
@@ -53,6 +55,20 @@ class TestDmSetupParse(unittest.TestCase):
         """Minimal reproducer for HYD-1385.  The `dmsetup table` output is authentic, the other inputs are hand crafted to
            let it run through far enough to experience failure."""
         self._test_dmsetup('devices_HYD-1390.txt', 'dmsetup_HYD-1390.txt', 'mpaths_HYD-1390.txt')
+
+
+class TestNonLocalLvmComponents(DummyDataTestCase):
+    def test_HYD_2431(self):
+        devices_data = json.loads(self.load('devices_HYD-2431.txt'))
+        dmsetup_data = self.load('dmsetup_HYD-2431.txt')
+
+        actual_lvs = MockDmsetupTable(dmsetup_data, devices_data).lvs
+        expected_lvs = json.loads(self.load('lvs_HYD-2431.txt'))
+        self.assertDictEqual(actual_lvs, expected_lvs)
+
+        actual_vgs = MockDmsetupTable(dmsetup_data, devices_data).vgs
+        expected_vgs = json.loads(self.load('vgs_HYD-2431.txt'))
+        self.assertDictEqual(actual_vgs, expected_vgs)
 
 
 class TestLocalFilesystem(unittest.TestCase):

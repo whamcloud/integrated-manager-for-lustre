@@ -1,0 +1,2 @@
+vg_mneme-lv_swap: 0 4128768 linear 252:2 57755648
+vg_mneme-lv_root: 0 57753600 linear 252:2 2048

@@ -1,0 +1,16 @@
+{
+  "vg_mneme": {
+    "lv_root": {
+      "block_device": "253:0",
+      "size": 29569843200,
+      "name": "lv_root",
+      "uuid": "HfpUSR-Cotk-Znli-je36-Pp1a-QYmF-J8K0OU"
+    },
+    "lv_swap": {
+      "block_device": "253:1",
+      "size": 2113929216,
+      "name": "lv_swap",
+      "uuid": "2o8rPx-R0be-e3Rk-g5zn-K2UT-6uZ0-KqvR9k"
+    }
+  }
+}
