@@ -28,6 +28,9 @@ WARNING:
 """
 import logging
 from chroma_core.lib.storage_plugin.api.resources import LogicalDrive, LogicalDriveSlice
+
+from chroma_core.lib.storage_plugin.query import ResourceQuery
+
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
@@ -306,6 +309,17 @@ class ResourceManager(object):
                 del self._sessions[scannable_id]
 
             session = PluginSession(scannable_id, update_period)
+
+            try:
+                # If this returns a BaseStorageResource such as
+                # PluginAgentResources, with a host_id
+                # set it in the session for later use.
+                resource = ResourceQuery().get_resource(session.scannable_id)
+                if resource and hasattr(resource, 'host_id'):
+                    session.host_id = resource.host_id
+            except BaseStorageResource.DoesNotExist:
+                pass
+
             self._sessions[scannable_id] = session
             self._persist_new_resources(session, initial_resources)
             self._cull_lost_resources(session, initial_resources)
@@ -1228,7 +1242,12 @@ class ResourceManager(object):
             if created:
                 # Record a user-visible event
                 log.debug("ResourceManager._persist_new_resource[%s] %s %s %s" % (session.scannable_id, created, record.pk, resource._handle))
-                StorageResourceLearnEvent(severity = logging.INFO, storage_resource = record).save()
+
+                event = StorageResourceLearnEvent(severity = logging.INFO,
+                    storage_resource = record)
+                if hasattr(session, 'host_id'):
+                    event.host_id = session.host_id
+                event.save()
 
             creations[resource] = (record, created)
 
