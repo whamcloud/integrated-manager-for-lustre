@@ -5,6 +5,7 @@ from tests.selenium.views.conf_param_dialog import ConfParamDialog
 from tests.selenium.views.filesystem import Filesystem
 from tests.selenium.views.edit_filesystem import EditFilesystem
 from tests.selenium.views.volumes import Volumes
+from tests.selenium.utils.element import find_visible_element_by_css_selector
 
 from utils.sample_data import Testdata
 
@@ -244,6 +245,7 @@ class TestEditFilesystem(SeleniumBaseTestCase):
         self.edit_filesystem_page.set_state('removed')
         list_view = Filesystem(self.driver)
         self.assertTrue(list_view.visible)
+        self.assertFalse(find_visible_element_by_css_selector(self.driver, "div.blockUI.blockMsg.blockPage"))
 
     def test_stop_start_mdt(self):
         self.edit_filesystem_page.mdt_set_state("%s-MDT0000" % self.filesystem_name, "unmounted")
