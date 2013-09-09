@@ -25,7 +25,7 @@ import threading
 import Queue
 
 from chroma_core.services.log import log_register
-from chroma_core.models import PowerControlDevice, PowerControlDeviceUnavailableAlert
+from chroma_core.models import PowerControlDevice, PowerControlDeviceUnavailableAlert, IpmiBmcUnavailableAlert
 
 
 log = log_register(__name__.split('.')[-1])
@@ -59,37 +59,51 @@ class PowerDeviceMonitor(threading.Thread):
             if django.db.connection.connection:
                 django.db.connection.close()
 
+    def _run_manager_tasks(self):
+        try:
+            task, kwargs = self._manager.get_monitor_tasks(self.device.sockaddr).get_nowait()
+            log.debug("Found task for %s:%s: %s" % (self.device.sockaddr + tuple([task])))
+            if task == "stop":
+                self.stop()
+            else:
+                getattr(self._manager, task)(**kwargs)
+            log.debug("Ran %s for %s:%s" % (tuple([task]) + self.device.sockaddr))
+        except Queue.Empty:
+            pass
+        except PowerControlDevice.DoesNotExist:
+            log.error("Attempted to run %s on %s, but it no longer exists" % (task, self.device))
+            self.stop()
+        except Exception, e:
+            log.error("Caught and re-raising exception: %s" % traceback.format_exc())
+            raise e
+
+    def _check_monitored_device(self):
+        if self.device.is_ipmi:
+            # Check to see if we can log into each BMC and that they're
+            # responsive to commands.
+            bmc_states = self._manager.check_bmc_availability(self.device)
+            for bmc in bmc_states:
+                if bmc_states[bmc] or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
+                    IpmiBmcUnavailableAlert.notify(bmc, not bmc_states[bmc])
+        else:
+            # Check to see if we can log into the PDU and that it's
+            # responsive to commands.
+            available = self._manager.check_device_availability(self.device)
+            if available or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
+                PowerControlDeviceUnavailableAlert.notify(self.device, not available)
+            log.debug("Checked on %s:%s: %s" % (self.device.sockaddr + tuple(["available" if available else "unavailable"])))
+
     def _run(self):
         log.info("Starting monitor for %s" % self.device)
 
         while not self._stopping.is_set():
             # Check to see if the manager has scheduled something for
             # us to do besides monitoring.
-            try:
-                task, kwargs = self._manager.get_monitor_tasks(self.device.sockaddr).get_nowait()
-                log.debug("Found task for %s:%s: %s" % (self.device.sockaddr + tuple([task])))
-                if task == "stop":
-                    self.stop()
-                else:
-                    getattr(self._manager, task)(**kwargs)
-                log.debug("Ran %s for %s:%s" % (tuple([task]) + self.device.sockaddr))
-            except Queue.Empty:
-                pass
-            except PowerControlDevice.DoesNotExist:
-                log.error("Attempted to run %s on %s, but it no longer exists" % (task, self.device))
-                self.stop()
-            except Exception, e:
-                log.error("Caught and re-raising exception: %s" % traceback.format_exc())
-                raise e
+            self._run_manager_tasks()
 
             if self._interval_ctr >= MONITORING_INTERVAL:
                 self._interval_ctr = 0
-                # Check to see if we can log into the PDU and that it's
-                # responsive to commands.
-                available = self._manager.check_device_availability(self.device)
-                if available or PowerControlDevice.objects.filter(id=self.device.id, not_deleted=True).exists():
-                    PowerControlDeviceUnavailableAlert.notify(self.device, not available)
-                log.debug("Checked on %s:%s: %s" % (self.device.sockaddr + tuple(["available" if available else "unavailable"])))
+                self._check_monitored_device()
 
             self._interval_ctr += 1
             self._stopping.wait(timeout = 1)
