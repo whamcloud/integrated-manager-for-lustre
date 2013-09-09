@@ -77,6 +77,8 @@ class TestCreateHostAPI(ChromaApiTestCase):
     """Test HostResource and TestHostResource passing through SSH auth
     arguments in the expected form to JobSchedulerClient.
     """
+    def __init__(self, method, username='admin', **kwargs):
+        ChromaApiTestCase.__init__(self, method, username=username, **kwargs)
 
     def setUp(self):
         super(TestCreateHostAPI, self).setUp()

@@ -242,7 +242,7 @@ class HostTestResource(Resource):
         detail_allowed_methods = []
         resource_name = 'test_host'
         authentication = AnonymousAuthentication()
-        authorization = PermissionAuthorization('add_managedhost')
+        authorization = PermissionAuthorization('chroma_core.add_managedhost')
         object_class = dict
         validation = HostTestValidation()
 
