@@ -123,18 +123,37 @@ class PowerControlManager(CommandLine):
 
         raise RuntimeError("Attempt to re-register unregistered device: %s" % device_id)
 
+    def check_bmc_availability(self, device):
+        if not device.is_ipmi:
+            raise RuntimeError("Can't check BMC status on non-IPMI device: %s" % device)
+
+        if not device.all_outlets_known:
+            log.info("Scheduling query on %s:%s to resolve unknown outlet states." % device.sockaddr)
+            self.add_monitor_task(device.sockaddr, ('query_device_outlets', {'device_id': device.id}))
+
+        with self._device_locks[device.sockaddr]:
+            bmc_states = {}
+            for outlet in device.outlets.all():
+                rc, out, err = self.shell(device.monitor_command(outlet.identifier))
+                if rc == 0:
+                    bmc_states[outlet] = True
+                else:
+                    log.error("BMC %s did not respond to monitor: %s %s" % (outlet.identifier, out, err))
+                    bmc_states[outlet] = False
+
+            return bmc_states
+
     def check_device_availability(self, device):
+        if device.is_ipmi:
+            raise RuntimeError("Can't check PDU status on IPMI device: %s" % device)
+
         if not device.all_outlets_known:
             log.info("Scheduling query on %s:%s to resolve unknown outlet states." % device.sockaddr)
             self.add_monitor_task(device.sockaddr, ('query_device_outlets', {'device_id': device.id}))
 
         with self._device_locks[device.sockaddr]:
             try:
-                if device.is_ipmi:
-                    for outlet in device.outlets.all():
-                        self.try_shell(device.monitor_command(outlet.identifier))
-                else:
-                    self.try_shell(device.monitor_command())
+                self.try_shell(device.monitor_command())
             except CommandError, e:
                 log.error("Device %s did not respond to monitor: %s" % (device, e))
                 return False

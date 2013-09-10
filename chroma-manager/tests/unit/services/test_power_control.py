@@ -3,9 +3,9 @@ import mock
 
 from django.test import TestCase
 
-from chroma_core.models import PowerControlType, PowerControlDevice
+from chroma_core.models.power_control import PowerControlType, PowerControlDevice, PowerControlDeviceOutlet
 from chroma_core.services.power_control.manager import PowerControlManager
-from chroma_core.services.power_control.monitor_daemon import PowerMonitorDaemon
+from chroma_core.services.power_control.monitor_daemon import PowerMonitorDaemon, PowerDeviceMonitor
 
 from tests.integration.core.constants import TEST_TIMEOUT
 
@@ -106,3 +106,65 @@ class PowerMonitoringTests(PowerControlTestCase):
         self.power_manager.reregister_device(pdu.id)
 
         self.wait_for_assert(lambda: self.assertNotEqual(start_threads, threading.enumerate()))
+
+
+@mock.patch('chroma_core.services.power_control.rpc.PowerControlRpc')
+class MonitorThreadTests(TestCase):
+    device_checks_should_fail = False
+
+    def _check_device_availability(self, device):
+        return self.device_checks_should_fail
+
+    def _check_bmc_availability(self, device):
+        return dict([(o, self.device_checks_should_fail) for o in device.outlets.all()])
+
+    def setUp(self):
+        patcher = mock.patch.object(PowerControlManager, 'check_device_availability', self._check_device_availability)
+        patcher.start()
+
+        patcher = mock.patch.object(PowerControlManager, 'check_bmc_availability', self._check_bmc_availability)
+        patcher.start()
+
+        self.addCleanup(mock.patch.stopall)
+
+    @mock.patch('chroma_core.models.power_control.PowerControlDeviceUnavailableAlert.notify')
+    def test_pdu_monitoring(self, mock_notify, mock_rpc):
+        # Grab the first non-IPMI type
+        type = PowerControlType.objects.filter(max_outlets__gt = 0)[0]
+        device = PowerControlDevice.objects.create(device_type = type,
+                                                   address = 'localhost')
+        manager = PowerControlManager()
+        monitor = PowerDeviceMonitor(device, manager)
+
+        # Check that an OK device notifies OK
+        monitor._check_monitored_device()
+        mock_notify.assert_called_with(device, True)
+
+        # Check that an unavailable device notifies not OK
+        self.device_checks_should_fail = True
+        monitor._check_monitored_device()
+        mock_notify.assert_called_with(device, False)
+
+    @mock.patch('chroma_core.models.power_control.IpmiBmcUnavailableAlert.notify')
+    def test_bmc_monitoring(self, mock_notify, mock_rpc):
+        # Grab an IPMI-ish type
+        type = PowerControlType.objects.filter(max_outlets = 0)[0]
+        device = PowerControlDevice.objects.create(device_type = type,
+                                                   address = 'localhost')
+        bmc = PowerControlDeviceOutlet.objects.create(device = device,
+                                                      identifier = "localhost")
+        manager = PowerControlManager()
+        monitor = PowerDeviceMonitor(device, manager)
+
+        # Check that an OK BMC notifies OK
+        monitor._check_monitored_device()
+        # Note that the notification goes to the BMC (PowerControlDeviceOutlet
+        # instance), not the pseudo-PDU device
+        mock_notify.assert_called_with(bmc, True)
+
+        # Check that an unavailable BMC notifies not OK
+        self.device_checks_should_fail = True
+        monitor._check_monitored_device()
+        # Note that the notification goes to the BMC (PowerControlDeviceOutlet
+        # instance), not the pseudo-PDU device
+        mock_notify.assert_called_with(bmc, False)

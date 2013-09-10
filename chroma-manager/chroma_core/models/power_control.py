@@ -156,6 +156,26 @@ class PowerControlDeviceUnavailableAlert(AlertState):
             severity = logging.INFO)
 
 
+class IpmiBmcUnavailableAlert(AlertState):
+    # This is WARNING because if a power control device is out
+    # of touch it may be behaving in an undefined way, therefore
+    # may be unable to participate in a failover operation, resulting
+    # in a reduced level of filesystem availability.
+    default_severity = logging.WARNING
+
+    class Meta:
+        app_label = 'chroma_core'
+
+    def message(self):
+        return "Unable to monitor BMC %s on server %s" % (self.alert_item, self.alert_item.host)
+
+    def end_event(self):
+        return AlertEvent(
+            message_str = "Monitoring resumed for BMC %s on server %s" % (self.alert_item, self.alert_item.host),
+            alert = self,
+            severity = logging.INFO)
+
+
 class PowerControlDevice(DeletablePowerControlModel):
     device_type = models.ForeignKey('PowerControlType', related_name = 'instances')
     name = models.CharField(null = False, blank = True, max_length = 50,
@@ -378,7 +398,7 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
             return "ON" if self.has_power else "OFF"
 
     def __str__(self):
-        return "%s: %s" % (self.identifier, self.power_state)
+        return self.identifier
 
     class Meta:
         app_label = 'chroma_core'
