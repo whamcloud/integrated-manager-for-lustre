@@ -44,16 +44,6 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 
-# The location of the chrome profiles depending on OS
-CHROME_USER_DATA_DIR_LOC_LINUX = os.path.join(os.path.expanduser('~'), ".config/")
-CHROME_USER_DATA_DIR_LOC_OSX = os.path.join(os.path.expanduser('~'), "Library/Application Support/Google/")
-
-# The Chrome profile to use/create for running selenium tests.
-# We don't want to use the Default profile as then devs can't
-# have their regular browser open at the same time as running
-# selenium tests.
-CHROME_TEST_PROFILE = "ChromeChromaTest"
-
 
 class SeleniumBaseTestCase(TestCase):
     """This is the base class for the test classes.
@@ -91,20 +81,7 @@ class SeleniumBaseTestCase(TestCase):
                 options.add_argument('log-level=""')  # log-level interferes with v=1
                 options.add_argument('v=1000')  # Get all levels of vlogs
 
-                if os.path.exists(CHROME_USER_DATA_DIR_LOC_LINUX):
-                    options.add_argument('user-data-dir=%s' % os.path.join(CHROME_USER_DATA_DIR_LOC_LINUX, CHROME_TEST_PROFILE))
-                elif os.path.exists(CHROME_USER_DATA_DIR_LOC_OSX):
-                    options.add_argument('user-data-dir=%s' % os.path.join(CHROME_USER_DATA_DIR_LOC_OSX, CHROME_TEST_PROFILE))
-                else:
-                    raise RuntimeError(
-                        "Did not find the expected location for Chrome profiles at either '%s' or '%s'" % (
-                            CHROME_USER_DATA_DIR_LOC_LINUX,
-                            CHROME_USER_DATA_DIR_LOC_OSX
-                        )
-                    )
-                options.add_argument('incognito')  # To clear state between test runs since sharing a profile now
-
-                self.driver = getattr(webdriver, browser)(chrome_options=options)
+                self.driver = getattr(webdriver, browser)(chrome_options=options, service_args=["--verbose", "--log-path=chromedriver.log"])
             elif browser == 'Firefox':
                 self.driver = webdriver.Firefox()
 
@@ -272,19 +249,16 @@ class SeleniumBaseTestCase(TestCase):
             if not os.path.exists(failed_browser_log_dir):
                 os.makedirs(failed_browser_log_dir)
 
-            filename = os.path.join(
+            new_filename = os.path.join(
                 failed_browser_log_dir,
-                "%s_%s_chrome_debug.log" % (
+                "%s_%s_chromedriver.log" % (
                     self.id(),
                     datetime.datetime.now().isoformat()
                 )
             )
 
-            self.log.debug("Saving log file to %s" % filename)
+            self.log.debug("Saving log file to %s" % new_filename)
             try:
-                shutil.copy(os.path.join(CHROME_USER_DATA_DIR_LOC_LINUX, CHROME_TEST_PROFILE, "chrome_debug.log"), filename)
+                shutil.copy(os.path.join(os.getcwd(), "chromedriver.log"), new_filename)
             except:
-                try:
-                    shutil.copy(os.path.join(CHROME_USER_DATA_DIR_LOC_OSX, CHROME_TEST_PROFILE, "chrome_debug.log"), filename)
-                except:
-                    raise RuntimeError("Did not find Chrome user-data-dir in the expected location.")
+                self.log.error("Did not find chromedriver.log in the expected location. Skipping.")

@@ -21,8 +21,6 @@ class PipInstallRequirements(object):
         self.pip_packages_dir = pip_packages_dir
 
     def install(self):
-        # Prepare the requirements.txt file
-        subprocess.check_call(['make', 'requirements'])
         requirements = open('requirements.txt')
 
         virtual_env = os.environ.get('VIRTUAL_ENV')

@@ -9,8 +9,81 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/sel
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+GOOGLE_REPO=${GOOGLE_REPO:-"http://mgmt1/cobbler/repo_mirror/google_chrome-stable-x86_64"}  # If not on Toro, can pass in http://dl.google.com/linux/chrome/rpm/stable/x86_64
 
 echo "Beginning installation and setup on $CHROMA_MANAGER..."
+
+ssh root@$TEST_RUNNER <<EOF
+set -ex
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar python-virtualenv python-devel gcc make tigervnc-server
+yum update --setopt=retries=50 --setopt=timeout=180 -y nss
+
+if [ ! -z "$GOOGLE_REPO" ]; then
+  # Install Google Chrome
+  cat << EOC >> /etc/yum.repos.d/google.repo
+[google]
+name=Google
+baseurl=$GOOGLE_REPO
+enabled=0
+gpgcheck=0
+retries=50
+timeout=180
+EOC
+  yum --enablerepo=google install -y google-chrome-stable
+fi
+
+# Create a user so we can run the tests as non-root
+useradd chromatest
+su chromatest <<EOC
+mkdir -p ~/.ssh
+touch ~/.ssh/authorized_keys
+EOC
+cat .ssh/id_rsa.pub >> /home/chromatest/.ssh/authorized_keys
+cp .ssh/* ~chromatest/.ssh/
+chown chromatest.chromatest ~chromatest/.ssh/*
+chmod 600 ~chromatest/.ssh/*
+EOF
+
+tar -czf ../chroma.tgz ./chroma/
+scp ../chroma.tgz chromatest@$TEST_RUNNER:~
+tar -czf ../pip_cache.tgz ../pip_cache/
+scp ../pip_cache.tgz chromatest@$TEST_RUNNER:~
+
+ssh chromatest@$TEST_RUNNER <<"EOF"
+set -ex
+
+# Install Chromedriver
+wget http://chromedriver.storage.googleapis.com/2.4/chromedriver_linux64.zip
+unzip chromedriver_linux64.zip
+mkdir $HOME/bin
+mv chromedriver $HOME/bin/chromedriver
+
+# Set up the virtualenv to run the tests in
+tar -xzf ~/pip_cache.tgz
+mkdir chroma_test_env
+cd chroma_test_env
+virtualenv --no-site-packages .
+source bin/activate
+tar -xzf ~/chroma.tgz
+cd chroma/chroma-manager
+make requirements
+
+# Remove requirements not compatible with python 2.7,
+# not needed for running the tests anyways
+for package in importlib greenlet gevent psycopg2 pygraphviz; do
+  sed -i "s/^.*$package.*$//g" requirements.txt
+done
+
+# Install the remaining requirements
+python tests/utils/pip_install_requirements.py ~/pip_cache
+
+# Configure VNC server
+cd ~
+vncpasswd <<EOC
+somepassword
+somepassword
+EOC
+EOF
 
 # Install and setup chroma manager
 scp ../$ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp

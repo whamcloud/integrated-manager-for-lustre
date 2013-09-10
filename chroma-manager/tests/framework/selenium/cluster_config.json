@@ -62,5 +62,10 @@
             "build_number": BUILD_JOB_BUILD_NUMBER
         }
     },
+    "test_runners": [
+        {
+            "distro": "fc18"
+        }
+    ],
     "provision": true
 }
