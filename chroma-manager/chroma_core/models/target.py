@@ -201,7 +201,7 @@ class ManagedTarget(StatefulObject):
         job_log.debug("mt.set_state %s %s" % (state, intentional))
         super(ManagedTarget, self).set_state(state, intentional)
         if intentional:
-            TargetOfflineAlert.notify_quiet(self, self.state == 'unmounted')
+            TargetOfflineAlert.notify_warning(self, self.state == 'unmounted')
         else:
             TargetOfflineAlert.notify(self, self.state == 'unmounted')
 

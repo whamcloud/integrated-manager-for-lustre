@@ -263,7 +263,7 @@ class AlertResource(SeverityResource):
                   'severity', 'alert_type']
         filtering = {'active': ['exact'],
                      'dismissed': ['exact'],
-                     'severity': ['in'],
+                     'severity': ['in', 'exact'],
                      'begin': ['gte'],
                      'alert_type': ['exact', 'in'],
                      'alert_item_id': ['exact', 'in'],

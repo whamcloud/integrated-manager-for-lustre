@@ -39,13 +39,14 @@ class TestAlerting(ChromaIntegrationTestCase):
         fs = self.get_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]
 
-        self.wait_until_true(lambda: not self.get_list("/api/alert/", {'active': True, 'dismissed': False}))
+        self.wait_until_true(lambda: not self.get_list("/api/alert/",
+            {'active': True, 'severity': 'ERROR'}))
 
         mgt = fs['mgt']
 
-        # Check the alert is raised when the target unexpectedly stops
+        # Check the ERROR alert is raised when the target unexpectedly stops
         self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
-        self.wait_for_assert(lambda: self.assertHasAlert(mgt['resource_uri']))
+        self.wait_for_assert(lambda: self.assertHasAlert(mgt['resource_uri'], of_severity='ERROR'))
         self.wait_for_assert(lambda: self.assertState(mgt['resource_uri'], 'unmounted'))
         target_offline_alert = self.get_alert(mgt['resource_uri'], alert_type="TargetOfflineAlert")
         self.assertEqual(target_offline_alert['severity'], 'ERROR')
@@ -58,7 +59,14 @@ class TestAlerting(ChromaIntegrationTestCase):
 
         # Check that no alert is raised when intentionally stopping the target
         self.set_state(mgt['resource_uri'], 'unmounted')
-        self.assertNoAlerts(mgt['resource_uri'])
+
+        # Expects no alerts?  This code above WILL generate alerts.  It used
+        # to generate them in the dismissed state, and this method would ignore
+        # dismissed alerts.  The system now never creates dismissed alerts.
+        # So, this method instead checks for any alerts with severity ERROR,
+        # since the new code that used to create alerts dismissed will
+        # now create the alerts in WARNING
+        self.assertNoAlerts(mgt['resource_uri'], of_severity='ERROR')
 
         # Stop the filesystem so that we can play with the host
         self.set_state(fs['resource_uri'], 'stopped')
@@ -67,18 +75,18 @@ class TestAlerting(ChromaIntegrationTestCase):
         host = self.get_by_uri(host['resource_uri'])
         self.assertEqual(host['state'], 'lnet_up')
         self.remote_operations.stop_lnet(host['fqdn'])
-        self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri']))
+        self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'], of_severity='INFO'))
         self.wait_for_assert(lambda: self.assertState(host['resource_uri'], 'lnet_down'))
         lnet_offline_alert = self.get_alert(host['resource_uri'], alert_type="LNetOfflineAlert")
         self.assertEqual(lnet_offline_alert['severity'], 'INFO')
 
         # Check that alert is dropped when lnet is brought back up
         self.set_state(host['resource_uri'], 'lnet_up')
-        self.assertNoAlerts(host['resource_uri'])
+        self.assertNoAlerts(host['resource_uri'], of_severity='ERROR')
 
         # Check that no alert is raised when intentionally stopping lnet
         self.set_state(host['resource_uri'], 'lnet_down')
-        self.assertNoAlerts(host['resource_uri'])
+        self.assertNoAlerts(host['resource_uri'], of_severity='ERROR')
 
         # Raise all the alerts we can
         self.set_state("/api/filesystem/%s/" % fs_id, 'available')

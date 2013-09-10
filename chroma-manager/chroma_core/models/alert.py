@@ -142,36 +142,52 @@ class AlertState(models.Model):
 
     @classmethod
     def notify(cls, alert_item, active, **kwargs):
-        return cls._notify(alert_item, active, False, **kwargs)
+        """Notify an alert in the default severity level for that alert"""
+
+        return cls._notify(alert_item, active, **kwargs)
 
     @classmethod
-    def notify_quiet(cls, alert_item, active, **kwargs):
-        return cls._notify(alert_item, active, True, **kwargs)
+    def notify_warning(cls, alert_item, active, **kwargs):
+        """Notify an alert in at most the WARNING severity level"""
+
+        kwargs['attrs_to_save'] = {'severity': min(
+            cls.default_severity, logging.WARNING)}
+        return cls._notify(alert_item, active, **kwargs)
 
     @classmethod
-    def _notify(cls, alert_item, active, dismissed, **kwargs):
+    def _notify(cls, alert_item, active, **kwargs):
         if hasattr(alert_item, 'content_type'):
             alert_item = alert_item.downcast()
 
         if active:
-            return cls.high(alert_item, dismissed, **kwargs)
+            return cls.high(alert_item, **kwargs)
         else:
             return cls.low(alert_item, **kwargs)
 
     @classmethod
-    def high(cls, alert_item, dismissed, **kwargs):
+    def high(cls, alert_item, **kwargs):
         if hasattr(alert_item, 'not_deleted') and alert_item.not_deleted != True:
             return None
 
         from django.db import IntegrityError
         now = django_now()
+
+        # Prepare data to be saved with alert, but not effect the get() below
+        # e.g. Only one alert type per alert item can be active, so we don't
+        # need to filter on severity.
+        attrs_to_save = kwargs.pop('attrs_to_save', None)
+
         try:
             alert_state = cls.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now
             alert_state.save()
         except cls.DoesNotExist:
             from chroma_core.lib.job import job_log
-            job_log.info("AlertState: Raised %s on %s" % (cls, alert_item))
+
+            if attrs_to_save is not None:
+                for attr, value in attrs_to_save.items():
+                    kwargs[attr] = value
+
             if not 'alert_type' in kwargs:
                 kwargs['alert_type'] = cls.__name__
             if not 'severity' in kwargs:
@@ -181,10 +197,14 @@ class AlertState(models.Model):
                     active = True,
                     begin = now,
                     end = now,
-                    dismissed = dismissed,
+                    dismissed = False,  # Users dismiss, not the software
                     alert_item = alert_item, **kwargs)
             try:
                 alert_state.save()
+                job_log.info("AlertState: Raised %s on %s "
+                             "at severity %s" % (cls,
+                                                 alert_state.alert_item,
+                                                 alert_state.severity))
             except IntegrityError, e:
                 job_log.warning("AlertState: IntegrityError %s saving %s : %s : %s" % (e, cls.__name__, alert_item, kwargs))
                 # Handle colliding inserts: drop out here, no need to update
@@ -196,6 +216,10 @@ class AlertState(models.Model):
     @classmethod
     def low(cls, alert_item, **kwargs):
         now = django_now()
+
+        # currently, no attrs are saved when an attr is lowered.
+        kwargs.pop('attrs_to_save', None)
+
         try:
             alert_state = cls.filter_by_item(alert_item).get(**kwargs)
             alert_state.end = now

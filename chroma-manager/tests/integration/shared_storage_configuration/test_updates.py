@@ -28,8 +28,8 @@ class TestUpdates(ChromaIntegrationTestCase):
 
         self.assertNotEqual(len(original_packages), 0)
 
-        # No alerts should be high at this point
-        self.assertNoAlerts(host['resource_uri'])
+        # No alerts ERROR should be high at this point
+        self.assertNoAlerts(host['resource_uri'], of_type='UpdatesAvailableAlert')
 
         # Subsequently chroma-manager is upgraded
         # =======================================
@@ -37,8 +37,10 @@ class TestUpdates(ChromaIntegrationTestCase):
 
         # The causes the agent to see higher versions of available packages, so an
         # alert is raised to indicate the need to upgrade
-        self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri']))
-        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
+        self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'],
+            of_type='UpdatesAvailableAlert'))
+        alerts = self.get_list("/api/alert/", {'active': True,
+                                               'alert_type': 'UpdatesAvailableAlert'})
 
         # Should be the only alert
         # FIXME HYD-2101 have to filter these alerts to avoid spurious ones.  Once that
@@ -75,7 +77,8 @@ class TestUpdates(ChromaIntegrationTestCase):
             'message': "Test update"
         }).json
         self.wait_for_command(self.chroma_manager, command['id'])
-        self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri']))
+        self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
+            of_type='UpdatesAvailableAlert'))
 
         # Check that a new package really did get installed
         for package_name, package_version in upgrade_packages.items():

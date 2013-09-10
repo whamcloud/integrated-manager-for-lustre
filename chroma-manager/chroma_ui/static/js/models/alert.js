@@ -31,11 +31,11 @@ angular.module('models').factory('alertModel', ['baseModel', 'STATES', function 
     params: {alertId: '@id'},
     methods: {
       /**
-       * @description Returns the state of the alert (which is always STATES.ERROR).
+       * @description Returns the severity of the alert as it's state.
        * @returns {string}
        */
       getState: function () {
-        return STATES.ERROR;
+        return this.severity;
       },
       getName: function () {
         return 'alert';

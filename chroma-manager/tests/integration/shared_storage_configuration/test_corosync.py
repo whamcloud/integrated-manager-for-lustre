@@ -25,7 +25,7 @@ class TestCorosync(ChromaIntegrationTestCase):
         """
         # Establish baseline for alerts
         start_alerts = self.get_list("/api/alert/", {'active': True,
-                                                     'dismissed': False})
+                                                     'severity': 'WARNING'})
 
         server_config_1 = self.TEST_SERVERS[0]
         server_config_2 = self.TEST_SERVERS[1]
@@ -39,9 +39,9 @@ class TestCorosync(ChromaIntegrationTestCase):
             return all([host['corosync_reported_up'] for host in hosts])
         self.wait_until_true(all_hosts_online)
 
-        # Check no new alerts - since nothing should be OFFLINE yet
+        # Check no new ERROR alerts - since nothing should be OFFLINE yet
         alerts = self.get_list("/api/alert/", {'active': True,
-                                               'dismissed': False})
+                                               'severity': 'WARNING'})
         self.assertListEqual(alerts, start_alerts)
 
         # Kill the second host
@@ -61,7 +61,7 @@ class TestCorosync(ChromaIntegrationTestCase):
         # Check that an alert was created (be specific to the 'is offline' alert
         # to avoid getting confused by 'lost contact' alerts)
         all_alerts = self.get_list("/api/alert/", {'active': True,
-                                               'dismissed': False})
+                                                   'severity': 'WARNING'})
         offline_alerts = [a for a in all_alerts if 'is offline' in a['message']]
         self.assertEqual(len(offline_alerts), 1,
                                "%s %s" % (len(all_alerts), len(offline_alerts)))

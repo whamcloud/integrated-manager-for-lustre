@@ -283,20 +283,42 @@ class ApiTestCase(UtilityTestCase):
 
         return command
 
-    def assertNoAlerts(self, uri):
-        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
+    def assertNoAlerts(self, uri, of_severity=None, of_type=None):
+        """Fail if alert_item (as tastypie uri) is found in any active alerts"""
+
+        # The intent of this method was to check for no alerts, but it was
+        # really just checking no active alerts that have not been dismissed.
+        # callers of this code, like test_alerting.py expected no alerts of
+        # this type.  Now you can't have alerts in that state.  Users dismiss
+        # alerts.  The code that created dismissed alerts, now creates alerts
+        # in the warning state.
+        # TODO: fix each test that calls this method to be sure the proper
+        # state is being tested.
+
+        data = {'active': True}
+        if of_type is not None:
+            data['alert_type'] = of_type
+        if of_severity is not None:  # Severity should be 'ERROR', 'WARNING', 'INFO'
+            data['severity'] = of_severity
+        alerts = self.get_list("/api/alert/", data)
         self.assertNotIn(uri, [a['alert_item'] for a in alerts])
 
-    def assertHasAlert(self, uri):
-        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
-        self.assertIn(uri, [a['alert_item'] for a in alerts])
+    def assertHasAlert(self, uri, of_severity=None, of_type=None):
+        data = {'active': True}
+        if of_severity is not None:  # Severity should be 'ERROR', 'WARNING', 'INFO'
+            data['severity'] = of_severity
+        if of_type is not None:
+            data['alert_type'] = of_type
+        alerts = self.get_list("/api/alert/", data)
+        self.assertIn(uri, [a['alert_item'] for a in alerts], [a['alert_item'] for a in alerts])
 
     def get_alert(self, uri, regex=None, alert_type=None):
         """Given that there is an active alert for object `uri` whose
            message matches `regex`, return it.  Raise an AssertionError
            if no such alert exists"""
 
-        all_alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False, 'limit': 0})
+        all_alerts = self.get_list("/api/alert/", {'active': True,
+                                                   'limit': 0})
         alerts = [a for a in all_alerts if a['alert_item'] == uri]
         if not alerts:
             raise AssertionError("No alerts for object %s (alerts are %s)" % (uri, all_alerts))

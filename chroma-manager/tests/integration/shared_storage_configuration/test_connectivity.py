@@ -1,4 +1,3 @@
-
 import time
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from django.utils.unittest import skipIf
@@ -36,21 +35,22 @@ class TestConnectivity(ChromaIntegrationTestCase):
         self.set_state(host['resource_uri'], 'lnet_up')
         self.set_state(host['resource_uri'], 'lnet_down')
 
-        # Initially there should be no alerts
-        alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
+        # Initially there should be no WARNING alerts for lost contact
+        alerts = self.get_list("/api/alert/", {'active': True,
+                                               'severity': 'WARNING'})
         self.assertListEqual([], alerts)
 
         # Enter the failure mode
         start_failure_cb()
         try:
             self.wait_until_true(
-                lambda: len(self.get_list("/api/alert/", {'active': True, 'dismissed': False})) > 0,
+                lambda: len(self.get_list("/api/alert/", {'active': True, 'severity': 'WARNING'})) > 0,
                 time_to_failure  # Long enough to time out and notice timing out
             )
 
             # A 'Lost contact' alert should be raised
             self.assertHasAlert(host['resource_uri'])
-            alerts = self.get_list("/api/alert/", {'active': True, 'dismissed': False})
+            alerts = self.get_list("/api/alert/", {'active': True, 'severity': 'WARNING'})
             self.assertEqual(len(alerts), 1)
             self.assertRegexpMatches(alerts[0]['message'], "Lost contact with host.*")
 
@@ -63,7 +63,7 @@ class TestConnectivity(ChromaIntegrationTestCase):
             self.remote_operations.fail_connections(False)
 
         # The alert should go away
-        self.wait_until_true(lambda: len(self.get_list("/api/alert/", {'active': True, 'dismissed': False})) == 0,
+        self.wait_until_true(lambda: len(self.get_list("/api/alert/", {'active': True, 'severity': 'WARNING'})) == 0,
                              MAX_AGENT_BACKOFF * 2)  # The agent may have backed off up to its max backoff
 
         # The alert goes away as soon as an agent GET gets through, but the action_runner session might

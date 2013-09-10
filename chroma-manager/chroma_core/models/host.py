@@ -222,7 +222,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
         super(ManagedHost, self).set_state(state, intentional)
         if intentional:
-            LNetOfflineAlert.notify_quiet(self, self.state != 'lnet_up')
+            LNetOfflineAlert.notify_warning(self, self.state != 'lnet_up')
         else:
             LNetOfflineAlert.notify(self, self.state != 'lnet_up')
 
@@ -1522,7 +1522,8 @@ class LNetNidsChangedAlert(AlertState):
     default_severity = logging.WARNING
 
     def message(self):
-        return "NIDs changed on server %s" % self.alert_item
+        msg = "NIDs changed on server %s - see manual for details."
+        return  msg % self.alert_item
 
     class Meta:
         app_label = 'chroma_core'
