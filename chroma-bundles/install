@@ -21,6 +21,7 @@ import xmlrpclib
 import httplib
 import platform
 import itertools
+import traceback
 
 
 PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
@@ -58,7 +59,7 @@ def _check_platform():
                                          + platform.architecture())
     if detected_platform not in SUPPORTED_PLATFORMS:
         log.error("%s is not a supported platform for %s. Please refer to the installation guide for a list of supported platforms." % (detected_platform, PRODUCT_NAME))
-        sys.exit(1)
+        sys.exit(-1)
 
 def _display_eula():
     try:
@@ -86,9 +87,11 @@ def _mkdir_p(path):
         os.makedirs(path)
     except OSError, e:
         if e.errno != errno.EEXIST:
+            log.debug("Unhandled exception: %s" % traceback.format_exc())
             raise e
         elif e.errno == errno.EEXIST and not os.path.isdir(path):
-            raise RuntimeError("%s exists but is not a directory" % path)
+            log.error("%s exists but is not a directory" % path)
+            sys.exit(-1)
 
 
 def spinner(p):
@@ -119,10 +122,27 @@ def _run(args, passthrough=False, drain_stdin=False):
     if drain_stdin:
         while len(select.select([sys.stdin.fileno()], [], [], 0.0)[0])>0:
             os.read(sys.stdin.fileno(), 4096)
-    if passthrough:
-        p = subprocess.Popen(args)
-    else:
-        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # As a general rule, any error condition which is likely to result in an
+    # exception MUST be wrapped in an exception handler so that we never
+    # present a traceback to the end user.
+    try:
+        if passthrough:
+            p = subprocess.Popen(args)
+        else:
+            p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError, e:
+        log.debug("OSError: %s" % traceback.format_exc())
+        if e.errno is errno.ENOENT:
+            log.error("Unable to execute the subcommand '%s' because it doesn't exist. (Installation failure?)" % args[0])
+
+        log.error("Please check %s for more details about the problem and retry the installation after resolving the issue or contacting support." % LOG_FILE)
+        sys.exit(-1)
+    except Exception:
+        log.debug("Unhandled exception: %s" % traceback.format_exc())
+        log.error("Unhandled exception. Please contact support with details from %s." % LOG_FILE)
+        sys.exit(-1)
+
     stdout, stderr = p.communicate()
     rc = p.returncode
     log.debug("rc=%s" % rc)
@@ -165,8 +185,20 @@ def _setup_logging():
 def _unpack_repo(tarball_path, destination):
     log.debug("Extracting %s to %s" % (tarball_path, destination))
     _mkdir_p(destination)
-    archive = tarfile.open(tarball_path, "r:gz")
-    archive.extractall(destination)
+
+    try:
+        archive = tarfile.open(tarball_path, "r:gz")
+    except tarfile.TarError, e:
+        log.debug("exception in tarfile.open(): %s" % traceback.format_exc())
+        log.error("Error opening %s: %s" % tarball_path, e.message)
+        sys.exit(-1)
+
+    try:
+        archive.extractall(destination)
+    except tarfile.TarError, e:
+        log.debug("exception in archive.extractall(): %s" % traceback.format_exc())
+        log.error("Error extracting %s to %s: %s" % tarball_path, destination, e.message)
+        sys.exit(-1)
 
 
 def _print_version(version = None, release = None):
@@ -275,6 +307,8 @@ enable=0
 def _install_or_upgrade_packages():
     manager_repo_dir = None
     manager_repo_file = None
+    old_version, old_release = _get_version()
+
     try:
         manager_repo_dir, manager_repo_file = _create_manager_repo()
         log.info("{action} Intel(R) Manager for Lustre*".format(action="Upgrading" \
@@ -290,6 +324,29 @@ def _install_or_upgrade_packages():
             shutil.rmtree(manager_repo_dir)
         if manager_repo_file:
             os.remove(manager_repo_file.name)
+
+    new_version, new_release = _get_version()
+    log.debug("Old VR: %s.%s -> New VR: %s.%s" % (old_version, old_release,
+                                                  new_version, new_release))
+    # Try to detect when an install or upgrade failed. It would be better to
+    # be told directly by yum (HYD-2109), but at the very least we should
+    # not be blindly moving forward after a failed install.
+    if all([old_version, old_release, new_version, new_release]):
+        # Would prefer to fail here, but the installer should be idempotent.
+        # Best we can do without better yum diagnostics is to splash up a
+        # big warning and hope someone's paying attention.
+        if (old_version, old_release) == (new_version, new_release):
+            log.warning("\n\nWARNING: The installed version (%s.%s) did not change. This is OK if the installer was intentionally re-run with the same version. Otherwise, please contact support with details from %s.\n\n" % (old_version, old_release, LOG_FILE))
+    elif not any([old_version, old_release, new_version, new_release]):
+        # This really didn't work out, did it?
+        log.error("The installation failed. Please contact support with details from %s." % LOG_FILE)
+        sys.exit(-1)
+    elif all([old_version, old_release]) and not all([new_version, new_release]):
+        # Hard to see how this would happen, because we're doing an upgrade
+        # rather than an erase/install. But we should handle it.
+        log.error("The upgrade from %s.%s to a new version failed. Please contact support with details from %s." % (old_version, old_release, LOG_FILE))
+        sys.exit(-1)
+
 
 def _install_or_upgrade_bundles(old_bundles, new_bundles):
     for bundle, meta in new_bundles.items():
