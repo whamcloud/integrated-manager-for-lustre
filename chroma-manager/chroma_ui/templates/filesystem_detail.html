@@ -5,6 +5,7 @@
     var conf_param_dialog;
     var volume_chooser_store;
     var filesystem;
+    var router_instance;
     var spinner = '<div style="text-align: center"><img src="/static/images/loading.gif"> Loading</div>';
 
     // cached selectors
@@ -183,7 +184,9 @@
       return this.$selector.fnSettings();
     };
 
-    function draw(id) {
+    function draw(id, router) {
+      router_instance = router;
+      conf_param_dialog = router_instance.conf_param_dialog;
       if (!initialized) {
         init();
         initialized = true;
@@ -194,7 +197,7 @@
 
       if (conf_param_dialog) {
         conf_param_dialog.destroy();
-        conf_param_dialog = null;
+        router_instance.conf_param_dialog = conf_param_dialog = null;
       }
 
       loadFilesystem(id);
@@ -351,7 +354,7 @@
         $commandDropdown.after(LiveObject.busyIcon(filesystem));
 
         // Config param dialog
-        conf_param_dialog = ConfParamDialog({
+        router_instance.conf_param_dialog = conf_param_dialog = ConfParamDialog({
           object: filesystem,
           conf_params: filesystem.conf_params,
           title: 'File System: %s Advanced Settings'.sprintf(filesystem.label)
