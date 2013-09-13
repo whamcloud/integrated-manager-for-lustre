@@ -528,6 +528,9 @@ class RealRemoteOperations(RemoteOperations):
         except paramiko.AuthenticationException, e:
             logger.debug("Auth error when checking %s: %s" % (address, e))
             return False
+        except paramiko.SSHException, e:
+            logger.debug("General SSH error when checking %s: %s" % (address, e))
+            return False
         else:
             return True
 
