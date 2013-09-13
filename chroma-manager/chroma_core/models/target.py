@@ -540,7 +540,7 @@ class ForgetTargetJob(StateChangeJob):
         ordering = ['id']
 
     def description(self):
-        return "Remove unmanaged target %s" % self.target
+        return "Forget unmanaged target %s" % self.target
 
     def get_requires_confirmation(self):
         return True
@@ -552,7 +552,7 @@ class ForgetTargetJob(StateChangeJob):
 
     state_transition = (ManagedTarget, ['unmounted', 'mounted'], 'forgotten')
     stateful_object = 'target'
-    state_verb = "Remove"
+    state_verb = "Forget"
     target = models.ForeignKey(ManagedTarget)
     long_description = [
         {"type": ManagedOst, "value": help_text["remove_ost"]},
@@ -1042,6 +1042,9 @@ class FailbackTargetJob(MigrateTargetJob):
 
     @classmethod
     def can_run(cls, instance):
+        if instance.immutable_state:
+            return False
+
         return len(instance.failover_hosts) > 0 and \
                 instance.active_host is not None and\
                 instance.primary_host != instance.active_host
@@ -1093,6 +1096,9 @@ class FailoverTargetJob(MigrateTargetJob):
 
     @classmethod
     def can_run(cls, instance):
+        if instance.immutable_state:
+            return False
+
         return len(instance.failover_hosts) > 0 and\
                instance.primary_host == instance.active_host
     # HYD-1238: once we have a valid online/offline piece of info for each host,

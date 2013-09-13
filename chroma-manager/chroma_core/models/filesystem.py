@@ -300,13 +300,13 @@ class ForgetFilesystemJob(StateChangeJob):
 
     state_transition = (ManagedFilesystem, ['unavailable', 'stopped', 'available'], 'forgotten')
     stateful_object = 'filesystem'
-    state_verb = "Remove"
+    state_verb = "Forget"
     filesystem = models.ForeignKey(ManagedFilesystem)
     requires_confirmation = True
     long_description = help_text["remove_file_system"]
 
     def description(self):
-        return "Remove unmanaged file system %s" % self.filesystem.name
+        return "Forget unmanaged file system %s" % self.filesystem.name
 
     def on_success(self):
         super(ForgetFilesystemJob, self).on_success()

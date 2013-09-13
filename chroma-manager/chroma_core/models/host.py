@@ -1097,6 +1097,9 @@ class RebootHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
+        if host.immutable_state:
+            return False
+
         return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
                 not AlertState.filter_by_item(host).filter(
                         active = True,
@@ -1149,6 +1152,9 @@ class ShutdownHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
+        if host.immutable_state:
+            return False
+
         return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
                 not AlertState.filter_by_item(host).filter(
                         active = True,
