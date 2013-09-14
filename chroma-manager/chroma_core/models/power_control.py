@@ -421,12 +421,15 @@ class PoweronHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
+        if host.immutable_state:
+            return False
+
         # We should only be able to issue a Poweron if:
         # 1. The host is associated with >= 1 outlet
-        # 2. All associated outlets are in a known state (On or Off)
+        # 2. At least one associated outlet is in a known state (On or Off)
         # 3. None of the associated outlets are On
         return (host.outlets.count()
-                and all([True if o.has_power in [True, False] else False
+                and any([True if o.has_power in [True, False] else False
                             for o in host.outlets.all()])
                 and not any([o.has_power for o in host.outlets.all()]))
 
@@ -457,12 +460,15 @@ class PoweroffHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
+        if host.immutable_state:
+            return False
+
         # We should only be able to issue a Poweroff if:
         # 1. The host is associated with >= 1 outlet
-        # 2. All associated outlets are in a known state (On or Off)
-        # 3. Any of the associated outlets are On
+        # 2. At least one associated outlet is in a known state (On or Off)
+        # 3. At least one of the associated outlets is On
         return (host.outlets.count()
-                and all([True if o.has_power in [True, False] else False
+                and any([True if o.has_power in [True, False] else False
                             for o in host.outlets.all()])
                 and any([o.has_power for o in host.outlets.all()]))
 
@@ -493,12 +499,15 @@ class PowercycleHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
+        if host.immutable_state:
+            return False
+
         # We should be able to issue a Powercycle if:
         # 1. The host is associated with >= 1 outlet
         #
         # NB: Issuing a powercycle will always result in the outlet being
         # switched On, so we can rely on this to get into a known state.
-        return host.outlets.count()
+        return host.outlets.count() > 0
 
     @classmethod
     def get_confirmation(cls, instance):
