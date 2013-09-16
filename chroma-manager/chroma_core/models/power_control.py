@@ -465,10 +465,10 @@ class PoweroffHostJob(AdvertisedJob):
 
         # We should only be able to issue a Poweroff if:
         # 1. The host is associated with >= 1 outlet
-        # 2. At least one associated outlet is in a known state (On or Off)
+        # 2. All associated outlets are in a known state (On or Off)
         # 3. At least one of the associated outlets is On
         return (host.outlets.count()
-                and any([True if o.has_power in [True, False] else False
+                and all([True if o.has_power in [True, False] else False
                             for o in host.outlets.all()])
                 and any([o.has_power for o in host.outlets.all()]))
 

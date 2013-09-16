@@ -1,7 +1,38 @@
 import mock
 from django.test import TestCase
 from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
-from chroma_core.models import HostContactAlert, HostOfflineAlert, FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob
+from chroma_core.models import HostContactAlert, HostOfflineAlert
+from chroma_core.models import FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob
+
+
+class TestAdvertisedJobCoverage(TestCase):
+    def test_all_advertised_jobs_tested(self):
+        import inspect
+        from chroma_core.models.jobs import AdvertisedJob
+        # This just tests that we're testing all advertised jobs. Will fail
+        # if someone adds a new AdvertisedJob that isn't covered.
+        #
+        # Reasonable exceptions are those jobs which can always run,
+        # or jobs that are parents for implementing subclasses.
+        EXCEPTIONS = ['ForceRemoveHostJob', 'MigrateTargetJob']
+        IMPORTED_JOBS = [x for x in globals().values()
+                         if (inspect.isclass(x)
+                             and issubclass(x, AdvertisedJob))]
+
+        def _find_children(cls):
+            children = []
+            for child in cls.__subclasses__():
+                children.append(child)
+                children.extend(_find_children(child))
+            return children
+
+        missing = set()
+        for child in _find_children(AdvertisedJob):
+            if (child not in IMPORTED_JOBS
+               and child.__name__ not in EXCEPTIONS):
+                missing.add(child)
+
+        self.assertItemsEqual(missing, set())
 
 
 class TestAdvertisedTargetJobs(TestCase):
@@ -165,7 +196,7 @@ class TestAdvertisedPowerJobs(TestCase):
 
         # One outlet on, one unknown
         self.host.outlet_list[0].has_power = True
-        self.assertTrue(PoweroffHostJob.can_run(self.host))
+        self.assertFalse(PoweroffHostJob.can_run(self.host))
 
         # Both outlets unknown
         self.host.outlet_list[0].has_power = None
