@@ -755,21 +755,6 @@ class JobScheduler(object):
             if 'state' in update_attrs:
                 return
 
-            # ManagedHost.needs_update field is False by default, and set to
-            # True when the lustre agent plugin has outdated packages (as
-            # determined in the update_scan.py:update_packages() function
-            # of the lustre_audit service.)
-            # When the host is locked, for setup, configuration or anything else
-            # it is ok to drop this report that updates are needed.  If the
-            # situation persists, then it will be updated when the host is no
-            # longer locked.  This fixes a regressive bug introduced by
-            # HYD-2284, in which, the updates needed was reported before all the
-            # packages of installation of the agent on the host was complete.
-            try:
-                del update_attrs['needs_update']
-            except KeyError:
-                pass
-
             log.info("_notify: Buffering update to %s because of locks" % instance)
             for lock in self._lock_cache.get_by_locked_item(instance):
                 log.info("  %s" % lock)
