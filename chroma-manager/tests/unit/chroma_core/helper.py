@@ -266,14 +266,16 @@ class MockAgentRpc(object):
         if (cmd, args) in cls.fail_commands:
             cls._fail(host.fqdn)
 
+        mock_server = cls.mock_servers[host.address]
+
         log.info("invoke_agent %s %s %s" % (host, cmd, args))
         if cmd == "lnet_scan":
-            return cls.mock_servers[host.address]['nids']
+            return mock_server['nids']
         elif cmd == 'host_properties':
             return {
                 'time': datetime.datetime.utcnow().isoformat() + "Z",
-                'fqdn': cls.mock_servers[host.address]['fqdn'],
-                'nodename': cls.mock_servers[host.address]['nodename'],
+                'fqdn': mock_server['fqdn'],
+                'nodename': mock_server['nodename'],
                 'capabilities': cls.capabilities,
                 'selinux_enabled': cls.selinux_enabled,
                 'agent_version': cls.version,
@@ -307,7 +309,7 @@ class MockAgentRpc(object):
             label = re.search("/mnt/([^\s]+)", mount_point).group(1)
             return {'label': label}
         elif cmd == 'detect_scan':
-            return cls.mock_servers[host.address]['detect-scan']
+            return mock_server['detect-scan']
         elif cmd == 'device_plugin' and args['plugin'] == 'lustre':
             return {'lustre': {
                 'lnet_up': True,
@@ -342,7 +344,7 @@ class MockAgentRpc(object):
             }
         elif cmd == 'device_plugin':
             try:
-                data = cls.mock_servers[host.address]['device-plugin']
+                data = mock_server['device-plugin']
             except KeyError:
                 data = {}
             if args['plugin'] in data:
@@ -354,20 +356,42 @@ class MockAgentRpc(object):
             now = datetime.datetime.utcnow()
             log.info("rebooting %s; updating boot_time to %s" % (host, now))
             JobSchedulerClient.notify(host, now, {'boot_time': now})
+        elif 'socket.gethostbyname(socket.gethostname())' in cmd:
+            if not mock_server['tests']['hostname_valid']:
+                return '127.0.0.1'
+            else:
+                return mock_server['address']
+        elif 'socket.getfqdn()' in cmd:
+            return mock_server['self_fqdn']
+        elif 'ping' in cmd:
+            result = ((0 if mock_server['tests']['reverse_resolve'] else 2) +
+                      (0 if mock_server['tests']['reverse_ping'] else 1))
+            return result
 
 
 class MockAgentSsh(object):
+    ssh_should_fail = False
+
     def __init__(self, address, log = None, console_callback = None, timeout = None):
         self.address = address
 
     def construct_ssh_auth_args(self, root_pw, pkey, pkey_pw):
         return {}
 
-    def invoke(self, cmd, args = {}, auth_args=None):
-        return MockAgentRpc._call(self.address, cmd, args)
-    #
-    # def ssh(self, commandline):
-    #
+    def invoke(self, cmd, args = {}, auth_args = None):
+        host = ManagedHost(address = self.address)
+        return MockAgentRpc._call(host, cmd, args)
+
+    def ssh(self, cmd, auth_args = None):
+        if self.ssh_should_fail:
+            from paramiko import SSHException
+            raise SSHException("synthetic failure")
+
+        result = self.invoke(cmd, auth_args)
+        if isinstance(result, int):
+            return (result, "", "")
+        else:
+            return (0, result, "")
 
     def ssh_params(self):
         return 'root', self.address, 22

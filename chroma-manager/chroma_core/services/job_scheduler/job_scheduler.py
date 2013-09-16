@@ -903,6 +903,76 @@ class JobScheduler(object):
                 self._drain_notification_buffer()
                 self._run_next()
 
+    def _test_hostname(self, agent_ssh, auth_args, address, resolved_address):
+        try:
+            # Check that the system hostname:
+            # a) resolves
+            # b) does not resolve to a loopback address
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
+                                             "python -c 'import socket; print socket.gethostbyname(socket.gethostname())'")
+            hostname_resolution = out.rstrip()
+        except AgentException:
+            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
+        else:
+            if rc != 0:
+                log.error("Failed configuration check on '%s': hostname does not resolve (%s)" % (address, err))
+                return False, False, False
+            if hostname_resolution.startswith('127'):
+                log.error("Failed configuration check on '%s': hostname resolves to a loopback address (%s)" % (address, hostname_resolution))
+                return False, False, False
+
+        try:
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
+                                             "python -c 'import socket; print socket.getfqdn()'")
+            assert rc == 0, "failed to get fqdn on %s: %s" % (address, err)
+            fqdn = out.rstrip()
+        except (AssertionError, AgentException):
+            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
+            return False, False, False
+
+        try:
+            resolved_fqdn = socket.gethostbyname(fqdn)
+        except socket.gaierror:
+            log.error("Failed configuration check on '%s': can't resolve self-reported fqdn '%s'" % (address, fqdn))
+            return True, False, False
+
+        if resolved_fqdn != resolved_address:
+            log.error("Failed configuration check on '%s': self-reported fqdn resolution '%s' doesn't match address resolution" % (address, fqdn))
+            return True, True, False
+
+        # Everything's OK (we hope!)
+        return True, True, True
+
+    def _test_reverse_ping(self, agent_ssh, auth_args, address, manager_hostname):
+        try:
+            # Test resolution/ping from server back to manager
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
+                                             "ping -c 1 %s" % manager_hostname)
+        except AgentException:
+            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
+            return False, False
+
+        if rc == 0:
+            # Can resolve, can ping
+            return True, True
+        elif rc == 1:
+            # Can resolve, cannot ping
+            log.error("Failed configuration check on '%s': Can't ping %s" % (address, manager_hostname))
+            return True, False
+        else:
+            # Cannot resolve, cannot ping
+            log.error("Failed configuration check on '%s': Can't resolve %s" % (address, manager_hostname))
+            return False, False
+
+    def _try_ssh_cmd(self, agent_ssh, auth_args, cmd):
+        try:
+            return agent_ssh.ssh(cmd, auth_args = auth_args)
+        except (AuthenticationException, SSHException):
+            raise
+        except Exception, e:
+            # Re-raise wrapped in an AgentException
+            raise AgentException("Unhandled exception: %s" % e)
+
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
         """Test that a host at this address can be created
 
@@ -920,10 +990,6 @@ class JobScheduler(object):
         agent_ssh = AgentSsh(address, timeout=5)
         user, hostname, port = agent_ssh.ssh_params()
 
-        auth = False
-        reverse_resolve = False
-        reverse_ping = False
-
         auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
 
         try:
@@ -936,36 +1002,32 @@ class JobScheduler(object):
             ping = (0 == subprocess.call(['ping', '-c 1', resolved_address]))
 
         manager_hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
-        try:
-            rc, out, err = agent_ssh.ssh(
-                "ping -c 1 %s" % manager_hostname,
-                auth_args=auth_args)
-            auth = True
-        except (AuthenticationException, SSHException):
-            #  No auth methods available, or wrong creds
-            auth = False
-        except Exception, e:
-            log.error("Error trying to invoke agent on '%s': %s" % (address, e))
-            reverse_resolve = False
-            reverse_ping = False
-        else:
-            if rc == 0:
-                reverse_resolve = True
-                reverse_ping = True
-            elif rc == 1:
-                # Can resolve, cannot ping
-                reverse_resolve = True
-                reverse_ping = False
+
+        auth = False
+        reverse_resolve = False
+        reverse_ping = False
+        hostname_valid = False
+        fqdn_resolves = False
+        fqdn_matches = False
+
+        if resolve and ping:
+            try:
+                reverse_resolve, reverse_ping = self._test_reverse_ping(agent_ssh, auth_args, address, manager_hostname)
+                hostname_valid, fqdn_resolves, fqdn_matches = self._test_hostname(agent_ssh, auth_args, address, resolved_address)
+            except (AuthenticationException, SSHException):
+                #  No auth methods available, or wrong creds
+                auth = False
             else:
-                # Cannot resolve
-                reverse_resolve = False
-                reverse_ping = False
+                auth = True
 
         return {
             'address': address,
             'resolve': resolve,
             'ping': ping,
             'auth': auth,
+            'hostname_valid': hostname_valid,
+            'fqdn_resolves': fqdn_resolves,
+            'fqdn_matches': fqdn_matches,
             'reverse_resolve': reverse_resolve,
             'reverse_ping': reverse_ping
         }

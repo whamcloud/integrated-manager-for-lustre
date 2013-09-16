@@ -39,10 +39,13 @@ help_text = {
     'rescan_NIDs-dialog': 'Select all servers for which the server NID may have changed and click <b>Run</b> to re-read the NIDs. <i>Note:</i> After completing this operation, you must update any affected Lustre targets by clicking the <strong>Re-write Target Configuration</strong> button.',
     'remove_server': 'Remove this server. Any file systems or targets that rely on this server will also be removed.',
     'rescan_NIDs-tooltip': 'Query the network interfaces on the storage servers to update the record of NIDs.',
+    'auth': 'Indicates if the manager server was able to connect, via SSH, to the storage server using the supplied authentication credentials.',
     'reverse_ping': 'Indicates if an ICMP ping from the storage server to manager server succeeded.',
     'resolve': 'Indicates if a DNS lookup performed at the manager server, of the fully-qualified domain name (FQDN) of the storage server, succeeded.',
     'reverse_resolve': 'Indicates if a DNS lookup by the storage server of the fully-qualified domain name (FQDN) of the manager server succeeded.',
-
+    'hostname_valid': 'Indicates if the self-reported hostname of the storage server is valid (resolves to a non-loopback address).',
+    'fqdn_resolves': 'Indicates if a DNS lookup at the manager server, of the self-reported fully-qualified domain name (FQDN) of the storage server, succeeded.',
+    'fqdn_matches': 'Indicates if there is match between the DNS lookup at the manager server of the user-supplied hostname, and the DNS lookup at the storage server of the self-reported fully-qualified domain name (FQDN) of the storage server.',
     'rewrite_target_configuration-dialog': 'Select all servers for which the NIDs were re-read by clicking the <strong>Rescan NIDs</strong> button.  Then click <b>Run</b> to rewrite the Lustre target configuration for targets associated with the selected servers.',
     'rewrite_target_configuration-tooltip': 'Update each target with the current NID for the server with which it is associated.',
 

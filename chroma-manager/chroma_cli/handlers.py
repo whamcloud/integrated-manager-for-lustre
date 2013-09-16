@@ -313,11 +313,14 @@ class ServerHandler(Handler):
     def test_host(self, ns, endpoint=None, **kwargs):
         failure_text = {
             'auth': "The manager was unable to login to %s on your behalf",
+            'agent': "The manager was unable to invoke the agent on %s",
             'resolve': "Unable to resolve fqdn for %s",
             'reverse_resolve': "The agent on %s was unable to resolve the manager's IP address",
             'ping': "The manager was unable to ping %s",
-            'agent': "The manager was unable to invoke the agent on %s",
-            'reverse_ping': "The agent on %s was unable to ping the manager's IP address"
+            'reverse_ping': "The agent on %s was unable to ping the manager's IP address",
+            'hostname_valid': "The system hostname on %s is set to 'localhost'",
+            'fqdn_resolves': "The self-reported fqdn on %s does not resolve on the manager",
+            'fqdn_matches': "The self-reported fqdn on %s does not resolve to the same address as the hostname supplied via CLI"
         }
         test_results = self.api.endpoints['test_host'].create(**kwargs)
         if not all(test_results.values()):

@@ -22,6 +22,7 @@ import httplib
 import platform
 import itertools
 import traceback
+import socket
 
 
 PRODUCT_NAME = "Intel(R) Manager for Lustre* software"
@@ -42,6 +43,20 @@ def _check_platform():
     # installation target.
 
     # TODO: Memory/CPU/Disk checks?
+
+    # Handle hostname == localhost shenanigans
+    hostname = socket.gethostname()
+    try:
+        address = socket.gethostbyname(hostname)
+    except socket.gaierror:
+        log.error("'%s' is not a resolvable hostname. Please set the system hostname to a resolvable name and re-run the installer." % hostname)
+        sys.exit(-1)
+    else:
+        if address.startswith('127'):
+            log.error("'%s' resolves to a loopback address. Please set the system hostname to a non-loopback address and re-run the installer." % hostname)
+            sys.exit(-1)
+
+    log.debug("Successfully resolved %s to %s" % (hostname, address))
 
     # Seems unlikely that someone will be trying to install this on their
     # old SPARC 5, but who knows?
@@ -86,11 +101,16 @@ def _mkdir_p(path):
     try:
         os.makedirs(path)
     except OSError, e:
-        if e.errno != errno.EEXIST:
-            log.debug("Unhandled exception: %s" % traceback.format_exc())
-            raise e
-        elif e.errno == errno.EEXIST and not os.path.isdir(path):
-            log.error("%s exists but is not a directory" % path)
+        try:
+            if e.errno != errno.EEXIST:
+                log.debug("Unhandled exception: %s" % traceback.format_exc())
+                raise e
+            elif e.errno == errno.EEXIST and not os.path.isdir(path):
+                log.error("%s exists but is not a directory" % path)
+                sys.exit(-1)
+        except NameError:
+            # logger not initialized yet?
+            print "Unhandled error while creating %s: %s" % (path, e)
             sys.exit(-1)
 
 

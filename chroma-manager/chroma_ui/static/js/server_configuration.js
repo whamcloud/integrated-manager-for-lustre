@@ -138,6 +138,9 @@ function add_host_dialog() {
         resolve: 'add_host_resolve',
         ping: 'add_host_ping',
         auth: 'add_host_auth',
+        hostname_valid: 'add_host_hostname_valid',
+        fqdn_resolves: 'add_host_fqdn_resolves',
+        fqdn_matches: 'add_host_fqdn_matches',
         reverse_ping: 'add_host_reverse_ping',
         reverse_resolve: 'add_host_reverse_resolve'};
 
