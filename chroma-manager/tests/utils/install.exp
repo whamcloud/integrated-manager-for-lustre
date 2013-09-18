@@ -4,29 +4,39 @@ set email [lindex $argv 1]
 set pass [lindex $argv 2]
 set ntp [lindex $argv 3]
 spawn ./install
+set timeout 900
 expect {
     "(press RETURN)" {
+        send_user "terminal must not be fully functional, sending CR\n"
         send "\r"
         exp_continue
     }
     "EULA.txt" {
+        send_user "got first paging prompt, sending space\n"
         send " "
+    } timeout {
+        send_user "waiting for prompt timed out, bailing\n"
+        exit 1
     }
 }
 expect {
     "\n:" {
+        send_user "got subsequent paging prompt, sending space\n"
         send " "
         exp_continue
     }
     "(END)" {
+        send_user "at end, sending space\n"
         send " "
         exp_continue
     }
     "(yes/no) " {
         send "yes\n"
+    } timeout {
+        send_user "waiting for prompt timed out, bailing\n"
+        exit 1
     }
 }
-set timeout 900
 expect "Username: "
 send $user\n
 expect "Email: "
