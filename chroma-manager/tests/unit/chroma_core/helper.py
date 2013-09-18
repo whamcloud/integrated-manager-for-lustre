@@ -367,6 +367,10 @@ class MockAgentRpc(object):
             result = ((0 if mock_server['tests']['reverse_resolve'] else 2) +
                       (0 if mock_server['tests']['reverse_ping'] else 1))
             return result
+        elif 'rpm -q epel-release' in cmd:
+            return 1 if mock_server['tests']['yum_valid_repos'] else 0
+        elif cmd == 'yum info ElectricFence':
+            return 0 if mock_server['tests']['yum_can_update'] else 1
 
 
 class MockAgentSsh(object):

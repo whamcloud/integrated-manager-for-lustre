@@ -338,7 +338,7 @@
                 </div>
                 <div class="add_host_loading">
                     <img src='{{STATIC_URL}}/images/loading.gif'/>
-                    <span class='loading_placeholder'>Checking connectivity...</span>
+                    <span class='loading_placeholder'>Checking connectivity and validating server configuration...</span>
                     <a href="#" class="add_host_skip_button">Skip</a>
                 </div>
                 <div class='add_host_confirm'>
@@ -352,6 +352,8 @@
                         <tr><td><a class='help_hover' data-topic='hostname_valid'>Valid hostname</a>: </td><td class="add_host_hostname_valid">&nbsp;</td></tr>
                         <tr><td><a class='help_hover' data-topic='fqdn_resolves'>FQDN resolves</a>: </td><td class="add_host_fqdn_resolves">&nbsp;</td></tr>
                         <tr><td><a class='help_hover' data-topic='fqdn_matches'>FQDN matches hostname</a>: </td><td class="add_host_fqdn_matches">&nbsp;</td></tr>
+                        <tr><td><a class='help_hover' data-topic='yum_valid_repos'>Valid yum repositories</a>: </td><td class="add_host_yum_valid_repos">&nbsp;</td></tr>
+                        <tr><td><a class='help_hover' data-topic='yum_can_update'>Valid yum mirror</a>: </td><td class="add_host_yum_can_update">&nbsp;</td></tr>
                     </table>
                     <a href="#" class="add_host_back_button">Back</a>
                     <a href="#" class="add_host_confirm_button">Confirm</a>

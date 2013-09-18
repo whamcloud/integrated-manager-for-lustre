@@ -227,7 +227,9 @@ class TestHostAddValidations(JobTestCase):
                 'reverse_ping': True,
                 'hostname_valid': True,
                 'fqdn_resolves': True,
-                'fqdn_matches': True
+                'fqdn_matches': True,
+                'yum_valid_repos': True,
+                'yum_can_update': True
             },
             'mgr_fqdn': "test-server.company.domain",
             'self_fqdn': "test-server.company.domain",
@@ -298,7 +300,9 @@ class TestHostAddValidations(JobTestCase):
             u'fqdn_resolves': True,
             u'fqdn_matches': True,
             u'reverse_resolve': True,
-            u'reverse_ping': True
+            u'reverse_ping': True,
+            u'yum_valid_repos': True,
+            u'yum_can_update': True
         }
 
         self.addCleanup(mock.patch.stopall)
@@ -366,5 +370,17 @@ class TestHostAddValidations(JobTestCase):
     def test_fqdn_mismatch(self):
         # Expect fqdn_matches to fail
         self._inject_failures(['fqdn_matches'])
+        self.assertEqual(self.expected_result,
+                         JobSchedulerClient.test_host_contact('test-server'))
+
+    def test_yum_bad_repo_config(self):
+        # Expect yum_valid_repos to fail
+        self._inject_failures(['yum_valid_repos'])
+        self.assertEqual(self.expected_result,
+                         JobSchedulerClient.test_host_contact('test-server'))
+
+    def test_yum_update_failure(self):
+        # Expect yum_can_update to fail
+        self._inject_failures(['yum_can_update'])
         self.assertEqual(self.expected_result,
                          JobSchedulerClient.test_host_contact('test-server'))

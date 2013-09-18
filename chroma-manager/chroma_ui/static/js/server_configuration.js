@@ -142,7 +142,10 @@ function add_host_dialog() {
         fqdn_resolves: 'add_host_fqdn_resolves',
         fqdn_matches: 'add_host_fqdn_matches',
         reverse_ping: 'add_host_reverse_ping',
-        reverse_resolve: 'add_host_reverse_resolve'};
+        reverse_resolve: 'add_host_reverse_resolve',
+        yum_valid_repos: 'add_host_yum_valid_repos',
+        yum_can_update: 'add_host_yum_can_update'
+      };
 
       _.each(field_to_class, function(el_class, field) {
         element.find('.' + el_class).toggleClass('success', result[field]);

@@ -964,6 +964,35 @@ class JobScheduler(object):
             log.error("Failed configuration check on '%s': Can't resolve %s" % (address, manager_hostname))
             return False, False
 
+    def _test_yum_sanity(self, agent_ssh, auth_args, address):
+        epel_detected = False
+        can_update = False
+
+        try:
+            # Check for the presence of EPEL
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
+                                             "rpm -q epel-release || yum info python-fedora-django")
+            if rc == 0:
+                log.error("Failed configuration check on '%s': EPEL repository detected in yum configuration" % address)
+                epel_detected = True
+        except AgentException:
+            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
+            return False, False
+
+        try:
+            # Check to see if yum can or ever has gotten OS repo metadata
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
+                                             "yum info ElectricFence")
+            if rc == 0:
+                can_update = True
+            else:
+                log.error("Failed configuration check on '%s': Unable to access any yum mirrors" % address)
+        except AgentException:
+            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
+            return False, False
+
+        return not epel_detected, can_update
+
     def _try_ssh_cmd(self, agent_ssh, auth_args, cmd):
         try:
             return agent_ssh.ssh(cmd, auth_args = auth_args)
@@ -1009,11 +1038,14 @@ class JobScheduler(object):
         hostname_valid = False
         fqdn_resolves = False
         fqdn_matches = False
+        yum_valid_repos = False
+        yum_can_update = False
 
         if resolve and ping:
             try:
                 reverse_resolve, reverse_ping = self._test_reverse_ping(agent_ssh, auth_args, address, manager_hostname)
                 hostname_valid, fqdn_resolves, fqdn_matches = self._test_hostname(agent_ssh, auth_args, address, resolved_address)
+                yum_valid_repos, yum_can_update = self._test_yum_sanity(agent_ssh, auth_args, address)
             except (AuthenticationException, SSHException):
                 #  No auth methods available, or wrong creds
                 auth = False
@@ -1029,7 +1061,9 @@ class JobScheduler(object):
             'fqdn_resolves': fqdn_resolves,
             'fqdn_matches': fqdn_matches,
             'reverse_resolve': reverse_resolve,
-            'reverse_ping': reverse_ping
+            'reverse_ping': reverse_ping,
+            'yum_valid_repos': yum_valid_repos,
+            'yum_can_update': yum_can_update
         }
 
     @classmethod

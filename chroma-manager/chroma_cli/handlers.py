@@ -318,9 +318,11 @@ class ServerHandler(Handler):
             'reverse_resolve': "The agent on %s was unable to resolve the manager's IP address",
             'ping': "The manager was unable to ping %s",
             'reverse_ping': "The agent on %s was unable to ping the manager's IP address",
-            'hostname_valid': "The system hostname on %s is set to 'localhost'",
+            'hostname_valid': "The system hostname on %s either does not resolve, or resolves to a loopback address",
             'fqdn_resolves': "The self-reported fqdn on %s does not resolve on the manager",
-            'fqdn_matches': "The self-reported fqdn on %s does not resolve to the same address as the hostname supplied via CLI"
+            'fqdn_matches': "The self-reported fqdn on %s does not resolve to the same address as the hostname supplied via CLI",
+            'yum_valid_repos': "The yum configuration on %s contains invalid repository entries (e.g. EPEL)",
+            'yum_can_update': "Unable to verify that %s is able to access any yum mirrors for vendor packages"
         }
         test_results = self.api.endpoints['test_host'].create(**kwargs)
         if not all(test_results.values()):
