@@ -42,6 +42,8 @@ def _check_platform():
     # This is the place to run tests for validating that this is a sane
     # installation target.
 
+    log.debug("Platform check ... ")
+
     # TODO: Memory/CPU/Disk checks?
 
     # Handle hostname == localhost shenanigans
@@ -75,6 +77,8 @@ def _check_platform():
     if detected_platform not in SUPPORTED_PLATFORMS:
         log.error("%s is not a supported platform for %s. Please refer to the installation guide for a list of supported platforms." % (detected_platform, PRODUCT_NAME))
         sys.exit(-1)
+
+    log.debug("Platform check ... Supported")
 
 def _display_eula():
     try:
@@ -199,6 +203,7 @@ def _setup_logging():
     file_output.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(message)s', '%d/%b/%Y:%H:%M:%S'))
     log.addHandler(file_output)
 
+    log.debug("Created logfile: %s" % LOG_FILE)
     return log
 
 
@@ -212,6 +217,8 @@ def _unpack_repo(tarball_path, destination):
         log.debug("exception in tarfile.open(): %s" % traceback.format_exc())
         log.error("Error opening %s: %s" % tarball_path, e.message)
         sys.exit(-1)
+    else:
+        log.debug("Opened installer tarfile")
 
     try:
         archive.extractall(destination)
@@ -219,6 +226,9 @@ def _unpack_repo(tarball_path, destination):
         log.debug("exception in archive.extractall(): %s" % traceback.format_exc())
         log.error("Error extracting %s to %s: %s" % tarball_path, destination, e.message)
         sys.exit(-1)
+    else:
+        log.debug("Completed extracting")
+
 
 
 def _print_version(version = None, release = None):
