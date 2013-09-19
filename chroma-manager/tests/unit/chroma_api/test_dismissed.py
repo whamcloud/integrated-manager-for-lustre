@@ -257,8 +257,11 @@ class TestPatchDismissables(ChromaApiTestCase, DismissableTestSupport):
             severity=WARNING, date=timezone.now())
         self.assertEqual(alert.dismissed, False)
 
-        data = {"dismissed": 'true'}
-        response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
+        path = '/api/alert/%s/' % alert.pk
+        # reject if severity isn't descriptive string as per the api
+        response = self.api_client.patch(path, data={'dismissed': True, 'severity': 10})
+        self.assertHttpBadRequest(response)
+        response = self.api_client.patch(path, data={'dismissed': True})
         self.assertHttpAccepted(response)
 
         alert = freshen(alert)

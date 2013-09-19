@@ -523,14 +523,11 @@ class SeverityResource(ModelResource):
         return logging.getLevelName(bundle.obj.severity)
 
     def hydrate_severity(self, bundle):
-        """Convert servitity name to int value for saving to DB
-
-        NB:  Needed for Patch
-        """
-
-        severity_val = str(conversion_util.STR_TO_SEVERITY[
-                           bundle.data['severity']])
-        bundle.data['severity'] = severity_val
+        """Convert severity name to int value for saving to DB"""
+        try:
+            bundle.data['severity'] = conversion_util.STR_TO_SEVERITY[bundle.data['severity']]
+        except KeyError as exc:
+            raise custom_response(self, bundle.request, http.HttpBadRequest, {'severity': ["invalid severity: {0}".format(*exc.args)]})
         return bundle
 
     def build_filters(self, filters=None):
