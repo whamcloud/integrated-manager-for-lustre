@@ -28,6 +28,10 @@ $(TARBALL): src/*.c src/*.h *.patch
 clean:
 	rm -f $(TARBALL)
 	$(MAKE) -f ../include/Makefile.rpmbuild clean
+
+distclean: clean
+	$(MAKE) -f ../include/Makefile.rpmbuild distclean
+
 endif
 
 # A DEVEL build occurs when this makefile is called via 'make develop'. In
@@ -48,6 +52,9 @@ install: $(INSTALLED_SO)
 		  httpd should now be able to use $(TARBALL_NAME).
 	@echo
 	@echo Hint: Configure $(dir $(DEV_HTTPD_DEST))chroma-manager.conf.template
+
+download:
+	@echo "Nothing to download"
 
 build: $(BUILT_SO)
 
@@ -75,3 +82,5 @@ $(CC_BIN):
 	@echo Unable to find $@. Is XCode correctly installed?
 	exit 1
 endif
+
+.PHONY: download

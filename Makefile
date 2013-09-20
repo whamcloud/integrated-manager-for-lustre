@@ -8,8 +8,9 @@ SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\
 all: TARGET=all
 rpms: TARGET=rpms
 docs: TARGET=docs
+download: TARGET=download
 
-all rpms docs subdirs: $(SUBDIRS)
+all rpms docs download subdirs: $(SUBDIRS)
 
 cleandist:
 	rm -rf dist

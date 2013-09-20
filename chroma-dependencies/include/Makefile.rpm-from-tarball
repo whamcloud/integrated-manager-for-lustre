@@ -39,6 +39,8 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile ../include/setuptools-pypi-rpm_spec.ed
 	cd tmp &&                                \
 	if [ $(TARBALL_EXT) = zip ]; then        \
 	    unzip ../$(TARBALL);                 \
+	elif [ $(TARBALL_EXT) = tar.bz2 ]; then  \
+	    tar xjvf ../$(TARBALL);              \
 	else                                     \
 	    tar xzvf ../$(TARBALL);              \
 	fi
@@ -69,13 +71,14 @@ spec.ed:
 	# make an empty one if it doesn't exist already
 	touch spec.ed
 
+$(TOP)/../chroma-externals/$(TARBALL):
+	CACHE="$${CACHE:-$(TOP)/../chroma-externals}" . ../include/cache.sh; \
+	cache_populate $(LOCATION); \
+
 $(TARBALL):
-	if [ -f "$(RPM_TOP)/SOURCES/$(TARBALL)" ]; then \
-		ln "$(RPM_TOP)/SOURCES/$(TARBALL)" .; \
-	else \
-		CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
-		cache_get $(LOCATION); \
-	fi
+	ln $(TOP)/../chroma-externals/$(TARBALL) .
+
+download: $(TOP)/../chroma-externals/$(TARBALL)
 
 clean:
 	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS cleanSRPM \

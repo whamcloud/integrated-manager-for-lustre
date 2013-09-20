@@ -29,5 +29,5 @@ rpms: cleandist tarball
 	mv _topdir/RPMS/noarch/chroma-diagnostics-*.noarch.rpm dist/
 	rm -rf _topdir
 
-docs:
+docs download:
 	@echo "Nothing to do here"

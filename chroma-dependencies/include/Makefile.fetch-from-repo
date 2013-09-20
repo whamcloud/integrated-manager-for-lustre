@@ -1,7 +1,7 @@
 TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
 include $(TOP)/include/Makefile.meta
 
-rpms: $(ALL_RPMS)
+rpms: $(addprefix $(TOP)/../chroma-externals/,$(ALL_RPMS))
 
 requirements:
 	for rpm in $(ALL_RPMS); do                \
@@ -52,20 +52,13 @@ clean:
 distclean:
 	rm -f $(ALL_RPMS)
 
-# should be able to just do this rather than having to explicitly ask for
-# a make of $*.rpm ($* == %)
-#$(REPO)/%.rpm: %.rpm
-#	ln $^ $(REPO)/
-# but instead, it seems we have to do this:
-$(REPO)/%.rpm:
-	make $*.rpm
-	mkdir -p $(REPO)
-	ln $*.rpm $(REPO)/
+download: $(addprefix $(TOP)/../chroma-externals/,$(ALL_RPMS))
 
-# and!!! the order of the above rule and this rule matter!  this is fixed
-# in gnu make 3.82 to always prefer rules that yeild a shorter stem
-%.rpm:
-	pattern=$$(echo $@ | sed -e 's/-[^-]*-[^-]*\.rpm$$//')-[0-9]*; \
-	rm -f $$pattern $(REPO)/$$pattern
-	CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
-	cache_get -t "RPM v3.0 bin " $(SRC_REPO)/$@ 
+$(REPO)/%.rpm: $(TOP)/../chroma-externals/%.rpm
+	mkdir -p $(REPO)
+	rm -f $@
+	ln $^ $(REPO)/
+
+$(TOP)/../chroma-externals/%.rpm:
+	CACHE="$${CACHE:-$(TOP)/../chroma-externals}" . ../include/cache.sh; \
+	cache_populate -t "RPM v3.0 bin " $(SRC_REPO)/$(notdir $@)

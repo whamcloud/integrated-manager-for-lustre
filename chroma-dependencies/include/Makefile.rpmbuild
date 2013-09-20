@@ -3,6 +3,7 @@ include $(TOP)/include/Makefile.meta
 
 TARBALL    ?= $(shell ls $(CURDIR)/*.tar* | head -1)
 SPECFILE   ?= $(shell ls $(CURDIR)/*.spec | head -1)
+SOURCEDIR  ?= $(CURDIR)
 
 RPM_NAME    = $(shell $(TOP)/include/parse_spec -n $(SPECFILE))
 RPM_VERSION = $(shell $(TOP)/include/parse_spec -v $(SPECFILE))
@@ -21,8 +22,9 @@ $(CURDIR)/$(PLAT_VERSION)/RPMS/%.rpm: $(SPECFILE)
 	if $(PLAT_BUILD_OK); then                                          \
 	  mkdir -p $(RPM_TOP)/{RPMS/{noarch,i686,x86_64},SRPMS,BUILD,TMP}; \
 	  $(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS;               \
+	  sudo yum-builddep -y $(SPECFILE) &&                              \
 	  rpmbuild --define '%_topdir $(RPM_TOP)'                          \
-	  	   --define '%_sourcedir $(CURDIR)'                        \
+	  	   --define '%_sourcedir $(SOURCEDIR)'                        \
 		   --define '%_tmppath $(RPM_TOP)/TMP'                     \
 		   --define '%debug_package %{nil}'                        \
 		   $(RPM_OPTS)                                             \

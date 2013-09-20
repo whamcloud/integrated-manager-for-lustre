@@ -60,6 +60,8 @@ pre_build()
     clean_uncommitted_artifacts
     # Nuke these tarballs to deal with name changes
     rm -f chroma-bundles/*.tar.gz
+    # update modules
+    . scripts/update_chroma-externals.sh
     run_pre_commit_hook
 }
 

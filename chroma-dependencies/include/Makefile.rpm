@@ -29,16 +29,11 @@ install pkg_install: rpms
 cleanRPMS cleanSRPM cleanBUILDDIR cleanTMPDIR:
 	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 
-$(SRPMS):
-	if [ -f ../$@ ]; then      \
-		ln ../$@ .;        \
-		touch $@;          \
-	else                            \
-		CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
-		cache_get $(LOCATION); \
-	fi
+$(TOP)/../chroma-externals/$(SRPMS):
+	CACHE="$${CACHE:-$(TOP)/../chroma-externals}" . ../include/cache.sh; \
+	cache_populate -t "RPM v3.0 src" $(LOCATION); \
 
-$(RPM_NAME).spec: $(SRPM) spec.ed
+$(RPM_NAME).spec: $(TOP)/../chroma-externals/$(SRPM) spec.ed
 	# if we are building a different version than last time, clean
 	# everything up
 	if [ -n "$(LAST_BUILT)" -a                                      \
@@ -47,13 +42,15 @@ $(RPM_NAME).spec: $(SRPM) spec.ed
 	    make -f ../include/Makefile.rpm LOCATION=$(LOCATION) clean; \
 	fi
 	rm -f $@
-	rpm2cpio < $(SRPM) | cpio -id
+	rpm2cpio < $(TOP)/../chroma-externals/$(SRPM) | cpio -id
 	cp $(RPM_NAME).spec{,.orig}
 	(cat spec.ed ; echo -e "w\nq") | ed $(RPM_NAME).spec
 
 spec.ed:
 	# make an empty one if it doesn't exist already
 	touch spec.ed
+
+download: $(TOP)/../chroma-externals/$(SRPMS)
 
 clean: $(LAST_BUILT) $(RPM_NAME).spec
 	cp $(RPM_NAME).spec.last_built $(RPM_NAME).spec || true

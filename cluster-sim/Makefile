@@ -36,7 +36,7 @@ rpms: cleandist tarball
 	mv _topdir/RPMS/noarch/chroma-cluster-sim-*.noarch.rpm dist/
 	rm -rf _topdir
 
-docs:
+docs download:
 	@echo "Nothing to do here"
 
 $(RPM2CPIO):

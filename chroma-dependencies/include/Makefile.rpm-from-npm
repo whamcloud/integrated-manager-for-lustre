@@ -15,7 +15,7 @@ BUILD_DEPS_TGZ	 := $(TARBALL_NAME)-modules.tar.gz
 SPECNAME         ?= $(TARBALL_NAME).spec
 
 rpms: $(SPECNAME) $(TARBALL) $(BUILD_DEPS_TGZ)
-	for dep in $(DEPS); do                 \
+	for dep in $(DEPS); do                   \
 		$(MAKE) -C ../$$dep pkg_install; \
 	done
 	$(MAKE) -f ../include/Makefile.rpmbuild $@
@@ -67,5 +67,8 @@ distclean:
 	if ! git ls-files --error-unmatch spec.ed >/dev/null 2>&1; then \
 		rm -f spec.ed; \
 	fi
+
+download:
+	@echo "Nothing to do here"
 
 include ../include/Makefile.requirements

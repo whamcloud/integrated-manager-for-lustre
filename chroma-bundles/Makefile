@@ -36,5 +36,5 @@ EULA.txt: ../chroma-manager/chroma_help/help.py
 rpms:
 	@echo "I don't know how to make RPMS!"
 
-docs:
+docs download:
 	@echo "Nothing to do here"

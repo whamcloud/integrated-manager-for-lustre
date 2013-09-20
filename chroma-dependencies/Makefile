@@ -6,14 +6,16 @@ SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\
 
 all: repo
 
-.PHONY: rpms clean distclean install requirements
-rpms clean distclean install requirements:: $(SUBDIRS)
+.PHONY: rpms clean distclean install requirements download debug
+debug download rpms clean distclean install requirements:: $(SUBDIRS)
 
 rpms: TARGET=rpms
 clean: TARGET=clean
 distclean: TARGET=distclean
 install: TARGET=install
 requirements: TARGET=requirements
+download: TARGET=download
+debug: TARGET=debug
 
 requirements::
 	# these are the ones provided by EL
