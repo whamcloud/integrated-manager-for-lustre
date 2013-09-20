@@ -7,6 +7,7 @@
     var advanced_tab_clicked = false;
     var conf_param_dialog;
     var volume_chooser_store;
+    var router_instance;
 
     function populate_existing_mgts()
     {
@@ -40,7 +41,9 @@
           .css('background-color', ( is_visible ? '#eee' : '' ));
     }
 
-    function draw() {
+    function draw(router) {
+      router_instance = router;
+      conf_param_dialog = router_instance.conf_param_dialog;
       if (!initialized) {
           init();
           initialized = true;
@@ -54,7 +57,7 @@
 
         if (conf_param_dialog) {
           conf_param_dialog.destroy();
-          conf_param_dialog = null;
+          router_instance.conf_param_dialog = conf_param_dialog = null;
         }
 
         advanced_tab_clicked = false;
@@ -338,7 +341,7 @@
         if(!conf_param_dialog) {
           Api.get("help/conf_param/", {kind: 'FS'}, success_callback = function(help_dict) {
             advanced_tab_clicked = true;
-            conf_param_dialog = ConfParamDialog({help: help_dict, title: 'File System Advanced Settings'});
+            router_instance.conf_param_dialog = conf_param_dialog = ConfParamDialog({help: help_dict, title: 'File System Advanced Settings'});
             conf_param_dialog.open();
           })
         } else {

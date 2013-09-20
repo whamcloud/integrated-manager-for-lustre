@@ -21,6 +21,7 @@
 
 
 var RouteUtils = function() {
+
   function api_path_to_ui_path(resource_uri)
   {
     /* Given an API resource URI for an object,
@@ -122,6 +123,7 @@ var ChromaRouter = Backbone.Router.extend({
     "status/": "status",
     "system_status/": "system_status"
   },
+  conf_param_dialog: null,
   object_detail: function(id, model_class, view_class, title_attr, overridePropertiesFunc)
   {
     var c = new model_class({id: id});
@@ -318,13 +320,13 @@ var ChromaRouter = Backbone.Router.extend({
     if ( this.failed_filesystem_admin_check() )
       return;
     this.filesystemPage('detail');
-    FilesystemDetailView.draw(id)
+    FilesystemDetailView.draw(id,this)
   },
   filesystemCreate: function() {
     if ( this.failed_filesystem_admin_check() )
       return;
     this.filesystemPage('create');
-    FilesystemCreateView.draw()
+    FilesystemCreateView.draw(this)
   },
   dashboard: function() {
     this.dashboard_type('filesystem');
