@@ -768,7 +768,7 @@ class JobScheduler(object):
         for attr, value in update_attrs.items():
             old_value = getattr(instance, attr)
             if old_value == value:
-                log.info("_notify: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
+                log.debug("_notify: Dropping %s.%s = %s because it is already set" % (instance, attr, value))
                 continue
 
             log.info("_notify: Updating .%s of item %s (%s) from %s to %s" % (attr, instance.id, instance, old_value, value))
