@@ -27,6 +27,7 @@ import threading
 import sys
 import traceback
 import urlparse
+from django.core.exceptions import ObjectDoesNotExist
 
 import os
 import operator
@@ -1303,28 +1304,32 @@ class JobScheduler(object):
         with self._lock:
             transitions = defaultdict(list)
             for obj_key, obj_id in object_list:
-                stateful_object = JobScheduler._retrieve_stateful_object(obj_key,
-                                                                        obj_id)
-
-                # We don't advertise transitions for anything which is currently
-                # locked by an incomplete job.  We could alternatively advertise
-                # which jobs would actually be legal to add by skipping this
-                # check and using get_expected_state in place of .state below.
-                if self._lock_cache.get_latest_write(stateful_object):
+                try:
+                    stateful_object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
+                except ObjectDoesNotExist:
+                    # Do not advertise transitions for an object that does not exist
+                    # as can happen if a parallel operation deletes this object
                     transitions[obj_id] = []
                 else:
+                    # We don't advertise transitions for anything which is currently
+                    # locked by an incomplete job.  We could alternatively advertise
+                    # which jobs would actually be legal to add by skipping this
+                    # check and using get_expected_state in place of .state below.
+                    if self._lock_cache.get_latest_write(stateful_object):
+                        transitions[obj_id] = []
+                    else:
 
-                    # XXX: could alternatively use expected_state here if you
-                    # want to advertise
-                    # what jobs can really be added (i.e. advertise transitions
-                    # which will
-                    # be available when current jobs are complete)
-                    #from_state = self.get_expected_state(stateful_object)
-                    from_state = stateful_object.state
-                    available_states = stateful_object.get_available_states(
-                        from_state)
+                        # XXX: could alternatively use expected_state here if you
+                        # want to advertise
+                        # what jobs can really be added (i.e. advertise transitions
+                        # which will
+                        # be available when current jobs are complete)
+                        #from_state = self.get_expected_state(stateful_object)
+                        from_state = stateful_object.state
+                        available_states = stateful_object.get_available_states(
+                            from_state)
 
-                    transitions[obj_id] = available_states
+                        transitions[obj_id] = available_states
 
             return transitions
 
@@ -1369,14 +1374,18 @@ class JobScheduler(object):
             jobs = defaultdict(list)
             for obj_key, obj_id in object_list:
 
-                stateful_object = JobScheduler._retrieve_stateful_object(
-                    obj_key, obj_id)
-
-                # If the object is subject to an incomplete Job
-                # then don't offer any actions
-                if self._lock_cache.get_latest_write(stateful_object) > 0:
+                try:
+                    stateful_object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
+                except ObjectDoesNotExist:
+                    # Do not advertise jobs for an object that does not exist
+                    # as can happen if a parallel operation deletes this object
                     jobs[obj_id] = []
                 else:
-                    jobs[obj_id] = self._fetch_jobs(stateful_object)
+                    # If the object is subject to an incomplete Job
+                    # then don't offer any actions
+                    if self._lock_cache.get_latest_write(stateful_object) > 0:
+                        jobs[obj_id] = []
+                    else:
+                        jobs[obj_id] = self._fetch_jobs(stateful_object)
 
             return jobs
