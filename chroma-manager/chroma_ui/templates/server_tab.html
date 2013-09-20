@@ -295,6 +295,7 @@
 
                         <label style="margin-right: 6px; font-weight: bold" for='id_add_host_address'>Hostname:</label>
                         <input tabindex="1" style="width:100%; margin-bottom: 15px" type='entry' class='add_host_address' id="id_add_host_address" name='address'/>
+                        <input type="hidden" id="id_failed_validations"/>
 
                         <label style="margin-right: 6px; font-weight: bold" for='add_server_profile'>Server profile:</label>
                         <br>
@@ -355,6 +356,11 @@
                         <tr><td><a class='help_hover' data-topic='yum_valid_repos'>Valid yum repositories</a>: </td><td class="add_host_yum_valid_repos">&nbsp;</td></tr>
                         <tr><td><a class='help_hover' data-topic='yum_can_update'>Valid yum mirror</a>: </td><td class="add_host_yum_can_update">&nbsp;</td></tr>
                     </table>
+
+                    <div class="add_host_confirm_override_prompt" style="visibility: hidden; display: none">
+                        <p><strong>WARNING: Adding a server with failed validations is unsupported!</strong></p>
+                        <button class="add_host_confirm_override_button">Understood, add it anyway.</button>
+                    </div>
                     <a href="#" class="add_host_back_button">Back</a>
                     <a href="#" class="add_host_confirm_button">Confirm</a>
                 </div>

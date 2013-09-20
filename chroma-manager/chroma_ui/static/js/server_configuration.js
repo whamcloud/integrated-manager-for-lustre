@@ -152,6 +152,11 @@ function add_host_dialog() {
         element.find('.' + el_class).toggleClass('failure', !result[field]);
       });
 
+      var failed_tests = Object.keys(field_to_class).filter(function (field) { return !result[field]; });
+
+      element.find('.add_host_confirm_override_prompt').css(failed_tests.length > 0 ? {"visibility": "visible", "display": "block"} : {"visibility": "hidden", "display": "none"});
+      element.find('.add_host_confirm_button').button('option', 'disabled', failed_tests.length > 0);
+      element.find('#id_failed_validations').val(failed_tests.join());
       element.find('.add_host_address_label').html(result['address']);
   }
 
@@ -241,6 +246,10 @@ function add_host_dialog() {
           return hash;
       }, {commit: true});
 
+      post_params['failed_validations'] = element
+          .find('form')
+          .find('#id_failed_validations').val();
+
       post_params['address'] = element
           .find('form')
           .find('#id_add_host_address').val();
@@ -311,6 +320,10 @@ function add_host_dialog() {
   element.find('.add_host_confirm_button').click(function(ev) {
     create_host();
     ev.preventDefault();
+  });
+
+  element.find('.add_host_confirm_override_button').click(function(ev) {
+    element.find('.add_host_confirm_button').button('enable');
   });
 
   element.find('.add_host_close_button').click(function(ev) {
