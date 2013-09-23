@@ -17,6 +17,7 @@ Patch99: 0001-list_includes_status.patch
 .
 /^## Setup\/build bits/i
 Obsoletes:     fence-agents
+Provides:      fence-agents = %{version}-%{release}
 
 .
 /^%changelog/a
