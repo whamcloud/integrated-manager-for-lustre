@@ -23,6 +23,7 @@
 from collections import defaultdict
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.rpc import RpcError, RpcTimeout
+from chroma_core.services import log_register
 from tastypie.validation import Validation
 
 from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile
@@ -37,6 +38,8 @@ from chroma_api.utils import custom_response, StatefulModelResource, MetricResou
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
+
+log = log_register(__name__)
 
 
 class HostValidation(Validation):
@@ -163,6 +166,9 @@ class HostResource(MetricResource, StatefulModelResource):
 
         # Resolve a server profile URI to a record
         profile = self.fields['server_profile'].hydrate(bundle).obj
+
+        if bundle.data.get('failed_validations'):
+            log.warning("Attempting to create host %s after failed validations: %s" % (bundle.data.get('address'), bundle.data.get('failed_validations')))
 
         try:
             host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name,

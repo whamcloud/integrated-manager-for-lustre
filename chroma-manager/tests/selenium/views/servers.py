@@ -1,4 +1,4 @@
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementNotVisibleException
 from selenium.webdriver import ActionChains
 
 from tests.selenium.base import wait_for_transition
@@ -19,6 +19,7 @@ class Servers(DatatableView):
         # Initialise elements on this page
         self.new_add_server_button = self.driver.find_element_by_css_selector('#btnAddNewHost')
         self.host_continue_button = 'button.add_host_submit_button'
+        self.add_host_confirm_override_button = 'button.add_host_confirm_override_button'
         self.add_host_confirm_button = 'a.add_host_confirm_button'
         self.add_host_close_button = '#ssh_tab a.add_host_close_button'
         self.add_host_add_another_button = 'a.add_host_back_button'
@@ -115,6 +116,13 @@ class Servers(DatatableView):
         self.quiesce()
 
     def add_server_confirm(self):
+        try:
+            # Workaround for mock servers that don't pass pre-add validations.
+            # Bonus: Exercises the override button. Totally planned it that way.
+            self.driver.find_element_by_css_selector(self.add_host_confirm_override_button).click()
+        except ElementNotVisibleException:
+            pass
+
         self.driver.find_element_by_css_selector(self.add_host_confirm_button).click()
         self.quiesce()
 
