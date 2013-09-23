@@ -7,8 +7,6 @@ from chroma_core.models import (ManagedMgs, ManagedFilesystem, ManagedOst,
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_core.helper import synthetic_volume, synthetic_host
 
-import mock
-
 
 class TestAvailableTransitions(TestCase):
     """Check that available transitions are reported correctly
@@ -183,22 +181,3 @@ class TestAvailableTransitions(TestCase):
         self.assertEqual(query_sum, EXPECTED_QUERIES,
             "something changed with queries! "
             "got %s expected %s" % (query_sum, EXPECTED_QUERIES))
-
-    def test_managed_target_dne(self):
-
-        host = synthetic_host()
-        host_ct_key = ContentType.objects.get_for_model(host.downcast()).natural_key()
-        host_id = host.id
-
-        def raise_dne(obj_content_type_natural_key, object_id):
-            # Simulate the host suddenly being removed.
-            raise host.DoesNotExist()
-
-        def_to_patch = "chroma_core.services.job_scheduler.job_scheduler.JobScheduler._retrieve_stateful_object"
-        with mock.patch(def_to_patch, new = staticmethod(raise_dne)):
-            job_scheduler = JobScheduler()
-
-            avail_trans = job_scheduler.available_transitions([(host_ct_key, host_id), ])[host.id]
-            self.assertTrue(len(avail_trans) == 0, avail_trans)
-            avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id), ])[host.id]
-            self.assertTrue(len(avail_jobs) == 0)
