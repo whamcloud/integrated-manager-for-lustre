@@ -185,6 +185,13 @@ class FakeServer(Persisted):
                 self.fqdn, ost_name,
                 [t['label'] for t in self._targets_started_here]))
 
+        elif parts[3] == 'mdt':
+            # /proc/fs/lustre/mdt/testfs-MDT0000/hsm_control
+            mdt_name = parts[4]
+            for target in self._targets_started_here:
+                if target['label'] == mdt_name:
+                    return target
+
         raise NotImplementedError("Simulator cannot resolve '%s' to target" % path)
 
     def _proc_path_to_conf_param(self, configs, path):
@@ -197,6 +204,10 @@ class FakeServer(Persisted):
 
         OBDFILTER_DEFAULTS = {
             'writethrough_cache_enable': "0"
+        }
+
+        MDT_DEFAULTS = {
+            'hsm_control': 'disabled'
         }
 
         parts = path.split("/")[1:]
@@ -216,6 +227,15 @@ class FakeServer(Persisted):
                 return configs[conf_param]
             except KeyError:
                 return OBDFILTER_DEFAULTS[parts[5]]
+        elif parts[3] == 'mdt':
+            # /proc/fs/lustre/mdt/testfs-MDT0000/hsm_control
+            mdt_name = parts[4]
+            conf_param = "%s.mdt.%s" % (mdt_name, parts[5])
+            try:
+                print configs
+                return configs[conf_param]
+            except KeyError:
+                return MDT_DEFAULTS[parts[5]]
 
         raise NotImplementedError("Simulator cannot resolve '%s' to conf param name" % path)
 
