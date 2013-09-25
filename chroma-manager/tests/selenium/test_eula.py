@@ -33,6 +33,8 @@ class TestEula(SeleniumBaseTestCase):
 
         self.login_page.logout().login(fsuser.username, fsuser.password)
 
+        self.login_page.wait_for_angular()
+
         self.eula_page.denied()
 
         self.login_page.login_and_accept_eula_if_presented(self.debug.username, self.debug.password)

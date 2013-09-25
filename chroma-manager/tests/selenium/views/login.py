@@ -90,7 +90,6 @@ class Login(BaseView):
         self.username.send_keys(username)
         self.password.send_keys(password)
         self.login_button.click()
-        self.wait_for_angular()
 
         return self
 

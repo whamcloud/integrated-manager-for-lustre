@@ -37,13 +37,14 @@ class Eula(BaseView):
         @param must_accept: should this method fail if the eula does not appear in time or we change pages?
         """
         self.log.debug("Accepting eula if presented.")
-        self.wait_for_angular()
 
         # Wait for the page to change or the modal to appear.
         WebDriverWait(self, self.short_wait).until(
             lambda eula: not self.on_page() or eula.modal,
             "The eula modal was not found!"
         )
+
+        self.wait_for_angular()
 
         # If we reach here and must accept then the page has changed when we did not want it to.
         if must_accept:
@@ -59,6 +60,12 @@ class Eula(BaseView):
         self.driver.execute_script(script)
         self.accept_button.click()
 
+        # Wait for the page to change
+        WebDriverWait(self, self.short_wait).until(
+            lambda eula: not self.on_page(),
+            "The page did not refresh!"
+        )
+
         # Wait for calls to finish
         self.wait_for_angular()
 
@@ -72,9 +79,6 @@ class Eula(BaseView):
         WebDriverWait(self, self.short_wait).until(lambda eula: eula.modal, "The eula modal was not found!")
 
         self.reject_button.click()
-
-        # Wait for calls to finish
-        self.wait_for_angular()
 
     def denied(self):
         """
