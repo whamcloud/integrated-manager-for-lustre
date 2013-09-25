@@ -1,6 +1,7 @@
 from urlparse import urlunparse
 
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.common.exceptions import StaleElementReferenceException
 from tests.selenium.base_view import BaseView
 from tests.selenium.views.eula import Eula
 
@@ -72,8 +73,14 @@ class Login(BaseView):
         self.login(username, password)
         Eula(self.driver).reject()
 
+        def wait_for_refresh(login):
+            try:
+                return login.username.get_attribute("value") == ""
+            except StaleElementReferenceException:
+                return False
+
         # Login username field should be empty on a refresh and not before.
-        WebDriverWait(self, self.short_wait).until(lambda login: login.username.get_attribute("value") == "")
+        WebDriverWait(self, self.short_wait).until(wait_for_refresh)
 
         # Page should be reloaded, make sure it is usable.
         self._reset_ui(True)
