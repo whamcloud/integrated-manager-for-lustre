@@ -212,6 +212,11 @@ if [ $1 -lt 1 ]; then
         /etc/sysconfig/iptables 
     sed -i -e '/--port=80:tcp/d' -e '/--port=443:tcp/d' \
            -e '/--port=123:udp/d' /etc/sysconfig/system-config-firewall
+
+    # clean out /var/lib/chroma
+    if [ -d /var/lib/chroma ]; then
+        rm -rf /var/lib/chroma
+    fi
 fi
 
 %files -f manager.files

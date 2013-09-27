@@ -173,18 +173,28 @@ fi"
 
 echo "End installation and setup."
 
-set +e
-set -x
-
 echo "Begin running tests..."
 
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS || true"
 
 echo "End running tests."
+
+# test that removing the chroma-manager RPM removes /var/lib/chroma
+ssh root@$CHROMA_MANAGER "set -xe
+exec 2>&1
+ls -l /var/lib/chroma
+rpm -e chroma-manager-cli chroma-manager chroma-manager-libs
+if [ -d /var/lib/chroma ]; then
+    echo \"Removing RPMs failed to clean up /var/lib/chroma\"
+    ls -l /var/lib/chroma
+    exit 1
+fi"
+
 echo "Collecting reports..."
+set +e
 
 scp root@$TEST_RUNNER:~/test_report*.xml $PWD/test_reports/
 
