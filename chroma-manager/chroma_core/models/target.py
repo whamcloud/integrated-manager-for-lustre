@@ -21,6 +21,7 @@
 
 
 import json
+import re
 import logging
 import uuid
 from chroma_core.lib.cache import ObjectCache
@@ -580,9 +581,14 @@ class RegisterTargetStep(Step):
 class GenerateHaLabelStep(Step):
     idempotent = True
 
+    def sanitize_name(self, name):
+        FILTER_REGEX = r'^\d|^-|^\.|[(){}[\].:@$%&/+,;\s]+'
+        sanitized_name = re.sub(FILTER_REGEX, '_', name)
+        return "%s_%s" % (sanitized_name, uuid.uuid4().hex[:6])
+
     def run(self, kwargs):
         target = kwargs['target']
-        target.ha_label = "%s_%s" % (target.name, uuid.uuid4().__str__()[0:6])
+        target.ha_label = self.sanitize_name(target.name)
         job_log.debug("Generated ha_label=%s for target %s (%s)" % (target.ha_label, target.id, target.name))
 
 
