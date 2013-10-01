@@ -83,7 +83,7 @@ class SeleniumBaseTestCase(TestCase):
                 options.add_argument('log-level=""')  # log-level interferes with v=1
                 options.add_argument('v=1000')  # Get all levels of vlogs
 
-                self.driver = getattr(webdriver, browser)(chrome_options=options, service_args=["--verbose", "--log-path=chromedriver.log"])
+                self.driver = webdriver.Chrome(chrome_options=options, service_args=["--verbose", "--log-path=chromedriver.log"])
             elif browser == 'Firefox':
                 self.driver = webdriver.Firefox()
 
