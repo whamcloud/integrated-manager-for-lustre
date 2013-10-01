@@ -72,6 +72,8 @@ class SeleniumBaseTestCase(TestCase):
         if not self.driver:
             browser = config['chroma_managers'][0]['browser']
             if browser == 'Chrome':
+                self.addCleanup(self._capture_chromedriver_log_on_failure)
+
                 options = webdriver.ChromeOptions()
                 options.add_argument('no-proxy-server')
 
@@ -89,7 +91,6 @@ class SeleniumBaseTestCase(TestCase):
 
         self.addCleanup(self.stop_driver)
         self.addCleanup(self._take_screenshot_on_failure)
-        self.addCleanup(self._capture_browser_log_on_failure)
 
         self.driver.set_script_timeout(90)
 
@@ -240,7 +241,7 @@ class SeleniumBaseTestCase(TestCase):
             self.log.debug("Saving screen shot to %s", filename)
             self.driver.get_screenshot_as_file(filename)
 
-    def _capture_browser_log_on_failure(self):
+    def _capture_chromedriver_log_on_failure(self):
         test_failed = False if sys.exc_info() == (None, None, None) else True
 
         if test_failed and config['chroma_managers'][0]['browser'] == 'Chrome':
