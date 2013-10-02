@@ -788,6 +788,10 @@ class RealRemoteOperations(RemoteOperations):
                             let timeout=$timeout-1 || true
                         done
                         if kill -0 $pid; then
+                            # first see what is still running
+                            echo "bug: HYD-2552"
+                            ps axf
+                            exit 1
                             # now start getting all medevil on it
                             killall crmd
                             timeout=5
