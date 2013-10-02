@@ -524,6 +524,7 @@ class RealRemoteOperations(RemoteOperations):
             )
 
         except socket.error:
+            logger.debug("Unknown socket error when checking %s" % address)
             return False
         except paramiko.AuthenticationException, e:
             logger.debug("Auth error when checking %s: %s" % (address, e))
@@ -531,12 +532,16 @@ class RealRemoteOperations(RemoteOperations):
         except paramiko.SSHException, e:
             logger.debug("General SSH error when checking %s: %s" % (address, e))
             return False
-        else:
-            return True
+        except EOFError:
+            logger.debug("Connection unexpectedly killed while checking %s" % address)
+            return False
 
         if not result.exit_status == 0:
             # Wait, what?  echo returned !0?  How is that possible?
+            logger.debug("exit status %d from echo on %s: inconceivable!" % (result.exit_status, address))
             return False
+
+        return True
 
     def host_up_secs(self, address):
         result = self._ssh_address(address, "cat /proc/uptime")
