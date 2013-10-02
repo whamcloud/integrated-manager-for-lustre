@@ -44,7 +44,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
 
         for outlet_uri in server_outlets:
             outlet = self.get_by_uri(outlet_uri)
-            self.assertEqual(outlet['host'], None)
+            self.wait_for_assert(lambda: self.assertEqual(outlet['host'], None))
 
         # TODO: Check that no async stuff happened as a result of the
         # outlet disassociation (STONITH reconfiguration, etc.)
