@@ -249,7 +249,7 @@ setup_script_template = """
 import subprocess
 ret = subprocess.call("date -s @{server_epoch_seconds} > /dev/null 2>&1", shell=True)
 
-import sys, httplib, urllib2, shlex, base64, json, os, socket, ssl, tempfile, json, traceback
+import sys, httplib, urllib2, shlex, base64, json, os, socket, ssl, tempfile, json, traceback, signal
 from subprocess import Popen, PIPE
 
 SSL_DIR = "/var/lib/chroma/"
@@ -369,7 +369,22 @@ def start_agent():
     output = launch_command("/sbin/service chroma-agent start")
 
 
+def kill_zombies():
+    # ensure that there are no old agents hanging around
+    for pid in [d for d in os.listdir('/proc') if d.isdigit()]:
+        try:
+            with open('/proc/%s/cmdline' % pid) as f:
+                if 'chroma-agent-daemon' in f.read():
+                    os.kill(int(pid), signal.SIGKILL)
+        except (OSError, IOError):
+            # Don't bail if this fails -- it's not critical
+            pass
+
+
 if __name__ == '__main__':
+    # Get a clean deployment environment
+    kill_zombies()
+
     # Set up SSL keys and register with the manager using our
     # embedded registration token
     setup_keys()
