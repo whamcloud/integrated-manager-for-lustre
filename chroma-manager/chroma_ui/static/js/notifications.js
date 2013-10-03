@@ -54,21 +54,23 @@ var LiveObject = function()
 
     if (job_confirmation) {
       var markup = "<div style='overflow-y: auto; max-height: 700px;'>" + job_confirmation + "</div>";
-      $(markup).dialog({'buttons': {
-        'Cancel': function() {$(this).dialog('close');},
-        'Confirm':
-        {
-          text: "Confirm",
-          class: "confirm_button",
-          click: function(){
-            var dialog = $(this);
-            Api.post('/api/command/', {'jobs': [job], message: job_message}, function(data) {
-              CommandNotification.begin(data);
-              dialog.dialog('close');
-            });
+      $(markup).dialog({
+        'buttons': {
+          'Cancel': function() {$(this).dialog('close');},
+          'Confirm': {
+            text: "Confirm",
+            class: "confirm_button",
+            click: function(){
+              var dialog = $(this);
+              Api.post('/api/command/', {'jobs': [job], message: job_message}, function(data) {
+                CommandNotification.begin(data);
+                dialog.dialog('close');
+              });
+            }
           }
-        }
-      }});
+        },
+        'title': job_message
+      });
     } else {
       Api.post('/api/command/', {'jobs': [job], message: job_message}, function(data) {
         CommandNotification.begin(data);
@@ -87,7 +89,6 @@ var LiveObject = function()
       {
         var requires_confirmation = false;
         var confirmation_markup;
-
         if (data.transition_job == null) {
           // A no-op
           return;
@@ -108,29 +109,32 @@ var LiveObject = function()
           confirmation_markup += "</ul>"
         } else {
           requires_confirmation = data.transition_job.requires_confirmation;
-          confirmation_markup = "<p><strong>" + data.transition_job.description + "</strong></p><p>Are you sure?</p>";
+          confirmation_markup = "<p>Are you sure?</p>";
         }
 
         if (requires_confirmation) {
           var markup = "<div style='overflow-y: auto; max-height: 700px;' id='transition_confirmation_dialog'>" + confirmation_markup + "</div>";
-          $(markup).dialog({'buttons': {
-            'Cancel': function() {
+          $(markup).dialog({
+            'buttons': {
+              'Cancel': function() {
                 $(this).dialog('close');
                 $(this).remove();
-            },
-            'Confirm':
-            {
-              text: "Confirm",
-              id: "transition_confirm_button",
-              click: function(){
-                var dialog = $(this);
-                Api.put(url, {state: state}, success_callback = function() {
-                  dialog.dialog('close');
-                  dialog.remove();
-                })
+              },
+              'Confirm': {
+                text: "Confirm",
+                id: "transition_confirm_button",
+                click: function(){
+                  var dialog = $(this);
+                  Api.put(url, {state: state}, success_callback = function() {
+                    dialog.dialog('close');
+                    dialog.remove();
+                  })
+                }
               }
-            }
-          }});
+            },
+            'title': data.transition_job.description
+
+          });
         } else {
           Api.put(url, {state: state})
         }
