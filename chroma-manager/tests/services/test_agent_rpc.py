@@ -26,7 +26,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
     functionality in JobScheduler.
     """
     SERVICES = ['http_agent', 'job_scheduler']
-    PORTS = [settings.HTTP_AGENT_PORT]
     PLUGIN = agent_rpc.ACTION_MANAGER_PLUGIN_NAME
 
     def __init__(self, *args, **kwargs):
@@ -114,11 +113,13 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
     def _request_action(self, state = 'lnet_up'):
         # Start a job which should generate an action
         command_id = JobSchedulerClient.command_set_state([(self.host.content_type.natural_key(), self.host.id, state)], "Test")
+        command = self._get_command(command_id)
+        self.assertEqual(len(command.jobs.all()), 1)
         return command_id
 
-    def _handle_action_receive(self, session_id, timeout=1):
+    def _handle_action_receive(self, session_id, retry=2):
         # Listen and wait for the action
-        for index in wait(timeout):
+        for index in wait(count=retry):
             try:
                 action_rpc_request, = self._receive_messages(1)
                 break
@@ -263,7 +264,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
         # Clean stop
         self.restart('http_agent')
-        self._wait_for_port(settings.HTTP_AGENT_PORT)
 
         # The agent should be told to terminate all
         response_message = self._receive_messages(1)[0]

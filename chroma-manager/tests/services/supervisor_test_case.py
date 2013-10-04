@@ -12,6 +12,7 @@ import os
 from ConfigParser import ConfigParser
 from StringIO import StringIO
 from django.utils.unittest import TestCase
+import settings
 
 from chroma_core.lib.util import site_dir
 
@@ -22,7 +23,10 @@ class SupervisorTestCase(TestCase):
     """A test case which starts and stops supervisor services"""
 
     SERVICES = []
-    PORTS = []
+    PORTS = {  # service ports to wait on binding
+        'http_agent': [settings.HTTP_AGENT_PORT],
+        'httpd': [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT],
+    }
     CONF = os.path.join(site_dir(), "supervisord.conf")
     TEST_USERNAME = 'test'
     TEST_PASSWORD = 'asiyud97sdyuias'
@@ -101,9 +105,8 @@ class SupervisorTestCase(TestCase):
             for service in self.SERVICES:
                 log.info("Starting service '%s'" % service)
                 self.start(service)
-
-            for port in self.PORTS:
-                self._wait_for_port(port)
+            for service in set(self.SERVICES) - set(self.PORTS):
+                self.assertRunning(service, uptime=3)
         except:
             # Ensure we don't leave a supervisor process behind
             self.tearDown()
@@ -136,6 +139,8 @@ class SupervisorTestCase(TestCase):
 
     def start(self, program):
         self._xmlrpc.supervisor.startProcess(program)
+        for port in self.PORTS.get(program, []):
+            self._wait_for_port(port)
         self.assertRunning(program)
 
     def stop(self, program):
@@ -146,9 +151,10 @@ class SupervisorTestCase(TestCase):
         self.stop(program)
         self.start(program)
 
-    def assertRunning(self, program):
+    def assertRunning(self, program, uptime=0):
         info = self._xmlrpc.supervisor.getProcessInfo(program)
         self.assertEqual(info['statename'], "RUNNING")
+        time.sleep(max(0, uptime + info['start'] - info['now']))
 
     def assertStopped(self, program):
         info = self._xmlrpc.supervisor.getProcessInfo(program)

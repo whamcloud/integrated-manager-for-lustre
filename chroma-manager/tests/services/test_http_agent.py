@@ -49,7 +49,6 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
     it go back and forth
     """
     SERVICES = ['http_agent']
-    PORTS = [settings.HTTP_AGENT_PORT]
     PLUGIN = 'test_messaging'
     RX_QUEUE_NAME = "agent_test_messaging_rx"
     TX_QUEUE_NAME = 'agent_tx'
@@ -317,8 +316,6 @@ class TestHttpAgent(SupervisorTestCase, AgentHttpClient):
         first_session_id = self._open_session()
 
         self.restart('http_agent')
-        for port in self.PORTS:
-            self._wait_for_port(port)
 
         # If we try to continue our session, it will tell us to terminate
         response = self._get()
