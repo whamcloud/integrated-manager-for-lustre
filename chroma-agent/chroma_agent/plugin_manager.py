@@ -51,7 +51,8 @@ class PluginManager(object):
             """Walk backwards up the tree to first non-module directory."""
             components = []
 
-            if os.path.isfile("%s/__init__.pyc" % dir):
+            if (os.path.isfile("%s/__init__.pyc" % dir)
+                or os.path.isfile("%s/__init__.py" % dir)):
                 parent, child = os.path.split(dir)
                 components.append(child)
                 components.extend(_walk_parents(parent))
@@ -62,16 +63,16 @@ class PluginManager(object):
             """Builds a namespace by finding all parent modules."""
             return ".".join(reversed(_walk_parents(dir)))
 
-        names = []
+        names = set()
 
         assert os.path.isdir(path)
-        for modfile in sorted(glob.glob("%s/*.pyc" % path)):
+        for modfile in sorted(glob.glob("%s/*.py*" % path)):
             dir, filename = os.path.split(modfile)
-            module = filename.split(".pyc")[0]
+            module = filename.split(".py")[0]
             if not module in EXCLUDED_PLUGINS:
                 namespace = _build_namespace(dir)
                 name = "%s.%s" % (namespace, module)
-                names.append(name)
+                names.add(name)
 
         return names
 
@@ -220,7 +221,8 @@ class ActionPluginManager(object):
             """Walk backwards up the tree to first non-module directory."""
             components = []
 
-            if os.path.isfile("%s/__init__.pyc" % dir):
+            if (os.path.isfile("%s/__init__.pyc" % dir)
+                or os.path.isfile("%s/__init__.py" % dir)):
                 parent, child = os.path.split(dir)
                 components.append(child)
                 components.extend(_walk_parents(parent))
@@ -231,16 +233,16 @@ class ActionPluginManager(object):
             """Builds a namespace by finding all parent modules."""
             return ".".join(reversed(_walk_parents(dir)))
 
-        names = []
+        names = set()
 
         assert os.path.isdir(cls.path)
-        for modfile in sorted(glob.glob("%s/*.pyc" % cls.path)):
+        for modfile in sorted(glob.glob("%s/*.py*" % cls.path)):
             dir, filename = os.path.split(modfile)
-            module = filename.split(".pyc")[0]
+            module = filename.split(".py")[0]
             if not module in EXCLUDED_PLUGINS:
                 namespace = _build_namespace(dir)
                 name = "%s.%s" % (namespace, module)
-                names.append(name)
+                names.add(name)
 
         daemon_log.info("Found action plugin modules: %s" % names)
 
