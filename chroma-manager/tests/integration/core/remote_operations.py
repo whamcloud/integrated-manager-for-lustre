@@ -789,8 +789,8 @@ class RealRemoteOperations(RemoteOperations):
                         done
                         if kill -0 $pid; then
                             # first see what is still running
-                            echo "bug: HYD-2552"
-                            ps axf
+                            echo "bug: HYD-2552" >&2
+                            ps axf >&2
                             exit 1
                             # now start getting all medevil on it
                             killall crmd
