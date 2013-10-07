@@ -1064,7 +1064,6 @@ class FailbackTargetJob(MigrateTargetJob):
     def get_deps(self):
         return DependAll(
             [DependOn(self.target, 'mounted')] +
-            [DependOn(self.target.active_host, 'lnet_up')] +
             [DependOn(self.target.primary_host, 'lnet_up')]
         )
 
@@ -1117,7 +1116,6 @@ class FailoverTargetJob(MigrateTargetJob):
     def get_deps(self):
         return DependAll(
             [DependOn(self.target, 'mounted')] +
-            [DependOn(self.target.primary_host, 'lnet_up')] +
             [DependOn(self.target.failover_hosts[0], 'lnet_up')]
         )
 
