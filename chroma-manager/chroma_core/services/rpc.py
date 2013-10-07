@@ -36,6 +36,7 @@ import socket
 import threading
 import uuid
 import django
+import errno
 import os
 import time
 import jsonschema
@@ -281,6 +282,11 @@ class RpcClientResponseHandler(threading.Thread):
                         connection.drain_events(timeout = 1)
                     except socket.timeout:
                         pass
+                    except IOError as e:
+                        #  See HYD-2551
+                        if e.errno != errno.EINTR:
+                            # if not [Errno 4] Interrupted system call
+                            raise
 
                     self._age_response_states()
 
@@ -368,6 +374,11 @@ class RpcClient(object):
                             connection.drain_events(timeout = 1)
                         except socket.timeout:
                             pass
+                        except IOError as e:
+                            #  See HYD-2551
+                            if e.errno != errno.EINTR:
+                                # if not [Errno 4] Interrupted system call
+                                raise
                         if time.time() > timeout_at:
                             raise RpcTimeout()
 
