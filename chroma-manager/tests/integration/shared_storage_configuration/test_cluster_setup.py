@@ -73,7 +73,8 @@ class TestClusterSetup(TestCase):
             stdouts = []
             for server in config['lustre_servers']:
                 response = json.loads(pipe_outs[server['nodename']].recv())
-                if response['num_replies'] < num_requests * (len(config['lustre_servers']) - 1):
+                # Ensure no more than 10% lost.
+                if response['num_replies'] < (0.9 * num_requests * (len(config['lustre_servers']) - 1)):
                     passed = False
                 stdouts.append("""----------------
 %s
