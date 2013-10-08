@@ -438,7 +438,7 @@ def _test_channels():
     yb = yum.YumBase()
     yb.setCacheDir()
 
-    return len(yb.searchGenerator(["name"], ["avahi-ui-tools"])) > 0
+    return len(list(yb.searchGenerator(["name"], ["avahi-ui-tools"]))) > 0
 
 def _test_repos():
 
