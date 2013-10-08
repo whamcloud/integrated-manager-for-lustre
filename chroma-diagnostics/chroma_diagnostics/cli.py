@@ -20,6 +20,8 @@
 # express and approved by Intel in writing.
 
 
+from collections import defaultdict
+
 import logging
 import subprocess
 from datetime import datetime, timedelta
@@ -31,38 +33,42 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.INFO)
 handler = logging.FileHandler("chroma-diagnostics.log")
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
+handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s',
+                                       '%d/%b/%Y:%H:%M:%S'))
 log.addHandler(handler)
 
-# Filenames included
-# if a log file in the directory (key) starts with any string in the list (value)
-# then include the log.  This is used below to match rolled over copies of the
-# logs
-tracked_logs = {'/var/log/chroma/': ['chroma-agent',
-                                     'chroma-agent-console',
-                                     'chroma-agent-daemon',
-                                     'job_scheduler',
-                                     'http',
-                                     'corosync',
-                                     'http_agent',
-                                     'lustre_audit',
-                                     'messages',
-                                     'plugin_runner',
-                                     'power_control',
-                                     'stats',
-                                     'supervisord',
-                                     'install', ],
-                '/var/log/': ['syslog',
-                              'messages',
-                              'system', ]}
+# Dictionary of parent path to array of logfiles
+# that are rolled by logrotated such that when rotated
+# the current file copied with the extendion -<date>.gz
+# and the file is gzipped.
+logrotate_logs = {
+    '/var/log/chroma/': ['job_scheduler.log',
+                         'http.log',
+                         'corosync.log',
+                         'http_agent.log',
+                         'lustre_audit.log',
+                         'plugin_runner.log',
+                         'power_control.log',
+                         'stats.log',
+                         'supervisord.log',
+                         'install.log',
+                         ],
+    '/var/log/httpd': ['error_log',
+                       'access_log',
+                       'ssl_error_log',
+                       ],
+    '/var/log/': ['messages',
+                  'chroma-agent.log',
+                  'chroma-agent-console.log'
+                  ]}
 
 
 def run_command(cmd, out, err):
 
     try:
         p = subprocess.Popen(cmd,
-            stdout = out,
-            stderr = err)
+                             stdout = out,
+                             stderr = err)
     except OSError:
         #  The cmd in this case could not run on this platform, skipping
 #        log.info("Skipping: %s" % cmd)
@@ -97,8 +103,8 @@ def execute(cmd):
     return run_command(cmd, subprocess.PIPE, subprocess.PIPE)
 
 
-def copy_logs(output_directory, days_back=1, verbose=0):
-    """Go days_back to find logs files to be copied.
+def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
+    """Go days_back to find compressed logrotate.d type log files to be copied.
 
     Note:  Chose to use nieve dates here, since this will run on the same
     host that the file was created they are likely to match.  The server is
@@ -117,28 +123,45 @@ def copy_logs(output_directory, days_back=1, verbose=0):
     cutoff_date = cutoff_date.replace(hour=0, minute=0, second=0)
     cutoff_date_seconds = time.mktime(cutoff_date.timetuple())
 
-    collected_files = []
+    collected_files = defaultdict(list)
 
-    # Consider each log path
-    for path, file_roots in tracked_logs.items():
+    # Collect all suitable files
+    for path, log_names_to_collect in logrotate_logs.items():
         if os.path.exists(path):
-            for file in os.listdir(path):
-                file_root = file.split('.')[0]
-                valid_name = file_root in file_roots
-                if valid_name:
-                    abs_path = os.path.join(path, file)
+            for file_name in os.listdir(path):
+                _dash = file_name.rfind('-')
+                if _dash < 0 or not file_name.endswith('gz'):
+                    # chroma-agent.log should be matched as a file_name
+                    root_file_name = file_name
+                else:
+                    root_file_name = file_name[0:_dash]
+
+                if root_file_name in log_names_to_collect:
+                    abs_path = os.path.join(path, file_name)
                     last_modified = os.path.getmtime(abs_path)
                     if last_modified >= cutoff_date_seconds:
-                        collected_files.append(abs_path)
+                        collected_files[root_file_name].append((abs_path,
+                                                                last_modified))
         else:
             if verbose > 0:
                 log.info("%s does not exist." % path)
 
-    if verbose > 1:
-        log.info("Copy %s" % "\t\n".join(collected_files))
+    # Copy all files into one file per filename
+    for file_name, log_files in collected_files.items():
+        ordered_log_files = [t[0] for t in sorted(log_files,
+                             key=lambda file_tuple: file_tuple[1])]
+        output_file_name = os.path.join(output_directory, file_name)
+        for log_file in ordered_log_files:
+            if log_file.endswith('gz'):
+                cmd = ['zcat', log_file, '>>', output_file_name, ]
+            else:
+                cmd = ['cat', log_file, '>>', output_file_name, ]
+            subprocess.Popen(' '.join(cmd), shell=True)
+        if verbose > 1:
+            log.info("copied logs: " % "\t\n".join(ordered_log_files))
 
-    execute(['cp', ] + collected_files + [output_directory, ])
     return len(collected_files)
+
 
 DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
 
@@ -158,7 +181,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('--verbose', '-v', action='count', required=False,
-        help="More output for troubleshooting.")
+                        help="More output for troubleshooting.")
 
     def _check_days_back(arg):
         try:
@@ -173,9 +196,9 @@ def main():
             else:
                 return days_back
     parser.add_argument('--days-back', '-d', required=False,
-        type=_check_days_back,
-        default=1, help="Number of days back to collect logs. default is 1.  0 "
-                        "would mean today's logs only.")
+                        type=_check_days_back, default=1,
+                        help="Number of days back to collect logs. "
+                             "default is 1.  0 would mean today's logs only.")
     args = parser.parse_args()
 
     time_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
@@ -190,14 +213,14 @@ def main():
 
     log.info("\nCollecting diagnostic files\n")
 
-    if dump('detected_devices.dump',
-        ['chroma-agent', 'device_plugin', '--plugin=linux'], output_directory):
+    if dump('detected_devices.dump', ['chroma-agent', 'device_plugin',
+                                      '--plugin=linux'], output_directory):
         log.info("Detected devices")
     elif args.verbose > 0:
         log.info("Failed to Detected devices")
 
-    if dump('rabbit_queue_status.dump',
-        ['rabbitmqctl', 'list_queues', '-p', 'chromavhost'], output_directory):
+    if dump('rabbit_queue_status.dump', ['rabbitmqctl', 'list_queues', '-p',
+                                         'chromavhost'], output_directory):
         log.info("Inspected rabbit queues")
     elif args.verbose > 0:
         log.info("Failed to inspect rabbit queues")
@@ -212,7 +235,8 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to list Pacemaker configuration")
 
-    if dump('chroma-config-validate.dump', ['chroma-config', 'validate'], output_directory):
+    if dump('chroma-config-validate.dump', ['chroma-config',
+                                            'validate'], output_directory):
         log.info("Validated chroma installation")
     elif args.verbose > 0:
         log.info("Failed to run chroma installation validation")
@@ -222,15 +246,22 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to finger print chroma installation")
 
-    log_count = copy_logs(output_directory, args.days_back, args.verbose)
+    if dump('ps.dmp', ['ps', '-ef', '--forest'], output_directory):
+        log.info("Listed running processes")
+    elif args.verbose > 0:
+        log.info("Failed to list running processes: ps")
+
+    log_count = copy_logrotate_logs(output_directory, args.days_back, args.verbose)
     if log_count > 0:
         log.info("Copied %s log files." % log_count)
     elif args.verbose > 0:
         log.info("Failed to copy logs")
 
     tgz_path = '%s.tar.gz' % output_directory
-    #  Using -C to change to parent of dump dir, then tgz'ing just the output dir
-    execute(['tar', '-czf', tgz_path, '-C', DEFAULT_OUTPUT_DIRECTORY, output_fn])
+    #  Using -C to change to parent of dump dir,
+    # then tgz'ing just the output dir
+    execute(['tar', '-czf', tgz_path, '-C',
+             DEFAULT_OUTPUT_DIRECTORY, output_fn])
 
     log.info("\nDiagnostic collection is completed.")
     log.info(tgz_path)
