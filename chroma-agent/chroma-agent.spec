@@ -33,7 +33,8 @@ This is the Intel Manager for Lustre monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket fence-agents-iml yum-utils system-config-firewall-base
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket yum-utils system-config-firewall-base
+Requires: fence-agents-iml > 3.1.5-25.wc1.el6.2
 %description management
 This package layers on management capabilities for Intel Manager for Lustre Agent.
 

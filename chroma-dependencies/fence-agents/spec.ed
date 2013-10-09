@@ -1,7 +1,7 @@
 /^Name:/c
 Name:          fence-agents-iml
 .
-/^Release:/s/^\(.*\)\(%{?alphatag:\.%{alphatag}}%{?dist}.*\)$/\1.wc1\2/
+/^Release:/s/^\(.*\)\(%{?alphatag:\.%{alphatag}}%{?dist}.*\)$/\1.wc2\2/
 ,s/%{name}/fence-agents/g
 /^ExclusiveArch:/i
 
@@ -21,6 +21,9 @@ Provides:      fence-agents = %{version}-%{release}
 
 .
 /^%changelog/a
+* Wed Oct 09 2013 Brian J. Murrell <brian.murrell@intel.com> - 2.1.5-25.wc2.el6_4.2
+- Fix Provides: to be "quacks-like-a-duck" compatible with upstream package
+
 * Thu Jun 06 2013 Michael J. MacDonald <michael.macdonald@intel.com> - 2.1.5-25.wc1.el6_4.2
 - Rebuild for Intel Manager for Lustre
 

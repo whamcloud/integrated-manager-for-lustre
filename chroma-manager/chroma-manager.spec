@@ -54,7 +54,7 @@ Requires: chroma-manager-cli = %{version}
 Requires: chroma-diagnostics >= %{version}
 Requires: policycoreutils-python
 Requires: python-gevent >= 0.13
-Requires: fence-agents-iml
+Requires: fence-agents-iml > 3.1.5-25.wc1.el6.2
 Requires: system-config-firewall-base
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
