@@ -27,9 +27,8 @@ from chroma_agent.log import daemon_log
 
 import re
 import os
-from chroma_agent import shell
+from chroma_agent import shell, config
 from chroma_agent.crypto import Crypto
-from chroma_agent.store import AgentStore
 
 REPO_CONTENT = """
 [Intel Lustre Manager]
@@ -47,7 +46,7 @@ REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
 
 def configure_repo(remote_url, repo_path=REPO_PATH):
-    crypto = Crypto(AgentStore.libdir())
+    crypto = Crypto(config.path)
     open(repo_path, 'w').write(REPO_CONTENT.format(remote_url, crypto.AUTHORITY_FILE, crypto.PRIVATE_KEY_FILE, crypto.CERTIFICATE_FILE))
 
 

@@ -20,6 +20,24 @@
 # express and approved by Intel in writing.
 
 
+import errno
+import os
+
+DEFAULT_AGENT_CONFIG = {
+    'lustre_client_root': "/mnt/lustre_clients"
+}
+
+PRODUCTION_CONFIG_STORE = "/var/lib/chroma"
+DEVEL_CONFIG_STORE = os.path.join(os.path.dirname(__file__), ".dev_config_store")
+from config_store import ConfigStore
+try:
+    config = ConfigStore(PRODUCTION_CONFIG_STORE)
+except OSError as e:
+    if e.errno == errno.EACCES:
+        config = ConfigStore(DEVEL_CONFIG_STORE)
+    else:
+        raise
+
 try:
     from scm_version import VERSION, PACKAGE_VERSION, IS_RELEASE, BUILD
     __version__ = VERSION

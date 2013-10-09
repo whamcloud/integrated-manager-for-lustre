@@ -26,8 +26,7 @@ import re
 import tempfile
 
 from chroma_agent.log import daemon_log, console_log
-from chroma_agent.store import AgentStore
-from chroma_agent import shell
+from chroma_agent import shell, config
 
 
 def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
@@ -342,13 +341,13 @@ def unconfigure_target_ha(primary, ha_label, uuid):
                                        ha_label])
 
     try:
-        os.rmdir(AgentStore.get_target_info(uuid)['mntpt'])
-    except AgentStore.AgentStoreException:
+        target = config.get('targets', uuid)
+        os.rmdir(target['mntpt'])
+    except KeyError:
         console_log.warn("Cannot retrieve target information")
     except IOError:
-        console_log.warn("Cannot remove target mount folder: %s" % AgentStore.get_target_info(uuid)['mntpt'])
-
-    AgentStore.remove_target_info(uuid)
+        console_log.warn("Cannot remove target mount folder: %s" % target['mntpt'])
+    config.delete('targets', uuid)
 
 
 def configure_target_ha(primary, device, ha_label, uuid, mount_point):
@@ -359,13 +358,13 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
         # If it already exists with different params, that is an error
         rc, stdout, stderr = shell.run(["crm_resource", "-r", ha_label, "-g", "target"])
         if rc == 0:
-            info = AgentStore.get_target_info(stdout.rstrip("\n"))
+            info = config.get('targets', stdout.rstrip("\n"))
             if info['bdev'] == device and info['mntpt'] == mount_point:
                 return
             else:
                 raise RuntimeError("A resource with the name %s already exists" % ha_label)
 
-    AgentStore.set_target_info(uuid, {"bdev": device, "mntpt": mount_point})
+    config.set('targets', uuid, {"bdev": device, "mntpt": mount_point})
 
     if primary:
         tmp_f, tmp_name = tempfile.mkstemp()
@@ -448,12 +447,12 @@ def _query_ha_targets():
 
 def mount_target(uuid):
     # these are called by the Target RA from corosync
-    info = AgentStore.get_target_info(uuid)
+    info = config.get('targets', uuid)
     shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])
 
 
 def unmount_target(uuid):
-    info = AgentStore.get_target_info(uuid)
+    info = config.get('targets', uuid)
     shell.try_run(["umount", info['bdev']])
 
 
@@ -617,9 +616,9 @@ def target_running(uuid):
     from os import _exit
     from chroma_agent.utils import Mounts
     try:
-        info = AgentStore.get_target_info(uuid)
-    except:
-        # it can't possibly be running here if the AgentStore entry for
+        info = config.get('targets', uuid)
+    except KeyError:
+        # it can't possibly be running here if the config entry for
         # it doesn't even exist
         _exit(1)
 

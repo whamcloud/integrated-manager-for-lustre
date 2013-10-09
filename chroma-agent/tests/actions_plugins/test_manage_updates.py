@@ -24,6 +24,7 @@ class TestManageUpdates(TestCase):
         lustre.scan_packages = self.old_scan_packages
 
     def test_configure_repo(self):
+        import chroma_agent
         expected_content = """
 [Intel Lustre Manager]
 name=Intel Lustre Manager updates
@@ -36,7 +37,7 @@ sslclientkey = /var/lib/chroma/private.pem
 sslclientcert = /var/lib/chroma/self.crt
 """
         with patch('__builtin__.open', spec=file, create=True) as mock_open:
-            with patch('chroma_agent.store.AgentStore.libdir', return_value="/var/lib/chroma/"):
+            with patch.object(chroma_agent.config, 'path', "/var/lib/chroma/", create=True):
                 manage_updates.configure_repo('http://www.test.com/test.repo')
                 mock_open.return_value.write.assert_called_once_with(expected_content)
 

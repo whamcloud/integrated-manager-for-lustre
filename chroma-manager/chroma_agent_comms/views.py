@@ -356,12 +356,7 @@ def install_agent():
 
 
 def configure_server():
-    server_conf_path = '/var/lib/chroma'
-    launch_command('mkdir -p %s' % server_conf_path)
-    tmp = tempfile.NamedTemporaryFile()
-    tmp.write(json.dumps({{'url': base_url + "agent/"}}))
-    tmp.flush()
-    launch_command('cp %s %s' % (tmp.name, os.path.join(server_conf_path, 'server_conf')))
+    launch_command('chroma-agent set_server_url --url %s' % base_url + 'agent/')
 
 
 def start_agent():
