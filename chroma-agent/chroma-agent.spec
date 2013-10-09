@@ -19,7 +19,7 @@ BuildArch: noarch
 Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
-Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3
+Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3 python-tablib
 Requires: chroma-diagnostics >= %{version}
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
