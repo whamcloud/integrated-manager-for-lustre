@@ -42,6 +42,7 @@ setup(
         'console_scripts': [
             'chroma-agent = chroma_agent.cli:main',
             'chroma-agent-daemon = chroma_agent.agent_daemon:main',
+            'chroma-copytool-monitor = chroma_agent.copytool_monitor:main',
             'fence_chroma = chroma_agent.fence_chroma:main',
         ],
     }

@@ -23,6 +23,7 @@
 from chroma_agent import shell
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
+from collections import defaultdict
 import os
 import re
 import glob
@@ -125,3 +126,37 @@ class BlkId(object):
 
     def all(self):
         return self.devices
+
+
+def lsof(pid=None, file=None):
+    lsof_args = ['lsof', '-F', 'pan0']
+
+    if pid:
+        lsof_args += ["-p", str(pid)]
+
+    if file:
+        lsof_args += [file]
+
+    pids = defaultdict(dict)
+    current_pid = None
+
+    rc, stdout, stderr = shell.run(lsof_args)
+    if rc != 0:
+        if stderr:
+            raise RuntimeError(stderr)
+        # lsof exits non-zero if there's nothing holding the file open
+        return pids
+
+    for line in stdout.split("\n"):
+        match = re.match(r'^p(\d+)\x00', line)
+        if match:
+            current_pid = match.group(1)
+            continue
+
+        match = re.match(r'^a(\w)\x00n(.*)\x00', line)
+        if match:
+            mode = match.group(1)
+            file = match.group(2)
+            pids[current_pid][file] = {'mode': mode}
+
+    return pids

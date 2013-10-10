@@ -21,12 +21,17 @@
 
 
 import logging
+from logging.handlers import SysLogHandler
 import os
 
 # This log is for messages about the internal machinations of our
 # daemon and messaging systems, the user would only be interested
 # in warnings and errors
 daemon_log = logging.getLogger('daemon')
+
+# This log is for copytool monitoring instances. Not particularly interesting
+# unless things have gone wrong.
+copytool_log = logging.getLogger('copytool')
 
 # This log is for messages about operations invoked at the user's request,
 # the user will be interested general breezy chat (INFO) about what we're
@@ -35,12 +40,14 @@ console_log = logging.getLogger('console')
 
 if os.path.exists("/tmp/chroma-agent-debug"):
     daemon_log.setLevel(logging.DEBUG)
+    copytool_log.setLevel(logging.DEBUG)
     console_log.setLevel(logging.DEBUG)
 else:
     daemon_log.setLevel(logging.WARN)
+    copytool_log.setLevel(logging.WARN)
     console_log.setLevel(logging.WARN)
 
-agent_loggers = [daemon_log, console_log]
+agent_loggers = [daemon_log, console_log, copytool_log]
 
 
 # these are signal handlers used to adjust loglevel at runtime
@@ -68,6 +75,31 @@ def decrease_loglevel(signal, frame):
 def daemon_log_setup():
     handler = logging.FileHandler("/var/log/chroma-agent.log")
     handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    daemon_log.addHandler(handler)
+
+
+class SafeSyslogFormatter(logging.Formatter):
+    # Python's logging module has some unicode bugs[1], so to be
+    # safe we'll just strip it out.
+    #
+    # 1. http://bugs.python.org/issue14452
+    def format(self, record):
+        result = logging.Formatter.format(self, record)
+        if isinstance(result, unicode):
+            result = result.encode('utf-8', 'replace')
+        return result
+
+
+# Log copytool stuff to syslog because we may have multiple processes running.
+def copytool_log_setup():
+    handler = SysLogHandler(facility=SysLogHandler.LOG_DAEMON, address="/dev/log")
+    # FIXME: define a custom formatter that will handle unicode strings
+    handler.setFormatter(SafeSyslogFormatter('[%(asctime)s] copytool %(levelname)s: %(message)s', '%d/%b/%Y:%H:%M:%S'))
+    copytool_log.addHandler(handler)
+
+    # Hijack these so that we can reuse code without stomping on other
+    # processes' logging.
+    console_log.addHandler(handler)
     daemon_log.addHandler(handler)
 
 

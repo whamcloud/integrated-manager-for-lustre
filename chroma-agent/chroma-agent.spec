@@ -11,6 +11,10 @@ Source0: %{name}-%{version}.tar.gz
 Source1: chroma-agent-init.sh
 Source2: lustre-modules-init.sh
 Source3: logrotate.cfg
+Source4: copytool.conf
+Source5: copytool-monitor.conf
+Source6: start-copytools.conf
+Source7: start-copytool-monitors.conf
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -57,10 +61,13 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --install-scripts=%{_bindir} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 mv $RPM_BUILD_ROOT/usr/{,s}bin/fence_chroma
+mv $RPM_BUILD_ROOT/usr/{,s}bin/chroma-copytool-monitor
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate}.d/
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-agent
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/lustre-modules
 install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-agent
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/init
+cp %{SOURCE4} %{SOURCE5} %{SOURCE6} %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/init
 
 # Nuke source code (HYD-1849)
 find $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
@@ -71,6 +78,8 @@ cat <<EndOfList>>management.files
 %{python_sitelib}/chroma_agent/templates/
 /usr/lib/ocf/resource.d/chroma/Target
 %{_sbindir}/fence_chroma
+%{_sbindir}/chroma-copytool-monitor
+%{_sysconfdir}/init/*
 EndOfList
 
 touch base.files
