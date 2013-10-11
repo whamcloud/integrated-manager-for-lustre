@@ -1388,3 +1388,14 @@ class JobScheduler(object):
                         jobs[obj_id] = self._fetch_jobs(stateful_object)
 
             return jobs
+
+    def get_locks(self, obj_key, obj_id):
+        locks = {}
+        try:
+            object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
+            locks['read'] = list(set([x.job.id for x in self._lock_cache.read_by_item[object]]))
+            locks['write'] = list(set([x.job.id for x in self._lock_cache.write_by_item[object]]))
+        except ObjectDoesNotExist:
+            pass
+
+        return locks

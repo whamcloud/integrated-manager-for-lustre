@@ -88,3 +88,22 @@ class TestMisc(ChromaApiTestCase):
 
         # Check resources still render without exceptions
         self.spider_api()
+
+
+class TestJobLocksAPI(ChromaApiTestCase):
+    def __init__(self, method, username='admin', **kwargs):
+        ChromaApiTestCase.__init__(self, method, username=username, **kwargs)
+
+    def setUp(self):
+        super(TestJobLocksAPI, self).setUp()
+        self.host = synthetic_host('myserver')
+
+    def tearDown(self):
+        super(TestJobLocksAPI, self).tearDown()
+
+    def test_get_host_locks_api(self):
+        response = self.deserialize(self.api_client.get("/api/host/"))['objects'][0]
+        self.assertIn('read', response['locks'])
+        self.assertIn('write', response['locks'])
+        self.assertEqual([1, 2], response['locks']['read'])
+        self.assertEqual([3, 4], response['locks']['write'])

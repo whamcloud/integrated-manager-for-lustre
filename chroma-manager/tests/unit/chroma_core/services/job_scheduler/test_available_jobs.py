@@ -3,8 +3,7 @@ from django.db import connection, reset_queries
 from django.test import TestCase
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import (ManagedMgs, ManagedFilesystem, ManagedOst,
-                                ManagedMdt, RebootHostJob, ShutdownHostJob,
-                                StateLock)
+                                ManagedMdt, RebootHostJob, ShutdownHostJob)
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_core.helper import synthetic_volume, synthetic_host
 
@@ -52,13 +51,10 @@ class TestAvailableJobs(TestCase):
 
         connection.use_debug_cursor = False
 
-    def _fake_add_lock(self, job, locked_item_type_id, locked_item_id):
+    def _fake_add_lock(self, jobscheduler, object, new_state):
 
-        d = {}
-        d['locked_item_type_id'] = locked_item_type_id
-        d['locked_item_id'] = locked_item_id
-
-        self.js._lock_cache.add(StateLock.from_dict(job, d))
+        d = (ContentType.objects.get_for_model(object).natural_key(), object.id, new_state)
+        jobscheduler.set_state([d], 'fake object lock', run=False)
 
     def _get_jobs(self, object):
         """Check that expected states are returned for given object"""
@@ -163,3 +159,14 @@ class TestAvailableJobs(TestCase):
         self.assertGreaterEqual(query_sum, EXPECTED_QUERIES,
             "something changed with queries! "
             "got %s expected %s" % (query_sum, EXPECTED_QUERIES))
+
+    def test_object_is_locked(self):
+        js = JobScheduler()
+        self._fake_add_lock(js, self.host, 'lnet_down')
+        host_ct_key = ContentType.objects.get_for_model(
+            self.host.downcast()).natural_key()
+        host_id = self.host.id
+
+        locks = js.get_locks(host_ct_key, host_id)
+        self.assertFalse(locks['read'])
+        self.assertEqual(2, len(locks['write']))

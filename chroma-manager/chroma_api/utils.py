@@ -142,9 +142,10 @@ class StatefulModelResource(CustomModelResource):
     available_transitions = fields.ListField()
     available_jobs = fields.ListField()
     label = fields.CharField()
+    locks = fields.DictField(help_text= "Lists of locked job ids for this object")
 
     class Meta:
-        readonly = ['id', 'immutable_state', 'state', 'content_type_id', 'available_transitions', 'available_jobs', 'label', 'state_modified_at']
+        readonly = ['id', 'immutable_state', 'state', 'content_type_id', 'available_transitions', 'available_jobs', 'label', 'state_modified_at', 'locks']
 
     def dehydrate_content_type_id(self, bundle):
         if hasattr(bundle.obj, 'content_type'):
@@ -154,6 +155,12 @@ class StatefulModelResource(CustomModelResource):
 
     def dehydrate_label(self, bundle):
         return bundle.obj.get_label()
+
+    def dehydrate_locks(self, bundle):
+        obj = bundle.obj
+        obj_key = ContentType.objects.get_for_model(obj.downcast()).natural_key()
+
+        return JobSchedulerClient.get_locks(obj_key, obj.id)
 
     def alter_detail_data_to_serialize(self, request, bundle):
         """Add post dehydrate data to a single bundle

@@ -56,7 +56,8 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'create_host',
                'create_targets',
                'available_transitions',
-               'available_jobs'
+               'available_jobs',
+               'get_locks'
                ]
 
 
@@ -245,3 +246,7 @@ class JobSchedulerClient(object):
 
         target_ids, command_id = JobSchedulerRpc().create_targets(targets_data)
         return list(ManagedTarget.objects.filter(id__in=target_ids)), Command.objects.get(pk = command_id)
+
+    @classmethod
+    def get_locks(cls, obj_key, obj_id):
+        return JobSchedulerRpc().get_locks(obj_key, obj_id)

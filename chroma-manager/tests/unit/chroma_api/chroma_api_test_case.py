@@ -62,6 +62,13 @@ class ChromaApiTestCase(ResourceTestCase):
         self.old_available_jobs = job_scheduler_client.JobSchedulerClient.available_jobs
         job_scheduler_client.JobSchedulerClient.available_jobs = fake_available_jobs
 
+        @classmethod
+        def fake_get_locks(cls, obj_key, obj_id):
+            return {'read': [1, 2], 'write': [3, 4]}
+
+        self.old_get_locks = job_scheduler_client.JobSchedulerClient.get_locks
+        job_scheduler_client.JobSchedulerClient.get_locks = fake_get_locks
+
     def tearDown(self):
         from chroma_api.authentication import CsrfAuthentication
         CsrfAuthentication.is_authenticated = self.old_is_authenticated
