@@ -91,7 +91,7 @@ class BlockDevices(DeviceHelper):
     def __init__(self):
         self.old_udev = None
 
-        # Build this map to retreive fstype in _device_node
+        # Build this map to retrieve fstype in _device_node
         self._major_minor_to_fstype = {}
         for blkid_dev in BlkId().all():
             major_minor = self._dev_major_minor(blkid_dev['path'])
@@ -245,13 +245,17 @@ class MdRaid(DeviceHelper):
     """Reads /proc/mdstat"""
 
     def __init__(self, block_devices):
+        self.block_devices = block_devices
+
         mds = {}
         for md in self._get_md():
-            path = md['path']
-            block_device = block_devices.node_block_devices[md['path']]
-            uuid = md['uuid']
             drives = [self._dev_major_minor(dp) for dp in md['device_paths']]
-            mds[uuid] = {'path': path, 'block_device': block_device, 'drives': drives}
+
+            # Check that none of the drives in the array are None (i.e. not found) if we found them all
+            # then we create the mds entry.
+            if drives.count(None) == 0:
+                mds[md['uuid']] = {'path': md["path"], 'block_device': md['mm'], 'drives': drives}
+
         self.mds = mds
 
     def all(self):
@@ -265,20 +269,27 @@ class MdRaid(DeviceHelper):
                 # e.g. md0
                 device_name = match.group(1)
                 device_path = "/dev/%s" % device_name
-                detail = shell.try_run(['mdadm', '--brief', '--detail', '--verbose', device_path])
-                device_uuid = re.search("UUID=(.*)[ \\n]", detail.strip(), flags = re.MULTILINE).group(1)
-                device_list_csv = re.search("^   devices=(.*)$", detail.strip(), flags = re.MULTILINE).group(1)
-                device_list = device_list_csv.split(",")
+                device_major_minor = self._dev_major_minor(device_path)
 
-                devs.append({
-                    "uuid": device_uuid,
-                    "path": device_path,
-                    "device_paths": device_list
-                    })
+                try:
+                    detail = shell.try_run(['mdadm', '--brief', '--detail', '--verbose', device_path])
+                    device_uuid = re.search("UUID=(.*)[ \\n]", detail.strip(), flags = re.MULTILINE).group(1)
+                    device_list_csv = re.search("^\s+devices=(.*)$", detail.strip(), flags = re.MULTILINE).group(1)
+                    device_list = device_list_csv.split(",")
+
+                    devs.append({
+                        "uuid": device_uuid,
+                        "path": device_path,
+                        "mm": device_major_minor,
+                        "device_paths": device_list
+                        })
+                except OSError as os_error:
+                    # mdadm doesn't exist, threw an error etc.
+                    console_log.exception("mdadm threw an exception '%s' " % os_error.strerror)
+
             return devs
         except IOError:
             return []
-
 
 class DmsetupTable(object):
     """Uses various devicemapper commands to learn about LVM and Multipath"""
