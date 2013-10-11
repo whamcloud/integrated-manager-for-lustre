@@ -1,38 +1,31 @@
 describe('tastypie interceptor', function () {
   'use strict';
 
-  var spy, deferred, newPromise;
+  var tastypieInterceptor;
 
   beforeEach(module('interceptors'));
 
-  beforeEach(inject(function ($injector) {
-    spy = jasmine.createSpy('spy');
-
-    deferred = $injector.get('$q').defer();
-
-    newPromise = $injector.get('tastypieInterceptor')(deferred.promise);
-    newPromise.then(spy);
-
+  beforeEach(inject(function (_tastypieInterceptor_) {
+    tastypieInterceptor = _tastypieInterceptor_;
   }));
 
-  it('should move other properties from tastypie response to a new prop', inject(function ($rootScope) {
-    deferred.resolve({
+  it('should move other properties from tastypie response to a new prop', function () {
+    var result = tastypieInterceptor.response({
       data: {
         meta: {},
         objects: []
       }
     });
-    $rootScope.$apply();
 
-    expect(spy).toHaveBeenCalledWith({
+    expect(result).toEqual({
       props: {
         meta: {}
       },
       data: []
     });
-  }));
+  });
 
-  it('should not alter the resp if it doesn\'t look like it originated from tastypie', inject(function ($rootScope) {
+  it('should not alter the resp if it doesn\'t look like it originated from tastypie', function () {
     var resp = {
       data: {
         meta: {},
@@ -40,9 +33,8 @@ describe('tastypie interceptor', function () {
       }
     };
 
-    deferred.resolve(resp);
-    $rootScope.$apply();
+    var result = tastypieInterceptor.response(resp);
 
-    expect(spy).toHaveBeenCalledWith(resp);
-  }));
+    expect(result).toEqual(resp);
+  });
 });

@@ -20,38 +20,24 @@
 // express and approved by Intel in writing.
 
 
-(function (_) {
+(function () {
   'use strict';
 
-  angular.module('interceptors')
-    .factory('tastypieInterceptor', [function tastypieInterceptor() {
-      return {
-        /**
-         * A Factory function that intercepts successful http responses
-         * and puts the meta property at a higher level if it is a tastypie generated response.
-         * @returns {object} The transformed response.
-         */
-        response: function (resp) {
-          var fromTastyPie = _.isObject(resp.data) && _.isObject(resp.data.meta) && Array.isArray(resp.data.objects);
+  var html = /\.html$/;
+  var slash = /\\$/;
 
-          // If we got data, and it looks like a tastypie meta/objects body
-          // then pull off the meta.
-          if (fromTastyPie) {
-            var temp = resp.data.objects;
+  angular.module('interceptors').factory('cleanRequestUrlInterceptor', [function () {
+    return {
+      request: function (config) {
+        if (html.test(config.url)) return config;
 
-            resp.props = resp.data;
-            delete resp.data.objects;
+        if (!slash.test(config.url)) config.url += '/';
 
-            resp.data = temp;
-          }
-
-          // Return the response for further processing.
-          return resp;
-        }
-      };
-    }])
-    .config(function ($httpProvider) {
-      // register the interceptor.
-      $httpProvider.interceptors.push('tastypieInterceptor');
-    });
-}(window.lodash));
+        return config;
+      }
+    };
+  }])
+  .config(function ($httpProvider) {
+    $httpProvider.interceptors.push('cleanRequestUrlInterceptor');
+  });
+}());

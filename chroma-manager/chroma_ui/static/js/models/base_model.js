@@ -43,8 +43,12 @@
           query: {
             method: 'GET',
             isArray: true,
-            patch: function (value, resp) {
-              value.paging = paging(resp.props.meta);
+            interceptor: {
+              response: function (resp) {
+                resp.resource.paging = paging(resp.props.meta);
+
+                return resp.resource;
+              }
             }
           }
         },

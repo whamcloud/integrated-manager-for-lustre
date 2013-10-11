@@ -1,7 +1,7 @@
 describe('Commands model', function () {
   'use strict';
 
-  beforeEach(module('models', 'ngResource', 'services', 'constants'));
+  beforeEach(module('models', 'ngResource', 'interceptors', 'services', 'constants'));
 
   afterEach(inject(function ($httpBackend) {
     $httpBackend.verifyNoOutstandingExpectation();

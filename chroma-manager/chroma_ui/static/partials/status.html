@@ -21,7 +21,7 @@
                     <span class="message-type">(( model.getState() | lowercase | capitalize ))</span>
                 </div>
                 <div class="date">
-                    (( model.created_at || model.begin | isoDate:'MM/dd/yyyy HH:mm' ))
+                    (( model.created_at || model.begin | date:'MM/dd/yyyy HH:mm' ))
                 </div>
                 <div class="message-body">
                     <div ng-show="model.alert_item_str || model.host_name"><strong>Host: </strong> ((model.host_name || model.alert_item_str))</div>

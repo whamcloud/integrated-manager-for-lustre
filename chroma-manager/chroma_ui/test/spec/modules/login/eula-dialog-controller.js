@@ -4,10 +4,11 @@ describe('Eula', function () {
   var $scope;
   var $window;
 
-  beforeEach(module('login'));
+  beforeEach(module('login', 'interceptors'));
+
+  mock.beforeEach('help');
 
   beforeEach(module(function ($provide) {
-    // Mock out deps.
     $provide.value('dialog', {
       close: jasmine.createSpy('dialogClose')
     });

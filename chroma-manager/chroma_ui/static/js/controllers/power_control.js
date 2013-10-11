@@ -41,13 +41,13 @@
       /**
        * @description Instantiates the and opens add BMC dialog.
        * @param {PowerControlDeviceModel} device
-       * @param {ManagedHost} host
+       * @param {hostModel} host
        */
       createBmc: function createBmc(device, host) {
         var dialog = $dialog.dialog({
           resolve: {
             device: function () { return device; },
-            host: function () { return host; },
+            host: function () { return host; }
           }
         });
 
@@ -84,7 +84,7 @@
       }
     };
 
-    $q.all([$scope.powerCtrl.hosts, $scope.powerCtrl.powerControlDevices]).then(function () {
+    $q.all([$scope.powerCtrl.hosts.$promise, $scope.powerCtrl.powerControlDevices.$promise]).then(function () {
       $scope.$emit('unblockUi');
     });
   }

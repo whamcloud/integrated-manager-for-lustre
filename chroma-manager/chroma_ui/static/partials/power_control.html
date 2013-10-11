@@ -36,8 +36,8 @@
                 tab-index="(($index + 1))"
                 device="device"
                 host="host"
-                on-add="device.addOutlet(outlet, host)"
-                on-remove="device.isIpmi() && device.removeIpmiOutlet(outlet) || device.removeOutlet(outlet)"
+                on-add="device.addOutletWrapped(outlet, host)"
+                on-remove="device.isIpmi() ? device.removeIpmiOutletWrapped(outlet) : device.removeOutletWrapped(outlet)"
                 ></power-control-autocomplete>
             </div>
             <div ng-show="(!device.isIpmi() && host.hasIpmi(powerCtrl.powerControlDevices)) || (device.isIpmi() && host.hasOutlets(powerCtrl.powerControlDevices))">

@@ -32,7 +32,6 @@
       $interpolateProvider.endSymbol('))');
     }])
     .config(['$httpProvider', function ($httpProvider) {
-      $httpProvider.defaults.headers.patch = {'Content-Type': 'application/json;charset=utf-8'};
       $httpProvider.defaults.xsrfCookieName = 'csrftoken';
       $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
     }])

@@ -7,7 +7,7 @@ describe('Login', function () {
   var EULA_STATES;
   var $window;
 
-  beforeEach(module('login'));
+  beforeEach(module('login', 'interceptors'));
 
   beforeEach(module(function ($provide) {
     $provide.value('HELP_TEXT', {

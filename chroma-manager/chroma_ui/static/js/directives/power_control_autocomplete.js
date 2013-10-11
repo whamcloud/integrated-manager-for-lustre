@@ -210,12 +210,12 @@
 
         var oldOnAdd = scope.onAdd;
         scope.onAdd = function (locals) {
-          oldOnAdd(locals).then(calculatePosition);
+          oldOnAdd(locals)().then(calculatePosition);
         };
 
         var oldOnRemove = scope.onRemove;
         scope.onRemove = function (locals) {
-          oldOnRemove(locals).then(calculatePosition);
+          oldOnRemove(locals)().then(calculatePosition);
         };
 
         scope.$on('$destroy', function destroy() {

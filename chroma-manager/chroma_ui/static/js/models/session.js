@@ -33,8 +33,12 @@ angular.module('models').factory('SessionModel', ['baseModel', 'UserModel', func
     url: '/api/session',
     actions: {
       get: {
-        patch: function (session) {
-          session.user = new UserModel(session.user);
+        interceptor: {
+          response: function (resp) {
+            resp.resource.user = new UserModel(resp.resource.user);
+
+            return resp.resource;
+          }
         }
       }
     }

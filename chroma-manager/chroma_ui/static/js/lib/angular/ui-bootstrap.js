@@ -1,3 +1,14 @@
+// This is a monkey patch that is available upstream in bootstrap ui 1.6.
+// When we upgrade to 1.6 we can just drop it in over this file.
+angular.module('ui.bootstrap.bindHtml', []).directive('bindHtmlUnsafe', function () {
+  return function (scope, element, attr) {
+    element.addClass('ng-binding').data('$binding', attr.bindHtmlUnsafe);
+    scope.$watch(attr.bindHtmlUnsafe, function bindHtmlUnsafeWatchAction(value) {
+      element.html(value || '');
+    });
+  };
+});
+
 angular.module("ui.bootstrap", ["ui.bootstrap.tpls", "ui.bootstrap.transition","ui.bootstrap.collapse","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.dialog","ui.bootstrap.dropdownToggle","ui.bootstrap.modal","ui.bootstrap.pagination","ui.bootstrap.position","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.typeahead"]);
 angular.module("ui.bootstrap.tpls", ["template/accordion/accordion-group.html","template/accordion/accordion.html","template/alert/alert.html","template/carousel/carousel.html","template/carousel/slide.html","template/dialog/message.html","template/pagination/pagination.html","template/tooltip/tooltip-html-unsafe-popup.html","template/tooltip/tooltip-popup.html","template/popover/popover.html","template/progressbar/bar.html","template/progressbar/progress.html","template/rating/rating.html","template/tabs/pane.html","template/tabs/tabs.html","template/typeahead/typeahead.html"]);
 angular.module('ui.bootstrap.transition', [])
@@ -1188,7 +1199,7 @@ angular.module('ui.bootstrap.position', [])
  * function, placement as a function, inside, support for more triggers than
  * just mouse enter/leave, html tooltips, and selector delegation.
  */
-angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position' ] )
+angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.bindHtml' ] )
 
 /**
  * The $tooltip service creates tooltip- and popover-like directives as well as
@@ -1745,7 +1756,7 @@ angular.module('ui.bootstrap.tabs', [])
   };
 }]);
 
-angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
+angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position', 'ui.bootstrap.bindHtml'])
 
 /**
  * A helper service that can parse typeahead's syntax (string provided by users)
@@ -2057,7 +2068,7 @@ angular.module("template/tooltip/tooltip-html-unsafe-popup.html", []).run(["$tem
   $templateCache.put("template/tooltip/tooltip-html-unsafe-popup.html",
     "<div class=\"tooltip ((placement))\" ng-class=\"{ in: isOpen(), fade: animation() }\">\n" +
     "  <div class=\"tooltip-arrow\"></div>\n" +
-    "  <div class=\"tooltip-inner\" ng-bind-html-unsafe=\"content\"></div>\n" +
+    "  <div class=\"tooltip-inner\" bind-html-unsafe=\"content\"></div>\n" +
     "</div>\n" +
     "");
 }]);
@@ -2123,14 +2134,14 @@ angular.module("template/tabs/tabs.html", []).run(["$templateCache", function($t
 
 angular.module("template/typeahead/match.html", []).run(["$templateCache", function($templateCache){
   $templateCache.put("template/typeahead/match.html",
-    "<a tabindex=\"-1\" ng-bind-html-unsafe=\"match.label | typeaheadHighlight:query\"></a>");
+    "<a tabindex=\"-1\" bind-html-unsafe=\"match.label | typeaheadHighlight:query\"></a>");
 }]);
 
 angular.module("template/typeahead/typeahead.html", []).run(["$templateCache", function($templateCache) {
   $templateCache.put("template/typeahead/typeahead.html",
     "<ul class=\"typeahead dropdown-menu\" ng-style=\"{display: isOpen()&&'block' || 'none', top: position.top+'px', left: position.left+'px'}\">\n" +
     "    <li ng-repeat=\"match in matches\" ng-class=\"{active: isActive($index) }\" ng-mouseenter=\"selectActive($index)\">\n" +
-    "        <a tabindex=\"-1\" ng-click=\"selectMatch($index)\" ng-bind-html-unsafe=\"match.label | typeaheadHighlight:query\"></a>\n" +
+    "        <a tabindex=\"-1\" ng-click=\"selectMatch($index)\" bind-html-unsafe=\"match.label | typeaheadHighlight:query\"></a>\n" +
     "    </li>\n" +
     "</ul>");
 }]);

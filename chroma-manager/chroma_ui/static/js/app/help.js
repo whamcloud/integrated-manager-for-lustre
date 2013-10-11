@@ -20,24 +20,23 @@
 // express and approved by Intel in writing.
 
 
-(function (_) {
+angular.module('help', ['constants']).factory('help', ['$sce', 'HELP_TEXT', function ($sce, HELP_TEXT) {
   'use strict';
 
-  /**
-   * The purpose of this filter is to convert date strings into a format compatible with angular's expectation of
-   * ISO8601 strict.
-   */
-  angular.module('filters').filter('isoDate', ['$filter', function($filter) {
-    var dateFilter = $filter('date');
+  var trusted = {};
 
-    return function(date, format) {
-      if(_.isString(date)) {
-        date = date.replace(/\.\d{6}/g, function (match) {
-          return match.substr(0, 4);
-        });
-      }
+  function addToTrusted (key) {
+    trusted[key] = $sce.trustAsHtml(HELP_TEXT[key]);
 
-      return dateFilter(date, format);
-    };
-  }]);
-}(window.lodash));
+    return trusted[key];
+  }
+
+  return {
+    get: function (key) {
+      if (!HELP_TEXT[key]) throw new Error('Key %s is not in help text!'.sprintf(key));
+
+      return trusted[key] || addToTrusted(key);
+    }
+  };
+}]);
+

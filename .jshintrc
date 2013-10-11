@@ -15,7 +15,8 @@
     "afterEach": false,
     "waits": false,
     "waitsFor": false,
-    "runs": false
+    "runs": false,
+    "mock": false
   },
 
   "predef": [
@@ -33,12 +34,13 @@
     "afterEach",
     "waits",
     "waitsFor",
-    "runs"
+    "runs",
+    "mock"
   ],
 
   // Enforcing Options
   "bitwise": true,
-  "curly": true,
+  "curly": false,
   "eqeqeq": true,
   "forin": true,
   "immed": true,

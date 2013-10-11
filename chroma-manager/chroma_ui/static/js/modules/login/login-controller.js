@@ -107,7 +107,7 @@
         .then(function (session) {
           return nextStep(session.user);
         })
-        .then(callback, callback);
+        .finally(callback);
       }
     };
   }

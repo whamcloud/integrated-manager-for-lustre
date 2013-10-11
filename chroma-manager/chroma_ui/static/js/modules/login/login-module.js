@@ -26,5 +26,5 @@
   /**
    * Login module definition.
    */
-  angular.module('login', ['services', 'directives', 'constants', 'ui.bootstrap', 'models']);
+  angular.module('login', ['services', 'directives', 'constants', 'ui.bootstrap', 'models', 'help']);
 }());

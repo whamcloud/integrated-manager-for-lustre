@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  function EulaCtrl($scope, $window, $location, dialog, SessionModel, HELP_TEXT, doneCallback, user) {
+  function EulaCtrl($scope, $window, $location, dialog, SessionModel, help, doneCallback, user) {
     /**
      * Wrapper function that creates an action for EULA buttons.
      * @param {boolean} state
@@ -47,11 +47,11 @@
           $window.location.href = $location.absUrl();
         });
       }),
-      eula: HELP_TEXT.eula
+      eula: help.get('eula')
     };
   }
 
   angular.module('login')
     .controller('EulaCtrl',
-      ['$scope', '$window', '$location', 'dialog', 'SessionModel', 'HELP_TEXT', 'doneCallback', 'user', EulaCtrl]);
+      ['$scope', '$window', '$location', 'dialog', 'SessionModel', 'help', 'doneCallback', 'user', EulaCtrl]);
 }());

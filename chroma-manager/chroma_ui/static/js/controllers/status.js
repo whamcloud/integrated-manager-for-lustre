@@ -103,7 +103,7 @@
           $element.find('ul.messages').scrollTop(0);
         }
 
-        this.getPage(page, noBlock).then(scrollTop, scrollTop);
+        this.getPage(page, noBlock).finally(scrollTop);
       },
       /**
        * @description Moves the current state to the specified page.
@@ -163,9 +163,8 @@
         function success() { $scope.$emit('checkHealth'); }
 
         delete message.active;
-        message.$patch().then(noUpdate ? angular.noop: success);
 
-        return message.$promise;
+        return message.$patch().then(noUpdate ? angular.noop: success);
       }
     };
 
@@ -204,7 +203,7 @@
           $scope.$emit('unblockUi');
         }
 
-        $q.all(promises).then(callback, callback);
+        $q.all(promises).finally(callback);
       });
     }.bind(this);
 

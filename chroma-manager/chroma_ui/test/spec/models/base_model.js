@@ -1,29 +1,36 @@
 describe('Base Model', function () {
   'use strict';
 
+  var baseModel, $httpBackend;
+
   beforeEach(module('models', 'ngResource', 'services', 'interceptors'));
 
-  afterEach(inject(function ($httpBackend) {
+  beforeEach(inject(function (_baseModel_, _$httpBackend_) {
+    baseModel = _baseModel_;
+    $httpBackend = _$httpBackend_;
+  }));
+
+  afterEach(function () {
     $httpBackend.verifyNoOutstandingExpectation();
     $httpBackend.verifyNoOutstandingRequest();
-  }));
+  });
 
-  it('should return a resource', inject(function (baseModel) {
+  it('should return a resource', function () {
     expect(baseModel).toBeDefined();
     expect(baseModel).toEqual(jasmine.any(Function));
-  }));
+  });
 
-  it('should have a patch method', inject(function (baseModel) {
+  it('should have a patch method', function () {
     var patchMethod = baseModel({url: '/a/'}).patch;
     expect(patchMethod).toBeDefined();
     expect(patchMethod).toEqual(jasmine.any(Function));
-  }));
+  });
 
-  it('should throw an error without a url', inject(function (baseModel) {
+  it('should throw an error without a url', function () {
     expect(baseModel).toThrow();
-  }));
+  });
 
-  it('should be callable with just a url', inject(function (baseModel, $httpBackend) {
+  it('should be callable with just a url', function () {
     var config = {url: '/a/b/c/'};
 
     $httpBackend
@@ -37,35 +44,36 @@ describe('Base Model', function () {
     $httpBackend.flush();
 
     expect(res).toEqual(jasmine.any(Object));
-  }));
+  });
 
-  it('should provide a way to patch a value', inject(function (baseModel, $httpBackend) {
-    var spy = jasmine.createSpy('patch').andCallFake(function (value) {
-      value.foo = 'bar';
+  it('should provide a way to intercept a response', function () {
+    var interceptor = jasmine.createSpy('interceptor').andCallFake(function (resp) {
+      resp.resource.foo = 'bar';
 
-      return value;
+      return resp;
     });
 
     var config = {
       url: '/a/b/c/',
       actions: {
         get: {
-          patch: spy
+          interceptor: {
+            response: interceptor
+          }
         }
       }
     };
 
-    $httpBackend
-      .expectGET(config.url)
-      .respond({});
+    $httpBackend.expectGET(config.url).respond({});
 
-    var res = baseModel(config).get();
+    var resp = baseModel(config).get();
 
     $httpBackend.flush();
 
-    expect(spy).toHaveBeenCalledWith(jasmine.any(Object), jasmine.any(Object));
-    expect(res.foo).toEqual('bar');
-  }));
+    expect(interceptor).toHaveBeenCalledWith(jasmine.any(Object));
+
+    expect(resp.foo).toEqual('bar');
+  });
 
   it('should provide a way to execute methods on data', inject(function (baseModel, $httpBackend) {
     var spy = jasmine.createSpy('squareFoo').andCallFake(function () {
@@ -99,14 +107,14 @@ describe('Base Model', function () {
     $httpBackend
       .expectGET(config.url)
       .respond({
-          meta: {
-            limit: 10,
-            next: "/api/alert/?limit=10&dismissed=false&offset=10",
-            offset: 0,
-            previous: null,
-            total_count: 52
-          },
-          objects: []
+        meta: {
+          limit: 10,
+          next: '/api/alert/?limit=10&dismissed=false&offset=10',
+          offset: 0,
+          previous: null,
+          total_count: 52
+        },
+        objects: []
       });
 
     var res = baseModel(config).query();

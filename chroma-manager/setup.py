@@ -46,6 +46,7 @@ setup(
         'chroma_core': ["fixtures/default_power_types.json"],
         'chroma_ui': ["static/js/lib/*.js", "static/js/lib/angular/*.js",
                       "static/js/lib/sprintf/*.js", "static/js/*.js",
+                      "static/js/app/*.js",
                       "static/js/controllers/*.js", "static/js/controllers/dialogs/*.js",
                       "static/js/directives/*.js", "static/js/directives/validators/*.js",
                       "static/js/filters/*.js", "static/js/interceptors/*.js",

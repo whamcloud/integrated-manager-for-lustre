@@ -1,7 +1,7 @@
 describe('Session model', function () {
   'use strict';
 
-  beforeEach(module('models', 'ngResource', 'services'));
+  beforeEach(module('models', 'ngResource', 'interceptors', 'services'));
 
   afterEach(inject(function ($httpBackend) {
     $httpBackend.verifyNoOutstandingExpectation();
@@ -9,7 +9,7 @@ describe('Session model', function () {
   }));
 
 
-  it('should patch it\'s get method to return a user model', inject(function (SessionModel, $httpBackend) {
+  it('should intercept the GET response to create a user model', inject(function (SessionModel, $httpBackend) {
     $httpBackend.expectGET('/api/session/').respond({
       user: {}
     });

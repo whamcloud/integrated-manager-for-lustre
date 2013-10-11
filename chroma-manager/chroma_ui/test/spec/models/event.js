@@ -3,7 +3,7 @@ describe('Events model', function () {
 
   var $httpBackend;
 
-  beforeEach(module('models', 'ngResource', 'constants', 'services'));
+  beforeEach(module('models', 'ngResource', 'interceptors', 'constants', 'services'));
 
   beforeEach(inject(function ($injector) {
     $httpBackend = $injector.get('$httpBackend');

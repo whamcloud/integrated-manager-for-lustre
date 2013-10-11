@@ -71,17 +71,33 @@
       params: {powerControlDeviceId: '@id'},
       actions: {
         query: {
-          patch: function (devices) {
-            devices.forEach(vivifyOutlets);
+          interceptor: {
+            response: function (resp) {
+              resp.resource.forEach(vivifyOutlets);
+
+              return resp.resource;
+            }
           }
         },
         save: {
           transformRequest: transformRequest,
-          patch: vivifyOutlets
+          interceptor: {
+            response: function (resp) {
+              vivifyOutlets(resp.resource);
+
+              return resp.resource;
+            }
+          }
         },
         update: {
           transformRequest: transformRequest,
-          patch: vivifyOutlets
+          interceptor: {
+            response: function (resp) {
+              vivifyOutlets(resp.resource);
+
+              return resp.resource;
+            }
+          }
         }
       },
       methods: {
@@ -113,12 +129,39 @@
           outlet.host = null;
           return outlet.$update();
         },
+        /**
+         * Have to wrap this because of the broken promise $parse implementation in Angular 1.2 RC2
+         * Remove when 1.2 RC3 is released. See {@link https://github.com/angular/angular.js/pull/4317|issue}.
+         * @param {PowerControlDeviceOutlet} outlet
+         * @returns {*}
+         */
+        removeOutletWrapped: function (outlet) {
+          outlet.host = null;
+          var promise = outlet.$update();
+
+          return function () { return promise; };
+        },
         removeIpmiOutlet: function (outlet) {
           outlet.host = null;
           return outlet.$delete().then(function () {
             var outletIndex = this.outlets.indexOf(outlet);
             this.outlets.splice(outletIndex, 1);
           }.bind(this));
+        },
+        /**
+         * Have to wrap this because of the broken promise $parse implementation in Angular 1.2 RC2
+         * Remove when 1.2 RC3 is released. See {@link https://github.com/angular/angular.js/pull/4317|issue}.
+         * @param {PowerControlDeviceOutlet} outlet
+         * @returns {*}
+         */
+        removeIpmiOutletWrapped: function (outlet) {
+          outlet.host = null;
+          var promise = outlet.$delete().then(function () {
+            var outletIndex = this.outlets.indexOf(outlet);
+            this.outlets.splice(outletIndex, 1);
+          }.bind(this));
+
+          return function () { return promise; };
         },
         /**
          * Adds an outlet to a host.
@@ -129,6 +172,19 @@
         addOutlet: function (outlet, host) {
           outlet.host = host.resource_uri;
           return outlet.$update();
+        },
+        /**
+         * Have to wrap this because of the broken promise $parse implementation in Angular 1.2 RC2
+         * Remove when 1.2 RC3 is released. See {@link https://github.com/angular/angular.js/pull/4317|issue}.
+         * @param outlet
+         * @param host
+         * @returns {Function}
+         */
+        addOutletWrapped: function (outlet, host) {
+          outlet.host = host.resource_uri;
+          var promise = outlet.$update();
+
+          return function () { return promise; };
         },
         format: function (value) {
           return _.pluck(value, 'identifier');

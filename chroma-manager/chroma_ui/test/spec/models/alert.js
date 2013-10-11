@@ -31,7 +31,7 @@ describe('Alerts model', function () {
     severity: 'ERROR'
   };
 
-  beforeEach(module('models', 'ngResource', 'constants', 'services'));
+  beforeEach(module('models', 'interceptors', 'ngResource', 'constants', 'services'));
 
   afterEach(inject(function ($httpBackend) {
     $httpBackend.verifyNoOutstandingExpectation();
