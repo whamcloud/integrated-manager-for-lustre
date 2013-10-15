@@ -21,6 +21,8 @@ files = [
   'static/js/modules/**/*-module.js',
   'static/js/modules/**/*.js',
   'static/js/constants.js',
+  'static/js/filters/filters_module.js',
+  'static/js/filters/*.js',
   'static/js/interceptors/*_module.js',
   'static/js/interceptors/*.js',
   'static/js/models/models_module.js',

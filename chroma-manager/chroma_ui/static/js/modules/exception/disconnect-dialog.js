@@ -23,21 +23,21 @@
 (function () {
   'use strict';
 
-  var html = /\.html$/;
-  var slash = /\/$/;
+  // This is gross but we can't depend on $http to be working when we are getting 0 status codes.
+  // We also may not auto cache templates at dev time.
+  var template = '<div> \
+    <div class="modal-body"> \
+      <h3>Disconnected From Server, Retrying. <i class="icon-spinner icon-spin icon-large"></i></h3>\
+    </div> \
+  </div>';
 
-  angular.module('interceptors').factory('cleanRequestUrlInterceptor', [function () {
-    return {
-      request: function (config) {
-        if (html.test(config.url)) return config;
-
-        if (!slash.test(config.url)) config.url += '/';
-
-        return config;
-      }
-    };
-  }])
-  .config(function ($httpProvider) {
-    $httpProvider.interceptors.push('cleanRequestUrlInterceptor');
-  });
+  angular.module('exception').factory('disconnectDialog', ['$dialog', function ($dialog) {
+    return $dialog.dialog({
+      dialogFade: true,
+      backdropClick: false,
+      dialogClass: 'modal disconnect-dialog',
+      keyboard: false,
+      template: template
+    });
+  }]);
 }());

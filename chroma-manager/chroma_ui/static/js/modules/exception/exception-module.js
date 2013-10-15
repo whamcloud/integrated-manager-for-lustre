@@ -20,24 +20,4 @@
 // express and approved by Intel in writing.
 
 
-(function () {
-  'use strict';
-
-  var html = /\.html$/;
-  var slash = /\/$/;
-
-  angular.module('interceptors').factory('cleanRequestUrlInterceptor', [function () {
-    return {
-      request: function (config) {
-        if (html.test(config.url)) return config;
-
-        if (!slash.test(config.url)) config.url += '/';
-
-        return config;
-      }
-    };
-  }])
-  .config(function ($httpProvider) {
-    $httpProvider.interceptors.push('cleanRequestUrlInterceptor');
-  });
-}());
+angular.module('exception', ['ui.bootstrap', 'models', 'services']);

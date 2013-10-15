@@ -30,4 +30,10 @@ describe('clean request url interceptor', function () {
 
     expect(result).toEqual(config);
   });
+
+  it('should not append more than one trailing slash', function () {
+    var result = cleanRequestUrlInterceptor.request({url: '/a/b/c/'});
+
+    expect(result).toEqual({url: '/a/b/c/'});
+  });
 });

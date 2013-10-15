@@ -11,7 +11,10 @@
    * @param {function} setup
    */
   Mock.prototype.register = function(name, setup) {
-    this.mocks[name] = setup;
+    if (name === Object(name))
+      this.mocks[name.name] = name;
+    else
+      this.mocks[name] = setup;
   };
 
   /**
@@ -30,7 +33,10 @@
 
         if (!setup) throw new Error('no mock found matching %s!'.sprintf(name));
 
-        $provide.factory(name, setup);
+        if (typeof setup === 'function')
+          $provide.factory(name, setup);
+        else
+          $provide[setup.type](setup.name, setup.setup);
       });
     }));
   };

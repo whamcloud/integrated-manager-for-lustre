@@ -23,21 +23,37 @@
 (function () {
   'use strict';
 
-  var html = /\.html$/;
-  var slash = /\/$/;
 
-  angular.module('interceptors').factory('cleanRequestUrlInterceptor', [function () {
-    return {
-      request: function (config) {
-        if (html.test(config.url)) return config;
+  // This is gross but we can't depend on $http to be working when there is an exception.
+  // We also may not auto cache templates at dev time.
+  var template = '<div> \
+    <div class="modal-header"> \
+        <h3>An Error Has Occured!</h3> \
+    </div> \
+    <div class="modal-body"> \
+      <ul> \
+        <li ng-repeat="item in exceptionDialog.messages"> \
+          <h5>((item.name | capitalize:true)):</h5> \
+          <pre>((item.value))</pre> \
+        </li> \
+      </ul> \
+    </div> \
+    <div class="modal-footer"> \
+      <button ng-click="exceptionDialog.reload()" class="btn btn-large btn-block" type="button"> \
+        <i class="icon-rotate-right"></i> Reload\
+      </button> \
+    </div> \
+  </div>';
 
-        if (!slash.test(config.url)) config.url += '/';
 
-        return config;
-      }
-    };
-  }])
-  .config(function ($httpProvider) {
-    $httpProvider.interceptors.push('cleanRequestUrlInterceptor');
-  });
+  angular.module('exception').factory('exceptionDialog', ['$dialog', function ($dialog) {
+    return $dialog.dialog({
+      dialogFade: true,
+      backdropClick: false,
+      dialogClass: 'modal exception-dialog',
+      keyboard: false,
+      controller: 'ExceptionDialogCtrl',
+      template: template
+    });
+  }]);
 }());

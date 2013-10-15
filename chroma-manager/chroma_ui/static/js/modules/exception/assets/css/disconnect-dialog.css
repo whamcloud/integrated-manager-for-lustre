@@ -1,0 +1,20 @@
+.disconnect-dialog {
+  height: 100px;
+  background-color: #F3B600;
+  -webkit-font-smoothing: antialiased;
+}
+
+.disconnect-dialog.fade.in {
+  opacity: 0.95;
+  filter: alpha(opacity=95);
+}
+
+.disconnect-dialog h3 {
+  margin-top: 23px;
+  text-align: center;
+  color: #FFFFFF;
+}
+
+.disconnect-dialog i {
+  margin-left: 10px;
+}

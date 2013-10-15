@@ -73,6 +73,7 @@ import chroma_api.registration_token
 import chroma_api.filesystem
 import chroma_api.target
 import chroma_api.package
+import chroma_api.client_error
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.ServerProfileResource())
 api.register(chroma_api.host.HostTestResource())
@@ -101,6 +102,7 @@ api.register(chroma_api.power_control.PowerControlTypeResource())
 api.register(chroma_api.power_control.PowerControlDeviceResource())
 api.register(chroma_api.power_control.PowerControlDeviceOutletResource())
 api.register(chroma_api.package.PackageResource())
+api.register(chroma_api.client_error.ClientErrorResource())
 
 urlpatterns = patterns('',
     (r'^', include(api.urls)),

@@ -20,24 +20,10 @@
 // express and approved by Intel in writing.
 
 
-(function () {
+angular.module('exception').factory('ClientErrorModel', ['baseModel', function ClientErrorModel(baseModel) {
   'use strict';
 
-  var html = /\.html$/;
-  var slash = /\/$/;
-
-  angular.module('interceptors').factory('cleanRequestUrlInterceptor', [function () {
-    return {
-      request: function (config) {
-        if (html.test(config.url)) return config;
-
-        if (!slash.test(config.url)) config.url += '/';
-
-        return config;
-      }
-    };
-  }])
-  .config(function ($httpProvider) {
-    $httpProvider.interceptors.push('cleanRequestUrlInterceptor');
+  return baseModel({
+    url: '/api/client_error/'
   });
-}());
+}]);

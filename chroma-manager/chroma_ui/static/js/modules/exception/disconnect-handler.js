@@ -23,21 +23,44 @@
 (function () {
   'use strict';
 
-  var html = /\.html$/;
-  var slash = /\/$/;
+  function disconnectHandlerFactory(disconnectDialog, interval, replay) {
+    var clearIntervalFunc, goPromise;
 
-  angular.module('interceptors').factory('cleanRequestUrlInterceptor', [function () {
     return {
-      request: function (config) {
-        if (html.test(config.url)) return config;
+      add: function add(config) {
+        var promise = replay.add(config);
 
-        if (!slash.test(config.url)) config.url += '/';
+        // We are already processing.
+        if (clearIntervalFunc) return promise;
 
-        return config;
+        clearIntervalFunc = interval(checkAndClear, 5000, false);
+
+        if (!disconnectDialog.isOpen()) disconnectDialog.open();
+
+        return promise;
       }
     };
-  }])
-  .config(function ($httpProvider) {
-    $httpProvider.interceptors.push('cleanRequestUrlInterceptor');
-  });
+
+    function checkAndClear() {
+      // We are already processing.
+      if (goPromise) return;
+
+      goPromise = replay.go();
+
+      goPromise.finally(function cleanup() {
+        //Flag we are not processing the queue anymore.
+        goPromise = null;
+
+        if (!replay.hasPending) {
+          clearIntervalFunc();
+          clearIntervalFunc = null;
+
+          disconnectDialog.close();
+        }
+      });
+    }
+  }
+
+  angular.module('exception').factory('disconnectHandler',
+    ['disconnectDialog', 'interval', 'replay', disconnectHandlerFactory]);
 }());

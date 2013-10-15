@@ -29,10 +29,10 @@
      * @param {object} resp the error response.
      */
     function errback(resp) {
-      if (resp.status === 400) {
+      if (resp.status === 400)
         $scope.createPduCtrl.err = angular.isString(resp.data) ? {__all__: [resp.data]} : resp.data;
-        $scope.$emit('unblockUi');
-      }
+
+      $scope.$emit('unblockUi');
     }
 
     $scope.createPduCtrl = {

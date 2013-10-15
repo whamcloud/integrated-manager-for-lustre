@@ -20,21 +20,30 @@
 # express and approved by Intel in writing.
 
 
-from jobs import *
-from host import *
-from target import *
-from filesystem import *
-from conf_param import *
-from storage_plugin import *
-from alert import *
-from event import *
-from log import *
-from registration_token import *
-from stats import *
-from ha_cluster import *
-from power_control import *
-from bundle import *
-from server_profile import *
-from package import *
-from user_profile import *
-from client_error import *
+from django.db import models
+from django.utils.text import Truncator
+
+import httpagentparser
+
+
+class ClientError(models.Model):
+    class Meta:
+        app_label = 'chroma_core'
+
+    browser = models.CharField(max_length=255, blank=True)
+    os = models.CharField(max_length=255, blank=True)
+    cause = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    message = models.CharField(max_length=255)
+    stack = models.TextField(blank=True)
+    url = models.URLField(verify_exists=False)
+    user_agent = models.CharField(max_length=255)
+
+    def __unicode__(self):
+        truncator = Truncator(self.message)
+        return u'%s: %s' % (self.id, truncator.chars(20))
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.os, self.browser = httpagentparser.simple_detect(self.user_agent)
+        return super(ClientError, self).save(*args, **kwargs)

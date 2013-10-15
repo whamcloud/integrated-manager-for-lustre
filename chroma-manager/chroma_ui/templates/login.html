@@ -12,6 +12,9 @@
   <link rel="stylesheet" href="{{ STATIC_URL }}css/error-tooltip.css" type="text/css"/>
   <link rel="stylesheet" href="{{ STATIC_URL }}js/modules/login/assets/css/login.css" type="text/css"/>
   <link rel="stylesheet" href="{{ STATIC_URL }}js/modules/login/assets/css/eula.css" type="text/css" />
+  <link rel="stylesheet" href="{{STATIC_URL}}js/modules/exception/assets/css/exception-dialog.css" type="text/css" />
+  <link rel="stylesheet" href="{{STATIC_URL}}js/modules/exception/assets/css/disconnect-dialog.css" type="text/css" />
+
   <style type="text/css">
     [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
       display: none;
@@ -27,7 +30,8 @@
 
     // Set Dependencies for this portion of the application
     window.dependencies = ['models', 'interceptors', 'constants',
-        'ui.bootstrap', 'services', 'controllers', 'directives', 'validators', 'login', 'responsive']
+        'ui.bootstrap', 'services', 'controllers', 'directives',
+        'validators', 'login', 'responsive', 'exception', 'filters']
   </script>
 </head>
 <body>
@@ -137,6 +141,16 @@
   <script type="text/javascript" src="{{ STATIC_URL }}js/modules/login/login-controller.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}js/modules/login/eula-dialog-controller.js"></script>
 
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/exception-module.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/exception-handler.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/exception-interceptor.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/exception-dialog.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/exception-dialog-controller.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/client-error-model.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/disconnect-handler.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/disconnect-dialog.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/replay.js"></script>
+
   <script type="text/javascript" src="{{ STATIC_URL }}js/interceptors/interceptor_module.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}js/interceptors/clean-request-url.js"></script>
 
@@ -147,6 +161,7 @@
   <script type="text/javascript" src="{{ STATIC_URL }}js/services/paging.js"></script>
 
   <script type="text/javascript" src="{{ STATIC_URL }}js/filters/filters_module.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/filters/capitalize.js"></script>
 
   <script type="text/javascript" src="{{ STATIC_URL }}js/directives/directive_module.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}js/directives/context_tooltip.js"></script>

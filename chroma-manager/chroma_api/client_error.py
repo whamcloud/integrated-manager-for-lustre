@@ -20,21 +20,29 @@
 # express and approved by Intel in writing.
 
 
-from jobs import *
-from host import *
-from target import *
-from filesystem import *
-from conf_param import *
-from storage_plugin import *
-from alert import *
-from event import *
-from log import *
-from registration_token import *
-from stats import *
-from ha_cluster import *
-from power_control import *
-from bundle import *
-from server_profile import *
-from package import *
-from user_profile import *
-from client_error import *
+from tastypie.resources import ModelResource
+from tastypie.authorization import Authorization
+
+from chroma_api.authentication import CsrfAuthentication
+
+from chroma_core.models import ClientError
+
+
+class ClientErrorResource(ModelResource):
+    """
+    A Client Error.
+
+    """
+    class Meta:
+        authentication = CsrfAuthentication()
+        authorization = Authorization()
+        queryset = ClientError.objects.all()
+        resource_name = 'client_error'
+        excludes = ['browser', 'created_at']
+        list_allowed_methods = ['post']
+        detail_allowed_methods = []
+
+    def hydrate_user_agent(self, bundle):
+        bundle.data['user_agent'] = bundle.request.META.get('HTTP_USER_AGENT', '')
+
+        return bundle

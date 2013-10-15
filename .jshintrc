@@ -61,6 +61,7 @@
 
   // Relaxing Options
   "eqnull": true,
+  "multistr": true,
 
   //Environments
   "browser" : true,

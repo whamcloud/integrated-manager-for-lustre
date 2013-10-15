@@ -38,6 +38,7 @@ Requires: python-requests >= 1.0.0
 Requires: python-celery >= 3.0.11
 Requires: python-amqplib
 Requires: python-networkx
+Requires: python-httpagentparser
 Requires: pygobject2
 Requires: postgresql-server
 Requires: python-psycopg2
@@ -121,7 +122,7 @@ preserve_patterns="settings.py manage.py chroma_core/migrations/*.py chroma_core
 find $RPM_BUILD_ROOT%{manager_root}/ -name "*.py" \
     | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
 
-# only include compiled modules in the main package 
+# only include compiled modules in the main package
 for manager_file in $(find $RPM_BUILD_ROOT%{manager_root}/ -name "*.pyc"); do
     install_file=${manager_file/$RPM_BUILD_ROOT\///}
     echo "${install_file%.py*}.py[c,o]" >> manager.files
@@ -176,10 +177,10 @@ semanage port -a -t http_port_t -p tcp 8001
 
 if ! out=$(service iptables status) || [ "$out" = "Table: filter
 Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination         
+num  target     prot opt source               destination
 
 Chain FORWARD (policy ACCEPT)
-num  target     prot opt source               destination         
+num  target     prot opt source               destination
 
 Chain OUTPUT (policy ACCEPT)
 num  target     prot opt source               destination         " ]; then
@@ -209,7 +210,7 @@ if [ $1 -lt 1 ]; then
         -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT/d'\
         -e '/INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT/d' \
         -e '/INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT/d' \
-        /etc/sysconfig/iptables 
+        /etc/sysconfig/iptables
     sed -i -e '/--port=80:tcp/d' -e '/--port=443:tcp/d' \
            -e '/--port=123:udp/d' /etc/sysconfig/system-config-firewall
 
