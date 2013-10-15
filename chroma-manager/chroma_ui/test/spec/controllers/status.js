@@ -1,7 +1,7 @@
 describe('status controller', function () {
   'use strict';
 
-  beforeEach(module('controllers', 'models', 'ngResource', 'services', 'constants', 'interceptors',
+  beforeEach(module('controllers', 'models', 'ngResource', 'services', 'constants', 'interceptors', 'ui.bootstrap',
     function ($provide) {
       // Mock out this dep.
       var $elementMock = {
