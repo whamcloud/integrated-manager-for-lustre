@@ -40,7 +40,7 @@ Scenario: Remove an OST
 
 Scenario: Add an OST
   Given the ost count should be 23
-  When I run chroma ost-add secondfs-oss0:/dev/disk/by-id/scsi-1IET_000c0001 --filesystem secondfs
+  When I run chroma ost-add --reformat --filesystem secondfs secondfs-oss0:/dev/disk/by-id/scsi-1IET_000c0001
   Then the ost count should be 24
   And the target state on secondfs-OST0004 should be mounted
 
