@@ -43,6 +43,8 @@ settings = chroma_settings()
 
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 from chroma_core.services.http_agent.crypto import Crypto
 
@@ -570,6 +572,13 @@ num  target     prot opt source               destination
             else:
                 return pass1
 
+    def validate_email(self, email):
+        try:
+            validate_email(email)
+        except ValidationError:
+            return False
+        return True
+
     def _user_account_prompt(self):
         log.info("An administrative user account will now be created using the " +
                  "credentials which you provide.")
@@ -581,7 +590,15 @@ num  target     prot opt source               destination
                 print "Username cannot contain spaces"
                 continue
             valid_username = True
-        email = self.get_input(msg = "Email")
+
+        valid_email = False
+        while not valid_email:
+            email = self.get_input(msg = "Email")
+            if email and not self.validate_email(email):
+                print "Email is not valid"
+                continue
+            valid_email = True
+
         password = self.get_pass(msg = "Password", empty_allowed = False,
                                  confirm_msg = "Confirm password")
 
