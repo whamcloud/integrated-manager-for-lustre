@@ -23,19 +23,10 @@
 import os
 import errno
 
-from chroma_agent import config
 from chroma_agent import shell
 
 
-def _filesystem_mountpoint(mountspec):
-    client_root = config.get('settings', 'agent')['lustre_client_root']
-    fsname = mountspec.split(':/')[1]
-    return os.path.join(client_root, fsname)
-
-
-def mount_lustre_filesystem(mountspec):
-    mountpoint = _filesystem_mountpoint(mountspec)
-
+def mount_lustre_filesystem(mountspec, mountpoint):
     try:
         os.makedirs(mountpoint, 0755)
     except OSError as e:
@@ -46,19 +37,17 @@ def mount_lustre_filesystem(mountspec):
 
 
 def mount_lustre_filesystems(filesystems):
-    for mountspec in filesystems:
-        mount_lustre_filesystem(mountspec)
+    for mountspec, mountpoint in filesystems:
+        mount_lustre_filesystem(mountspec, mountpoint)
 
 
-def unmount_lustre_filesystem(mountspec):
-    mountpoint = _filesystem_mountpoint(mountspec)
-
+def unmount_lustre_filesystem(mountspec, mountpoint):
     shell.try_run(['/bin/umount', mountpoint])
 
 
 def unmount_lustre_filesystems(filesystems):
-    for mountspec in filesystems:
-        unmount_lustre_filesystem(mountspec)
+    for mountspec, mountpoint in filesystems:
+        unmount_lustre_filesystem(mountspec, mountpoint)
 
 
 ACTIONS = [mount_lustre_filesystems, unmount_lustre_filesystems, mount_lustre_filesystem, unmount_lustre_filesystem]

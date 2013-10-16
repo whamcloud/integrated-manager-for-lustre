@@ -3,7 +3,7 @@ from chroma_core.models import ManagedHost, ServerProfile
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_agent_comms.views import MessageView
+from chroma_agent_comms.views import ValidatedClientView
 from django.test import Client, TestCase
 import mock
 import settings
@@ -26,7 +26,7 @@ class TestRegistration(TestCase):
 
         self.old_create_host = JobSchedulerClient.create_host
         JobSchedulerClient.create_host = mock.Mock(side_effect=lambda *args, **kwargs: (synthetic_host('mynewhost', **self.mock_servers['mynewhost']), mock.Mock(id='bar')))
-        MessageView.valid_certs = {}
+        ValidatedClientView.valid_certs = {}
 
     def tearDown(self):
         JobSchedulerClient.create_host = self.old_create_host

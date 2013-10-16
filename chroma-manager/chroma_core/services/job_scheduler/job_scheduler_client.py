@@ -54,6 +54,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'test_host_contact',
                'create_filesystem',
                'create_client_mount',
+               'create_copytool',
                'create_host',
                'create_targets',
                'available_transitions',
@@ -256,6 +257,13 @@ class JobSchedulerClient(object):
                                                                 filesystem.id,
                                                                 mountpoint)
         return LustreClientMount.objects.get(id = client_mount_id)
+
+    @classmethod
+    def create_copytool(cls, copytool_data):
+        from chroma_core.models import Copytool
+
+        copytool_id = JobSchedulerRpc().create_copytool(copytool_data)
+        return Copytool.objects.get(id = copytool_id)
 
     @classmethod
     def get_locks(cls, obj_key, obj_id):

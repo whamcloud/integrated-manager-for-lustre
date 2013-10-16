@@ -121,9 +121,9 @@ class FakeServer(Persisted):
                 mounts.append({'mountspec': mountspec, 'mountpoint': mountpoint})
             return mounts
 
-    def add_client_mount(self, mountspec):
+    def add_client_mount(self, mountspec, mountpoint):
         fsname = mountspec.split(':/')[1]
-        mountpoint = "/mnt/lustre/%s" % fsname
+        mountpoint = "%s/%s" % (mountpoint, fsname)
         with self._lock:
             self.start_lnet()
             self.state['client_mounts'][mountspec] = mountpoint
@@ -339,6 +339,12 @@ class FakeServer(Persisted):
             raise RuntimeError("Tried to run set_conf_param but not target named MGS is started on %s" % self.fqdn)
 
         self._devices.mgt_set_conf_param(mgt['mgsnode'], key, value)
+
+        if 'hsm_control' in key:
+            # e.g. testfs-MDT0000.mdt.hsm_control
+            target = key.split('.')[0]
+            fsname = target[:target.rfind('-')]
+            self._simulator.control_hsm_coordinator(fsname, value)
 
     @property
     def filename(self):
@@ -664,6 +670,10 @@ class FakeServer(Persisted):
 
         for target in self._targets_started_here:
             result['target'][target['label']] = self._devices.get_target_stats(target)
+            # One coordinator per filesystem; just stick it on the first MDT
+            if 'MDT0000' in target['label'] and target['fsname'] in self._simulator.coordinators:
+                hsm_stats = self._simulator.coordinators[target['fsname']].hsm_stats
+                result['target'][target['label']].update(hsm_stats)
 
         return result
 

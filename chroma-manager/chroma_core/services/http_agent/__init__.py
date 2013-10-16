@@ -30,7 +30,7 @@ from chroma_core.services.http_agent.host_state import HostStateCollection, Host
 from chroma_core.services.http_agent.queues import HostQueueCollection, AmqpRxForwarder, AmqpTxForwarder
 from chroma_core.services.http_agent.sessions import SessionCollection
 from chroma_core.services import ChromaService, ServiceThread, log_register
-from chroma_agent_comms.views import MessageView
+from chroma_agent_comms.views import MessageView, ValidatedClientView
 
 from settings import HTTP_AGENT_PORT
 
@@ -120,7 +120,7 @@ class Service(ChromaService):
         MessageView.queues = self.queues
         MessageView.sessions = self.sessions
         MessageView.hosts = self.hosts
-        MessageView.valid_certs = self.valid_certs
+        ValidatedClientView.valid_certs = self.valid_certs
 
         # The thread for generating HostOfflineAlerts
         host_checker_thread = ServiceThread(HostStatePoller(self.hosts, self.sessions))

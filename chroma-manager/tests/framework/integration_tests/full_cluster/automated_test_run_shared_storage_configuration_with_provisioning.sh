@@ -57,7 +57,7 @@ scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
 $PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install chroma-manager-integration-tests
+$PROXY yum -y install chroma-manager-integration-tests python-mock
 
 if $USE_FENCE_XVM; then
     # make sure the host has fence_virtd installed and configured

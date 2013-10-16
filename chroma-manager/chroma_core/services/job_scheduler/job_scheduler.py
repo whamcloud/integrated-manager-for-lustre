@@ -49,7 +49,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
     ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob, ForceRemoveHostJob, \
-    DeployHostJob, UpdatesAvailableAlert, LustreClientMount
+    DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -1110,6 +1110,37 @@ class JobScheduler(object):
             log.info("Created client mount: %s" % mount)
 
         return mount
+
+    def create_copytool(self, copytool_data):
+        from django.db import transaction
+        log.debug("Creating copytool from: %s" % copytool_data)
+        with self._lock:
+            host = ObjectCache.get_by_id(ManagedHost, int(copytool_data['host']))
+            copytool_data['host'] = host
+            filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(copytool_data['filesystem']))
+            copytool_data['filesystem'] = filesystem
+
+            with transaction.commit_on_success():
+                copytool = Copytool.objects.create(**copytool_data)
+
+            # Add the copytool after the transaction commits
+            ObjectCache.add(Copytool, copytool)
+
+        log.debug("Created copytool: %s" % copytool)
+
+        mount = self._create_client_mount(host, filesystem, copytool_data['mountpoint'])
+
+        # Make the association between the copytool and client mount
+        with self._lock:
+            copytool.client_mount = mount
+
+            with transaction.commit_on_success():
+                copytool.save()
+
+            ObjectCache.update(copytool)
+
+        self.progress.advance()
+        return copytool.id
 
     def create_filesystem(self, fs_data):
         # FIXME: HYD-970: check that the MGT or hosts aren't being removed while

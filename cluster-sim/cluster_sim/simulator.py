@@ -28,7 +28,8 @@ import threading
 import time
 from requests import ConnectionError
 
-from chroma_agent.agent_client import AgentClient, HttpError, Session
+from chroma_agent.agent_client import CryptoClient, AgentClient, HttpError, Session
+from chroma_agent.copytool_monitor import CopytoolMonitor
 
 from cluster_sim.utils import Persisted
 from cluster_sim.fake_action_plugins import FakeActionPlugins
@@ -39,7 +40,17 @@ from cluster_sim.fake_devices import FakeDevices
 from cluster_sim.fake_power_control import FakePowerControl
 from cluster_sim.fake_server import FakeServer
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
+from cluster_sim.fake_hsm_coordinator import FakeHsmCoordinator
+from cluster_sim.fake_hsm_copytool import FakeHsmCopytool
 from cluster_sim.log import log
+
+# Ensure copytool logging goes to sim log
+from chroma_agent import copytool_monitor
+copytool_monitor.copytool_log = log
+
+
+class UnregisteredCopytoolError(Exception):
+    pass
 
 
 class ClusterSimulator(Persisted):
@@ -70,6 +81,9 @@ class ClusterSimulator(Persisted):
         self.servers = {}
         self.clusters = {}
         self.controllers = {}
+        self.coordinators = {}
+        self.copytools = {}
+        self.copytool_monitors = {}
 
         self._load_controllers()
         self._load_servers()
@@ -153,6 +167,59 @@ class ClusterSimulator(Persisted):
         self.servers[fqdn] = worker
 
         return worker
+
+    def configure_hsm_copytool(self, server, **kwargs):
+        copytool = FakeHsmCopytool(self.folder, server.fqdn, **kwargs)
+        self.copytools[copytool.id] = copytool
+
+    def unconfigure_hsm_copytool(self, id):
+        self.copytools[id].stop()
+        self.copytools[id].delete()
+        del self.copytools[id]
+
+    def start_monitored_copytool(self, server, id):
+        copytool = self.copytools[id]
+        coordinator = self.coordinators[copytool.filesystem]
+
+        client = CryptoClient(self.url + "copytool_event/", server.crypto,
+                              server.fqdn)
+        monitor = CopytoolMonitor(client, copytool)
+        self.copytool_monitors[id] = monitor
+        self.copytool_monitors[id].start()
+        copytool.start(coordinator)
+
+    def stop_monitored_copytool(self, id):
+        try:
+            self.copytools[id].stop()
+        except KeyError:
+            log.error("Attempt to stop unknown copytool: %s" % id)
+
+        try:
+            self.copytool_monitors[id].stop()
+        except KeyError:
+            log.error("Attempt to stop unknown copytool monitor: %s" % id)
+
+    def start_hsm_copytools(self):
+        for conf in glob.glob("%s/fake_hsm_copytool-*.json" % self.folder):
+            with open(conf) as f:
+                data = json.load(f)
+                server = self.servers[data['server']]
+                self.configure_hsm_copytool(server, **data['copytool'])
+                self.start_monitored_copytool(server, data['copytool']['id'])
+
+    def start_hsm_coordinators(self):
+        for conf in glob.glob("%s/fake_hsm_coordinator-*.json" % self.folder):
+            fsname = json.load(open(conf))['filesystem']
+            coordinator = FakeHsmCoordinator(self, fsname)
+            self.coordinators[fsname] = coordinator
+            coordinator.start()
+
+    def control_hsm_coordinator(self, fsname, control_value):
+        if not fsname in self.coordinators:
+            coordinator = FakeHsmCoordinator(self, fsname)
+            self.coordinators[fsname] = coordinator
+
+        self.coordinators[fsname].control(control_value)
 
     def setup(self, server_count, worker_count, volume_count, nid_count, cluster_size, pdu_count, su_size):
         """
@@ -272,7 +339,6 @@ class ClusterSimulator(Persisted):
 
     def register_all(self, server_secret, worker_secret):
         register_count = 0
-        self.power.start()
         for fqdn, server in self.servers.items():
             if server.crypto.certificate_file is None:
                 if server.is_worker:
@@ -282,6 +348,8 @@ class ClusterSimulator(Persisted):
                 register_count += 1
             else:
                 self.start_server(fqdn)
+
+        self.post_server_start()
 
         # Useful for some callers to know if servers were registered or
         # just started.
@@ -404,18 +472,32 @@ class ClusterSimulator(Persisted):
     def stop(self):
         log.info("Stopping")
         self.power.stop()
-        for server in self.servers.values():
-            server.stop()
+        for group in ['coordinators', 'copytools', 'copytool_monitors', 'servers']:
+            for thread in getattr(self, group).values():
+                thread.stop()
 
     def join(self):
         log.info("Joining...")
         self.power.join()
-        for server in self.servers.values():
-            server.join()
+        for group in ['coordinators', 'copytools', 'copytool_monitors', 'servers']:
+            for thread in getattr(self, group).values():
+                thread.join()
         log.info("Joined")
 
-    def start_all(self):
+    def pre_server_start(self):
         self.power.start()
+
+    def post_server_start(self):
+        if len(self.servers) < 1:
+            log.info("No servers started; skipping post_server_start()")
+            return
+
+        self.start_hsm_coordinators()
+        self.start_hsm_copytools()
+
+    def start_all(self):
+        self.pre_server_start()
+
         # Spread out starts to avoid everyone doing sending their update
         # at the same moment
 
@@ -430,6 +512,8 @@ class ClusterSimulator(Persisted):
                     time.sleep(delay)
         else:
             log.info("start_all: No servers yet")
+
+        self.post_server_start()
 
     def set_log_rate(self, fqdn, rate):
         log.info("Set log rate for %s to %s" % (fqdn, rate))

@@ -133,7 +133,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return new_hosts
 
-    def create_filesystem_simple(self, name = 'testfs'):
+    def create_filesystem_simple(self, name = 'testfs', hsm = False):
         """
         Create the simplest possible filesystem on a single server.
         """
@@ -149,13 +149,16 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         mgt_volume = ha_volumes[0]
         mdt_volume = ha_volumes[1]
         ost_volumes = [ha_volumes[2]]
+        mdt_params = {}
+        if hsm:
+            mdt_params['mdt.hsm_control'] = "enabled"
         return self.create_filesystem(
             {
                 'name': name,
                 'mgt': {'volume_id': mgt_volume['id']},
                 'mdt': {
                     'volume_id': mdt_volume['id'],
-                    'conf_params': {}
+                    'conf_params': mdt_params
                 },
                 'osts': [{
                     'volume_id': v['id'],

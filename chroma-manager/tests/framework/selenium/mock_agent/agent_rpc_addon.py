@@ -67,5 +67,5 @@ def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
 
 JobScheduler.test_host_contact = test_host_contact
 
-from chroma_core.services.http_agent import MessageView
-MessageView.valid_certs = {}  # normally set by http_agent service
+from chroma_core.services.http_agent import ValidatedClientView
+ValidatedClientView.valid_certs = {}  # normally set by http_agent service

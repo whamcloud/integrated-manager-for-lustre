@@ -166,7 +166,28 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
         RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/message/ [P,L]
     </Location>
 
-    Alias /repo {{REPO_PATH}}
+    <Location /agent/copytool_event/>
+        ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/copytool_event/
+
+        SSLVerifyClient require
+        SSLRenegBufferSize 8388608
+        RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
+        RewriteRule .* - [E=SSLC_ON:%1]
+        RequestHeader add X-SSL-Client-On %{SSLC_ON}e
+
+        RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
+        RewriteRule .* - [E=SSLC_NAME:%1]
+        RequestHeader add X-SSL-Client-Name %{SSLC_NAME}e
+
+        RewriteCond %{SSL:SSL_CLIENT_M_SERIAL} (.*)
+        RewriteRule .* - [E=SSLC_SERIAL:%1]
+        RequestHeader add X-SSL-Client-Serial %{SSLC_SERIAL}e
+
+        RewriteEngine on
+        RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/copytool_event/ [P,L]
+    </Location>
+
+Alias /repo {{REPO_PATH}}
     <Location /repo >
         SSLVerifyClient require
         RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)

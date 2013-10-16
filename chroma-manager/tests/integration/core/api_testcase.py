@@ -19,6 +19,10 @@ logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
 
+# Used by tests so that we don't need to be root
+COPYTOOL_TESTING_FIFO_ROOT = "/tmp"
+
+
 class ApiTestCase(UtilityTestCase):
     """
     Adds convenience for interacting with the chroma api.
@@ -42,6 +46,26 @@ class ApiTestCase(UtilityTestCase):
 
     def setUp(self):
         if config.get('simulator', False):
+            # When we're running with the simulator, parts of the simulated
+            # Copytools use agent code, and the agent code expects to find
+            # a populated agent-side configuration. The safe way to handle
+            # this requirement is to use mock to patch in a fresh
+            # ConfigStore instance for each test run.
+            try:
+                from chroma_agent.config_store import ConfigStore
+            except ImportError:
+                raise ImportError("Cannot import agent, do you need to do a 'setup.py develop' of it?")
+
+            import mock
+            import tempfile
+            self.mock_config = ConfigStore(tempfile.mkdtemp())
+            mock.patch('chroma_agent.config', self.mock_config).start()
+            from chroma_agent.action_plugins.settings_management import reset_agent_config, set_agent_config
+            reset_agent_config()
+            # Allow the worker to create a fifo in /tmp rather than /var/spool
+            set_agent_config('copytool_fifo_directory',
+                             COPYTOOL_TESTING_FIFO_ROOT)
+
             try:
                 from cluster_sim.simulator import ClusterSimulator
             except ImportError:
@@ -121,6 +145,11 @@ class ApiTestCase(UtilityTestCase):
         if hasattr(self, 'simulator'):
             self.simulator.stop()
             self.simulator.join()
+
+            # Clean up the temp agent config
+            import mock
+            mock.patch.stopall()
+            shutil.rmtree(self.mock_config.path)
 
             passed = sys.exc_info() == (None, None, None)
             if passed:
@@ -275,6 +304,16 @@ class ApiTestCase(UtilityTestCase):
         response = self.chroma_manager.get(uri)
         self.assertEqual(response.status_code, 200, response.content)
         return response.json
+
+    def run_command(self, jobs, message = None, verify_successful = True):
+        logger.debug("Running %s (%s)" % (jobs, message))
+        command = self.chroma_manager.post('/api/command/', body = dict(
+            jobs = jobs,
+            message = message if message else "Test command"
+        )).json
+
+        if verify_successful:
+            self.wait_for_command(self.chroma_manager, command['id'])
 
     def set_state(self, uri, state, verify_successful=True):
         logger.debug("set_state %s %s" % (uri, state))

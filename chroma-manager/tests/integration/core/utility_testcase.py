@@ -94,6 +94,36 @@ class UtilityTestCase(TestCase):
             running_time += 1
         self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
 
+    def wait_for_action(self, victim, job_class = None, state = None, timeout = TEST_TIMEOUT):
+        """
+        Check victim's available_actions until the desired action is available
+        or the timeout is reached.
+        """
+        if not any([job_class, state]):
+            raise RuntimeError("Either job_class or state must be supplied")
+        if all([job_class, state]):
+            raise RuntimeError("Only one of job_class or state may be supplied")
+
+        running_time = 0
+        while running_time < timeout:
+            logger.debug("Waiting for '%s' in %s's available_actions" % (job_class if job_class else state, victim['resource_uri']))
+            for action in self.get_by_uri(victim['resource_uri'])['available_actions']:
+                try:
+                    if job_class == action['class_name']:
+                        return action
+                except KeyError:
+                    pass
+
+                try:
+                    if state == action['state']:
+                        return action
+                except KeyError:
+                    pass
+
+            time.sleep(1)
+            running_time += 1
+        self.assertLess(running_time, timeout, "Timed out waiting for an action to become available.")
+
     def get_host_config(self, nodename):
         """
         Get the entry for a lustre server from the cluster config.

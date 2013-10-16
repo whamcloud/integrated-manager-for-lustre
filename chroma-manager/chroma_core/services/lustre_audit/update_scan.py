@@ -27,7 +27,8 @@ from django.db import transaction
 
 from chroma_core.lib.util import normalize_nid
 from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
-from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo, LustreClientMount
+from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo
+from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount

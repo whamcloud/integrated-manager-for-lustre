@@ -140,11 +140,20 @@ class FakeActionPlugins():
             elif cmd == "host_corosync_config":
                 return {}
             elif cmd == 'mount_lustre_filesystems':
-                for filesystem in kwargs['filesystems']:
-                    self._server.add_client_mount(filesystem)
+                for mountspec, mountpoint in kwargs['filesystems']:
+                    self._server.add_client_mount(mountspec, mountpoint)
             elif cmd == 'unmount_lustre_filesystems':
-                for filesystem in kwargs['filesystems']:
-                    self._server.del_client_mount(filesystem)
+                for mountspec, _ in kwargs['filesystems']:
+                    self._server.del_client_mount(mountspec)
+            elif cmd == 'configure_copytool':
+                self._simulator.configure_hsm_copytool(self._server, **kwargs)
+            elif cmd == 'unconfigure_copytool':
+                self._simulator.unconfigure_hsm_copytool(kwargs['id'])
+            elif cmd == 'start_monitored_copytool':
+                self._simulator.start_monitored_copytool(self._server,
+                                                         kwargs['id'])
+            elif cmd == 'stop_monitored_copytool':
+                self._simulator.stop_monitored_copytool(kwargs['id'])
             else:
                 try:
                     fn = getattr(self._server, cmd)

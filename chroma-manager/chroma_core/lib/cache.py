@@ -34,13 +34,14 @@ class ObjectCache(object):
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration, LustreClientMount
         from chroma_core.models.target import ManagedTarget, ManagedTargetMount
+        from chroma_core.models.copytool import Copytool
         self.objects = defaultdict(dict)
         filter_args = {
             ManagedTargetMount: {"target__not_deleted": True},
             LNetConfiguration: {"host__not_deleted": True}
         }
 
-        self._cached_models = [ManagedTarget, ManagedFilesystem, ManagedHost, ManagedTargetMount, LustreClientMount, LNetConfiguration]
+        self._cached_models = [ManagedTarget, ManagedFilesystem, ManagedHost, ManagedTargetMount, LustreClientMount, LNetConfiguration, Copytool]
 
         for klass in self._cached_models:
             args = filter_args.get(klass, {})
@@ -124,6 +125,23 @@ class ObjectCache(object):
     def clear(cls):
         log.info('clear')
         cls.instance = None
+
+    @classmethod
+    def host_client_mounts(cls, host_id):
+        from chroma_core.models.client_mount import LustreClientMount
+        return cls.get(LustreClientMount, lambda hcm: hcm.host_id == host_id)
+
+    @classmethod
+    def filesystem_client_mounts(cls, fs_id):
+        from chroma_core.models.client_mount import LustreClientMount
+        return cls.get(LustreClientMount, lambda fcm: fcm.filesystem_id == fs_id)
+
+    @classmethod
+    def client_mount_copytools(cls, cm_id):
+        from chroma_core.models.client_mount import LustreClientMount
+        from chroma_core.models.copytool import Copytool
+        client_mount = cls.get_one(LustreClientMount, lambda ccm: ccm.id == cm_id)
+        return cls.get(Copytool, lambda ct: (client_mount.host_id == ct.host_id and client_mount.mountpoint == ct.mountpoint))
 
     @classmethod
     def host_targets(cls, host_id):

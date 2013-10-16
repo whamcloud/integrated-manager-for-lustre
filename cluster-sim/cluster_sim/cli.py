@@ -38,7 +38,7 @@ from cluster_sim.simulator import ClusterSimulator
 from cluster_sim.log import log
 
 from chroma_agent.agent_daemon import daemon_log
-from chroma_agent.action_plugins.settings_management import reset_agent_config
+from chroma_agent.action_plugins.settings_management import reset_agent_config, set_agent_config
 
 
 SIMULATOR_PORT = 8743
@@ -76,6 +76,7 @@ class SimulatorCli(object):
             volume_count = server_count * 2
 
         reset_agent_config()
+        set_agent_config('copytool_fifo_directory', '/tmp')
 
         simulator = ClusterSimulator(args.config, args.url)
         simulator.setup(server_count, worker_count, volume_count, int(args.nid_count), int(args.cluster_size), int(args.psu_count), int(args.su_size))

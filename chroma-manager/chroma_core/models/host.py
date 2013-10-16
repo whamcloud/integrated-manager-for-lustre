@@ -20,7 +20,6 @@
 # express and approved by Intel in writing.
 
 
-import os
 import json
 import logging
 import itertools
@@ -105,29 +104,6 @@ class ClientCertificate(models.Model):
 
     class Meta:
         app_label = 'chroma_core'
-
-
-class LustreClientMount(DeletableStatefulObject):
-    host = models.ForeignKey('ManagedHost', help_text = "Mount host", related_name="client_mounts")
-    filesystem = models.ForeignKey('ManagedFilesystem', help_text = "Mounted filesystem")
-    mountpoint = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), help_text = "Filesystem mountpoint on host", null = True, blank = True)
-
-    states = ['unmounted', 'mounted', 'removed']
-    initial_state = 'unmounted'
-
-    def __str__(self):
-        return self.get_label()
-
-    @property
-    def active(self):
-        return self.state == 'mounted'
-
-    def get_label(self):
-        return "%s:%s (%s)" % (self.host, self.mountpoint, self.state)
-
-    class Meta:
-        app_label = 'chroma_core'
-        unique_together = ('host', 'filesystem')
 
 
 class ManagedHost(DeletableStatefulObject, MeasuredEntity):
@@ -1055,15 +1031,9 @@ class RemoveHostJob(StateChangeJob):
         steps = [(UnconfigureNTPStep, {'host': self.host}),
                 (UnconfigurePacemakerStep, {'host': self.host}),
                 (UnconfigureCorosyncStep, {'host': self.host}),
-                (UnconfigureRsyslogStep, {'host': self.host})]
-        if self.host.client_filesystems.exists():
-            args = dict(host = self.host,
-                        filesystems = [f.mount_path() for f
-                                       in self.host.client_filesystems.all()])
-            steps.append((UnmountLustreFilesystemsStep, args))
-
-        steps += [(RemoveServerConfStep, {'host': self.host}),
-                  (DeleteHostStep, {'host': self.host, 'force': False})]
+                (UnconfigureRsyslogStep, {'host': self.host}),
+                (RemoveServerConfStep, {'host': self.host}),
+                (DeleteHostStep, {'host': self.host, 'force': False})]
 
         return steps
 
@@ -1088,8 +1058,9 @@ def _get_host_dependents(host):
     for f in filesystems:
         targets |= set(list(f.get_targets()))
     mounts = set(list(host.client_mounts.distinct()))
+    copytools = set(list(host.copytools.distinct()))
 
-    return targets, filesystems, mounts
+    return targets, filesystems, mounts, copytools
 
 
 class DeleteHostDependents(Step):
@@ -1098,11 +1069,16 @@ class DeleteHostDependents(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        targets, filesystems, mounts = _get_host_dependents(host)
+        targets, filesystems, mounts, copytools = _get_host_dependents(host)
 
-        job_log.info("DeleteHostDependents(%s): targets: %s, filesystems: %s, client_mounts: %s" % (host, targets, filesystems, mounts))
+        job_log.info("DeleteHostDependents(%s): targets: %s, filesystems: %s, client_mounts: %s, copytools: %s" % (host, targets, filesystems, mounts, copytools))
 
-        for object in itertools.chain(targets, filesystems, mounts):
+        # This keeps the UI sane... Faster than waiting around for an
+        # expiration.
+        for copytool in copytools:
+            copytool.cancel_current_operations()
+
+        for object in itertools.chain(targets, filesystems, mounts, copytools):
             # We are allowed to modify state directly because we have locked these objects
             object.set_state('removed')
             object.mark_deleted()
@@ -1138,9 +1114,9 @@ class ForceRemoveHostJob(AdvertisedJob):
             write = True
         ))
 
-        targets, filesystems, mounts = _get_host_dependents(self.host)
+        targets, filesystems, mounts, copytools = _get_host_dependents(self.host)
         # Take a write lock on get_stateful_object if this is a StateChangeJob
-        for object in itertools.chain(targets, filesystems, mounts):
+        for object in itertools.chain(targets, filesystems, mounts, copytools):
             job_log.debug("Creating StateLock on %s/%s" % (object.__class__, object.id))
             locks.append(StateLock(
                 job = self,
@@ -1671,127 +1647,3 @@ class UpdatesAvailableAlert(AlertState):
 
 class NoLNetInfo(Exception):
     pass
-
-
-class MountLustreFilesystemsJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
-    classes = ['ManagedHost']
-    verb = "Mount Filesystem(s)"
-    long_description = help_text['mount_lustre_filesystems']
-
-    requires_confirmation = True
-
-    display_group = Job.JOB_GROUPS.RARE
-    display_order = 120
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    @classmethod
-    def get_args(cls, host):
-        return {'host_id': host.id}
-
-    @classmethod
-    def get_confirmation(cls, instance):
-        return cls.long_description
-
-    @classmethod
-    def can_run(cls, host):
-        if not host.is_worker:
-            return False
-
-        search = lambda cm: (cm.host == host and cm.state == 'unmounted')
-        unmounted = ObjectCache.get(LustreClientMount, search)
-        return (host.state not in ['removed', 'undeployed', 'unconfigured']
-                and len(unmounted) > 0
-                and not AlertState.filter_by_item(host).filter(
-                        active = True,
-                        alert_type__in = [
-                            HostOfflineAlert.__name__,
-                            HostContactAlert.__name__
-                        ]
-                    ).exists()
-                )
-
-    def description(self):
-        return "Mount associated Lustre filesystem(s) on host %s" % self.host
-
-    def get_steps(self):
-        search = lambda cm: (cm.host == self.host and cm.state == 'unmounted')
-        unmounted = ObjectCache.get(LustreClientMount, search)
-        args = dict(host = self.host,
-                    filesystems = [m.filesystem.mount_path() for m in unmounted])
-        return [(MountLustreFilesystemsStep, args)]
-
-
-class MountLustreFilesystemsStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        filesystems = kwargs['filesystems']
-        self.invoke_agent(host, "mount_lustre_filesystems",
-                          {'filesystems': filesystems})
-
-
-class UnmountLustreFilesystemsJob(AdvertisedJob):
-    host = models.ForeignKey(ManagedHost)
-    classes = ['ManagedHost']
-    verb = "Unmount Filesystem(s)"
-    long_description = help_text['unmount_lustre_filesystems']
-
-    requires_confirmation = True
-
-    display_group = Job.JOB_GROUPS.RARE
-    display_order = 130
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    @classmethod
-    def get_args(cls, host):
-        return {'host_id': host.id}
-
-    @classmethod
-    def get_confirmation(cls, instance):
-        return cls.long_description
-
-    @classmethod
-    def can_run(cls, host):
-        if not host.is_worker:
-            return False
-
-        search = lambda cm: (cm.host == host and cm.state == 'mounted')
-        mounted = ObjectCache.get(LustreClientMount, search)
-        return (host.state not in ['removed', 'undeployed', 'unconfigured']
-                and len(mounted) > 0
-                and not AlertState.filter_by_item(host).filter(
-                        active = True,
-                        alert_type__in = [
-                            HostOfflineAlert.__name__,
-                            HostContactAlert.__name__
-                        ]
-                    ).exists()
-                )
-
-    def description(self):
-        return "Unmount associated Lustre filesystem(s) on host %s" % self.host
-
-    def get_steps(self):
-        search = lambda cm: (cm.host == self.host and cm.state == 'mounted')
-        mounted = ObjectCache.get(LustreClientMount, search)
-        args = dict(host = self.host,
-                    filesystems = [m.filesystem.mount_path() for m in mounted])
-        return [(UnmountLustreFilesystemsStep, args)]
-
-
-class UnmountLustreFilesystemsStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        filesystems = kwargs['filesystems']
-        self.invoke_agent(host, "unmount_lustre_filesystems",
-                          {'filesystems': filesystems})

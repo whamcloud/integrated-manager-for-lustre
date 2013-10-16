@@ -3,7 +3,8 @@ from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_api.test_misc import remove_host_resources_patch
 from tests.unit.chroma_core.helper import synthetic_host
 
-from chroma_core.models.host import ForceRemoveHostJob, RemoveHostJob, LustreClientMount, UnmountLustreFilesystemsStep
+from chroma_core.models.host import ForceRemoveHostJob, RemoveHostJob
+from chroma_core.models.client_mount import LustreClientMount
 
 
 class LustreClientMountTests(ChromaApiTestCase):
@@ -28,10 +29,6 @@ class LustreClientMountTests(ChromaApiTestCase):
                          str(mount.id))
 
         job = RemoveHostJob(host = self.host)
-
-        # Ensure that we unmount any filesystems before removing the host
-        self.assertTrue(UnmountLustreFilesystemsStep in
-                        [step[0] for step in job.get_steps()])
 
         # March through the job steps
         for step_klass, args in job.get_steps():

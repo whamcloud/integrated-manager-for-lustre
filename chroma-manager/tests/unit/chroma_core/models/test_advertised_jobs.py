@@ -16,7 +16,8 @@ class TestAdvertisedJobCoverage(TestCase):
         #
         # Reasonable exceptions are those jobs which can always run,
         # or jobs that are parents for implementing subclasses.
-        EXCEPTIONS = ['ForceRemoveHostJob', 'MigrateTargetJob']
+        EXCEPTIONS = ['ForceRemoveHostJob', 'ForceRemoveCopytoolJob',
+                      'MigrateTargetJob']
         IMPORTED_JOBS = [x for x in globals().values()
                          if (inspect.isclass(x)
                              and issubclass(x, AdvertisedJob))]

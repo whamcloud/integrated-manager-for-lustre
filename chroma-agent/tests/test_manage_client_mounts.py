@@ -14,25 +14,11 @@ class TestClientMountManagement(CommandCaptureTestCase):
         self.mountspec = '1.2.3.4@tcp:/%s' % self.fsname
         self.mountpoint = os.path.join(client_root, self.fsname)
 
-        class FakeConfig(object):
-            def get(self, *args, **kwargs):
-                return {'lustre_client_root': client_root}
-        patch('chroma_agent.action_plugins.manage_client_mounts.config',
-              FakeConfig()).start()
-
-        self.addCleanup(patch.stopall)
-
-    def test_mountpoint_generation(self):
-        from chroma_agent.action_plugins.manage_client_mounts import _filesystem_mountpoint
-
-        self.assertEqual(_filesystem_mountpoint(self.mountspec),
-                         self.mountpoint)
-
     def test_mount_lustre_filesystem(self):
         from chroma_agent.action_plugins.manage_client_mounts import mount_lustre_filesystem
 
         with patch('os.makedirs') as makedirs:
-            mount_lustre_filesystem(self.mountspec)
+            mount_lustre_filesystem(self.mountspec, self.mountpoint)
             makedirs.assert_called_with(self.mountpoint, 0755)
 
         self.assertRan(['/sbin/mount.lustre', self.mountspec, self.mountpoint])
@@ -41,13 +27,13 @@ class TestClientMountManagement(CommandCaptureTestCase):
         from chroma_agent.action_plugins.manage_client_mounts import mount_lustre_filesystems
 
         with patch('chroma_agent.action_plugins.manage_client_mounts.mount_lustre_filesystem') as mlf:
-            mount_lustre_filesystems([self.mountspec])
-            mlf.assert_called_with(self.mountspec)
+            mount_lustre_filesystems([(self.mountspec, self.mountpoint)])
+            mlf.assert_called_with(self.mountspec, self.mountpoint)
 
     def test_unmount_lustre_filesystem(self):
         from chroma_agent.action_plugins.manage_client_mounts import unmount_lustre_filesystem
 
-        unmount_lustre_filesystem(self.mountspec)
+        unmount_lustre_filesystem(self.mountspec, self.mountpoint)
 
         self.assertRan(['/bin/umount', self.mountpoint])
 
@@ -55,5 +41,5 @@ class TestClientMountManagement(CommandCaptureTestCase):
         from chroma_agent.action_plugins.manage_client_mounts import unmount_lustre_filesystems
 
         with patch('chroma_agent.action_plugins.manage_client_mounts.unmount_lustre_filesystem') as ulf:
-            unmount_lustre_filesystems([self.mountspec])
-            ulf.assert_called_with(self.mountspec)
+            unmount_lustre_filesystems([(self.mountspec, self.mountpoint)])
+            ulf.assert_called_with(self.mountspec, self.mountpoint)
