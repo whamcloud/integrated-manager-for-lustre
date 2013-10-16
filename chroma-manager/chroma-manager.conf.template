@@ -18,6 +18,7 @@ LoadModule headers_module {{module_path}}mod_headers.so
 LoadModule log_config_module {{module_path}}mod_log_config.so
 LoadModule ssl_module {{module_path}}mod_ssl.so
 LoadModule status_module {{module_path}}mod_status.so
+LoadModule deflate_module {{module_path}}mod_deflate.so
 ExtendedStatus on
 
 
@@ -80,12 +81,18 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
     <IfDefine ChromaDev>
         <Location /static/>
             ProxyPass http://localhost:{{HTTP_API_PORT}}/static/
+
+            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript
+
         </Location>
     </IfDefine>
     <IfDefine !ChromaDev>
         Alias /static {{app}}/static/
         <Location "/static">
-        	SetHandler None
+            SetHandler None
+
+            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript
+
         </Location>
     </IfDefine>
 
@@ -93,6 +100,8 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/ui/
         ProxyPass http://localhost:{{HTTP_API_PORT}}/ui/
+
+        AddOutputFilterByType DEFLATE text/html
     </Location>
     <Location /api/>
         ProxyPass http://localhost:{{HTTP_API_PORT}}/api/
