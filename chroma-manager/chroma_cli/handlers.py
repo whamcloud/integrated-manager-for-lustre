@@ -115,7 +115,7 @@ class Dispatcher(object):
                     verb_parser.add_argument("subject", metavar=key)
 
                 verb_parser.set_defaults(handler=handler['klass'])
-                handler['klass'].add_args(verb_parser, verb)
+                handler['klass'].add_args(verb_parser, verb, noun)
 
             if len(handler['klass'].contextual_actions()) > 0:
                 ctx_parser = verb_subparsers.add_parser("context", help="%s_name action (e.g. ost-list, vol-list, etc.)" % key)
@@ -141,7 +141,7 @@ class Handler(object):
         return ["%s-%s" % t for t in product(*[cls.contextual_nouns, ["list"]])]
 
     @classmethod
-    def add_args(cls, parser, verb):
+    def add_args(cls, parser, verb, noun=None):
         "Add custom arguments for given verb."
         pass
 
@@ -363,7 +363,7 @@ class FilesystemHandler(Handler):
     irregular_verbs = ["mountspec"]
 
     @classmethod
-    def add_args(cls, parser, verb):
+    def add_args(cls, parser, verb, noun=None):
         if verb == 'add':
             parser.add_argument('--reformat', action='store_true', help="reformat volumes without prompting")
 
@@ -487,6 +487,13 @@ class TargetHandler(Handler):
     }
     verbs = ["list", "show", "add", "remove", "start", "stop"] + job_map.keys()
 
+    @classmethod
+    def add_args(cls, parser, verb, noun=None):
+        if verb == 'add':
+            parser.add_argument('--reformat', action='store_true', help="reformat volume without prompting")
+            if noun and noun != 'mgt':
+                parser.add_argument('--filesystem', required=True, help="filesystem to which target is being added")
+
     def __init__(self, *args, **kwargs):
         super(TargetHandler, self).__init__(*args, **kwargs)
         self.api_endpoint = self.api.endpoints['target']
@@ -499,10 +506,20 @@ class TargetHandler(Handler):
 
     def add(self, ns):
         vn = self._resolve_volume_node(ns.subject)
+        volume = self.api.endpoints['volume'].show(vn.volume_id)
+
+        if ns.noun == 'mdt':
+            raise BadUserInput("Sorry, this version of the software only supports a single MDT per filesystem.")
+
         kwargs = {'kind': ns.noun.upper(), 'volume_id': vn.volume_id}
         if ns.noun != 'mgt':
             fs = self.api.endpoints['filesystem'].show(ns.filesystem)
             kwargs['filesystem_id'] = fs.id
+        if ns.reformat:
+            kwargs['reformat'] = True
+        else:
+            if volume['filesystem_type']:
+                raise ReformatVolumesConfirmationRequired([volume])
 
         self.output(self.api_endpoint.create(**kwargs))
 
@@ -523,7 +540,7 @@ class VolumeHandler(Handler):
         self.api_endpoint = self.api.endpoints['volume']
 
     @classmethod
-    def add_args(cls, parser, verb):
+    def add_args(cls, parser, verb, noun=None):
         if verb == 'list':
             parser.add_argument('--all', action='store_true', help="list all volumes")
 

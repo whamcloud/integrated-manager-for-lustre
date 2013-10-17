@@ -42,7 +42,7 @@ Scenario: Remove lingering MGT
 
 Scenario: Create a standalone MGS
   Given the mgt count should be 0
-  When I run chroma mgt-add setup-mgs:/fake/path/2
+  When I run chroma mgt-add --reformat setup-mgs:/fake/path/2
   Then the mgt count should be 1
 
 Scenario: Create new filesystem with existing MGT
