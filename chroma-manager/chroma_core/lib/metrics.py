@@ -185,20 +185,13 @@ class TargetMetricStore(MetricStore):
     """
     def serialize(self, metrics, update_time=None):
         "Return serialized samples (id, dt, value) suitable for bulk stats insertion."
-        update = {}
         if update_time is None:
             update_time = time.time()
 
-        stats = {}
-        #brw_stats = {}
-        for key in metrics:
-            if key == "stats":
-                stats = metrics[key]
-            elif key == "brw_stats":
-                pass
-                #brw_stats = metrics[key]
-            else:
-                update[key] = {'value': metrics[key], 'type': 'Gauge'}
+        stats = metrics.pop('stats', {})
+        metrics.pop('brw_stats', None)  # ignore brw_stats
+        metrics.pop('job_stats', [])  # ignore job_stats for now
+        update = dict((key, {'value': metrics[key], 'type': 'Gauge'}) for key in metrics)
 
         for key in stats:
             ds_name = "stats_%s" % key

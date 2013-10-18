@@ -22,12 +22,15 @@
 
 import re
 import os
+import heapq
+from tablib.packages import yaml
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 
 # HYD-2307 workaround
 DISABLE_BRW_STATS = True
+JOB_STATS_LIMIT = 20  # only return the most active jobs
 
 
 def local_audit_classes(fscontext=None):
@@ -385,12 +388,26 @@ class ObdfilterAudit(TargetAudit):
 
         return histograms
 
+    def read_job_stats(self, target):
+        path = self.fscontext.abs(os.path.join(self.target_root, target, 'job_stats'))
+        try:
+            stats = yaml.load(open(path))['job_stats'] or []
+        except IOError:
+            return []
+        return heapq.nlargest(JOB_STATS_LIMIT, stats, key=lambda stat: stat['read']['sum'] + stat['write']['sum'])
+
     def _gather_raw_metrics(self):
+        metrics = self.raw_metrics['lustre']
+        try:
+            metrics['jobid_var'] = self.read_string('/proc/fs/lustre/jobid_var')
+        except IOError:
+            metrics['jobid_var'] = 'disable'
         for ost in [dev for dev in self.devices() if dev['type'] == 'obdfilter']:
-            self.raw_metrics['lustre']['target'][ost['name']] = self.read_int_metrics(ost['name'])
-            self.raw_metrics['lustre']['target'][ost['name']]['stats'] = self.read_stats(ost['name'])
+            metrics['target'][ost['name']] = self.read_int_metrics(ost['name'])
+            metrics['target'][ost['name']]['stats'] = self.read_stats(ost['name'])
             if not DISABLE_BRW_STATS:
-                self.raw_metrics['lustre']['target'][ost['name']]['brw_stats'] = self.read_brw_stats(ost['name'])
+                metrics['target'][ost['name']]['brw_stats'] = self.read_brw_stats(ost['name'])
+            metrics['target'][ost['name']]['job_stats'] = self.read_job_stats(ost['name'])
 
 
 class LnetAudit(LustreAudit):

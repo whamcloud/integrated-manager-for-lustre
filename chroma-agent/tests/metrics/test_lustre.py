@@ -305,3 +305,21 @@ class TestObdfilterMetrics(unittest.TestCase):
         """Test that brw_stats hists on a fresh OST (no traffic) have empty buckets."""
         hist = self.metrics['lustre-OST0003']['brw_stats']['pages']
         self.assertEqual(hist['buckets'], {})
+
+
+class TestJobStats(unittest.TestCase):
+    def setUp(self):
+        test_root = os.path.normpath(os.path.join(__file__, '../../data/lustre_versions/2.3/oss'))
+        audit = ObdfilterAudit(fscontext=test_root)
+        self.metrics = audit.metrics()['raw']['lustre']
+
+    def test(self):
+        assert self.metrics['jobid_var'] == 'procname_uid'
+        metrics = self.metrics['target']
+        for target in ('lustre-OST0001', 'lustre-OST0002', 'lustre-OST0003'):
+            assert metrics[target]['job_stats'] == []
+        stats = metrics['lustre-OST0000']['job_stats']
+        assert [stat['job_id'] for stat in stats] == ['dd.0', 'cp.0']
+        assert [stat['snapshot_time'] for stat in stats] == [1381939640, 1381939592]
+        assert stats[0]['read']['sum'] == stats[0]['write']['sum'] == 671088640
+        assert stats[1]['read']['sum'] == 0 and stats[1]['write']['sum'] == 220986046
