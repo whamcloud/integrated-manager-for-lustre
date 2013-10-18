@@ -2,7 +2,7 @@ import json
 import mock
 import os
 from django.utils import unittest
-from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems
+from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems, MdRaid
 from tests.test_utils import patch_open, patch_run
 
 
@@ -113,3 +113,102 @@ UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
                         "1:2": ("/", "ext4"),
                         "3:4": ("swap", 'swap')
                     })
+
+class TestMDRaid(unittest.TestCase):
+
+    def setUp(self):
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        self.test_root = os.path.join(tests, "data/device_plugins/linux")
+
+        self.md_value_good = {'mdstat': """Personalities : [raid1]
+md127 : active (auto-read-only) raid1 sdc2[1] sdc1[0]
+      16056704 blocks super 1.2 [2/2] [UU]
+
+md128 : active (auto-read-only) raid0 sdd[0]
+      16056704 blocks super 1.2 [2/2] [UU]
+
+unused devices: <none>\n""",
+                              'mdadm': {"/dev/md127": """ARRAY /dev/md127 level=raid1 num-devices=2 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb5
+   devices=/dev/sdc1,/dev/sdc2\n""",
+                                        "/dev/md128": """ARRAY /dev/md128 level=raid0 num-devices=1 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb6
+   devices=/dev/sdd1\n"""},
+                              'results': [{
+                                              'uuid': '15054135:be3426c6:f1387822:49830fb5',
+                                              'path': '/dev/md127',
+                                              'mm': '9:127',
+                                              'device_paths': ['/dev/sdc1','/dev/sdc2']
+                                          },
+                                          {
+                                              'uuid': '15054135:be3426c6:f1387822:49830fb6',
+                                              'path': '/dev/md128',
+                                              'mm': '9:128',
+                                              'device_paths': ['/dev/sdd1']
+                                          }]
+        }
+
+    def _load(self, filename):
+        return open(os.path.join(self.test_root, filename)).read()
+
+    def _load_dmsetup(self, devices_filename, dmsetup_filename):
+        self.devices_data = json.loads(self._load(devices_filename))
+        self.dmsetup_data = self._load(dmsetup_filename)
+
+        return MockDmsetupTable(self.dmsetup_data, self.devices_data)
+
+    def mock_debug(self, value):
+        print value
+
+    class mock_open:
+        md_value = None
+
+        def __init__(self, fname):
+            pass
+
+        def read(self):
+            return self.md_value["mdstat"]
+
+    def mock_try_run(self, arg_list):
+        return self.md_value["mdadm"][arg_list[4]]
+
+    def mock_dev_major_minor(self, path):
+        if (self.devices_data['node_block_devices'].has_key(path)):
+            return self.devices_data['node_block_devices'][path]
+        else:
+            return None
+
+    def _setup_md_raid(self, devices_filename, dmsetup_filename, md_value):
+        dm_setup_table = self._load_dmsetup(devices_filename, dmsetup_filename)
+
+        with mock.patch('logging.Logger.debug', self.mock_debug):
+            with mock.patch('chroma_agent.shell.try_run', self.mock_try_run):
+                with mock.patch('__builtin__.open', self.mock_open):
+                    with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor', self.mock_dev_major_minor):
+
+                        self.md_value = md_value
+                        self.mock_open.md_value = md_value
+
+                        return MdRaid(dm_setup_table.block_devices).all()
+
+    def test_mdraid_pass(self):
+        mds = self._setup_md_raid('devices_MdRaid.txt', 'dmsetup_MdRaid.txt', self.md_value_good)
+
+        self.assertTrue(len(mds) == len(self.md_value_good['results']))
+
+        for value in self.md_value_good['results']:
+            uuid = value['uuid']
+
+            self.assertTrue(mds.has_key(uuid))
+            self.assertTrue(mds[uuid]['path'] == value['path'])
+            self.assertTrue(mds[uuid]['block_device'] == value['mm'])
+            self.assertTrue(len(mds[uuid]['drives']) == len(value['device_paths']))
+            for i in range(0, len(value['device_paths'])):
+                self.assertTrue(mds[uuid]['drives'][i] == self.mock_dev_major_minor(value['device_paths'][i]))
+
+    # This should not fail as such, but the dmsetup data doesn't contain the device info for the md device so the
+    # data is inconsistent. The code should deal with this and return an mddevice with empty drives..
+    def test_mdraid_fail(self):
+        mds = self._setup_md_raid('devices_HYD-1385.txt', 'dmsetup_HYD-1385.txt', self.md_value_good)
+
+        # No data should come back
+        self.assertTrue(len(mds) == 0)
+
