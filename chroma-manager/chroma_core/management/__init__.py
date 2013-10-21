@@ -43,6 +43,12 @@ def setup_groups(app, **kwargs):
             for perm in auth.models.Permission.objects.filter(content_type = ContentType.objects.get_for_model(model)):
                 group.permissions.add(perm)
 
+        def all_subclasses(cls):
+            for subclass in cls.__subclasses__():
+                yield subclass
+                for subclass in all_subclasses(subclass):
+                    yield subclass
+
         grant_write(fsadmin_group, chroma_core.models.ManagedTarget)
         grant_write(fsadmin_group, chroma_core.models.ManagedHost)
         grant_write(fsadmin_group, chroma_core.models.ManagedFilesystem)
@@ -53,6 +59,16 @@ def setup_groups(app, **kwargs):
         grant_write(fsadmin_group, chroma_core.models.VolumeNode)
         grant_write(fsadmin_group, django.contrib.auth.models.User)
         grant_write(fsadmin_group, chroma_core.models.RegistrationToken)
+
+        # Allow fs admins to dismiss alerts
+        grant_write(fsadmin_group, chroma_core.models.AlertState)
+        for alert_klass in all_subclasses(chroma_core.models.AlertState):
+            grant_write(fsadmin_group, alert_klass)
+
+        # Allow fs admins to dismiss events
+        grant_write(fsadmin_group, chroma_core.models.Event)
+        for alert_klass in all_subclasses(chroma_core.models.Event):
+            grant_write(fsadmin_group, alert_klass)
 
         fsusers_group = auth.models.Group.objects.create(name = "filesystem_users")
         # For modifying his own account

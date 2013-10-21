@@ -414,6 +414,59 @@ class TestNotLoggedInUsersCannotDismiss(ResourceTestCase, DismissableTestSupport
         self.assertEqual(event.dismissed, False)
 
 
+class TestFSAdminsCanDismiss(ChromaApiTestCase, DismissableTestSupport):
+    """Make sure filesystem_administrators can Dismiss or Dismiss all alerts
+
+    Bug HYD-2619
+    """
+
+    def __init__(self, methodName=None):
+        super(TestFSAdminsCanDismiss, self).__init__(
+            methodName, username='admin', password='chr0m4_d3bug')
+
+    def test_dismissing_alert(self):
+        """Test dismissing alert by fs admins is allowed"""
+
+        alert = self.make_dismissable(AlertState, dismissed=False,
+            severity=WARNING, date=timezone.now())
+        self.assertEqual(alert.dismissed, False)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/alert/%s/" % alert.pk, data=data)
+        self.assertHttpAccepted(response)
+
+        alert = freshen(alert)
+        self.assertEqual(alert.dismissed, True)
+
+    def test_dismissing_command(self):
+        """Test dismissing command by fs admins is allowed"""
+
+        command = self.make_dismissable(Command, dismissed=False, failed=True)
+        self.assertEqual(command.dismissed, False)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/command/%s/" % command.pk,
+            data=data)
+        self.assertHttpAccepted(response)
+
+        command = freshen(command)
+        self.assertEqual(command.dismissed, True)
+
+    def test_dismissing_event(self):
+        """Test dismissing event by fs admins is allowed"""
+
+        event = self.make_dismissable(Event, dismissed=False, severity=WARNING)
+        self.assertEqual(event.dismissed, False)
+
+        data = {"dismissed": 'true'}
+        response = self.api_client.patch("/api/event/%s/" % event.pk,
+            data=data)
+        self.assertHttpAccepted(response)
+
+        event = freshen(event)
+        self.assertEqual(event.dismissed, True)
+
+
 class TestFSUsersCannotDismiss(ChromaApiTestCase, DismissableTestSupport):
     """Make sure filesystem_users cannot Dismiss or Dismiss all alerts
 
