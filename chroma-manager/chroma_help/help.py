@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # INTEL CONFIDENTIAL
 #
@@ -33,8 +34,10 @@ help_text = {
     'force_remove': 'This action removes the record for the storage server in the manager database, without attempting to contact the storage server. All targets that depend on this server will also be removed without any attempt to unconfigure them.  <b>You should only perform this action if the server is permanently unavailable.</b>',
     'invoke_agent': 'Indicates that the chroma-agent service can be accessed on this server.',
     'nids': 'The Lustre network identifier(s) for the LNet network(s) to which this node belongs.',
-    'ping': 'Indicates if an ICMP ping from the server running Intel(R) Manager for Lustre, to the server, succeeded.',
+    'ping': 'Indicates if an ICMP ping from the server running Intel® Manager for Lustre*, to the server, succeeded.',
     'type': 'The type of storage device.',
+    'managed_filesystem': 'This file system is managed by Intel® Manager for Lustre*',
+    'monitored_filesystem': 'This file system is monitored and may not be modified within Intel® Manager for Lustre*',
 
     'rescan_NIDs-dialog': 'Select all servers for which the server NID may have changed and click <b>Run</b> to re-read the NIDs. <i>Note:</i> After completing this operation, you must update any affected Lustre targets by clicking the <strong>Re-write Target Configuration</strong> button.',
     'remove_server': 'Remove this server. Any file systems or targets that rely on this server will also be removed.',
