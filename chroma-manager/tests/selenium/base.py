@@ -40,9 +40,13 @@ def wait_for_transition(driver, timeout):
     raise RuntimeError('Timeout after %s seconds waiting for transition to complete' % timeout)
 
 
-log = logging.getLogger(__name__)
-log.addHandler(logging.StreamHandler())
+log = logging.getLogger('test')
 log.setLevel(logging.DEBUG)
+handler = logging.FileHandler('selenium_test.log')
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+log.addHandler(handler)
 
 
 class SeleniumBaseTestCase(TestCase):
