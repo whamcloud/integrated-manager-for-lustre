@@ -1,0 +1,58 @@
+@import "variables";
+@import "/font-awesome/less/mixins.less";
+@import "/font-awesome/less/path.less";
+@import "/font-awesome/less/core.less";
+@import "/font-awesome/less/bootstrap.less";
+@import "/font-awesome/less/extras.less";
+@import "/font-awesome/less/icons.less";
+@import "/bootstrap/less/bootstrap";
+@import "responsive-breakpoints";
+
+html, body {
+  height: 100%;
+}
+
+.wrap {
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  margin: 0 auto -60px;
+  padding: 0 0 60px;
+}
+
+footer {
+  height: 60px;
+
+  .row {
+    position: relative;
+    height: 60px;
+
+    .col-lg-12 {
+      position: absolute;
+      bottom: 0;
+    }
+  }
+
+  small {
+    color: #888888;
+  }
+}
+
+@media (max-width: 767px) {
+  footer {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+.modal {
+  display:block;
+}
+
+.alert.alert-danger {
+background-color: @errorColor;
+border-color: darken(@errorColor, 10%);
+color: #FFFFFF;
+}

@@ -1,0 +1,54 @@
+@import "mixins";
+
+.error-tooltip {
+  ul {
+    list-style-type: none;
+    padding: 0;
+  }
+
+  .tooltip-inner {
+    background-color: @errorColor;
+  }
+
+  &.top .tooltip-arrow {
+    border-top-color: @errorColor;
+  }
+
+  &.right .tooltip-arrow {
+    border-right-color: @errorColor;
+  }
+
+  &.bottom .tooltip-arrow {
+    border-bottom-color: @errorColor;
+  }
+
+  &.left .tooltip-arrow {
+    border-left-color: @errorColor;
+  }
+
+  .my-toggle-animation {
+    padding: 10px;
+    border: 1px solid black;
+  }
+
+  &.top-add,
+  &.top-remove,
+  &.bottom-add,
+  &.bottom-remove {
+    .transition(0.1s ease-in-out all);
+  }
+
+  &.in-add,
+  &.in-remove {
+    .transition(0.1s linear opacity);
+  }
+
+  &.in-add,
+  &.in-remove-active {
+    opacity: 0;
+  }
+
+  &.in-add-active {
+    opacity: 1;
+  }
+}

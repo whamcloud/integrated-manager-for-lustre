@@ -103,6 +103,13 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
 
         AddOutputFilterByType DEFLATE text/html
     </Location>
+    <Location /ui_new/>
+        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
+        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/ui_new/
+        ProxyPass http://localhost:{{HTTP_API_PORT}}/ui_new/
+
+        AddOutputFilterByType DEFLATE text/html
+    </Location>
     <Location /api/>
         ProxyPass http://localhost:{{HTTP_API_PORT}}/api/
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/

@@ -20,25 +20,23 @@
 # express and approved by Intel in writing.
 
 
-from django.conf.urls.defaults import patterns, include
+import json
+import datetime
+import settings
 
-from django.contrib import admin
+from chroma_help.help import help_text
 
-admin.autodiscover()
 
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+def default(request):
+    """
+    Returns Default context variables.
+    """
 
-import chroma_ui.urls
-import chroma_ui_new.urls
-import chroma_api.urls
-import chroma_agent_comms.urls
-
-urlpatterns = patterns('',
-    (r'^admin/', include(admin.site.urls)),
-    (r'^agent/', include(chroma_agent_comms.urls)),
-    (r'^ui/', include(chroma_ui.urls)),
-    (r'^ui_new/', include(chroma_ui_new.urls)),
-    (r'^', include(chroma_api.urls)),
-)
-
-urlpatterns += staticfiles_urlpatterns()
+    return {
+        'help_text': json.dumps(help_text),
+        'server_time': datetime.datetime.utcnow(),
+        'BUILD': settings.BUILD,
+        'VERSION': settings.VERSION,
+        'IS_RELEASE': settings.IS_RELEASE,
+        'ALLOW_ANONYMOUS_READ': settings.ALLOW_ANONYMOUS_READ
+    }

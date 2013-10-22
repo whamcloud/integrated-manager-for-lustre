@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  <base href="/ui_new/" />
+
+  <title>Intel&reg; Manager for Lustre* software{% block title %}{% endblock %}</title>
+
+  <!-- build:css(tmp) {{STATIC_URL}}chroma_ui/built.css -->
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/styles/main.css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/bower_components/animate.css/animate.css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/login/assets/styles/login.css"/>
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/login/assets/styles/eula.css"/>
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/remote-validate/validators/assets/error-tooltip.css"/>
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/remote-validate/assets/remote-validate.css"/>
+  <!-- endbuild -->
+
+  <script type="text/javascript">
+    window.STATIC_URL = '{{STATIC_URL}}chroma_ui/';
+    window.HELP_TEXT = {{help_text|safe}};
+  </script>
+</head>
+<body ng-app="iml">
+  {% block content %}{% endblock %}
+  <footer class="container logo-footer">
+    <div class="row text-center">
+      <div class="col-lg-12">
+        <small>
+          Intel&reg; Manager for Lustre* software {{ VERSION }} (build {{ BUILD }}) is
+          Copyright &copy; {{ server_time.year|safe }} Intel Corporation. All rights reserved.
+          <a href="/ui/about/" class='navigation'>About Intel&reg; Manager for Lustre* software</a>
+        </small>
+      </div>
+    </div>
+  </footer>
+
+  <!-- build:js(source) {{STATIC_URL}}chroma_ui/built.js -->
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/lodash/dist/lodash.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/underscore-contrib/dist/underscore-contrib.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/vendor/sprintf/sprintf.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/angular/angular.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/angular-route/angular-route.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/angular-animate/angular-animate.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/angular-route-segment/build/angular-route-segment.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/vendor/ui-bootstrap-tpls-0.6.0-SNAPSHOT.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/app/environment.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/app/help.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/common/resourceful/resourceful-provider.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/resourceful/route.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/directives/at-scroll-boundary.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/common/login/login-module.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/login/session-model.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/login/user-model.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/login/login-controller.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/login/eula-modal-controller.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/common/access-denied/access-denied-modal-controller.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/common/remote-validate/remote-validate.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/remote-validate/validators/error-tooltip.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/tooltip-position.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/app/app.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/app/router.js"></script>
+  <!-- endbuild -->
+
+
+  {% if not IS_RELEASE %}
+    <script src="http://localhost:35729/livereload.js"></script>
+  {% endif %}
+</body>
+</html>

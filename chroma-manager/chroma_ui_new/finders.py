@@ -20,25 +20,12 @@
 # express and approved by Intel in writing.
 
 
-from django.conf.urls.defaults import patterns, include
+from django.contrib.staticfiles.finders import AppDirectoriesFinder, AppStaticStorage
 
-from django.contrib import admin
 
-admin.autodiscover()
+class DevStaticStorage(AppStaticStorage):
+    source_dir = 'source'
 
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
-import chroma_ui.urls
-import chroma_ui_new.urls
-import chroma_api.urls
-import chroma_agent_comms.urls
-
-urlpatterns = patterns('',
-    (r'^admin/', include(admin.site.urls)),
-    (r'^agent/', include(chroma_agent_comms.urls)),
-    (r'^ui/', include(chroma_ui.urls)),
-    (r'^ui_new/', include(chroma_ui_new.urls)),
-    (r'^', include(chroma_api.urls)),
-)
-
-urlpatterns += staticfiles_urlpatterns()
+class DevDirectoriesFinder(AppDirectoriesFinder):
+    storage_class = DevStaticStorage

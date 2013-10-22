@@ -1,0 +1,38 @@
+{
+    "globals": {
+      "jasmine": false,
+      "protractor": false,
+      "spyOn": false,
+      "it": false,
+      "console": false,
+      "describe": false,
+      "expect": false,
+      "beforeEach": false,
+      "waits": false,
+      "waitsFor": false,
+      "runs": false
+    },
+
+    "node" : true,
+    "browser": true,
+
+    "bitwise": true,
+    "curly": false,
+    "eqeqeq": true,
+    "forin": true,
+    "immed": true,
+    "indent": 2,
+    "newcap": true,
+    "noarg": true,
+    "noempty": true,
+    "nonew": true,
+    "plusplus": true,
+    "quotmark": "single",
+    "undef": true,
+    "unused": true,
+    "strict": true,
+    "trailing": true,
+    "maxcomplexity": 5,
+    "maxlen": 120,
+    "expr": true
+}

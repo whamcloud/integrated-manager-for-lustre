@@ -1,0 +1,53 @@
+.eula {
+  font-size: 90%;
+  line-height: 18px;
+  color: #444444;
+  padding-bottom: 0;
+
+
+  .well {
+    max-height: 324px;
+    overflow-x: auto;
+  }
+
+  .subtext {
+    font-size: 10px;
+    line-height: 12px;
+    color: #666666;
+  }
+
+  ol {
+    padding-left: 35px;
+    counter-reset: item;
+    position: relative;
+    list-style-type: none;
+
+    .alpha {
+      counter-reset: alpha;
+
+      li:before {
+        counter-increment: alpha;
+        content: "(" counter(alpha, lower-alpha) ")";
+      }
+    }
+  }
+
+  li {
+    margin-bottom: 20px;
+
+    &:before {
+      content: counters(item, ".") ".";
+      counter-increment: item;
+      position: absolute;
+      left: 0;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    h5 {
+      display: inline-block;
+      margin: 0;
+      font-size: inherit;
+    }
+  }
+}

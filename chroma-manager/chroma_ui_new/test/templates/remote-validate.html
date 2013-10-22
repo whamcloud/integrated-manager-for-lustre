@@ -1,0 +1,7 @@
+<form name="testForm" remote-validate-form validate="validate">
+  <ul ng-repeat="error in serverValidationError.__all__">
+    <li>{{ error }}</li>
+  </ul>
+  <input remote-validate-component type="text" name="foo" ng-model="foo" />
+  <select remote-validate-component name="bar" ng-model="bar"></select>
+</form>

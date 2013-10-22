@@ -114,19 +114,26 @@ CHECKS = [
 DJANGO_PROJECTS = ['chroma-manager']
 
 JS_HINT_CHECK = {
-    'output': 'Running JSHint...',
-    'command': 'jshint %s',
-    'match_files': [
-        '.*/chroma_ui/static/js/.+/[^/]+\.js$',
-        '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
-        '.*/chroma_ui/static/js/app.js$',
-        '.*/chroma_ui/static/js/constants.js$'
-    ],
-    'ignore_files': [
-        '.*/chroma_ui/static/js/lib/.*'
-    ],
-    'print_filename': True,
-}
+        'output': 'Running JSHint...',
+        'command': 'jshint %s',
+        'match_files': [
+            '.*/chroma_ui_new/.*\.js$',
+            '.*/chroma_ui/static/js/.+/[^/]+\.js$',
+            '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
+            '.*/chroma_ui/static/js/app.js$',
+            '.*/chroma_ui/static/js/constants.js$'
+        ],
+        'ignore_files': [
+            '.*/chroma_ui/static/js/lib/.*',
+            '.*/chroma_ui_new/source/chroma_ui/bower_components/.*',
+            '.*/chroma_ui_new/source/chroma_ui/vendor/.*',
+            '.*/chroma_ui_new/karma.*\.conf\.js',
+            '.*/chroma_ui_new/Gruntfile.js',
+            '.*/chroma_ui_new/test/matchers/matchers\.js',
+            '.*/chroma-manager/chroma_ui_new/node_modules/.*'
+        ],
+        'print_filename': True,
+    }
 
 has_js_hint = spawn.find_executable('jshint')
 
