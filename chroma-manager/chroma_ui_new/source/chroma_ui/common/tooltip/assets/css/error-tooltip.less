@@ -1,0 +1,28 @@
+@import "mixins";
+
+.error-tooltip {
+  ul {
+    list-style-type: none;
+    padding: 0;
+  }
+
+  .tooltip-inner {
+    background-color: @errorColor;
+  }
+
+  &.top .tooltip-arrow {
+    border-top-color: @errorColor;
+  }
+
+  &.right .tooltip-arrow {
+    border-right-color: @errorColor;
+  }
+
+  &.bottom .tooltip-arrow {
+    border-bottom-color: @errorColor;
+  }
+
+  &.left .tooltip-arrow {
+    border-left-color: @errorColor;
+  }
+}

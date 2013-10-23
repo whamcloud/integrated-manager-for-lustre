@@ -23,7 +23,13 @@
 (function () {
   'use strict';
 
-  function LoginCtrl($window, $modal, $q, SessionModel, HELP_TEXT, UI_ROOT) {
+  angular.module('login').controller('LoginCtrl',
+    ['$modal', '$q', 'SessionModel', 'help', 'navigate', LoginCtrl]
+  );
+
+  function LoginCtrl($modal, $q, SessionModel, help, navigate) {
+    this.continueAsAnonymous = help.get('continue_as_anonymous');
+
     /**
      * Initializes the eula modal and opens it.
      * @param {UserModel} user
@@ -52,7 +58,7 @@
         backdrop: 'static',
         keyboard: false,
         resolve: {
-          message: _.iterators.K(HELP_TEXT.access_denied_eula)
+          message: _.iterators.K(help.get('access_denied_eula'))
         }
       }).result;
     }.bind(this);
@@ -63,28 +69,26 @@
     this.submitLogin = function submitLogin() {
       this.inProgress = true;
 
-      var promise = SessionModel.login(this.username, this.password).$promise
+      this.validate = SessionModel.login(this.username, this.password).$promise
       .then(function (session) {
         return session.user.actOnEulaState(initializeEulaDialog, initializeDeniedDialog);
       })
-      .then(function () {
-        $window.location.href = UI_ROOT;
-      })
+      .then(goToIndex)
       .catch(function (reason) {
         if (reason === 'dismiss')
-          return SessionModel.del().$promise;
+          return SessionModel.delete().$promise;
 
         return $q.reject(reason);
       })
       .finally(function () {
         this.inProgress = false;
       }.bind(this));
-
-      this.validate = { promise: promise };
     };
-  }
 
-  angular.module('login').controller('LoginCtrl',
-    ['$window', '$modal', '$q', 'SessionModel', 'HELP_TEXT', 'UI_ROOT', LoginCtrl]
-  );
+    this.goToIndex = goToIndex;
+
+    function goToIndex() {
+      navigate();
+    }
+  }
 }());

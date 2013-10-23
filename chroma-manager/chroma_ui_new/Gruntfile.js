@@ -26,16 +26,6 @@ module.exports = function (grunt) {
         files: ['<%= config.src %>/**/*.less', '!<%= config.src %>/bower_components/**/*'],
         tasks: ['less:dev']
       },
-      livereload: {
-        options: {
-          livereload: true
-        },
-        files: [
-          '<%= config.dist %>/**/*.css',
-          '<%= config.src %>/**/*.html',
-          '<%= config.src %>/**/*.js'
-        ]
-      },
       jshint: {
         tasks: ['jshint'],
         files: [
@@ -48,10 +38,6 @@ module.exports = function (grunt) {
         options: {
           spawn: false
         }
-      },
-      karma: {
-        files: ['<%= config.src %>/**/*.js', 'test/**/*.js'],
-        tasks: ['karma:dev:run']
       }
     },
 
@@ -112,9 +98,9 @@ module.exports = function (grunt) {
     },
 
     karma: {
-      dev: {
-        background: true,
+      unit: {
         configFile: 'karma.conf.js',
+        singleRun: true,
         browsers: ['Chrome', 'Firefox', 'Safari']
       }
     },
@@ -173,7 +159,6 @@ module.exports = function (grunt) {
   grunt.registerTask('dev', [
     'clean:dev',
     'less:dev',
-    'karma:dev',
     'watch'
   ]);
 

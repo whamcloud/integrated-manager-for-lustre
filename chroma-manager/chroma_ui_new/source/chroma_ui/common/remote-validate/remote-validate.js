@@ -120,12 +120,10 @@
           });
         });
 
-
-        // There is currently no way to watch a promise for reference changes without wrapping it.
         var deregisterWatch = scope.$watch(attrs.validate, function validateWatcher(newValidate, oldValidate) {
           if (newValidate === oldValidate) return;
 
-          newValidate.promise.then(success, errback);
+          newValidate.then(success, errback);
         });
 
         scope.$on('$destroy', function () {
@@ -148,7 +146,7 @@
     };
   }
 
-  angular.module('remote-validate', ['validators'])
+  angular.module('remote-validate', [])
 
   /**
    * Service wrapper for remote validation of a form. Useful for testing.

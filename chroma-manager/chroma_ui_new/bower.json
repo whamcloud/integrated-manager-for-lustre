@@ -2,19 +2,20 @@
   "name": "chromaUi",
   "version": "2.1.0",
   "dependencies": {
-    "angular": "1.2.0-rc.2",
-    "angular-animate": "~1.2.0-rc.2",
-    "angular-bootstrap": "git://github.com/angular-ui/bootstrap.git#bootstrap3_bis",
-    "angular-route": "1.2.0-rc.2",
-    "angular-route-segment": "~1.1.0",
-    "font-awesome": "git://github.com/FortAwesome/Font-Awesome.git#~3.2.1",
+    "angular": "1.2.0-rc.3",
+    "angular-animate": "~1.2.0-rc.3",
+    "angular-resource": "~1.2.0-rc.3",
+    "angular-route": "1.2.0-rc.3",
+    "angular-route-segment": "~1.2.0",
+    "font-awesome": "git://github.com/FortAwesome/Font-Awesome.git#~4.0.0",
     "bootstrap": "~3.0.0",
-    "lodash": "~2.1.0",
+    "lodash": "~2.2.0",
+    "jquery": "~2.0.3",
     "underscore-contrib": "git://github.com/documentcloud/underscore-contrib.git#0.1.4",
-    "animate.css": "*"
+    "animate.css": "~2.1.0"
   },
   "devDependencies": {
-    "angular-mocks": "1.2.0-rc.2",
+    "angular-mocks": "1.2.0-rc.3",
     "jasmine-stealth": "https://github.com/searls/jasmine-stealth/releases/download/0.0.12/jasmine-stealth.js"
   }
 }

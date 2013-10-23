@@ -1,8 +1,7 @@
 describe('Login Controller', function () {
   'use strict';
 
-  var loginController, $window, $httpBackend, $modal, sessionFixture, sessionFixtures, $rootScope;
-  var uiRoot = 'root/of/app';
+  var loginController, $httpBackend, $modal, sessionFixture, sessionFixtures, $rootScope, navigate;
 
   var userEulaStates = {
     EULA: 'eula',
@@ -10,36 +9,38 @@ describe('Login Controller', function () {
     DENIED: 'denied'
   };
 
-  var helpText = {
-    access_denied_eula: 'access denied :('
-  };
+  beforeEach(module('login'));
 
-  beforeEach(module('login', '$windowMock'));
+  mock.beforeEach('$modal', 'navigate', 'help');
 
-  beforeEach(inject(function ($controller, _$httpBackend_, _$modal_, _$window_, _$rootScope_, fixtures) {
+  beforeEach(inject(function ($controller, _$httpBackend_, _$modal_, _$rootScope_, _navigate_, fixtures) {
     $httpBackend = _$httpBackend_;
     $rootScope = _$rootScope_;
     $modal = _$modal_;
-    $window = _$window_;
+    navigate = _navigate_;
     sessionFixtures = fixtures.asName('session');
 
     loginController = $controller('LoginCtrl', {
-      user_EULA_STATES: userEulaStates,
-      HELP_TEXT: helpText,
-      UI_ROOT: uiRoot
+      user_EULA_STATES: userEulaStates
     });
 
     sessionFixture = sessionFixtures.getFixture(function (fixture) {
       return fixture.status === 200;
     });
 
-    $httpBackend.whenPOST('session').respond(201);
-    $httpBackend.whenGET('session').respond.apply(null, sessionFixture.toArray());
+    $httpBackend.whenPOST('session/').respond(201);
+    $httpBackend.whenGET('session/').respond.apply(null, sessionFixture.toArray());
   }));
 
   afterEach(function() {
     $httpBackend.verifyNoOutstandingExpectation();
     $httpBackend.verifyNoOutstandingRequest();
+  });
+
+  it('should have a method to go to index', function () {
+    loginController.goToIndex();
+
+    expect(navigate).toHaveBeenCalledWith();
   });
 
   describe('authenticated user', function () {
@@ -49,7 +50,7 @@ describe('Login Controller', function () {
       };
 
     beforeEach(function () {
-      $httpBackend.expectPOST('session', credentials).respond(201);
+      $httpBackend.expectPOST('session/', credentials).respond(201);
 
       _.extend(loginController, credentials);
 
@@ -76,20 +77,18 @@ describe('Login Controller', function () {
 
     it('should redirect to base uri if api says so', function () {
       sessionFixture.data.user.eula_state = userEulaStates.PASS;
-      $httpBackend.expectGET('session').respond.apply(null, sessionFixture.toArray());
+      $httpBackend.expectGET('session/').respond.apply(null, sessionFixture.toArray());
 
       $httpBackend.flush();
 
       expect($modal.open.callCount).toEqual(0);
-      expect($window.location.__hrefSpy__.callCount).toEqual(1);
-
-      expect($window.location.__hrefSpy__).toHaveBeenCalledWith('root/of/app');
+      expect(navigate).toHaveBeenCalledOnceWith();
     });
 
     it('should logout when eula is rejected', function () {
       $httpBackend.flush();
 
-      $httpBackend.expectDELETE('session').respond(204);
+      $httpBackend.expectDELETE('session/').respond(204);
 
       $modal.instances['common/login/assets/html/eula.html'].dismiss('dismiss');
 
@@ -103,7 +102,7 @@ describe('Login Controller', function () {
 
       $rootScope.$digest();
 
-      expect($window.location.__hrefSpy__).toHaveBeenCalledWith('root/of/app');
+      expect(navigate).toHaveBeenCalledWith();
     });
   });
 
@@ -113,7 +112,7 @@ describe('Login Controller', function () {
         return fixture.status === 400;
       });
 
-      $httpBackend.expectPOST('session').respond.apply(null, failedAuth.toArray());
+      $httpBackend.expectPOST('session/').respond.apply(null, failedAuth.toArray());
 
       _.extend(loginController, {username: 'badHacker', password: 'bruteForce'});
       loginController.submitLogin();
@@ -122,7 +121,7 @@ describe('Login Controller', function () {
     it('should have a rejected promise', function () {
       var err = jasmine.createSpy('err');
 
-      loginController.validate.promise.catch(err);
+      loginController.validate.catch(err);
 
       $httpBackend.flush();
       $rootScope.$digest();
@@ -145,7 +144,7 @@ describe('Login Controller', function () {
         return fixture.data.user && fixture.data.user.username === 'admin';
       });
 
-      $httpBackend.expectGET('session').respond.apply(null, adminSession.toArray());
+      $httpBackend.expectGET('session/').respond.apply(null, adminSession.toArray());
 
       _.extend(loginController, {username: 'admin', password: 'foo'});
       loginController.submitLogin();
@@ -166,7 +165,7 @@ describe('Login Controller', function () {
     });
 
     it('should not perform any further actions', function () {
-      expect($window.location.__hrefSpy__).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
 
       expect(loginController.inProgress).toBeTruthy();
     });

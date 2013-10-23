@@ -47,16 +47,13 @@ angular.module('fixtures', []).service('fixtures', function () {
     return group.filter(filter);
   };
 
-  this.getFixture = function (name, filter, shouldThrow) {
-    shouldThrow = shouldThrow || true;
-
+  this.getFixture = function (name, filter) {
     var group = fixtures[name] || [];
 
     var fixture = group.filter(filter)[0];
 
-    if (shouldThrow && !fixture) {
+    if (!fixture)
       throw new Error('No matching fixtures found under %s!'.sprintf(name));
-    }
 
     return _.cloneDeep(fixture);
   };

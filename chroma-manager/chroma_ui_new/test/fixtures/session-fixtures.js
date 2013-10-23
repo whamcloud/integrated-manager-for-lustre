@@ -23,6 +23,11 @@ angular.module('fixtures').run(function (fixtures) {
       username: 'debug'
     }
   })
+  .registerFixture('session', 200, {
+    read_enabled: true,
+    resource_uri: '/api/session/',
+    user: null
+  })
   .registerFixture('session', 400, {
     password: ['This field is mandatory'],
     username: ['This field is mandatory']

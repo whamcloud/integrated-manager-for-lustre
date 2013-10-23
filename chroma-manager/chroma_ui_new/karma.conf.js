@@ -15,7 +15,7 @@ module.exports = function(config) {
   var sourceDir = bound('source/chroma_ui/%s');
   var bowerDir = bound(sourceDir('bower_components/%s'));
   var vendorDir = bound(sourceDir('vendor/%s'));
-  var appDir = bound(sourceDir('app/%s'));
+  var imlDir = bound(sourceDir('iml/%s'));
   var commonDir = bound(sourceDir('common/%s'));
   var testDir = bound('test/%s');
 
@@ -33,13 +33,16 @@ module.exports = function(config) {
     files: [
       bowerDir('jasmine-stealth/index.js'),
       bowerDir('angular/angular.js'),
+      bowerDir('angular-resource/angular-resource.js'),
       bowerDir('lodash/dist/lodash.js'),
       bowerDir('underscore-contrib/dist/underscore-contrib.js'),
       vendorDir('**/*.js'),
       commonDir('**/*-module.js'),
-      appDir('**/*.js'),
       commonDir('**/*.js'),
+      imlDir('**/*-module.js'),
+      imlDir('**/*.js'),
       bowerDir('angular-mocks/angular-mocks.js'),
+      testDir('mocks/mock.js'),
       testDir('**/*-module.js'),
       testDir('fixtures/fixtures.js'),
       testDir('fixtures/**/*.js'),
@@ -50,8 +53,8 @@ module.exports = function(config) {
 
     // list of files to exclude
     exclude: [
-      appDir('app.js'),
-      appDir('router.js'),
+      imlDir('iml.js'),
+      imlDir('router.js'),
       testDir('selenium/**/*')
     ],
 

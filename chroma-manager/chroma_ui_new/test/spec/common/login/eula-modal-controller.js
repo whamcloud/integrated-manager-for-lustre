@@ -11,6 +11,8 @@ describe('Eula', function () {
     });
   }));
 
+  mock.beforeEach('$modal');
+
   beforeEach(inject(function ($controller, $rootScope, $modal, _$httpBackend_, UserModel) {
     $scope = $rootScope.$new();
     $httpBackend = _$httpBackend_;
@@ -24,7 +26,7 @@ describe('Eula', function () {
   }));
 
   it('should update the user on accept', function () {
-    $httpBackend.expectPUT('user', {accepted_eula: true}).respond(202);
+    $httpBackend.expectPUT('user/', {accepted_eula: true}).respond(202);
 
     $scope.eulaCtrl.accept();
 
@@ -36,7 +38,7 @@ describe('Eula', function () {
   });
 
   it('should perform the appropriate actions on reject', function () {
-    $httpBackend.expectPUT('user', {accepted_eula: false}).respond(202);
+    $httpBackend.expectPUT('user/', {accepted_eula: false}).respond(202);
 
     expect($modalInstance.dismiss).not.toHaveBeenCalled();
 

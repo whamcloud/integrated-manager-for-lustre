@@ -2,7 +2,7 @@
 @import "/font-awesome/less/mixins.less";
 @import "/font-awesome/less/path.less";
 @import "/font-awesome/less/core.less";
-@import "/font-awesome/less/bootstrap.less";
+@import "/font-awesome/less/font-awesome.less";
 @import "/font-awesome/less/extras.less";
 @import "/font-awesome/less/icons.less";
 @import "/bootstrap/less/bootstrap";
@@ -47,12 +47,12 @@ footer {
   }
 }
 
-.modal {
-  display:block;
-}
-
 .alert.alert-danger {
 background-color: @errorColor;
 border-color: darken(@errorColor, 10%);
 color: #FFFFFF;
+}
+
+a:hover {
+  cursor: pointer;
 }

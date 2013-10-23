@@ -73,7 +73,7 @@ describe('Remote validate directive', function () {
       remoteValidateFormService.link($scope, $element, {validate: 'validate'}, controller);
       $scope.$digest();
 
-      $scope.validate = { promise: deferred.promise };
+      $scope.validate = deferred.promise;
       $scope.$digest();
     }));
 
@@ -156,7 +156,7 @@ describe('Remote validate directive', function () {
         var deferred = $q.defer();
 
         _.extend($scope, {
-          validate: { promise: deferred.promise }
+          validate: deferred.promise
         });
 
         return deferred;

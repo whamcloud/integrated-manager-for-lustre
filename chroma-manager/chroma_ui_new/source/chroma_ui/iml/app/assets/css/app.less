@@ -1,0 +1,23 @@
+.navbar {
+  border-radius: 0;
+
+  .navbar-brand {
+    padding-top: 12px;
+    padding-bottom: 0;
+  }
+
+  .logo {
+    background-image: url(../images/intel-logo-white-small.png);
+    background-repeat: no-repeat;
+    background-size: 38px 25px;
+    width: 38px;
+    height: 25px;
+
+    @media only screen and (min--moz-device-pixel-ratio: 2),
+    only screen and (-o-min-device-pixel-ratio: 2/1),
+    only screen and (-webkit-min-device-pixel-ratio: 2),
+    only screen and (min-device-pixel-ratio: 2) {
+      background-image: url(../images/intel-logo-white-large.png);
+    }
+  }
+}

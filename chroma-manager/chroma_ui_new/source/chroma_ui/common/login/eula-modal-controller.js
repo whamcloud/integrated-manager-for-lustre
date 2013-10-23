@@ -34,7 +34,7 @@
 
       return function () {
         user.accepted_eula = state;
-        user.$put().then($modalInstance[action].bind($modalInstance, action));
+        user.$update().then($modalInstance[action].bind($modalInstance, action));
       };
     }
 

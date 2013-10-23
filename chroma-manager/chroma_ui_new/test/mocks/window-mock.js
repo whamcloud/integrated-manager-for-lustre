@@ -1,4 +1,4 @@
-angular.module('$windowMock', []).service('$window', function () {
+mock.register('$window', function () {
   'use strict';
 
   var hrefSpy = jasmine.createSpy('hrefSpy');

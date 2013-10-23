@@ -26,5 +26,6 @@
   /**
    * Login module definition.
    */
-  angular.module('login', ['resourceful', 'remote-validate', 'help', 'atScrollBoundary', 'accessDenied']);
+  angular.module('login',
+    ['auth', 'remote-validate', 'help', 'atScrollBoundary', 'accessDenied', 'iml-tooltip', 'navigate']);
 }());

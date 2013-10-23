@@ -1,0 +1,13 @@
+<nav class="navbar navbar-inverse" role="navigation">
+  <div class="navbar-header">
+    <a class="navbar-brand" route-to="">
+      <div class="logo"></div>
+    </a>
+  </div>
+  <div class="collapse navbar-collapse navbar-ex1-collapse">
+    <ul class="nav navbar-nav navbar-right">
+      <li ng-if="app.loggedIn"><a>{{ app.user.username }}</a></li>
+      <li><a ng-click="app.onClick()">{{ app.loggedIn? 'Logout': 'Login' }}</a></li>
+    </ul>
+  </div>
+</nav>

@@ -13,11 +13,14 @@
           name="username"
           autocomplete="off"
           ng-model="login.username"
-          error-tooltip="{{ serverValidationError.username }}"
-          error-tooltip-placement="top"
           remote-validate-component
           placeholder="Username"
           />
+        <iml-tooltip class="error-tooltip" toggle="serverValidationError.username" direction="top">
+          <ul>
+            <li ng-repeat="error in serverValidationError.username">{{ error }}</li>
+          </ul>
+        </iml-tooltip>
       </div>
       <div class="form-group password-group" ng-class="{'has-error': loginForm.password.$invalid}">
         <input
@@ -26,22 +29,28 @@
           name="password"
           autocomplete="off"
           ng-model="login.password"
-          error-tooltip="{{ serverValidationError.password }}"
-          error-tooltip-placement="bottom"
           remote-validate-component
           placeholder="Password"
           />
+        <iml-tooltip class="error-tooltip" toggle="serverValidationError.password" direction="bottom">
+          <ul>
+            <li ng-repeat="error in serverValidationError.password">{{ error }}</li>
+          </ul>
+        </iml-tooltip>
       </div>
       <button type="submit" class="btn btn-success" ng-disabled="loginForm.$pristine || login.inProgress" ng-click="login.submitLogin()">
-        <i class="icon-unlock-alt"></i> Login
+        <i class="fa fa-unlock"></i> Login
       </button>
       <div class="skip-login-row">
         <div class="skip-login">
           <small>
-            <a href="/ui/">Or Continue As Anonymous</a>
-            <a context-tooltip="continue_as_anonymous" tooltip-placement="right">
-              <i class="icon-question-sign"></i>
-            </a>
+            <a ng-click="login.goToIndex()">Or Continue As Anonymous</a>
+            <span class="help">
+              <a><i class="fa fa-question-circle"></i></a>
+              <iml-tooltip direction="right">
+                <span ng-bind-html="login.continueAsAnonymous"></span>
+              </iml-tooltip>
+            </span>
           </small>
         </div>
       </div>
