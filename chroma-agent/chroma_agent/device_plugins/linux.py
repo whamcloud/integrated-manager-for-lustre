@@ -83,6 +83,16 @@ class DeviceHelper(object):
         else:
             return None
 
+    def _find_block_devs(self, folder):
+        # Map of major_minor to path
+        result = {}
+        for path in glob.glob(os.path.join(folder, "*")):
+            mm = self._dev_major_minor(path)
+            if mm:
+                result[mm] = path
+
+        return result
+
 
 class BlockDevices(DeviceHelper):
     """Reads /sys/block to detect all block devices, resolves SCSI WWIDs where possible, and
@@ -140,19 +150,9 @@ class BlockDevices(DeviceHelper):
         return info
 
     def _parse_sys_block(self):
-        def _find_block_devs(folder):
-            # Map of major_minor to path
-            result = {}
-            for path in glob.glob(os.path.join(folder, "*")):
-                mm = self._dev_major_minor(path)
-                if mm:
-                    result[mm] = path
-
-            return result
-
-        mapper_devs = _find_block_devs("/dev/mapper/")
-        by_id_nodes = _find_block_devs("/dev/disk/by-id/")
-        by_path_nodes = _find_block_devs("/dev/disk/by-path/")
+        mapper_devs = self._find_block_devs("/dev/mapper/")
+        by_id_nodes = self._find_block_devs("/dev/disk/by-id/")
+        by_path_nodes = self._find_block_devs("/dev/disk/by-path/")
 
         def get_path(major_minor, device_name):
             # Try to find device nodes for these:
@@ -264,12 +264,20 @@ class MdRaid(DeviceHelper):
     def _get_md(self):
         try:
             matches = re.finditer("^(md\d+) : active", open('/proc/mdstat').read().strip(), flags = re.MULTILINE)
+            dev_md_nodes = self._find_block_devs("/dev/md/")
+
             devs = []
             for match in matches:
                 # e.g. md0
                 device_name = match.group(1)
                 device_path = "/dev/%s" % device_name
                 device_major_minor = self._dev_major_minor(device_path)
+
+                # Defensive, but perhaps the md device doesn't show up as disk/by-id in which case we can't use it
+                if (dev_md_nodes.has_key(device_major_minor) == False):
+                    continue
+
+                device_path = dev_md_nodes[device_major_minor]
 
                 try:
                     detail = shell.try_run(['mdadm', '--brief', '--detail', '--verbose', device_path])
