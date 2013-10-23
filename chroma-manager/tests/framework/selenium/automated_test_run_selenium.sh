@@ -22,6 +22,10 @@ for FILE in $(cd tests/selenium && ls test_*.py); do
   CLUSTER_DATA=tests/selenium/test_data.json PATH=$PATH:$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=$HOME/test_reports/selenium-test-results_$FILE.xml --tc-format=json --tc-file=$HOME/cluster_config.json tests/selenium/$FILE || true
   killall chromedriver
 done
+
+cd chroma_ui
+$HOME/node_modules/.bin/karma start --browsers Chrome --singleRun true --reporters junit
+mv test-results.xml $HOME/test_reports/karma-test-results.xml
 EOF
 
 exit 0

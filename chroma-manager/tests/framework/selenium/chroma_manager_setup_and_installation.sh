@@ -15,7 +15,7 @@ echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar python-virtualenv python-devel gcc make tigervnc-server
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar python-virtualenv python-devel gcc make tigervnc-server npm
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
 if [ ! -z "$GOOGLE_REPO" ]; then
@@ -35,8 +35,10 @@ fi
 # Create a user so we can run the tests as non-root
 useradd chromatest
 su chromatest <<EOC
+cd
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
+npm install karma@0.8
 EOC
 cat .ssh/id_rsa.pub >> /home/chromatest/.ssh/authorized_keys
 cp .ssh/* ~chromatest/.ssh/
