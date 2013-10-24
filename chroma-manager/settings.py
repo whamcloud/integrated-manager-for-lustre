@@ -242,6 +242,7 @@ SQL_RETRY_PERIOD = 10
 # you want to change.
 LUSTRE_MKFS_OPTIONS_MDT = None
 LUSTRE_MKFS_OPTIONS_OST = None
+LUSTRE_MKFS_OPTIONS_MGS = None
 
 # Argument to mkfs.ext4 '-J' option
 JOURNAL_SIZE = "2048"

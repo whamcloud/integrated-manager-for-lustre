@@ -102,7 +102,11 @@ class TestTargetTransitions(JobTestCaseWithHost):
 
         path = self.mgt.managedtargetmount_set.get().volume_node.path
         try:
-            MockAgentRpc.fail_commands = [('format_target', {'device': path, 'target_types': 'mgs'})]
+            MockAgentRpc.fail_commands = [('format_target', {'device': path,
+                                                             'target_types': 'mgs',
+                                                             'backfstype': 'ldiskfs',
+                                                             'device_type': 'linux',
+                                                             'target_name': 'MGS'})]
 
             command = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'formatted', check=False)
             self.assertEqual(freshen(command).complete, True)
@@ -111,13 +115,22 @@ class TestTargetTransitions(JobTestCaseWithHost):
             MockAgentRpc.fail_commands = []
 
         # Check that the initial format did not pass the reformat flag
-        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path, 'target_types': 'mgs'}))
+        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path,
+                                                                      'target_types': 'mgs',
+                                                                      'backfstype': 'ldiskfs',
+                                                                      'device_type': 'linux',
+                                                                      'target_name': 'MGS'}))
 
         # This one should succeed
         self.set_and_assert_state(self.mgt.managedtarget_ptr, 'formatted', check=True)
 
         # Check that it passed the reformat flag
-        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path, 'target_types': 'mgs', 'reformat': True}))
+        self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path,
+                                                                      'target_types': 'mgs',
+                                                                      'backfstype': 'ldiskfs',
+                                                                      'device_type': 'linux',
+                                                                      'target_name': 'MGS',
+                                                                      'reformat': True}))
 
 
 class TestSharedTarget(JobTestCaseWithHost):

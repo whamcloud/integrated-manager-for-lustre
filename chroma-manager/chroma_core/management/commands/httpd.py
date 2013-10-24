@@ -41,6 +41,7 @@ class Command(BaseCommand):
     def _wsgi_path(self):
         WSGI_LOCATIONS = [
             '/usr/lib64/httpd/modules/mod_wsgi.so',  # CentOS 6 location
+            '/usr/libexec/apache2/mod_wsgi.so',                    # OS X + macports location
             '/usr/local/Cellar/mod_wsgi/3.4/libexec/mod_wsgi.so',  # OS X + homebrew locations
             '/usr/local/Cellar/mod_wsgi/3.3/libexec/mod_wsgi.so',
         ]

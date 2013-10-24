@@ -27,6 +27,14 @@ WARNING:
     this module unless you're really going to use it.
 """
 import logging
+import json
+import threading
+from collections import defaultdict
+
+from django.db.models.aggregates import Count
+from django.db.models.query_utils import Q
+from django.db import transaction
+
 from chroma_core.lib.storage_plugin.api.resources import LogicalDrive, LogicalDriveSlice
 from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 
@@ -34,8 +42,6 @@ from chroma_core.lib.storage_plugin.query import ResourceQuery
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.dbutils import advisory_lock
-from django.db.models.aggregates import Count
-from django.db.models.query_utils import Q
 from chroma_core.lib.storage_plugin.api import attributes, relations
 
 from chroma_core.lib.storage_plugin.base_resource import BaseGlobalId, BaseScopedId, HostsideResource, BaseScannableResource
@@ -53,10 +59,7 @@ from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import Event
 from chroma_core.models import LNetConfiguration, NetworkInterface, Nid
-from django.db import transaction
 
-from collections import defaultdict
-import threading
 from chroma_core.models.storage_plugin import StorageResourceAttributeSerialized, StorageResourceLearnEvent, StorageResourceAttributeReference, StorageAlertPropagated
 from chroma_core.models.target import ManagedTargetMount
 
@@ -707,7 +710,6 @@ class ResourceManager(object):
 
             attr_model_class = StorageResourceRecord.objects.get(id = weight_resource_ids[0]).resource_class.get_class().attr_model_class('weight')
 
-            import json
             ancestor_weights = [json.loads(w['value']) for w in attr_model_class.objects.filter(
                 resource__in = weight_resource_ids, key = 'weight').values('value')]
             weight = reduce(lambda x, y: x + y, ancestor_weights)
@@ -1395,7 +1397,7 @@ class ResourceManager(object):
                     cleaned_id_items.append(session.local_id_to_global_id[t._handle])
                 else:
                     cleaned_id_items.append(t)
-            import json
+
             id_str = json.dumps(tuple(cleaned_id_items))
 
             record, created = StorageResourceRecord.objects.get_or_create(

@@ -59,7 +59,7 @@ class DmsetupTable(DeviceHelper):
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:
             name, uuid, size_str = line.split()
-            size = int(size_str[0:-1], 10)
+            size = self._human_to_bytes(size_str)
             yield (name, uuid, size)
 
     def _get_lvs(self, vg_name):
@@ -68,7 +68,7 @@ class DmsetupTable(DeviceHelper):
         lines = [l for l in out.split("\n") if len(l) > 0]
         for line in lines:
             name, uuid, size_str, path = line.split()
-            size = int(size_str[0:-1], 10)
+            size = self._human_to_bytes(size_str)
             yield (name, uuid, size, path)
 
     def _parse_multipath_params(self, tokens):

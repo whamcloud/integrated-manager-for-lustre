@@ -175,11 +175,13 @@ class Linux(Plugin):
                 except KeyError:
                     # An inactive LV has no block device
                     pass
+
         mpath_block_devices = set()
         for mp_name, mp in devices['mpath'].items():
             mpath_block_devices.add(mp['block_device'])
 
         special_block_devices = lv_block_devices | mpath_block_devices
+
         for uuid, md_info in devices['mds'].items():
             special_block_devices.add(md_info['block_device'])
 

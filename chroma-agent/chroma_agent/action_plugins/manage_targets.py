@@ -26,6 +26,8 @@ import re
 import tempfile
 
 from chroma_agent.chroma_common.lib import shell
+from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
+from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log, console_log
 from chroma_agent import config
 
@@ -168,43 +170,34 @@ def get_resource_locations():
     return locations
 
 
-def check_block_device(path):
+def check_block_device(device_type, path):
     """
     Precursor to formatting a device: check if there is already a filesystem on it.
 
     :param path: Path to a block device
+    :param device_type: The type of device the path references
     :return The filesystem type of the filesystem on the device, or None if unoccupied.
     """
-
-    rc, blkid_output, blkid_err = shell.run(["blkid", "-p", "-o", "value", "-s", "TYPE", path])
-
-    if rc == 2:
-        # blkid returns 2 if there is no fileysstem on the device
-        return None
-    elif rc == 0:
-        filesystem_type = blkid_output.strip()
-
-        if filesystem_type:
-            return filesystem_type
-        else:
-            # Empty filesystem: blkid returns 0 but prints no FS if it seems something non-filesystem-like
-            # like an MBR
-            return None
-    else:
-        raise RuntimeError("Unexpected return code %s from blkid %s: '%s' '%s'" % (rc, path, blkid_output, blkid_err))
+    return BlockDevice(device_type, path).filesystem_type
 
 
-def format_target(device=None, target_types=(), mgsnode=(), fsname=None,
+def format_target(device_type, target_name, device, backfstype,
+                  target_types=(), mgsnode=(), fsname=None,
                   failnode=(), servicenode=(), param={}, index=None,
                   comment=None, mountfsoptions=None, network=(),
-                  backfstype=None, device_size=None, mkfsoptions=None,
+                  device_size=None, mkfsoptions=None,
                   reformat=False, stripe_count_hint=None, iam_dir=False,
                   dryrun=False, verbose=False, quiet=False):
-    """Perform a mkfs.lustre operation on a block device."""
+    """Perform a mkfs.lustre operation on a target device.
+       Device may be a number of devices, block"""
 
     # freeze a view of the namespace before we start messing with it
     args = dict(locals())
     options = []
+
+    # Now remove the locals that are not parameters for mkfs.
+    del args['device_type']
+    del args['target_name']
 
     tuple_options = ["target_types", "mgsnode", "failnode", "servicenode", "network"]
     for name in tuple_options:
@@ -250,24 +243,15 @@ def format_target(device=None, target_types=(), mgsnode=(), fsname=None,
         if value is not None:
             options.append("--%s=%s" % (name, value))
 
-    try:
-        # osd_ldiskfs will load ldiskfs in Lustre 2.4.0+
-        shell.try_run(['modprobe', 'osd_ldiskfs'])  # TEI-469: Race loading the ldiskfs module during mkfs.lustre
-    except shell.CommandExecutionError:
-        shell.try_run(['modprobe', 'ldiskfs'])  # TEI-469: Race loading the ldiskfs module during mkfs.lustre
-    shell.try_run(['mkfs.lustre'] + options + [device])
+    block_device = BlockDevice(device_type, device)
+    filesystem = FileSystem(backfstype, device)
 
-    blkid_output = shell.try_run(["blkid", "-o", "value", "-s", "UUID", "-s", "TYPE", device])
-    uuid, type = [i.strip() for i in blkid_output.strip().split("\n")]
+    filesystem.mkfs(target_name, options)
 
-    dumpe2fs_output = shell.try_run(["dumpe2fs", "-h", device])
-    inode_count = int(re.search("Inode count:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
-    inode_size = int(re.search("Inode size:\\s*(\\d+)$", dumpe2fs_output, re.MULTILINE).group(1))
-
-    return {'uuid': uuid,
-            'filesystem_type': type,
-            'inode_size': inode_size,
-            'inode_count': inode_count}
+    return {'uuid': block_device.uuid,
+            'filesystem_type': block_device.filesystem_type,
+            'inode_size': filesystem.inode_size,
+            'inode_count': filesystem.inode_count}
 
 
 def _mkdir_p_concurrent(path):
@@ -295,22 +279,16 @@ def _mkdir_p_concurrent(path):
     mkdir_silent(path)
 
 
-def register_target(mount_point, device):
+def register_target(target_name, device_path, mount_point, backfstype):
+    filesystem = FileSystem(backfstype, device_path)
+
     _mkdir_p_concurrent(mount_point)
 
-    mount_args = ["mount", "-t", "lustre", device, mount_point]
-    rc, stdout, stderr = shell.run(mount_args)
-    if rc == 5:
-        # HYD-1040: Sometimes we should retry on a failed registration
-        shell.try_run(mount_args)
-    elif rc != 0:
-        raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(mount_args), stdout, stderr))
+    filesystem.mount(target_name, mount_point)
 
-    shell.try_run(["umount", mount_point])
+    filesystem.umount(target_name, mount_point)
 
-    blkid_output = shell.try_run(["blkid", "-c/dev/null", "-o", "value", "-s", "LABEL", device])
-
-    return {'label': blkid_output.strip()}
+    return {'label': filesystem.label}
 
 
 def unconfigure_target_ha(primary, ha_label, uuid):
@@ -339,7 +317,7 @@ def unconfigure_target_ha(primary, ha_label, uuid):
 
 def unconfigure_target_store(uuid):
     try:
-        target = config.get('targets', uuid)
+        target = _get_target_config(uuid)
         os.rmdir(target['mntpt'])
     except KeyError:
         console_log.warn("Cannot retrieve target information")
@@ -348,9 +326,15 @@ def unconfigure_target_store(uuid):
     config.delete('targets', uuid)
 
 
-def configure_target_store(device, uuid, mount_point):
-
-    config.set('targets', uuid, {"bdev": device, "mntpt": mount_point})
+def configure_target_store(device, uuid, mount_point, backfstype, target_name):
+    # Logically this should be config.set - but an error condition exists where the configure_target_store
+    # steps fail later on and so the config exists but the manager doesn't know. Meaning that a set fails
+    # because of a duplicate, where as an update doesn't.
+    # So use update because that updates or creates.
+    config.update('targets', uuid, {'bdev': device,
+                                    'mntpt': mount_point,
+                                    'backfstype': backfstype,
+                                    'target_name': target_name})
 
 
 def configure_target_ha(primary, device, ha_label, uuid, mount_point):
@@ -361,7 +345,7 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
         # If it already exists with different params, that is an error
         rc, stdout, stderr = shell.run(["crm_resource", "-r", ha_label, "-g", "target"])
         if rc == 0:
-            info = config.get('targets', stdout.rstrip("\n"))
+            info = _get_target_config(stdout.rstrip("\n"))
             if info['bdev'] == device and info['mntpt'] == mount_point:
                 return
             else:
@@ -433,13 +417,19 @@ def _query_ha_targets():
 
 def mount_target(uuid):
     # these are called by the Target RA from corosync
-    info = config.get('targets', uuid)
-    shell.try_run(['mount', '-t', 'lustre', info['bdev'], info['mntpt']])
+    info = _get_target_config(uuid)
+
+    filesystem = FileSystem(info['backfstype'], info['bdev'])
+
+    filesystem.mount(info['target_name'], info['mntpt'])
 
 
 def unmount_target(uuid):
-    info = config.get('targets', uuid)
-    shell.try_run(["umount", info['bdev']])
+    info = _get_target_config(uuid)
+
+    filesystem = FileSystem(info['backfstype'], info['bdev'])
+
+    filesystem.umount(info['target_name'], info['mntpt'])
 
 
 def start_target(ha_label):
@@ -573,6 +563,20 @@ def failback_target(ha_label):
                            ha_label)
     return _move_target(ha_label, node)
 
+
+def _get_target_config(uuid):
+    info = config.get('targets', uuid)
+
+    # Some history, previously the backfstype and target_name were not stored. So if not present presume ldiskfs
+    # and for the target_name set as unknown because ldiskfs does not use it.
+    if 'backfstype' not in info:
+        info['backfstype'] = 'ldiskfs'
+        info['target_name'] = 'unknown'
+        config.update('targets', uuid, info)
+
+    return info
+
+
 # FIXME: these appear to be unused, remove?
 #def migrate_target(ha_label, node):
 #    # a migration scores at 500 to force it higher than stickiness
@@ -602,7 +606,7 @@ def target_running(uuid):
     from os import _exit
     from chroma_agent.utils import Mounts
     try:
-        info = config.get('targets', uuid)
+        info = _get_target_config(uuid)
     except (KeyError, TypeError):
         # it can't possibly be running here if the config entry for
         # it doesn't even exist, or if the store doesn't even exist!

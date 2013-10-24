@@ -35,6 +35,8 @@ from chroma_core.models.host import ManagedHost, VolumeNode, Volume, HostContact
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_help.help import help_text
+from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_core.chroma_common.filesystems.filesystem import FileSystem
 import settings
 
 
@@ -76,12 +78,6 @@ def select_description(stateful_object, descriptions):
     match_class_names = ", ".join(class_to_compare.__name__ for class_to_compare in descriptions.keys())
 
     raise RuntimeError("Could not find %s in %s" % (stateful_object.downcast_class.__name__, match_class_names))
-
-
-# How Lustre targets are reported by blkid: this assumes stock Lustre 2.x
-# whose ldiskfs filesystems appear as ext4.  Would require extension
-# to deal with ZFS builds of Lustre.
-LUSTRE_FILESYSTEM_TYPE = 'ext4'
 
 
 class ManagedTarget(StatefulObject):
@@ -331,6 +327,15 @@ class ManagedTarget(StatefulObject):
 
         return target, target_mounts
 
+    def target_type(cls):
+        raise "Unimplemented method 'target_type'"
+
+    def mkfs_override_options(self, filesystemtype, mkfs_options):
+        """ Allows a ManagedTarget to modify the mkfs_options as required.
+        :return: A list of additional options for mkfs as in those things that appear after --mkfsoptions
+        """
+        return mkfs_options
+
 
 class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
     class Meta:
@@ -345,6 +350,19 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
             available_states = super(ManagedOst, self).get_available_states(begin_state)
             available_states = list(set(available_states) ^ set(['forgotten']))
             return available_states
+
+    def target_type(cls):
+        return "ost"
+
+    def mkfs_override_options(self, filesystemtype, mkfs_options):
+        if (settings.JOURNAL_SIZE != None) and (filesystemtype == 'ldiskfs'):
+            mkfs_options.append("-J size=%s" % settings.JOURNAL_SIZE)
+
+        # HYD-1089 should supercede these settings
+        if settings.LUSTRE_MKFS_OPTIONS_OST:
+            mkfs_options = [settings.LUSTRE_MKFS_OPTIONS_OST]
+
+        return mkfs_options
 
 
 class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
@@ -361,6 +379,19 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
             available_states = list(set(available_states) - set(['removed', 'forgotten']))
 
             return available_states
+
+    def target_type(cls):
+        return "mdt"
+
+    def mkfs_override_options(self, filesystemtype, mkfs_options):
+        if (settings.JOURNAL_SIZE != None) and (filesystemtype == 'ldiskfs'):
+            mkfs_options += ["-J size=%s" % settings.JOURNAL_SIZE]
+
+        # HYD-1089 should supercede these settings
+        if settings.LUSTRE_MKFS_OPTIONS_MDT:
+            mkfs_options = [settings.LUSTRE_MKFS_OPTIONS_MDT]
+
+        return mkfs_options
 
 
 class ManagedMgs(ManagedTarget, MeasuredEntity):
@@ -423,6 +454,16 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         for p in params:
             p.version = version
             p.save()
+
+    def target_type(cls):
+        return "mgs"
+
+    def mkfs_override_options(self, filesystemtype, mkfs_options):
+        # HYD-1089 should supercede these settings
+        if settings.LUSTRE_MKFS_OPTIONS_MGS:
+            mkfs_options = [settings.LUSTRE_MKFS_OPTIONS_MGS]
+
+        return mkfs_options
 
 
 class TargetRecoveryInfo(models.Model):
@@ -603,8 +644,10 @@ class RegisterTargetStep(Step):
         target = kwargs['target']
 
         result = self.invoke_agent(kwargs['primary_host'], "register_target",
-                                   {'device': kwargs['device_path'],
-                                    'mount_point': kwargs['mount_point']})
+                                   {'target_name': target.name,
+                                    'device_path': kwargs['device_path'],
+                                    'mount_point': kwargs['mount_point'],
+                                    'backfstype': kwargs['backfstype']})
 
         if not result['label'] == target.name:
             # We synthesize a target name (e.g. testfs-OST0001) when creating targets, then
@@ -635,13 +678,16 @@ class ConfigureTargetStoreStep(Step):
         target_mount = kwargs['target_mount']
         volume_node = kwargs['volume_node']
         host = kwargs['host']
+        backfstype = kwargs['backfstype']
 
         assert(volume_node is not None)
 
         self.invoke_agent(host, "configure_target_store", {
             'device': volume_node.path,
             'uuid': target.uuid,
-            'mount_point': target_mount.mount_point})
+            'mount_point': target_mount.mount_point,
+            'backfstype': backfstype,
+            'target_name': target.name})
 
 
 class UnconfigureTargetStoreStep(Step):
@@ -712,6 +758,7 @@ class ConfigureTargetJob(StateChangeJob):
                 'host': target_mount.host,
                 'target': target_mount.target,
                 'target_mount': target_mount,
+                'backfstype': target_mount.volume_node.volume.filesystem_type,
                 'volume_node': target_mount.volume_node
             }))
 
@@ -774,7 +821,7 @@ class RegisterTargetJob(StateChangeJob):
                 'target': self.target,
                 'device_path': path,
                 'mount_point': primary_mount.mount_point,
-                'mgs_id': mgs_id
+                'backfstype': primary_mount.volume_node.volume.filesystem_type
             })]
         else:
             raise NotImplementedError(target_class)
@@ -890,7 +937,8 @@ class PreFormatCheck(Step):
         return "Prepare for format %s:%s" % (kwargs['host'], kwargs['path'])
 
     def run(self, kwargs):
-        occupying_fs = self.invoke_agent(kwargs['host'], "check_block_device", {'path': kwargs['path']})
+        occupying_fs = self.invoke_agent(kwargs['host'], "check_block_device", {'path': kwargs['path'],
+                                                                                'device_type': kwargs['device_type']})
         if occupying_fs is not None:
             msg = "Found filesystem of type '%s' on %s:%s" % (occupying_fs, kwargs['host'], kwargs['path'])
             self.log(msg)
@@ -916,14 +964,11 @@ class PreFormatComplete(Step):
 class MkfsStep(Step):
     def _mkfs_args(self, kwargs):
         target = kwargs['target']
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember
+
         mkfs_args = {}
 
-        mkfs_args['target_types'] = {
-            ManagedMgs: "mgs",
-            ManagedMdt: "mdt",
-            ManagedOst: "ost"
-        }[target.downcast_class]
+        mkfs_args['target_types'] = target.downcast().target_type()
+        mkfs_args['target_name'] = target.name
 
         if issubclass(target.downcast_class, FilesystemMember):
             mkfs_args['fsname'] = target.downcast().filesystem.name
@@ -939,25 +984,11 @@ class MkfsStep(Step):
         if issubclass(target.downcast_class, FilesystemMember):
             mkfs_args['index'] = target.downcast().index
 
-        mkfsoptions = []
-        if target.inode_size:
-            mkfsoptions.append("-I %s" % target.inode_size)
-        if target.bytes_per_inode:
-            mkfsoptions.append("-i %s" % target.bytes_per_inode)
-        if target.inode_count:
-            mkfsoptions.append("-N %s" % target.inode_count)
+        mkfs_args["device_type"] = kwargs['device_type']
+        mkfs_args["backfstype"] = kwargs['backfstype']
 
-        if settings.JOURNAL_SIZE and issubclass(target.downcast_class, FilesystemMember):
-            # Journal setting only applies to MDT and OST
-            mkfsoptions.append("-J size=%s" % settings.JOURNAL_SIZE)
-        if mkfsoptions:
-            mkfs_args['mkfsoptions'] = " ".join(mkfsoptions)
-
-        # HYD-1089 should supercede these settings
-        if issubclass(target.downcast_class, ManagedOst) and settings.LUSTRE_MKFS_OPTIONS_OST:
-            mkfs_args['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_OST
-        if issubclass(target.downcast_class, ManagedMdt) and settings.LUSTRE_MKFS_OPTIONS_MDT:
-            mkfs_args['mkfsoptions'] = settings.LUSTRE_MKFS_OPTIONS_MDT
+        if len(kwargs['mkfsoptions']) > 0:
+            mkfs_args['mkfsoptions'] = " ".join(kwargs['mkfsoptions'])
 
         return mkfs_args
 
@@ -973,8 +1004,12 @@ class MkfsStep(Step):
         args = self._mkfs_args(kwargs)
         result = self.invoke_agent(kwargs['primary_host'], "format_target", args)
 
-        if not result['filesystem_type'] == LUSTRE_FILESYSTEM_TYPE:
+        if not (result['filesystem_type'] in FileSystem.all_supported_filesystems()):
             raise RuntimeError("Unexpected filesystem type '%s'" % result['filesystem_type'])
+
+        # I don't think this should be here - seems kind of out of place - but I also don't see when else to store it.
+        # See comment above about database = True
+        target.volume.filesystem_type = result['filesystem_type']
 
         target.uuid = result['uuid']
 
@@ -1042,7 +1077,7 @@ class FormatTargetJob(StateChangeJob):
 
     def get_steps(self):
         primary_mount = self.target.managedtargetmount_set.get(primary = True)
-        path = primary_mount.volume_node.path
+
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
             # which filesystem
@@ -1052,32 +1087,47 @@ class FormatTargetJob(StateChangeJob):
 
         steps = []
 
+        device_type = self.target.volume.storage_resource.to_resource_class().device_type()
+
         if not self.target.reformat:
             # We are not expecting to need to reformat/overwrite this volume
             # so before proceeding, check that it is indeed unoccupied
             steps.append((PreFormatCheck, {
                 'host': primary_mount.host,
-                'path': path
+                'path': primary_mount.volume_node.path,
+                'device_type': device_type
             }))
 
             steps.append((PreFormatComplete, {
                 'target': self.target
             }))
 
+        # This line is key, because it causes the volume property to be filled so it can be access by the step
+        self.target.volume
+
+        block_device = BlockDevice(device_type, primary_mount.volume_node.path)
+        filesystem = FileSystem(block_device.preferred_fstype, primary_mount.volume_node.path)
+
+        mkfsoptions = filesystem.mkfs_options(self.target)
+
+        mkfsoptions = self.target.downcast().mkfs_override_options(block_device.preferred_fstype, mkfsoptions)
+
         steps.append((MkfsStep, {
             'primary_host': primary_mount.host,
             'target': self.target,
-            'device_path': path,
+            'device_path': primary_mount.volume_node.path,
             'failover_nids': self.target.get_failover_nids(),
             'mgs_nids': mgs_nids,
-            'reformat': self.target.reformat
-        }))
+            'reformat': self.target.reformat,
+            'device_type': device_type,
+            'backfstype': block_device.preferred_fstype,
+            'mkfsoptions': mkfsoptions
+       }))
 
         return steps
 
     def on_success(self):
         super(FormatTargetJob, self).on_success()
-        self.target.volume.filesystem_type = LUSTRE_FILESYSTEM_TYPE
         self.target.volume.save()
 
 

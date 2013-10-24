@@ -95,6 +95,12 @@ class LogicalDrive(BaseStorageResource):
     size = attributes.Bytes()
     filesystem_type = attributes.Boolean(optional=True)
 
+    """ This has to be a class method today because at the point we call it we only has the type not the object"""
+    @classmethod
+    def device_type(cls):
+        """ By default devices are linux block devices """
+        return "linux"
+
 
 class LogicalDriveSlice(LogicalDrive):
     """A part of a slicable device like partition or lvm"""

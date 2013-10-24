@@ -31,22 +31,9 @@ _normalize_device_table = {}
 
 
 def normalized_device_path(device_path):
+    _prime_normalized_paths()
+
     normalized_path = os.path.realpath(device_path)
-
-    if normalized_path not in _normalize_device_table:
-        lookup_paths = ["%s/*" % DISKBYIDPATH, "%s/*" % MAPPERPATH]
-
-        for path in lookup_paths:
-            for f in glob.glob(path):
-                add_normalized_device(os.path.realpath(f), f)
-
-        try:
-            root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read())
-        except IOError:
-            root = None
-
-        if root and os.path.exists(root.group(1)):
-            add_normalized_device('/dev/root', root.group(1))
 
     # This checks we have a completely normalized path, perhaps the stack means our current
     # normal path can actually be normalized further. So if the root to normalization takes multiple
@@ -65,6 +52,33 @@ def normalized_device_path(device_path):
         normalized_path = _normalize_device_table[normalized_path]
 
     return normalized_path
+
+
+def find_normalized_end(device_path):
+    _prime_normalized_paths()
+
+    for key, value in _normalize_device_table.items():
+        if value.endswith(device_path):
+            return value
+
+    raise KeyError("Device ending with %s not found in normalized devices" % device_path)
+
+
+def _prime_normalized_paths():
+    if _normalize_device_table == {}:
+        lookup_paths = ["%s/*" % DISKBYIDPATH, "%s/*" % MAPPERPATH]
+
+        for path in lookup_paths:
+            for f in glob.glob(path):
+                add_normalized_device(os.path.realpath(f), f)
+
+        try:
+            root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read())
+        except IOError:
+            root = None
+
+        if root and os.path.exists(root.group(1)):
+            add_normalized_device('/dev/root', root.group(1))
 
 
 def add_normalized_device(path, normalized_path):

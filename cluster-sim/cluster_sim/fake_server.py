@@ -623,11 +623,21 @@ class FakeServer(Persisted):
             target = self._devices.get_target_by_path(self.fqdn, device)
             self._devices.mgt_writeconf(target['mgsnode'])
 
-    def check_block_device(self, path):
+    def check_block_device(self, device_type, path):
         serial = self._devices.get_by_path(self.fqdn, path)['serial_80']
         return self._devices.state['local_filesystems'].get(serial, None)
 
-    def format_target(self, device = None, target_types = None, mgsnode = None, fsname = None, failnode = None, reformat = None, mkfsoptions = None, index = None):
+    def format_target(self, device_type, target_name, device, backfstype,
+                      target_types=(), mgsnode=(), fsname=None,
+                      failnode=(), servicenode=(), param={}, index=None,
+                      comment=None, mountfsoptions=None, network=(),
+                      device_size=None, mkfsoptions=None,
+                      reformat=False, stripe_count_hint=None, iam_dir=False,
+                      dryrun=False, verbose=False, quiet=False):
+
+        # Remove warnings, but allow parameters to match real parameters.
+        target_name, servicenode, param, comment, mountfsoptions, network, device_size, reformat, stripe_count_hint, iam_dir, dryrun, verbose, quiet, device_type
+
         def mgs_key(mgsnode):
             # Create a consistent mgs_key by sorting the nids
             return ":".join(sorted([",".join(sorted(mgsnids)) for mgsnids in mgsnode]))
@@ -652,20 +662,21 @@ class FakeServer(Persisted):
             'uuid': tgt_uuid,
             'mgsnode': mgs_key(mgsnode),
             'fsname': fsname,
+            'backfstype': backfstype,
             'index': index,
             'primary_nid': None
         }
 
         return self._devices.format(self.fqdn, device, mkfsoptions, target)
 
-    def register_target(self, device = None, mount_point = None):
+    def register_target(self, target_name, device_path, mount_point, backfstype):
 
         # FIXME: arbitrary choice of which NID to use, correctly this should be
         # whichever NID LNet uses to route to the MGS, or what is set
         # with servicenode.
         nid = self.nids[0]
 
-        label = self._devices.register(self.fqdn, device, nid)
+        label = self._devices.register(self.fqdn, device_path, nid)
 
         return {'label': label}
 
