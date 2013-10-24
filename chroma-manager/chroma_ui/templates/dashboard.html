@@ -31,7 +31,13 @@
 <script type="text/template" id="global_filesystem_table_row_template">
 <tr class='filesystem_row' data-fs_id='<%= filesystem.id %>'>
     <td class='icon_columns'><%= LiveObject.alertIcon(filesystem) %></td>
-    <td class='fs_name' style='text-align: center;'><a class="navigation" href="/ui/dashboard/filesystem/<%= filesystem.id %>/"><%= filesystem.attributes.name %></a></td>
+    <td class='fs_name' style='text-align: center;'>
+        <div context-tooltip="<%= state.contextTooltip %>">
+            <i class="<%= state.icon%>"></i>
+            <a class="navigation" href="/ui/dashboard/filesystem/<%= filesystem.id %>/"><%= filesystem.attributes.name %></a>
+        </div>
+    </td>
+    <td style='text-align: center;'><%= state.type %></td>
     <td>
         <span class='peity_space' data-colours='["#A6C56D","#C76560"]' data-diameter='12'></span>
         <span class='space'>-</span>
@@ -125,6 +131,7 @@
                         <tr>
                             <th class='icon_column'></th>
                             <th style='text-align: center;'>File System</th>
+                            <th style='text-align: center;'>Type</th>
                             <th>Space Used / Total</th>
                             <th>Inodes Used / Total</th>
                             <th>Clients</th>

@@ -551,8 +551,12 @@ var Dashboard = (function() {
 
   function global_filesystem_table_update(snapshot_data) {
 
+    var compileTemplate = angular.element('body').injector().get('compileTemplate');
+    var template = _.template($('#global_filesystem_table_row_template').html());
+    var $table = $('#global_filesystem_table');
+
     // cleanup. Remove filesystem rows that no longer exist
-    $('#global_filesystem_table tr.filesystem_row').each(function() {
+    $table.find('tr.filesystem_row').each(function() {
       var $filesystem_row = $(this);
       var fs_id = $filesystem_row.data('fs_id');
       if ( fs_id && ! _.has(snapshot_data,fs_id) ) {
@@ -560,24 +564,36 @@ var Dashboard = (function() {
       }
     });
 
-    var template = _.template($('#global_filesystem_table_row_template').html());
-
     Object.keys(snapshot_data).forEach(function(fs_id) {
       var fs_data = snapshot_data[fs_id]
-      var row_selector = '#global_filesystem_table tr.filesystem_row[data-fs_id="'+fs_id+'"]';
+      var row_selector = 'tr.filesystem_row[data-fs_id="%s"]'.sprintf(fs_id);
+      var row_exists = $table.find(row_selector).length > 0;
+      var template_vars, filesystem;
 
       // add new filesystem
-      if ( ! $(row_selector).length ) {
-        var filesystem = ApiCache.get('filesystem', fs_id);
-        $('#global_filesystem_table')
-          .find('tbody')
-          .append( template({filesystem: filesystem}) );
+      if ( ! row_exists ) {
+        filesystem = ApiCache.get('filesystem', fs_id);
+
+        if (filesystem) {
+
+          template_vars = { filesystem: filesystem };
+          if ( filesystem.immutable_state ) {
+            template_vars.state = { type: 'Monitored', icon: 'icon-dashboard', contextTooltip: 'monitored_filesystem' };
+          } else {
+            template_vars.state = { type: 'Managed', icon: 'icon-cogs', contextTooltip: 'managed_filesystem' };
+          }
+
+          $table.find('tbody').append(compileTemplate(template(template_vars)));
+          row_exists = true;
+        }
       }
 
       // process fs_data
-      Object.keys(fs_data).forEach(function (selector) {
-        render_text_or_peity(row_selector + ' ' + selector, fs_data[selector]);
-      });
+      if ( row_exists) {
+        Object.keys(fs_data).forEach(function (selector) {
+          render_text_or_peity(row_selector + ' ' + selector, fs_data[selector]);
+        });
+      }
     });
 
   }
