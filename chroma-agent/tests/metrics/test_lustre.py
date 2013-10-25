@@ -30,6 +30,15 @@ class TestLocalLustreMetrics(unittest.TestCase):
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 127575)
         self.assertEqual(metrics['lnet']['recv_count'], 547181)
 
+    def test_24_oss_metrics(self):
+        """Test that the various OSS metrics are collected and aggregated (2.4+)."""
+        audit = LocalAudit()
+        audit.fscontext = os.path.join(self.tests,
+                                     "data/lustre_versions/2.5.0/oss")
+        metrics = audit.metrics()['raw']['lustre']
+        self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 524040)
+        self.assertEqual(metrics['lnet']['recv_count'], 156747)
+
 
 class TestPathologicalUseCases(unittest.TestCase):
     # AKA: The world will always build a better idiot! ;)

@@ -1,0 +1,7 @@
+  0 UP mgc MGC10.42.42.4@tcp ef3ee30e-4c72-88ed-7558-b7125700bab7 5
+  1 UP lod lustre-MDT0000-mdtlov lustre-MDT0000-mdtlov_UUID 4
+  2 UP osp lustre-OST0000-osc-MDT0000 lustre-MDT0000-mdtlov_UUID 5
+  3 UP osd-ldiskfs lustre-OST0000-osd lustre-OST0000-osd_UUID 5
+  4 UP ost OSS OSS_uuid 3
+  5 UP obdfilter lustre-OST0000 lustre-OST0000_UUID 7
+  6 UP lwp lustre-MDT0000-lwp-OST0000 lustre-MDT0000-lwp-OST0000_UUID 5

@@ -410,6 +410,22 @@ class ObdfilterAudit(TargetAudit):
             metrics['target'][ost['name']]['job_stats'] = self.read_job_stats(ost['name'])
 
 
+class OstAudit(ObdfilterAudit):
+    @classmethod
+    def is_available(cls, fscontext=None):
+        # Not pretty, but it works. On 2.4+, the ost module is loaded,
+        # but the obdfilter module is not. Pre-2.4, both are loaded, so
+        # we need to prevent double audits. Really, this whole method of
+        # determining which audits to run needs to be reworked. Later.
+        lustre_version = cls(fscontext=fscontext).version_info()
+        if lustre_version[0] < 2:
+            return False
+        elif (lustre_version[0] == 2 and lustre_version[1] < 4):
+            return False
+        else:
+            return super(OstAudit, cls).is_available(fscontext)
+
+
 class LnetAudit(LustreAudit):
     def parse_lnet_stats(self):
         try:
