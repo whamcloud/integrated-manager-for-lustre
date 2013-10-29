@@ -1,9 +1,11 @@
 
 import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
+from tests.unit.chroma_api.test_misc import remove_host_resources_patch
 from tests.unit.chroma_core.helper import synthetic_host, log
 
 from chroma_core.models.power_control import PowerControlDevice
+from chroma_core.models.host import RemoveHostJob
 
 
 class PowerControlResourceTestCase(ChromaApiTestCase):
@@ -205,7 +207,7 @@ class IpmiResourceTests(PowerControlResourceTestCase):
                                              username = 'baz',
                                              password = 'qux')
 
-        synthetic_host(address = 'foo')
+        self.host_obj = synthetic_host(address = 'foo')
         self.host = self.api_get_list("/api/host/")[0]
 
     @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
@@ -311,3 +313,22 @@ class IpmiResourceTests(PowerControlResourceTestCase):
             self._create_power_outlet(host = self.host['resource_uri'],
                                       device = self.ipmi['resource_uri'],
                                       identifier = '1')
+
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new = mock.Mock(), create = True)
+    @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new = mock.Mock())
+    @mock.patch("chroma_core.lib.job.Step.invoke_agent")
+    @remove_host_resources_patch
+    def test_removed_host_deletes_bmc(self, notify, remove):
+        bmc = self._create_power_outlet(host = self.host['resource_uri'],
+                                        device = self.ipmi['resource_uri'],
+                                        identifier = 'localhost')
+        self.assertDictEqual(bmc, self.api_get_list("/api/power_control_device_outlet/")[0])
+
+        job = RemoveHostJob(host = self.host_obj)
+        for step_klass, args in job.get_steps():
+            step_klass(job, args, None, None, None).run(args)
+
+        # The BMC should have been removed when the host was removed
+        with self.assertRaises(IndexError):
+            self.api_get_list("/api/power_control_device_outlet/")[0]
