@@ -31,6 +31,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
         self.wait_until_true(self.all_outlets_known)
 
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
+    @unittest.skipUnless(config.get('power_control_types', [{}])[0].get('max_outlets', 0), "requires non-IPMI power control")
     def test_force_removed_host_disassociated_with_outlets(self):
         server_outlets = [o['resource_uri'] for o in
                           self.get_list("/api/power_control_device_outlet/")
@@ -50,6 +51,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
         # outlet disassociation (STONITH reconfiguration, etc.)
 
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
+    @unittest.skipUnless(config.get('power_control_types', [{}])[0].get('max_outlets', 0), "requires non-IPMI power control")
     def test_removed_host_disassociated_with_outlets(self):
         server_outlets = [o['resource_uri'] for o in
                           self.get_list("/api/power_control_device_outlet/")

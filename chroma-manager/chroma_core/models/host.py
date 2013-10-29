@@ -942,8 +942,12 @@ class DeleteHostStep(Step):
             # then crash, then get restarted.
             pass
 
-        # Remove associations with PDU outlets
-        for outlet in host.outlets.all():
+        # Remove associations with PDU outlets, or delete IPMI BMCs
+        for outlet in host.outlets.select_related().all():
+            if outlet.device.is_ipmi:
+                outlet.mark_deleted()
+                continue
+
             if kwargs['force']:
                 outlet.force_host_disassociation()
             else:
