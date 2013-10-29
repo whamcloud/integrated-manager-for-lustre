@@ -1,7 +1,7 @@
 TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
 include $(TOP)/include/Makefile.meta
 
-rpms: $(ALL_RPMS)
+rpms: decruftinate $(ALL_RPMS)
 
 requirements:
 	for rpm in $(ALL_RPMS); do                \
@@ -23,6 +23,22 @@ requirements:
 		
 
 REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
+
+decruftinate:
+	@rpm_name() { base=$${1##*/}; name=$${base%-*}; version=$${name%-*}; name=$${name%-*}; echo $$name; }; \
+	WANTED=""; \
+	for rpm in $(ALL_RPMS); do \
+	  WANTED="$$WANTED $$(rpm_name $$rpm)"; \
+	done; \
+	echo "Desired RPMs: $$WANTED"; \
+	for exists in $$(ls $(CURDIR)/*.rpm 2>/dev/null); do \
+	    name=$$(rpm_name $$exists); \
+		if [[ $$WANTED != *$$name* ]]; then \
+		    echo "removing cruft: $$name"; \
+			rm -f $$exists; \
+			rm -f $(REPO)/$$(basename $$exists); \
+		fi; \
+	done
 
 install: $(REPO_TARGETS)
 
@@ -48,6 +64,7 @@ $(REPO)/%.rpm:
 # and!!! the order of the above rule and this rule matter!  this is fixed
 # in gnu make 3.82 to always prefer rules that yeild a shorter stem
 %.rpm:
-	rm -f $$(echo $@ | sed -e 's/-[^-]*-[^-]*\.rpm$$//')-[0-9]*
+	pattern=$$(echo $@ | sed -e 's/-[^-]*-[^-]*\.rpm$$//')-[0-9]*; \
+	rm -f $$pattern $(REPO)/$$pattern
 	CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
 	cache_get $(SRC_REPO)/$@ "RPM v3.0 bin "
