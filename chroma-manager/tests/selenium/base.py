@@ -13,6 +13,7 @@ from testconfig import config
 
 from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.element import find_visible_element_by_css_selector
+from tests.selenium.utils.patch_driver_execute import patch_driver_execute
 
 
 def quiesce_api(driver, timeout):
@@ -86,6 +87,8 @@ class SeleniumBaseTestCase(TestCase):
             display.start()
 
         if not self.driver:
+            patch_driver_execute()
+
             browser = config['chroma_managers'][0]['browser']
             if browser == 'Chrome':
                 self.addCleanup(self._capture_chromedriver_log_on_failure)
