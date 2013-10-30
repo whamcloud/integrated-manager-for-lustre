@@ -26,6 +26,8 @@
       } else {
         $('#server_configuration').dataTable().fnDraw();
       }
+      angular.element('html').injector().get('pageTitle').set('Configuration - Servers');
+
     }
 
     function init()

@@ -193,6 +193,8 @@
       } else {
         $('#resource_table').dataTable().fnDraw();
       }
+      angular.element('html').injector().get('pageTitle').set('Configuration - Storage');
+
     }
 
     function init()

@@ -23,8 +23,10 @@
 (function () {
   'use strict';
 
-  function PowerCtrl($scope, $dialog, $q, hostModel, PowerControlDeviceModel) {
+  function PowerCtrl($scope, $dialog, $q, hostModel, PowerControlDeviceModel, pageTitle) {
     $scope.$emit('blockUi', {fadeIn: true, message: null});
+
+    pageTitle.set('Configuration - Power Control');
 
     $scope.powerCtrl = {
       hosts: hostModel.query(),
@@ -90,7 +92,7 @@
   }
 
   angular.module('controllers').controller('PowerCtrl',
-    ['$scope', '$dialog', '$q', 'hostModel', 'PowerControlDeviceModel', PowerCtrl]
+    ['$scope', '$dialog', '$q', 'hostModel', 'PowerControlDeviceModel', 'pageTitle', PowerCtrl]
   );
 }());
 

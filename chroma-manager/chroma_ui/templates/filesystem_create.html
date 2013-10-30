@@ -66,6 +66,8 @@
         $('#filesystem_create_form').find('.error').removeClass('error');
         $('#txtfsnameid').val("");
       }
+      angular.element('html').injector().get('pageTitle').set('Configuration - File Systems - Create');
+
     }
 
     function submit(filesystem) {

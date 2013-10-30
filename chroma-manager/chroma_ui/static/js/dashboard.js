@@ -248,6 +248,8 @@ var Dashboard = (function() {
   function load_server_page()
   {
     dashboard_page('server');
+    angular.element('html').injector().get('pageTitle').set('Dashboard - Server %s'.sprintf(dashboard_server.label));
+
 
     var ostKindMarkUp = "<option value=''></option>";
     var ost_file_system_MarkUp = "<option value=''></option>";
@@ -301,6 +303,7 @@ var Dashboard = (function() {
   function load_target_page()
   {
     dashboard_page('target');
+    angular.element('html').injector().get('pageTitle').set('Dashboard - Target %s'.sprintf(dashboard_target.label));
 
     var target_params = "";
 
@@ -423,6 +426,7 @@ var Dashboard = (function() {
   function load_filesystem_page()
   {
     dashboard_page('filesystem');
+    angular.element('html').injector().get('pageTitle').set('Dashboard - File System %s'.sprintf(dashboard_filesystem.label));
 
     var ostKindMarkUp = "<option value=''></option>";
 
@@ -479,6 +483,7 @@ var Dashboard = (function() {
   function load_global_page()
   {
     dashboard_page('global');
+    angular.element('html').injector().get('pageTitle').set('Dashboard');
 
     var compileTemplate = angular.element('body').injector().get('compileTemplate');
     var breadCrumbHtml = "<ul>" +

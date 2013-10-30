@@ -20,6 +20,9 @@ describe('Power Control', function () {
         open: jasmine.createSpy('dialogOpen')
       })
     });
+    $provide.value('pageTitle', {
+      set: jasmine.createSpy('set')
+    });
   }));
 
   beforeEach(inject(function ($controller, $rootScope) {
