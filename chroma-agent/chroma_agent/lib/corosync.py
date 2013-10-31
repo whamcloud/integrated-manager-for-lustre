@@ -407,12 +407,17 @@ class CorosyncRingInterface(object):
             sock.close()
             return bool(struct.unpack('4xI', ecmd.tostring())[0])
 
-        while time_left:
-            # Poll for link status on newly-up interfaces
-            if _has_link():
-                return True
-            else:
-                time.sleep(1)
-                time_left -= 1
+        try:
+            while time_left:
+                # Poll for link status on newly-up interfaces
+                if _has_link():
+                    return True
+                else:
+                    time.sleep(1)
+                    time_left -= 1
 
-        return _has_link()
+            return _has_link()
+        except IOError:
+            # If the ioctl fails, then for the purposes of this test, the
+            # interface is not usable. HYD-2679
+            return False
