@@ -27,8 +27,8 @@
                     <div ng-show="model.alert_item_str || model.host_name"><strong>Host: </strong> ((model.host_name || model.alert_item_str))</div>
                     <strong>(( model.getName() | capitalize )):&nbsp;</strong> (( model.message ))
                 </div>
-                <div class="buttons" ng-show="status.view == 'current'">
-                    <a class="btn btn-small" ng-click="status.dismiss(model)" ng-disabled="model.notDismissable()"  context-tooltip="(( model.notDismissable() && 'no_dismiss_message' || 'dismiss_message' ))" tooltip-placement="left">
+                <div class="buttons">
+                    <a class="btn btn-small" ng-show="status.view == 'current'" ng-click="status.dismiss(model)" ng-disabled="model.notDismissable()"  context-tooltip="(( model.notDismissable() && model.noDismissMessage() || 'dismiss_message' ))" tooltip-placement="left">
                         <i class="icon-trash"></i> Dismiss
                     </a>
                     <a ng-show="model.getName() == 'command'" class="navigation btn btn-small"

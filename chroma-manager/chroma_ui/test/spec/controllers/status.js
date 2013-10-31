@@ -78,15 +78,18 @@ describe('status controller', function () {
       'objects': [
         {
           'id': 1,
-          'message': 'Creating OST'
+          'message': 'Creating OST',
+          complete: true
         },
         {
           'id': 2,
-          'message': 'Start file system testfs'
+          'message': 'Start file system testfs',
+          complete: true
         },
         {
           'id': 3,
-          'message': 'Stop file system testfs'
+          'message': 'Stop file system testfs',
+          complete: true
         }
       ]
     };

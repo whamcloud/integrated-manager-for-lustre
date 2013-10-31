@@ -44,6 +44,16 @@ angular.module('models').factory('commandModel', ['baseModel', 'STATES', functio
       },
       getName: function () {
         return 'command';
+      },
+      /**
+       * Command should not be dismissed if it's incomplete.
+       * @returns {boolean}
+       */
+      notDismissable: function () {
+        return !this.complete;
+      },
+      noDismissMessage: function () {
+        return 'no_dismiss_message_command';
       }
     }
   });

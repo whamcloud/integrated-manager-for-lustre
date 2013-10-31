@@ -87,4 +87,14 @@ describe('Alerts model', function () {
       expect.toBeFalsy();
     }, {severity: STATES.WARN, active: false});
   }));
+
+  it('should return a no dismiss message key', inject(function (alertModel, $httpBackend) {
+    $httpBackend.expectGET(apiName).respond(fixture);
+
+    var model = alertModel.get();
+
+    $httpBackend.flush();
+
+    expect(model.noDismissMessage()).toEqual('no_dismiss_message_alert');
+  }));
 });
