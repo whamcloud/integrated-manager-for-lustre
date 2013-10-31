@@ -46,6 +46,9 @@ angular.module('models').factory('alertModel', ['baseModel', 'STATES', function 
        */
       notDismissable: function () {
         return (this.severity === STATES.ERROR || this.severity === STATES.WARN) && this.active;
+      },
+      noDismissMessage: function () {
+        return 'no_dismiss_message_alert';
       }
     }
   });

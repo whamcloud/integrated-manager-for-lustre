@@ -31,4 +31,34 @@ describe('Commands model', function () {
       expect(model.getState()).toEqual(state);
     });
   }));
+
+  it('should block dismiss if not completed', inject(function ($httpBackend, commandModel) {
+    $httpBackend.expectGET('/api/command/').respond({complete: false});
+
+    var model = commandModel.get();
+
+    $httpBackend.flush();
+
+    expect(model.notDismissable()).toBe(true);
+  }));
+
+  it('should allow dismiss if completed', inject(function ($httpBackend, commandModel) {
+    $httpBackend.expectGET('/api/command/').respond({complete: true});
+
+    var model = commandModel.get();
+
+    $httpBackend.flush();
+
+    expect(model.notDismissable()).toBe(false);
+  }));
+
+  it('should return a no dismiss message key', inject(function (commandModel, $httpBackend) {
+    $httpBackend.expectGET('/api/command/').respond({});
+
+    var model = commandModel.get();
+
+    $httpBackend.flush();
+
+    expect(model.noDismissMessage()).toEqual('no_dismiss_message_command');
+  }));
 });
