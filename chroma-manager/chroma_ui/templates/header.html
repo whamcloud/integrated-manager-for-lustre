@@ -11,6 +11,12 @@
       <li><a id="event_menu" class="navigation" href="event/"><i class="icon-time"></i>History</a></li>
       <li><a id="log_menu" class="navigation" href="log/"><i class="icon-book"></i>Logs</a></li>
       <li class='fsadmin_only'><a id="help_menu" class="navigation skip_router" href="{{STATIC_URL}}webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i>Help</a></li>
+      <li>
+        <a class="navigation status-nav" href="/ui/status/" context-tooltip="status_light" tooltip-placement="bottom">
+          <span ng-controller="BigGreenButtonCtrl" ng-class="state" class="ng-cloak" ></span>
+          <span class="status-text">Status</span>
+        </a>
+      </li>
     </ul>
     </div>
     <span id="user_info">
@@ -31,9 +37,6 @@
       {% endif %}
             </a>
     </span>
-  </div>
-  <div ng-controller="BigGreenButtonCtrl" ng-class="state" class="ng-cloak" context-tooltip="status_light" tooltip-placement="bottom">
-      <a class="navigation" href="/ui/status/"></a>
   </div>
 </div>
 

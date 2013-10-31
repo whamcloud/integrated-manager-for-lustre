@@ -1,54 +1,62 @@
-div[ng-controller="BigGreenButtonCtrl"] {
-    width: 20px;
-    height: 20px;
+.status-nav {
+  position: relative;
+}
+
+.status-nav .status-text {
+  margin-left: 16px;
+}
+
+span[ng-controller="BigGreenButtonCtrl"] {
+    position: absolute;
+    top: 12.5px;
+    width: 12px;
+    height: 12px;
     display: inline-block;
     border-radius: 12px;
-    margin-top: 8px;
-    margin-left: 40px;
     cursor: pointer;
 
-    -webkit-transition: all 1s ease-in-out;
-    -moz-transition: all 1s ease-in-out;
-    -o-transition: all 1s ease-in-out;
-    -ms-transition: all 1s ease-in-out;
-    transition: all 1s ease-in-out;
+    -webkit-transition: all .2s ease-in-out;
+    -moz-transition: all .2s ease-in-out;
+    -o-transition: all .2s ease-in-out;
+    -ms-transition: all .2s ease-in-out;
+    transition: all .2s ease-in-out;
 }
 
 @media screen and (max-width: 900px) {
-    div[ng-controller="BigGreenButtonCtrl"] {
+    span[ng-controller="BigGreenButtonCtrl"] {
         margin-left: 0;
     }
 }
 
-div[ng-controller="BigGreenButtonCtrl"] a {
+span[ng-controller="BigGreenButtonCtrl"] a {
     height: 20px;
     width: 20px;
     display: inline-block;
 }
 
-div[ng-controller="BigGreenButtonCtrl"].GOOD {
+span[ng-controller="BigGreenButtonCtrl"].GOOD {
     background-color: #2C9600;
-    box-shadow: 0px 0px 5px 1px #55C624;
+    box-shadow: 0 0 6px 0 #55C624;
 }
 
-div[ng-controller="BigGreenButtonCtrl"].GOOD:hover {
+.status-nav:hover span[ng-controller="BigGreenButtonCtrl"].GOOD {
     background-color: #30A300;
 }
 
-div[ng-controller="BigGreenButtonCtrl"].WARNING {
+span[ng-controller="BigGreenButtonCtrl"].WARNING {
     background-color: #FFBF00;
-    box-shadow: 0 0 5px 1px #FFDF80;
+    box-shadow: 0 0 6px 0 #FFDF80;
 }
 
-div[ng-controller="BigGreenButtonCtrl"].WARNING:hover {
+.status-nav:hover span[ng-controller="BigGreenButtonCtrl"].WARNING {
     background-color: #FFD866;
 }
 
-div[ng-controller="BigGreenButtonCtrl"].ERROR {
+span[ng-controller="BigGreenButtonCtrl"].ERROR {
     background-color: #FF362B;
-    box-shadow: 0 0 5px 1px #F44847;
+    box-shadow: 0 0 6px 0 #F44847;
 }
 
-div[ng-controller="BigGreenButtonCtrl"].ERROR:hover {
+.status-nav:hover span[ng-controller="BigGreenButtonCtrl"].ERROR {
     background-color: #F44847;
 }
