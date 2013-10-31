@@ -55,14 +55,14 @@ class TestConfigureCorosync(unittest.TestCase):
                     'mac_address': 'de:ad:be:ef:ca:fe',
                     'ipv4_address': '192.168.1.1',
                     'ipv4_netmask': '255.255.255.0',
-                    'has_link': True
+                    'link_up': True
                 },
                 'eth1': {
                     'device': 'eth1',
                     'mac_address': 'ba:db:ee:fb:aa:af',
                     'ipv4_address': None,
                     'ipv4_netmask': 0,
-                    'has_link': True
+                    'link_up': True
                 }
             }
 
@@ -93,9 +93,9 @@ class TestConfigureCorosync(unittest.TestCase):
 
         @property
         def has_link(obj):
-            return self.interfaces[obj.name]['has_link']
-        patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.has_link', has_link)
-        patcher.start()
+            return self.interfaces[obj.name]['link_up']
+        self.link_patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.has_link', has_link)
+        self.link_patcher.start()
 
         patcher = mock.patch('chroma_agent.lib.corosync.find_unused_port', return_value = 4242)
         patcher.start()
@@ -170,3 +170,21 @@ class TestConfigureCorosync(unittest.TestCase):
 
         for args, output in test_map.items():
             self.assertEqual(output, find_subnet(*args))
+
+    def test_failed_has_link(self):
+        self.link_patcher.stop()
+
+        patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.__getattr__', return_value = False)
+        patcher.start()
+
+        import errno
+        def boom(*args):
+            # EMULTIHOP is what gets raised with IB interfaces
+            raise IOError(errno.EMULTIHOP)
+        patcher = mock.patch('fcntl.ioctl', side_effect=boom)
+        patcher.start()
+
+        from chroma_agent.lib.corosync import get_ring0
+        iface = get_ring0()
+
+        self.assertFalse(iface.has_link)
