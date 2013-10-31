@@ -45,6 +45,7 @@ var LiveObject = function()
 
   function jobClicked()
   {
+    var dialog;
     var job_class = $(this).data('job_class');
     var job_message = $(this).data('job_message');
     var job_confirmation = JSON.parse($(this).data('job_confirmation'));
@@ -54,17 +55,16 @@ var LiveObject = function()
 
     if (job_confirmation) {
       var markup = "<div style='overflow-y: auto; max-height: 700px;'>" + job_confirmation + "</div>";
-      $(markup).dialog({
+      dialog = $(markup).dialog({
         'buttons': {
           'Cancel': function() {$(this).dialog('close');},
           'Confirm': {
             text: "Confirm",
             class: "confirm_button",
             click: function(){
-              var dialog = $(this);
               Api.post('/api/command/', {'jobs': [job], message: job_message}, function(data) {
                 CommandNotification.begin(data);
-                dialog.dialog('close');
+                dialog.dialog().dialog('close');
               });
             }
           }
@@ -89,6 +89,7 @@ var LiveObject = function()
       {
         var requires_confirmation = false;
         var confirmation_markup;
+        var dialog;
         if (data.transition_job == null) {
           // A no-op
           return;
@@ -114,7 +115,7 @@ var LiveObject = function()
 
         if (requires_confirmation) {
           var markup = "<div style='overflow-y: auto; max-height: 700px;' id='transition_confirmation_dialog'>" + confirmation_markup + "</div>";
-          $(markup).dialog({
+          dialog = $(markup).dialog({
             'buttons': {
               'Cancel': function() {
                 $(this).dialog('close');
@@ -124,11 +125,10 @@ var LiveObject = function()
                 text: "Confirm",
                 id: "transition_confirm_button",
                 click: function(){
-                  var dialog = $(this);
                   Api.put(url, {state: state}, success_callback = function() {
-                    dialog.dialog('close');
+                    dialog.dialog().dialog('close');
                     dialog.remove();
-                  })
+                  });
                 }
               }
             },
