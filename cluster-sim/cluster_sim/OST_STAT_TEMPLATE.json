@@ -2021,5 +2021,67 @@
     "filesfree": 127575, 
     "kbytesfree": 1979620, 
     "tot_pending": 0, 
-    "kbytestotal": 2015824
+    "kbytestotal": 2015824,
+    "job_stats": [
+        {
+            "write": {
+                "max": 1048576, 
+                "sum": 220986046, 
+                "samples": 3060, 
+                "unit": "bytes", 
+                "min": 29
+            }, 
+            "job_id": "cp.0", 
+            "setattr": {
+                "samples": 3478, 
+                "unit": "reqs"
+            }, 
+            "read": {
+                "max": 0, 
+                "sum": 0, 
+                "samples": 0, 
+                "unit": "bytes", 
+                "min": 0
+            }, 
+            "snapshot_time": 1381939592, 
+            "punch": {
+                "samples": 0, 
+                "unit": "reqs"
+            }, 
+            "sync": {
+                "samples": 0, 
+                "unit": "reqs"
+            }
+        }, 
+        {
+            "write": {
+                "max": 1048576, 
+                "sum": 671088640, 
+                "samples": 640, 
+                "unit": "bytes", 
+                "min": 1048576
+            }, 
+            "job_id": "dd.0", 
+            "setattr": {
+                "samples": 1, 
+                "unit": "reqs"
+            }, 
+            "read": {
+                "max": 1048576, 
+                "sum": 671088640, 
+                "samples": 662, 
+                "unit": "bytes", 
+                "min": 106496
+            }, 
+            "snapshot_time": 1381939640, 
+            "punch": {
+                "samples": 0, 
+                "unit": "reqs"
+            }, 
+            "sync": {
+                "samples": 0, 
+                "unit": "reqs"
+            }
+        }
+    ]
 }

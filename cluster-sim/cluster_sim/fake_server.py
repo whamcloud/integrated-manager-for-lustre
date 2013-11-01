@@ -597,7 +597,8 @@ class FakeServer(Persisted):
     def get_lustre_stats(self):
         result = {
             'target': {},
-            'lnet': {}
+            'lnet': {},
+            'jobid_var': 'procname_uid',
         }
 
         for target in self._targets_started_here:

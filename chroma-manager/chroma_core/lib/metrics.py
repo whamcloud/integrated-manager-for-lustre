@@ -183,14 +183,14 @@ class TargetMetricStore(MetricStore):
     """
     Wrapper class for Lustre Target metrics.
     """
-    def serialize(self, metrics, update_time=None):
+    def serialize(self, metrics, update_time=None, jobid_var='disable'):
         "Return serialized samples (id, dt, value) suitable for bulk stats insertion."
         if update_time is None:
             update_time = time.time()
 
         stats = metrics.pop('stats', {})
         metrics.pop('brw_stats', None)  # ignore brw_stats
-        metrics.pop('job_stats', [])  # ignore job_stats for now
+        job_stats = metrics.pop('job_stats', [])
         update = dict((key, {'value': metrics[key], 'type': 'Gauge'}) for key in metrics)
 
         for key in stats:
@@ -223,6 +223,11 @@ class TargetMetricStore(MetricStore):
         #        for direction in "read write".split():
         #            ds_name = "brw_%s_%s_%s"  % (key, bucket, direction)
         #            update[ds_name] = brw_stats[key]['buckets'][bucket][direction]['count']
+
+        # summarize job stats into a single quantity
+        job_stats = dict((stat['job_id'], stat['read']['sum'] + stat['write']['sum']) for stat in job_stats)
+        if jobid_var != 'disable':
+            pass  # TODO: store job stats
 
         return list(MetricStore.serialize(self, {update_time: update}))
 

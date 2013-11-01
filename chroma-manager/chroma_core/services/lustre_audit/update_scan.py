@@ -226,7 +226,7 @@ class UpdateScan(object):
         if isinstance(target, ManagedMdt):
             metrics['client_count'] = metrics['num_exports'] - 1
 
-        return target.metrics.serialize(metrics, self.update_time)
+        return target.metrics.serialize(metrics, jobid_var=self.jobid_var)
 
     @transaction.commit_on_success
     def store_metrics(self):
@@ -234,10 +234,8 @@ class UpdateScan(object):
         Pass the received metrics into the metrics library for storage.
         """
         raw_metrics = self.host_data['metrics']['raw']
+        self.jobid_var = raw_metrics['lustre'].get('jobid_var', 'disable')
         samples = []
-
-        if not hasattr(self, 'update_time'):
-            self.update_time = None
 
         try:
             node_metrics = raw_metrics['node']
@@ -246,7 +244,7 @@ class UpdateScan(object):
             except KeyError:
                 pass
 
-            samples += self.host.metrics.serialize(node_metrics, self.update_time)
+            samples += self.host.metrics.serialize(node_metrics)
         except KeyError:
             pass
 
