@@ -98,7 +98,10 @@ chkconfig rsyslog on
 if [ $1 -lt 2 ]; then
     # open ports in the firewall for access to Lustre
     for port in 988; do
-        lokkit -p $port:tcp
+        # don't allow lokkit to re-install the firewall due to RH #1024557
+        lokkit -n -p $port:tcp
+        # instead live update the firewall
+        iptables -I INPUT 4 -m state --state new -p tcp --dport $port -j ACCEPT
     done
 fi
 
