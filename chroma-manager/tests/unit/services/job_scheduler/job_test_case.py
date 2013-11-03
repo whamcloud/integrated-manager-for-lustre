@@ -89,6 +89,7 @@ class JobTestCase(TestCase):
         # from trying to do network comms during unit tests
         ServiceRpcInterface._call = mock.Mock(side_effect = NotImplementedError)
         ServiceQueue.put = mock.Mock(side_effect = NotImplementedError)
+        ServiceQueue.purge = mock.Mock()
 
         # Create an instance for the purposes of the test
         from chroma_core.services.plugin_runner.resource_manager import ResourceManager

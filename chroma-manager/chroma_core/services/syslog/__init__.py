@@ -46,6 +46,7 @@ class Service(ChromaService):
     def __init__(self):
         super(Service, self).__init__()
         self._queue = SyslogRxQueue()
+        self._queue.purge()
         self._table_size = LogMessage.objects.count()
         self._parser = LogMessageParser()
 
@@ -107,7 +108,6 @@ class Service(ChromaService):
                         self.log.error("Error %s ingesting syslog entry: %s" % (e, msg))
 
     def run(self):
-        self._queue.purge()
         self._queue.serve(data_callback = self.on_data)
 
     def stop(self):

@@ -44,6 +44,7 @@ class QueueHandler(object):
     """
     def __init__(self, job_scheduler):
         self._queue = NotificationQueue()
+        self._queue.purge()
         self._job_scheduler = job_scheduler
 
     def stop(self):
@@ -51,7 +52,6 @@ class QueueHandler(object):
 
     def run(self):
         # Disregard any old messages
-        self._queue.purge()
         self._queue.serve(self.on_message)
 
     def on_message(self, message):

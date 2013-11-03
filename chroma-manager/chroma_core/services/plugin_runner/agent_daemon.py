@@ -71,13 +71,13 @@ class AgentPluginHandler(object):
             plugin = plugin_name
 
         self._queue = PluginQueue()
+        # Disregard any old messages
+        self._queue.purge()
 
     def stop(self):
         self._queue.stop()
 
     def run(self):
-        # Disregard any old messages
-        self._queue.purge()
         self._queue.serve(session_callback = self.on_message)
 
     def remove_host_resources(self, host_id):

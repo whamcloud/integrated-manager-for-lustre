@@ -40,9 +40,11 @@ class LustreAgentRx(AgentRxQueue):
 
 
 class Service(ChromaService):
-    def run(self):
+    def __init__(self):
         self._queue = LustreAgentRx()
         self._queue.purge()
+
+    def run(self):
         self._queue.serve(data_callback = self.on_data)
 
     def on_data(self, fqdn, data):

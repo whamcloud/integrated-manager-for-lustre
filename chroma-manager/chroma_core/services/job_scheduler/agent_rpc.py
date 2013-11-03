@@ -113,6 +113,7 @@ class AgentRpcMessenger(object):
         self._sessions = {}
 
         self._action_runner_rx_queue = AgentRunnerPluginRxQueue()
+        self._action_runner_rx_queue.purge()
 
         self._lock = threading.Lock()
 
@@ -125,7 +126,6 @@ class AgentRpcMessenger(object):
             # already the case.
             log.warning("Unable to reset %s sessions" % ACTION_MANAGER_PLUGIN_NAME)
 
-        self._action_runner_rx_queue.purge()
         self._action_runner_rx_queue.serve(session_callback = self.on_rx)
         log.info("AgentRpcMessenger.complete")
 
