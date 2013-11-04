@@ -40,7 +40,16 @@ module.exports = function (grunt) {
         }
       }
     },
-
+    primus: {
+      dev: {
+        options: {
+          url: 'https://localhost:8888/primus/primus.js',
+        },
+        files: [{
+          dest: '<%= config.src %>/vendor/primus-client/primus.js'
+        }]
+      }
+    },
     less: {
       options: {
         paths: ['<%= config.src %>/bower_components/', '<%= config.src %>/styles/', '.'],
@@ -158,6 +167,7 @@ module.exports = function (grunt) {
 
   grunt.registerTask('dev', [
     'clean:dev',
+    'primus:dev',
     'less:dev',
     'watch'
   ]);

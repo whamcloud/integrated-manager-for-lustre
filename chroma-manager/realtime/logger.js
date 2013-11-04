@@ -19,12 +19,17 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
+
 'use strict';
 
-var bunyan = require('bunyan');
+var bunyan = require('bunyan'),
+  Logger = require('bunyan/lib/bunyan');
 
 module.exports = bunyan.createLogger({
   name: 'realtime',
+  serializers: {
+    err: Logger.stdSerializers.err
+  },
   streams: [
     {
       level: 'info',

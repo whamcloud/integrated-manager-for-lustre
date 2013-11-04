@@ -5,9 +5,16 @@
     </a>
   </div>
   <div class="collapse navbar-collapse navbar-ex1-collapse">
+    <ul class="nav navbar-nav">
+      <li ng-class="{active: app.$routeSegment.contains('dashboard')}">
+        <a route-to="dashboard/"><i class="fa fa-bar-chart-o"></i> Dashboard</a>
+      </li>
+    </ul>
     <ul class="nav navbar-nav navbar-right">
       <li ng-if="app.loggedIn"><a>{{ app.user.username }}</a></li>
       <li><a class="login-toggle" ng-class="{login: !app.loggedIn, logout: app.loggedIn}" ng-click="app.onClick()">{{ app.loggedIn? 'Logout': 'Login' }}</a></li>
     </ul>
   </div>
 </nav>
+<h3 class="page-header"><i class="fa fa-bar-chart-o"></i> Dashboard</h3>
+<div class="container container-full" app-view-segment="1"></div>

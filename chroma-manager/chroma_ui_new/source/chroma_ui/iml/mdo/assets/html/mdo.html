@@ -1,0 +1,9 @@
+<div ng-controller="MdoCtrl" class="with-transitions">
+  <h5>Metadata Operations</h5>
+  <div class="controls">
+    <duration-picker start-unit="{{ mdo.unit }}" start-size="{{ mdo.size }}" on-update="mdo.onUpdate(unit, size)"></duration-picker>
+    <a full-screen-btn class="btn btn-primary btn-xs"></a>
+    <a type="button" class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
+  </div>
+  <stacked-area-chart options="mdo.options" chart-data="mdo.data"></stacked-area-chart>
+</div>

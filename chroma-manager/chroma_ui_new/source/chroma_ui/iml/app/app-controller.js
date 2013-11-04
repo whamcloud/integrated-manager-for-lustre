@@ -20,10 +20,14 @@
 // express and approved by Intel in writing.
 
 
-angular.module('app').controller('AppCtrl', ['SessionModel', 'navigate', function AppCtrl (SessionModel, navigate) {
+angular.module('app').controller('AppCtrl', ['$routeSegment', 'SessionModel', 'navigate', AppCtrl]);
+
+function AppCtrl ($routeSegment, SessionModel, navigate) {
   'use strict';
 
   var self = this;
+
+  this.$routeSegment = $routeSegment;
 
   SessionModel.get().$promise.then(function (resp) {
     self.session = resp;
@@ -39,4 +43,4 @@ angular.module('app').controller('AppCtrl', ['SessionModel', 'navigate', functio
   this.logout = function logout() {
     self.session.$delete().then(self.login);
   };
-}]);
+}

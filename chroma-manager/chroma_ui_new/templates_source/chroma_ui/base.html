@@ -9,16 +9,24 @@
 
   <title>Intel&reg; Manager for Lustre* software{% block title %}{% endblock %}</title>
 
+  <link rel="icon" href="{{STATIC_URL}}chroma_ui/iml/app/assets/images/intel.ico" />
+
   <!-- build:css(tmp) {{STATIC_URL}}chroma_ui/built.css -->
-  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/styles/main.css" />
-  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/iml/app/assets/css/app.css" />
-  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/bower_components/animate.css/animate.css" />
-  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/login/assets/styles/login.css"/>
-  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/login/assets/styles/eula.css"/>
-  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/tooltip/assets/css/error-tooltip.css"/>
-  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/remote-validate/assets/remote-validate.css"/>
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/styles/main.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/iml/app/assets/css/app.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/bower_components/animate.css/animate.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/bower_components/nvd3/nv.d3.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/login/assets/styles/login.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/login/assets/styles/eula.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/tooltip/assets/css/error-tooltip.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/remote-validate/assets/remote-validate.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/sortable/assets/css/sortable.css" type="text/css" />
   <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/exception/assets/css/exception-modal.css" type="text/css" />
   <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/exception/assets/css/disconnect-modal.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/charts/assets/css/picker.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/charts/assets/css/charts.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/common/full-screen/assets/css/full-screen.css" type="text/css" />
+  <link rel="stylesheet" media="screen" href="{{ STATIC_URL }}chroma_ui/iml/dashboard/assets/css/dashboard.css" type="text/css" />
   <!-- endbuild -->
 
   <script type="text/javascript">
@@ -44,8 +52,9 @@
   </footer>
 
   <!-- build:js(source) {{STATIC_URL}}chroma_ui/built.js -->
+  <script src="{{ STATIC_URL }}chroma_ui/vendor/primus-client/primus.js"></script>
   <script src="{{ STATIC_URL }}chroma_ui/bower_components/lodash/dist/lodash.js"></script>
-  <script src="{{ STATIC_URL }}chroma_ui/bower_components/underscore-contrib/dist/underscore-contrib.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/underscore-contrib/underscore.function.iterators.js"></script>
   <script src="{{ STATIC_URL }}chroma_ui/vendor/sprintf/sprintf.js"></script>
   <script src="{{ STATIC_URL }}chroma_ui/bower_components/jquery/jquery.js"></script>
   <script src="{{ STATIC_URL }}chroma_ui/bower_components/angular/angular.js"></script>
@@ -56,6 +65,11 @@
   <script src="{{ STATIC_URL }}chroma_ui/vendor/angular-animate-patched/angular-animate.js"></script>
 
   <script src="{{ STATIC_URL }}chroma_ui/bower_components/angular-route-segment/build/angular-route-segment.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/angular-bindonce/bindonce.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/momentjs/moment.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/twix/bin/twix.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/d3/d3.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/bower_components/nvd3/nv.d3.js"></script>
 
   <script src="{{ STATIC_URL }}chroma_ui/vendor/ui-bootstrap-tpls-0.6.0-SNAPSHOT.js"></script>
 
@@ -99,16 +113,72 @@
   <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/exception/disconnect-modal.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/exception/replay.js"></script>
 
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/popover/popover.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/sortable/sortable.js"></script>
+
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/charts-module.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/duration-picker.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/usage-picker.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/base-chart.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/line-chart.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/multi-bar-chart.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/stacked-area-chart.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/pie-graph.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/format-bytes.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/date-ticks.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/append-data-transformer.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/splice-old-data-transformer.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/stream-duration-mixin.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/charts/append-or-replace-data-transformer.js"></script>
+
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/stream/stream-module.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/stream/stream.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/stream/transformers/replace-transformer.js"></script>
+
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/full-screen/full-screen-module.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}chroma_ui/common/full-screen/full-screen.js"></script>
+
   <script src="{{ STATIC_URL }}chroma_ui/common/navigate/navigate.js"></script>
 
   <script src="{{ STATIC_URL }}chroma_ui/common/remote-validate/remote-validate.js"></script>
 
   <script src="{{ STATIC_URL }}chroma_ui/common/route-to/route-to.js"></script>
 
+  <script src="{{ STATIC_URL }}chroma_ui/common/d3/d3.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/nv/nv.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/primus/primus.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/common/moment/moment.js"></script>
+
   <script src="{{ STATIC_URL }}chroma_ui/iml/iml.js"></script>
   <script src="{{ STATIC_URL }}chroma_ui/iml/router.js"></script>
   <script src="{{ STATIC_URL }}chroma_ui/iml/app/app-module.js"></script>
   <script src="{{ STATIC_URL }}chroma_ui/iml/app/app-controller.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/iml/dashboard/dashboard-controller.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/dashboard/file-system-info-controller.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/iml/ost-balance/ost-balance-controller.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/ost-balance/ost-balance-stream.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/ost-balance/ost-balance-transformer.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/iml/mdo/mdo-controller.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/mdo/mdo-stream.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/mdo/mdo-transformer.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/iml/mds/mds-controller.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/mds/mds-stream.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/mds/mds-transformer.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/iml/read-write-bandwidth/read-write-bandwidth-controller.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/read-write-bandwidth/read-write-bandwidth-stream.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/read-write-bandwidth/read-write-bandwidth-transformer.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/iml/object-storage-servers/object-storage-servers-controller.js"></script>
+
+  <script src="{{ STATIC_URL }}chroma_ui/iml/file-system/file-system-module.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/file-system/file-system-stream.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/file-system/file-system-stream-model.js"></script>
+  <script src="{{ STATIC_URL }}chroma_ui/iml/file-system/file-system-stream-model-transformer.js"></script>
   <!-- endbuild -->
 
 </body>

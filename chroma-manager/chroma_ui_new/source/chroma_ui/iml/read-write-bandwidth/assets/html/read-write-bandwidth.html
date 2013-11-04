@@ -1,0 +1,9 @@
+<div ng-controller="ReadWriteBandwidthCtrl" class="with-transitions">
+  <h5>Read/Write Bandwidth</h5>
+  <div class="controls">
+    <duration-picker start-unit="{{ readWriteBandwidth.unit }}" start-size="{{ readWriteBandwidth.size }}" on-update="readWriteBandwidth.onUpdate(unit, size)"></duration-picker>
+    <a full-screen-btn class="btn btn-primary btn-xs"></a>
+    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
+  </div>
+  <line-chart options="readWriteBandwidth.options" chart-data="readWriteBandwidth.data"></line-chart>
+</div>

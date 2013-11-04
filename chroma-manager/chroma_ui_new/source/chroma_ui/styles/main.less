@@ -20,6 +20,10 @@ html, body {
   padding: 0 0 60px;
 }
 
+.navbar {
+  margin-bottom: 0;
+}
+
 footer {
   height: 60px;
 
@@ -48,11 +52,28 @@ footer {
 }
 
 .alert.alert-danger {
-background-color: @errorColor;
-border-color: darken(@errorColor, 10%);
-color: #FFFFFF;
+  background-color: @errorColor;
+  border-color: darken(@errorColor, 10%);
+  color: #FFFFFF;
 }
 
 a:hover {
   cursor: pointer;
+}
+
+.page-header {
+  margin-top: 0;
+  color: #FFFFFF;
+  padding: 15px 20px;
+  background-color: #0067B4;
+
+}
+
+.section-header {
+  margin-top: 50px;
+  color: #0067B4;
+}
+
+html body div.container-full {
+  width: 100%;
 }

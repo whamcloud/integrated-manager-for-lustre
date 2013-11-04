@@ -29,14 +29,30 @@
 
     beforeEach(module(function ($provide) {
       args.forEach(function (name) {
+        if (angular.isFunction(name)) {
+          var ret = name();
+
+          if (_.isPlainObject(ret)) {
+            $provide.value(ret.name, ret.value);
+          } else {
+            ret.forEach(function (obj) {
+              $provide.value(obj.name, obj.value);
+            });
+          }
+
+          return;
+        }
+
         var setup = self.mocks[name];
 
         if (!setup) throw new Error('no mock found matching %s!'.sprintf(name));
 
         if (typeof setup === 'function')
           $provide.factory(name, setup);
-        else
+        else if (setup === Object(setup))
           $provide[setup.type](setup.name, setup.setup);
+        else
+          $provide.value(name, setup);
       });
     }));
   };

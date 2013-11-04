@@ -26,7 +26,8 @@ var domain = require('domain'),
   d = domain.create();
 
 d.on('error', function(err) {
-  console.log(err);
+  console.error(err.message);
+  console.error(err.stack);
 
   process.exit(1);
 });
@@ -34,45 +35,49 @@ d.on('error', function(err) {
 d.run(function initialize() {
   var https = require('https'),
     di = require('di'),
-    nodeRequest = require('request'),
+    request = require('request'),
     serverFactory = require('./server'),
-    request = require('./request'),
     logger = require('./logger'),
-    BaseDataSource = require('./data-sources/base-data-source'),
     conf = require('./conf'),
     primus = require('./primus'),
     Primus = require('primus'),
+    streamFactory = require('./stream'),
     multiplex = require('primus-multiplex'),
-    metricsModel = require('./models/metrics-model'),
-    metricsDataSources = require('./data-sources/metrics');
+    resourceFactory = require('./resources').resourceFactory,
+    channelFactory = require('./channel'),
+    fileSystemResourceFactory = require('./resources').fileSystemResourceFactory,
+    hostResourceFactory = require('./resources').hostResourceFactory,
+    targetResourceFactory = require('./resources').targetResourceFactory,
+    targetOstMetricsResourceFactory = require('./resources').targetOstMetricsResourceFactory;
 
   var modules = [{
     conf: ['value', conf],
     https: ['value', https],
-    BaseDataSource: ['value', BaseDataSource],
-    nodeRequest: ['value', nodeRequest],
-    request: ['factory', request],
-    server: ['factory', serverFactory],
     logger: ['value', logger],
     Primus: ['value', Primus],
     multiplex: ['value', multiplex],
+    request: ['value', request],
+    channelFactory: ['factory', channelFactory],
+    Stream: ['factory', streamFactory],
+    FileSystemResource: ['factory', fileSystemResourceFactory],
+    HostResource: ['factory', hostResourceFactory],
     primus: ['factory', primus],
-    metricsModel: ['factory', metricsModel.metricsModelFactory],
-    MetricsDataSource: ['factory', metricsDataSources.getMetricsDataSource],
-    mdtDataSourceFactory: ['factory', metricsDataSources.mdtDataSourceFactory],
-    mdsDataSourceFactory: ['factory', metricsDataSources.mdsDataSourceFactory],
-    ostBalanceDataSourceFactory: ['factory', metricsDataSources.ostBalanceDataSourceFactory]
+    Resource: ['factory', resourceFactory],
+    server: ['factory', serverFactory],
+    TargetResource: ['factory', targetResourceFactory],
+    TargetOstMetricsResource: ['factory', targetOstMetricsResourceFactory]
   }];
 
   var injector = new di.Injector(modules);
 
-  injector.invoke(function (logger, metricsModel,
-                            mdtDataSourceFactory, mdsDataSourceFactory, ostBalanceDataSourceFactory) {
+  injector.invoke(function (logger, channelFactory,
+                            FileSystemResource, HostResource, TargetResource, TargetOstMetricsResource) {
 
     logger.info('Realtime Module started.');
 
-    metricsModel('mds', mdsDataSourceFactory);
-    metricsModel('ostbalance', ostBalanceDataSourceFactory);
-    metricsModel('mdt', mdtDataSourceFactory);
+    channelFactory('filesystem', FileSystemResource);
+    channelFactory('host', HostResource);
+    channelFactory('target', TargetResource);
+    channelFactory('targetostmetrics', TargetOstMetricsResource);
   });
 });

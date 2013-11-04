@@ -12,6 +12,3 @@ database.db
 dist/
 *.egg-info/
 node_modules
-bower_components
-chroma-manager/chroma_ui_new/coverage
-chroma-manager/chroma_ui_new/static

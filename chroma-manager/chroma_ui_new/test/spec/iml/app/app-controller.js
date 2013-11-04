@@ -1,13 +1,14 @@
 describe('App controller', function () {
   'use strict';
 
-  var appController, sessionFixture, $httpBackend, navigate, fixtures;
+  var $routeSegment, appController, sessionFixture, $httpBackend, navigate, fixtures;
 
   beforeEach(module('app'));
 
-  mock.beforeEach('navigate');
+  mock.beforeEach('navigate', '$routeSegment');
 
-  beforeEach(inject(function ($controller, _$httpBackend_, _navigate_, _fixtures_) {
+  beforeEach(inject(function (_$routeSegment_, $controller, _$httpBackend_, _navigate_, _fixtures_) {
+    $routeSegment = _$routeSegment_;
     appController = $controller('AppCtrl');
     $httpBackend = _$httpBackend_;
     navigate = _navigate_;
@@ -42,6 +43,12 @@ describe('App controller', function () {
     $httpBackend.flush();
 
     expect(navigate).toHaveBeenCalledOnceWith('login/');
+  });
+
+  it('should expose the $routeSegment on the controller', function () {
+    $httpBackend.flush();
+
+    expect(appController.$routeSegment).toEqual($routeSegment);
   });
 
   describe('logged in', function () {

@@ -7,12 +7,16 @@
     "socket.io": "0.9.16",
     "di": "0.0.1",
     "q": "0.9.7",
-    "primus": "1.4.6",
-    "primus-multiplex": "2.1.1",
+    "primus": "1.5.0",
+    "primus-multiplex": "2.2.0",
+    "primus-emitter": "2.0.4",
     "lodash": "2.3.0",
     "bunyan": "0.22.0",
-    "request": "2.27.0",
-    "moment": "2.4.0"
+    "request": "2.29.0",
+    "moment": "2.4.0",
+    "uritemplate": "0.3.4",
+    "dotty": "0.0.2",
+    "async": "0.2.9"
   },
   "devDependencies": {
     "socket.io-client": "0.9.16",
