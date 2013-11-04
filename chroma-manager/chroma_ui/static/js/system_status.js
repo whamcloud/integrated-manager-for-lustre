@@ -25,6 +25,7 @@ var SystemStatusView = Backbone.View.extend({
   update_period: 5000,
   render: function() {
     var view = this;
+    angular.element('html').injector().get('pageTitle').set('System Status');
     $(view.el).html(_.template($('#system_status_template').html())());
     Api.get("/api/system_status/", {}, function(data) {
       var table = $(view.el).find('table.supervisor_processes');

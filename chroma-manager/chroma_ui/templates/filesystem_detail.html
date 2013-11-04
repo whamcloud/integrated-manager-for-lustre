@@ -341,6 +341,9 @@
       success_callback = function(filesystem_data)
       {
         filesystem = filesystem_data;
+        angular.element('html').injector().get('pageTitle').set('Configuration - File Systems - %s'.sprintf(filesystem.label));
+
+
         /* FS summary fields */
         $('#ost_count').html(filesystem.osts.length);
         $('#mgs_name').html(RouteUtils.uri_properties_link(filesystem.mgt.primary_server, filesystem.mgt.primary_server_name));

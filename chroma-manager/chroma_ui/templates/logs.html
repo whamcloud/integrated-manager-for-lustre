@@ -10,6 +10,7 @@
       } else {
         $('#all_log_content').dataTable().fnDraw();
       }
+      angular.element('html').injector().get('pageTitle').set('Configuration - Logs');
     }
     function init()
     {

@@ -8,6 +8,8 @@
       } else {
         $('#fs_list').dataTable().fnDraw();
       }
+      angular.element('html').injector().get('pageTitle').set('Configuration - File Systems');
+
     }
 
     function init()

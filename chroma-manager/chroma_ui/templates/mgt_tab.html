@@ -10,6 +10,8 @@
         volume_chooser_store.reload();
         $('#mgt_configuration').dataTable().fnDraw();
       }
+      angular.element('html').injector().get('pageTitle').set('Configuration - MGTs');
+
     }
 
     function submit(target)

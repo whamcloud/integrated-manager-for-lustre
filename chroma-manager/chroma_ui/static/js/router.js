@@ -245,6 +245,9 @@ var ChromaRouter = Backbone.Router.extend({
   {
     $('div.toplevel').hide();
     $("#toplevel-" + name).show();
+    if (name === 'status') {
+      angular.element('html').injector().get('pageTitle').set('Status');
+    }
 
     $('a.navigation').removeClass('active');
     $("#" + name + "_menu").addClass('active');
@@ -300,6 +303,7 @@ var ChromaRouter = Backbone.Router.extend({
         var link = $compile('<div ng-include="(( config.asStatic(\'partials/power_control.html\') ))"></div>');
 
         powerTab.html(link($scope));
+
       });
     }
   },
