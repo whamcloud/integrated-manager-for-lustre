@@ -39,6 +39,7 @@ span[ng-controller="BigGreenButtonCtrl"].GOOD {
     box-shadow: 0 0 6px 0 #55C624;
 }
 
+.status-nav.active span[ng-controller="BigGreenButtonCtrl"].GOOD,
 .status-nav:hover span[ng-controller="BigGreenButtonCtrl"].GOOD {
     background-color: #30A300;
 }
@@ -48,6 +49,7 @@ span[ng-controller="BigGreenButtonCtrl"].WARNING {
     box-shadow: 0 0 6px 0 #FFDF80;
 }
 
+.status-nav.active span[ng-controller="BigGreenButtonCtrl"].WARNING,
 .status-nav:hover span[ng-controller="BigGreenButtonCtrl"].WARNING {
     background-color: #FFD866;
 }
@@ -57,6 +59,7 @@ span[ng-controller="BigGreenButtonCtrl"].ERROR {
     box-shadow: 0 0 6px 0 #F44847;
 }
 
+.status-nav.active span[ng-controller="BigGreenButtonCtrl"].ERROR,
 .status-nav:hover span[ng-controller="BigGreenButtonCtrl"].ERROR {
     background-color: #F44847;
 }
