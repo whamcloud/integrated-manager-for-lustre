@@ -192,9 +192,9 @@ function add_host_dialog() {
       ev.preventDefault();
   })
 
-  var existing_keys_div = $('#id_existing_keys');
-  var root_password_div = $('#id_root_password');
-  var private_key_div = $('#id_private_key');
+  var existing_keys_div = $('#existing_keys_choice');
+  var root_password_div = $('#id_password_root');
+  var private_key_div = $('#private_key_choice');
 
   element.find('#id_existing_keys_choice').click(function(event){
       existing_keys_div.show();

@@ -307,24 +307,24 @@
                         <label style="margin-right: 6px; font-weight: bold" >SSH Authentication:</label>
                         <div class="choice_ssh_auth" style="margin-bottom: 10px">
                             <input type="radio" id="id_existing_keys_choice" name="auth_type" checked="checked" value='existing_keys_choice'/><label for="id_existing_keys_choice">Existing key</label>
-                            <input type="radio" id="id_password_choice" name="auth_type" value='id_root_password'/><label for="id_password_choice">Root Password</label>
+                            <input type="radio" id="id_password_choice" name="auth_type" value='id_password_root'/><label for="id_password_choice">Root Password</label>
                             <input type="radio" id="id_other_keys_choice" name="auth_type"  value='private_key_choice'/><label for="id_other_keys_choice">Another key</label>
                         </div>
 
-                        <div id="id_existing_keys">
+                        <div id="existing_keys_choice">
                             <div style="margin-bottom: 5px">
                                 If this management server is configured with a set of ssh keys,
                                 those keys will be used to register this new server.</div>
                         </div>
 
-                        <div id="id_root_password" style="display: none">
+                        <div id="id_password_root" style="display: none">
                             <div style="margin-bottom: 5px">
                                 Use standard password based auth, if you don't have ssh keys to use.</div>
                             <label style="margin-right: 6px; font-weight: bold" for='id_add_host_password'>Root password:</label>
                             <input tabindex="2"  style="width:100%; margin-bottom: 15px" type='password'  id='id_add_host_password' name='root_password'/>
                         </div>
 
-                        <div id="id_private_key" style="display: none">
+                        <div id="private_key_choice" style="display: none">
                             <div style="margin-bottom: 5px">A private key that is a pair with a public key on this new server, may be used.
                                 A passphrase can be supplied for an encrypted private key.</div>
                             <label style="margin-right: 6px; font-weight: bold" for='id_add_host_private_key'>Private key:</label>
