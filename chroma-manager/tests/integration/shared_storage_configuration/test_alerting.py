@@ -54,8 +54,13 @@ class TestAlerting(ChromaIntegrationTestCase):
         mgt = fs['mgt']
 
         # Check the ERROR alert is raised when the target unexpectedly stops
-        self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
-        self.wait_for_assert(lambda: self.assertHasAlert(mgt['resource_uri'], of_severity='ERROR'))
+        result = self.remote_operations.stop_target(host['fqdn'], mgt['ha_label'])
+        try:
+            self.wait_for_assert(lambda: self.assertHasAlert(mgt['resource_uri'], of_severity='ERROR'))
+        except AssertionError:
+            if hasattr(result, 'stdout'):
+                print result.stdout.read()  # command exit_status was already checked, but display output anyway
+            raise
         self.wait_for_assert(lambda: self.assertState(mgt['resource_uri'], 'unmounted'))
         target_offline_alert = self.get_alert(mgt['resource_uri'], alert_type="TargetOfflineAlert")
         self.assertEqual(target_offline_alert['severity'], 'ERROR')

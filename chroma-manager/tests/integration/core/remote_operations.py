@@ -108,7 +108,7 @@ class SimulatorRemoteOperations(RemoteOperations):
         self._simulator.format_block_device(fqdn, path, filesystem_type)
 
     def stop_target(self, fqdn, ha_label):
-        self._simulator.get_cluster(fqdn).stop(ha_label)
+        return self._simulator.get_cluster(fqdn).stop(ha_label)
 
     def start_target(self, fqdn, ha_label):
         self._simulator.get_cluster(fqdn).start(ha_label)
@@ -339,7 +339,7 @@ class RealRemoteOperations(RemoteOperations):
         self._ssh_fqdn(fqdn, command)
 
     def stop_target(self, fqdn, ha_label):
-        self._ssh_fqdn(fqdn, "chroma-agent stop_target --ha %s" % ha_label)
+        return self._ssh_fqdn(fqdn, "chroma-agent stop_target --ha %s" % ha_label)
 
     def start_target(self, fqdn, ha_label):
         self._ssh_fqdn(fqdn, "chroma-agent start_target --ha %s" % ha_label)
