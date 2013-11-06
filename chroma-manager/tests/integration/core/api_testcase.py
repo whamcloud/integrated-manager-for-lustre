@@ -345,3 +345,10 @@ class ApiTestCase(UtilityTestCase):
 
     def get_filesystem(self, filesystem_id):
         return self.get_by_uri("/api/filesystem/%s/" % filesystem_id)
+
+    def get_filesystem_by_name(self, name):
+        filesystems = self.get_list("/api/filesystem/")
+        try:
+            return [f for f in filesystems if f['name'] == name][0]
+        except IndexError:
+            raise KeyError("No filesystem named %s" % name)
