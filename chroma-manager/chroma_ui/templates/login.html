@@ -44,7 +44,7 @@
         <div class="span6 offset3" ng-controller="LoginCtrl">
           <header class="row-fluid logo"></header>
           <div class="row-fluid">
-            <form class="form" novalidate name="loginForm" remote-validate-form remote-then="login.loginThen">
+            <form class="form" action="javascript:void(0)" novalidate name="loginForm" remote-validate-form remote-then="login.loginThen">
               <div class="ng-cloak">
                 <alert class="span4 offset4" ng-repeat="error in serverValidationError.__all__" type="'error'">
                   ((error))
