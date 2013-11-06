@@ -34,5 +34,6 @@
     "trailing": true,
     "maxcomplexity": 5,
     "maxlen": 120,
-    "expr": true
+    "expr": true,
+    "eqnull": true
 }

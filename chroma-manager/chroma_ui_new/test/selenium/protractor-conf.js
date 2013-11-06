@@ -1,10 +1,10 @@
 var manager = require('./util/manager');
 
 exports.config = {
-
-  seleniumServerJar: '/usr/local/opt/selenium-server-standalone/selenium-server-standalone-2.35.0.jar',
+  seleniumServerJar: '/usr/local/opt/selenium-server-standalone/selenium-server-standalone-2.37.0.jar',
 
   specs: [
+    'spec/global.js',
     'spec/**/*.js'
   ],
 

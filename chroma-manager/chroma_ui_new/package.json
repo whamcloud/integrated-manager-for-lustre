@@ -29,6 +29,6 @@
     "lodash-contrib": "git://github.com/jgrund/lodash-contrib",
     "lodash": "~2.2.1",
     "matchdep": "~0.3.0",
-    "protractor": "~0.9.0"
+    "protractor": "~0.12.0"
   }
 }

@@ -1,5 +1,4 @@
 var loginView = require('../views/login'),
-  eulaView = require('../views/eula'),
   manager = require('../util/manager');
 
 describe('login', function () {
@@ -20,11 +19,15 @@ describe('login', function () {
     loginView.authFailed;
   });
 
-  it('might show the eula', function () {
-    var user = manager.getSuperuser();
+  describe('with correct credentials', function () {
+    var user;
 
-    loginView.login(user.username, user.password);
+    beforeEach(function () {
+      user = manager.getSuperuser();
+    });
 
-    eulaView.accept();
+    it('might show the eula', function () {
+      loginView.loginAndAcceptEulaIfPresented(user.username, user.password);
+    });
   });
 });

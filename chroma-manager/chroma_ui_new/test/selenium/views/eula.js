@@ -7,6 +7,10 @@
 
   BaseView.extend(EulaView);
 
+  /**
+   * Represents the eula dialog in the ui.
+   * @constructor
+   */
   function EulaView () {
     this.one = {
       well: eulaLocators.WELL,
@@ -18,9 +22,19 @@
     this.path = 'login';
   }
 
-
+  /**
+   * Accepts the eula if it appears, otherwise continues on.
+   */
   EulaView.prototype.accept = function accept() {
+    var self = this;
+
     this.ptor.waitForAngular();
+
+    this.ptor.wait(function detectNextStep() {
+      return !self.onPage() || self.well.isDisplayed();
+    }, 30000);
+
+    if (!this.onPage()) return;
 
     this.ptor.executeScript(function (wellSelector) {
       var well = document.querySelector(wellSelector);
@@ -28,8 +42,7 @@
       well.scrollTop = well.scrollHeight;
     }, eulaSelectors.WELL);
 
-    this.ptor.wait(function () {
-    }, 5000);
+    this.acceptButton.click();
   };
 
 

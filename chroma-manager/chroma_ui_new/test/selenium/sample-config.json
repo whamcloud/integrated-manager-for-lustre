@@ -4,7 +4,7 @@
     "clean_up_on_failure": true,
     "chroma_managers": [
         {
-            "server_http_url": "https://localhost:8000/ui/",
+            "server_http_url": "https://localhost:8000/ui_new/",
             "browser": "Chrome",
             "users": [
                 {

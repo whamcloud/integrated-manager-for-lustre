@@ -41,6 +41,7 @@
         controller: 'EulaCtrl',
         backdrop: 'static',
         keyboard: false,
+        windowClass: 'eula-modal',
         resolve: {
           user: _.iterators.K(user)
         }

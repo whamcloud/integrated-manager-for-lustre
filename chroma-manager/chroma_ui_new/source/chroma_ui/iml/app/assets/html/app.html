@@ -7,7 +7,7 @@
   <div class="collapse navbar-collapse navbar-ex1-collapse">
     <ul class="nav navbar-nav navbar-right">
       <li ng-if="app.loggedIn"><a>{{ app.user.username }}</a></li>
-      <li><a ng-click="app.onClick()">{{ app.loggedIn? 'Logout': 'Login' }}</a></li>
+      <li><a class="login-toggle" ng-class="{login: !app.loggedIn, logout: app.loggedIn}" ng-click="app.onClick()">{{ app.loggedIn? 'Logout': 'Login' }}</a></li>
     </ul>
   </div>
 </nav>
