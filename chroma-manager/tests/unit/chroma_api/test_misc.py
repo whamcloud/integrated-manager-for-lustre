@@ -4,6 +4,7 @@ from chroma_core.models.host import ManagedHost, Volume, VolumeNode, ForceRemove
 from chroma_core.models.jobs import Command, StepResult
 from chroma_core.models.target import ManagedTarget
 import mock
+import time
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helper import synthetic_host
 
@@ -90,16 +91,13 @@ class TestMisc(ChromaApiTestCase):
         self.spider_api()
 
 
-class TestJobLocksAPI(ChromaApiTestCase):
+class TestMiscAPICalls(ChromaApiTestCase):
     def __init__(self, method, username='admin', **kwargs):
         ChromaApiTestCase.__init__(self, method, username=username, **kwargs)
 
     def setUp(self):
-        super(TestJobLocksAPI, self).setUp()
+        super(TestMiscAPICalls, self).setUp()
         self.host = synthetic_host('myserver')
-
-    def tearDown(self):
-        super(TestJobLocksAPI, self).tearDown()
 
     def test_get_host_locks_api(self):
         response = self.deserialize(self.api_client.get("/api/host/"))['objects'][0]
@@ -107,3 +105,7 @@ class TestJobLocksAPI(ChromaApiTestCase):
         self.assertIn('write', response['locks'])
         self.assertEqual([1, 2], response['locks']['read'])
         self.assertEqual([3, 4], response['locks']['write'])
+
+    def test_get_cached_host_version_api(self):
+        response = self.deserialize(self.api_client.get("/api/host/"))['objects'][0]
+        self.assertEqual(int(time.time()), int(response['version']))

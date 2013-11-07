@@ -22,6 +22,7 @@
 
 from collections import defaultdict
 from chroma_core.services import log_register
+from time import time
 
 
 log = log_register(__name__)
@@ -51,6 +52,7 @@ class ObjectCache(object):
 
         log.debug("_add %s %s %s" % (instance.__class__, instance.id, id(instance)))
 
+        instance.version = time()
         self.objects[klass][instance.pk] = instance
 
     @classmethod
@@ -147,6 +149,7 @@ class ObjectCache(object):
             except obj.__class__.DoesNotExist:
                 return None
             else:
+                fresh_instance.version = time()
                 class_collection[obj.pk] = fresh_instance
             return fresh_instance
 
