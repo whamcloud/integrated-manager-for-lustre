@@ -118,6 +118,7 @@ var ChromaRouter = Backbone.Router.extend({
     "": "dashboard",
     "alert/": "alert",
     "event/": "event",
+    "log/around-:aroundDatetime/": "log",
     "log/": "log",
     "about/": "about",
     "status/": "status",
@@ -213,9 +214,9 @@ var ChromaRouter = Backbone.Router.extend({
   {
     this.toplevel('event');
   },
-  log: function()
+  log: function(aroundDatetime)
   {
-    this.toplevel('log');
+    this.toplevel('log', aroundDatetime);
   },
   about:function () {
     this.toplevel('about');
@@ -241,7 +242,7 @@ var ChromaRouter = Backbone.Router.extend({
 
     this.configure('server');
   },
-  toplevel: function(name)
+  toplevel: function(name, aroundDatetime)
   {
     $('div.toplevel').hide();
     $("#toplevel-" + name).show();
@@ -257,7 +258,7 @@ var ChromaRouter = Backbone.Router.extend({
     } else if (name == 'event') {
       EventView.draw();
     } else if (name == 'log') {
-      LogView.draw();
+      LogView.draw(aroundDatetime);
     }
 
     // FIXME: generalise this once there is a global ChartManager

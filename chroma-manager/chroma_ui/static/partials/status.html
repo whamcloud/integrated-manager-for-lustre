@@ -21,7 +21,7 @@
                     <span class="message-type">(( model.getState() | lowercase | capitalize ))</span>
                 </div>
                 <div class="date">
-                    (( model.created_at || model.begin | date:'MM/dd/yyyy HH:mm' ))
+                    <a class="navigation" ng-href="/ui/log/around-(( model.created_at || model.begin | date:'yyyy-MM-ddTHH:mm:ssZ' ))/">(( model.created_at || model.begin | date:'MM/dd/yyyy HH:mm' ))</a>
                 </div>
                 <div class="message-body">
                     <div ng-show="model.alert_item_str || model.host_name"><strong>Host: </strong> ((model.host_name || model.alert_item_str))</div>
