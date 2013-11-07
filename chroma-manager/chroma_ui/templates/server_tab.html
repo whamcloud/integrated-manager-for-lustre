@@ -19,6 +19,8 @@
 <script type='text/javascript'>
   var ServerView = function() {
     var initialized = false;
+    var stickyServerProfile;
+
     function draw() {
       if (!initialized) {
         init();
@@ -73,9 +75,14 @@
           { "sClass": 'txtcenter', bSortable: false, mDataProp: 'icons'}
         ]
       } );
+
+      function serverProfile(profile) {
+        if (_.isString(profile)) stickyServerProfile = profile;
+        return stickyServerProfile;
+      }
       $('#btnAddNewHost').click(function()
       {
-        add_host_dialog();
+        add_host_dialog(serverProfile);
       });
 
       function ServerCommandPrompt(options) {

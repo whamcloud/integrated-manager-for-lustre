@@ -20,8 +20,7 @@
 // express and approved by Intel in writing.
 
 
-function add_host_dialog() {
-
+function add_host_dialog(serverProfile) {
   /* Dialog setup */
   var template = _.template($('#add_host_dialog_template').html());
   var element;
@@ -219,10 +218,15 @@ function add_host_dialog() {
   });
 
   function get_profiles() {
-    Api.get("server_profile/?order_by=default&order_by=managed", {limit: 0}, success_callback = function(data) {
-      $.each(data.objects, function(i, profile) {
-        var option = "<option value='" + profile.resource_uri + "'>"+ profile.ui_name + "</option>";
-        $('div.add_host_dialog select[name=\'server_profile\']').prepend(option)
+    Api.get("server_profile/?order_by=default&order_by=-managed", {limit: 0}, success_callback = function(data) {
+      var $select = $('div.add_host_dialog select[name=\'server_profile\']');
+      data.objects.forEach(function(profile) {
+        var option = "<option value='%s'%s>%s</option>".sprintf(
+          profile.resource_uri,
+          (profile.resource_uri === serverProfile() ? " selected='selected'" : ''),
+          profile.ui_name
+        );
+        $select.append(option)
       });
     });
   }
@@ -258,6 +262,7 @@ function add_host_dialog() {
           .find('form')
           .find('.add_server_profile').val();
 
+      serverProfile(post_params.server_profile);
       Api.post('host/', post_params,
                   success_callback = function(data)
                   {
