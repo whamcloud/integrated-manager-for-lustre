@@ -178,6 +178,7 @@ class TestConfigureCorosync(unittest.TestCase):
         patcher.start()
 
         import errno
+
         def boom(*args):
             # EMULTIHOP is what gets raised with IB interfaces
             raise IOError(errno.EMULTIHOP)
