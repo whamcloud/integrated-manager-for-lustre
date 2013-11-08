@@ -31,6 +31,7 @@ class TestAvailableJobs(TestCase):
         self.js = JobScheduler()
         volume = synthetic_volume(with_storage=False)
 
+        # Create object before ObjectCache init, so they are in the cache.
         self.host = synthetic_host()
         self.mgs = ManagedMgs.objects.create(volume=volume)
         self.fs = ManagedFilesystem.objects.create(name='mgsfs', mgs=self.mgs)
@@ -39,6 +40,7 @@ class TestAvailableJobs(TestCase):
         self.ost = ManagedOst.objects.create(volume=volume,
             filesystem=self.fs, index=1)
 
+        # If you create object after init of this case, they will not be in it.
         ObjectCache.getInstance()
 
         connection.use_debug_cursor = True
@@ -170,3 +172,15 @@ class TestAvailableJobs(TestCase):
         locks = js.get_locks(host_ct_key, host_id)
         self.assertFalse(locks['read'])
         self.assertEqual(2, len(locks['write']))
+
+    def test_managed_host_undeployed(self):
+        """Test that an undeployed host can only be force removed"""
+
+        self.host.state = 'undeployed'
+        self.host.save()
+
+        ObjectCache.update(self.host)
+
+        expected_job_classes = ['ForceRemoveHostJob']
+        received_job_classes = [job['class_name'] for job in self._get_jobs(self.host)]
+        self.assertEqual(set(received_job_classes), set(expected_job_classes))

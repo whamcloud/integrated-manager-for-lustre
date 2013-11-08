@@ -1079,7 +1079,8 @@ class ForceRemoveHostJob(AdvertisedJob):
         return """The record for the server in Chroma Manager is removed without
 attempting to contact the server. Any targets that depend on this server will
 also be removed without any attempt to unconfigure them. This action should only
-be used if the server is permanently unavailable."""
+be used if the server is permanently unavailable, or is in the undeployed state
+having never been successfully deployed."""
 
 
 class RebootHostJob(AdvertisedJob):
