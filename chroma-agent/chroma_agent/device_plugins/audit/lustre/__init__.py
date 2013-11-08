@@ -81,11 +81,11 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         filter = lambda line: line.startswith(modname)
         obj = cls(fscontext=fscontext)
         try:
-            list = obj.read_lines("/proc/modules", filter)
+            modules = list(obj.read_lines("/proc/modules", filter))
         except IOError:
-            list = []
+            modules = []
 
-        return len(list) == 1
+        return len(modules) == 1
 
     def __init__(self, fscontext=None, **kwargs):
         super(LustreAudit, self).__init__(**kwargs)
@@ -116,30 +116,28 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         # excepting IOErrors as a general rule, but I suppose this is
         # the least-worst solution.
         try:
-            lines = self.read_lines(file)
+            for line in self.read_lines(file):
+                match = re.match(stats_re, line)
+                if not match:
+                    continue
+
+                name = match.group('name')
+                stats[name] = {
+                        'count': int(match.group('count')),
+                        'units': match.group('units')
+                }
+                if match.group("min_max_sum") is not None:
+                    stats[name].update({
+                        'min': int(match.group('min')),
+                        'max': int(match.group('max')),
+                        'sum': int(match.group('sum'))
+                    })
+                if match.group("sumsq") is not None:
+                    stats[name].update({
+                        'sumsquare': int(match.group('sumsquare'))
+                    })
         except IOError:
             return stats
-
-        for line in lines:
-            match = re.match(stats_re, line)
-            if not match:
-                continue
-
-            name = match.group('name')
-            stats[name] = {
-                    'count': int(match.group('count')),
-                    'units': match.group('units')
-            }
-            if match.group("min_max_sum") is not None:
-                stats[name].update({
-                    'min': int(match.group('min')),
-                    'max': int(match.group('max')),
-                    'sum': int(match.group('sum'))
-                })
-            if match.group("sumsq") is not None:
-                stats[name].update({
-                    'sumsquare': int(match.group('sumsquare'))
-                })
 
         return stats
 
