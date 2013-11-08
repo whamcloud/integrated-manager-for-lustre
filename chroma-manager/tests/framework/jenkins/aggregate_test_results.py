@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     # Fetch the downstream build info from jenkins
     jenkins = api.Jenkins(jenkins_url, username=username, password=password)
-    assert jenkins.login()
+    assert jenkins.get_jobs_list()  # A test we are logged in
     job = jenkins.get_job(build_job_name)
     build = job.get_build(build_job_build_number)
 
@@ -51,20 +51,30 @@ if __name__ == '__main__':
             if fingerprint['fileName'] == 'build_info.txt':
                 usage = fingerprint['usage']
                 for use in usage:
-                    if use['name'] in downstream_jobs_names and use['name'] in valid_test_jobs:
+                    job_name = use['name'].split('/')[0]
+                    if job_name in downstream_jobs_names and job_name in valid_test_jobs:
                         build_nums = []
                         for k, ranges in use['ranges'].iteritems():
                             for range in ranges:
                                 build_nums.append(range['end'] - 1)
                         latest_build = max(build_nums)
                         try:
-                            test_runs.append(jenkins.get_job(use['name']).get_build(latest_build))
-                            logging.info("Added '%s' build num '%s' to the list of test runs" % (use['name'], latest_build))
+                            if job_name == use['name']:
+                                # Job is not multiconfiguration
+                                test_runs.append(jenkins.get_job(job_name).get_build(latest_build))
+                            else:
+                                # Job is multiconfiguration
+                                master_job = jenkins.get_job(job_name)
+                                master_build = master_job.get_build(latest_build)
+                                for run in master_build.get_matrix_runs():
+                                    test_runs.append(run)
+                            logging.info("Added '%s' build num '%s' to the list of test runs" % (job_name, latest_build))
                         except Exception, e:
                             # Can happen for things like old disabled jobs.
                             # Any real missing builds will be caught by the
                             # check for required runs below.
-                            logging.warning("Exception trying to get '%s' build num '%s': '%s'" % (use['name'], latest_build, e))
+                            logging.warning("Exception trying to get '%s' build num '%s': '%s'" % (job_name, latest_build, e))
+                            raise e
 
     # Double check all jobs have finished running
     for test_run in test_runs:
@@ -81,19 +91,18 @@ if __name__ == '__main__':
             coverage_report = artifacts['.coverage']
             coverage_report.save('coverage_files/.coverage.%s' % test_run.job.name)
 
-        test_reports = [v for k, v in artifacts.iteritems() if re.match("test_reports/.*", k)]
-        mkdir_p("test_reports/%s" % test_run.job.name)
+        test_reports = [v for k, v in artifacts.iteritems() if re.match(".*test.*.xml", k)]
+        mkdir_p("test_reports/%s" % os.path.normpath(test_run.name))
         for test_report in test_reports:
-            test_report.savetodir("test_reports/%s/" % test_run.job.name)
+            test_report.save_to_dir("test_reports/%s/" % os.path.normpath(test_run.name))
 
     # Ensure all of the jobs required to be run to land are passing
     logging.info("Requiring these tests: '%s'" % required_tests)
-    # found_tests = list of test job names for all runs we found test reports for
-    found_tests = [t.job.name for t in test_runs if os.listdir("test_reports/%s" % t.job.name)]
-    logging.info("Found these test runs: '%s'" % found_tests)
-    missing_tests = set(required_tests).difference(set(found_tests))
+    optional_tests = set(valid_test_jobs).difference(set(required_tests))
+    missing_tests = [t.job.name for t in test_runs if not os.listdir("test_reports/%s" % t.name)]
+    missing_tests = set(missing_tests).difference(set(optional_tests))
     if missing_tests:
-        print "MISSING TEST RESULTS! Did not find a test report for these tests: '%s'." % ', '.join(missing_tests)
+        print "MISSING TEST RESULTS! Did not find an expected test report for these tests: '%s'." % ', '.join(missing_tests)
         exit(1)
 
     # Check if there were test failures
