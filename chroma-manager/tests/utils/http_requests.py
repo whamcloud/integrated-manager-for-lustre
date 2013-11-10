@@ -2,7 +2,7 @@ import json
 import sys
 import os
 import requests
-from urlparse import urljoin
+from urlparse import urljoin, urlparse
 
 
 class HttpRequests(object):
@@ -119,8 +119,25 @@ class AuthorizedHttpRequests(HttpRequests):
         # but let's not completely rule out the possibility that someone might want to run
         # the tests on a remote system using a proxy.
         if 'https_proxy' in os.environ:
-            sys.stderr.write("Warning: Using proxy %s from https_proxy" % os.environ['https_proxy'] +
-                             " environment variable, you probably don't want that\n")
+            manager_server = urlparse(self.server_http_url).netloc
+            if ':' in manager_server:
+                (manager_server, port) = manager_server.split(':')
+
+            no_proxy = os.environ.get('no_proxy', "").split(',')
+            will_proxy = True
+            for item in no_proxy:
+                if manager_server.endswith(item):
+                    will_proxy = False
+                    break
+
+            if will_proxy:
+                sys.stderr.write("Warning: Environment has https_proxy=%s set.  "
+                                 "Unless you really do want to use that proxy to "
+                                 "communicate with the manager at %s please ensure that "
+                                 "the no_proxy environment variable includes "
+                                 "%s (or a subdomain of it) in it\n"
+                                 % (os.environ['https_proxy'], self.server_http_url,
+                                    manager_server))
 
         response = self.get("/api/session/")
         if not response.successful:

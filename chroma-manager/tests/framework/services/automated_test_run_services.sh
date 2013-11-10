@@ -18,14 +18,6 @@ echo "Beginning installation and setup..."
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
-cat <<EOC > /etc/yum.repos.d/internal_epel.repo
-[addon-epel6-x86_64]
-name=addon-epel6-x86_64
-baseurl=http://10.10.0.6/cobbler/repo_mirror/addon-epel6-x86_64
-enabled=1
-gpgcheck=0
-priority=99
-EOC
 yum clean metadata
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool
 
@@ -55,6 +47,8 @@ cat rabbitmq_startup.log
 chkconfig postgresql on
 service postgresql initdb
 service postgresql start
+# TODO: sleeping is racy.  should check for up-ness, not just assume it
+#       will happen within 5 seconds
 sleep 5  # Unfortunately postgresql start seems to return before its truly up and ready for business
 su postgres -c 'createuser -R -S -d chroma'
 su postgres -c 'createdb -O chroma chroma'

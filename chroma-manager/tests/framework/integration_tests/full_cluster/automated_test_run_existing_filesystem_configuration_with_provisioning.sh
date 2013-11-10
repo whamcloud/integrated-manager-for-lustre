@@ -106,7 +106,7 @@ timeout=180
 
 [lustre]
 name=lustre
-baseurl=https://jenkins-pull:2cf9b55238c654b00bc37a6e8ccc4caf@build.whamcloudlabs.com/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
+baseurl=${JENKINS_URL/\/\//\/\/jenkins-pull:$JENKINS_PULL@}/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
 enabled=1
 priority=1
 gpgcheck=0

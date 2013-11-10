@@ -9,7 +9,7 @@ CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/sel
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
-GOOGLE_REPO=${GOOGLE_REPO:-"http://mgmt1/cobbler/repo_mirror/google_chrome-stable-x86_64"}  # If not on Toro, can pass in http://dl.google.com/linux/chrome/rpm/stable/x86_64
+GOOGLE_REPO=${GOOGLE_REPO:-"http://cobbler/cobbler/repo_mirror/google_chrome-stable-x86_64"}  # If not on Toro, can pass in http://dl.google.com/linux/chrome/rpm/stable/x86_64
 
 echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
