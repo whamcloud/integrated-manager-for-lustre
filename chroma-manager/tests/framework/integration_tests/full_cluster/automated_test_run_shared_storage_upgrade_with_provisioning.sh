@@ -119,9 +119,9 @@ fi
 # first fetch and install chroma 2.0.0.0
 if [ $JENKINS_URL =  http://hydra-1vm1.lab.whamcloud.com:8080 -o \
      $JENKINS_URL =  http://hydra-1vm1.lab.whamcloud.com:8080/ ]; then
-    wget --auth-no-challenge --http-user=jenkins-pull --http-password="2cf9b55238c654b00bc37a6e8ccc4caf" "${JENKINS_URL}job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
+    curl -O -u jenkins-pull:${JENKINS_PULL:2cf9b55238c654b00bc37a6e8ccc4caf} "${JENKINS_URL}job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
 else
-    wget --no-check-certificate --auth-no-challenge --http-user=jenkins-pull --http-password="2cf9b55238c654b00bc37a6e8ccc4caf" "https://build.whamcloudlabs.com/job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
+    curl -O -u jenkins-pull:${JENKINS_PULL:2cf9b55238c654b00bc37a6e8ccc4caf} "https://build.whamcloudlabs.com/job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
 fi
 
 # Install and setup old chroma manager
