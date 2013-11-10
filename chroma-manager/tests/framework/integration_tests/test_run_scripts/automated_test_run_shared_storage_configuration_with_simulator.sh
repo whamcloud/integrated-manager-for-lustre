@@ -70,9 +70,6 @@ virtualenv --no-site-packages .
 source bin/activate
 cd chroma/chroma-manager/
 
-unset http_proxy
-unset https_proxy
-
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/chroma/chroma-manager/.coveragerc
 [run]
