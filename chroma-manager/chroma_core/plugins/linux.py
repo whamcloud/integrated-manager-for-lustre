@@ -99,6 +99,12 @@ class MdRaid(resources.LogicalDrive):
     uuid = attributes.String()
 
 
+class EMCPower(resources.LogicalDrive):
+    class Meta:
+        identifier = GlobalId('uuid')
+    uuid = attributes.String()
+
+
 class LocalMount(resources.LogicalDriveOccupier):
     """Used for marking devices which are already in use, so that
     we don't offer them for use as Lustre targets."""
@@ -157,6 +163,10 @@ class Linux(Plugin):
     def agent_session_start(self, host_id, data):
         devices = data
 
+        for expected_item in ['vgs', 'lvs', 'emcpower', 'mpath', 'devs', 'local_fs', 'mds']:
+            if expected_item not in devices:
+                devices[expected_item] = {}
+
         lv_block_devices = set()
         for vg, lv_list in devices['lvs'].items():
             for lv_name, lv in lv_list.items():
@@ -172,6 +182,9 @@ class Linux(Plugin):
         special_block_devices = lv_block_devices | mpath_block_devices
         for uuid, md_info in devices['mds'].items():
             special_block_devices.add(md_info['block_device'])
+
+        for uuid, emcpower_info in devices['emcpower'].items():
+            special_block_devices.add(emcpower_info['block_device'])
 
         def preferred_serial(bdev):
             for attr in SERIAL_PREFERENCE:
@@ -316,21 +329,27 @@ class Linux(Plugin):
                 mpath_node.logical_drive = mpath_parents[0].logical_drive
                 mpath_node.add_parent(p)
 
-        for uuid, md_info in devices['mds'].items():
-            bdev = devices['devs'][md_info['block_device']]
-            md_res, created = self.update_or_create(MdRaid,
-                    size = bdev['size'],
-                    filesystem_type = bdev['filesystem_type'],
-                    uuid = uuid)
-            node_res, created = self.update_or_create(LinuxDeviceNode,
-                    parents = [md_res],
-                    logical_drive = md_res,
-                    host_id = host_id,
-                    path = md_info['path'])
-            for drive_bd in md_info['drives']:
-                drive_res = major_minor_to_node_resource[drive_bd]
-                md_res.add_parent(drive_res)
-            major_minor_to_node_resource[md_info['block_device']] = node_res
+        def _map_drives_to_device_to_node(device_type, klass):
+            for uuid, device_info in devices[device_type].items():
+                bdev = devices['devs'][device_info['block_device']]
+                device_res, created = self.update_or_create(klass,
+                                                            size = bdev['size'],
+                                                            filesystem_type = bdev['filesystem_type'],
+                                                            uuid = uuid)
+                node_res, created = self.update_or_create(LinuxDeviceNode,
+                                                          parents = [device_res],
+                                                          logical_drive = device_res,
+                                                          host_id = host_id,
+                                                          path = device_info['path'])
+                for drive_bd in device_info['drives']:
+                    drive_res = major_minor_to_node_resource[drive_bd]
+                    device_res.add_parent(drive_res)
+
+                major_minor_to_node_resource[device_info['block_device']] = node_res
+
+        _map_drives_to_device_to_node('mds', MdRaid)
+
+        _map_drives_to_device_to_node('emcpower', EMCPower)
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = major_minor_to_node_resource[bdev]

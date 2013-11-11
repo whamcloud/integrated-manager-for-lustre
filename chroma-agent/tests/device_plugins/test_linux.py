@@ -2,7 +2,7 @@ import json
 import mock
 import os
 from django.utils import unittest
-from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems, MdRaid
+from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems, MdRaid, EMCPower
 from tests.test_utils import patch_open, patch_run
 
 
@@ -114,6 +114,7 @@ UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
                         "3:4": ("swap", 'swap')
                     })
 
+
 class TestMDRaid(unittest.TestCase):
 
     def setUp(self):
@@ -121,7 +122,7 @@ class TestMDRaid(unittest.TestCase):
         self.test_root = os.path.join(tests, "data/device_plugins/linux")
 
         self.md_value_good = {'mdstat': """Personalities : [raid1]
-md127 : active (auto-read-only) raid1 sdc2[1] sdc1[0]
+md127 : active (auto-read-only) raid1 sdc[1] sdb[0]
       16056704 blocks super 1.2 [2/2] [UU]
 
 md128 : active (auto-read-only) raid0 sdd[0]
@@ -129,24 +130,24 @@ md128 : active (auto-read-only) raid0 sdd[0]
 
 unused devices: <none>\n""",
                               'mdadm': {"/dev/md/md-name-test:1": """ARRAY /dev/md/md-name-test:1 level=raid0 num-devices=1 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb6
-   devices=/dev/sdd1\n""",
+   devices=/dev/sdd\n""",
                                         "/dev/md/md-name-test:123": """ARRAY /dev/md/md-name-test:123 level=raid1 num-devices=2 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb5
-   devices=/dev/sdc1,/dev/sdc2\n"""
-                                        },
-                              'find_block_devs' : {"9:127": "/dev/md/md-name-test:123",
-                                                   "9:128": "/dev/md/md-name-test:1"
-                                                   },
+   devices=/dev/sdb,/dev/sdc\n"""
+                              },
+                              'find_block_devs': {"9:127": "/dev/md/md-name-test:123",
+                                                  "9:128": "/dev/md/md-name-test:1"
+                              },
                               'results': [{
                                               'uuid': '15054135:be3426c6:f1387822:49830fb5',
                                               'path': '/dev/md/md-name-test:123',
                                               'mm': '9:127',
-                                              'device_paths': ['/dev/sdc1','/dev/sdc2']
+                                              'device_paths': ['/dev/sdb', '/dev/sdc']
                                           },
                                           {
                                               'uuid': '15054135:be3426c6:f1387822:49830fb6',
                                               'path': '/dev/md/md-name-test:1',
                                               'mm': '9:128',
-                                              'device_paths': ['/dev/sdd1']
+                                              'device_paths': ['/dev/sdd']
                                           }]
         }
 
@@ -175,7 +176,7 @@ unused devices: <none>\n""",
         return self.md_value["mdadm"][arg_list[4]]
 
     def mock_dev_major_minor(self, path):
-        if (self.devices_data['node_block_devices'].has_key(path)):
+        if path in self.devices_data['node_block_devices']:
             return self.devices_data['node_block_devices'][path]
         else:
             return None
@@ -198,13 +199,13 @@ unused devices: <none>\n""",
                             return MdRaid(dm_setup_table.block_devices).all()
 
     def test_mdraid_pass(self):
-        mds = self._setup_md_raid('devices_MdRaid.txt', 'dmsetup_MdRaid.txt', self.md_value_good)
+        mds = self._setup_md_raid('devices_MdRaid_EMCPower.txt', 'dmsetup_MdRaid_EMCPower.txt', self.md_value_good)
 
         self.assertTrue(len(mds) == len(self.md_value_good['results']))
 
         for value in self.md_value_good['results']:
             uuid = value['uuid']
-            self.assertTrue(mds.has_key(uuid))
+            self.assertTrue(uuid in mds)
             self.assertTrue(mds[uuid]['path'] == value['path'])
             self.assertTrue(mds[uuid]['block_device'] == value['mm'])
             self.assertTrue(len(mds[uuid]['drives']) == len(value['device_paths']))
@@ -219,3 +220,110 @@ unused devices: <none>\n""",
         # No data should come back
         self.assertTrue(len(mds) == 0)
 
+
+class TestEMCPower(unittest.TestCase):
+
+    def setUp(self):
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        self.test_root = os.path.join(tests, "data/device_plugins/linux")
+
+        self.emcpower_value_good = {'powermt': {"dev=emcpowera": ("VNX ID=APM00122204204 [NGS1]\n"
+                                                                  "Logical device ID=600601603BC12D00C4CECB092F1FE311 [LUN 11]\n"
+                                                                  "state=alive; policy=CLAROpt; queued-IOs=0\n"
+                                                                  "Owner: default=SP A, current=SP A	Array failover mode: 4\n"
+                                                                  "==============================================================================\n"
+                                                                  "--------------- Host ---------------   - Stor -  -- I/O Path --   -- Stats ---\n"
+                                                                  "###  HW Path               I/O Paths    Interf.  Mode     State   Q-IOs Errors\n"
+                                                                  "==============================================================================\n"
+                                                                  "  13 qla2xxx                sdb         SP A0    active   alive      0      0\n"
+                                                                  "  12 qla2xxx                sde         SP B0    active   alive      0      0\n"),
+                                                "dev=emcpowerb": ("VNX ID=APM00122204204 [NGS1]\n"
+                                                                  "Logical device ID=D00C4CECB600601603BC12092F1FE311 [LUN 11]\n"
+                                                                  "state=alive; policy=CLAROpt; queued-IOs=0\n"
+                                                                  "Owner: default=SP A, current=SP A	Array failover mode: 4\n"
+                                                                  "==============================================================================\n"
+                                                                  "--------------- Host ---------------   - Stor -  -- I/O Path --   -- Stats ---\n"
+                                                                  "###  HW Path               I/O Paths    Interf.  Mode     State   Q-IOs Errors\n"
+                                                                  "==============================================================================\n"
+                                                                  "  14 qla2xxx                sdf         SP A0    active   alive      0      0\n"
+                                                                  "  13 qla2xxx                sdd         SP A0    active   alive      0      0\n"
+                                                                  "  12 qla2xxx                sdc         SP B0    active   alive      0      0")},
+                                    'glob': {"/dev/emcpower?": ["/dev/emcpowera", "/dev/emcpowerb"]},
+                                    'find_block_devs': {"99:12": "/dev/emcpowera",
+                                                        "98:12": "/dev/emcpowerb"},
+                                    'results': [{
+                                                    'uuid': '60060160:3BC12D00:C4CECB09:2F1FE311',
+
+                                                    'path': '/dev/emcpowera',
+                                                    'mm': '99:12',
+                                                    'device_paths': ['/dev/sdb', '/dev/sde']
+                                                },
+                                                {
+                                                    'uuid': 'D00C4CEC:B6006016:03BC1209:2F1FE311',
+                                                    'path': '/dev/emcpowerb',
+                                                    'mm': '98:12',
+                                                    'device_paths': ['/dev/sdf', '/dev/sdd', '/dev/sdc']
+                                                }]
+        }
+
+    def _load(self, filename):
+        return open(os.path.join(self.test_root, filename)).read()
+
+    def _load_dmsetup(self, devices_filename, dmsetup_filename):
+        self.devices_data = json.loads(self._load(devices_filename))
+        self.dmsetup_data = self._load(dmsetup_filename)
+
+        return MockDmsetupTable(self.dmsetup_data, self.devices_data)
+
+    def mock_debug(self, value):
+        print value
+
+    def mock_try_run(self, arg_list):
+        return self.emcpower_value["powermt"][arg_list[2]]
+
+    def mock_glob(self, path):
+        return self.emcpower_value["glob"][path]
+
+    def mock_dev_major_minor(self, path):
+        if path in self.devices_data['node_block_devices']:
+            return self.devices_data['node_block_devices'][path]
+        else:
+            return None
+
+    def mock_find_block_devs(self, folder):
+        return self.emcpower_value["find_block_devs"]
+
+    def _setup_emcpower(self, devices_filename, dmsetup_filename, emcpower_value):
+        dm_setup_table = self._load_dmsetup(devices_filename, dmsetup_filename)
+
+        with mock.patch('logging.Logger.debug', self.mock_debug):
+            with mock.patch('glob.glob', self.mock_glob):
+                with mock.patch('chroma_agent.shell.try_run', self.mock_try_run):
+                    with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor', self.mock_dev_major_minor):
+                        with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._find_block_devs', self.mock_find_block_devs):
+
+                            self.emcpower_value = emcpower_value
+
+                            return EMCPower(dm_setup_table.block_devices).all()
+
+    def test_emcpower_pass(self):
+        emcpowers = self._setup_emcpower('devices_MdRaid_EMCPower.txt', 'dmsetup_MdRaid_EMCPower.txt', self.emcpower_value_good)
+
+        self.assertTrue(len(emcpowers) == len(self.emcpower_value_good['results']))
+
+        for value in self.emcpower_value_good['results']:
+            uuid = value['uuid']
+            self.assertTrue(uuid in emcpowers)
+            self.assertTrue(emcpowers[uuid]['path'] == value['path'])
+            self.assertTrue(emcpowers[uuid]['block_device'] == value['mm'])
+            self.assertTrue(len(emcpowers[uuid]['drives']) == len(value['device_paths']))
+            for i in range(0, len(value['device_paths'])):
+                self.assertTrue(emcpowers[uuid]['drives'][i] == self.mock_dev_major_minor(value['device_paths'][i]))
+
+    # This should not fail as such, but the dmsetup data doesn't contain the device info for the md device so the
+    # data is inconsistent. The code should deal with this and return an mddevice with empty drives..
+    def test_emcpower_fail(self):
+        emcpowers = self._setup_emcpower('devices_HYD-1385.txt', 'dmsetup_HYD-1385.txt', self.emcpower_value_good)
+
+        # No data should come back
+        self.assertTrue(len(emcpowers) == 0)
