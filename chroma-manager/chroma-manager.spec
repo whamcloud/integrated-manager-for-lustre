@@ -49,9 +49,9 @@ Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.11
 Requires: django-celery >= 3.0.10
 Requires: django-picklefield
-Requires: chroma-manager-libs = %{version}
-Requires: chroma-manager-cli = %{version}
-Requires: chroma-diagnostics >= %{version}
+Requires: chroma-manager-libs = %{version}-%{release}
+Requires: chroma-manager-cli = %{version}-%{release}
+Requires: chroma-diagnostics >= %{version}-%{release}
 Requires: policycoreutils-python
 Requires: python-gevent >= 0.13
 Requires: fence-agents-iml > 3.1.5-25.wc1.el6.2
@@ -71,7 +71,7 @@ This package contains libraries for Chroma CLI and Chroma Server.
 %package cli
 Summary: Command-Line Interface for Chroma Server
 Group: System/Utility
-Requires: chroma-manager-libs = %{version} python-argparse python-requests >= 1.0.3 python-tablib python-dateutil python-prettytable
+Requires: chroma-manager-libs = %{version}-%{release} python-argparse python-requests >= 1.0.3 python-tablib python-dateutil python-prettytable
 %description cli
 This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
