@@ -114,6 +114,7 @@ UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
                         "3:4": ("swap", 'swap')
                     })
 
+
 class TestMDRaid(unittest.TestCase):
 
     def setUp(self):
@@ -128,19 +129,23 @@ md128 : active (auto-read-only) raid0 sdd[0]
       16056704 blocks super 1.2 [2/2] [UU]
 
 unused devices: <none>\n""",
-                              'mdadm': {"/dev/md127": """ARRAY /dev/md127 level=raid1 num-devices=2 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb5
-   devices=/dev/sdc1,/dev/sdc2\n""",
-                                        "/dev/md128": """ARRAY /dev/md128 level=raid0 num-devices=1 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb6
-   devices=/dev/sdd1\n"""},
+                              'mdadm': {"/dev/md/md-name-test:1": """ARRAY /dev/md/md-name-test:1 level=raid0 num-devices=1 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb6
+   devices=/dev/sdd1\n""",
+                                        "/dev/md/md-name-test:123": """ARRAY /dev/md/md-name-test:123 level=raid1 num-devices=2 metadata=1.2 name=mac-node:1 UUID=15054135:be3426c6:f1387822:49830fb5
+   devices=/dev/sdc1,/dev/sdc2\n"""
+                                        },
+                              'find_block_devs': {"9:127": "/dev/md/md-name-test:123",
+                                                  "9:128": "/dev/md/md-name-test:1"
+                                                   },
                               'results': [{
                                               'uuid': '15054135:be3426c6:f1387822:49830fb5',
-                                              'path': '/dev/md127',
+                                              'path': '/dev/md/md-name-test:123',
                                               'mm': '9:127',
-                                              'device_paths': ['/dev/sdc1','/dev/sdc2']
+                                              'device_paths': ['/dev/sdc1', '/dev/sdc2']
                                           },
                                           {
                                               'uuid': '15054135:be3426c6:f1387822:49830fb6',
-                                              'path': '/dev/md128',
+                                              'path': '/dev/md/md-name-test:1',
                                               'mm': '9:128',
                                               'device_paths': ['/dev/sdd1']
                                           }]
@@ -171,10 +176,13 @@ unused devices: <none>\n""",
         return self.md_value["mdadm"][arg_list[4]]
 
     def mock_dev_major_minor(self, path):
-        if (self.devices_data['node_block_devices'].has_key(path)):
+        if (path in self.devices_data['node_block_devices']):
             return self.devices_data['node_block_devices'][path]
         else:
             return None
+
+    def mock_find_block_devs(self, folder):
+        return self.md_value["find_block_devs"]
 
     def _setup_md_raid(self, devices_filename, dmsetup_filename, md_value):
         dm_setup_table = self._load_dmsetup(devices_filename, dmsetup_filename)
@@ -183,11 +191,12 @@ unused devices: <none>\n""",
             with mock.patch('chroma_agent.shell.try_run', self.mock_try_run):
                 with mock.patch('__builtin__.open', self.mock_open):
                     with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor', self.mock_dev_major_minor):
+                        with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._find_block_devs', self.mock_find_block_devs):
 
-                        self.md_value = md_value
-                        self.mock_open.md_value = md_value
+                            self.md_value = md_value
+                            self.mock_open.md_value = md_value
 
-                        return MdRaid(dm_setup_table.block_devices).all()
+                            return MdRaid(dm_setup_table.block_devices).all()
 
     def test_mdraid_pass(self):
         mds = self._setup_md_raid('devices_MdRaid.txt', 'dmsetup_MdRaid.txt', self.md_value_good)
@@ -196,8 +205,7 @@ unused devices: <none>\n""",
 
         for value in self.md_value_good['results']:
             uuid = value['uuid']
-
-            self.assertTrue(mds.has_key(uuid))
+            self.assertTrue(uuid in mds)
             self.assertTrue(mds[uuid]['path'] == value['path'])
             self.assertTrue(mds[uuid]['block_device'] == value['mm'])
             self.assertTrue(len(mds[uuid]['drives']) == len(value['device_paths']))
@@ -211,4 +219,3 @@ unused devices: <none>\n""",
 
         # No data should come back
         self.assertTrue(len(mds) == 0)
-
