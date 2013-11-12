@@ -21,7 +21,7 @@ set -ex
 
 wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 yum install -y epel-release-6-8.noarch.rpm
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel rabbitmq-server postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server erlang-inets
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
@@ -42,8 +42,41 @@ sed -i "s/Defaults    requiretty/# Defaults    requiretty/g" /etc/sudoers
 sed -i "s/rabbitmq:x:\([0-9]*\):[a-z]*/rabbitmq:x:\1:chromatest/g" /etc/group
 # End witchcraft
 
+export PATH=$PATH:/usr/lib/rabbitmq/bin/
+rabbitmq-plugins enable rabbitmq_management
 service rabbitmq-server start &> rabbitmq_startup.log
 cat rabbitmq_startup.log
+
+
+# Testing rabbitmq and wait to be up and running
+COUNTER=0
+MAX_TRIALS=15
+rabbitmqctl status
+while [[ \$? -ne 0 && \$COUNTER -ne \$MAX_TRIALS ]];
+    do
+    sleep 2
+    let COUNTER=COUNTER+1
+    rabbitmqctl status
+done;
+echo "counter: \$COUNTER, trials: \$MAX_TRIALS"
+[[ \$COUNTER -eq \$MAX_TRIALS ]] && { echo "RabbitMQ cannot be started!"; exit 1; }
+
+# Testing rabbitmq internal messaging
+curl http://localhost:15672/cli/rabbitmqadmin > \$HOME/rabbitmqadmin
+chmod u+x \$HOME/rabbitmqadmin
+\$HOME/rabbitmqadmin declare queue name=test-queue durable=false
+\$HOME/rabbitmqadmin publish exchange=amq.default routing_key=test-queue payload="test_message"
+
+COUNTER=0
+grep_msg="\$HOME/rabbitmqadmin get queue=test-queue requeue=false | grep test_message"
+while [[ \$(eval \$grep_msg) == "" && \$COUNTER -ne \$MAX_TRIALS ]];
+    do
+    sleep 2
+    let COUNTER=COUNTER+1
+done;
+echo "counter: \$COUNTER, trials: \$MAX_TRIALS"
+[[ \$COUNTER -eq \$MAX_TRIALS ]] && { echo "RabbitMQ cannot receive messages!"; exit 1; }
+
 
 # Configure postgres
 chkconfig postgresql on
