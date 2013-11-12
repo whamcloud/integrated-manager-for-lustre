@@ -29,7 +29,7 @@ else
 	# in order to easily understand the provenance of a package.
 	# The commits-since-tag number will ensure that newer packages
 	# are preferred, since RPM's version parsing works left-to-right.
-	PACKAGE_RELEASE := $(PACKAGE_RELEASE).$(BUILD_NUMBER).$(JENKINS_BUILD_TAG)
+	PACKAGE_RELEASE := $(BUILD_NUMBER).$(PACKAGE_RELEASE).$(JENKINS_BUILD_TAG)
 
 	# Display this in the UI to make ID easier in dev/test
 	BUILD_NUMBER := $(JENKINS_BUILD_TAG)
