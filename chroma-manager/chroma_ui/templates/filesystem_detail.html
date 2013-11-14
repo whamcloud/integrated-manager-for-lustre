@@ -377,9 +377,9 @@
             )
           );
           $inodes_text.html(
-            "%s/%s inodes".sprintf(
-              formatBytes(filesystem.files_total - filesystem.files_free),
-              formatBytes(filesystem.files_total)
+            "%s/%s files".sprintf(
+              formatBigNumber(filesystem.files_total - filesystem.files_free),
+              formatBigNumber(filesystem.files_total)
             )
           );
           LoadFSGraph_EditFS(filesystem);
