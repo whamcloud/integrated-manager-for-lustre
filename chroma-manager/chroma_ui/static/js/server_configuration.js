@@ -79,6 +79,7 @@ function add_host_dialog(serverProfile) {
   element.find('.add_host_back_button').button();
   element.find('.add_host_skip_button').button();
   element.find('.add_host_ssh_button').button();
+  element.find('.add_host_revalidate_button').button();
   element.find('.add_host_https_generate_button').button();
   element.find('.add_host_https_back_button').button();
   element.find('.choice_ssh_auth').buttonset();
@@ -161,17 +162,23 @@ function add_host_dialog(serverProfile) {
 
   var test_xhr;
   var test_skipped;
-  element.find('.add_host_submit_button').click(function(ev) {
 
-      var form_params = element
-          .find('form').find('input, textarea, select')
-          .filter(':visible')
+  function gatherParams() {
+      var $form = element.find('form');
+      var auth_group = $($form.find('div.choice_ssh_auth input[type="radio"]').filter(':checked')[0]).val();
+      var form_params = $form
+          .find('div#' + auth_group)
+          .find('input, textarea, select')
+          .add('#id_add_host_address, select.add_server_profile, #id_failed_validations')
           .serializeArray()
           .reduce(function (hash, pair) {
               hash[pair.name] = pair.value;
               return hash;
-          }, {commit: true});
-
+          }, {commit: true, auth_type: auth_group});
+      return form_params;
+  }
+  element.find('.add_host_submit_button').click(function(ev) {
+      var form_params = gatherParams();
       test_xhr = ValidatedForm.save(element.find('.add_host_prompt'), Api.post, "/api/test_host/", {},
           function(data) {
               if (!test_skipped) {
@@ -239,38 +246,17 @@ function add_host_dialog(serverProfile) {
     }
 
     //  Build params from add host dialog form elements based on checked radio
-    var auth_group = $(element.find('input[type="radio"]').filter(':checked')[0]).val();
-    var post_params = element
-      .find('form')
-      .find('div#' + auth_group)
-      .find('input, textarea, select')
-      .serializeArray()
-      .reduce(function (hash, pair) {
-          hash[pair.name] = pair.value;
-          return hash;
-      }, {commit: true});
+    var post_params = gatherParams();
 
-      post_params['failed_validations'] = element
-          .find('form')
-          .find('#id_failed_validations').val();
-
-      post_params['address'] = element
-          .find('form')
-          .find('#id_add_host_address').val();
-
-      post_params['server_profile'] = element
-          .find('form')
-          .find('.add_server_profile').val();
-
-      serverProfile(post_params.server_profile);
-      Api.post('host/', post_params,
-                  success_callback = function(data)
-                  {
-                    select_page('.add_host_complete', ssh_pages);
-                    $('.add_host_back_button').focus();
-                    $('#server_configuration').dataTable().fnDraw();
-                    ApiCache.put('host', data.host);
-                  });
+    serverProfile(post_params.server_profile);
+    Api.post('host/', post_params,
+                success_callback = function(data)
+                {
+                  select_page('.add_host_complete', ssh_pages);
+                  $('.add_host_back_button').focus();
+                  $('#server_configuration').dataTable().fnDraw();
+                  ApiCache.put('host', data.host);
+                });
   }
 
   /* HTTPS buttons */
@@ -334,6 +320,11 @@ function add_host_dialog(serverProfile) {
   element.find('.add_host_close_button').click(function(ev) {
       element.dialog('close');
       ev.preventDefault();
+  });
+
+  element.find('.add_host_revalidate_button').click(function(ev) {
+    element.find('.add_host_submit_button').click();
+    ev.preventDefault();
   });
 
   element.find('.add_host_back_button').click(function(ev) {
