@@ -1,39 +1,71 @@
 <script type="text/javascript" src="{{STATIC_URL}}js/lib/jquery-ui-timepicker-addon.js"></script>
 <script language="javascript" type="text/javascript">
   var LogView = function() {
-    var initialized = false;
-    function draw() {
-      loadObjectSelection('host', $('#logs_hostList'));
+    var initialized = false,
+        cache,
+        maxDate,
+        heading = 'System Logs',
+        dateFormat = 'yyyy-MM-dd HH:mm',
+        basePageTitle = 'Logs';
+
+    function draw(aroundDatetime) {
+      var around,
+          pageTitle = basePageTitle;
+
+      if (_.isUndefined(cache)) {
+        cache = {
+          datetimeFrom: $('#datetime_from'),
+          datetimeTo: $('#datetime_to'),
+          onlyLustre: $('#id_only_lustre'),
+          systemLogs: $('#system_logs'),
+          allLogContent: $('#all_log_content'),
+          logsHotList: $('#logs_hostList')
+        };
+      }
+
+      loadObjectSelection('host', cache.logsHotList);
+
+      if (_.isString(aroundDatetime)) {
+        around = XDate(aroundDatetime);
+        cache.datetimeFrom.val(around.clone().addMinutes(-5).toString(dateFormat));
+        cache.datetimeTo.val(around.clone().addMinutes(5).toString(dateFormat));
+        cache.onlyLustre.attr('checked', true);
+        cache.systemLogs.html("%s - Around %s".sprintf(heading, shortLocalTime(around.toString(dateFormat))));
+
+        pageTitle = [pageTitle, "- Around", around.toString(dateFormat)].join(' ');
+      }
+
+      angular.element('html').injector().get('pageTitle').set(pageTitle);
+
       if (!initialized) {
         init();
         initialized = true;
       } else {
-        $('#all_log_content').dataTable().fnDraw();
+        cache.allLogContent.dataTable().fnDraw();
       }
-      angular.element('html').injector().get('pageTitle').set('Configuration - Logs');
     }
     function init()
     {
       //validation for start an end time
-      $('#datetime_from').datetimepicker(
+      cache.datetimeFrom.datetimepicker(
       {
         maxDate: XDate().addSeconds(TIME_OFFSET),
         onSelect: function (selectedDateTime)
         {
           var start = $(this).datetimepicker('getDate');
-          $('#datetime_to').datetimepicker('option', 'minDate', new Date(start.getTime()));
+          cache.datetimeTo.datetimepicker('option', 'minDate', new Date(start.getTime()));
         }
       });
-      $('#datetime_to').datetimepicker(
+      cache.datetimeTo.datetimepicker(
       {
         maxDate: XDate().addSeconds(TIME_OFFSET)
       });
 
       $.datepicker.setDefaults({dateFormat: 'yy-mm-dd'});
-      $('#datetime_from').datetimepicker();
-      $('#datetime_to').datetimepicker();
+      cache.datetimeFrom.datetimepicker();
+      cache.datetimeTo.datetimepicker();
 
-      var oTable = $('#all_log_content').dataTable(
+      var oTable = cache.allLogContent.dataTable(
       {
         "bProcessing": true,
         "bFilter":true,
@@ -43,25 +75,20 @@
         "sAjaxSource": 'log/',
         "fnServerData": function (url, aoData, callback, settings) {
           var filter_args = {};
-          if ( $('#id_only_lustre').is(':checked')) {
+          if ( cache.onlyLustre.is(':checked')) {
             filter_args['message_class__in'] = ['LUSTRE', 'LUSTRE_ERROR']
           }
-          filter_args['host_id'] = $('#logs_hostList').val();
+          filter_args['host_id'] = cache.logsHotList.val();
 
           function timepicker_iso(element) {
             /* Get a timezone-aware Date and then ISO-8601 format it */
             // NB $.trim is used because datetimepicker seems to append a trailing space
             var val_str = $.trim(element.val());
-            if (val_str) {
-              var val = new Date(val_str);
-              return val.toISOString();
-            } else {
-              return val_str;
-            }
+            return val_str ? XDate(val_str).toISOString() : val_str;
           }
 
-          filter_args['datetime__gte'] = timepicker_iso($('#datetime_from'));
-          filter_args['datetime__lte'] = timepicker_iso($('#datetime_to'));
+          filter_args['datetime__gte'] = timepicker_iso(cache.datetimeFrom);
+          filter_args['datetime__lte'] = timepicker_iso(cache.datetimeTo);
           $.each(aoData, function(i, param) {
               if (param.name == 'sSearch') {
                   filter_args['message__icontains'] = param.value;
@@ -105,8 +132,13 @@
       });
 
       //click handler for filter
-      $('#log_filter_btn').click(function()
-      {
+      $('#log_filter_btn').click(function() {
+        var pageTitleService = angular.element('html').injector().get('pageTitle');
+
+        cache.systemLogs.html(heading);
+        Backbone.history.navigate("log/");
+        if (pageTitleService.get() !== basePageTitle) pageTitleService.set(basePageTitle);
+
         oTable.fnDraw();
       });
     }
@@ -116,7 +148,7 @@
 </script>
 <h1 class="page-header"><i class="icon-book"></i> Logs</h1>
 <div class='content'>
-<h2 class="section_header">System Logs</h2>
+<h2 class="section_header" id="system_logs">System Logs</h2>
   <table width="100%" border="0" cellspacing="0" cellpadding="3" align="center">
     <tr style="background-color:#cccccc;">
       <td width="30%">

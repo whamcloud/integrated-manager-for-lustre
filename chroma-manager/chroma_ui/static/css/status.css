@@ -151,6 +151,10 @@ div[ng-controller="StatusCtrl"] div.message .message-body div:first-child {
   margin-bottom: 5px;
 }
 
+div[ng-controller="StatusCtrl"] div.message div.date a.navigation {
+  color: #FFF;
+}
+
 div[ng-controller="StatusCtrl"] div.message .buttons {
   margin-right: 15px;
   margin-top: 13px;
