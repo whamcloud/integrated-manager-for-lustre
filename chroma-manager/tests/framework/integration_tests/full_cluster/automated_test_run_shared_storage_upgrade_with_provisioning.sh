@@ -116,13 +116,16 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# first fetch and install chroma 2.0.0.0
-if [ $JENKINS_URL =  http://hydra-1vm1.lab.whamcloud.com:8080 -o \
-     $JENKINS_URL =  http://hydra-1vm1.lab.whamcloud.com:8080/ ]; then
-    curl -O -u jenkins-pull:${JENKINS_PULL:2cf9b55238c654b00bc37a6e8ccc4caf} "${JENKINS_URL}job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
-else
-    curl -O -u jenkins-pull:${JENKINS_PULL:2cf9b55238c654b00bc37a6e8ccc4caf} "https://build.whamcloudlabs.com/job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
+if [ -z "$JENKINS_PULL" ]; then
+    JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
+# first fetch and install chroma 2.0.0.0
+#if [ $JENKINS_URL = http://hydra-1vm1.lab.whamcloud.com:8080 -o \
+#     $JENKINS_URL = http://hydra-1vm1.lab.whamcloud.com:8080/ ]; then
+    curl -k -O -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
+#else
+#    curl -k -O -u "jenkins-pull:${JENKINS_PULL}" "https://build.whamcloudlabs.com/job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
+#fi
 
 # Install and setup old chroma manager
 scp ieel-1.0.0.tar.gz $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
