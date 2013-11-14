@@ -120,10 +120,10 @@ class AuthorizedHttpRequests(HttpRequests):
         # the tests on a remote system using a proxy.
         if 'https_proxy' in os.environ:
             manager_server = urlparse(self.server_http_url).netloc
-            if manager_server.find(':') > -1:
+            if ':' in manager_server:
                 (manager_server, port) = manager_server.split(':')
 
-            no_proxy = os.environ.get('no_proxy').split(',')
+            no_proxy = os.environ.get('no_proxy', "").split(',')
             will_proxy = True
             for item in no_proxy:
                 if manager_server.endswith(item):
