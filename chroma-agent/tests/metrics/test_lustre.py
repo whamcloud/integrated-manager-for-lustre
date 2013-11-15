@@ -21,6 +21,21 @@ class TestLocalLustreMetrics(unittest.TestCase):
         self.assertEqual(metrics['target']['MGS']['num_exports'], 4)
         self.assertEqual(metrics['lnet']['send_count'], 218887)
 
+    def test_mdt_hsm_metrics(self):
+        """Test that the HSM metrics are collected and aggregated."""
+        audit = LocalAudit()
+        audit.fscontext = os.path.join(self.tests,
+                                     "data/lustre_versions/2.5.0/mds")
+        metrics = audit.metrics()['raw']['lustre']['target']['lustre-MDT0000']['hsm']
+        self.assertEqual(metrics['agents']['idle'], 1)
+        self.assertEqual(metrics['agents']['busy'], 1)
+        self.assertEqual(metrics['agents']['total'], 2)
+
+        self.assertEqual(metrics['actions']['waiting'], 1)
+        self.assertEqual(metrics['actions']['running'], 1)
+        self.assertEqual(metrics['actions']['succeeded'], 1)
+        self.assertEqual(metrics['actions']['errored'], 0)
+
     def test_oss_metrics(self):
         """Test that the various OSS metrics are collected and aggregated."""
         audit = LocalAudit()

@@ -268,6 +268,58 @@ class MdtAudit(TargetAudit):
             'num_exports': 'mdt/%s/num_exports',
         })
 
+    def _parse_hsm_agent_stats(self, stats_root):
+        stats = {
+            'total': 0,
+            'idle': 0,
+            'busy': 0
+        }
+
+        for line in self.read_lines(os.path.join(stats_root, "agents")):
+            # uuid=... archive_id=1 requests=[current:0 ok:1 errors:0]
+            stats['total'] += 1
+            if 'current:0' in line:
+                stats['idle'] += 1
+            else:
+                stats['busy'] += 1
+
+        return stats
+
+    def _parse_hsm_action_stats(self, stats_root):
+        stats = {
+            'waiting': 0,
+            'running': 0,
+            'succeeded': 0,
+            'errored': 0
+        }
+
+        for line in self.read_lines(os.path.join(stats_root, "actions")):
+            if 'status=WAITING' in line:
+                stats['waiting'] += 1
+            elif 'status=SUCCEED' in line:
+                stats['succeeded'] += 1
+            elif 'status=STARTED' in line:
+                stats['running'] += 1
+
+        return stats
+
+    def get_hsm_stats(self, target):
+        control_file = os.path.join(self.target_root, "mdt",
+                                    target, "hsm_control")
+        try:
+            if self.read_string(control_file) != "enabled":
+                return {}
+        except IOError:
+            return {}
+
+        stats_root = os.path.join(self.target_root, "mdt", target, "hsm")
+        agent_stats = self._parse_hsm_agent_stats(stats_root)
+        action_stats = self._parse_hsm_action_stats(stats_root)
+        return {
+            'agents': agent_stats,
+            'actions': action_stats
+        }
+
     def read_stats(self, target):
         """Aggregate mish-mash of MDT stats into one stats dict."""
         stats = {}
@@ -280,6 +332,7 @@ class MdtAudit(TargetAudit):
         for mdt in [dev for dev in self.devices() if dev['type'] == 'mdt']:
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
             self.raw_metrics['lustre']['target'][mdt['name']]['stats'] = self.read_stats(mdt['name'])
+            self.raw_metrics['lustre']['target'][mdt['name']]['hsm'] = self.get_hsm_stats(mdt['name'])
 
 
 class MgsAudit(TargetAudit):

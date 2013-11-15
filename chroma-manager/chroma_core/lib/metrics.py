@@ -209,6 +209,7 @@ class TargetMetricStore(MetricStore):
         stats = metrics.pop('stats', {})
         metrics.pop('brw_stats', None)  # ignore brw_stats
         job_stats = metrics.pop('job_stats', [])
+        hsm_stats = metrics.pop('hsm', {})
         update = dict((key, {'value': metrics[key], 'type': 'Gauge'}) for key in metrics)
 
         for key in stats:
@@ -250,6 +251,12 @@ class TargetMetricStore(MetricStore):
                 for key in ('read', 'write'):
                     update['job_{0}_bytes_{1}'.format(key, stat['job_id'])] = {'value': stat[key]['sum'], 'type': jobid_var}
                     update['job_{0}_ops_{1}'.format(key, stat['job_id'])] = {'value': stat[key]['samples'], 'type': jobid_var}
+
+        for group in hsm_stats:
+            for stat in hsm_stats[group]:
+                ds_name = "hsm_%s_%s" % (group, stat)
+                update[ds_name] = {'value': int(hsm_stats[group][stat]),
+                                   'type': 'Gauge'}
 
         return list(MetricStore.serialize(self, {update_time: update}))
 
