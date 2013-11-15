@@ -55,7 +55,7 @@ ssh chromatest@$TEST_RUNNER <<"EOF"
 set -ex
 
 # Install Chromedriver
-wget http://chromedriver.storage.googleapis.com/2.4/chromedriver_linux64.zip
+wget http://chromedriver.storage.googleapis.com/2.6/chromedriver_linux64.zip
 unzip chromedriver_linux64.zip
 mkdir $HOME/bin
 mv chromedriver $HOME/bin/chromedriver
