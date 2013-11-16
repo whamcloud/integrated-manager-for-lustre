@@ -77,4 +77,4 @@ class LogMessage(models.Model):
             return MessageClass.NORMAL
 
     def __str__(self):
-        return "%s %s %s %s %s" % (self.datetime, self.fqdn, self.priority, self.source, self.message)
+        return "%s %s %s %s %s %s" % (self.datetime, self.fqdn, self.severity, self.facility, self.tag, self.message)
