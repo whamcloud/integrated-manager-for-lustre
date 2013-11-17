@@ -40,6 +40,7 @@ def wait_for_transition(driver, timeout):
     raise RuntimeError('Timeout after %s seconds waiting for transition to complete' % timeout)
 
 
+# Setup up the main log for test actions
 log = logging.getLogger('test')
 log.setLevel(logging.DEBUG)
 handler = logging.FileHandler('selenium_test.log')
@@ -47,6 +48,15 @@ handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 log.addHandler(handler)
+
+# Setup the log for Chrome console messages
+console_log = logging.getLogger('console')
+console_log.setLevel(logging.DEBUG)
+console_handler = logging.FileHandler('console.log')
+console_handler.setLevel(logging.DEBUG)
+console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(console_formatter)
+console_log.addHandler(console_handler)
 
 
 class SeleniumBaseTestCase(TestCase):
@@ -94,6 +104,7 @@ class SeleniumBaseTestCase(TestCase):
         self.driver.get(config['chroma_managers'][0]['server_http_url'])
 
         self.addCleanup(self.stop_driver)
+        self.addCleanup(self._log_console)
         self.addCleanup(self._take_screenshot_on_failure)
 
         self.driver.set_script_timeout(90)
@@ -267,3 +278,8 @@ class SeleniumBaseTestCase(TestCase):
                 shutil.copy(os.path.join(os.getcwd(), "chromedriver.log"), new_filename)
             except:
                 self.log.error("Did not find chromedriver.log in the expected location. Skipping.")
+
+    def _log_console(self):
+        if config['chroma_managers'][0]['browser'] == 'Chrome':
+            console = self.driver.get_log('browser')
+            console_log.info("Console for test %s: '%s'" % (self.id(), console))
