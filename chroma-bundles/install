@@ -491,6 +491,7 @@ def _test_repos():
 
         failures = 0
         for url in urls:
+            url_str = url
             xmlrpc = url.find("/XMLRPC/")
             if xmlrpc != -1:
                 url = url[0:xmlrpc] + "/rpc/api"
@@ -525,7 +526,7 @@ def _test_repos():
                     urllib2.urlopen(url, timeout=5)
                 except urllib2.URLError:
                     failures += 1
-                    failed_urls.append(url)
+                    failed_urls.append(url_str)
                 else:
                     continue
 
