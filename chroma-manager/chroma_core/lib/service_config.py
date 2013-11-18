@@ -159,8 +159,15 @@ class NTPConfig:
                 if server != "localhost" and not added_server:
                     line = "%sserver %s\n%s%s" % (self.SENTINEL, server, self.SENTINEL, line)
                     added_server = True
+            # EL 6.4
             if server == "localhost" and line.startswith("#fudge"):
                 line = "%s%sserver  127.127.1.0     # local clock\nfudge   127.127.1.0 stratum 10\n%s" % (line, self.SENTINEL, self.SENTINEL)
+                added_server = True
+            # EL 6.5
+            if server == "localhost" and not added_server and \
+               line.startswith("# Enable public key cryptography."):
+                line = "%sserver  127.127.1.0     # local clock\nfudge   127.127.1.0 stratum 10\n%s\n%s" % (self.SENTINEL, self.SENTINEL, line)
+                added_server = True
             os.write(tmp_f, line)
         self.close_conf(tmp_f, tmp_name, f)
 
