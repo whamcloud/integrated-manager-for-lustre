@@ -24,15 +24,20 @@
 """This script substitutes modifies supervisord.conf with production-specific settings"""
 
 
-from ConfigParser import ConfigParser
+from ConfigParser import SafeConfigParser
 import sys
 
 base_config_file = sys.argv[1]
 
-config = ConfigParser()
+config = SafeConfigParser()
 config.readfp(open(base_config_file, 'r'))
 
 # Remove the apache section, it is run as a separate init script in production
 config.remove_section('program:httpd')
+
+# Replace the primus section argument to indicate it's running in production
+command = config.get('program:primus', 'command')
+new_command = command.replace('--type=dev', '--type=prod')
+config.set('program:primus', 'command', new_command)
 
 config.write(sys.stdout)
