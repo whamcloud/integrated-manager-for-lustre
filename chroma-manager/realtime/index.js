@@ -25,6 +25,21 @@
 var domain = require('domain'),
   d = domain.create();
 
+function cleanShutdown (signal) {
+  console.log('Caught ' + signal + ', shutting down cleanly.');
+  // TODO: Is there more that should be done to shut down cleanly?
+  d.exit();
+  process.exit(0);
+}
+
+process.on('SIGINT', function () {
+  cleanShutdown('SIGINT (Ctrl-C)');
+});
+
+process.on('SIGTERM', function () {
+  cleanShutdown('SIGTERM');
+});
+
 d.on('error', function(err) {
   console.log(err);
 

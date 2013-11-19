@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # INTEL CONFIDENTIAL
 #
@@ -21,17 +20,12 @@
 # express and approved by Intel in writing.
 
 
-"""This script substitutes production mode values into the apache
-configuration template, and outputs the configuration on stdout"""
-
-import sys
-from production_settings import production_settings
-
-template_file = sys.argv[1]
-
-
-config = open(template_file).read()
-for setting, value in production_settings.items():
-    config = config.replace("{{%s}}" % setting, value)
-
-print config
+production_settings = {
+    "app": "/usr/share/chroma-manager",
+    "REPO_PATH": "/var/lib/chroma/repo",
+    "HTTP_FRONTEND_PORT": "80",
+    "HTTPS_FRONTEND_PORT": "443",
+    "HTTP_AGENT_PORT": "8002",
+    "HTTP_API_PORT": "8001",
+    "ssl": "/var/lib/chroma"
+}
