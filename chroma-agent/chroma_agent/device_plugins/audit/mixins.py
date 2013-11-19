@@ -47,21 +47,24 @@ class FileSystemMixin(object):
         The filesystem context (defaults to "/")""")
 
     def read_lines(self, filename, filter_f=None):
-        """Read/strip all lines from filename and return them as a list.
+        """Return a generator for stripped lines read from the file.
 
         If the optional filter_f argument is supplied, it will be applied
         prior to stripping each line.
         """
-        fh = open(self.fscontext.abs(filename))
-        try:
-            return [line.rstrip("\n") for line in
-                    filter_f and filter(filter_f, fh.readlines()) or fh.readlines()]
-        finally:
-            fh.close()
+        for line in open(self.fscontext.abs(filename)):
+            if filter_f:
+                if filter_f(line):
+                    yield line.rstrip("\n")
+            else:
+                yield line.rstrip("\n")
 
     def read_string(self, filename):
-        """Read one line from a file and return it as a string."""
-        return self.read_lines(filename)[0]
+        """Read the first line from a file and return it as a string."""
+        try:
+            return self.read_lines(filename).next()
+        except StopIteration:
+            raise RuntimeError("read_string() on empty file: %s" % filename)
 
     def read_int(self, filename):
         """Read one line from a file and return it as an int."""

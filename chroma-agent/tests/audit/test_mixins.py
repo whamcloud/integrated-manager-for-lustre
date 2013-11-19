@@ -24,7 +24,7 @@ class TestFileSystemMixinWithDefaultContext(unittest.TestCase):
     def test_default_context(self):
         """Test that the mixin works without a context supplied."""
         filter = lambda line: line.startswith("root")
-        assert "root" in self.audit.read_lines("/etc/passwd", filter)[0]
+        assert "root" in self.audit.read_lines("/etc/passwd", filter).next()
 
 
 class TestFileSystemMixinWithContextInConstructor(unittest.TestCase):
@@ -46,13 +46,13 @@ class TestFileSystemMixinWithContextInConstructor(unittest.TestCase):
     def test_fscontext_in_constructor(self):
         """Test that the mixin works with fscontext supplied in constructor."""
         filter = lambda line: line.startswith("root")
-        assert "root" in self.constructor.read_lines("/etc/passwd", filter)[0]
+        assert "root" in self.constructor.read_lines("/etc/passwd", filter).next()
 
     def test_fscontext_set_later(self):
         """Test that the mixin works with fscontext set after instantiation."""
         self.set_later.context = self.test_root
         filter = lambda line: line.startswith("root")
-        assert "root" in self.set_later.read_lines("/etc/passwd", filter)[0]
+        assert "root" in self.set_later.read_lines("/etc/passwd", filter).next()
 
 
 class TestFileSystemMixin(unittest.TestCase):
@@ -76,15 +76,15 @@ build:  1.8.3-20100409182943-PRISTINE-2.6.18-164.11.1.el5_lustre.1.8.3
         self.audit.fscontext = self.test_root
 
     def test_readlines(self):
-        """Test that readlines() returns a list of strings."""
+        """Test that read_lines() returns a generator of strings."""
         lines = self.audit.read_lines("/proc/fs/lustre/version")
-        self.assertEqual(lines[0], "lustre: 1.8.3")
+        self.assertEqual(lines.next(), "lustre: 1.8.3")
 
     def test_readlines_filter(self):
         """Test that readlines() accepts and uses a line filter function."""
         filter = lambda line: "build:" in line
         lines = self.audit.read_lines("/proc/fs/lustre/version", filter)
-        self.assertEqual(lines[0], "build:  1.8.3-20100409182943-PRISTINE-2.6.18-164.11.1.el5_lustre.1.8.3")
+        self.assertEqual(lines.next(), "build:  1.8.3-20100409182943-PRISTINE-2.6.18-164.11.1.el5_lustre.1.8.3")
 
     def test_readstring(self):
         """Test that read_string() returns a single string."""
