@@ -41,7 +41,7 @@
       "device_paths": [
 
       ],
-      "distro": "el6.4",
+      "distro": "rhel6.5",
       "status_command": "virsh domstate hydra-4vm2",
       "address": "hydra-4vm2.lab.whamcloud.com",
       "host": "hydra-4",
@@ -61,7 +61,7 @@
       "device_paths": [
 
       ],
-      "distro": "el6.4",
+      "distro": "rhel6.5",
       "users": [
         {
           "username": "debug",
@@ -92,7 +92,7 @@
       "device_paths": [
 
       ],
-      "distro": "el6.4",
+      "distro": "rhel6.5",
       "address": "hydra-4vm4.lab.whamcloud.com",
       "status_command": "virsh domstate hydra-4vm4",
       "host": "hydra-4",
@@ -116,7 +116,7 @@
 
       ],
       "root_password": "lustre",
-      "distro": "el6.4",
+      "distro": "rhel6.5",
       "bridges": ["a"],
       "address": "hydra-4vm5.lab.whamcloud.com",
       "status_command": "virsh domstate hydra-4vm5",
@@ -143,7 +143,7 @@
         "/dev/disk/by-id/scsi-1IET_00010005"
       ],
       "root_password": "lustre",
-      "distro": "el6.4",
+      "distro": "rhel6.5",
       "bridges": ["a"],
       "address": "hydra-4vm6.lab.whamcloud.com",
       "status_command": "virsh domstate hydra-4vm6",
@@ -170,7 +170,7 @@
         "/dev/disk/by-id/scsi-1IET_00010005"
       ],
       "root_password": "lustre",
-      "distro": "el6.4",
+      "distro": "rhel6.5",
       "bridges": ["b"],
       "address": "hydra-4vm7.lab.whamcloud.com",
       "status_command": "virsh domstate hydra-4vm7",
@@ -197,7 +197,7 @@
         "/dev/disk/by-id/scsi-1IET_00010005"
       ],
       "root_password": "lustre",
-      "distro": "el6.4",
+      "distro": "rhel6.5",
       "bridges": ["b"],
       "address": "hydra-4vm8.lab.whamcloud.com",
       "status_command": "virsh domstate hydra-4vm8",

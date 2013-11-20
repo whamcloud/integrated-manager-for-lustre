@@ -11,13 +11,13 @@
     "pacemaker_hard_reset": true,
     "test_runners": [
         {
-            "distro": "el6.4",
+            "distro": "rhel6.5",
             "repos": ["chroma"]
         }
     ], 
     "chroma_managers": [
         {
-            "distro": "el6.4",
+            "distro": "rhel6.5",
             "repos": ["chroma"],
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug",
@@ -27,7 +27,7 @@
     ],
     "lustre_servers": [
         {
-            "distro": "el6.4",
+            "distro": "rhel6.5",
             "root_password": "lustre",
             "repos": ["chroma"],
             "bridges": ["a"],
@@ -37,7 +37,7 @@
             }
         },
        {
-            "distro": "el6.4",
+            "distro": "rhel6.5",
             "root_password": "lustre",
             "repos": ["chroma"],
             "bridges": ["a"],
@@ -47,7 +47,7 @@
             }
         },
        {
-            "distro": "el6.4",
+            "distro": "rhel6.5",
             "root_password": "lustre",
             "repos": ["chroma"],
             "bridges": ["b"],
@@ -57,7 +57,7 @@
             }
         },
        {
-            "distro": "el6.4",
+            "distro": "rhel6.5",
             "root_password": "lustre",
             "repos": ["chroma"],
             "bridges": ["b"],
@@ -69,7 +69,7 @@
     ],
     "lustre_clients": {
         "client1": {
-            "distro": "el6.4",
+            "distro": "rhel6.5",
             "lustre_client_version": "2.3.0"
         }
     },
