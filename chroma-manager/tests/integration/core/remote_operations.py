@@ -1018,3 +1018,12 @@ omping -T %s -c %s %s
 iptables -D INPUT -p udp --dport 4321 -j ACCEPT""" % (timeout, count,
                               " ".join([s['nodename'] for s in servers])))
         return r.stdout.read()
+
+    def yum_update(self, server):
+        self._ssh_address(server['address'], "yum -y update")
+
+    def default_boot_kernel_path(self, server):
+        r = self._ssh_address(server['address'], "grubby --default-kernel")
+        stdout = r.stdout.read().rstrip()
+
+        return stdout

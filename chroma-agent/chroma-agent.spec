@@ -124,10 +124,9 @@ if [ $1 -lt 2 ]; then
     done
 elif [ $1 -gt 1 ]; then
     # upgrade
-    #restart corosync and pacemaker
-    service pacemaker stop
-    service corosync restart
-    service pacemaker start
+    # do nothing, the manager will restart pacemaker after the updates
+    # are complete
+    :
 fi
 
 %postun management
@@ -143,8 +142,14 @@ EOF
 w
 q
 EOF
-
 fi
+
+# when a kernel is installed, make sure that our kernel is reset back to
+# being the preferred boot kernel
+%triggerin management -- kernel
+MOST_RECENT_KERNEL_VERSION=$(rpm -q kernel --qf "%{INSTALLTIME} %{VERSION}-%{RELEASE}.%{ARCH}\n" | sort -nr | sed -n -e '/_lustre/{s/.* //p;q}')
+grubby --set-default=/boot/vmlinuz-$MOST_RECENT_KERNEL_VERSION
+
 %files -f base.files
 %defattr(-,root,root)
 %attr(0755,root,root)/etc/init.d/chroma-agent
