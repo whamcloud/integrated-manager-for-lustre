@@ -24,7 +24,7 @@ from django.db import models
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
 from chroma_core.models.target import ManagedTargetMount, ManagedMgs, FilesystemMember, ManagedTarget
 from chroma_core.models.host import NoLNetInfo
-from chroma_core.models.jobs import StatefulObject, StateChangeJob, StateLock
+from chroma_core.models.jobs import StatefulObject, StateChangeJob, StateLock, Job
 from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
 from django.db.models import Q
@@ -164,6 +164,9 @@ class RemoveFilesystemJob(StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
     long_description = help_text["remove_file_system"]
 
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 20
+
     def get_requires_confirmation(self):
         return True
 
@@ -232,6 +235,9 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
     long_description = help_text["start_file_system"]
 
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
     def description(self):
         return "Start file system %s" % self.filesystem.name
 
@@ -251,6 +257,9 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     filesystem = models.ForeignKey('ManagedFilesystem')
     long_description = help_text["start_file_system"]
 
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 20
+
     def description(self):
         return "Start filesystem %s" % self.filesystem.name
 
@@ -268,6 +277,9 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_transition = (ManagedFilesystem, 'unavailable', 'stopped')
     filesystem = models.ForeignKey('ManagedFilesystem')
     long_description = help_text["stop_file_system"]
+
+    display_group = Job.JOB_GROUPS.INFREQUENT
+    display_order = 30
 
     def description(self):
         return "Stop file system %s" % self.filesystem.name
@@ -297,6 +309,9 @@ class ForgetFilesystemJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    display_group = Job.JOB_GROUPS.RARE
+    display_order = 40
 
     state_transition = (ManagedFilesystem, ['unavailable', 'stopped', 'available'], 'forgotten')
     stateful_object = 'filesystem'

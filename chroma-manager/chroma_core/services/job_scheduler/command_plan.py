@@ -56,6 +56,7 @@ class Transition(object):
         return hash((self.stateful_object.__hash__(), self.old_state, self.new_state))
 
     def to_job(self):
+
         job_klass = self.stateful_object.get_job_class(self.old_state, self.new_state)
         stateful_object_attr = job_klass.stateful_object
         kwargs = {stateful_object_attr: self.stateful_object, 'old_state': self.old_state}

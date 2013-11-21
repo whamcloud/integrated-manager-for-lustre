@@ -640,6 +640,9 @@ class DeployHostJob(StateChangeJob):
     # Not cancellable because uses SSH rather than usual agent comms
     cancellable = False
 
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 10
+
     def __init__(self, *args, **kwargs):
         super(DeployHostJob, self).__init__(*args, **kwargs)
 
@@ -722,6 +725,9 @@ class SetupHostJob(StateChangeJob):
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
     state_verb = 'Set up server'
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 20
 
     def description(self):
         return "Set up server %s" % self.managed_host
@@ -851,6 +857,9 @@ class LoadLNetJob(StateChangeJob):
     state_verb = 'Load LNet'
     long_description = help_text["start_lnet"]
 
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 30
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -868,6 +877,9 @@ class UnloadLNetJob(StateChangeJob):
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Unload LNet'
     long_description = help_text["unload_lnet"]
+
+    display_group = Job.JOB_GROUPS.RARE
+    display_order = 110
 
     class Meta:
         app_label = 'chroma_core'
@@ -887,6 +899,9 @@ class StartLNetJob(StateChangeJob):
     state_verb = 'Start LNet'
     long_description = help_text["start_lnet"]
 
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 40
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -904,6 +919,9 @@ class StopLNetJob(StateChangeJob):
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Stop LNet'
     long_description = help_text["stop_lnet"]
+
+    display_group = Job.JOB_GROUPS.RARE
+    display_order = 100
 
     class Meta:
         app_label = 'chroma_core'
@@ -981,6 +999,9 @@ class RemoveHostJob(StateChangeJob):
 
     requires_confirmation = True
 
+    display_group = Job.JOB_GROUPS.EMERGENCY
+    display_order = 120
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -1048,6 +1069,9 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     long_description = help_text['force_remove']
 
+    display_group = Job.JOB_GROUPS.LAST_RESORT
+    display_order = 140
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -1108,6 +1132,9 @@ class RebootHostJob(AdvertisedJob):
 
     verb = "Reboot"
 
+    display_group = Job.JOB_GROUPS.INFREQUENT
+    display_order = 50
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -1163,6 +1190,9 @@ class ShutdownHostJob(AdvertisedJob):
 
     verb = "Shutdown"
 
+    display_group = Job.JOB_GROUPS.INFREQUENT
+    display_order = 60
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -1215,6 +1245,9 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
     long_description = help_text['remove_unconfigured_server']
 
     requires_confirmation = True
+
+    display_group = Job.JOB_GROUPS.EMERGENCY
+    display_order = 130
 
     class Meta:
         app_label = 'chroma_core'

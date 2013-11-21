@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import traceback
 
 from django.db import models
@@ -274,26 +274,36 @@ class StatefulObject(models.Model):
             return list(set(self.transition_map[begin_state]))
 
     def get_verb(self, begin_state, end_state):
-        """begin_state need not be adjacent but there must be a route between them"""
+        """Return the GUI short (verb) and long description of the Job that is last in the route between the states
+
+        begin_state need not be adjacent to the end_state, but but there must be a transitive route between them
+        """
+
+        job_cls = self.get_job_class(begin_state, end_state, last_job_in_route=True)
+        return {
+            "state_verb": job_cls.state_verb,
+            "long_description": job_cls.get_long_description(self),
+        }
+
+    def get_job_class(self, begin_state, end_state, last_job_in_route=False):
+        """Get the Job class that can be used to move any appropriate StatefulObject from begin_state to end_state
+
+        By default, the begin_state and end_state must be adjacent
+        (i.e. get from one to another with one StateChangeJob)
+
+        if last_job_in_route is True, however, then the begin_state and end_state need not be adjacent
+        (i.e. get from one to the other with more then one StateChangeJob).  In this case, the Job class returned
+        is the last job in the list of jobs required.
+        """
+
         if not hasattr(self, 'route_map') or not hasattr(self, 'job_class_map'):
             self._build_maps()
 
-        route = self.route_map[(begin_state, end_state)]
-        job_cls = self.job_class_map[(route[-2], route[-1])]
-
-        return {
-            "state_verb": job_cls.state_verb,
-            "long_description": job_cls.get_long_description(self)
-        }
-
-    @classmethod
-    def get_job_class(cls, begin_state, end_state):
-        """begin_state and end_state must be adjacent (i.e. get from one to another
-           with one StateChangeJob)"""
-        if not hasattr(cls, 'route_map') or not hasattr(cls, 'job_class_map'):
-            cls._build_maps()
-
-        return cls.job_class_map[(begin_state, end_state)]
+        if last_job_in_route:
+            route = self.route_map[(begin_state, end_state)]
+            return self.job_class_map[(route[-2], route[-1])]
+        else:
+            return self.job_class_map[(begin_state, end_state)]
 
     def get_dependent_objects(self):
         """Get all objects which MAY be depending on the state of this object"""
@@ -382,6 +392,23 @@ class Job(models.Model):
     locks_json = models.TextField()
 
     long_description = None
+
+    # Job subclasses can provide one of these group values to assert the job group assignment
+    JOB_GROUPS = namedtuple('GROUPS', 'COMMON, INFREQUENT, RARE, EMERGENCY, LAST_RESORT, DEFAULT')(1, 2, 3, 4, 5, 1000)
+
+    # The UX may display Jobs grouped.  Exactly how this happens is not defined in the backend.  But, you can control
+    # the relative group of a job by specificing a 'group' attribute and assigning it to a choice from the GROUP
+    # object above.  The default is to have the DEFAULT group.  This group will probably appear last.
+    display_group = JOB_GROUPS.DEFAULT
+
+    # display_order is a numeric index of the relative position of the job in a list.  Jobs are presented in different
+    # contexts in the UI, typically defined by state and object type a job would act on.  This makes the order a bit
+    # course grained, as this is the order to cover all cases.  Job subclasses provide display_order attrs.
+    # appear at the top, and 2's after, an so on.  It is important for you to know roughly what jobs will appear
+    # together at any presentation the application in in order to set this properly.  Look at the jobs you'd typically
+    # see in a list, and look at their order attributes.  Trying to fit any new jobs in.  There can be gaps in the
+    # sequence of numbers.  The intent is that the Job will be sorted numerically ascending.
+    display_order = DEFAULT_ORDER = 1000
 
     # Human readable long description of the job.
     @classmethod

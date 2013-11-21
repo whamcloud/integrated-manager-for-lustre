@@ -1350,6 +1350,8 @@ class JobScheduler(object):
                             available_jobs.append({
                                 'verb': aj.verb,
                                 'long_description': aj.get_long_description(stateful_object),
+                                'display_group': aj.display_group,
+                                'display_order': aj.display_order,
                                 'confirmation': aj.get_confirmation(
                                     stateful_object),
                                 'class_name': aj.__name__,

@@ -411,6 +411,9 @@ class PoweronHostJob(AdvertisedJob):
     classes = ['ManagedHost']
     verb = "Power On"
 
+    display_group = Job.JOB_GROUPS.INFREQUENT
+    display_order = 70
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -450,6 +453,9 @@ class PoweroffHostJob(AdvertisedJob):
     classes = ['ManagedHost']
     verb = "Power Off"
 
+    display_group = Job.JOB_GROUPS.INFREQUENT
+    display_order = 80
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -488,6 +494,9 @@ class PowercycleHostJob(AdvertisedJob):
     requires_confirmation = True
     classes = ['ManagedHost']
     verb = "Power cycle"
+
+    display_group = Job.JOB_GROUPS.INFREQUENT
+    display_order = 90
 
     class Meta:
         app_label = 'chroma_core'

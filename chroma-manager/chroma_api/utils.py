@@ -236,11 +236,20 @@ class StatefulModelResource(CustomModelResource):
         #  decorate the transition lists with verbs
         #  and install in the bundle for return
         for idx, bundle in enumerate(to_be_serialized['objects']):
+
             obj_transitions = computed_transitions[str(bundle.obj.id)]
             verbed_trans = self._add_verb(bundle.obj, obj_transitions)
-            to_be_serialized['objects'][idx].data['available_transitions'] = verbed_trans
             obj_jobs = computed_jobs[str(bundle.obj.id)]
-            to_be_serialized['objects'][idx].data['available_jobs'] = obj_jobs
+
+            # TODO: available_transitions is deprecated, use available_actions
+            bundle.data['available_transitions'] = verbed_trans
+
+            # TODO: available_jobs is deprecated, use available_actions
+            bundle.data['available_jobs'] = obj_jobs
+
+            available_actions = sorted(verbed_trans + obj_jobs,
+                                       key=lambda action: action['display_order'])
+            bundle.data['available_actions'] = available_actions
 
         return to_be_serialized
 
@@ -256,7 +265,8 @@ class StatefulModelResource(CustomModelResource):
         transitions = []
         for to_state in raw_transitions:
             try:
-                verb = stateful_object.get_verb(from_state, to_state)
+                # Fetch the last job in a a list of jobs that will tranisiont this object from from_state to to_state
+                job_class = stateful_object.get_job_class(from_state, to_state, last_job_in_route=True)
             except KeyError:
                 log.warning("Object %s in state %s advertised an "
                             "unreachable state %s" % (stateful_object,
@@ -265,11 +275,13 @@ class StatefulModelResource(CustomModelResource):
             else:
                 # NB: a None verb means its an internal
                 # transition that shouldn't be advertised
-                if verb:
+                if job_class.state_verb:
                     transitions.append({
-                        "state": to_state,
-                        "verb": verb["state_verb"],
-                        "long_description": verb["long_description"]
+                        'state': to_state,
+                        'verb': job_class.state_verb,
+                        'long_description': job_class.get_long_description(stateful_object),
+                        'display_group': job_class.display_group,
+                        'display_order': job_class.display_order
                     })
 
         return transitions
