@@ -139,7 +139,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             help_text = "Indicates that the host's fencing configuration should be updated")
 
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['undeployed', 'unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
+    states = ['undeployed', 'unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed', 'deploy_failed']
     initial_state = 'unconfigured'
 
     class Meta:
@@ -169,6 +169,9 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         super(ManagedHost, self).save(*args, **kwargs)
 
     def get_available_states(self, begin_state):
+        if begin_state == 'deploy_failed':
+            return []
+
         if self.immutable_state:
             if begin_state in ['undeployed', 'unconfigured']:
                 return ['removed', 'configured']
@@ -610,6 +613,7 @@ class DeployStep(Step):
             try:
                 registration_result = json.loads(stdout)
             except ValueError:
+                # Not valid JSON
                 raise RuntimeError("Failed to register host %s: rc=%s\n'%s'\n'%s'" % (kwargs['address'], rc, stdout, stderr))
 
             return registration_result['host_id'], registration_result['command_id']
@@ -625,6 +629,8 @@ class AwaitRebootStep(Step):
 
 
 class DeployHostJob(StateChangeJob):
+    """Handles Deployment of the IML agent code base to a new host"""
+
     state_transition = (ManagedHost, 'undeployed', 'unconfigured')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
@@ -653,6 +659,13 @@ class DeployHostJob(StateChangeJob):
                 'address': self.managed_host.address,
                 '__auth_args': self.auth_args},)
         ]
+
+    def on_error(self):
+        """When the job fails, make sure it is in the deploy_failed state, which will disallow any future new states"""
+
+        # There are no known exceptions from this code that have recovery paths.
+        self.managed_host.set_state('deploy_failed')
+        self.managed_host.save()
 
     class Meta:
         app_label = 'chroma_core'

@@ -584,6 +584,9 @@ class JobScheduler(object):
             log.warning("Job %s: No incomplete command while completing" % job.pk)
             command = None
 
+        if errored:
+            job.on_error()
+
         self._job_collection.update(job, 'complete', errored = errored, cancelled = cancelled)
 
         locks = json.loads(job.locks_json)
@@ -1316,11 +1319,6 @@ class JobScheduler(object):
                     # which jobs would actually be legal to add by skipping this
                     # check and using get_expected_state in place of .state below.
                     if self._lock_cache.get_latest_write(stateful_object):
-                        transitions[obj_id] = []
-                    elif stateful_object.state == 'undeployed':
-                        # The deployment failed or is incomplete, no transmissions are possible.
-                        # The only option now is the job Force Remove, which
-                        # is a job defined in available_jobs for objects in this state.
                         transitions[obj_id] = []
                     else:
                         # XXX: could alternatively use expected_state here if you

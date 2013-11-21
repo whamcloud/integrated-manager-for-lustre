@@ -72,7 +72,7 @@ def synthetic_volume_full(primary_host, *args):
     return volume
 
 
-def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None):
+def synthetic_host_optional_profile(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None, server_profile=None):
     """
     Create a ManagedHost + paraphernalia, with states set as if configuration happened successfully
 
@@ -92,7 +92,7 @@ def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn
         fqdn=fqdn,
         nodename=nodename,
         state='lnet_up' if nids else 'configured',
-        server_profile=ServerProfile.objects.get(name='test_profile')
+        server_profile=server_profile
     )
     if nids:
         lnet_configuration = LNetConfiguration.objects.create(host = host, state = 'nids_known')
@@ -111,6 +111,12 @@ def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn
         StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': 'linux', 'host_id': host.id})
 
     return host
+
+
+def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None):
+
+    server_profile = ServerProfile.objects.get(name='test_profile')
+    return synthetic_host_optional_profile(address, nids, storage_resource, fqdn, nodename, server_profile)
 
 
 def _passthrough_create_targets(target_data):

@@ -464,6 +464,17 @@ class Job(models.Model):
     def on_success(self):
         pass
 
+    def on_error(self):
+        """Method called by JobScheduler when a job is completed with job.errored=True
+
+        This allows Job subclasses to do related processing at the time that the JobScheduler has determined the job
+        failed.
+
+        NB: The JobScheduler expects this to return nicely.  Do not raise exceptions or let known exceptions
+        propagate from here.  If you do, that will be seen as a bug and probably crash the JobScheduler.  If you can
+        control the raising of expections, please do.  This approach ensures that actual bugs are not masked."""
+        pass
+
     def __str__(self):
         if self.id:
             id = self.id

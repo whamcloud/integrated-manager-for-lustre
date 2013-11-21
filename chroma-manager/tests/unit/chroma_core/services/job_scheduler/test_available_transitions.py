@@ -203,11 +203,11 @@ class TestAvailableTransitions(TestCase):
             avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id), ])[host.id]
             self.assertTrue(len(avail_jobs) == 0)
 
-    def test_host_undeployed(self):
+    def test_host_deploy_failed(self):
         """Test that an undeployed host will have no transitions"""
 
         host = synthetic_host()
-        host.state = 'undeployed'
+        host.state = 'deploy_failed'
         host.save()
 
         expected_transitions = []
