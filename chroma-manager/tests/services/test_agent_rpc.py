@@ -233,7 +233,6 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         # Running command should have its AgentRpc errored
         running_command = self._get_command(command_id)
         self.assertTrue(running_command.complete)
-        self.assertFalse(running_command.cancelled)
         self.assertTrue(running_command.errored)
 
         # Waiting command should have been marked cancelled
