@@ -105,6 +105,9 @@ class AlertState(models.Model):
     def end_event(self):
         return None
 
+    def message(self):
+        raise NotImplementedError()
+
     class Meta:
         unique_together = ('alert_item_type', 'alert_item_id', 'alert_type', 'active')
         app_label = 'chroma_core'

@@ -141,4 +141,4 @@ class ChromaApiTestCase(ResourceTestCase):
 
                     for o in objects:
                         response = self.api_client.get(o['resource_uri'])
-                        self.assertEqual(response.status_code, 200, "%s: %s %s" % (o['resource_uri'], response.status_code, self.deserialize(response)))
+                        self.assertEqual(response.status_code, 200, "resource_url: %s, %s %s %s" % (o['resource_uri'], response.status_code, self.deserialize(response), o))
