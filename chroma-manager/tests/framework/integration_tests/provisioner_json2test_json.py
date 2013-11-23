@@ -14,10 +14,10 @@ provisioner_json_file.close()
 mcast_groups = {}
 
 
-def mcast_port(vm_host_ip, bridge):
+def mcast_port(vm_host_ip, cluster_number, bridge):
     if not bridge in mcast_groups:
         octets = [int(o) for o in vm_host_ip.split('.')]
-        mcast_base = octets[0] + 6000 + octets[1] + octets[2] + octets[3] * 30
+        mcast_base = octets[0] + 6000 + octets[1] + octets[2] + octets[3] * cluster_number * 30
         group_port = len(mcast_groups) * 2
         mcast_groups[bridge] = str(mcast_base + group_port)
     return mcast_groups[bridge]
@@ -46,6 +46,10 @@ def setup_power_config():
 def setup_corosync_config():
     # NB: This will be wrong if there's ever more than one...
     vm_host_ipaddr = config['hosts'].values()[0]['ip_address']
+    try:
+        cluster_num = config['hosts'].values()[0]['cluster_num'] + 1
+    except KeyError:
+        cluster_num = 1
 
     try:
         for server in config['lustre_servers']:
@@ -53,6 +57,7 @@ def setup_corosync_config():
             # this'll need to be updated.
             bridge = server['bridges'][0]
             server['corosync_config']['mcast_port'] = mcast_port(vm_host_ipaddr,
+                                                                 cluster_num,
                                                                  bridge)
     except KeyError:
         pass
