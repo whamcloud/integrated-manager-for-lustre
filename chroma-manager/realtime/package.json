@@ -1,0 +1,22 @@
+{
+  "name": "realtime",
+  "version": "0.0.1",
+  "description": "Adds realtime capabilites to the ui.",
+  "main": "index.js",
+  "dependencies": {
+    "socket.io": "~0.9.16",
+    "di": "0.0.1",
+    "q": "~0.9.7",
+    "primus": "~1.4.6",
+    "primus-multiplex": "~2.1.1",
+    "lodash": "~2.3.0",
+    "bunyan": "~0.22.0",
+    "request": "~2.27.0",
+    "moment": "~2.4.0"
+  },
+  "devDependencies": {
+    "socket.io-client": "~0.9.16",
+    "sinon": "~1.7.3",
+    "jasmine-sinon": "~0.2.1"
+  }
+}
