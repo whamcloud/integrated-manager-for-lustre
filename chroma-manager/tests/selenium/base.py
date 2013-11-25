@@ -4,6 +4,8 @@ import os
 import shutil
 import sys
 import time
+import json
+
 
 from django.utils.unittest import TestCase
 from selenium import webdriver
@@ -282,4 +284,8 @@ class SeleniumBaseTestCase(TestCase):
     def _log_console(self):
         if config['chroma_managers'][0]['browser'] == 'Chrome':
             console = self.driver.get_log('browser')
-            console_log.info("Console for test %s: '%s'" % (self.id(), console))
+
+            if not isinstance(console, (list, dict)):
+                console = []
+
+            console_log.info("\n\nConsole for test %s:\n\n '%s'" % (self.id(), json.dumps(console)))
