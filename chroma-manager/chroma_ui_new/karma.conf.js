@@ -63,6 +63,11 @@ module.exports = function(config) {
     // possible values: 'dots', 'progress', 'junit', 'growl', 'coverage'
     reporters: ['dots'],
 
+    // Only used if junit reporter activated (ex "--reporters junit" on the command line)
+    junitReporter: {
+      suite: 'karma-tests'
+    },
+
 
     preprocessors: {
       '**/*.html': ['ng-html2js']

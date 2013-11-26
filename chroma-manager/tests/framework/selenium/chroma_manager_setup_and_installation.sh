@@ -15,7 +15,7 @@ echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm firefox
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
 if [ ! -z "$GOOGLE_REPO" ]; then
@@ -35,10 +35,8 @@ fi
 # Create a user so we can run the tests as non-root
 useradd chromatest
 su chromatest <<EOC
-cd
 mkdir -p ~/.ssh
 touch ~/.ssh/authorized_keys
-npm install karma@0.11.2
 EOC
 cat .ssh/id_rsa.pub >> /home/chromatest/.ssh/authorized_keys
 cp .ssh/* ~chromatest/.ssh/
@@ -68,6 +66,8 @@ virtualenv --no-site-packages .
 source bin/activate
 tar -xzf ~/chroma.tgz
 cd chroma/chroma-manager
+
+# Install pip-based requirements
 make requirements
 
 # Remove requirements not compatible with python 2.7,
@@ -76,8 +76,12 @@ for package in importlib greenlet gevent psycopg2 pygraphviz; do
   sed -i "s/^.*$package.*$//g" requirements.txt
 done
 
-# Install the remaining requirements
+# Install the remaining pip requirements
 python tests/utils/pip_install_requirements.py ~/pip_cache
+
+# Install npm-based requirements
+cd chroma_ui
+npm install
 
 # Configure VNC server
 cd ~
