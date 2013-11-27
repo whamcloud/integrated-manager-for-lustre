@@ -38,6 +38,7 @@ from cluster_sim.simulator import ClusterSimulator
 from cluster_sim.log import log
 
 from chroma_agent.agent_daemon import daemon_log
+from chroma_agent.action_plugins.settings_management import reset_agent_config
 
 
 SIMULATOR_PORT = 8743
@@ -66,14 +67,18 @@ class SimulatorCli(object):
     def setup(self, args):
         log.info("Setting up simulator configuration for %s servers in %s/" % (args.server_count, args.config))
 
+        worker_count = int(args.worker_count)
+
         server_count = int(args.server_count)
         if args.volume_count:
             volume_count = int(args.volume_count)
         else:
             volume_count = server_count * 2
 
+        reset_agent_config()
+
         simulator = ClusterSimulator(args.config, args.url)
-        simulator.setup(server_count, volume_count, int(args.nid_count), int(args.cluster_size), int(args.psu_count), int(args.su_size))
+        simulator.setup(server_count, worker_count, volume_count, int(args.nid_count), int(args.cluster_size), int(args.psu_count), int(args.su_size))
 
     def _get_authenticated_session(self, url, username, password):
         session = requests.session()
@@ -95,7 +100,7 @@ class SimulatorCli(object):
 
         return session
 
-    def _acquire_token(self, url, username, password, credit_count, duration=None):
+    def _acquire_token(self, url, username, password, credit_count, duration=None, preferred_profile=None):
         """
         Localised use of the REST API to acquire a server registration token.
         """
@@ -103,7 +108,13 @@ class SimulatorCli(object):
 
         # Acquire a server profile
         response = session.get("%sapi/server_profile/" % url)
-        profile = response.json()['objects'][0]
+        if not preferred_profile:
+            profile = response.json()['objects'][0]
+        else:
+            try:
+                profile = [p for p in response.json()['objects'] if p['name'] == preferred_profile][0]
+            except IndexError:
+                raise RuntimeError("No such profile: %s" % preferred_profile)
 
         args = {
             'credits': credit_count,
@@ -121,15 +132,17 @@ class SimulatorCli(object):
         server_count = len(simulator.servers)
 
         if args.secret:
-            secret = args.secret
+            server_secret = args.secret
+            worker_secret = args.secret
         elif args.username and args.password:
-            secret = self._acquire_token(args.url, args.username, args.password, server_count)
+            server_secret = self._acquire_token(args.url, args.username, args.password, server_count, preferred_profile='base_managed')
+            worker_secret = self._acquire_token(args.url, args.username, args.password, server_count, preferred_profile='posix_copytool_worker')
         else:
             sys.stderr.write("Must pass either --secret or --username and --password\n")
             sys.exit(-1)
 
         log.info("Registering %s servers in %s/" % (server_count, args.config))
-        register_count = simulator.register_all(secret)
+        register_count = simulator.register_all(server_secret, worker_secret)
 
         if args.create_pdu_entries and register_count > 0:
             self.create_pdu_entries(simulator, args)
@@ -184,7 +197,7 @@ class SimulatorCli(object):
             'limit': 0
         }))
         assert 200 <= response.status_code < 300, response.text
-        servers = json.loads(response.text)['objects']
+        servers = [s for s in json.loads(response.text)['objects'] if 'posix_copytool_worker' not in s['server_profile']]
 
         for i, server in enumerate(sorted(servers, key=lambda server: server['fqdn'])):
             for pdu in pdu_entries:
@@ -230,6 +243,7 @@ class SimulatorCli(object):
         setup_parser.add_argument('--su_size', required = False, help = "Servers per SU", default = '0')
         setup_parser.add_argument('--cluster_size', required = False, help = "Number of simulated storage servers", default = '4')
         setup_parser.add_argument('--server_count', required = False, help = "Number of simulated storage servers", default = '8')
+        setup_parser.add_argument('--worker_count', required = False, help = "Number of simulated HSM workers", default = '1')
         setup_parser.add_argument('--nid_count', required = False, help = "Number of LNet NIDs per storage server, defaults to 1 per server", default = '1')
         setup_parser.add_argument('--volume_count', required = False, help = "Number of simulated storage devices, defaults to twice the number of servers")
         setup_parser.add_argument('--psu_count', required = False, help = "Number of simulated server Power Supply Units, defaults to one per server", default = '1')

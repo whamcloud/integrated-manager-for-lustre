@@ -705,6 +705,11 @@ class RealRemoteOperations(RemoteOperations):
                     " type lustre"
                 )
 
+    def is_worker(self, server):
+        workers = [w['address'] for w in
+                   config['lustre_servers'] if 'worker' in w.get('profile', "")]
+        return server['address'] in workers
+
     def has_pacemaker(self, server):
         result = self._ssh_address(
             server['address'],
@@ -803,6 +808,10 @@ class RealRemoteOperations(RemoteOperations):
         """
 
         for server in server_list:
+            if self.is_worker(server):
+                logger.info("%s is configured as a worker -- skipping." % server['address'])
+                break
+
             if self.has_pacemaker(server):
                 if config.get('pacemaker_hard_reset', False):
                     result = self._ssh_address(

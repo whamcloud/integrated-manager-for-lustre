@@ -45,7 +45,6 @@ class LocalAudit(BaseAudit, FileSystemMixin):
         >>> d2 = {'a': {'c': {'gg': {'m': '3'},
         ...                   'xx': '4'}}}
         pyflakes:ignore >>> pprint.pprint(mergedicts(d1, d2), width=2)
-            self.fscontext = fscontext
         {'a': {'b': {'x': '1',
                      'y': '2'},
                'c': {'gg': {'m': '3'},

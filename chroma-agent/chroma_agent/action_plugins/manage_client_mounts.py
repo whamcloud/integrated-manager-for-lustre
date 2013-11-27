@@ -20,20 +20,46 @@
 # express and approved by Intel in writing.
 
 
-def local_audit_classes():
-    import lustre
-    import node
+import os
+import errno
 
-    classes = []
-    classes.extend(lustre.local_audit_classes())
-    classes.append(getattr(node, 'NodeAudit'))
-    return classes
+from chroma_agent import config
+from chroma_agent import shell
 
 
-class BaseAudit(object):
-    """Base Audit class."""
-    def __init__(self, **kwargs):
-        self.raw_metrics = {}
+def _filesystem_mountpoint(mountspec):
+    client_root = config.get('settings', 'agent')['lustre_client_root']
+    fsname = mountspec.split(':/')[1]
+    return os.path.join(client_root, fsname)
 
-    def metrics(self):
-        raise NotImplementedError
+
+def mount_lustre_filesystem(mountspec):
+    mountpoint = _filesystem_mountpoint(mountspec)
+
+    try:
+        os.makedirs(mountpoint, 0755)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+    shell.try_run(['/sbin/mount.lustre', mountspec, mountpoint])
+
+
+def mount_lustre_filesystems(filesystems):
+    for mountspec in filesystems:
+        mount_lustre_filesystem(mountspec)
+
+
+def unmount_lustre_filesystem(mountspec):
+    mountpoint = _filesystem_mountpoint(mountspec)
+
+    shell.try_run(['/bin/umount', mountpoint])
+
+
+def unmount_lustre_filesystems(filesystems):
+    for mountspec in filesystems:
+        unmount_lustre_filesystem(mountspec)
+
+
+ACTIONS = [mount_lustre_filesystems, unmount_lustre_filesystems, mount_lustre_filesystem, unmount_lustre_filesystem]
+CAPABILITIES = ['manage_client_mounts']

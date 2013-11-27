@@ -211,5 +211,7 @@ class PatchedContextTestCase(unittest.TestCase):
         # These classes aren't reliably detected for patching.
         from chroma_agent.device_plugins.audit.node import NodeAudit
         mock.patch.object(NodeAudit, 'fscontext', self.test_root).start()
+        from chroma_agent.utils import Mounts
+        mock.patch.object(Mounts, 'fscontext', self.test_root).start()
 
         self.addCleanup(mock.patch.stopall)

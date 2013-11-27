@@ -26,7 +26,7 @@ from chroma_core.services.rpc import RpcError, RpcTimeout
 from chroma_core.services import log_register
 from tastypie.validation import Validation
 
-from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile
+from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile, LustreClientMount
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -113,7 +113,39 @@ class ServerProfileResource(ModelResource):
         ordering = ['managed', 'default']
         list_allowed_methods = ['get']
         readonly = ['ui_name']
-        filtering = {'name': ['exact'], 'managed': ['exact'], 'default': ['exact']}
+        filtering = {'name': ['exact'], 'managed': ['exact'],
+                     'worker': ['exact'], 'default': ['exact']}
+
+
+class ClientMountResource(ModelResource):
+    # This resource is only used for integration testing.
+
+    host = fields.ToOneField('chroma_api.host.HostResource', 'host')
+    filesystem = fields.ToOneField('chroma_api.filesystem.FilesystemResource', 'filesystem')
+    mountpoint = fields.CharField()
+
+    class Meta:
+        queryset = LustreClientMount.objects.all()
+        resource_name = 'client_mount'
+        authentication = AnonymousAuthentication()
+        authorization = DjangoAuthorization()
+        list_allowed_methods = ['get', 'post']
+        filtering = {'host': ['exact'], 'filesystem': ['exact']}
+
+    def prepare_mount(self, client_mount):
+        return self.alter_detail_data_to_serialize(None, self.full_dehydrate(
+               self.build_bundle(obj = client_mount))).data
+
+    def obj_create(self, bundle, request = None, **kwargs):
+        host = self.fields['host'].hydrate(bundle).obj
+        filesystem = self.fields['filesystem'].hydrate(bundle).obj
+        mountpoint = bundle.data['mountpoint']
+
+        client_mount = JobSchedulerClient.create_client_mount(host, filesystem,
+                                                              mountpoint)
+
+        args = dict(client_mount = self.prepare_mount(client_mount))
+        raise custom_response(self, request, http.HttpAccepted, args)
 
 
 class HostResource(MetricResource, StatefulModelResource):
@@ -125,6 +157,7 @@ class HostResource(MetricResource, StatefulModelResource):
     POSTs to this resource must have the ``address`` attribute set.
     """
     nids = fields.ListField(null = True)
+    client_mounts = fields.ListField(null = True)
     root_pw = fields.CharField(help_text = "ssh root password to new server.")
     private_key = fields.CharField(help_text = "ssh private key matching a "
                                                "public key on the new server.")
@@ -136,6 +169,15 @@ class HostResource(MetricResource, StatefulModelResource):
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(
             lnet_configuration = bundle.obj.lnetconfiguration)]
+
+    def dehydrate_client_mounts(self, bundle):
+        from chroma_core.lib.cache import ObjectCache
+        from chroma_core.models import LustreClientMount
+        search = lambda cm: cm.host == bundle.obj
+        mounts = ObjectCache.get(LustreClientMount, search)
+        return [{'filesystem_name': mount.filesystem.name,
+                 'mountpoint': mount.mountpoint,
+                 'state': mount.state} for mount in mounts]
 
     class Meta:
         queryset = ManagedHost.objects.select_related(
@@ -149,7 +191,7 @@ class HostResource(MetricResource, StatefulModelResource):
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['nodename', 'fqdn', 'nids',
                     'needs_fence_reconfiguration', 'needs_update', 'boot_time',
-                    'corosync_reported_up']
+                    'corosync_reported_up', 'client_mounts']
         # HYD-2256: remove these fields when other auth schemes work
         readonly += ['root_pw', 'private_key_passphrase', 'private_key']
         validation = HostValidation()
