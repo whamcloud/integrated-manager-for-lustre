@@ -17,6 +17,7 @@
   "devDependencies": {
     "socket.io-client": "~0.9.16",
     "sinon": "~1.7.3",
-    "jasmine-sinon": "~0.2.1"
+    "jasmine-sinon": "~0.2.1",
+    "jasmine-node": "~1.11.0"
   }
 }
