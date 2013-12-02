@@ -8,6 +8,7 @@ import re
 
 from testconfig import config
 from tests.integration.core.constants import TEST_TIMEOUT
+from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
 from tests.integration.core.utility_testcase import RemoteCommandResult
 
 
@@ -627,7 +628,8 @@ class RealRemoteOperations(RemoteOperations):
                     # No monitor server, take SSH offline-ness as evidence for being booted
                     break
             else:
-                if restart and not restart_attempted:
+                if restart and running_time > UNATTENDED_BOOT_TIMEOUT and \
+                   not restart_attempted:
                     logger.info("attempting to restart %s" % boot_fqdn)
                     result = self._ssh_address(
                         boot_server['host'],
