@@ -69,6 +69,7 @@ describe('Login Controller', function () {
         keyboard: false,
         backdrop: 'static',
         controller: 'EulaCtrl',
+        windowClass: 'eula-modal',
         resolve: jasmine.argThat(function(arg) {
           return typeof arg.user === 'function';
         })
