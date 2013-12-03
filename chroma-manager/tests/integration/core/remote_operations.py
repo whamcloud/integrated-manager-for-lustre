@@ -561,7 +561,7 @@ class RealRemoteOperations(RemoteOperations):
         reset_cmd = server_config.get('reset_command', None)
         if host.get('reset_is_buggy', False):
             self.kill_server(fqdn)
-            self.await_server_boot(fqdn, restart = True)
+            self.start_server(fqdn)
         elif reset_cmd:
             result = self._ssh_address(
                 server_config['host'],
@@ -602,6 +602,17 @@ class RealRemoteOperations(RemoteOperations):
             if i > TEST_TIMEOUT:
                 raise RuntimeError("Host %s didn't terminate within %s seconds" % (fqdn, TEST_TIMEOUT))
 
+    def start_server(self, fqdn):
+        boot_server = self._fqdn_to_server_config(fqdn)
+
+        result = self._ssh_address(
+            boot_server['host'],
+            boot_server['start_command']
+        )
+        node_status = result.stdout.read()
+        if re.search('started', node_status):
+            logger.info("%s started successfully" % fqdn)
+
     def await_server_boot(self, boot_fqdn, monitor_fqdn = None, restart = False):
         """
         Wait for the stonithed server to come back online
@@ -639,13 +650,7 @@ class RealRemoteOperations(RemoteOperations):
                     if re.search('running', node_status):
                         logger.info("%s seems to be running, but unresponsive" % boot_fqdn)
                         self.kill_server(boot_fqdn)
-                    result = self._ssh_address(
-                        boot_server['host'],
-                        boot_server['start_command']
-                    )
-                    node_status = result.stdout.read()
-                    if re.search('started', node_status):
-                        logger.info("%s started successfully" % boot_fqdn)
+                    self.start_server(boot_fqdn)
                     restart_attempted = True
 
             time.sleep(3)

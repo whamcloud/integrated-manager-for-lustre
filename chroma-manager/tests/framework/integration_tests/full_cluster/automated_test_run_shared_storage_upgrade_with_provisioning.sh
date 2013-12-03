@@ -1,7 +1,5 @@
 #!/bin/bash -ex
 
-env
-
 if [ "$slave" = "rhel6&&ssi" ]; then
     RHEL=true
 else
