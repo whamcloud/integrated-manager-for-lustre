@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.utils.timezone import utc
 from django.test import TestCase
 from django.contrib.auth.models import User
+from tests.utils import patch
 from chroma_core.lib import metrics
 from chroma_core.models.stats import Series, Stats, timestamp
 
@@ -32,7 +33,9 @@ class TestSeries(TestCase):
         series = Series.get(self.obj, field, type)
         self.assertIs(series, Series.get(self.obj, field))
         Series.cache.clear()
-        self.assertEqual(series, Series.get(self.obj, field))
+        with patch(Series.cache, SIZE=0):
+            self.assertEqual(series, Series.get(self.obj, field))
+        self.assertFalse(Series.cache)
 
     def test_fast(self):
         "Small data set with short intervals."
@@ -90,7 +93,7 @@ class TestSeries(TestCase):
             stats = self.store.fetch(names, latest - timedelta(seconds=seconds), latest)
             self.assertLessEqual(len(stats), seconds / model.step + 1)
             self.assertFalse(any(timestamp(dt) % model.step for dt in stats))
-        series, = self.store.series(names[0])
+        series = Series.filter(self.obj)[0]
         counts = [model.objects.filter(id=series.id).count() for model in Stats]
         self.assertLess(counts.pop(0), rows)
         self.assertEqual(counts, sorted(counts, reverse=True))

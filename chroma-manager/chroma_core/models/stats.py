@@ -73,10 +73,22 @@ epoch = datetime.fromtimestamp(0, utc)
 Point.zero = Point(epoch, 0.0, 0)
 
 
+class Cache(collections.defaultdict):
+    "Simple cache of limited size;  doesn't need to be LRU yet."
+    SIZE = 1e5
+
+    def __setitem__(self, key, value):
+        collections.defaultdict.__setitem__(self, key, value)
+        if len(self) > self.SIZE:
+            self.clear()
+
+
 class Series(models.Model):
     """Sources and their associated fields.
     Leverages the ContentTypes framework to allow series to be associated with other apps' models.
     """
+    DATA_TYPES = 'Gauge', 'Counter', 'Derive'
+    JOB_TYPES = 'SLURM_JOB_ID', 'JOB_ID', 'LSB_JOBID', 'LOADL_STEP_ID', 'PBS_JOBID', 'procname_uid'
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()
     name = models.CharField(max_length=255)
@@ -87,7 +99,7 @@ class Series(models.Model):
         app_label = 'chroma_core'
         unique_together = ('content_type', 'object_id', 'name'),
 
-    cache = {}
+    cache = Cache(None)
 
     @classmethod
     def get(cls, obj, name, type=''):
@@ -97,10 +109,18 @@ class Series(models.Model):
         except KeyError:
             ct = ContentType.objects.get_for_model(obj)
         if type:
-            series, created = Series.objects.get_or_create(content_type=ct, object_id=obj.id, name=name, type=type)
+            assert type in cls.DATA_TYPES + cls.JOB_TYPES
+            series, created = cls.objects.get_or_create(content_type=ct, object_id=obj.id, name=name, type=type)
         else:
-            series = Series.objects.get(content_type=ct, object_id=obj.id, name=name)
-        return cls.cache.setdefault((obj, name), series)
+            series = cls.objects.get(content_type=ct, object_id=obj.id, name=name)
+        cls.cache[obj, name] = series
+        return series
+
+    @classmethod
+    def filter(cls, obj, **kwargs):
+        "Return queryset filtered for measured object."
+        ct = ContentType.objects.get_for_model(obj)
+        return cls.objects.filter(content_type=ct, object_id=obj.id, **kwargs)
 
 
 class Sample(models.Model):
@@ -174,7 +194,7 @@ class Stats(list):
     def __init__(self, samples, rows):
         maxlen = max(map(operator.floordiv, samples[1:], samples[:-1]))
         for sample in samples:
-            cache = collections.defaultdict(functools.partial(collections.deque, maxlen=maxlen))
+            cache = Cache(functools.partial(collections.deque, maxlen=maxlen))
             namespace = {'__module__': 'chroma_core.models', 'step': sample, 'expiration': timedelta(seconds=rows * sample * sample), 'cache': cache}
             self.append(type('Sample_{0:d}'.format(sample), (Sample,), namespace))
 

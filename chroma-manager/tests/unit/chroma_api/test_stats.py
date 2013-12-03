@@ -3,7 +3,7 @@ import json
 import collections
 import operator
 from chroma_core.lib import metrics
-from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, Stats
+from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, Stats, Series
 from .chroma_api_test_case import ChromaApiTestCase
 from ..chroma_core.helper import synthetic_host, synthetic_volume_full
 
@@ -27,8 +27,9 @@ class TestStats(ChromaApiTestCase):
         # store fixture data with corresponding targets
         for target, key in zip(self.hosts + [self.mdt] + self.osts, sorted(fixture)):
             store = metrics.MetricStore.new(target)
+            kwargs = {'jobid_var': 'procname_uid'} if isinstance(target, ManagedOst) else {}
             for timestamp, value in fixture[key]:
-                Stats.insert(store.serialize(value, timestamp))
+                Stats.insert(store.serialize(value, timestamp, **kwargs))
         for model in Stats:
             model.cache.clear()
 
@@ -91,3 +92,14 @@ class TestStats(ChromaApiTestCase):
         data, timestamps = zip(*map(operator.itemgetter('data', 'ts'), content))
         self.assertEqual(data, ({'stats_write_bytes': 1517052856.4, 'stats_read_bytes': 259273421.2},))
         self.assertEqual(timestamps, ('2013-04-19T20:34:10+00:00',))
+
+        # TODO test job stats through api
+        for series in Series.objects.filter(name__startswith='job_'):
+            prefix, field, kind, job_id = series.name.split('_')
+            self.assertEqual(prefix, 'job')
+            self.assertIn(field, ('read', 'write', 'metadata'))
+            self.assertIn(kind, ('bytes', 'ops'))
+            self.assertIn(job_id, ('cp.0', 'dd.0'))
+            self.assertEqual(series.type, 'procname_uid')
+            point, = Stats[0].select(series.id)
+            self.assertTrue(point)

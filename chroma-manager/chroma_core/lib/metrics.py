@@ -21,10 +21,10 @@
 
 
 import time
+import heapq
 import collections
 from datetime import datetime
 from chroma_core.services import log_register
-from django.contrib.contenttypes.models import ContentType
 from django.utils.timezone import utc
 from chroma_core.models import Series, Stats, ManagedHost, ManagedTarget, ManagedFilesystem
 from chroma_core.lib.storage_plugin.api import statistics
@@ -67,25 +67,16 @@ class MetricStore(object):
 
     def clear(self):
         "Remove all associated series."
-        ct = ContentType.objects.get_for_model(self.measured_object)
-        for series in Series.objects.filter(content_type=ct, object_id=self.measured_object.id):
+        for series in Series.filter(self.measured_object):
             series.delete()
             Stats.delete(series.id)
-
-    def series(self, *names):
-        "Generate existing series by name for this source."
-        for name in names:
-            try:
-                yield Series.get(self.measured_object, name)
-            except Series.DoesNotExist:
-                pass
 
     def fetch(self, fetch_metrics, begin, end, max_points=1000, **kwargs):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
         end = Stats[0].floor(end)  # exclude points from a partial sample
-        for series in self.series(*fetch_metrics):
+        for series in Series.filter(self.measured_object, name__in=fetch_metrics):
             types.add(series.type)
             minimum = 0.0 if series.type == 'Counter' else float('-inf')
             for point in Stats.select(series.id, begin, end, rate=series.type in ('Counter', 'Derive'), maxlen=max_points):
@@ -98,7 +89,7 @@ class MetricStore(object):
     def fetch_last(self, fetch_metrics):
         "Return latest datetime and dict of field names and values."
         latest, data = datetime.fromtimestamp(0, utc), {}
-        for series in self.series(*fetch_metrics):
+        for series in Series.filter(self.measured_object, name__in=fetch_metrics):
             point = Stats.latest(series.id)
             data[series.name] = point.mean
             latest = max(latest, point.dt)
@@ -183,6 +174,8 @@ class TargetMetricStore(MetricStore):
     """
     Wrapper class for Lustre Target metrics.
     """
+    JOB_STATS_LIMIT = 10  # only store the most active jobs
+
     def serialize(self, metrics, update_time=None, jobid_var='disable'):
         "Return serialized samples (id, dt, value) suitable for bulk stats insertion."
         if update_time is None:
@@ -224,10 +217,14 @@ class TargetMetricStore(MetricStore):
         #            ds_name = "brw_%s_%s_%s"  % (key, bucket, direction)
         #            update[ds_name] = brw_stats[key]['buckets'][bucket][direction]['count']
 
-        # summarize job stats into a single quantity
-        job_stats = dict((stat['job_id'], stat['read']['sum'] + stat['write']['sum']) for stat in job_stats)
         if jobid_var != 'disable':
-            pass  # TODO: store job stats
+            for stat in heapq.nlargest(self.JOB_STATS_LIMIT, job_stats, key=lambda stat: stat['read']['sum'] + stat['write']['sum']):
+                # summarize job stats into discrete quantities
+                value = sum(stat[key]['samples'] for key in set(stat).difference(['snapshot_time', 'read', 'write', 'job_id']))
+                update['job_metadata_ops_{0}'.format(stat['job_id'])] = {'value': value, 'type': jobid_var}
+                for key in ('read', 'write'):
+                    update['job_{0}_bytes_{1}'.format(key, stat['job_id'])] = {'value': stat[key]['sum'], 'type': jobid_var}
+                    update['job_{0}_ops_{1}'.format(key, stat['job_id'])] = {'value': stat[key]['samples'], 'type': jobid_var}
 
         return list(MetricStore.serialize(self, {update_time: update}))
 
