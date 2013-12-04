@@ -40,7 +40,8 @@ help_text = {
     'monitored_filesystem': 'This file system is monitored and may not be modified within Intel® Manager for Lustre*',
 
     'rescan_NIDs-dialog': 'Select all servers for which the server NID may have changed and click <b>Run</b> to re-read the NIDs. <i>Note:</i> After completing this operation, you must update any affected Lustre targets by clicking the <strong>Re-write Target Configuration</strong> button.',
-    'remove_server': 'Remove this server. Any file systems or targets that rely on this server will also be removed.',
+    'remove_configured_server': 'Remove this server. Any file systems or targets that rely on this server will also be removed.',
+    'remove_unconfigured_server': 'Remove this unconfigured server.',
     'rescan_NIDs-tooltip': 'Query the network interfaces on the storage servers to update the record of NIDs.',
     'auth': 'Indicates if the manager server was able to connect, via SSH, to the storage server using the supplied authentication credentials.',
     'reverse_ping': 'Indicates if an ICMP ping from the storage server to manager server succeeded.',

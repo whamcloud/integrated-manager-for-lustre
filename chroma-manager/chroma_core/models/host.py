@@ -964,7 +964,7 @@ class RemoveHostJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
-    long_description = help_text['remove_server']
+    long_description = help_text['remove_configured_server']
 
     requires_confirmation = True
 
@@ -982,6 +982,9 @@ class RemoveHostJob(StateChangeJob):
                 (UnconfigureRsyslogStep, {'host': self.host}),
                 (RemoveServerConfStep, {'host': self.host}),
                 (DeleteHostStep, {'host': self.host, 'force': False})]
+
+    def get_confirmation_string(self):
+        return self.long_description
 
 
 def _get_host_dependents(host):
@@ -1196,6 +1199,9 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
+    long_description = help_text['remove_unconfigured_server']
+
+    requires_confirmation = True
 
     class Meta:
         app_label = 'chroma_core'
@@ -1206,6 +1212,9 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
 
     def get_steps(self):
         return [(DeleteHostStep, {'host': self.host, 'force': False})]
+
+    def get_confirmation_string(self):
+        return self.long_description
 
 
 class RelearnNidsJob(Job, HostListMixin):

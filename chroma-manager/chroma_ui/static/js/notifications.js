@@ -93,9 +93,6 @@ var LiveObject = function()
         if (data.transition_job == null) {
           // A no-op
           return;
-        } else if (data.transition_job.confirmation_prompt) {
-          requires_confirmation = true;
-          confirmation_markup = "<p><strong>" + data.transition_job.confirmation_prompt + "</strong></p><p>Are you sure?</p>";
         } else if (data.dependency_jobs.length > 0) {
           confirmation_markup = "<p>This action has the following consequences:</p><ul>";
           requires_confirmation = data.transition_job.requires_confirmation;
@@ -108,6 +105,9 @@ var LiveObject = function()
             }
           });
           confirmation_markup += "</ul>"
+        } else if (data.transition_job.confirmation_prompt) {
+          requires_confirmation = true;
+          confirmation_markup = "<p><strong>" + data.transition_job.confirmation_prompt + "</strong></p><p>Are you sure?</p>";
         } else {
           requires_confirmation = data.transition_job.requires_confirmation;
           confirmation_markup = "<p>Are you sure?</p>";
