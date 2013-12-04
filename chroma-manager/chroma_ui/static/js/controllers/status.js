@@ -23,10 +23,12 @@
 (function (_) {
   'use strict';
 
-  function StatusCtrl($scope, $q, $element, alertModel, eventModel, commandModel, collectionModel) {
+  function StatusCtrl($scope, $q, $element, alertModel, eventModel, commandModel, collectionModel,
+                      confirmDialog) {
     var params = _.extend.bind(_, {}, {order_by: '-created_at', limit: 30, dismissed: false});
 
     var types = {};
+    var dialog;
 
     this.alertModel = alertModel.bind(params({order_by: '-begin'}));
     this.eventModel = eventModel.bind(params());
@@ -207,10 +209,22 @@
       });
     }.bind(this);
 
+    $scope.status.dismissAllConfirm = function() {
+      dialog = confirmDialog.setup({
+        content: {
+          title: 'Dismiss All',
+          message: 'Do you wish to dismiss all status messages?',
+          confirmText: 'Dismiss All',
+        }
+      });
+      dialog.open().then($scope.status.dismissAll);
+    };
+
     $scope.$root.$on('health', $scope.status.getPage.bind($scope.status, null, true));
   }
 
   angular.module('controllers').controller('StatusCtrl',
-    ['$scope', '$q', '$element', 'alertModel', 'eventModel', 'commandModel', 'collectionModel', StatusCtrl]
+    ['$scope', '$q', '$element', 'alertModel', 'eventModel', 'commandModel', 'collectionModel',
+     'confirmDialog', StatusCtrl]
   );
 }(window.lodash));
