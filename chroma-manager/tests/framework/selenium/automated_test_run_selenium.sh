@@ -12,20 +12,20 @@ trap "set +e; scp -r chromatest@$TEST_RUNNER:test_reports $WORKSPACE" EXIT
 
 scp $CLUSTER_CONFIG chromatest@$TEST_RUNNER:cluster_config.json
 ssh chromatest@$TEST_RUNNER <<"EOF"
-set -x
+set -ex
 mkdir test_reports
 source chroma_test_env/bin/activate
-cd chroma_test_env/chroma/chroma-manager
 vncserver :1
 export DISPLAY=$(hostname):1
-for FILE in $(cd tests/selenium && ls test_*.py); do
-  CLUSTER_DATA=tests/selenium/test_data.json PATH=$PATH:$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=$HOME/test_reports/selenium-test-results_$FILE.xml --tc-format=json --tc-file=$HOME/cluster_config.json tests/selenium/$FILE || true
-  killall chromedriver
-done
 
-cd chroma_ui
-$HOME/node_modules/.bin/karma start --browsers Chrome --singleRun true --reporters junit
+# Run Karma GUI unit tests
+cd $HOME/chroma_test_env/chroma/chroma-manager/chroma_ui
+./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit || true
 mv test-results.xml $HOME/test_reports/karma-test-results.xml
+
+# Run Selenium GUI Tests
+cd $HOME/chroma_test_env/chroma/chroma-manager
+CLUSTER_DATA=tests/selenium/test_data.json PATH=$PATH:$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=$HOME/test_reports/selenium-test-results.xml --tc-format=json --tc-file=$HOME/cluster_config.json tests/selenium/ || true
 EOF
 
 exit 0

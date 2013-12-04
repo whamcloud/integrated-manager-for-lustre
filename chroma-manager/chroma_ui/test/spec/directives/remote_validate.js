@@ -4,13 +4,12 @@ describe('Remote Validate Directive', function () {
   var controller;
   var locals;
   var formControllerSpy;
-  var templateLocation = 'test/templates/remote-validate.html';
 
   function createComponent(name) {
     return jasmine.createSpyObj(name, ['$setValidity']);
   }
 
-  beforeEach(module('services', templateLocation, 'directives'));
+  beforeEach(module('services', 'templates', 'directives'));
 
   beforeEach(inject(function ($controller, $rootScope, remoteValidateFormService) {
     locals = {
@@ -165,7 +164,7 @@ describe('Remote Validate Directive', function () {
     var getDeferred;
 
     beforeEach(inject(function ($rootScope, $compile, $templateCache, $q) {
-      form = angular.element($templateCache.get(templateLocation));
+      form = angular.element($templateCache.get('remote-validate.html'));
 
       scope = $rootScope.$new();
       $compile(form)(scope);
