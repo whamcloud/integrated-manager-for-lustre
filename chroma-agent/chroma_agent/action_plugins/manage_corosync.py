@@ -271,12 +271,17 @@ def host_corosync_config():
     ring1_ipaddr = 10.42.42.10
     ring1_netmask = 255.255.0.0
     """
-    from ConfigParser import SafeConfigParser
+    from ConfigParser import SafeConfigParser, Error as ConfigError
+    config_file = "/etc/chroma.cfg"
 
     parser = SafeConfigParser()
     parser.add_section('corosync')
-    parser.read("/etc/chroma.cfg")
-    return dict(parser.items('corosync'))
+    try:
+        parser.read(config_file)
+        return dict(parser.items('corosync'))
+    except ConfigError as e:
+        daemon_log.error("Failed to parse %s: %s" % (config_file, e))
+        return {}
 
 
 ACTIONS = [configure_corosync, unconfigure_corosync,
