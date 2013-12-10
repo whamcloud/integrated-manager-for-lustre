@@ -29,6 +29,7 @@ from south.signals import post_migrate
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
+from django.utils.timezone import now as tznow
 
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
@@ -367,20 +368,19 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
             return
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-        from django.utils.timezone import now
         reconfigure = {'needs_fence_reconfiguration': True}
         if self.host is not None:
             if old_self and old_self.host and old_self.host != self.host:
                 job_log.debug("Triggering reconfigure on %s due to host change" % old_self.host)
-                JobSchedulerClient.notify(old_self.host, now(), reconfigure)
+                JobSchedulerClient.notify(old_self.host, tznow(), reconfigure)
             elif not old_self:
                 job_log.debug("Triggering reconfigure on %s for new outlet" % self.host)
             job_log.debug("Triggering reconfigure on %s" % self.host)
-            JobSchedulerClient.notify(self.host, now(), reconfigure)
+            JobSchedulerClient.notify(self.host, tznow(), reconfigure)
         elif self.host is None and old_self is not None:
             if old_self.host is not None:
                 job_log.debug("Triggering reconfigure on %s due to disassociation" % old_self.host)
-                JobSchedulerClient.notify(old_self.host, now(), reconfigure)
+                JobSchedulerClient.notify(old_self.host, tznow(), reconfigure)
 
     def force_host_disassociation(self):
         """
@@ -559,8 +559,9 @@ class ConfigureHostFencingJob(Job):
         return DependOn(self.host, 'configured', acceptable_states=self.host.not_state('removed'))
 
     def on_success(self):
-        self.host.needs_fence_reconfiguration = False
-        self.host.save()
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+        reconfigure = {'needs_fence_reconfiguration': False}
+        JobSchedulerClient.notify(self.host, tznow(), reconfigure)
 
 
 class ConfigureHostFencingStep(Step):
