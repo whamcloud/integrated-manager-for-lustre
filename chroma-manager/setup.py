@@ -70,6 +70,10 @@ setup(
                         "static/webhelp/*.png", "static/webhelp/*.swf"],
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
+        'realtime': [
+            "data-sources/metrics/*.js", "data-sources/*.js", "models/*.js",
+            "*.js"
+        ]
     },
     scripts = ["chroma-host-discover"],
     entry_points = {
