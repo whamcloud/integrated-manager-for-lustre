@@ -94,6 +94,7 @@ class Command(BaseCommand):
             'HTTPS_FRONTEND_PORT': settings.HTTPS_FRONTEND_PORT,
             'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,
             'HTTP_API_PORT': settings.HTTP_API_PORT,
+            'REALTIME_PORT': settings.REALTIME_PORT,
             'WSGI_PYTHON_PATH': get_python_lib()
         }))
         open(DEV_HTTPD_CONF, 'w').write(conf_text)

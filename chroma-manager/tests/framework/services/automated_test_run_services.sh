@@ -29,7 +29,7 @@ gpgcheck=0
 sslverify=0
 EOC
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm patch httpd-devel
 
 # Create a user so we can run chroma as non-root
 useradd chromatest

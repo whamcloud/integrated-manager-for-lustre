@@ -19,6 +19,8 @@ LoadModule log_config_module {{module_path}}mod_log_config.so
 LoadModule ssl_module {{module_path}}mod_ssl.so
 LoadModule status_module {{module_path}}mod_status.so
 LoadModule deflate_module {{module_path}}mod_deflate.so
+# load this from homedir in dev
+LoadModule proxy_wstunnel_module {{var}}/mod_proxy_wstunnel.so
 ExtendedStatus on
 
 
@@ -54,6 +56,7 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
 
 <VirtualHost *:{{HTTPS_FRONTEND_PORT}}>
     SSLEngine on
+    SSLProxyEngine on
     SSLProtocol all -SSLv2
     SSLCipherSuite ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:!LOW:!SSLv2:+EXP
     SSLCertificateFile {{ssl}}/manager.crt
@@ -113,6 +116,14 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
     <Location /api/>
         ProxyPass http://localhost:{{HTTP_API_PORT}}/api/
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
+    </Location>
+    <LocationMatch "/primus/1/websocket/">
+      ProxyPass wss://localhost:{{REALTIME_PORT}}/primus/1/websocket/
+      ProxyPassReverse wss://localhost:{{REALTIME_PORT}}/primus/1/websocket/
+    </LocationMatch>
+    <Location /primus/>
+        ProxyPass https://localhost:{{REALTIME_PORT}}/primus/
+        ProxyPassReverse https://localhost:{{REALTIME_PORT}}/primus/
     </Location>
 
     <Location /agent/register/>

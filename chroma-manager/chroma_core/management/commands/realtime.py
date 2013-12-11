@@ -67,7 +67,7 @@ class Command(BaseCommand):
             mode = 'PROD'
 
         conf = {
-            "PRIMUS_PORT": 8888,
+            "PRIMUS_PORT": settings.REALTIME_PORT,
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
             "SSL": ssl,
             "MODE": mode

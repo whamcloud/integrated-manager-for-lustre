@@ -315,6 +315,8 @@ DBLOG_LW = 1000000
 HTTP_API_PORT = 8001
 # Internal port, used for inter-service communication
 HTTP_AGENT_PORT = 8002
+# Internal port, used for realtime UI clients
+REALTIME_PORT = 8888
 
 HTTP_FRONTEND_PORT = 9000
 HTTPS_FRONTEND_PORT = 8000
