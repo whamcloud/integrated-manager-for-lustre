@@ -3,7 +3,7 @@ import json
 import collections
 import operator
 from chroma_core.lib import metrics
-from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, Stats, Series
+from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, Stats
 from .chroma_api_test_case import ChromaApiTestCase
 from ..chroma_core.helper import synthetic_host, synthetic_volume_full
 
@@ -88,18 +88,21 @@ class TestStats(ChromaApiTestCase):
         self.assertEqual(timestamps, ('2013-04-19T20:34:20+00:00',))
 
         # target detail, date range: verify target retrieval with missing timestamp
-        content = self.fetch('target/{0}/metric/'.format(self.osts[1].id), metrics='stats_read_bytes,stats_write_bytes', begin='2013-04-19T20:34:00Z', end='2013-04-19T20:34:30Z')
+        content = self.fetch('target/{0}/metric/'.format(self.osts[1].id), max_points='100', metrics='stats_read_bytes,stats_write_bytes', begin='2013-04-19T20:34:00Z', end='2013-04-19T20:34:30Z')
         data, timestamps = zip(*map(operator.itemgetter('data', 'ts'), content))
         self.assertEqual(data, ({'stats_write_bytes': 1517052856.4, 'stats_read_bytes': 259273421.2},))
         self.assertEqual(timestamps, ('2013-04-19T20:34:10+00:00',))
 
-        # TODO test job stats through api
-        for series in Series.objects.filter(name__startswith='job_'):
-            prefix, field, kind, job_id = series.name.split('_')
-            self.assertEqual(prefix, 'job')
-            self.assertIn(field, ('read', 'write', 'metadata'))
-            self.assertIn(kind, ('bytes', 'ops'))
-            self.assertIn(job_id, ('cp.0', 'dd.0'))
-            self.assertEqual(series.type, 'procname_uid')
-            point, = Stats[0].select(series.id)
-            self.assertTrue(point)
+        # target detail and list, with job stats
+        for name in ('metadata_ops', 'read_ops', 'write_ops', 'read_bytes', 'write_bytes'):
+            content, = self.fetch('target/{0}/metric/'.format(self.osts[0].id), job='id', metrics=name, begin='2013-04-19T20:30:00Z', end='2013-04-19T20:34:30Z')
+            self.assertEqual(content['ts'], '2013-04-19T20:34:20+00:00')
+            self.assertEqual(content['data'], {'cp.0': 0.0, 'dd.0': 0.0})
+            content = self.fetch('target/metric/', job='id', metrics=name, begin='2013-04-19T20:30:00Z', end='2013-04-19T20:34:30Z', kind='OST')
+            self.assertEqual(sorted(map(len, content.values())), [0, 1])
+
+        # invalid request
+        response = self.api_client.get('/api/target/metric/', data={'job': 'id', 'latest': 'true', 'metrics': 'read_bytes,write_bytes'})
+        self.assertEqual(response.status_code, 400)
+        content = json.loads(response.content)
+        self.assertEqual(len(content['job']), 2)

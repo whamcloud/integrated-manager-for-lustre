@@ -71,7 +71,7 @@ class MetricStore(object):
             series.delete()
             Stats.delete(series.id)
 
-    def fetch(self, fetch_metrics, begin, end, max_points=1000, **kwargs):
+    def fetch(self, fetch_metrics, begin, end, max_points=float('inf')):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
@@ -94,6 +94,21 @@ class MetricStore(object):
             data[series.name] = point.mean
             latest = max(latest, point.dt)
         return latest, data
+
+    def fetch_jobs(self, metric, begin, end, job, max_points=float('inf')):
+        "Return datetimes with dicts of field names and values."
+        result = collections.defaultdict(dict)
+        types = set()
+        end = Stats[0].floor(end)  # exclude points from a partial sample
+        series_ids = Series.filter(self.measured_object, name__startswith='job_' + metric).values('id')
+        series_ids = Stats[0].objects.filter(id__in=series_ids, dt__gte=begin).values('id').distinct('id')
+        for series in Series.filter(self.measured_object, id__in=series_ids):
+            types.add(series.type)
+            for point in Stats.select(series.id, begin, end, rate=True, maxlen=max_points):
+                result[point.dt][series.name.split('_', 3)[-1]] = max(0.0, point.mean)
+        assert types.issubset(Series.JOB_TYPES)
+        # TODO: translate job ids into metadata
+        return dict(result)
 
 
 class VendorMetricStore(MetricStore):

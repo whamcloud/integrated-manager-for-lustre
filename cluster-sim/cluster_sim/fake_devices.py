@@ -230,7 +230,9 @@ class FakeDevices(Persisted):
             target['stats']['filesfree'] = perturb(target['stats']['filesfree'], target['stats']['filestotal'] / 10, 0, target['stats']['filestotal'])
             for stat in target['stats']['job_stats']:
                 for key in ('read', 'write'):
-                    stat[key]['sum'] = random.randint(0, 10 ** 10)
+                    stat[key]['sum'] += random.randint(0, 10 ** 9)
+                for key in ('read', 'write', 'setattr', 'punch', 'sync'):
+                    stat[key]['samples'] += random.randint(0, 100)
 
         # This is necessary to stop and start the simulator and avoid a big judder on the charts,
         # but in other circumstances it's a gratuitous amount of IO

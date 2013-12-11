@@ -402,8 +402,8 @@ class MetricResource:
         """
         GET parameters:
         :metrics: Comma separated list of strings (e.g. kbytesfree,kbytestotal)
-                  If a datapoint for a particular object does not have ALL of the
-                  requested metrics, that datapoint is discarded.
+        :job: 'id', 'user', or 'command'.
+                only supply one metric of 'read_bytes', 'write_bytes', 'read_iops', 'write_iops', 'metadata_iops'
         :begin: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
         :end: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
         :latest: boolean -- if true, you are asking for a single time point, the latest value
@@ -429,6 +429,12 @@ class MetricResource:
         metrics = request.GET.get('metrics', '').split(',')
         if metrics == ['']:
             errors['metrics'].append("Metrics must be a comma separated list of 1 or more strings")
+        job = request.GET.get('job', '')
+        if job:
+            if len(metrics) > 1:
+                errors['job'].append("Job metrics must be a single string")
+            if latest:
+                errors['job'].append("Job metrics and latest are incompatible")
 
         datetimes = {}
         if not latest:
@@ -443,39 +449,41 @@ class MetricResource:
         if update:
             begin, end = end, timezone.now()
 
-        if 'max_points' in request.GET:
-            try:
-                kwargs['max_points'] = int(request.GET['max_points'])
-            except ValueError:
-                errors['max_points'].append("max_points must be a valid integer")
+        try:
+            max_points = int(request.GET.get('max_points', 1000))
+        except ValueError:
+            errors['max_points'].append("max_points must be a valid integer")
         if errors:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
         if 'pk' in kwargs:
-            return self.get_metric_detail(request, metrics, begin, end, **kwargs)
-        return self.get_metric_list(request, metrics, begin, end, **kwargs)
+            return self.get_metric_detail(request, metrics, begin, end, job, max_points, **kwargs)
+        return self.get_metric_list(request, metrics, begin, end, job, max_points, **kwargs)
 
     def _format(self, stats):
         return [{'ts': dt.isoformat(), 'data': stats[dt]} for dt in sorted(stats)]
 
-    def _fetch(self, metrics_obj, metrics, begin, end, **kwargs):
+    def _fetch(self, metrics_obj, metrics, begin, end, job, max_points):
+        if job:
+            return metrics_obj.fetch_jobs(metrics[0], begin, end, job, max_points)
         if begin and end:
-            return metrics_obj.fetch(metrics, begin, end, **kwargs)
+            return metrics_obj.fetch(metrics, begin, end, max_points)
         return dict([metrics_obj.fetch_last(metrics)])
 
-    def get_metric_detail(self, request, metrics, begin, end, **kwargs):
+    def get_metric_detail(self, request, metrics, begin, end, job, max_points, **kwargs):
         obj = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
         if isinstance(obj, StorageResourceRecord):
             # FIXME: there is a level of indirection here to go from a StorageResourceRecord to individual time series.
             # Although no longer necessary, time series are still stored in separate resources.
             stats = defaultdict(dict)
             for stat in StorageResourceStatistic.objects.filter(storage_resource=obj, name__in=metrics):
-                for dt, data in self._fetch(stat.metrics, metrics, begin, end).items():
+                for dt, data in self._fetch(stat.metrics, metrics, begin, end, job, max_points).items():
                     stats[dt].update(data)
         else:
-            stats = self._fetch(MetricStore(obj), metrics, begin, end)
-        for data in stats.values():
-            data.update(dict.fromkeys(set(metrics).difference(data), 0.0))
+            stats = self._fetch(MetricStore(obj), metrics, begin, end, job, max_points)
+        if not job:
+            for data in stats.values():
+                data.update(dict.fromkeys(set(metrics).difference(data), 0.0))
         return self.create_response(request, self._format(stats))
 
     def _reduce(self, metrics, results, reduce_fn):
@@ -497,7 +505,7 @@ class MetricResource:
                     counter[name] /= len(results)
         return result
 
-    def get_metric_list(self, request, metrics, begin, end, **kwargs):
+    def get_metric_list(self, request, metrics, begin, end, job, max_points, **kwargs):
         errors = {}
         reduce_fn, group_by = map(request.GET.get, ('reduce_fn', 'group_by'))
         if not reduce_fn and group_by:
@@ -510,7 +518,7 @@ class MetricResource:
         except Http404 as exc:
             raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
 
-        result = dict((obj.id, self._fetch(MetricStore(obj), metrics, begin, end, **kwargs)) for obj in objs)
+        result = dict((obj.id, self._fetch(MetricStore(obj), metrics, begin, end, job, max_points)) for obj in objs)
         if not reduce_fn:
             for obj_id, stats in result.items():
                 result[obj_id] = self._format(stats)

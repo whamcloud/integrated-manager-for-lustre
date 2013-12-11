@@ -90,7 +90,7 @@ class TestSeries(TestCase):
         names = [field[0] for field in fields]
         latest, data = self.store.fetch_last(names)
         for seconds, model in zip((1e4, 5e4, 1e5, 1e6, 1e7), Stats):
-            stats = self.store.fetch(names, latest - timedelta(seconds=seconds), latest)
+            stats = self.store.fetch(names, latest - timedelta(seconds=seconds), latest, max_points=1000)
             self.assertLessEqual(len(stats), seconds / model.step + 1)
             self.assertFalse(any(timestamp(dt) % model.step for dt in stats))
         series = Series.filter(self.obj)[0]
