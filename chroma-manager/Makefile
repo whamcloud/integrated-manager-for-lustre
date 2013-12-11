@@ -62,7 +62,7 @@ nuke_db:
 nuke_logs:
 	@$(ALWAYS_NUKE_LOGS) && { \
 		echo "Scrubbing devel logs..."; \
-		rm -f $(CURDIR)/*.log; \
+		rm -f $(CURDIR)/*{.,_}log; \
 	} || true
 
 $(CLUSTER_SIM_BIN):
