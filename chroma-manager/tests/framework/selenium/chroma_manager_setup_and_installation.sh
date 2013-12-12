@@ -15,7 +15,7 @@ echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm git firefox
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm git firefox java-1.7.0-openjdk
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
 if [ ! -z "$GOOGLE_REPO" ]; then
@@ -52,11 +52,14 @@ scp ../pip_cache.tgz chromatest@$TEST_RUNNER:~
 ssh chromatest@$TEST_RUNNER <<"EOF"
 set -ex
 
+mkdir $HOME/bin
+
 # Install Chromedriver
 wget http://chromedriver.storage.googleapis.com/2.6/chromedriver_linux64.zip
-unzip chromedriver_linux64.zip
-mkdir $HOME/bin
-mv chromedriver $HOME/bin/chromedriver
+unzip chromedriver_linux64.zip -d $HOME/bin/
+
+# Download Selenium jar
+wget -O $HOME/bin/selenium-server-standalone.jar https://selenium.googlecode.com/files/selenium-server-standalone-2.39.0.jar
 
 # Set up the virtualenv to run the tests in
 tar -xzf ~/pip_cache.tgz
@@ -103,7 +106,7 @@ cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
 retries=50
 timeout=180
 EOF
-yum install -y python-mock expect
+yum install -y python-mock expect chroma-manager-ui_new  # remove chroma-manager-ui_new once new ui packaging complete
 if $MEASURE_COVERAGE; then
     yum install -y python-coverage
 fi
