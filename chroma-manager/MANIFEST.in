@@ -11,6 +11,7 @@ include chroma_ui/templates/*
 include tests/sample_data/*
 include tests/integration/run_tests
 include tests/integration/*/*.json
+graft realtime
 graft licenses
 graft polymorphic
 graft chroma_ui/static
