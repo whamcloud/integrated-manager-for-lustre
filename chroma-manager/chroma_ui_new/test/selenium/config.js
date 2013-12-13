@@ -3,13 +3,8 @@
 
   var util = require('util'),
     _ = require('lodash-contrib'),
-    regexp = /^config=/;
-
-  var file = process.argv.reduce(function (file, arg) {
-    if (regexp.test(arg)) file = arg.replace(regexp, '');
-
-    return file;
-  }, './sample-config');
+    argv = require('optimist').argv,
+    file = argv.config || './sample-config';
 
   var config = require(file);
 
