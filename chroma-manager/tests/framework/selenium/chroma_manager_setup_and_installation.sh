@@ -2,7 +2,7 @@
 
 [ -r localenv ] && . localenv
 
-ARCHIVE_NAME=ieel-1.0.1.tar.gz
+ARCHIVE_NAME=ieel-1.0.2.tar.gz
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/selenium/cluster_config.json"}
 
