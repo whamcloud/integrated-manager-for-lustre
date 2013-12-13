@@ -32,6 +32,7 @@ module.exports = function requestFactory(conf, nodeRequest) {
   return nodeRequest.defaults({
     jar: true,
     json: true,
-    ca: conf.caFile
+    ca: conf.caFile,
+    strictSSL: false
   });
 };

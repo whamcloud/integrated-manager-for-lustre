@@ -26,7 +26,8 @@ describe('request', function () {
     expect(nodeRequest.defaults).toHaveBeenCalledWithExactly({
       jar: true,
       json: true,
-      ca: conf.caFile
+      ca: conf.caFile,
+      strictSSL: false
     });
   });
 
