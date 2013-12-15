@@ -25,19 +25,39 @@
 
   angular.module('primus', [])
     .value('Primus', window.Primus)
-    .factory('primus', ['Primus', 'BASE', function (Primus, BASE) {
-      var primus;
+    .factory('primus', ['Primus', 'BASE', 'disconnectModal', '$rootScope', primusFactory]);
 
-      /**
-       * Returns a new connection. or the existing one if get was already called.
-       * @param {string} [namespace]
-       */
-      return function get () {
-        if (primus) return primus;
+  function primusFactory(Primus, BASE, disconnectModal, $rootScope) {
+    var primus, modal;
 
-        primus = new Primus(BASE + ':8888');
+    /**
+     * Returns a new connection. or the existing one if get was already called.
+     * @param {string} [namespace]
+     */
+    return function get () {
+      if (primus) return primus;
 
-        return primus;
+      primus = new Primus(BASE + ':8888');
+
+      primus.on('reconnecting', $applyFunc(function onReconnecting() {
+        if (!modal)
+          modal = disconnectModal();
+      }));
+
+      primus.on('open', $applyFunc(function onOpen() {
+        if (modal) {
+          modal.close();
+          modal = null;
+        }
+      }));
+
+      return primus;
+    };
+
+    function $applyFunc(func) {
+      return function () {
+        $rootScope.$apply(func);
       };
-    }]);
+    }
+  }
 }());
