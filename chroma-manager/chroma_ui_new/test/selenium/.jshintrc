@@ -8,6 +8,8 @@
       "describe": false,
       "expect": false,
       "beforeEach": false,
+      "afterEach": false,
+      "browser": false,
       "waits": false,
       "waitsFor": false,
       "runs": false
