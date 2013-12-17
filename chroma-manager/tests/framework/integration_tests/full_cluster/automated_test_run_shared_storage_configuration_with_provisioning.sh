@@ -4,6 +4,15 @@ spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
 
+d=${0%/*}
+if [[ $d != /* ]]; then
+    d=${PWD}/$d
+fi
+while [ ! -f $d/include/Makefile.version ]; do
+    d=${d%/*}
+done
+IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
+
 [ -r localenv ] && . localenv
 
 # Remove test results and coverage reports from previous run
@@ -12,7 +21,7 @@ rm -rfv $PWD/coverage_reports/.coverage*
 mkdir -p $PWD/test_reports
 mkdir -p $PWD/coverage_reports
 
-ARCHIVE_NAME=ieel-2.0.1.1.tar.gz
+ARCHIVE_NAME=ieel-$IEEL_VERSION.tar.gz
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 USE_FENCE_XVM=false

@@ -1,8 +1,17 @@
 #!/bin/bash -ex
 
+d=${0%/*}
+if [[ $d != /* ]]; then
+    d=${PWD}/$d
+fi
+while [ ! -f $d/include/Makefile.version ]; do
+    d=${d%/*}
+done
+IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
+
 [ -r localenv ] && . localenv
 
-ARCHIVE_NAME=ieel-2.0.1.1.tar.gz
+ARCHIVE_NAME=ieel-$IEEL_VERSION.tar.gz
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/selenium/cluster_config.json"}
 
