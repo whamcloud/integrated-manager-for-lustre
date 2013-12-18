@@ -17,7 +17,7 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> cluster_sim/scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> cluster_sim/scm_version.py
 
-develop: version
+develop: version $(FENCE_APC)
 	python setup.py develop
 
 tarball: version
