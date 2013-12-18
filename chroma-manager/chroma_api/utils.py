@@ -402,7 +402,7 @@ class MetricResource:
         """
         GET parameters:
         :metrics: Comma separated list of strings (e.g. kbytesfree,kbytestotal)
-        :job: 'id', 'user', or 'command'.
+        :job: 'id', 'user', or 'name'.
                 only supply one metric of 'read_bytes', 'write_bytes', 'read_iops', 'write_iops', 'metadata_iops'
         :begin: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
         :end: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'

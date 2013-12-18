@@ -26,8 +26,9 @@ import collections
 from datetime import datetime
 from chroma_core.services import log_register
 from django.utils.timezone import utc
-from chroma_core.models import Series, Stats, ManagedHost, ManagedTarget, ManagedFilesystem
+from chroma_core.models import Point, Series, Stats, ManagedHost, ManagedTarget, ManagedFilesystem
 from chroma_core.lib.storage_plugin.api import statistics
+from chroma_core.lib import scheduler
 
 metrics_log = log_register('metrics')
 
@@ -105,9 +106,18 @@ class MetricStore(object):
         for series in Series.filter(self.measured_object, id__in=series_ids):
             types.add(series.type)
             for point in Stats.select(series.id, begin, end, rate=True, maxlen=max_points):
-                result[point.dt][series.name.split('_', 3)[-1]] = max(0.0, point.mean)
+                result[point.dt][series.name.split('_', 3)[-1]] = point
         assert types.issubset(Series.JOB_TYPES)
-        # TODO: translate job ids into metadata
+        # translate job ids into metadata
+        metadata = dict((job_id, job_id) for points in result.values() for job_id in points)
+        if job != 'id':
+            for type in types:  # there should generally be only one
+                metadata.update(scheduler.metadata(type, job, metadata))
+        for dt in result:
+            data = collections.defaultdict(lambda: Point.zero)
+            for job_id, point in result[dt].items():
+                data[metadata[job_id]] += point
+            result[dt] = dict((key, max(0.0, data[key].mean)) for key in data)
         return dict(result)
 
 

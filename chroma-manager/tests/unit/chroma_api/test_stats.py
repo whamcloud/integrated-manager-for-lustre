@@ -98,8 +98,11 @@ class TestStats(ChromaApiTestCase):
             content, = self.fetch('target/{0}/metric/'.format(self.osts[0].id), job='id', metrics=name, begin='2013-04-19T20:30:00Z', end='2013-04-19T20:34:30Z')
             self.assertEqual(content['ts'], '2013-04-19T20:34:20+00:00')
             self.assertEqual(content['data'], {'cp.0': 0.0, 'dd.0': 0.0})
-            content = self.fetch('target/metric/', job='id', metrics=name, begin='2013-04-19T20:30:00Z', end='2013-04-19T20:34:30Z', kind='OST')
-            self.assertEqual(sorted(map(len, content.values())), [0, 1])
+            for job, keys in [('user', ['0']), ('name', ['cp', 'dd']), ('missing', ['cp.0', 'dd.0'])]:
+                content = self.fetch('target/metric/', job=job, metrics=name, begin='2013-04-19T20:30:00Z', end='2013-04-19T20:34:30Z', kind='OST')
+                self.assertEqual(content[str(self.osts[1].id)], [])
+                item, = content[str(self.osts[0].id)]
+                self.assertEqual(item['data'], dict.fromkeys(keys, 0.0))
 
         # invalid request
         response = self.api_client.get('/api/target/metric/', data={'job': 'id', 'latest': 'true', 'metrics': 'read_bytes,write_bytes'})
