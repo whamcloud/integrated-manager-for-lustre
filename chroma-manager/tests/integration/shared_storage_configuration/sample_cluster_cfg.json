@@ -90,7 +90,7 @@
         {
             "address": "hydra-2-ss2-client-1"
         }
-    ]
+    ],
     "hosts": {
         "hydra-2": {}
     }
