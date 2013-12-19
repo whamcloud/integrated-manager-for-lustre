@@ -234,7 +234,7 @@ class UpdateScan(object):
         Pass the received metrics into the metrics library for storage.
         """
         raw_metrics = self.host_data['metrics']['raw']
-        self.jobid_var = raw_metrics['lustre'].get('jobid_var', 'disable')
+        self.jobid_var = raw_metrics.get('lustre', {}).get('jobid_var', 'disable')
         samples = []
 
         try:
