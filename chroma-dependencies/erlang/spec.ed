@@ -23,7 +23,7 @@
 /%files -n emacs-erlang/
 -2;/^%endif/d
 /^%changelog/a
-* Wed May 01 2013 Brian J. Murrell <brian.murrell@intel.com> - R14B-04.2.wc1
+* Fri Dec 20 2013 Brian J. Murrell <brian.murrell@intel.com> - R14B-04.3.wc1
 - Repackage
   - remove syntax_tools from hipe
   - remove otp_mibs and snmp requirement from os_mon
