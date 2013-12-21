@@ -1,0 +1,231 @@
+#!/usr/bin/env python
+
+#
+# INTEL CONFIDENTIAL
+#
+# Copyright 2013 Intel Corporation All Rights Reserved.
+#
+# The source code contained or described herein and all documents related
+# to the source code ("Material") are owned by Intel Corporation or its
+# suppliers or licensors. Title to the Material remains with Intel Corporation
+# or its suppliers and licensors. The Material contains trade secrets and
+# proprietary and confidential information of Intel or its suppliers and
+# licensors. The Material is protected by worldwide copyright and trade secret
+# laws and treaty provisions. No part of the Material may be used, copied,
+# reproduced, modified, published, uploaded, posted, transmitted, distributed,
+# or disclosed in any way without Intel's prior express written permission.
+#
+# No license under any patent, copyright, trade secret or other intellectual
+# property right is granted to or conferred upon you by disclosure or delivery
+# of the Materials, either expressly, by implication, inducement, estoppel or
+# otherwise. Any license under such intellectual property rights must be
+# express and approved by Intel in writing.
+
+
+import json
+import sys
+import time
+from subprocess import Popen, PIPE
+
+class PackageSpec(object):
+    def __init__(self, package_meta):
+        self.package_meta = package_meta
+        self._build_requires = []
+        self._requires = []
+
+    def __str__(self):
+        return '''
+%%{?nodejs_find_provides_and_requires}
+
+Name:       nodejs-%(name)s
+Version:    %(version)s
+Release:    %(release)s%%{?dist}
+Summary:    The nodejs %(name)s module
+License:    %(clean_license)s
+Group:      Development/Libraries
+URL:        %(homepage)s
+Vendor:     %(clean_author)s
+Packager:   %(packager)s
+Source0:    http://registry.npmjs.org/%(name)s/-/%(name)s-%(version)s.tgz
+Source1:    %(name)s-modules.tar.gz
+BuildRoot:  %%{_tmppath}/%%{name}-%%{version}-%%{release}-root-%%(%%{__id_u} -n)
+BuildArch:  noarch
+ExclusiveArch: %%{ix86} x86_64 %%{arm} noarch
+
+BuildRequires: nodejs-devel %(build_requires)s
+Requires: nodejs %(requires)s
+
+%%description
+%(description)s
+
+%%prep
+%%setup -q -n package
+# nuke any bundled modules
+rm -rf node_modules
+%%setup -q -a 1 -n package
+
+%%build
+%(build_stanza)s
+# nuke build modules
+rm -rf node_modules
+# get rid of cruft
+rm -rf test/ bench/ src/ examples/ example/
+
+%%install
+rm -rf %%{buildroot}
+
+mkdir -p %%{buildroot}%%{nodejs_sitelib}/%(name)s
+cp -a * %%{buildroot}%%{nodejs_sitelib}/%(name)s/
+%(bin_install_stanza)s
+
+%%nodejs_symlink_deps
+
+%%clean
+rm -rf %%{buildroot}
+
+%%files
+%%{nodejs_sitelib}/%(name)s/
+%(bin_files_stanza)s
+
+%%changelog
+* %(package_date)s %(packager)s - %(version)s-%(release)s%%{?dist}
+  - Built RPM for distribution with Intel Manager for Lustre
+''' % self
+
+    def __getitem__(self, key):
+        try:
+            return self.package_meta[key].encode('ascii', 'ignore')
+        except AttributeError:
+            raise RuntimeError("Don't know how do deal with %s = %s" % (key, self.package_meta[key]))
+        except KeyError:
+            try:
+                return getattr(self, key)
+            except AttributeError:
+                return "UNKNOWN"
+
+    def add_build_requirements(self, requirements):
+        self._build_requires += requirements
+
+    def add_requirements(self, requirements):
+        self._requires += requirements
+
+    @property
+    def build_requires(self):
+        if self.package_meta.get('gypfile', None):
+            self._build_requires.append('node-gyp')
+        return " ".join(self._build_requires)
+
+    @property
+    def requires(self):
+        return " ".join(self._requires)
+
+    @property
+    def build_stanza(self):
+        if self.package_meta.get('gypfile', None):
+            return '''# build with node-gyp
+export CXXFLAGS="%{optflags}"
+node-gyp rebuild
+'''
+        else:
+            return '# Nothing to build'
+
+    @property
+    def bin_install_stanza(self):
+        if 'bin' in self.package_meta:
+            stanza = ["", "mkdir -p %{buildroot}%{_bindir}"]
+            for name, path in self.package_meta['bin'].items():
+                stanza.append("ln -s %%{nodejs_sitelib}/%s/%s %%{buildroot}%%{_bindir}/%s" % (self.package_meta['name'], path, name))
+            return "\n".join(stanza)
+        else:
+            return ''
+
+    @property
+    def bin_files_stanza(self):
+        if 'bin' in self.package_meta:
+            stanza = []
+            for name in self.package_meta['bin']:
+                stanza.append("%%{_bindir}/%s" % name)
+            return "\n".join(stanza)
+        else:
+            return ''
+
+
+    @property
+    def release(self):
+        return 1
+
+    @property
+    def clean_author(self):
+        author = self.package_meta.get('author', None)
+        if author:
+            if isinstance(author, dict):
+                if 'email' in author and 'name' in author:
+                    author = '%s <%s>' % (author['name'], author['email'])
+                elif 'name' in author:
+                    author = author['name']
+                else:
+                    author = "UNKNOWN"
+
+            return author.encode('ascii', 'ignore')
+        else:
+            if 'contributors' in self.package_meta:
+                return ", ".join(self.package_meta['contributors']).encode('ascii', 'ignore')
+            else:
+                return "UNKNOWN"
+
+    @property
+    def packager(self):
+        user_name = Popen(['git', 'config', '--get', 'user.name'], stdout=PIPE).communicate()[0].rstrip()
+        user_email = Popen(['git', 'config', '--get', 'user.email'], stdout=PIPE).communicate()[0].rstrip()
+        return "%s <%s>" % (user_name, user_email)
+
+    @property
+    def clean_license(self):
+        if 'licenses' in self.package_meta:
+            return ",".join([l['type'] for l in self.package_meta['licenses']])
+        elif 'license' in self.package_meta:
+            try:
+                return self.package_meta['license']['type']
+            except TypeError:
+                return self.package_meta['license']
+        else:
+            return "UNKNOWN"
+
+    @property
+    def homepage(self):
+        if 'repository' in self.package_meta:
+            try:
+                return self.package_meta['repository']['url']
+            except TypeError:
+                return self.package_meta['repository']
+        elif 'repositories' in self.package_meta:
+            return self.package_meta['repositories'][0]['url']
+        else:
+            return "UNKNOWN"
+
+    @property
+    def package_date(self):
+        return time.strftime('%a %b %d %Y')
+
+
+def fatal(msg=None):
+    if msg:
+        sys.stderr.write("FATAL: %s\n" % msg)
+
+    sys.exit(1)
+
+
+def main():
+    try:
+        package_json_path = sys.argv[1]
+    except IndexError:
+        fatal("Must supply path/to/package.json")
+
+    with open(package_json_path) as f:
+        package_json = json.load(f)
+
+    print PackageSpec(package_json)
+
+
+if __name__ == "__main__":
+    main()

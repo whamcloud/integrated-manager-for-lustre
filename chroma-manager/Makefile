@@ -1,5 +1,9 @@
 include ../include/Makefile.version
 
+# Get the list of nodejs modules needed by realtime
+REALTIME_DEPENDENCIES := $(shell python -c "import json; print ' '.join(json.load(open('realtime/package.json'))['dependencies'].keys())")
+NPM := $(shell if which npm 2>/dev/null; then true; else echo npm; fi)
+
 # Override this if you don't want to use detected bundles
 USE_DETECTED_BUNDLES ?= true
 DEV_SETUP_BUNDLES ?= $(shell $(USE_DETECTED_BUNDLES) && { ls $(CURDIR)/repo/*.profile >/dev/null 2>&1 || echo "--no-bundles"; } || echo "--no-bundles")
@@ -46,11 +50,23 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
-develop: version
+develop: version realtime
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
 	./manage.py dev_setup $(DEV_SETUP_BUNDLES)
+
+$(NPM):
+	@echo "You need to install $@ first... (brew install $@?)"
+	exit 1
+
+realtime: realtime/package.json $(NPM)
+	@echo "Setting up realtime module for development..."
+	if [ -n "$(HTTP_PROXY)" ] && [[ $(HTTP_PROXY) != "http://"* ]]; then \
+		export HTTP_PROXY=http://$(HTTP_PROXY); \
+	fi; \
+	cd realtime && \
+	npm install
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -168,6 +184,7 @@ rpms: cleandist tarball
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(PACKAGE_VERSION)" \
 		--define "release $(PACKAGE_RELEASE)" \
+		--define "realtime_dependencies '$(REALTIME_DEPENDENCIES)'" \
 		-bb _topdir/SPECS/chroma-manager.spec
 	mv _topdir/RPMS/noarch/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).noarch.rpm dist/
 	rm -rf _topdir
