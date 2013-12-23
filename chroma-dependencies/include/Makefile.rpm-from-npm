@@ -38,6 +38,8 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile
 	mkdir tmp
 	tar xzvf $(TARBALL) -C tmp
 	$(TOP)/include/npm2spec tmp/package/package.json > $(SPECNAME)
+	cp $(SPECNAME){,.orig}
+	(cat spec.ed ; echo -e "w\nq") | ed $(SPECNAME) 2>/dev/null
 	rm -fr tmp
 
 spec.ed:

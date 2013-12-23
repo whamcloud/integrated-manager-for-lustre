@@ -1,6 +1,6 @@
 NAME		:= bunyan
-VERSION		:= 0.22.1
-SHA1SUM		:= 020c383bed625af5c6c8834dd8c4aca0dd0f765c
+VERSION		:= 0.22.0
+SHA1SUM		:= 04303ba236ad112da7444aaa4b9f905afd477f15
 DEPENDENCIES	:= dtrace-provider mv
 
 include ../include/Makefile.rpm-from-npm

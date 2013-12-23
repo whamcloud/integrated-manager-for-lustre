@@ -1,5 +1,5 @@
 NAME		:= primus-multiplex
-VERSION		:= 2.1.1
-SHA1SUM		:= c57c4944106e0b444e51dcf27320ef666dc5642f
+VERSION		:= 2.2.0
+SHA1SUM		:= 6738599de324103f8908675f845c2eb20377ee76
 
 include ../include/Makefile.rpm-from-npm

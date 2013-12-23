@@ -1,5 +1,7 @@
 'use strict';
 
+jasmine.getEnv().defaultTimeoutInterval = 10000;
+
 var Primus = require('primus'),
   multiplex = require('primus-multiplex'),
   conf = require('../../../conf');
