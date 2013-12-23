@@ -29,4 +29,10 @@ describe('Date ticks', function () {
 
     expect(func('11/11/2013 08:30:00')).toEqual('08:30:00 AM');
   });
+
+  it('should accept an array as a range', function () {
+    var func = dateTicks.getTickFormatFunc(['11/11/2013 00:00:00', '12/11/2013 00:00:00']);
+
+    expect(func('11/12/2013 06:30:00')).toEqual('Nov 12 06:30 AM');
+  });
 });

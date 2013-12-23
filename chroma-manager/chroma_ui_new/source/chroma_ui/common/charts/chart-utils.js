@@ -19,27 +19,29 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
-angular.module('charts').factory('dateTicks', ['d3', 'moment', function (d3, moment) {
+angular.module('charts').factory('chartUtils', ['chartParamMixins', function (chartParamMixins) {
   'use strict';
 
   return {
     /**
-     * Given a range from moment#twix returns a function used to format the ticks.
-     * @param {Object|Array} range If an Array converts into a twix range.
-     * @returns {Function}
+     * Convenience to create a translate string
+     * @param {Number} dx The x coordinate.
+     * @param {Number} dy The y coordinate.
+     * @returns {String}
      */
-    getTickFormatFunc: function getTickFormatFunc(range) {
-      if (Array.isArray(range))
-        range = moment(range[0]).twix(range[1]);
-
-      if (!range.isSame('month'))
-        return function (d) { return d3.time.format('%b %d %I:%M %p')(moment(d).utc().toDate()); };
-
-      if (!range.isSame('day'))
-        return function (d) { return d3.time.format('%d %I:%M:%S %p')(moment(d).utc().toDate()); };
-
-      return function (d) { return d3.time.format('%I:%M:%S %p')(moment(d).utc().toDate()); };
-    }
+    translator: function translator(dx, dy) {
+      return 'translate(' + dx + ',' + dy + ')';
+    },
+    /**
+     * Convenience to prepend a string with a CSS class period.
+     * @param {String} str
+     * @returns {String}
+     */
+    cl: function cl(str) {
+      return '.' + str;
+    },
+    chartParamMixins: chartParamMixins
   };
+
 }]);
+

@@ -40,9 +40,7 @@
           var chart,
             svg = d3.select(element.find('svg')[0]);
 
-          chart = config.generateChart(nv).options({
-            margin: {left: 70, bottom: 100, right: 50}
-          });
+          chart = config.generateChart(nv).margin({left: 70, bottom: 100, right: 50});
 
           svg
             .attr('preserveAspectRatio', 'xMinYMid')
@@ -50,7 +48,11 @@
             .attr('height', '100%')
             .datum(scope.chartData);
 
-          nv.utils.windowResize(setChartViewBox);
+          var debounced = _.debounce(function onWindowResize() {
+            scope.$apply(setChartViewBox);
+          }, 150);
+
+          angular.element(window).on('resize', debounced);
 
           if(scope.options && scope.options.setup) scope.options.setup(chart, d3, nv);
 
@@ -88,6 +90,8 @@
 
           scope.$on('$destroy', function onDestroy() {
             deregister();
+
+            angular.element(window).off('resize', debounced);
 
             if (fullScreenCtrl) fullScreenCtrl.removeListener(setChartViewBox);
           });
