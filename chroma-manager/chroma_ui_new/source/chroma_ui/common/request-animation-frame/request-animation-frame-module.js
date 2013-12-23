@@ -20,8 +20,4 @@
 // express and approved by Intel in writing.
 
 
-(function () {
-  'use strict';
-
-  angular.module('charts', ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame']);
-}());
+angular.module('requestAnimationFrame', []);

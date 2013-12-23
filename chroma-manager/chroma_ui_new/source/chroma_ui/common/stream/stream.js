@@ -145,6 +145,12 @@ angular.module('stream').factory('stream', ['$parse', '$q', 'primus', function s
     };
 
     /**
+     * Alias to to updateParams
+     * @type {updateParams}
+     */
+    Stream.prototype.restart = Stream.prototype.updateParams;
+
+    /**
      * Returns a function that when called recursively iterates the list.
      * Each transformer has Stream as a context.
      * @param {array} queue

@@ -1,0 +1,33 @@
+.read-write-heat-map {
+  .cell:hover {
+    cursor: pointer;
+  }
+
+  .mini-dialog {
+    @border-radius: 2px;
+
+    position: absolute;
+    z-index: 9999;
+    width: 200px;
+    border-radius: @border-radius;
+    background-color: @body-bg;
+
+    .box-shadow(0 1px 1px rgba(0,0,0,.05));
+
+    .padding {
+      padding: 10px;
+    }
+
+    .heading {
+      margin-top: 0;
+      background-color: @gray-lighter;
+      color: @gray;
+      border-radius: @border-radius @border-radius 0 0;
+      .padding;
+    }
+
+    .body {
+      .padding;
+    }
+  }
+}

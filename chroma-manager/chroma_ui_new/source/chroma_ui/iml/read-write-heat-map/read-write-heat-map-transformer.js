@@ -20,8 +20,41 @@
 // express and approved by Intel in writing.
 
 
-(function () {
+angular.module('readWriteHeatMap').factory('readWriteHeatMapTransformer', [readWriteHeatMapTransformerFactory]);
+
+function readWriteHeatMapTransformerFactory() {
   'use strict';
 
-  angular.module('charts', ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame']);
-}());
+  /**
+   * Transforms incoming protocol data to display write as a negative value.
+   * @param {Object} resp The response.
+   * @param {Object} deferred The deferred to pipe through.
+   */
+  return function transformer(resp, deferred) {
+    var newVal = resp.body;
+
+    if (!_.isPlainObject(newVal))
+      throw new Error('readWriteHeatMapTransformer expects resp.body to be an object!');
+
+    /*jshint validthis: true */
+    var type = this.type;
+
+    resp.body = Object.keys(newVal).reduce(function (arr, key) {
+      var ost = {key: key, values: []};
+
+      newVal[key].forEach(function (item) {
+        ost.values.push({
+          x: new Date(item.ts),
+          z: item.data[type]
+        });
+      });
+
+      arr.push(ost);
+
+      return arr;
+    }, []);
+
+    deferred.resolve(resp);
+  };
+}
+

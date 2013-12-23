@@ -21,7 +21,7 @@
 
 angular.module('dashboard',
     ['ostBalance', 'mdo', 'mds', 'sortable',
-      'readWriteBandwidth', 'objectStorageServers', 'fullScreen',
+      'readWriteBandwidth', 'objectStorageServers', 'readWriteHeatMap', 'fullScreen',
       'fileSystem'
     ])
   .controller('DashboardCtrl', ['$scope', function ($scope) {
@@ -29,6 +29,7 @@ angular.module('dashboard',
 
     $scope.dashboard = {
       charts: [
+        {name: 'iml/read-write-heat-map/assets/html/read-write-heat-map.html'},
         {name: 'iml/ost-balance/assets/html/ost-balance.html'},
         {name: 'iml/mdo/assets/html/mdo.html'},
         {name: 'iml/read-write-bandwidth/assets/html/read-write-bandwidth.html'},

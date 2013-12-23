@@ -20,8 +20,7 @@
 // express and approved by Intel in writing.
 
 
-(function () {
-  'use strict';
-
-  angular.module('charts', ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame']);
-}());
+angular.module('readWriteHeatMap').constant('readWriteHeatMapTypes', {
+  READ: 'stats_read_bytes',
+  WRITE: 'stats_write_bytes'
+});

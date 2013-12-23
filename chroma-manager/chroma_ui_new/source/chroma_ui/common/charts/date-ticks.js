@@ -26,10 +26,13 @@ angular.module('charts').factory('dateTicks', ['d3', 'moment', function (d3, mom
   return {
     /**
      * Given a range from moment#twix returns a function used to format the ticks.
-     * @param {object} range
+     * @param {Object|Array} range If an Array converts into a twix range.
      * @returns {Function}
      */
     getTickFormatFunc: function getTickFormatFunc(range) {
+      if (Array.isArray(range))
+        range = moment(range[0]).twix(range[1]);
+
       if (!range.isSame('month'))
         return function (d) { return d3.time.format('%b %d %I:%M %p')(moment(d).utc().toDate()); };
 

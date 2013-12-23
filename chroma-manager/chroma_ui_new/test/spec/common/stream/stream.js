@@ -141,6 +141,32 @@ describe('stream module', function () {
         });
       });
 
+
+      describe('restart', function () {
+        var stopStreamingCall;
+
+        beforeEach(function () {
+          streamInstance.restart();
+
+          stopStreamingCall = primus._channelInstance_.send.mostRecentCallThat(function (call) {
+            return call.args[0] === 'stopStreaming';
+          });
+        });
+
+        it('should stop the stream', function () {
+          expect(primus._channelInstance_.send).toHaveBeenCalledOnceWith('stopStreaming', jasmine.any(Function));
+        });
+
+        it('should not start the stream until stop calls back', function () {
+          expect(primus._channelInstance_.send).toHaveBeenCalledOnceWith('startStreaming');
+        });
+
+        it('should start the stream', function () {
+          stopStreamingCall.args[1]();
+
+          expect(primus._channelInstance_.send).toHaveBeenCalledTwiceWith('startStreaming');
+        });
+      });
     });
 
     describe('destroy', function () {

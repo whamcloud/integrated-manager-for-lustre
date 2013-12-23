@@ -19,9 +19,40 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
-(function () {
+angular.module('charts').factory('chartUtils', ['chartParamMixins', function (chartParamMixins) {
   'use strict';
 
-  angular.module('charts', ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame']);
-}());
+  return {
+    /**
+     * Convenience to create a translate string
+     * @param {Number} dx The x coordinate.
+     * @param {Number} dy The y coordinate.
+     * @returns {String}
+     */
+    translator: function translator(dx, dy) {
+      return 'translate(' + dx + ',' + dy + ')';
+    },
+    /**
+     * Convenience to prepend a string with a CSS class period.
+     * @param {String} str
+     * @returns {String}
+     */
+    cl: function cl(str) {
+      return '.' + str;
+    },
+    /**
+     * Convenience to get a node's bounding box.
+     * @param selection A d3 selection
+     * @returns {Object}
+     */
+    getBBox: function getBBox(selection) {
+      return selection.node().getBBox();
+    },
+    /**
+     * Exports the chartParamMixins in this object
+     * @property chartParamMixins
+     */
+    chartParamMixins: chartParamMixins
+  };
+}]);
+

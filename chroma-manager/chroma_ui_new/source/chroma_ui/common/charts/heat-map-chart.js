@@ -20,8 +20,24 @@
 // express and approved by Intel in writing.
 
 
-(function () {
+angular.module('charts').directive('heatMap', ['moment', 'dateTicks', 'heatMapChartFactory', 'baseChart', heatMap]);
+
+function heatMap (moment, dateTicks, heatMapChartFactory, baseChart) {
   'use strict';
 
-  angular.module('charts', ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame']);
-}());
+  return baseChart({
+    generateChart: heatMapChartFactory,
+    onUpdate: function onUpdate(chart, data) {
+      if(data.length === 0) return;
+
+      var values = _.pluck(data, 'values')[0],
+        start = values[0].x,
+        end = values[values.length - 1].x,
+        range = moment(start).twix(end);
+
+      chart.xAxis()
+        .axisLabel(range.format({implicitYear: false}))
+        .tickFormat(dateTicks.getTickFormatFunc(range));
+    }
+  });
+}

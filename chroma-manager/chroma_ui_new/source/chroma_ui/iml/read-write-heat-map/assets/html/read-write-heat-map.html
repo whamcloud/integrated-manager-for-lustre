@@ -1,0 +1,22 @@
+<div ng-controller="ReadWriteHeatMapCtrl" class="with-transitions read-write-heat-map">
+  <h5>Read/Write Heat Map</h5>
+  <div class="controls">
+    <duration-picker start-unit="{{ readWriteHeatMap.unit }}" start-size="{{ readWriteHeatMap.size }}" on-update="readWriteHeatMap.onUpdate(unit, size)"></duration-picker>
+    <a full-screen-btn class="btn btn-primary btn-xs"></a>
+    <div class="btn-group">
+      <button type="button" ng-click="readWriteHeatMap.toggle(readWriteHeatMap.TYPES.READ)" class="btn btn-default btn-xs" ng-model="readWriteHeatMap.type" btn-radio="'stats_read_bytes'">Read</button>
+      <button type="button" ng-click="readWriteHeatMap.toggle(readWriteHeatMap.TYPES.WRITE)" class="btn btn-default btn-xs" ng-model="readWriteHeatMap.type" btn-radio="'stats_write_bytes'">Write</button>
+    </div>
+    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
+  </div>
+  <heat-map options="readWriteHeatMap.options" chart-data="readWriteHeatMap.data"></heat-map>
+  <div class="mini-dialog" ng-class="{hide: !readWriteHeatMap.isVisible}" ng-style="{top: readWriteHeatMap.y, left: readWriteHeatMap.x }">
+    <h4 class="heading">
+      {{ readWriteHeatMap.ostName }}
+    </h4>
+    <div class="body">
+      <p>{{ readWriteHeatMap.date | date:'medium' }}</p>
+      <p>{{ readWriteHeatMap.bandwidth }}</p>
+    </div>
+  </div>
+</div>

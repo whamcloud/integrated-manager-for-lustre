@@ -3,18 +3,17 @@ describe('Exception interceptor', function () {
 
   var exceptionInterceptor, exceptionHandler, response, $rootScope, error, errbackSpy, disconnectHandler;
 
-  beforeEach(module({STATIC_URL: '/api/'}, function ($exceptionHandlerProvider) {
-    $exceptionHandlerProvider.mode('log');
-
-    exceptionHandler = $exceptionHandlerProvider.$get();
-  }, 'exception', function ($provide) {
+  beforeEach(module({STATIC_URL: '/api/'}, 'exception', function ($provide) {
     disconnectHandler = { add: jasmine.createSpy('add') };
 
     $provide.value('disconnectHandler', disconnectHandler);
+
+    $provide.value('$exceptionHandler', jasmine.createSpy('$exceptionHandler'));
   }));
 
-  beforeEach(inject(function (_exceptionInterceptor_, _$rootScope_) {
+  beforeEach(inject(function (_exceptionInterceptor_, _$exceptionHandler_, _$rootScope_) {
     exceptionInterceptor = _exceptionInterceptor_;
+    exceptionHandler = _$exceptionHandler_;
     $rootScope = _$rootScope_;
     errbackSpy = jasmine.createSpy('errbackSpy');
     error = new Error('Test Error!');
@@ -36,7 +35,7 @@ describe('Exception interceptor', function () {
     it('should call $exceptionHandler with the same error that was passed in', function () {
       exceptionInterceptor.requestError(error);
 
-      expect(exceptionHandler.errors[0][0]).toBe(error);
+      expect(exceptionHandler).toHaveBeenCalledOnceWith(error);
     });
 
     it('should call $exceptionHandler with a cause if passed a string.', function () {
@@ -44,7 +43,7 @@ describe('Exception interceptor', function () {
 
       exceptionInterceptor.requestError(errorString);
 
-      expect(exceptionHandler.errors[0][1]).toBe(errorString);
+      expect(exceptionHandler).toHaveBeenCalledWith(null, errorString);
     });
 
     describe('custom error', function () {
@@ -55,7 +54,7 @@ describe('Exception interceptor', function () {
 
         exceptionInterceptor.requestError(strangeError);
 
-        customError = exceptionHandler.errors[0][0];
+        customError = exceptionHandler.mostRecentCall.args[0];
       });
 
       it('should call $exceptionHandler with a custom error', function () {
@@ -86,7 +85,7 @@ describe('Exception interceptor', function () {
 
       exceptionInterceptor.responseError(response);
 
-      expect(exceptionHandler.errors.length).toBe(0);
+      expect(exceptionHandler.callCount).toBe(0);
     });
 
     it('should not call the $exceptionHandler with an error on 0s', function () {
@@ -94,7 +93,7 @@ describe('Exception interceptor', function () {
 
       exceptionInterceptor.responseError(response);
 
-      expect(exceptionHandler.errors.length).toBe(0);
+      expect(exceptionHandler.callCount).toBe(0);
     });
 
     it('should call the disconnectHandler on a 0', function () {
@@ -127,7 +126,7 @@ describe('Exception interceptor', function () {
     it('should call the $exceptionHandler with an error on 500s', function () {
       exceptionInterceptor.responseError(response);
 
-      var error = exceptionHandler.errors[0][0];
+      var error = exceptionHandler.mostRecentCall.args[0];
 
       expect(error).toEqual(jasmine.any(Error));
     });

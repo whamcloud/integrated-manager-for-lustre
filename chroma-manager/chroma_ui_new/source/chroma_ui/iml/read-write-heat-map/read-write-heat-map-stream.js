@@ -20,8 +20,38 @@
 // express and approved by Intel in writing.
 
 
-(function () {
+angular.module('readWriteHeatMap').factory('ReadWriteHeatMapStream', ['stream', 'readWriteHeatMapTransformer',
+  'replaceTransformer', 'readWriteHeatMapTypes', readWriteHeatMapFactory]);
+
+function readWriteHeatMapFactory(stream, readWriteHeatMapTransformer,
+                                 replaceTransformer, readWriteHeatMapTypes) {
   'use strict';
 
-  angular.module('charts', ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame']);
-}());
+  var ReadWriteHeatMapStream = stream('targetostmetrics', 'httpGetOstMetrics', {
+    params: {
+      qs: {
+        kind: 'OST',
+        metrics: 'stats_read_bytes,stats_write_bytes',
+        num_points: '20'
+      }
+    },
+    transformers: [readWriteHeatMapTransformer, replaceTransformer]
+  });
+
+  Object.defineProperty(ReadWriteHeatMapStream.prototype, 'type', {
+    set: function (value) {
+      if (value in _.invert(readWriteHeatMapTypes)) {
+        this._value = value;
+      } else {
+        throw new Error('Type: %s is not a valid type!'.sprintf(value));
+      }
+    },
+    get: function () {
+      return this._value;
+    }
+  });
+
+  ReadWriteHeatMapStream.TYPES = readWriteHeatMapTypes;
+
+  return ReadWriteHeatMapStream;
+}
