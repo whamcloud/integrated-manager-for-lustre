@@ -31,7 +31,7 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager/realtime
 
 # Run Karma GUI unit tests (old ui)
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui
-./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit || true
+./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
 mv test-results.xml \$HOME/test_reports/karma-test-results-old-ui.xml
 
 # Run Selenium GUI Tests (old ui)

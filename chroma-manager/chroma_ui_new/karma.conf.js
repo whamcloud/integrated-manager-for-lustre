@@ -32,6 +32,7 @@ module.exports = function(config) {
     // list of files / patterns to load in the browser
     files: [
       bowerDir('jasmine-stealth/index.js'),
+      bowerDir('jquery/jquery.js'),
       bowerDir('angular/angular.js'),
       bowerDir('angular-resource/angular-resource.js'),
       bowerDir('lodash/dist/lodash.js'),
@@ -39,8 +40,10 @@ module.exports = function(config) {
       vendorDir('**/*.js'),
       commonDir('**/*-module.js'),
       commonDir('**/*.js'),
+      commonDir('**/*.html'),
       imlDir('**/*-module.js'),
       imlDir('**/*.js'),
+      imlDir('**/*.html'),
       bowerDir('angular-mocks/angular-mocks.js'),
       testDir('mocks/mock.js'),
       testDir('**/*-module.js'),
@@ -75,7 +78,11 @@ module.exports = function(config) {
 
     ngHtml2JsPreprocessor: {
       moduleName: 'templates',
-      stripPrefix: 'test/templates/'
+      cacheIdFromPath: function (filepath) {
+        return filepath
+          .replace(/^source\/chroma_ui\//, '')
+          .replace(/^test\/templates\//, '');
+      }
     },
 
     // web server port
