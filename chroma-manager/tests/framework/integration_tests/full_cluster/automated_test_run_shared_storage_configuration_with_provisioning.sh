@@ -21,6 +21,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
+#TESTS=${TESTS:-"tests/integration/shared_storage_configuration/test_managed_filesystem_with_failover.py"}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
 echo "Beginning installation and setup..."
@@ -175,15 +176,17 @@ echo "End installation and setup."
 
 echo "Begin running tests..."
 
+rc=0
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS || true"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS" || rc=${PIPESTATUS[0]}
 
 echo "End running tests."
 
-# test that removing the chroma-manager RPM removes /var/lib/chroma
-ssh root@$CHROMA_MANAGER "set -xe
+if [ $rc -eq 0 ]; then
+    # test that removing the chroma-manager RPM removes /var/lib/chroma
+    ssh root@$CHROMA_MANAGER "set -xe
 exec 2>&1
 ls -l /var/lib/chroma
 rpm -e chroma-manager-cli chroma-manager chroma-manager-libs
@@ -192,6 +195,7 @@ if [ -d /var/lib/chroma ]; then
     ls -l /var/lib/chroma
     exit 1
 fi"
+fi
 
 echo "Collecting reports..."
 set +e

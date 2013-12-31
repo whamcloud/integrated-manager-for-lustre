@@ -101,6 +101,7 @@ def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
 def get_resource_location(resource_name):
     # FIXME: this may break on non-english systems or new versions of pacemaker
     rc, lines_text, stderr = shell.run(["crm_mon", "-1", "-r"])
+    console_log.debug("result: \"%s\"" % lines_text)
     if rc != 0:
         # Pacemaker not running, or no resources configured yet
         return None
@@ -136,6 +137,7 @@ def get_resource_locations():
        resources (i.e. targets) are running."""
 
     rc, lines_text, stderr = shell.run(["crm_mon", "-1", "-r"])
+    console_log.debug("result: \"%s\"" % lines_text)
     if rc != 0:
         # Pacemaker not running, or no resources configured yet
         return None
@@ -613,10 +615,13 @@ def target_running(uuid):
         return os.stat(a).st_ino == os.stat(b).st_ino
 
     mounts = Mounts()
+    console_log.debug("in target_running Mounts(): \"%s\"" % mounts)
     for device, mntpnt, fstype in mounts.all():
         if mntpnt == info['mntpt'] and devices_match(device, info['bdev']):
+            console_log.debug("target is running: %s->%s" % (uuid, info['bdev']))
             _exit(0)
 
+    console_log.debug("target is NOT running: %s->%s" % (uuid, info['bdev']))
     _exit(1)
 
 

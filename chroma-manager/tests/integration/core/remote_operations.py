@@ -505,6 +505,7 @@ class RealRemoteOperations(RemoteOperations):
                     filesystem['name']))
 
     def exercise_filesystem(self, client_address, filesystem):
+        import simplejson as json
         """
         Verify we can actually exercise a filesystem.
 
@@ -512,6 +513,10 @@ class RealRemoteOperations(RemoteOperations):
         sanity check that it was configured correctly.
         """
         # TODO: Expand on entire function. Perhaps use existing lustre client tests.
+
+        logger.debug("filesystem: %s" % json.dumps(filesystem,
+                                                   indent=4,
+                                                   separators=(',', ': ')))
 
         if not filesystem.get('bytes_free'):
             self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free'))
@@ -810,7 +815,7 @@ class RealRemoteOperations(RemoteOperations):
                         '''set -ex
                         service pacemaker stop &
                         pid=$!
-                        timeout=120
+                        timeout=180
                         while kill -0 $pid && [ $timeout -gt 0 ]; do
                             sleep 1
                             let timeout=$timeout-1 || true
