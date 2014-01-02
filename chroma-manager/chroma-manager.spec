@@ -2,6 +2,7 @@
 %{?!version: %define version %(%{__python} -c "from scm_version import PACKAGE_VERSION; sys.stdout.write(PACKAGE_VERSION)")}
 %{?!release: %define release 1}
 %{?!python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
+%{?!nodejs_sitelib: %define nodejs_sitelib %{_prefix}/lib/node_modules}
 
 # The install directory for the manager
 %{?!manager_root: %define manager_root /usr/share/chroma-manager}
@@ -57,6 +58,9 @@ Requires: policycoreutils-python
 Requires: python-gevent >= 0.13
 Requires: fence-agents-iml > 3.1.5-25.wc1.el6.2
 Requires: system-config-firewall-base
+%if %([ -z %{?realtime_dependencies} ]; echo $?)
+Requires: %(for dep in $(echo %{realtime_dependencies}); do echo -n "nodejs-$dep "; done)
+%endif
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 
@@ -114,6 +118,13 @@ cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/chroma-manager.conf
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
 cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
+
+# Allow our realtime app to use globally-installed node modules
+realtime_modules=$RPM_BUILD_ROOT%{manager_root}/realtime/node_modules
+mkdir -p $realtime_modules
+for module in %(echo %{?realtime_dependencies}); do
+    ln -s %{nodejs_sitelib}/$module $realtime_modules/$module
+done
 
 # Nuke source code (HYD-1849), but preserve key .py files needed for operation
 preserve_patterns="settings.py manage.py chroma_core/migrations/*.py chroma_core/management/commands/*.py"

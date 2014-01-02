@@ -67,4 +67,4 @@ $(REPO)/%.rpm:
 	pattern=$$(echo $@ | sed -e 's/-[^-]*-[^-]*\.rpm$$//')-[0-9]*; \
 	rm -f $$pattern $(REPO)/$$pattern
 	CACHE="$${CACHE:-$$(pwd)/cache}" . ../include/cache.sh; \
-	cache_get $(SRC_REPO)/$@ "RPM v3.0 bin "
+	cache_get -t "RPM v3.0 bin " $(SRC_REPO)/$@ 

@@ -22,8 +22,15 @@ file_valid() {
 }
 
 cache_get() {
-    local location="$1"
-    local type="$2"
+    local sha1sum=
+    local type=
+    while getopts "t:s:" flag; do
+        case "$flag" in
+            t) type=$OPTARG;;
+            s) sha1sum=$OPTARG;;
+        esac
+    done
+    local location=${@:$OPTIND:1}
 
     local name="${location##*/}"
     local entry="$CACHE/$name"
@@ -77,6 +84,17 @@ cache_get() {
 
     # got it, remove the lock so others can read it
     rm -f "$lock"
+
+    # check sha1sum, if provided
+    if [ -n "$sha1sum" ]; then
+        entry_sha1sum=$(sha1sum $entry | awk '{print $1}')
+        if ! [ "$sha1sum" == "$entry_sha1sum" ]; then
+            echo "sha1sum mismatch on $entry! (got $entry_sha1sum, expected $sha1sum"
+            exit 1
+        fi
+    fi
+
+    # copy from cache into working directory
     cp "$entry" .
 
     # indicate freshness of the entry
