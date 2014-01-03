@@ -20,20 +20,17 @@
 // express and approved by Intel in writing.
 
 
-angular.module('charts').factory('formatBytes', [function () {
-  'use strict';
+/*
+ * Given a size in bytes, return a human-readable string.
+ */
+angular.module('filters')
+  .filter('humanBytes', ['formatBytes',
+  function humanBytes (formatBytes) {
+    'use strict';
 
-  var units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    return function (bytes, precision) {
+      return formatBytes(bytes, precision);
+    };
+  }
+]);
 
-  return function formatBytes(bytes, precision) {
-    if (isNaN(parseFloat(bytes)) || !isFinite(bytes)) return '';
-    precision = precision || 4;
-
-    bytes = Math.max(bytes, 0);
-    var pwr = Math.floor((bytes ? Math.log(bytes) : 0) / Math.log(1024));
-    pwr = Math.min(pwr, units.length - 1);
-    bytes /= Math.pow(1024, pwr);
-    return '%s %s'.sprintf((bytes).toPrecision(precision), units[pwr]);
-  };
-
-}]);

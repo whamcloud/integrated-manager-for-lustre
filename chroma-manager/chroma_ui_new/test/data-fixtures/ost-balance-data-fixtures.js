@@ -42,7 +42,7 @@ angular.module('dataFixtures').value('ostBalanceDataFixtures', [
               percentFree: '100%',
               percentUsed: '0%',
               bytesFree: '1.922 GB',
-              bytesUsed: '0.000 b',
+              bytesUsed: '0.000 B',
               bytesTotal: '1.922 GB'
             }
           }
@@ -69,7 +69,7 @@ angular.module('dataFixtures').value('ostBalanceDataFixtures', [
               percentFree: '100%',
               percentUsed: '0%',
               bytesFree: '1.922 GB',
-              bytesUsed: '0.000 b',
+              bytesUsed: '0.000 B',
               bytesTotal: '1.922 GB'
             }
           }
