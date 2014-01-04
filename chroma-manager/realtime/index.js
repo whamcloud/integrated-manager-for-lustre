@@ -52,6 +52,8 @@ var https = require('https'),
   fileSystemResourceFactory = require('./resources').fileSystemResourceFactory,
   hostResourceFactory = require('./resources').hostResourceFactory,
   targetResourceFactory = require('./resources').targetResourceFactory,
+  hsmCopytoolResourceFactory = require('./resources').hsmCopytoolResourceFactory,
+  hsmCopytoolOperationResourceFactory = require('./resources').hsmCopytoolOperationResourceFactory,
   targetOstMetricsResourceFactory = require('./resources').targetOstMetricsResourceFactory;
 
 var modules = [{
@@ -70,18 +72,24 @@ var modules = [{
   Resource: ['factory', resourceFactory],
   server: ['factory', serverFactory],
   TargetResource: ['factory', targetResourceFactory],
+  HsmCopytoolResource: ['factory', hsmCopytoolResourceFactory],
+  HsmCopytoolOperationResource: ['factory', hsmCopytoolOperationResourceFactory],
   TargetOstMetricsResource: ['factory', targetOstMetricsResourceFactory]
 }];
 
 var injector = new di.Injector(modules);
 
 injector.invoke(function (logger, channelFactory,
-                          FileSystemResource, HostResource, TargetResource, TargetOstMetricsResource) {
+                          FileSystemResource, HostResource, TargetResource,
+                          HsmCopytoolResource, HsmCopytoolOperationResource,
+                          TargetOstMetricsResource) {
 
   logger.info('Realtime Module started.');
 
   channelFactory('filesystem', FileSystemResource);
   channelFactory('host', HostResource);
   channelFactory('target', TargetResource);
+  channelFactory('copytool', HsmCopytoolResource);
+  channelFactory('copytool_operation', HsmCopytoolOperationResource);
   channelFactory('targetostmetrics', TargetOstMetricsResource);
 });

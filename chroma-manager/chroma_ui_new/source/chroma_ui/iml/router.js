@@ -46,6 +46,13 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment'])
     templateUrl: 'iml/dashboard/assets/html/dashboard.html'
   });
 
+  $routeSegmentProvider.when('/hsm', 'app.hsm');
+
+  $routeSegmentProvider.within('app').segment('hsm', {
+    controller: 'HsmCtrl',
+    templateUrl: 'iml/hsm/assets/html/hsm.html'
+  });
+
   $routeSegmentProvider.when('/dashboard/jobstats/:id/:startDate/:endDate', 'app.jobstats');
 
   $routeSegmentProvider.within('app').segment('jobstats', {

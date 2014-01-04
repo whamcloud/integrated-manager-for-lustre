@@ -20,23 +20,35 @@
 // express and approved by Intel in writing.
 
 
-'use strict';
+angular.module('hsm')
+  .factory('HsmCopytoolOperationModel', ['modelFactory',
+  function hsmCopytoolOperationModelFactory (modelFactory) {
+    'use strict';
 
-var inherits = require('util').inherits;
+    var HsmCopytoolOperationModel = modelFactory({ url: 'copytool_operation' });
 
+    HsmCopytoolOperationModel.prototype.progress = function () {
+      var progress = (this.processed_bytes /
+                      this.total_bytes) * 100;
 
-module.exports = function hostResourceFactory(Resource) {
-  /**
-   * Bridge to the host api endpoint.
-   * @constructor
-   */
-  function HostResource () {
-    this.defaults = ['GetList', 'GetMetrics'];
+      if (!isFinite(progress)) {
+        return 0;
+      } else {
+        return progress;
+      }
+    };
 
-    Resource.call(this, 'host');
+    HsmCopytoolOperationModel.prototype.throughput = function () {
+      var elapsed = (Date.parse(this.updated_at) -
+                     Date.parse(this.started_at)) / 1000;
+
+      if (elapsed < 1 || !isFinite(elapsed)) return 0;
+
+      // bytes/sec
+      var throughput = this.processed_bytes / elapsed;
+      return isFinite(throughput) ? throughput : 0;
+    };
+
+    return HsmCopytoolOperationModel;
   }
-
-  inherits(HostResource, Resource);
-
-  return HostResource;
-};
+]);

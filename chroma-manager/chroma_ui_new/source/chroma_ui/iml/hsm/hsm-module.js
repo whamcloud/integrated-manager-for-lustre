@@ -19,24 +19,4 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
-'use strict';
-
-var inherits = require('util').inherits;
-
-
-module.exports = function hostResourceFactory(Resource) {
-  /**
-   * Bridge to the host api endpoint.
-   * @constructor
-   */
-  function HostResource () {
-    this.defaults = ['GetList', 'GetMetrics'];
-
-    Resource.call(this, 'host');
-  }
-
-  inherits(HostResource, Resource);
-
-  return HostResource;
-};
+angular.module('hsm', ['charts', 'd3', 'progress', 'fileSystem', 'command']);

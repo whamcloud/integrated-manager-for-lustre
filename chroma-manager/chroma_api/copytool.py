@@ -64,6 +64,9 @@ class CopytoolOperationResource(ModelResource):
 
         if filters.get('active', False):
             orm_filters.update(self.active_filter)
+        # Shortcut filter for UI client
+        if filters.get('filesystem_id', False):
+            orm_filters.update({'copytool__filesystem_id': filters['filesystem_id']})
 
         return orm_filters
 
@@ -169,7 +172,4 @@ class CopytoolResource(StatefulModelResource, MetricResource):
         #readonly = ['host', 'filesystem', 'index', 'path', 'hsm_arguments',
         #            'pid']
         always_return_data = True
-
-        #filtering = {'id': ['exact'],
-        #             'filesystem': ['exact'],
-        #             'host': ['exact']}
+        filtering = {'filesystem_id': ['exact']}

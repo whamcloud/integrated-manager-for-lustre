@@ -20,23 +20,26 @@
 // express and approved by Intel in writing.
 
 
-'use strict';
+angular.module('hsm')
+  .factory('hsmCopytoolOperationStreamTransformer',
+  ['HsmCopytoolOperationModel',
+  function hsmCopytoolOperationStreamTransformerFactory(HsmCopytoolOperationModel) {
+    'use strict';
 
-var inherits = require('util').inherits;
+    /**
+     * Transforms incoming stream data to HsmCopytoolOperationModel instances.
+     * @param {Array|undefined} newVal The new data.
+     * @param {Object} deferred The deferred to pipe through.
+     */
+    return function transformer(resp, deferred) {
+      if (!_.isPlainObject(resp.body) )
+        throw new Error('hsmCopytoolOperationStreamTransformer expects resp.body to be an object!');
 
+      resp.body.objects = resp.body.objects.map(function (item) {
+        return new HsmCopytoolOperationModel(item);
+      });
 
-module.exports = function hostResourceFactory(Resource) {
-  /**
-   * Bridge to the host api endpoint.
-   * @constructor
-   */
-  function HostResource () {
-    this.defaults = ['GetList', 'GetMetrics'];
-
-    Resource.call(this, 'host');
+      deferred.resolve(resp);
+    };
   }
-
-  inherits(HostResource, Resource);
-
-  return HostResource;
-};
+]);

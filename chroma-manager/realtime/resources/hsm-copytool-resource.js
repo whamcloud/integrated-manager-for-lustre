@@ -25,18 +25,18 @@
 var inherits = require('util').inherits;
 
 
-module.exports = function hostResourceFactory(Resource) {
+module.exports = function hsmCopytoolResourceFactory(Resource) {
   /**
-   * Bridge to the host api endpoint.
+   * Bridge to the copytool api endpoint.
    * @constructor
    */
-  function HostResource () {
-    this.defaults = ['GetList', 'GetMetrics'];
+  function HsmCopytoolResource () {
+    this.defaults = ['GetList'];
 
-    Resource.call(this, 'host');
+    Resource.call(this, 'copytool');
   }
 
-  inherits(HostResource, Resource);
+  inherits(HsmCopytoolResource, Resource);
 
-  return HostResource;
+  return HsmCopytoolResource;
 };

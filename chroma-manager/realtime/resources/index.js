@@ -24,6 +24,8 @@
 
 exports.resourceFactory = require('./resource');
 exports.fileSystemResourceFactory = require('./file-system-resource');
+exports.hsmCopytoolResourceFactory = require('./hsm-copytool-resource');
+exports.hsmCopytoolOperationResourceFactory = require('./hsm-copytool-operation-resource');
 exports.hostResourceFactory = require('./host-resource');
 exports.targetResourceFactory = require('./target-resource');
 exports.targetOstMetricsResourceFactory = require('./target-ost-metrics-resource');

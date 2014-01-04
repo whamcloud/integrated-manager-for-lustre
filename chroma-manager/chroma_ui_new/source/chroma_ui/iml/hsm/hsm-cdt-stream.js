@@ -20,23 +20,28 @@
 // express and approved by Intel in writing.
 
 
-'use strict';
+angular.module('hsm')
+  .factory('HsmCdtStream', ['stream', 'hsmCdtTransformer',
+                            'streamDurationMixin', 'spliceOldDataTransformer',
+                            'appendOrReplaceDataTransformer',
+  function hsmCdtStream(stream, hsmCdtTransformer, streamDurationMixin,
+                        spliceOldDataTransformer,
+                        appendOrReplaceDataTransformer) {
+    'use strict';
 
-var inherits = require('util').inherits;
+    var HsmCdtStream = stream('target', 'httpGetMetrics', {
+      params: {
+        qs: {
+          reduce_fn: 'sum',
+          role: 'MDT',
+          metrics: 'hsm_actions_waiting,hsm_actions_running,hsm_agents_idle'
+        }
+      },
+      transformers: [spliceOldDataTransformer, hsmCdtTransformer, appendOrReplaceDataTransformer]
+    });
 
+    _.extend(HsmCdtStream.prototype, streamDurationMixin);
 
-module.exports = function hostResourceFactory(Resource) {
-  /**
-   * Bridge to the host api endpoint.
-   * @constructor
-   */
-  function HostResource () {
-    this.defaults = ['GetList', 'GetMetrics'];
-
-    Resource.call(this, 'host');
+    return HsmCdtStream;
   }
-
-  inherits(HostResource, Resource);
-
-  return HostResource;
-};
+]);

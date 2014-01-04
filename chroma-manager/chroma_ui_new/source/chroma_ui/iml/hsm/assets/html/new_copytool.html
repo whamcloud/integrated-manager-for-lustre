@@ -1,0 +1,58 @@
+<div class="modal-header">
+  <h3>Add Copytool</h3>
+</div>
+<div class="modal-body copytool">
+  <form novalidate remote-validate-form validate="validate" name="form" class="css-form" role="form">
+    <div ng-if="!isEmpty(serverValidationError)">
+      Validation Errors:
+      <div class="ng-cloak alert alert-danger span4 offset4" ng-repeat="(field, errors) in serverValidationError">
+        {{ field }}: <span ng-repeat="error in errors">{{ error }} </span>
+      </div>
+    </div>
+    <div class="form-group" ng-class="{'has-error': form.archive.$invalid}">
+      <label for="copytoolFilesystem" class="control-label">File system:</label>
+      <select class="form-control" name="filesystem" id="filesystem" ng-model="copytool.filesystem" ng-options="f.label for f in fileSystems.objects track by f.id" remote-validate-component></select>
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': form.archive.$invalid}">
+      <label for="host" class="control-label">Worker:</label>
+      <select class="form-control" name="host" id="host" ng-model="copytool.host" ng-options="w.label for w in workers.objects track by w.id" remote-validate-component></select>
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': form.archive.$invalid}">
+      <label for="bin_path" class="control-label">Path to HSM agent binary:</label>
+      <input class="form-control" name="bin_path" id="bin_path" type="text" ng-model="copytool.bin_path" placeholder="/path/to/lhsmtool_binary" ng-pattern="/^\/.*[^/]$/" required remote-validate-component/>
+      <div ng-show="form.bin_path.$dirty && form.bin_path.$invalid">Invalid:
+        <span ng-show="form.bin_path.$error.required || form.bin_path.$error.pattern">Absolute path to HSM agent binary is required.</span>
+      </div>
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': form.hsm_arguments.$invalid}">
+      <label for="hsm_arguments" class="control-label">HSM agent arguments (optional):</label>
+      <input class="form-control" name="hsm_arguments" id="hsm_arguments" type="text" ng-model="copytool.hsm_arguments" placeholder="-p /path/to/hsm" remote-validate-component/>
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': form.archive.$invalid}">
+      <label for="mountpoint" class="control-label">File system mountpoint:</label>
+      <input class="form-control" name="mountpoint" id="mountpoint" type="text" ng-model="copytool.mountpoint" placeholder="/mnt/{{ copytool.filesystem.label }}" ng-pattern="/^\/.+$/" required remote-validate-component/>
+      <div ng-show="form.mountpoint.$dirty && form.mountpoint.$invalid">Invalid:
+        <span ng-show="form.mountpoint.$error.required || form.mountpoint.$error.pattern">Absolute path to lustre filesystem mountpoint is required.</span>
+      </div>
+    </div>
+
+    <div class="form-group" ng-class="{'has-error': form.archive.$invalid}">
+      <label for="archive" class="control-label">Archive number:</label>
+      <input class="form-control" name="archive" id="archive" type="number" ng-model="copytool.archive" min="0" ng-pattern="/^\d+$/" required remote-validate-component/>
+      <div ng-show="copytool.archive === 0">
+        <i class="fa fa-exclamation-triangle">Warning: Archive 0 is reserved as the "catch-all" number -- you probably don't want to use it!</i>
+      </div>
+      <div ng-show="form.archive.$dirty && form.archive.$invalid">Invalid:
+        <span ng-show="form.archive.$error.required">HSM archive number is required.</span>
+        <span ng-show="form.archive.$error.pattern">Must be an integer.</span>
+      </div>
+    </div>
+
+    <button ng-click="onClose()" class="btn btn-large">Close</button>
+    <button ng-click="onSubmit(copytool)" class="btn btn-large btn-primary" ng-disabled="missingRequiredValues()">Save</button>
+  </form>
+</div>

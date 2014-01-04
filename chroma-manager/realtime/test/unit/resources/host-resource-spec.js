@@ -22,7 +22,7 @@ describe('Host resource', function () {
     expect(Resource.call).toHaveBeenCalledWithExactly(hostResource, 'host');
   });
 
-  it('should allow GetMetrics', function () {
-    expect(hostResource.defaults).toEqual(['GetMetrics']);
+  it('should allow GetList and GetMetrics', function () {
+    expect(hostResource.defaults).toEqual(['GetList', 'GetMetrics']);
   });
 });

@@ -244,6 +244,10 @@ class HostResource(MetricResource, StatefulModelResource):
             # Not filtering on filesystem_id
             pass
 
+        # convenience filter for the UI client
+        if request.GET.get('worker', False):
+            objects = objects.filter(server_profile__worker = True)
+
         try:
             from chroma_api.target import KIND_TO_MODEL_NAME
             server_role = request.GET['role'].upper()

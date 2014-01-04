@@ -1,0 +1,101 @@
+<h3 class="page-header"><i class="fa fa-files-o"></i> HSM</h3>
+<div class="container container-full">
+  <div ng-controller="HsmCtrl" class="with-transitions">
+
+    <div class="controls">
+        Displaying HSM information for:
+        <select ng-model="hsm.selectedFileSystem" ng-options="f.label for f in hsm.fileSystems.objects track by f.id" ng-change="onFileSystemSelection()">
+          <option value="">All File Systems</option>
+        </select>
+    </div>
+
+    <h4 class="section-header">Outstanding Agent Requests vs. Idle Copytool Workers</h4>
+    <div class="controls">
+      <duration-picker start-unit="{{ hsm.unit }}" start-size="{{ hsm.size }}" on-update="hsm.onUpdate(unit, size)"></duration-picker>
+    </div>
+    <line-chart options="hsm.options" chart-data="hsm.data"></line-chart>
+
+    <div ng-if="hsm.copytoolOperations.objects.length === 0" class="no-copytool-operations well txtcenter">
+      <text class="nvd3 nv-noData">No Active Copytool Operations.</text>
+    </div>
+
+    <div ng-if="hsm.copytoolOperations.objects.length > 0">
+      <h4 class="section_header">Active Copytool Operations</h4>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Copytool</th>
+            <th>Operation</th>
+            <th>Status</th>
+            <th>Throughput</th>
+            <th>File</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="copytoolOperation in hsm.copytoolOperations.objects track by copytoolOperation.id">
+            <td>{{ copytoolOperation.copytool.host.label }}</td>
+            <td class="operation">
+                <div ng-include="'iml/hsm/assets/html/ops/' + copytoolOperation.type + '.html'"></div>
+            </td>
+            <td class="state">
+              <div ng-include="'iml/hsm/assets/html/states/' + copytoolOperation.state + '.html'"></div>
+            </td>
+            <td>
+              <div class="throughput">
+                  <div class="size">{{ copytoolOperation.processed_bytes | humanBytes }} / {{ copytoolOperation.total_bytes | humanBytes }}</div>
+                  <div class="speed">{{ copytoolOperation.throughput() | throughput }}</div>
+              </div>
+            </td>
+            <td>
+              <div class="file">{{ copytoolOperation.path | pathMaxLength:60 }} <i tooltip="{{copytoolOperation.description}}" class="icon-info-sign"></i></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div ng-if="hsm.copytools.objects.length === 0" class="no-copy-tools well txtcenter">
+      <text class="nvd3 nv-noData">No Copytools Available. </text>
+      <button ng-click="newCopytoolModal()" class="btn btn-primary"><i class="fa fa-plus"></i> Add Copytool</button>
+    </div>
+
+    <div ng-if="hsm.copytools.objects.length > 0">
+      <h4 class="section_header">Copytools</h4>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="copytool in hsm.copytools.objects track by copytool.id" ng-class="{even: $even, odd: $odd}">
+            <td>{{ copytool.host.label }}</td>
+            <td class="status">
+              <div ng-include="'iml/hsm/assets/html/states/' + copytool.status() + '.html'"></div>
+            </td>
+            <td class="txtcenter actions-cell">
+              <div class="dropdown">
+                <a class="dropdown-toggle btn-mini btn">Actions <i class="fa fa-caret-down"></i></a>
+                <ul class="dropdown-menu">
+                  <li ng-repeat="action in copytool.available_actions">
+                    <a ng-controller="CommandCtrl" ng-click="onActionSelection(copytool, action)">
+                      {{ action.verb }}
+                    </a>
+                    <iml-tooltip direction="left">{{ action.long_description }}</iml-tooltip>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="button-row" ng-if="hsm.copytools.objects.length > 0">
+      <button ng-click="newCopytoolModal()" class="btn btn-primary"><i class="fa fa-plus"></i> Add Copytool</button>
+    </div>
+  </div>
+</div>

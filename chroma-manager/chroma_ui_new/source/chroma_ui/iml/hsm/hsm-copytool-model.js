@@ -20,23 +20,25 @@
 // express and approved by Intel in writing.
 
 
-'use strict';
+angular.module('hsm')
+  .factory('HsmCopytoolModel', ['statefulModelFactory',
+  function (statefulModelFactory) {
+    'use strict';
 
-var inherits = require('util').inherits;
+    var HsmCopytoolModel = statefulModelFactory({ url: 'copytool/:id',
+                                                  params: { id: '@id' } });
 
 
-module.exports = function hostResourceFactory(Resource) {
-  /**
-   * Bridge to the host api endpoint.
-   * @constructor
-   */
-  function HostResource () {
-    this.defaults = ['GetList', 'GetMetrics'];
+    HsmCopytoolModel.prototype.status = function copytoolStatus() {
+      if (this.state !== 'started')
+        return this.state;
 
-    Resource.call(this, 'host');
+      if (this.active_operations_count === 0)
+        return 'idle';
+      else
+        return 'working';
+    };
+
+    return HsmCopytoolModel;
   }
-
-  inherits(HostResource, Resource);
-
-  return HostResource;
-};
+]);

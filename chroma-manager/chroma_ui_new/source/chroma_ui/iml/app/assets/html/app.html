@@ -24,6 +24,9 @@
           <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/user/">Users</a></li>
         </ul>
       </li>
+      <li ng-class="{active: app.$routeSegment.contains('hsm')}">
+        <a route-to="hsm/"><i class="fa fa-cog"></i> HSM</a>
+      </li>
     </ul>
     <ul class="nav navbar-nav navbar-right">
       <li ng-if="app.loggedIn"><a>{{ app.user.username }}</a></li>
