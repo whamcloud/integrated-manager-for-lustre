@@ -32,6 +32,7 @@ from chroma_core.lib.storage_plugin.api.resources import LogicalDrive, LogicalDr
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_core.services.dbutils import advisory_lock
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
 from chroma_core.lib.storage_plugin.api import attributes, relations
@@ -48,6 +49,7 @@ from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
 from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
+from chroma_core.models.event import Event
 
 from django.db import transaction
 
@@ -837,6 +839,8 @@ class ResourceManager(object):
             self._persist_lun_updates(scannable_id)
             self._persist_created_hosts(session, scannable_id, resources)
 
+    @transaction.commit_on_success
+    @advisory_lock(Event, wait=False)
     def session_remove_resources(self, scannable_id, resources):
         with self._instance_lock:
             session = self._sessions[scannable_id]
@@ -903,7 +907,8 @@ class ResourceManager(object):
         alert_state = StorageResourceAlert.notify(record, active, alert_class=alert_class, attribute=attribute, severity=severity, alert_type = "StorageResourceAlert_%s" % alert_class)
         return alert_state
 
-    @transaction.autocommit
+    @transaction.commit_on_success
+    @advisory_lock(Event, wait=False)
     def _cull_lost_resources(self, session, reported_resources):
         reported_scoped_resources = []
         reported_global_resources = []
@@ -992,6 +997,8 @@ class ResourceManager(object):
         for record_id in phase1_ordered_dependencies:
             collect_phase2(record_id)
 
+        StorageResourceLearnEvent._base_manager.filter(storage_resource__in = ordered_for_deletion).delete()
+
         # Delete any parent relations pointing to victim resources
         StorageResourceRecord.parents.through._default_manager.filter(
             **{'%s__in' % StorageResourceRecord.parents.field.m2m_reverse_field_name(): ordered_for_deletion}
@@ -1073,6 +1080,7 @@ class ResourceManager(object):
             for srs in StorageResourceStatistic.objects.filter(storage_resource__in = ordered_for_deletion):
                 srs.metrics.clear()
                 srs_delayed.delete(int(srs.id))
+        StorageResourceStatistic.delayed.flush()
 
         for record_id in ordered_for_deletion:
             self._subscriber_index.remove_resource(record_id, self._class_index.get(record_id))
@@ -1088,8 +1096,6 @@ class ResourceManager(object):
                 except KeyError:
                     pass
 
-        StorageResourceLearnEvent._base_manager.filter(storage_resource__in = ordered_for_deletion).delete()
-
         with StorageResourceRecord.delayed as resources:
             for record_id in ordered_for_deletion:
                 resources.update({'id': int(record_id), 'storage_id_scope_id': None})
@@ -1100,7 +1106,9 @@ class ResourceManager(object):
         with StorageResourceRecord.delayed as deleter:
             for record_id in ordered_for_deletion:
                 deleter.delete(int(record_id))
+        StorageResourceRecord.delayed.flush()
 
+    @advisory_lock(Event, wait=False)
     def global_remove_resource(self, resource_id):
         with self._instance_lock:
             with transaction.commit_manually():

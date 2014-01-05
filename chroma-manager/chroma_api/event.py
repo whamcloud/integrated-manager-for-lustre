@@ -24,6 +24,7 @@ from tastypie.constants import ALL_WITH_RELATIONS
 from tastypie import fields
 
 from chroma_core.models.event import Event
+from chroma_core.services.dbutils import advisory_lock
 from chroma_api.utils import SeverityResource
 from chroma_api.authentication import AnonymousAuthentication, \
     PATCHSupportDjangoAuth
@@ -67,6 +68,9 @@ class EventResource(SeverityResource):
         detail_allowed_methods = ['get', 'patch']
         always_return_data = True
 
+    def get_object_list(self, request):
+        return Event.objects.all()
+
     def dehydrate_host_name(self, bundle):
         """When sending to API caller, initialize this field. """
 
@@ -100,3 +104,7 @@ class EventResource(SeverityResource):
         filters = super(EventResource, self).build_filters(filters)
         filters.update(custom_filters)
         return filters
+
+    @advisory_lock(Event)
+    def dispatch(self, request_type, request, **kwargs):
+        return super(EventResource, self).dispatch(request_type, request, **kwargs)
