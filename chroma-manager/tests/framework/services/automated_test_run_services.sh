@@ -11,6 +11,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 TESTS=${TESTS:-"tests/services/"}
+EPEL_SOURCE=${EPEL_SOURCE:-"baseurl=http://cobbler/cobbler/repo_mirror/EPEL-6-x86_64/"}  # For a dev env, use mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-6&arch=$basearch
 
 echo "Beginning installation and setup..."
 
@@ -18,8 +19,17 @@ echo "Beginning installation and setup..."
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
-yum clean metadata
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets
+cat <<EOC > /etc/yum.repos.d/epel.repo
+[epel]
+name=epel
+$EPEL_SOURCE
+enabled=1
+priority=1
+gpgcheck=0
+sslverify=0
+EOC
+yum makecache
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
@@ -103,9 +113,6 @@ virtualenv --no-site-packages .
 source bin/activate
 cd chroma/chroma-manager/
 
-unset http_proxy
-unset https_proxy
-
 if $MEASURE_COVERAGE; then
   cat <<EOC > /home/chromatest/chroma_test_env/chroma/chroma-manager/.coveragerc
 [run]
@@ -130,7 +137,7 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-python manage.py dev_setup --no-bundles
+make develop
 
 set +e
 echo "Begin running tests..."

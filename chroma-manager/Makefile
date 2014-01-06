@@ -62,8 +62,9 @@ $(NPM):
 
 realtime: realtime/package.json $(NPM)
 	@echo "Setting up realtime module for development..."
-	if [ -n "$(HTTP_PROXY)" ] && [[ $(HTTP_PROXY) != "http://"* ]]; then \
+	if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"* ]]; then \
 		export HTTP_PROXY=http://$(HTTP_PROXY); \
+		export HTTPS_PROXY=https://$(HTTPS_PROXY); \
 	fi; \
 	cd realtime && \
 	npm install
@@ -211,4 +212,4 @@ docs: requirements version
 	fi ; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
-.PHONY: docs
+.PHONY: docs realtime

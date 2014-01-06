@@ -12,7 +12,6 @@
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ],
-            "repos": ["chroma"],
             "distro": "el6.4"
         }
     ],
