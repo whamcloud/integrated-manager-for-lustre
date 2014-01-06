@@ -26,8 +26,7 @@ import socket
 from netaddr import IPNetwork, IPAddress
 from netaddr.core import AddrFormatError
 
-from chroma_agent import shell, node_admin
-from chroma_agent.store import AgentStore
+from chroma_agent import shell, node_admin, config
 from chroma_agent.log import console_log
 from chroma_agent.lib.system import iptables
 
@@ -61,7 +60,7 @@ def generate_ring1_network(ring0):
 def get_ring0():
     # ring0 will always be on the interface used for agent->manager comms
     from urlparse import urlparse
-    server_url = AgentStore.get_server_conf()['url']
+    server_url = config.get('settings', 'server')['url']
     manager_address = socket.gethostbyname(urlparse(server_url).hostname)
     out = shell.try_run(['/sbin/ip', 'route', 'get', manager_address])
     match = re.search(r'dev\s+(\w+)', out)

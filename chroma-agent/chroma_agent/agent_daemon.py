@@ -35,12 +35,11 @@ from daemon.daemon import set_signal_handlers
 from daemon import DaemonContext
 from daemon.pidlockfile import PIDLockFile
 
+from chroma_agent import config
 from chroma_agent.crypto import Crypto
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 from chroma_agent.agent_client import AgentClient
 from chroma_agent.log import daemon_log, daemon_log_setup, console_log_setup, increase_loglevel, decrease_loglevel
-
-from chroma_agent.store import AgentStore
 
 
 class ServerProperties(object):
@@ -161,8 +160,9 @@ def main():
 
     try:
         daemon_log.info("Entering main loop")
-        conf = AgentStore.get_server_conf()
-        if conf is None:
+        try:
+            conf = config.get('settings', 'server')
+        except KeyError:
             daemon_log.error("No configuration found (must be registered before running the agent service)")
             return
 
@@ -171,7 +171,7 @@ def main():
             ActionPluginManager(),
             DevicePluginManager(),
             ServerProperties(),
-            Crypto(AgentStore.libdir()))
+            Crypto(config.path))
 
         def teardown_callback(*args, **kwargs):
             agent_client.stop()

@@ -25,13 +25,12 @@ Actions for registration and deregistration of a server (adding and removing
 it from chroma manager)
 """
 
-from chroma_agent import shell
+from chroma_agent import shell, config
 from chroma_agent.agent_client import AgentClient, HttpError
 from chroma_agent.agent_daemon import ServerProperties
 from chroma_agent.crypto import Crypto
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.log import console_log
-from chroma_agent.store import AgentStore
 
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
 import os
@@ -58,7 +57,7 @@ def _disable_service():
 
 
 def deregister_server():
-    AgentStore.remove_server_conf()
+    config.delete('settings', 'server')
 
     def disable_and_kill():
         console_log.info("Disabling chroma-agent service")
@@ -76,7 +75,7 @@ def register_server(url, ca, secret, address = None):
         console_log.warning("chroma-agent service was running before registration, stopping.")
         shell.try_run(["/sbin/service", "chroma-agent", "stop"])
 
-    crypto = Crypto(AgentStore.libdir())
+    crypto = Crypto(config.path)
     # Call delete in case we are over-writing a previous configuration that wasn't removed properly
     crypto.delete()
     crypto.install_authority(ca)
@@ -90,7 +89,7 @@ def register_server(url, ca, secret, address = None):
     registration_result = agent_client.register(address)
     crypto.install_certificate(registration_result['certificate'])
 
-    AgentStore.set_server_conf({'url': url})
+    config.set('settings', 'server', {'url': url})
 
     console_log.info("Enabling chroma-agent service")
     shell.try_run(["/sbin/chkconfig", "chroma-agent", "on"])
@@ -107,8 +106,8 @@ def reregister_server(url, address):
         console_log.warning("chroma-agent service was running before registration, stopping.")
         shell.try_run(["/sbin/service", "chroma-agent", "stop"])
 
-    AgentStore.set_server_conf({'url': url})
-    crypto = Crypto(AgentStore.libdir())
+    config.set('settings', 'server', {'url': url})
+    crypto = Crypto(config.path)
     agent_client = AgentClient(url + 'reregister/', ActionPluginManager(), DevicePluginManager(), ServerProperties(), crypto)
     data = {'address': address, 'fqdn': agent_client._fqdn}
 

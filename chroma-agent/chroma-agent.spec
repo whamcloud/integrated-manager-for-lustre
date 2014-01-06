@@ -92,6 +92,14 @@ chkconfig lustre-modules on
 sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
 # the above only disables on the next boot.  disable it currently, also
 echo 0 > /selinux/enforce
+    
+if [ $1 -eq 1 ]; then
+    # new install; create default agent config
+    chroma-agent reset_agent_config
+elif [ $1 -eq 2 ]; then
+    # upgrade; convert any older agent config
+    chroma-agent convert_agent_config
+fi
 
 %post management
 chkconfig rsyslog on
