@@ -137,11 +137,6 @@ cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_rpc_addo
 
 # TODO: Remove this section once supervisor starts the realtime module
 cd /usr/share/chroma-manager/realtime/
-wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-yum install -y epel-release-6-8.noarch.rpm
-yum install -y npm
-yum remove -y epel-release
-npm install socket.io@~0.9.16 di@0.0.1 q@~0.9.7 primus@~1.4.6 primus-multiplex@~2.1.1 lodash@~2.3.0 bunyan@~0.22.0 request@~2.27.0 moment@~2.4.0
 cat << EOF > /usr/share/chroma-manager/realtime/conf.json
 {
   \"SERVER_HTTP_URL\": \"https://$CHROMA_MANAGER/\",
