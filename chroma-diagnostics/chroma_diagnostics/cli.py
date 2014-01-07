@@ -274,6 +274,11 @@ def main():
         elif args.verbose > 0:
             log.info("Failed to list cat /proc/%s" % proc)
 
+    if dump('etc_hosts', ['cat', '/etc/hosts', ], output_directory):
+        log.info("Listed hosts")
+    elif args.verbose > 0:
+        log.info("Failed to list hosts: /etc/hosts")
+
     log_count = copy_logrotate_logs(output_directory, args.days_back, args.verbose)
     if log_count > 0:
         log.info("Copied %s log files." % log_count)
