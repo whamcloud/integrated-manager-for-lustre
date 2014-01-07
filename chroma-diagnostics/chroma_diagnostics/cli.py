@@ -94,9 +94,16 @@ def dump(fn, cmd, output_directory):
     err_fn = "%s.err" % fn
     out_path = os.path.join(output_directory, out_fn)
     err_path = os.path.join(output_directory, err_fn)
+
     with open(out_path, 'w') as out:
         with open(err_path, 'w') as err:
-            return run_command(cmd, out, err)
+            result = run_command(cmd, out, err)
+
+    # Remove meaningless zero lenth error files
+    if os.path.getsize(err_path) <= 0:
+        os.remove(err_path)
+
+    return result
 
 
 def execute(cmd):
