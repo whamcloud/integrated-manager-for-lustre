@@ -231,10 +231,11 @@ class Stats(list):
         model.expire(stats)
         return outdated
 
-    def select(self, id, start, stop, rate=False, maxlen=float('inf')):
+    def select(self, id, start, stop, rate=False, maxlen=float('inf'), fixed=0):
         """Return points for a series within inclusive interval of most granular samples.
         Optionally derive the rate of change of points.
         Optionally limit number of points by increasing sample resolution.
+        Optionally return fixed intervals with padding and arbitrary resolution.
         """
         minstep = total_seconds(stop - start) / maxlen
         for index, model in enumerate(self):
@@ -242,7 +243,15 @@ class Stats(list):
                 break
         points = model.select(id, dt__gte=start, dt__lt=stop)
         points = list(points if index else model.reduce(points))
-        return map(operator.sub, points[1:], points[:-1]) if rate else points
+        if rate:
+            points = map(operator.sub, points[1:], points[:-1])
+        if fixed:
+            step = (stop - start) // fixed
+            intervals = [Point(start + step * index, 0.0, 0) for index in range(fixed)]
+            for point in points:
+                intervals[total_seconds(point.dt - start) // total_seconds(step)] += point
+            points = intervals
+        return points
 
     def latest(self, id):
         "Return most recent data point."

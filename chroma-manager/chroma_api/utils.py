@@ -407,9 +407,8 @@ class MetricResource:
         :begin: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
         :end: Time ISO8601 string, e.g. '2008-09-03T20:56:35.450686Z'
         :latest: boolean -- if true, you are asking for a single time point, the latest value
-        :update: boolean -- if true, then begin,end specifies the region you've already presented
-                 and you're asking for values *since* end.
         :max_points: maximum number of datapoints returned, may result in lower resolution samples
+        :num_points: return exact number of data points scaled for the date range
         :reduce_fn: one of 'average', 'sum'
         :group_by: an attribute name of the object you're fetching.  For example, to get
                    the total OST stats for a filesystem, when requesting from
@@ -436,16 +435,32 @@ class MetricResource:
             if latest:
                 errors['job'].append("Job metrics and latest are incompatible")
 
-        datetimes = {}
+        num_points = 0
+        if 'num_points' in request.GET:
+            try:
+                num_points = int(request.GET['num_points'])
+            except ValueError:
+                errors['num_points'].append("num_points must be a valid integer")
+            if latest or update:
+                errors['num_points'].append("num_points requires a fixed begin and end")
+
+        begin = end = None
         if not latest:
-            for name in ('begin', 'end'):
-                try:
-                    datetimes[name] = dateutil.parser.parse(request.GET[name])
-                except KeyError:
-                    errors[name].append("This field is mandatory when latest=false")
-                except ValueError:
-                    errors[name].append("Malformed time string")
-        begin, end = map(datetimes.get, ('begin', 'end'))
+            try:
+                begin = dateutil.parser.parse(request.GET['begin'])
+            except KeyError:
+                errors['begin'].append("This field is mandatory when latest=false")
+            except ValueError:
+                errors['begin'].append("Malformed time string")
+            try:
+                end = dateutil.parser.parse(request.GET['end'])
+            except KeyError:
+                if update or num_points:
+                    errors['end'].append("This field is mandatory when latest=false")
+                else:
+                    end = timezone.now()
+            except ValueError:
+                errors['end'].append("Malformed time string")
         if update:
             begin, end = end, timezone.now()
 
@@ -457,30 +472,30 @@ class MetricResource:
             return self.create_response(request, errors, response_class = HttpBadRequest)
 
         if 'pk' in kwargs:
-            return self.get_metric_detail(request, metrics, begin, end, job, max_points, **kwargs)
-        return self.get_metric_list(request, metrics, begin, end, job, max_points, **kwargs)
+            return self.get_metric_detail(request, metrics, begin, end, job, max_points, num_points, **kwargs)
+        return self.get_metric_list(request, metrics, begin, end, job, max_points, num_points, **kwargs)
 
     def _format(self, stats):
         return [{'ts': dt.isoformat(), 'data': stats[dt]} for dt in sorted(stats)]
 
-    def _fetch(self, metrics_obj, metrics, begin, end, job, max_points):
+    def _fetch(self, metrics_obj, metrics, begin, end, job, max_points, num_points):
         if job:
-            return metrics_obj.fetch_jobs(metrics[0], begin, end, job, max_points)
+            return metrics_obj.fetch_jobs(metrics[0], begin, end, job, max_points, num_points)
         if begin and end:
-            return metrics_obj.fetch(metrics, begin, end, max_points)
+            return metrics_obj.fetch(metrics, begin, end, max_points, num_points)
         return dict([metrics_obj.fetch_last(metrics)])
 
-    def get_metric_detail(self, request, metrics, begin, end, job, max_points, **kwargs):
+    def get_metric_detail(self, request, metrics, begin, end, job, max_points, num_points, **kwargs):
         obj = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
         if isinstance(obj, StorageResourceRecord):
             # FIXME: there is a level of indirection here to go from a StorageResourceRecord to individual time series.
             # Although no longer necessary, time series are still stored in separate resources.
             stats = defaultdict(dict)
             for stat in StorageResourceStatistic.objects.filter(storage_resource=obj, name__in=metrics):
-                for dt, data in self._fetch(stat.metrics, metrics, begin, end, job, max_points).items():
+                for dt, data in self._fetch(stat.metrics, metrics, begin, end, job, max_points, num_points).items():
                     stats[dt].update(data)
         else:
-            stats = self._fetch(MetricStore(obj), metrics, begin, end, job, max_points)
+            stats = self._fetch(MetricStore(obj), metrics, begin, end, job, max_points, num_points)
         if not job:
             for data in stats.values():
                 data.update(dict.fromkeys(set(metrics).difference(data), 0.0))
@@ -505,7 +520,7 @@ class MetricResource:
                     counter[name] /= len(results)
         return result
 
-    def get_metric_list(self, request, metrics, begin, end, job, max_points, **kwargs):
+    def get_metric_list(self, request, metrics, begin, end, job, max_points, num_points, **kwargs):
         errors = {}
         reduce_fn, group_by = map(request.GET.get, ('reduce_fn', 'group_by'))
         if not reduce_fn and group_by:
@@ -518,7 +533,7 @@ class MetricResource:
         except Http404 as exc:
             raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
 
-        result = dict((obj.id, self._fetch(MetricStore(obj), metrics, begin, end, job, max_points)) for obj in objs)
+        result = dict((obj.id, self._fetch(MetricStore(obj), metrics, begin, end, job, max_points, num_points)) for obj in objs)
         if not reduce_fn:
             for obj_id, stats in result.items():
                 result[obj_id] = self._format(stats)

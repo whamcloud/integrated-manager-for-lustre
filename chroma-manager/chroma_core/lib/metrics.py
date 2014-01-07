@@ -72,7 +72,7 @@ class MetricStore(object):
             series.delete()
             Stats.delete(series.id)
 
-    def fetch(self, fetch_metrics, begin, end, max_points=float('inf')):
+    def fetch(self, fetch_metrics, begin, end, max_points=float('inf'), num_points=0):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
@@ -80,7 +80,7 @@ class MetricStore(object):
         for series in Series.filter(self.measured_object, name__in=fetch_metrics):
             types.add(series.type)
             minimum = 0.0 if series.type == 'Counter' else float('-inf')
-            for point in Stats.select(series.id, begin, end, rate=series.type in ('Counter', 'Derive'), maxlen=max_points):
+            for point in Stats.select(series.id, begin, end, rate=series.type in ('Counter', 'Derive'), maxlen=max_points, fixed=num_points):
                 result[point.dt][series.name] = max(minimum, point.mean)
         # if absolute and derived values are mixed, the earliest value will be incomplete
         if result and types > set(['Gauge']) and len(result[min(result)]) < len(fetch_metrics):
@@ -96,7 +96,7 @@ class MetricStore(object):
             latest = max(latest, point.dt)
         return latest, data
 
-    def fetch_jobs(self, metric, begin, end, job, max_points=float('inf')):
+    def fetch_jobs(self, metric, begin, end, job, max_points=float('inf'), num_points=0):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)
         types = set()
@@ -105,7 +105,7 @@ class MetricStore(object):
         series_ids = Stats[0].objects.filter(id__in=series_ids, dt__gte=begin).values('id').distinct('id')
         for series in Series.filter(self.measured_object, id__in=series_ids):
             types.add(series.type)
-            for point in Stats.select(series.id, begin, end, rate=True, maxlen=max_points):
+            for point in Stats.select(series.id, begin, end, rate=True, maxlen=max_points, fixed=num_points):
                 result[point.dt][series.name.split('_', 3)[-1]] = point
         assert types.issubset(Series.JOB_TYPES)
         # translate job ids into metadata
