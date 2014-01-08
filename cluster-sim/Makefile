@@ -1,6 +1,6 @@
 include ../include/Makefile.version
 
-FENCE_AGENTS_URL	:= http://mirrors.kernel.org/centos/6.4/os/x86_64/Packages/fence-agents-3.1.5-25.el6.x86_64.rpm
+FENCE_AGENTS_URL	:= http://vault.centos.org/6.4/os/x86_64/Packages/fence-agents-3.1.5-25.el6.x86_64.rpm
 FENCE_AGENTS_RPM	:= $(shell basename $(FENCE_AGENTS_URL))
 FENCE_APC			:= $(shell if which fence_apc 2>/dev/null; then true; else echo $(word 1,$(subst :, ,$(PATH)))/fence_apc; fi)
 RPM2CPIO			:= $(shell if which rpm2cpio 2>/dev/null; then true; else echo rpm2cpio; fi)
