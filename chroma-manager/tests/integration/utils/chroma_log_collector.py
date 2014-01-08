@@ -34,6 +34,7 @@ class ChromaLogCollector(object):
             self.fetch_log_dir(chroma_manager, '/var/log/httpd/')
 
         for lustre_server in self.lustre_servers:
+            self.fetch_log(lustre_server, '/var/log/chroma-agent-console.log', '%s-chroma-agent-console.log' % lustre_server)
             self.fetch_log(lustre_server, '/var/log/chroma-agent.log', '%s-chroma-agent.log' % lustre_server)
             self.fetch_log(lustre_server, '/var/log/messages', '%s-messages.log' % lustre_server)
             self.fetch_pacemaker_configuration(lustre_server)
