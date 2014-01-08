@@ -31,6 +31,7 @@
         return nv.models.lineChart();
       },
       onUpdate: function onUpdate(chart, data) {
+        if (data == null || data.length === 0) return;
         var values = data[0].values;
 
         var start = values[0].x,
