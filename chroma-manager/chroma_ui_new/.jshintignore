@@ -1,0 +1,8 @@
+karma*.conf.js
+test/matchers/matchers.js
+node_modules/**/*
+coverage/**/*
+static/**/*
+tmp/**/*
+source/chroma_ui/bower_components/**/*.js
+source/chroma_ui/vendor/**/*.js

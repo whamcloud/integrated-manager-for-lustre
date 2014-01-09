@@ -8,7 +8,7 @@ module.exports = function (grunt) {
     dist: 'static/chroma_ui',
     baseDist: 'static',
     templateSource: 'templates_source/chroma_ui',
-    templateDist: 'templates',
+    templateDist: 'templates/chroma_ui',
     temp: 'tmp'
   };
 
@@ -21,23 +21,35 @@ module.exports = function (grunt) {
   grunt.initConfig({
     config: config,
 
+    filerev: {
+      dist: {
+        src: [
+          '<%= config.dist %>/built.js',
+          '<%= config.dist %>/built.css'
+        ]
+      }
+    },
+
     watch: {
       less: {
-        files: ['<%= config.src %>/**/*.less', '!<%= config.src %>/bower_components/**/*'],
-        tasks: ['less:dev']
+        files: [
+          '<%= config.src %>/**/*.less',
+          '!<%= config.src %>/bower_components/**/*',
+          '!<%= config.src %>/vendor/**/*'
+        ],
+        tasks: ['newer:less:dev']
       },
       jshint: {
-        tasks: ['jshint'],
         files: [
-          '**/*.js',
+          '<%= config.src %>/**/*.js',
+          'test/**/*.js',
           '!<%= config.src %>/bower_components/**/*.js',
+          '!<%= config.src %>/vendor/**/*.js',
+          '!test/matchers/matchers.js',
           '!coverage/**/*',
-          '!**/node_modules/**/*',
-          '!<%= config.src %>/vendor/**/*.js'
+          '!**/node_modules/**/*'
         ],
-        options: {
-          spawn: false
-        }
+        tasks: ['newer:jshint:all']
       }
     },
 
@@ -61,7 +73,7 @@ module.exports = function (grunt) {
           expand: true,
           cwd: '<%= config.src %>',
           src: ['styles/imports.less'],
-          dest: '<%= config.temp %>/chroma_ui',
+          dest: '<%= config.temp %>/<%= config.dist %>',
           ext: '.css'
         }]
       }
@@ -91,6 +103,14 @@ module.exports = function (grunt) {
             src: [
               '**/*.html'
             ]
+          },
+          {
+            expand: true,
+            cwd: '<%= config.src %>',
+            dest: '<%= config.dist %>',
+            src: [
+              'bower_components/font-awesome/fonts/*'
+            ]
           }
         ]
       }
@@ -107,7 +127,7 @@ module.exports = function (grunt) {
     useminPrepare: {
       html: '<%= config.templateSource %>/base.html',
       options: {
-        dest: '<%= config.baseDist %>'
+        dest: './'
       }
     },
 
@@ -119,40 +139,31 @@ module.exports = function (grunt) {
     ngtemplates: {
       iml: {
         options: {
-          templateConfig: function (file) {
-            return file.replace(new RegExp('^' + config.src), config.dist);
+          url: function (url) {
+            return url.replace(new RegExp('^' + config.src), '/' + config.dist);
           },
-          concat: '<%= config.dist %>/built.js'
+          usemin: '<%= config.dist %>/built.js',
+          htmlmin:  {
+            collapseWhitespace: true,
+            collapseBooleanAttributes: true
+          }
         },
-        src: ['<%= config.src %>/**/*.html', '!<%= config.src %>/bower_components/**/*.html'],
-        dest: '<%= config.tmp %>/templates.js'
+        src: [
+          '<%= config.src %>/**/*.html',
+          '!<%= config.src %>/bower_components/**/*.html'
+        ],
+        dest: '<%= config.temp %>/templates.js'
       }
     },
 
     jshint: {
       options: {
-        jshintrc: '.jshintrc'
+        jshintrc: true
       },
-      all: [
-        '**/*.js',
-        '!<%= config.src %>/bower_components/**/*.js',
-        '!coverage/**/*',
-        '!**/node_modules/**/*',
-        '!<%= config.src %>/vendor/**/*.js'
-      ]
+      all: {
+        src: '**/*.js'
+      }
     }
-
-  });
-
-  // Handle jshint watching.
-  var changedFiles = Object.create(null);
-  var onChange = grunt.util._.debounce(function () {
-    grunt.config(['jshint', 'all'], Object.keys(changedFiles));
-    changedFiles = Object.create(null);
-  }, 200);
-  grunt.event.on('watch', function (action, filepath) {
-    changedFiles[filepath] = action;
-    onChange();
   });
 
   grunt.registerTask('dev', [
@@ -161,10 +172,14 @@ module.exports = function (grunt) {
     'watch'
   ]);
 
+  grunt.registerTask('precommit', [
+    'jshint:all',
+    'karma'
+  ]);
+
   grunt.registerTask('dist', [
     'clean:dist',
     'less:dist',
-    'jshint:all',
     'useminPrepare',
     'cleanStaticTemplateString',
     'ngtemplates',
@@ -172,6 +187,7 @@ module.exports = function (grunt) {
     'cssmin',
     'copy:dist',
     'uglify',
+    'filerev',
     'usemin',
     'clean:postDist'
   ]);
