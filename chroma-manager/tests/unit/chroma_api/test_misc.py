@@ -107,5 +107,7 @@ class TestMiscAPICalls(ChromaApiTestCase):
         self.assertEqual([3, 4], response['locks']['write'])
 
     def test_get_cached_host_version_api(self):
+        now = time.time()
         response = self.deserialize(self.api_client.get("/api/host/"))['objects'][0]
-        self.assertEqual(int(time.time()), int(response['version']))
+        self.assertGreaterEqual(response['version'], now)
+        self.assertLessEqual(response['version'], time.time())
