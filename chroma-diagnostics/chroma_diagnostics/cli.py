@@ -285,10 +285,10 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to copy logs")
 
-    tgz_path = '%s.tar.gz' % output_directory
+    tgz_path = '%s.tar.lzma' % output_directory
     #  Using -C to change to parent of dump dir,
     # then tgz'ing just the output dir
-    execute(['tar', '-czf', tgz_path, '-C',
+    execute(['tar', '--lzma', '-cf', tgz_path, '-C',
              DEFAULT_OUTPUT_DIRECTORY, output_fn])
 
     log.info("\nDiagnostic collection is completed.")
