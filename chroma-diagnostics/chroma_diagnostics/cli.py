@@ -220,56 +220,56 @@ def main():
 
     log.info("\nCollecting diagnostic files\n")
 
-    if dump('detected_devices.dump', ['chroma-agent', 'device_plugin',
-                                      '--plugin=linux'], output_directory):
+    if dump('detected_devices', ['chroma-agent', 'device_plugin',
+                                 '--plugin=linux'], output_directory):
         log.info("Detected devices")
     elif args.verbose > 0:
         log.info("Failed to Detected devices")
 
-    if dump('rabbit_queue_status.dump', ['rabbitmqctl', 'list_queues', '-p',
-                                         'chromavhost'], output_directory):
+    if dump('rabbit_queue_status', ['rabbitmqctl', 'list_queues', '-p',
+                                    'chromavhost'], output_directory):
         log.info("Inspected rabbit queues")
     elif args.verbose > 0:
         log.info("Failed to inspect rabbit queues")
 
-    if dump('rpm_packges_installed.dump', ['rpm', '-qa'], output_directory):
+    if dump('rpm_packges_installed', ['rpm', '-qa'], output_directory):
         log.info("Listed installed packages")
     elif args.verbose > 0:
         log.info("Failed to list installed packages")
 
-    if dump('pacemaker-cib.dump', ['cibadmin', '--query'], output_directory):
+    if dump('pacemaker-cib', ['cibadmin', '--query'], output_directory):
         log.info("Listed pacemaker configuration")
     elif args.verbose > 0:
         log.info("Failed to list Pacemaker configuration")
 
-    if dump('chroma-config-validate.dump', ['chroma-config',
-                                            'validate'], output_directory):
+    if dump('chroma-config-validate', ['chroma-config',
+                                       'validate'], output_directory):
         log.info("Validated chroma installation")
     elif args.verbose > 0:
         log.info("Failed to run chroma installation validation")
 
-    if dump('finger-print.dump', ['rpm', '-V', ] + PACKAGES, output_directory):
+    if dump('finger-print', ['rpm', '-V', ] + PACKAGES, output_directory):
         log.info("Finger printed chroma installation")
     elif args.verbose > 0:
         log.info("Failed to finger print chroma installation")
 
-    if dump('ps.dmp', ['ps', '-ef', '--forest'], output_directory):
+    if dump('ps', ['ps', '-ef', '--forest'], output_directory):
         log.info("Listed running processes")
     elif args.verbose > 0:
         log.info("Failed to list running processes: ps")
 
-    if dump('lspci.dmp', ['lspci', '-v'], output_directory):
+    if dump('lspci', ['lspci', '-v'], output_directory):
         log.info("listed PCI devices")
     elif args.verbose > 0:
         log.info("Failed to list PCI devices: lspci")
 
-    if dump('df.dmp', ['df', '--all'], output_directory):
+    if dump('df', ['df', '--all'], output_directory):
         log.info("listed file system disk space.")
     elif args.verbose > 0:
         log.info("Failed to list file system disk space : df")
 
     for proc in ['cpuinfo', 'meminfo', 'mounts', 'partitions']:
-        if dump('%s.dmp' % proc, ['cat', '/proc/%s' % proc], output_directory):
+        if dump(proc, ['cat', '/proc/%s' % proc], output_directory):
             log.info("listed cat /proc/%s" % proc)
         elif args.verbose > 0:
             log.info("Failed to list cat /proc/%s" % proc)
