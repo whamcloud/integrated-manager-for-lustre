@@ -29,6 +29,10 @@ import os
 from chroma_agent.log import console_log
 
 
+class CommandExecutionError(Exception):
+    pass
+
+
 class ThreadState(threading.local):
     """Thread-local logs for stdout/stderr from wrapped commands"""
 
@@ -125,6 +129,6 @@ def try_run(arg_list):
 
     rc, stdout, stderr = run(arg_list)
     if rc != 0:
-        raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
+        raise CommandExecutionError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
 
     return stdout
