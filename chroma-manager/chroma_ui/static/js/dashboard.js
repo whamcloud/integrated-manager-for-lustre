@@ -583,7 +583,7 @@ var Dashboard = (function() {
 
           template_vars = { filesystem: filesystem };
           if ( filesystem.immutable_state ) {
-            template_vars.state = { type: 'Monitored', icon: 'icon-dashboard', contextTooltip: 'monitored_filesystem' };
+            template_vars.state = { type: 'Monitored-only', icon: 'icon-dashboard', contextTooltip: 'monitored_filesystem' };
           } else {
             template_vars.state = { type: 'Managed', icon: 'icon-cogs', contextTooltip: 'managed_filesystem' };
           }
