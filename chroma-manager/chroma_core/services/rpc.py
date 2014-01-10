@@ -30,7 +30,7 @@ instance of RpcWaiter, which requires explicit initialization and shutdown.
 This is taken care of if your code is running within the `chroma_service`
 management command.
 """
-
+import logging
 
 import socket
 import threading
@@ -254,7 +254,7 @@ class RpcClientResponseHandler(threading.Thread):
         log.debug("ResponseThread.run")
 
         def callback(body, message):
-            log.debug(body)
+#            log.debug(body)
             try:
                 jsonschema.validate(body, RESPONSE_SCHEMA)
             except jsonschema.ValidationError as e:
@@ -350,7 +350,7 @@ class RpcClient(object):
             self._complete = False
 
             def callback(body, message):
-                log.debug(body)
+#                log.debug(body)
                 try:
                     jsonschema.validate(body, RESPONSE_SCHEMA)
                 except jsonschema.ValidationError as e:
@@ -541,6 +541,7 @@ class ServiceRpcInterface(object):
             'kwargs': kwargs,
             'request_id': request_id}
 
+        log.info("Starting rpc: %s, id: %s " % (fn_name, request_id))
         log.debug("_call: %s %s %s %s" % (request_id, fn_name, args, kwargs))
 
         rpc_client = RpcClientFactory.get_client(self.__class__.__name__)
@@ -551,7 +552,22 @@ class ServiceRpcInterface(object):
             log.error("ServiceRpcInterface._call: exception %s: %s \ttraceback: %s" % (result['exception'], result['exception_type'], result.get('traceback')))
             raise RpcError(result['exception'], result.get('exception_type'), traceback=result.get('traceback'))
         else:
-            log.info("Completed rpc '%s' (result=%s)" % (fn_name, result))
+            # NB: 'result' can be very large, and almost cripple the various logs where
+            # rpcs are run: http.log, job_scheduler.log, etc.
+            # If you want to see response result data from rpcs at the INFO level, consider writing
+            # log messages into the JobSchedulerClient calls.  Leaving this in for DEBUG.
+
+            if log.getEffectiveLevel() is not logging.DEBUG:
+                # Truncate message
+                result100 = str(result)[:100]
+                if str(result) != result100:
+                    result100 += "..."
+                result_str = result100
+            else:
+                result_str = result
+
+            log.info("Completed rpc: %s, id: %s, result: %s" % (fn_name, request_id, result_str))
+
             return result['result']
 
     def _local_call(self, fn_name, *args, **kwargs):
