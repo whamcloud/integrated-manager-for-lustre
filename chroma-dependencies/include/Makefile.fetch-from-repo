@@ -1,7 +1,7 @@
 TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
 include $(TOP)/include/Makefile.meta
 
-rpms: decruftinate $(ALL_RPMS)
+rpms: $(ALL_RPMS)
 
 requirements:
 	for rpm in $(ALL_RPMS); do                \
@@ -25,6 +25,7 @@ requirements:
 REPO_TARGETS = $(patsubst %, $(REPO)/%,$(ALL_RPMS))
 
 decruftinate:
+	@echo "Checking for cruft in $(CURDIR)..."
 	@rpm_name() { base=$${1##*/}; name=$${base%-*}; version=$${name%-*}; name=$${name%-*}; echo $$name; }; \
 	WANTED=""; \
 	for rpm in $(ALL_RPMS); do \
@@ -40,7 +41,7 @@ decruftinate:
 		fi; \
 	done
 
-install: $(REPO_TARGETS)
+install: decruftinate $(REPO_TARGETS)
 
 uninstall:
 	rm -f $(REPO_TARGETS)
