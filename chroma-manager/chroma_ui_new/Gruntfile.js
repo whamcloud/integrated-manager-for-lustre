@@ -43,15 +43,14 @@ module.exports = function (grunt) {
 
     less: {
       options: {
-        paths: ['<%= config.src %>/bower_components/', '<%= config.src %>/styles/', '.'],
-        relativeUrls: true,
+        paths: ['<%= config.src %>'],
         ieCompat: false
       },
       dev: {
         files: [{
           expand: true,
           cwd: '<%= config.src %>',
-          src: ['**/*.less', '!bower_components/**/*.less'],
+          src: ['styles/imports.less'],
           dest: '<%= config.dist %>',
           ext: '.css'
         }]
@@ -61,7 +60,7 @@ module.exports = function (grunt) {
         files: [{
           expand: true,
           cwd: '<%= config.src %>',
-          src: ['**/*.less', '!bower_components/**/*.less'],
+          src: ['styles/imports.less'],
           dest: '<%= config.temp %>/chroma_ui',
           ext: '.css'
         }]
