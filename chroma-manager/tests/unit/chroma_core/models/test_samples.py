@@ -101,6 +101,10 @@ class TestModels(TestCase):
         self.assertTrue(any(timestamp % 300 for timestamp in timestamps))
         for point in Stats.select(id, point.dt - timedelta(hours=1), point.dt, rate=True):
             self.assertEqual(point[1:], (1.0, 10))
+        selection = list(Stats.select(id, now - timedelta(seconds=30), now + timedelta(seconds=30), fixed=3))
+        self.assertEqual(len(selection), 3)
+        self.assertEqual(sum(point.len for point in selection), 3)
+        self.assertEqual(selection[0].len, 0)
         with assertQueries(*['DELETE'] * 5):
             Stats.delete(id)
         for model in Stats:

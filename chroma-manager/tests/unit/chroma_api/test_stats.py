@@ -104,8 +104,14 @@ class TestStats(ChromaApiTestCase):
                 item, = content[str(self.osts[0].id)]
                 self.assertEqual(item['data'], dict.fromkeys(keys, 0.0))
 
+        # fixed number of points
+        content = self.fetch('host/metric/', num_points=2, metrics='mem_MemTotal,mem_MemFree', begin='2013-04-19T20:33:00Z', end='2013-04-19T20:34:00Z', role='OSS')
+        data, = content.values()
+        self.assertEqual(map(operator.itemgetter('ts'), data), ['2013-04-19T20:33:00+00:00', '2013-04-19T20:33:30+00:00'])
+
         # invalid request
-        response = self.api_client.get('/api/target/metric/', data={'job': 'id', 'latest': 'true', 'metrics': 'read_bytes,write_bytes'})
+        response = self.api_client.get('/api/target/metric/', data={'num_points': '', 'job': 'id', 'latest': 'true', 'metrics': 'read_bytes,write_bytes'})
         self.assertEqual(response.status_code, 400)
         content = json.loads(response.content)
         self.assertEqual(len(content['job']), 2)
+        self.assertEqual(len(content['num_points']), 2)
