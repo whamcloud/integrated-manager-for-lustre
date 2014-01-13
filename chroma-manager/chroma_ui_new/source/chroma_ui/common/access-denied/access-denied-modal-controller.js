@@ -29,5 +29,5 @@
     };
   }
 
-  angular.module('accessDenied', []).controller('AccessDeniedCtrl', ['$scope', 'message', AccessDeniedCtrl]);
+  angular.module('accessDenied').controller('AccessDeniedCtrl', ['$scope', 'message', AccessDeniedCtrl]);
 }());

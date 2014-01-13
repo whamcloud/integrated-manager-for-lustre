@@ -146,7 +146,7 @@
     };
   }
 
-  angular.module('remote-validate', [])
+  angular.module('remote-validate')
 
   /**
    * Service wrapper for remote validation of a form. Useful for testing.

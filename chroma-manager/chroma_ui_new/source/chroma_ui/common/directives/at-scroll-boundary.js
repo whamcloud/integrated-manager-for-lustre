@@ -30,7 +30,7 @@
  * @name atScrollBoundary
  *
  */
-angular.module('atScrollBoundary', []).directive('atScrollBoundary', function factory() {
+angular.module('atScrollBoundary').directive('atScrollBoundary', function factory() {
   'use strict';
 
   var BOTTOM = 'bottom';

@@ -20,7 +20,7 @@
 // express and approved by Intel in writing.
 
 
-angular.module('modelFactory', ['ngResource', 'interceptors']).provider('modelFactory', function () {
+angular.module('modelFactory').provider('modelFactory', function () {
   'use strict';
 
   var urlPrefix = '';

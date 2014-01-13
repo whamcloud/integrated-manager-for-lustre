@@ -20,15 +20,4 @@
 // express and approved by Intel in writing.
 
 
-angular.module('route-to').directive('routeTo', ['UI_ROOT', function (UI_ROOT) {
-  'use strict';
-
-  return {
-    priority: 99, // it needs to run after the attributes are interpolated
-    link: function(scope, element, attr) {
-      attr.$observe('routeTo', function(value) {
-        attr.$set('href', UI_ROOT + value);
-      });
-    }
-  };
-}]);
+angular.module('atScrollBoundary', []);

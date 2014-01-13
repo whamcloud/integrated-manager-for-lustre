@@ -143,5 +143,5 @@
     return '%scalc(50%% - %spx)'.sprintf(prefix, dimension);
   }
 
-  angular.module('position', []).service('position', ['$window', Position]);
+  angular.module('position').service('position', ['$window', Position]);
 }());
