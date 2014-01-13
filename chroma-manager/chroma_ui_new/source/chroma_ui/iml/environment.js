@@ -28,5 +28,8 @@
     .constant('HELP_TEXT', window.HELP_TEXT)
     .constant('IS_RELEASE', window.IS_RELEASE)
     .constant('VERSION', window.VERSION)
-    .constant('BUILD', window.BUILD);
+    .constant('BUILD', window.BUILD)
+    .constant('BASE', '%s//%s'.sprintf(window.location.protocol, window.location.hostname))
+    .constant('API', '%s//%s:%s/api/'
+      .sprintf(window.location.protocol, window.location.hostname, window.location.port));
 }());

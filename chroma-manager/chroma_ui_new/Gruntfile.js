@@ -52,7 +52,16 @@ module.exports = function (grunt) {
         tasks: ['newer:jshint:all']
       }
     },
-
+    primus: {
+      dev: {
+        options: {
+          url: 'https://localhost:8888/primus/primus.js'
+        },
+        files: [{
+          dest: '<%= config.src %>/vendor/primus-client/primus.js'
+        }]
+      }
+    },
     less: {
       options: {
         paths: ['<%= config.src %>'],
@@ -168,6 +177,7 @@ module.exports = function (grunt) {
 
   grunt.registerTask('dev', [
     'clean:dev',
+    'primus:dev',
     'less:dev',
     'watch'
   ]);

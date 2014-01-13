@@ -163,8 +163,6 @@ describe('Remote validate directive', function () {
       };
     }));
 
-
-
     it('should validate fields', function () {
       getDeferred().reject({
         data: {

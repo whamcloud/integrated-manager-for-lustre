@@ -31,9 +31,13 @@
  */
 module.exports = function (Primus, server, multiplex) {
   var primus = new Primus(server, {parser: 'JSON', transformer: 'socket.io'});
+  var Emitter = require('primus-emitter');
 
   // add multiplex to Primus
   primus.use('multiplex', multiplex);
+
+  // add emitter to Primus
+  primus.use('emitter', Emitter);
 
   return primus;
 };

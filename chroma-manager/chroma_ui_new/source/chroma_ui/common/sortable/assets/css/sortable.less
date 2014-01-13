@@ -1,0 +1,37 @@
+.sorting[sorter] [sort-item] {
+  position: relative;
+
+  .sort-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+
+    &.over {
+      border: 5px dotted #777;
+      background-color: #EEE;
+      opacity: .1;
+      .transition(opacity .2s ease-in-out);
+      .transition(background-color .2s ease-in-out);
+      .transition(border-width .2s ease-in-out);
+    }
+  }
+}
+
+div[sort-item] {
+  &[draggable] {
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+    /* Required to make elements draggable in old WebKit */
+    -khtml-user-drag: element;
+    -webkit-user-drag: element;
+  }
+
+  &.moving {
+    opacity: .8;
+  }
+}
+

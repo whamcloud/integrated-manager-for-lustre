@@ -1,0 +1,59 @@
+.dashboard-chart {
+  @text-fill: #555555;
+
+  height: 520px;
+  margin-top: 25px;
+  border-bottom: 1px dotted #EEEEEE;
+
+  .controls {
+    margin: 20px 10px;
+
+    .drag {
+      cursor: move;
+      float: right;
+    }
+  }
+
+  h5 {
+    text-align: center;
+  }
+
+  .nv-y.nv-axis {
+    .nv-axisMaxMin text,
+    .tick text {
+      fill: @text-fill;
+    }
+  }
+
+  .nv-x.nv-axis {
+    .tick text {
+      fill: @text-fill;
+    }
+
+    .nv-axislabel {
+      fill: #777777;
+      font-weight: bold;
+      -webkit-transform: translateY(12px);
+    }
+  }
+
+  &.full-screen.active {
+    .chart {
+      height: 70vh;
+    }
+  }
+}
+
+.file-system-info {
+  .chart {
+    height: auto;
+    display: inline-block;
+
+    svg {
+      width: 25px;
+      height: 20px;
+      min-width: 20px;
+      min-height: 20px;
+    }
+  }
+}

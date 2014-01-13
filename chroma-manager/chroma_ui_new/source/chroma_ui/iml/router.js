@@ -37,4 +37,11 @@ angular.module('iml').config(['$routeSegmentProvider', function ($routeSegmentPr
     controllerAs: 'app',
     templateUrl: 'iml/app/assets/html/app.html'
   });
+
+  $routeSegmentProvider.when('/dashboard', 'app.dashboard');
+
+  $routeSegmentProvider.within('app').segment('dashboard', {
+    controller: 'DashboardCtrl',
+    templateUrl: 'iml/dashboard/assets/html/dashboard.html'
+  });
 }]);

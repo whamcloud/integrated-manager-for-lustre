@@ -1,0 +1,9 @@
+<div ng-controller="ObjectStorageServersCtrl" class="with-transitions">
+  <h5>Object Storage Servers</h5>
+  <div class="controls">
+    <duration-picker start-unit="{{ objectStorageServers.unit }}" start-size="{{ objectStorageServers.size }}" on-update="objectStorageServers.onUpdate(unit, size)"></duration-picker>
+    <a full-screen-btn class="btn btn-primary btn-xs"></a>
+    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
+  </div>
+  <line-chart options="objectStorageServers.options" chart-data="objectStorageServers.data"></line-chart>
+</div>
