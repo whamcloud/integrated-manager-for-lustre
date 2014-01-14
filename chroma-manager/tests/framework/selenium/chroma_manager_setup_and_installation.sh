@@ -135,19 +135,6 @@ ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
 # patch the agent
 cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
 
-# TODO: Remove this section once supervisor starts the realtime module
-cd /usr/share/chroma-manager/realtime/
-cat << EOF > /usr/share/chroma-manager/realtime/conf.json
-{
-  \"SERVER_HTTP_URL\": \"https://$CHROMA_MANAGER/\",
-  \"PRIMUS_PORT\": 8888,
-  \"SSL\": \"/var/lib/chroma\"
-}
-EOF
-cd /usr/share/chroma-manager/
-nohup node realtime &>/dev/null &
-# End of remove once supervisor starts the realtime module
-
 if $MEASURE_COVERAGE; then
   cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
 [run]
