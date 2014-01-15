@@ -1,0 +1,22 @@
+<div class="modal-header">
+  <button class="close" ng-click="onCancel()">&times;</button>
+  <h4 class="modal-title">{{ title }}</h4>
+</div>
+<div class="modal-body">
+  <div class="single-confirmation" ng-show="confirmPrompts.length == 1">
+    <p><strong>{{ confirmPrompts[0] }}</strong></p>
+  </div>
+  <div class="multi-confirmation" ng-show="confirmPrompts.length > 1">
+    <p>This action has the following consequences:</p>
+    <ul>
+      <li ng-repeat="message in confirmPrompts"><strong>{{ message }}</strong></li>
+    </ul>
+  </div>
+  <p>Are you sure?</p>
+</div>
+<div class="modal-footer">
+  <div class="button-row">
+    <button ng-click="onCancel()" class="btn btn-large">Cancel</button>
+    <button ng-click="onConfirm()" class="btn btn-large btn-primary">Confirm</button>
+  </div>
+</div>
