@@ -50,8 +50,8 @@
         }
       };
     }])
-    .config(function ($httpProvider) {
+    .config(['$httpProvider', function ($httpProvider) {
       // register the interceptor.
       $httpProvider.interceptors.push('tastypieInterceptor');
-    });
+    }]);
 }());
