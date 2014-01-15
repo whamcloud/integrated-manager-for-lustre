@@ -37,4 +37,3 @@ from bundle import *
 from server_profile import *
 from package import *
 from user_profile import *
-from client_error import *
