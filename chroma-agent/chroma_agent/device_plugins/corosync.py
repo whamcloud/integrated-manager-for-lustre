@@ -59,12 +59,12 @@ class CorosyncPlugin(DevicePlugin):
     """
 
     COROSYNC_CONNECTION_FAILURE = ("Connection to cluster failed: "
-                               "connection failed")
+                                   "connection failed")
 
     # This is the message that crm_mon will report
     # when corosync is not running
     def _parse_crm_as_xml(self, raw):
-        """ Parse the crm response
+        """ Parse the crm_mon response
 
         returns dict of node status or ERROR if corosync is down
         """
@@ -74,7 +74,7 @@ class CorosyncPlugin(DevicePlugin):
             root = xml.fromstring(raw)
         except ParseError:
             # not xml, might be a known error message
-            if  CorosyncPlugin.COROSYNC_CONNECTION_FAILURE in raw:
+            if CorosyncPlugin.COROSYNC_CONNECTION_FAILURE in raw:
                 return_dict['datetime'] = ''
                 return_dict['nodes'] = {}
             else:
@@ -96,11 +96,10 @@ class CorosyncPlugin(DevicePlugin):
     def _convert_utc_datetime(self, tm_str_local):
         """Convert the local time from str time to utc isoformat"""
 
-        dt = parse(tm_str_local).replace(
-                            tzinfo=tzlocal()).astimezone(tzutc()).isoformat()
+        dt = parse(tm_str_local).replace(tzinfo=tzlocal()).astimezone(tzutc()).isoformat()
         return dt
 
-    def _read_crm__mod_as_xml(self):
+    def _read_crm_mon_as_xml(self):
         """Run crm_mon --one-shot --as-xml, return raw output or None
 
         For expected return values (0, 10), return the stdout from output.
@@ -111,7 +110,7 @@ class CorosyncPlugin(DevicePlugin):
         rc, stdout, stderr = shell.run(crm_command)
         if rc not in [0, 10]:  # 10 Corosync is not running on this node
             daemon_log.warning("rc=%s running '%s': '%s' '%s'" %
-                                      (rc, crm_command, stdout, stderr))
+                               (rc, crm_command, stdout, stderr))
             stdout = None
 
         return stdout
@@ -122,7 +121,7 @@ class CorosyncPlugin(DevicePlugin):
     def update_session(self):
         """Respond to poll.  Only return if has valid data"""
 
-        raw_output = self._read_crm__mod_as_xml()
+        raw_output = self._read_crm_mon_as_xml()
         if raw_output:
             dict_status = self._parse_crm_as_xml(raw_output)
 

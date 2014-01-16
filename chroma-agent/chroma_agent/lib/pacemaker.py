@@ -203,7 +203,16 @@ def cibadmin(command_args):
     n = 100
     rc = 10
 
-    while (rc == 10 or rc == 41) and n > 0:
+    # I think these are "errno" values, but I'm not positive
+    # but going forward, any additions to this should try to be informative
+    # about the type of exit code and why it's OK to retry
+    RETRY_CODES = {
+        10: "something unknown",
+        41: "something unknown",
+        62: "something unknown",
+        107: "something unknown"
+    }
+    while rc in RETRY_CODES and n > 0:
         rc, stdout, stderr = shell.run(['cibadmin'] + command_args)
         if rc == 0:
             break
