@@ -445,17 +445,17 @@ class RealRemoteOperations(RemoteOperations):
     def get_resource_running(self, host, ha_label):
         result = self._ssh_address(
             host['address'],
-            'crm resource status %s' % ha_label,
+            'crm_resource -r %s -W' % ha_label,
             timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
         )
         resource_status = result.stdout.read()
 
-        # Sometimes crm resource status gives a false positive when it is repetitively
+        # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
         # to check that it didn't have problems starting.
         result = self._ssh_address(
             host['address'],
-            'crm resource failcount %s show %s' % (ha_label, host['nodename'])
+            'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, host['nodename'])
         )
         self._test_case.assertRegexpMatches(
             result.stdout.read(),
@@ -468,24 +468,41 @@ class RealRemoteOperations(RemoteOperations):
         return bool(re.search(expected_resource_status, resource_status))
 
     def check_ha_config(self, hosts, filesystem):
+        import xml.etree.ElementTree as xml
+
+        def host_has_location(items, host):
+            for p in items:
+                if p.attrib['node'] == host:
+                    return True
+            return False
+
+        def has_primitive(items, filesystem_name):
+            for p in items:
+                if p.attrib['class'] == "ocf" and \
+                   p.attrib['provider'] == "chroma" and \
+                   p.attrib['type'] == "Target" and \
+                   p.attrib['id'].startswith("%s-" % filesystem_name):
+                    return True
+            return False
+
         for host in hosts:
             result = self._ssh_address(
                 host['address'],
-                'crm configure show'
+                'cibadmin --query'
             )
-            configuration = result.stdout.read()
-            self._test_case.assertRegexpMatches(
-                configuration,
-                "location [^\n]* %s\n" % host['nodename']
-            )
-            self._test_case.assertRegexpMatches(
-                configuration,
-                "primitive %s-" % filesystem['name']
-            )
-            self._test_case.assertRegexpMatches(
-                configuration,
-                "id=\"%s-" % filesystem['name']
-            )
+            configuration = xml.fromstring(result.stdout.read())
+
+            self._test_case.assertTrue(
+                host_has_location(
+                    configuration.findall(
+                        './configuration/constraints/rsc_location'),
+                    host['nodename']))
+
+            self._test_case.assertTrue(
+                has_primitive(
+                    configuration.findall(
+                        './configuration/resources/primitive'),
+                    filesystem['name']))
 
     def exercise_filesystem(self, client_address, filesystem):
         """
@@ -630,10 +647,11 @@ class RealRemoteOperations(RemoteOperations):
                     # Verify other host knows it is no longer offline
                     result = self._ssh_address(
                         monitor_server['address'],
-                        "crm node show %s" % boot_server['nodename']
+                        "crm_mon -1"
                     )
                     node_status = result.stdout.read()
-                    if not re.search('offline', node_status):
+                    if re.search('Online: \[.* %s .*\]' %
+                                 boot_server['nodename'], node_status):
                         break
                 else:
                     # No monitor server, take SSH offline-ness as evidence for being booted
@@ -660,9 +678,11 @@ class RealRemoteOperations(RemoteOperations):
         if monitor_server:
             result = self._ssh_address(
                 monitor_server['address'],
-                "crm node show %s" % boot_server['nodename']
+                "crm_mon -1"
             )
-            self._test_case.assertNotRegexpMatches(result.stdout.read(), 'offline')
+            self._test_case.assertRegexpMatches(result.stdout.read(),
+                                                'Online: \[.* %s .*\]' %
+                                                boot_server['nodename'])
 
     def unmount_clients(self):
         """
@@ -700,7 +720,7 @@ class RealRemoteOperations(RemoteOperations):
         """
         result = self._ssh_address(
             server['address'],
-            'crm resource list'
+            'crm_resource -L'
         )
         crm_resources = result.stdout.read().split('\n')
         targets = []
@@ -718,7 +738,8 @@ class RealRemoteOperations(RemoteOperations):
     def is_pacemaker_target_running(self, server, target):
         result = self._ssh_address(
             server['address'],
-            "crm resource status %s" % target
+            "crm_resource -r %s -W" % target
+
         )
         return re.search('is running', result.stdout.read())
 
@@ -815,7 +836,7 @@ class RealRemoteOperations(RemoteOperations):
                         ifconfig eth1 0.0.0.0 down
                         rm -f /etc/sysconfig/network-scripts/ifcfg-eth1
                         rm -f /etc/corosync/corosync.conf
-                        rm -f /var/lib/heartbeat/crm/* /var/lib/corosync/*;
+                        rm -f /var/lib/pacemaker/cib/* /var/lib/corosync/*
                         cat << EOF > /etc/sysconfig/system-config-firewall
 --enabled
 --port=22:tcp
@@ -847,11 +868,11 @@ EOF
 
                     # Stop targets and delete targets
                     for target in crm_targets:
-                        self._ssh_address(server['address'], 'crm resource stop %s' % target)
+                        self._ssh_address(server['address'], 'crm_resource --resource %s --set-parameter target-role --meta --parameter-value Stopped' % target)
                     for target in crm_targets:
                         self._test_case.wait_until_true(lambda: not self.is_pacemaker_target_running(server, target))
-                        self._ssh_address(server['address'], 'crm configure delete %s' % target)
-                        self._ssh_address(server['address'], 'crm resource cleanup %s' % target)
+                        self._ssh_address(server['address'], 'pcs resource delete %s' % target)
+                        self._ssh_address(server['address'], 'crm_resource -C -r %s' % target)
 
                     # Verify no more targets
                     self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
