@@ -1,8 +1,8 @@
 {
   "name": "chroma-ui",
-  "version": "0.0.0",
+  "version": "2.1.0",
   "engines": {
-    "node": ">=0.8.0"
+    "node": ">=0.10.0"
   },
   "devDependencies": {
     "gulp": "3.3.1",
@@ -15,6 +15,7 @@
     "gulp-minify-html": "0.1.0",
     "gulp-csso": "0.1.7",
     "gulp-rimraf": "0.0.8",
+    "gulp-less": "1.1.10",
     "karma": "0.11.10",
     "karma-jasmine": "0.1.5",
     "karma-firefox-launcher": "0.1.2",
