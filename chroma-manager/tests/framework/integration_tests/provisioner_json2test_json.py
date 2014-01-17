@@ -74,10 +74,23 @@ if config.get('chroma_managers') and config.get('simulator'):
 
 if config.get('lustre_servers'):
     for server in config['lustre_servers']:
-        start_command = config.get('start_command', None)
-        if start_command:
+        start_command = server.get('start_command', None)
+        if start_command and start_command.startswith("virsh start"):
+            # until the provisioner is giving us an idempotent start
+            # command adjust them so they are so
+            server['start_command'] = '[ "$(virsh domstate %s)" = "running" ] || %s' % \
+                (server['nodename'], start_command)
+            # and until the server is providing a reset command
+            # create our own
             server['reset_command'] = \
-                server['start_command'].replace("start", "reset")
+                start_command.replace("start", "reset")
+        # until the provisioner is giving us an idempotent destroy
+        # command adjust them so they are so
+        destroy_command = server.get('destroy_command', None)
+        if destroy_command and destroy_command.startswith("virsh destroy"):
+            server['destroy_command'] = '[ "$(virsh domstate %s)" = "shut off" ] || %s' % \
+                (server['nodename'], destroy_command)
+
 
 if not config.get('simulator', False):
     setup_power_config()
