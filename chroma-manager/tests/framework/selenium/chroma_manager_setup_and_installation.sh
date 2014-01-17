@@ -15,7 +15,7 @@ echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm firefox
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm git firefox
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
 
 if [ ! -z "$GOOGLE_REPO" ]; then
@@ -81,6 +81,8 @@ python tests/utils/pip_install_requirements.py ~/pip_cache
 
 # Install npm-based requirements
 cd chroma_ui
+npm install
+cd ../chroma_ui_new
 npm install
 cd ../realtime
 npm install
