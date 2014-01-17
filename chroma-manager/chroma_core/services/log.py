@@ -54,9 +54,11 @@ FILE_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
 STDOUT_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
 
 
-def _add_file_handler(logger):
+def _add_file_handler(logger, filename=None):
     if not _has_handler(logger, WatchedFileHandler):
-        handler = WatchedFileHandler(_log_filename)
+        if filename is None:
+            filename = _log_filename
+        handler = WatchedFileHandler(filename)
         handler.setFormatter(logging.Formatter(FILE_FORMAT))
         logger.addHandler(handler)
 
@@ -119,6 +121,27 @@ def log_disable_stdout():
         for handler in logger.handlers:
             if isinstance(handler, logging.StreamHandler):
                 logger.removeHandler(handler)
+
+
+def custom_log_register(log_name, filename=None):
+    """Create another custom log handler within service in addition to default one
+
+    logger can have a file handler, no handler at all.  In the second case
+    you can then add your own handlers after the call to this method.
+
+    Uses settings.LOG_LEVEL
+    """
+
+    logger = logging.getLogger(log_name)
+    logger.setLevel(settings.LOG_LEVEL)
+
+    if filename:
+        if not filename.startswith(settings.LOG_PATH):
+            filename = os.path.join(settings.LOG_PATH, filename)
+        _add_file_handler(logger, filename)
+
+    _loggers.add(logger)
+    return logger
 
 
 def log_register(log_name):

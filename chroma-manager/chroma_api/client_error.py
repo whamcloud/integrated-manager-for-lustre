@@ -20,29 +20,51 @@
 # express and approved by Intel in writing.
 
 
-from tastypie.resources import ModelResource
+import httpagentparser
+
+from tastypie.resources import Resource
 from tastypie.authorization import Authorization
 
 from chroma_api.authentication import CsrfAuthentication
+from chroma_core.services.log import custom_log_register
 
-from chroma_core.models import ClientError
+logger = custom_log_register(__name__, 'client_errors.log')
 
 
-class ClientErrorResource(ModelResource):
+class ClientErrorResource(Resource):
     """
-    A Client Error.
+    A JavaScript Client Error.
 
+    Designed for POST only.  Each POST will write a block to the
+    client_errors.log log file.
+
+    GET is not supported; this resource cannot be queried.
     """
+
     class Meta:
         authentication = CsrfAuthentication()
         authorization = Authorization()
-        queryset = ClientError.objects.all()
         resource_name = 'client_error'
-        excludes = ['browser', 'created_at']
         list_allowed_methods = ['post']
         detail_allowed_methods = []
+        always_return_data = False
+        object_class = dict  # Not used, but required
 
-    def hydrate_user_agent(self, bundle):
-        bundle.data['user_agent'] = bundle.request.META.get('HTTP_USER_AGENT', '')
+    def get_resource_uri(self, bundle):
+        return None  # not used, but required
+
+    def obj_create(self, bundle, request=None, **kwargs):
+
+        url = bundle.data.get('url', None)
+        message = bundle.data.get('message', None)
+        stack = bundle.data.get('stack', None)
+        user_agent = bundle.request.META.get('HTTP_USER_AGENT', '')
+        os, browser = httpagentparser.simple_detect(user_agent)
+
+        logger.error("%s, url: %s, os: %s, browser: %s" % (message, url, os, browser))
+        logger.error("user agent: %s" % user_agent)
+        for line in stack.split("\n"):
+            logger.error(line)
+        logger.error("")
 
         return bundle
