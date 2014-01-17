@@ -52,6 +52,7 @@ logrotate_logs = {
                          'stats.log',
                          'supervisord.log',
                          'install.log',
+                         'client_errors.log',
                          ],
     '/var/log/httpd': ['error_log',
                        'access_log',
