@@ -4,6 +4,14 @@ include ../include/Makefile.version
 REALTIME_DEPENDENCIES := $(shell python -c "import json; print ' '.join(json.load(open('realtime/package.json'))['dependencies'].keys())")
 NPM := $(shell if which npm 2>/dev/null; then true; else echo npm; fi)
 
+# Fixup proxies if needed
+PREFIXED_PROXIES := if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"* ]]; then \
+	export HTTP_PROXY=http://$(HTTP_PROXY); \
+	export http_proxy=http://$(HTTP_PROXY); \
+	export HTTPS_PROXY=https://$(HTTPS_PROXY); \
+	export https_proxy=https://$(HTTPS_PROXY); \
+fi;
+
 # Override this if you don't want to use detected bundles
 USE_DETECTED_BUNDLES ?= true
 DEV_SETUP_BUNDLES ?= $(shell $(USE_DETECTED_BUNDLES) && { ls $(CURDIR)/repo/*.profile >/dev/null 2>&1 || echo "--no-bundles"; } || echo "--no-bundles")
@@ -62,12 +70,20 @@ $(NPM):
 
 realtime: realtime/package.json $(NPM)
 	@echo "Setting up realtime module for development..."
-	if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"* ]]; then \
-		export HTTP_PROXY=http://$(HTTP_PROXY); \
-		export HTTPS_PROXY=https://$(HTTPS_PROXY); \
-	fi; \
+	$(PREFIXED_PROXIES) \
 	cd realtime && \
 	npm install
+
+ui_new: $(NPM)
+	@echo "Setting up the New Ui for development..."
+	$(PREFIXED_PROXIES) \
+	cd chroma_ui_new && \
+	npm install
+
+gulp_build: $(NPM) realtime ui_new
+	@echo "Building New UI files for deployment..."
+	cd chroma_ui_new && \
+	./node_modules/.bin/gulp build
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -163,9 +179,9 @@ feature_tests:
 	done; \
 	exit $$brc
 
-tests test: unit_tests agent_tests feature_tests integration_tests service_tests 
+tests test: unit_tests agent_tests feature_tests integration_tests service_tests
 
-tarball: version
+tarball: version gulp_build
 	rm -f MANIFEST
 	python scripts/production_httpd.py chroma-manager.conf.template > chroma-manager.conf
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
@@ -202,7 +218,7 @@ requirements:
 		echo "why is this not quiet like it should be?";  \
 		sed -i -e '/^make\[[0-9]\]: /d' requirements.txt; \
 	fi
-	
+
 docs: requirements version
 	set -e ; \
 	if [ -z $(VIRTUAL_ENV) ] ; then \
