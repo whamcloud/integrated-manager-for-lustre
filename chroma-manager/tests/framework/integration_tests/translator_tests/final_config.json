@@ -6,7 +6,7 @@
       "device_paths": [
 
       ],
-      "distro": "el6.4",
+      "distro": "el6.5",
       "fqdn": "hydra-4vm3.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.216",
@@ -45,7 +45,7 @@
       "device_paths": [
 
       ],
-      "distro": "el6.4",
+      "distro": "el6.5",
       "fqdn": "hydra-4vm2.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.215",
@@ -67,7 +67,7 @@
       "device_paths": [
 
       ],
-      "distro": "el6.4",
+      "distro": "el6.5",
       "fqdn": "hydra-4vm5.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.218",
@@ -94,7 +94,7 @@
         "/dev/disk/by-id/scsi-1IET_00010004",
         "/dev/disk/by-id/scsi-1IET_00010005"
       ],
-      "distro": "el6.4",
+      "distro": "el6.5",
       "fqdn": "hydra-4vm6.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.219",
@@ -121,7 +121,7 @@
         "/dev/disk/by-id/scsi-1IET_00010004",
         "/dev/disk/by-id/scsi-1IET_00010005"
       ],
-      "distro": "el6.4",
+      "distro": "el6.5",
       "fqdn": "hydra-4vm7.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.223",
@@ -148,7 +148,7 @@
         "/dev/disk/by-id/scsi-1IET_00010004",
         "/dev/disk/by-id/scsi-1IET_00010005"
       ],
-      "distro": "el6.4",
+      "distro": "el6.5",
       "fqdn": "hydra-4vm8.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.226",
@@ -215,7 +215,7 @@
       "device_paths": [
 
       ],
-      "distro": "el6.4",
+      "distro": "el6.5",
       "fqdn": "hydra-4vm4.lab.whamcloud.com",
       "host": "hydra-4",
       "ip_address": "10.10.4.217",

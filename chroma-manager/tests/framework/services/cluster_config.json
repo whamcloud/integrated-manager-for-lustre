@@ -12,7 +12,7 @@
             "users": [
                 {"username": "debug", "super": true, "password": "chr0m4_d3bug"}
             ],
-            "distro": "el6.4"
+            "distro": "el6.5"
         }
     ],
     "provision": true
