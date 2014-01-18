@@ -14,7 +14,7 @@
                     "email": "nobody@example.com"
                 }
             ],
-            "distro": "el6.4",
+            "distro": "el6.5",
             "repos": ["chroma"]
         }
     ],

@@ -12,13 +12,13 @@
     "managed": true,
     "test_runners": [
         {
-            "distro": "el6.4",
+            "distro": "el6.5",
             "repos": ["chroma"]
         }
     ],
     "chroma_managers": [
         {
-            "distro": "el6.4",
+            "distro": "el6.5",
             "selinux_enabled": true,
             "firewall_enabled": true,
             "repos": ["chroma"],
@@ -30,7 +30,7 @@
     ],
     "lustre_servers": [
         {
-            "distro": "el6.4",
+            "distro": "el6.5",
             "selinux_enabled": true,
             "firewall_enabled": true,
             "root_password": "lustre",
@@ -42,7 +42,7 @@
             }
         },
         {
-            "distro": "el6.4",
+            "distro": "el6.5",
             "selinux_enabled": true,
             "firewall_enabled": true,
             "root_password": "lustre",
@@ -54,7 +54,7 @@
             }
         },
         {
-            "distro": "el6.4",
+            "distro": "el6.5",
             "selinux_enabled": true,
             "firewall_enabled": true,
             "root_password": "lustre",
@@ -66,7 +66,7 @@
             }
         },
         {
-            "distro": "el6.4",
+            "distro": "el6.5",
             "selinux_enabled": true,
             "firewall_enabled": true,
             "root_password": "lustre",
@@ -81,7 +81,7 @@
     "lustre_clients": [
         {
             "address": "client1",
-            "distro": "el6.4",
+            "distro": "el6.5",
             "lustre_client_version": "2.3.0"
         }
     ],
