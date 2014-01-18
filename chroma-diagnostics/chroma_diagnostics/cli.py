@@ -239,9 +239,19 @@ def main():
         log.info("Failed to list installed packages")
 
     if dump('pacemaker-cib', ['cibadmin', '--query'], output_directory):
-        log.info("Listed pacemaker configuration")
+        log.info("Listed cibadmin --query")
     elif args.verbose > 0:
-        log.info("Failed to list Pacemaker configuration")
+        log.info("Failed to list cibadmin --query")
+
+    if dump('pacemaker-pcs-config-show', ['pcs', 'config', 'show'], output_directory):
+        log.info("Listed: pcs config show")
+    elif args.verbose > 0:
+        log.info("Failed to list pcs config show")
+
+    if dump('pacemaker-crm-mon-1', ['crm_mon', '-1r', ], output_directory):
+        log.info("Listed: crm_mon -1r")
+    elif args.verbose > 0:
+        log.info("Failed to list crm_mon -1r")
 
     if dump('chroma-config-validate', ['chroma-config',
                                        'validate'], output_directory):
