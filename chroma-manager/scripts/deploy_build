@@ -8,6 +8,10 @@ CACHE_ROOT=$HOME/cache
 # do manager install or just scrub the nodes clean?
 INSTALL_MGR=${INSTALL_MGR:-true}
 
+if [ -n "$CLUSTER" ]; then
+    . $SCRIPT_DIR/deploy_build-${CLUSTER}.sh
+fi
+
 IML_NODE=${IML_NODE:-"manager"}
 MDS_NODES=${MDS_NODES:-"storage0"}
 OSS_NODES=${OSS_NODES:-"storage1"}
@@ -16,16 +20,14 @@ SERVER_RING1=${SERVER_RING1:-"eth1"}
 CLIENTS=${CLIENTS:-"storage2"}
 ALL_NODES="$IML_NODE $SERVERS $CLIENTS"
 
-BUILDER_USERNAME=${BUILDER_USERNAME:-"jenkins-pull"}
-BUILDER_PASSWORD=${BUILDER_PASSWORD:-"2cf9b55238c654b00bc37a6e8ccc4caf"}
 IML_USERNAME=${IML_USERNAME:-"admin"}
 IML_PASSWORD=${IML_PASSWORD:-"lustre"}
 
-BUILDER_URL=https://build.whamcloudlabs.com
+BUILDER_URL=https://jenkins.iml.intel.com:8080
 BUILD_JOB=${BUILD_JOB:-chroma-blessed}
 BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
 BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6.4"}
-BUNDLE_TARBALL=${BUNDLE_TARBALL:-ieel-1.0.1.tar.gz}
+BUNDLE_TARBALL=${BUNDLE_TARBALL:-ieel-1.0.2.tar.gz}
 BUILD_META_CHANGES=
 
 usage()
@@ -95,7 +97,7 @@ remote_shell()
     host_list=$1
     shift
     if $(which pdsh >/dev/null); then
-        pdsh -lroot -w$host_list $* | dshbak -c
+        pdsh $PDSH_ARGS -lroot -w$host_list $* | dshbak -c
     else
         for host in $(hl2h $host_list); do
             ssh root@$host $*
@@ -236,6 +238,11 @@ install_manager()
     rm -f $tmp
     remote_shell $IML_NODE cd $installer_dir\; expect /tmp/install.exp $IML_USERNAME iml-$IML_USERNAME@intel.com $IML_PASSWORD localhost
 }
+
+if [ -z "$BUILDER_USERNAME" -o -z "$BUILDER_PASSWORD" ]; then
+    echo "You need to set \$BUILDER_USERNAME and \$BUILDER_PASSWORD in your environment to your Jenkins username/passwd"
+    exit 1
+fi
 
 handle_options $*
 
