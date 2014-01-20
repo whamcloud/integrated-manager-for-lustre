@@ -1,0 +1,14 @@
+{
+  "name": "underscore-contrib",
+  "homepage": "https://github.com/documentcloud/underscore-contrib",
+  "version": "0.2.0",
+  "_release": "0.2.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.2.0",
+    "commit": "897466d30430b3ce6703547e45a180f3578f423a"
+  },
+  "_source": "https://github.com/documentcloud/underscore-contrib.git",
+  "_target": "0.2.0",
+  "_originalSource": "git://github.com/documentcloud/underscore-contrib.git"
+}

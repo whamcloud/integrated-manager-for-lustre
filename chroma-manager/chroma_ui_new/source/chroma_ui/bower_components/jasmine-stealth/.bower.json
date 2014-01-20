@@ -1,0 +1,15 @@
+{
+  "name": "jasmine-stealth",
+  "_cacheHeaders": {
+    "ETag": "\"43f76ce62e23c6279811744aa7fdc686\"",
+    "Last-Modified": "Sat, 07 Sep 2013 16:13:59 GMT",
+    "Content-Length": "6229",
+    "Content-Type": "application/octet-stream",
+    "Content-Disposition": "attachment; filename=jasmine-stealth.js"
+  },
+  "_release": "e-tag:43f76ce62",
+  "main": "index.js",
+  "_source": "https://github.com/searls/jasmine-stealth/releases/download/0.0.13/jasmine-stealth.js",
+  "_target": "*",
+  "_originalSource": "https://github.com/searls/jasmine-stealth/releases/download/0.0.13/jasmine-stealth.js"
+}

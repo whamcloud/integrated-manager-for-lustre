@@ -1,0 +1,15 @@
+{
+    "name": "angular-route-segment",
+    "version": "1.0.0",
+    "dependencies": {
+        "grunt": "",
+        "grunt-contrib-uglify": "",
+        "grunt-contrib-concat": "",
+        "grunt-karma": "",
+        "karma": "",
+        "karma-jasmine": "",
+        "karma-phantomjs-launcher": "",
+        "karma-junit-reporter": "",
+        "grunt-git-describe": ""
+    }
+}

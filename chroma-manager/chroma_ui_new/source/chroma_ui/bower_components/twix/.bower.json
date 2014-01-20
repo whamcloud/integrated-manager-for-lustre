@@ -1,0 +1,19 @@
+{
+  "name": "twix",
+  "version": "0.3.0",
+  "dependencies": {
+    "moment": "*"
+  },
+  "main": "bin/twix.js",
+  "description": "A date range plugin for moment.js",
+  "homepage": "https://github.com/icambron/twix.js",
+  "_release": "0.3.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "0.3.0",
+    "commit": "7e14804c1c128884b7a356ccc6249b90e80fc460"
+  },
+  "_source": "https://github.com/icambron/twix.js.git",
+  "_target": "~0.3.0",
+  "_originalSource": "twix"
+}
