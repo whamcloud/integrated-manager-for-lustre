@@ -37,11 +37,11 @@ __all__ = 'Point', 'Series', 'Stats'
 
 def total_seconds(td):
     "Return timedelta.total_seconds (builtin in 2.7)"
-    return (td.days * 24 * 60 * 60) + td.seconds
+    return (td.days * 24 * 60 * 60) + td.seconds + (td.microseconds * 1e-6)
 
 ROWS = 1000  # sample size multiplier for total number of rows
 SAMPLES = {'seconds': 10}, {'minutes': 1}, {'minutes': 5}, {'hours': 1}, {'days': 1}
-SAMPLES = tuple(total_seconds(timedelta(**SAMPLE)) for SAMPLE in SAMPLES)
+SAMPLES = tuple(int(total_seconds(timedelta(**SAMPLE))) for SAMPLE in SAMPLES)
 for div, mod in map(divmod, SAMPLES[1:], SAMPLES[:-1]):
     assert div > 1 and mod == 0, SAMPLES
 
@@ -246,10 +246,10 @@ class Stats(list):
         if rate:
             points = map(operator.sub, points[1:], points[:-1])
         if fixed:
-            step = (stop - start) // fixed
+            step = (stop - start) / fixed
             intervals = [Point(start + step * index, 0.0, 0) for index in range(fixed)]
             for point in points:
-                intervals[total_seconds(point.dt - start) // total_seconds(step)] += point
+                intervals[int(total_seconds(point.dt - start) / total_seconds(step))] += point
             points = intervals
         return points
 
