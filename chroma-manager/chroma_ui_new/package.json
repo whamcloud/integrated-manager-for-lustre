@@ -25,7 +25,6 @@
     "karma-script-launcher": "0.1.0",
     "karma-ng-html2js-preprocessor": "0.1.0",
     "karma-coverage": "0.1.4",
-    "lodash-contrib": "git://github.com/jgrund/lodash-contrib",
     "lodash": "2.3.0",
     "matchdep": "0.3.0",
     "protractor": "0.12.0",
