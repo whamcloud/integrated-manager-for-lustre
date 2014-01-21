@@ -44,4 +44,14 @@ describe('replace transformer', function () {
 
     $rootScope.$digest();
   });
+
+  it('should preserve object identity', function () {
+    function FakeThingy () {};
+
+    resp.body = [new FakeThingy()];
+
+    replaceTransformer.call(stream, resp, deferred);
+
+    expect(data[0].constructor).toEqual(FakeThingy);
+  });
 });

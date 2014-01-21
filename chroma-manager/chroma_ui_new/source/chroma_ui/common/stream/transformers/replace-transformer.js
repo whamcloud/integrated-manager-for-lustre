@@ -29,8 +29,26 @@ angular.module('stream').factory('replaceTransformer', [function replaceStreamFa
   return function replaceScope(resp, deferred) {
     var data = this.getter();
 
-    /*jshint validthis: true */
-    angular.copy(resp.body, data);
+    var isArray = Array.isArray(data);
+
+    if (isArray !== Array.isArray(resp.body))
+      throw new Error('data and resp.body must both be the same type!');
+
+    if (isArray) {
+      data.length = 0;
+
+      resp.body.forEach(function (item) {
+        data.push(item);
+      });
+    } else {
+      Object.keys(data).forEach(function (key) {
+        delete data[key];
+      });
+
+      Object.keys(resp.body).forEach(function (key) {
+        data[key] = resp.body[key];
+      });
+    }
 
     deferred.resolve(data);
   };
