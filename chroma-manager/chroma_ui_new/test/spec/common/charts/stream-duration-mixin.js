@@ -108,9 +108,9 @@ describe('stream duration mixin', function () {
     it('should set up params for an update', function () {
       expect(params).toEqual({
         qs : {
-          update : true,
-          begin : '2013-12-09T05:00:00.000Z',
-          end : '2013-12-11T05:00:00.000Z'
+          update: true,
+          begin: data[0].values[0].x.toISOString(),
+          end: data[0].values[2].x.toISOString()
         }
       });
     });
