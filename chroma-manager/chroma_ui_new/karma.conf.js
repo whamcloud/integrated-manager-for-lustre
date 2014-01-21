@@ -75,7 +75,7 @@ module.exports = function(config) {
 
     // Only used if junit reporter activated (ex "--reporters junit" on the command line)
     junitReporter: {
-      suite: 'karma-tests'
+      suite: 'karma-tests (new ui)'
     },
 
 

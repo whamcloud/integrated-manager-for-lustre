@@ -64,7 +64,7 @@ module.exports = function(config) {
     reporters: ['dots', 'growl'],
 
     junitReporter: {
-      suite: 'karma-tests'
+      suite: 'karma-tests (old ui)'
     },
 
     port: 9876,
