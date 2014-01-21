@@ -99,36 +99,39 @@ def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
 
 
 def get_resource_location(resource_name):
-    try:
-        rc, stdout, stderr = shell.run(['crm_resource', '--locate', '--resource', resource_name])
-    except OSError:
-        # Probably we're on a server without corosync
-        return None
-
+    # FIXME: this may break on non-english systems or new versions of pacemaker
+    rc, lines_text, stderr = shell.run(["crm_mon", "-1", "-r"])
     if rc != 0:
-        # We can't get the state of the resource, assume that means it's not running (maybe
-        # it was unconfigured while we were running)
+        # Pacemaker not running, or no resources configured yet
         return None
-    elif len(stdout.strip()) == 0:
-        return None
-    else:
-        try:
-            # Amusingly (?) Pacemaker will sometimes report that a target is running on more than one
-            # node, by outputting a number of 'is running on' lines.
-            # This happens while we are adding a target -- a separate process doing a get_resource_locations
-            # sees one of these multi-line outputs from 'crm_resource --locate'
-            # this actually shouldn't happen any more with HYD-514 fixed
-            line_count = len(stdout.strip().split('\n'))
-            if line_count > 1:
-                return None
 
-            node_name = re.search("^resource [^ ]+ is running on: (.*)$", stdout.strip()).group(1)
-        except AttributeError:
-            raise RuntimeError("Bad crm_resource output '%s'" % stdout.strip())
-        return node_name
+    before_status = True
+    for line in lines_text.rstrip().split("\n"):
+        if line == "":
+            continue
+
+        # skip down to the resources part
+        if before_status:
+            if line.startswith("Online: "):
+                before_status = False
+            continue
+
+        # The line can have 3 or 4 arguments so pad it out to at least 4 and
+        # throw away any extra
+        # credit it goes to Aric Coady for this little trick
+        rsc_id, type, status, host = (line.rstrip().lstrip().split() + [None])[:4]
+
+        if rsc_id == resource_name:
+            # host will be None if it's not started due to the trick above
+            # because the host only shows up as the 4th item when it's
+            # started and gets the padded value of None above when it's not
+            return host
+
+        return None
 
 
 def get_resource_locations():
+    # FIXME: this may break on non-english systems or new versions of pacemaker
     """Parse `crm_mon -1` to identify where (if anywhere)
        resources (i.e. targets) are running."""
 
@@ -450,13 +453,10 @@ def start_target(ha_label):
                        '-m', '-v', 'Started'])
 
         # now wait for it to start
-        # FIXME: this may break on non-english systems or new versions of pacemaker
         timeout = 100
         n = 0
         while n < timeout:
-            stdout = shell.try_run(['crm_resource', '-r', ha_label, '--locate'])
-
-            if stdout.startswith("resource %s is running on:" % ha_label):
+            if get_resource_location(ha_label):
                 break
 
             sleep(1)
@@ -496,16 +496,11 @@ def _stop_target(ha_label):
     shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
                   '-m', '-v', 'Stopped'])
 
-    # now wait for it
-    # FIXME: this may break on non-english systems or new versions of pacemaker
+    # now wait for it to stop
     timeout = 100
     n = 0
     while n < timeout:
-        arg_list = ["crm_resource", "-r", ha_label, "--locate"]
-        rc, stdout, stderr = shell.run(arg_list)
-        if rc != 0:
-            raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
-        if stderr.find("is NOT running") > -1:
+        if not get_resource_location(ha_label):
             break
         sleep(1)
         n += 1
