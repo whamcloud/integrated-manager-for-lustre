@@ -65,6 +65,7 @@
         $('#filesystem_create_form').find('span.error').remove();
         $('#filesystem_create_form').find('.error').removeClass('error');
         $('#txtfsnameid').val("");
+        $('#fs_opt_enable_hsm').prop("checked", false);
       }
       angular.element('html').injector().get('pageTitle').set('Configuration - File Systems - Create');
 
@@ -298,6 +299,9 @@
         if (bytes_per_inode) {
           filesystem.mdt.bytes_per_inode = parseInt(bytes_per_inode);
         }
+        if ($('#fs_opt_enable_hsm').is(':checked')) {
+          filesystem.mdt.conf_params["mdt.hsm_control"] = "enabled";
+        }
 
         // Compose OST list
         filesystem.osts = [];
@@ -368,8 +372,13 @@
         <span class="step_number">1.</span> <span class="step_caption">Set file system options</span><br>
       </div>
       <div class='step_body'>
-        <label>File system name:</label> <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" maxlength="8"/>
-        <button class='advanced' type="button">Set Advanced Settings</button>
+        <div>
+            <label>File system name:</label> <input type="text" name="txtfsname" id="txtfsnameid" style="width:100px;" maxlength="8"/>
+            <button class='advanced' type="button">Set Advanced Settings</button>
+        </div>
+        <div>
+            <label>Enable HSM?</label> <input type="checkbox" name="fs_opt_enable_hsm" id="fs_opt_enable_hsm"/>
+        </div>
       </div>
     </td>
   </tr>

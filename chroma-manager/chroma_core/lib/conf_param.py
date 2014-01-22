@@ -260,6 +260,11 @@ all_params = {
 'ost.OSS.ost_io.thread_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for bulk data I/O. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
 'ost.OSS.ost_create.thread_min': (OstConfParam, IntegerParam(), "Minimum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
 'ost.OSS.ost_create.thread_max': (OstConfParam, IntegerParam(), "Maximum thread count on object storage server for object pre-creation operations. Default is set dynamically depending on RAM and CPU resources available on the server. In the \"Lustre Operations Manual\", see Section 25.1: Optimizing the Number of Service Threads and Section 31.2.13: Setting MDS and OSS Thread Counts."),
+
+
+# "HSM Configuration and Control"
+# =================
+    'mdt.hsm_control': (MdtConfParam, EnumParam(['enabled', 'shutdown', 'disabled', 'purge']), "Controls if HSM is enabled for this MDT's filesystem. Values are \"enabled\", \"shutdown\", \"disabled\", or \"purge\". Default is \"disabled\". In the \"Lustre Operations Manual\", see Section XXX FIXME: HSM SOMETHING SOMETHING."),
 }
 
 _conf_param_klasses = [FilesystemClientConfParam, FilesystemGlobalConfParam, MdtConfParam, OstConfParam]
