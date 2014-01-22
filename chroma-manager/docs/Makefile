@@ -1,5 +1,5 @@
 
-all: api storage_plugin internals packaging
+all: api storage_plugin internals packaging scheduler-plugin-api
 
 dist:
 	mkdir -p dist
@@ -47,3 +47,10 @@ packaging: dist/
 	cp -r packaging/_build/html dist/chroma-doc-packaging
 	pushd dist ;\
 	tar czf chroma-doc-packaging.tar.gz chroma-doc-packaging
+
+.PHONY: scheduler-plugin-api
+scheduler-plugin-api: dist
+	make -C $@ html
+	rm -rf dist/chroma-doc-$@
+	cp -r $@/_build/html dist/chroma-doc-$@
+	tar -C dist -czf dist/chroma-doc-$@.tar.gz chroma-doc-$@

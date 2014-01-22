@@ -21,8 +21,8 @@
 
 
 """
-Registered job scheduler plugins.
-slurm_job_id, job_id, lsb_jobid, loadl_step_id, pbs_jobid, procname_uid
+Registered job scheduler plugins:
+slurm_job_id, job_id, lsb_jobid, loadl_step_id, pbs_jobid, procname_uid.
 
 Modules will be loaded dynamically as needed.
 Plugins must implement fetch function as documented.
