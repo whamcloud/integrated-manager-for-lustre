@@ -51,18 +51,19 @@ class ChromaLogCollector(object):
 
     def fetch_pacemaker_configuration(self, lustre_server):
         # Only attempt to fetch if pacemaker exists on the lustre server
-        if subprocess.call(['ssh', lustre_server, 'which pcs']) == 0:
-            pcs_status = subprocess.Popen(['ssh', lustre_server, 'pcs status'], stdout=subprocess.PIPE).communicate()[0]
-            f = open('%s/%s-pcs-status.log' % (self.destination_path, lustre_server), 'w')
+        which_crm_exit_code = subprocess.call(['ssh', lustre_server, 'which crm'])
+        if which_crm_exit_code == 0:
+            crm_status = subprocess.Popen(['ssh', lustre_server, 'crm status'], stdout=subprocess.PIPE).communicate()[0]
+            f = open('%s/%s-crm-status.log' % (self.destination_path, lustre_server), 'w')
             try:
-                f.write(pcs_status)
+                f.write(crm_status)
             finally:
                 f.close()
 
-            pcs_configuration = subprocess.Popen(['ssh', lustre_server, 'pcs config'], stdout=subprocess.PIPE).communicate()[0]
-            f = open('%s/%s-pcs-configuration.log' % (self.destination_path, lustre_server), 'w')
+            crm_configuration = subprocess.Popen(['ssh', lustre_server, 'crm configure show'], stdout=subprocess.PIPE).communicate()[0]
+            f = open('%s/%s-crm-configuration.log' % (self.destination_path, lustre_server), 'w')
             try:
-                f.write(pcs_configuration)
+                f.write(crm_configuration)
             finally:
                 f.close()
 
