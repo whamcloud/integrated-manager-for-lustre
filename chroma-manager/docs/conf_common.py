@@ -50,6 +50,9 @@ source_suffix = '.rst'
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
+# The master toctree document.
+master_doc = 'index'
+
 # General information about the project.
 copyright = u'2013, Intel Corporation'
 
@@ -137,7 +140,7 @@ html_theme_path = ["../"]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
