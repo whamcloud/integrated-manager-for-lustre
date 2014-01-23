@@ -345,7 +345,7 @@ tr.even {
 
 }
 
-#tabs {
+#conf_wrapper {
   width: 98%;
 }
 
@@ -412,7 +412,7 @@ h2.section_header {
   -webkit-font-smoothing: antialiased;
 }
 
-#tabs h1.page-header {
+#conf_wrapper h1.page-header {
   margin-top: 15px;
 }
 
@@ -494,6 +494,7 @@ tr.log_info {
 
 div.toplevel, div.relative {
     position: relative;
+    background-color: white;
 }
 
 h1.dashboard-title {
@@ -953,6 +954,24 @@ div.help_loaded {
 
 .actions-cell .dropdown-menu {
   left: -30px;
+}
+
+li.nav div.dropdown ul.dropdown-menu {
+    background-color: #2C2C2C;
+    margin-top: 0;
+}
+
+li.nav div.dropdown ul.dropdown-menu li {
+    float: none;
+    font-size: 12px;
+}
+
+li.nav div.dropdown:hover > ul.dropdown-menu {
+    display: block;
+}
+
+li.nav div.dropdown ul.dropdown-menu li a:hover {
+    background: #0067B4;
 }
 
 .qtip p {

@@ -49,16 +49,7 @@
   }();
 </script>
 
-<div id="tabs">
-  <ul>
-    <li><a href='#server-tab' title='servers'>Servers</a></li>
-    <li><a href='#volume-tab' title='volumes'>Volumes</a></li>
-    <li><a href='#power-tab' title='power'>Power Control</a></li>
-    <li><a href='#mgt-tab' title='mgts'>MGTs</a></li>
-    <li><a href='#filesystem-tab' title='filesystems'>File Systems</a></li>
-    <li><a href='#storage-tab' title='storage'>Storage</a></li>
-    <li><a class="superuser_only" href='#user-tab' title='users'>Users</a></li>
-  </ul>
+{% if '/configure/filesystem/' in request.path %}
   <div id='filesystem-tab'>
     <div id='filesystem-tab-list' style="display: none">
       {% include "filesystem_list.html" %}
@@ -70,20 +61,28 @@
       {% include "filesystem_detail.html" %}
     </div>
   </div>
+{% elif '/configure/mgt/' in request.path %}
   <div id='mgt-tab'>
     {% include "mgt_tab.html" %}
   </div>
+{% elif '/configure/volume/' in request.path %}
   <div id='volume-tab'>
     {% include "volume_tab.html" %}
   </div>
+{% elif '/configure/server/' in request.path %}
   <div id='server-tab'>
     {% include "server_tab.html" %}
   </div>
+{% elif '/configure/storage/' in request.path %}
   <div id='storage-tab'>
     {% include "storage_tab.html" %}
   </div>
-  <div id='power-tab'></div>
+{% elif '/configure/power/' in request.path %}
+  <div id='power-tab'>
+    {% include "power_control.html" %}
+  </div>
+{% elif '/configure/user/' in request.path %}
   <div id='user-tab'>
     {% include "user_tab.html" %}
   </div>
-</div>
+{% endif %}

@@ -18,6 +18,7 @@ class Mgt(DatatableView):
 
     def select_mgt(self, server_address, volume_name):
         self.volume_chooser_open_and_select('new_mgt_chooser', server_address, volume_name)
+        self.quiesce()
 
     def transition(self, primary_server_address, state):
         self.transition_by_column_values({2: primary_server_address}, state)

@@ -39,7 +39,8 @@ class BaseView(object):
     def quiesce(self):
         for i in xrange(self.long_wait):
             busy = self.driver.execute_script('return ($.active != 0);')
-            if not busy:
+            animated = self.driver.execute_script('return $(":animated").length;')
+            if not busy and not animated:
                 self.log.debug('quiesced in %s iterations' % i)
                 return
             else:
@@ -152,6 +153,7 @@ class BaseView(object):
         """Click storage button and select an MGT from chooser"""
         chooser_button = self.driver.find_element_by_css_selector("#%s_outer" % chooser_id)
         chooser_button.click()
+        self.quiesce()
         self.volume_chooser_select(chooser_id, server_address, volume_name, multi)
 
     def volume_chooser_select(self, chooser_id, server_address, volume_name, multi):
@@ -162,6 +164,7 @@ class BaseView(object):
         else:
             row = self.find_row_by_column_text(table, {4: server_address, 0: volume_name})
         row.click()
+        self.quiesce()
 
     def get_input_error(self, input_element):
         """Given an input element, get the validation error text attached to it, or

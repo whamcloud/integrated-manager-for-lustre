@@ -35,5 +35,6 @@ class TestBaseLayout(SeleniumBaseTestCase):
 
     def open_slider_check(self, page):
         self.vertical_side_bar.click()
+        self.navigation.quiesce()
         self.assertTrue(wait_for_element_by_css_selector(self.driver, self.base_page_layout.sidebar_id, 10), 'Unable to open Notification side bar with id:' + self.base_page_layout.sidebar_id + ' on page:' + page)
         self.sidebar_close.click()

@@ -41,7 +41,6 @@ class Users(DatatableView):
         super(Users, self).__init__(driver)
 
         # Initialise elements on this page
-        self.create_new_user_button = self.driver.find_element_by_css_selector("#create_user")
         self.create_user_dialog = "div.create_user_dialog"
         self.user_detail = "div.user_detail div.tabs"
         self.user_details_tab = '%s a[href="#user_details_tab"]' % self.user_detail
@@ -85,6 +84,10 @@ class Users(DatatableView):
         self.user_list_datatable = 'user_list'
         self.username_td = 0
         self.user_group_td = 3
+
+    @property
+    def create_new_user_button(self):
+        return self.driver.find_element_by_css_selector("#create_user")
 
     def _open_account_dialog(self):
         account_button = wait_for_element_by_css_selector(self.driver, "#account", 10)
@@ -157,8 +160,10 @@ class Users(DatatableView):
         for button in buttons:
             if button.text == static_text['edit_user']:
                 button.click()
+                self.quiesce()
                 wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
                 self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
+                self.quiesce()
                 alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
                 self._fill_out_alerts_form(alerts_form, alert_subscriptions)
 

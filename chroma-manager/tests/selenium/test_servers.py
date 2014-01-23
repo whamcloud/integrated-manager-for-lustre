@@ -52,7 +52,7 @@ class TestServer(SeleniumBaseTestCase):
 
     def test_create_server(self):
         self.server_page.add_servers(self.host_list)
-        self.navigation.go('Volumes', 'Servers')
+        self.navigation.go('Configure', 'Servers')
         for host in self.host_list:
             host_name = host["address"]
             # Check LNet state
@@ -79,7 +79,7 @@ class TestServer(SeleniumBaseTestCase):
 
         self.server_page.add_servers(self.host_list)
         self.check_volume_config_for_added_server()
-        self.navigation.go('Servers')
+        self.navigation.go('Configure', 'Servers')
 
     def test_start_and_stop_lnet_on_server(self):
         """Test for starting and stopping LNet on server"""
@@ -114,7 +114,7 @@ class TestServer(SeleniumBaseTestCase):
         self.assertEqual(len(self.server_page.get_server_list()), len(self.host_list) - 1)
 
     def check_volume_config_for_added_server(self):
-        self.navigation.go('Volumes')
+        self.navigation.go('Configure', 'Volumes')
         volumes_page = Volumes(self.driver)
 
         for host in self.host_list:

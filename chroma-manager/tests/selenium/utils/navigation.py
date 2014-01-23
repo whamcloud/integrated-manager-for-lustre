@@ -28,12 +28,12 @@ class Navigation(BaseView):
             'Logs': '#log_menu',
 
             # Elements under configure tab
-            'Filesystems': "a[href='#filesystem-tab']",
-            'MGTs': "a[href='#mgt-tab']",
-            'Volumes': "a[href='#volume-tab']",
-            'Servers': "a[href='#server-tab']",
-            'Storage': "a[href='#storage-tab']",
-            'Users': "a[href='#user-tab']",
+            'Filesystems': "a#filesystem-conf-item",
+            'MGTs': "a#mgt-conf-item",
+            'Volumes': "a#volume-conf-item",
+            'Servers': "a#server-conf-item",
+            'Storage': "a#storage-conf-item",
+            'Users': "a#user-conf-item",
             'Create_new_filesystem': "#create_new_fs",
         }
 
@@ -65,6 +65,7 @@ class Navigation(BaseView):
             self.click(self.links[page])
         self.quiesce()
         self.wait_for_angular()
+        self.quiesce()
 
     def click(self, selector):
         """
@@ -92,6 +93,7 @@ class Navigation(BaseView):
                     else:
                         break
                 break
+        self.quiesce()
 
     def wait_for_loading_page(self, blocking_element_class):
         try:
