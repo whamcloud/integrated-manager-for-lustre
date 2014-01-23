@@ -9,7 +9,7 @@
   var config = require(file);
 
   // Walks the config adding element selection methods to any collections found.
-  _.walk(config, function (val, key) {
+  _.walk.preorder(config, function (val, key) {
     if (!Array.isArray(val)) return;
 
     val.get = function get(predicate) {
