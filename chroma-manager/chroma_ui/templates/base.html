@@ -19,7 +19,7 @@
 
       // Set Dependencies for this portion of the application
       window.dependencies = ['controllers', 'models', 'interceptors', 'ngResource', 'constants',
-        'ui.bootstrap', 'services', 'filters', 'ui', 'directives', 'timing', 'exception'];
+        'ui.bootstrap', 'services', 'filters', 'ui', 'directives', 'timing', 'exception', 'configureLnet'];
     </script>
 
     <link rel="stylesheet" href="{{STATIC_URL}}css/base.css" type="text/css" />
@@ -49,6 +49,7 @@
     <link rel="stylesheet" href="{{STATIC_URL}}css/create_pdu.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}js/modules/exception/assets/css/exception-dialog.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}js/modules/exception/assets/css/disconnect-dialog.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}js/modules/configure-lnet/assets/css/configure-lnet.css" type="text/css" />
 
     {% block css %}{% endblock %}
     <link rel="icon" href="{{STATIC_URL}}images/intel.ico" />
@@ -119,6 +120,12 @@
     <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/disconnect-handler.js"></script>
     <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/disconnect-dialog.js"></script>
     <script type="text/javascript" src="{{ STATIC_URL }}js/modules/exception/replay.js"></script>
+
+    <script type="text/javascript" src="{{ STATIC_URL }}js/modules/configure-lnet/configure-lnet-module.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}js/modules/configure-lnet/configure-lnet-button.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}js/modules/configure-lnet/configure-lnet-dialog.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}js/modules/configure-lnet/lnet-options.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}js/modules/configure-lnet/network-interface.js"></script>
 
     <script type="text/javascript" src="{{STATIC_URL}}js/lib/json2.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/misc.js"></script>

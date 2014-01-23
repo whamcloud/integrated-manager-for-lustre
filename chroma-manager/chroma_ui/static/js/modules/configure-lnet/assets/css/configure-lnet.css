@@ -1,0 +1,61 @@
+button.configure-lnet-button {
+  font-family: Verdana, Arial, sans-serif;
+  font-size: 11px;
+}
+
+button.configure-lnet-button:focus {
+  outline: none;
+}
+
+.configure-lnet .alert.alert-info {
+  background-color: #3a87ad;
+  border-color: transparent;
+  color: #EEEEEE;
+  text-shadow: none;
+}
+
+.configure-lnet .well {
+  height: 300px;
+  overflow: auto;
+}
+
+.configure-lnet .well h2 {
+  height: 50px;
+  margin-top: 125px;
+  text-align: center;
+  color: #BBBBBB;
+}
+
+.configure-lnet ul {
+  padding-left: 0;
+  margin: 0;
+  list-style-type: none;
+}
+
+.configure-lnet ul li {
+  padding: 10px 0;
+  border-top: 1px solid #DDDDDD;
+}
+
+.configure-lnet ul li label {
+  width: 150px;
+  display: inline-block;
+  font-size: 14px;
+  color: #444444;
+}
+
+.configure-lnet ul li:first-child {
+  border-top: none;
+}
+
+.configure-lnet ul li:last-child {
+  padding-bottom: 0;
+}
+
+.configure-lnet .dropdown-menu li {
+  padding: 0;
+}
+
+.configure-lnet .dropdown-menu a {
+  font-size: 12px;
+}
