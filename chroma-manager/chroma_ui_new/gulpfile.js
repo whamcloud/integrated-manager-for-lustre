@@ -102,6 +102,13 @@ gulp.task('default', function() {
     gulp.run('less:dev');
   });
 
+  gulp.watch([
+    'source/chroma_ui/**/*.{html,js,png,woff,ttf,svg,ico}',
+    '!source/chroma_ui/bower_components/**'
+  ], function () {
+    gulp.run('static:dev');
+  });
+
   gulp.watch('templates_source/**/*.html', function () {
     gulp.run('copy-templates');
   });
