@@ -9,16 +9,16 @@
     "angular-route-segment": "1.2.0",
     "angular-bindonce": "0.2.2",
     "font-awesome": "git://github.com/FortAwesome/Font-Awesome.git#~4.0.3",
-    "bootstrap": "~3.0.3",
-    "lodash": "~2.4.0",
-    "jquery": "~2.0.3",
+    "bootstrap": "3.0.3",
+    "lodash": "2.4.0",
+    "jquery": "2.0.3",
     "underscore-contrib": "git://github.com/documentcloud/underscore-contrib.git#0.2.0",
-    "animate.css": "~3.0.0",
-    "ngstorage": "~0.3.0",
+    "animate.css": "3.0.0",
+    "ngstorage": "0.3.0",
     "d3": "3.3.11",
     "nvd3": "1.1.14-beta",
-    "momentjs": "~2.4.0",
-    "twix": "~0.3.0"
+    "momentjs": "2.4.0",
+    "twix": "0.3.0"
   },
   "devDependencies": {
     "angular-mocks": "1.2.4",

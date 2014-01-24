@@ -14,6 +14,6 @@
     "commit": "7e14804c1c128884b7a356ccc6249b90e80fc460"
   },
   "_source": "https://github.com/icambron/twix.js.git",
-  "_target": "~0.3.0",
+  "_target": "0.3.0",
   "_originalSource": "twix"
 }

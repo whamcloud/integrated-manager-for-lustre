@@ -25,6 +25,6 @@
     "commit": "cef538eb6a78e08a91011d328387b3ec30ee120c"
   },
   "_source": "https://github.com/moment/moment.git",
-  "_target": "~2.4.0",
+  "_target": "2.4.0",
   "_originalSource": "momentjs"
 }
