@@ -20,14 +20,15 @@
 // express and approved by Intel in writing.
 
 
-angular.module('app').controller('AppCtrl', ['$routeSegment', 'SessionModel', 'navigate', AppCtrl]);
+angular.module('app').controller('AppCtrl', ['$routeSegment', 'SessionModel', 'navigate', 'CONFMENU_URL', AppCtrl]);
 
-function AppCtrl ($routeSegment, SessionModel, navigate) {
+function AppCtrl ($routeSegment, SessionModel, navigate, CONFMENU_URL) {
   'use strict';
 
   var self = this;
 
   this.$routeSegment = $routeSegment;
+  this.CONFMENU_URL = CONFMENU_URL;
 
   SessionModel.get().$promise.then(function (resp) {
     self.session = resp;

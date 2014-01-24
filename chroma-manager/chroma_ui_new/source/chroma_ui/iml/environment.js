@@ -30,6 +30,7 @@
     .constant('VERSION', window.VERSION)
     .constant('BUILD', window.BUILD)
     .constant('BASE', '%s//%s'.sprintf(window.location.protocol, window.location.hostname))
+    .constant('CONFMENU_URL', '/ui/configure')
     .constant('API', '%s//%s:%s/api/'
       .sprintf(window.location.protocol, window.location.hostname, window.location.port));
 }());

@@ -10,6 +10,20 @@
         <a route-to="dashboard/"><i class="fa fa-bar-chart-o"></i> Dashboard</a>
       </li>
     </ul>
+    <ul class="nav navbar-nav">
+      <li ng-class="{active: app.$routeSegment.contains('configure')}" class="dropdown-wrapper">
+          <a class="dropdown" href="#"><i class="fa fa-cog"></i> Configuration</a>
+          <ul class="dropdown-menu navbar-nav" role="menu" aria-labelledby="dropdownMenu">
+              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/server/">Servers</a></li>
+              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/volume/">Volumes</a></li>
+              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/power/">Power Control</a></li>
+              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/mgt/">MGTs</a></li>
+              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/filesystem/">File Systems</a></li>
+              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/storage/">Storage</a></li>
+              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/user/">Users</a></li>
+          </ul>
+        </li>
+    </ul>
     <ul class="nav navbar-nav navbar-right">
       <li ng-if="app.loggedIn"><a>{{ app.user.username }}</a></li>
       <li><a class="login-toggle" ng-class="{login: !app.loggedIn, logout: app.loggedIn}" ng-click="app.onClick()">{{ app.loggedIn? 'Logout': 'Login' }}</a></li>

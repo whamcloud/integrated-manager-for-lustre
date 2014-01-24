@@ -6,6 +6,24 @@
     padding-bottom: 0;
   }
 
+  .dropdown-menu {
+    background-color: @gray-darker;
+    font-size: 12px;
+  }
+
+  .dropdown-menu li {
+    display:inline-block;
+    width: 100%;
+  }
+
+  .dropdown-menu li a {
+    padding: 10px 15px 10px 15px;
+  }
+
+  .dropdown-wrapper:hover > .dropdown-menu {
+    display: block;
+  }
+
   .logo {
     background-image: url('@{base-path}/iml/app/assets/images/intel-logo-white-small.png');
     background-repeat: no-repeat;
