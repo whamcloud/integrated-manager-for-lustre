@@ -1,0 +1,17 @@
+{
+  "name": "jasmine-stealth",
+  "version": "0.0.15",
+  "main": "dist/jasmine-stealth.js",
+  "ignore": [
+    "app",
+    "config",
+    "spec",
+    "tasks",
+    ".travis.yml",
+    "Gruntfile.js",
+    "main.js",
+    "package.json"
+  ],
+  "dependencies": {},
+  "devDependencies": {}
+}

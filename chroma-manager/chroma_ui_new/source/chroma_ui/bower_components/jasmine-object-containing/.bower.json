@@ -1,0 +1,33 @@
+{
+  "name": "jasmine-object-containing",
+  "main": "jasmine-object-containing.js",
+  "version": "0.0.1",
+  "homepage": "https://github.com/jgrund/jasmine-object-containing",
+  "authors": [
+    "Joe Grund <grundjoseph@gmail.com>"
+  ],
+  "description": "A simple matcher that wraps jasmine.objectContaining",
+  "keywords": [
+    "jasmine",
+    "matchers",
+    "jasmine.objectContaining",
+    "objectContaining"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "_release": "0.0.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "0.0.1",
+    "commit": "0ce7f477b0ca172bc25ab57803169ad72a265c1c"
+  },
+  "_source": "https://github.com/jgrund/jasmine-object-containing.git",
+  "_target": "0.0.1",
+  "_originalSource": "jasmine-object-containing"
+}

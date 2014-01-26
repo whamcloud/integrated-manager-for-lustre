@@ -1,0 +1,24 @@
+{
+  "name": "jasmine-n-matchers",
+  "main": "jasmine-n-matchers.js",
+  "version": "0.0.2",
+  "homepage": "https://github.com/jgrund/jasmine-n-matchers",
+  "authors": [
+    "grundjoseph@gmail.com"
+  ],
+  "description": "A set of matchers to assert a spy was called n times.",
+  "keywords": [
+    "jasmine",
+    "bdd",
+    "matchers",
+    "karma"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
