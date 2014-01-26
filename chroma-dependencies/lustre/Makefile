@@ -1,9 +1,9 @@
 override REPO          := $(dir $(patsubst %/,%,$(REPO)))/repo-lustre
 LUSTRE_RELEASE         = 2.5.0
-RELEASE_POSTFIX        = _g19c0acd
+RELEASE_POSTFIX        = _g333e7c1
 KERNEL_RELEASE         = 2.6.32-358.18.1.el6_lustre.g6093be6.x86_64
 KERNEL_RELEASE_MANGLED = $(subst -,_,$(KERNEL_RELEASE))
-SRC_REPO               = https://jenkins-pull:Aitahd9u@build.whamcloud.com/job/lustre-reviews/20839/arch=x86_64,build_type=server,distro=el6,ib_stack=inkernel/artifact/artifacts/RPMS/x86_64/
+SRC_REPO               = https://jenkins-pull:Aitahd9u@build.whamcloud.com/job/lustre-reviews/21460/arch=x86_64,build_type=server,distro=el6,ib_stack=inkernel/artifact/artifacts/RPMS/x86_64/
 ALL_RPMS               = lustre-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
 			 lustre-modules-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
 			 lustre-osd-ldiskfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
