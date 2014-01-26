@@ -13,6 +13,7 @@
     "beforeEach": false,
     "afterEach": false,
     "mock": false,
+    "Mock": false,
     "waits": false,
     "waitsFor": false,
     "runs": false
@@ -32,6 +33,7 @@
     "beforeEach",
     "afterEach",
     "mock",
+    "Mock",
     "waits",
     "waitsFor",
     "runs"
