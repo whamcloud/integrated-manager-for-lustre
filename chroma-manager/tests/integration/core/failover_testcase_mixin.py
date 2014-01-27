@@ -38,29 +38,9 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         # "Push the reset button" on the primary lustre server
         self.remote_operations.reset_server(primary_host['config']['fqdn'])
 
-        def my_proof():
-            from testconfig import config
-
-            logger = logging.getLogger('test')
-            logger.setLevel(logging.DEBUG)
-
-            if config.get('simulator', True):
-                return
-
-            import sys
-            from tests.integration.core.remote_operations import RealRemoteOperations
-            remote_operations = RealRemoteOperations(self)
-            for host in config['lustre_servers']:
-                try:
-                    result = remote_operations._ssh_address(host['address'],
-                                                            "hostname; cat /proc/mounts; crm_mon -1")
-                    logger.debug("proof: %s" % result.stdout.read())
-                except:
-                    logger.debug("ssh %s \"hostname; cat /proc/mounts; crm_mon -1\" failed: %s" % sys.exc_info()[0])
-
         # Wait for failover to occur
-        self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state), proof = my_proof)
-        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state, proof = my_proof)
+        self.wait_until_true(lambda: self.targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state))
+        self.verify_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_expected_hosts_in_failover_state)
 
         self.remote_operations.await_server_boot(primary_host['fqdn'], secondary_host['fqdn'])
 
@@ -145,18 +125,16 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         """
         return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = False)
 
-    def verify_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts, proof = None):
+    def verify_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts):
         """
         Assert targets associated with each volume is running on the expected host.
 
         Use this version of this check if you expect the targets to be on their
         proper hosts already and want test execution to be halted if not.
         """
+        return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = True)
 
-        return self._check_targets_for_volumes_started_on_expected_hosts(filesystem_id, volumes_to_expected_hosts, assert_true = True, proof = proof)
-
-    def _check_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts, assert_true, proof = None):
-        #import simplejson as json
+    def _check_targets_for_volumes_started_on_expected_hosts(self, filesystem_id, volumes_to_expected_hosts, assert_true):
         """
         Private function providing shared logic for public facing target active host checks.
         """
@@ -168,9 +146,6 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         )
         self.assertTrue(response.successful, response.text)
         targets = response.json['objects']
-        #logger.debug("targets: %s" % json.dumps(targets,
-        #                                        indent=4,
-        #                                        separators=(',', ': ')))
 
         response = self.chroma_manager.get(
             '/api/host/',
@@ -179,8 +154,6 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
         )
         self.assertTrue(response.successful, response.text)
         hosts = response.json['objects']
-        #logger.debug("hosts: %s" % json.dumps(hosts, indent=4,
-        #                                      separators=(',', ': ')))
 
         for target in targets:
             if target['volume']['id'] in volumes_to_expected_hosts:
@@ -190,24 +163,19 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
                     active_host = [h['fqdn'] for h in hosts if h['resource_uri'] == active_host][0]
                 logger.debug("%s: should be running on %s (actual: %s)" % (target['name'], expected_host['fqdn'], active_host))
 
-                # Check Pacemaker's view
+                # Check chroma manager's view
+                if assert_true:
+                    self.assertEqual(expected_host['resource_uri'], target['active_host'])
+                else:
+                    if not expected_host['resource_uri'] == target['active_host']:
+                        return False
+
+                # Check corosync's view
                 is_running = self.remote_operations.get_resource_running(expected_host, target['ha_label'])
-                logger.debug("Pacemaker says it's running: %s" % is_running)
+                logger.debug("Manager says it's OK, pacemaker says: %s" % is_running)
                 if assert_true:
                     self.assertEqual(is_running, True)
                 elif not is_running:
                     return False
-
-                # Check chroma manager's view
-                if assert_true:
-                    self.assertEqual(expected_host['resource_uri'], target['active_host'],
-                                     proof = proof)
-                else:
-                    if not expected_host['resource_uri'] == target['active_host']:
-                        if proof:
-                            proof()
-                        return False
-
-                logger.debug("Manager says it's OK")
 
         return True

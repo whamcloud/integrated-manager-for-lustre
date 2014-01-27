@@ -46,10 +46,10 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APP
 if $RHEL; then
 yum-config-manager --enable  rhel-6-server-optional-rpms
 fi
+$PROXY yum install -y omping
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
     rm -f /etc/yum.repos.d/autotest.repo
-fi
-$PROXY yum install -y omping" | dshbak -c
+fi" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi

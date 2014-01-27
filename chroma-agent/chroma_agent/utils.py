@@ -48,14 +48,6 @@ def normalize_device(device):
 
 
 class Mounts(object):
-    def __repr__(self):
-        s = "<"
-        for mount in self.mounts:
-            s += "%s %s %s\n" % (mount.devices, mount.mntpnt, mount.fstype)
-        s += ">"
-
-        return s
-
     def __init__(self):
         # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
         # reports out of date information from /etc/mtab when a lustre service doesn't

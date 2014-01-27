@@ -74,14 +74,11 @@ def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = 
 
 
 def get_cluster_size():
-    # you'd think there'd be a way to query the value of a property
+    # you'd think there'd be a way to query the value of a prooperty
     # such as "expected-quorum-votes" but there does not seem to be, so
-    # just count nodes instead
+    # just count nodes instead (of waiting for the end of the crm configure
+    # show output to parse the properties list)
     rc, stdout, stderr = shell.run(["crm_node", "-l"])
-
-    if not stdout:
-        return 0
-
     n = 0
     for line in stdout.rstrip().split('\n'):
         node_id, name, status = line.split(" ")
@@ -117,11 +114,11 @@ def configure_pacemaker():
     # this could race with other cluster members to make sure
     # any errors are only due to it already existing
     try:
-        cibadmin(["--create", "--obj_type", "resources", "-X",
-                  "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
+        shell.try_run(["crm", "-F", "configure", "primitive",
+                       "st-fencing", "stonith:fence_chroma"])
     except:
-        rc, stdout, stderr = shell.run(['crm_resource', '--locate',
-                                        '--resource', "st-fencing"])
+        rc, stdout, stderr = shell.run(["crm", "resource", "show",
+                                        "st-fencing"])
         if rc == 0:
             # no need to do the rest if another member is already doing it
             return
@@ -207,21 +204,13 @@ def unconfigure_corosync():
     del_firewall_rule(mcastport, "udp", "corosync")
 
 
-def pacemaker_running():
-    rc, stdout, stderr = shell.run(["crm_mon", "-1"])
-    if rc != 0:
-        return False
-
-    return True
-
-
 def unconfigure_pacemaker():
     # only unconfigure if we are the only node in the cluster
     # but first, see if pacemaker is up to answer this
-    if not pacemaker_running():
+    rc, stdout, stderr = shell.run(["crm", "status"])
+    if rc != 0:
         # and just skip doing this if it's not
         return 0
-
     if get_cluster_size() < 2:
         # last node, nuke the CIB
         cibadmin(["-f", "-E"])
@@ -232,14 +221,15 @@ def unconfigure_pacemaker():
 
 
 def _unconfigure_fencing():
-    cibadmin(["--delete", "--obj_type", "resources", "-X",
-              "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
+    shell.run(["crm", "resource", "stop", "st-fencing"])
+    shell.run(["crm", "configure", "delete", "st-fencing"])
 
 
 def unconfigure_fencing():
     # only unconfigure if we are the only node in the cluster
     # but first, see if pacemaker is up to answer this
-    if not pacemaker_running():
+    rc, stdout, stderr = shell.run(["crm", "status"])
+    if rc != 0:
         # and just skip doing this if it's not
         return 0
 

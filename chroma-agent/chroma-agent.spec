@@ -19,7 +19,7 @@ BuildArch: noarch
 Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
-Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3 python-tablib pcs
+Requires: ntp python-simplejson python-argparse python-daemon python-setuptools python-requests >= 1.0.3 python-tablib
 Requires: chroma-diagnostics >= %{version}
 %if 0%{?rhel} > 5
 Requires: util-linux-ng
@@ -33,8 +33,7 @@ This is the Intel Manager for Lustre monitoring and adminstration agent
 Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
-Obsoletes: pacemaker-iml <= 1.1.7-6.wc2.el6 pacemaker-iml-cluster-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-cli <= 1.1.7-6.wc2.el6
-Requires: %{name} = %{version}-%{release} rsyslog pacemaker > 1.1.7-6.wc2.el6 python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket yum-utils system-config-firewall-base
+Requires: %{name} = %{version}-%{release} rsyslog pacemaker-iml python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket yum-utils system-config-firewall-base
 Requires: fence-agents-iml > 3.1.5-25.wc1.el6.2
 %description management
 This package layers on management capabilities for Intel Manager for Lustre Agent.
@@ -105,7 +104,6 @@ fi
 %post management
 chkconfig rsyslog on
 if [ $1 -lt 2 ]; then
-    # install
     # open ports in the firewall for access to Lustre
     for port in 988; do
         # don't allow lokkit to re-install the firewall due to RH #1024557
@@ -113,12 +111,6 @@ if [ $1 -lt 2 ]; then
         # instead live update the firewall
         iptables -I INPUT 4 -m state --state new -p tcp --dport $port -j ACCEPT
     done
-elif [ $1 -gt 1 ]; then
-    # upgrade
-    #restart corosync and pacemaker
-    service pacemaker stop
-    service corosync restart
-    service pacemaker start
 fi
 
 %postun management

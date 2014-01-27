@@ -40,18 +40,6 @@ class UtilityTestCase(TestCase):
     Adds a few non-api specific utility functions for the integration tests.
     """
 
-    def assertEqual(self, obj1, obj2, msg=None, proof=None):
-        equal = super(UtilityTestCase, self).assertEqual(obj1, obj2, msg=msg)
-        if proof and not equal:
-            proof()
-        return equal
-
-    def assertLess(self, obj1, obj2, msg=None, proof=None):
-        less = super(UtilityTestCase, self).assertLess(obj1, obj2, msg=msg)
-        if proof and not less:
-            proof()
-        return less
-
     def remote_command(self, server, command, expected_return_code=0, timeout=TEST_TIMEOUT):
         """
         Executes a command on a remote server over ssh.
@@ -76,7 +64,7 @@ class UtilityTestCase(TestCase):
             self.assertEqual(exit_status, expected_return_code, stderr.read())
         return RemoteCommandResult(exit_status, stdout, stderr)
 
-    def wait_until_true(self, lambda_expression, timeout=TEST_TIMEOUT, proof = None):
+    def wait_until_true(self, lambda_expression, timeout=TEST_TIMEOUT):
         """
         Evaluates lambda_expression once/1s until True or hits timeout.
         """
@@ -87,7 +75,7 @@ class UtilityTestCase(TestCase):
             logger.debug("%s evaluated to %s" % (inspect.getsource(lambda_expression), lambda_result))
             time.sleep(1)
             running_time += 1
-        self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression), proof = proof)
+        self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
 
     def wait_for_assert(self, lambda_expression, timeout=TEST_TIMEOUT):
         """
