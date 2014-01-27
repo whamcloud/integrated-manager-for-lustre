@@ -37,7 +37,7 @@ module.exports = function(config) {
       bowerDir('angular-resource/angular-resource.js'),
       bowerDir('angular-bindonce/bindonce.js'),
       bowerDir('lodash/dist/lodash.js'),
-      bowerDir('underscore-contrib/dist/underscore-contrib.js'),
+      bowerDir('underscore-contrib/underscore.function.iterators.js'),
       bowerDir('momentjs/moment.js'),
       bowerDir('twix/bin/twix.js'),
       bowerDir('d3/d3.js'),
@@ -57,6 +57,8 @@ module.exports = function(config) {
       testDir('fixtures/**/*.js'),
       testDir('global-setup.js'),
       testDir('matchers/**/*.js'),
+      bowerDir('jasmine-object-containing/jasmine-object-containing.js'),
+      bowerDir('jasmine-n-matchers/jasmine-n-matchers.js'),
       testDir('**/*.js'),
       testDir('templates/**/*.html')
     ],
