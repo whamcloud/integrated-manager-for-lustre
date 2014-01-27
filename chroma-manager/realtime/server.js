@@ -22,6 +22,8 @@
 'use strict';
 
 module.exports = function serverFactory(conf, https) {
+  https.globalAgent.maxSockets = 25;
+
   var server = https.createServer({
     cert: conf.certFile,
     key: conf.keyFile,

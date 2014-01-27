@@ -22,13 +22,9 @@
 
 'use strict';
 
-var domain = require('domain'),
-  d = domain.create();
-
 function cleanShutdown (signal) {
   console.log('Caught ' + signal + ', shutting down cleanly.');
   // TODO: Is there more that should be done to shut down cleanly?
-  d.exit();
   process.exit(0);
 }
 
@@ -40,59 +36,52 @@ process.on('SIGTERM', function () {
   cleanShutdown('SIGTERM');
 });
 
-d.on('error', function(err) {
-  console.error(err.message);
-  console.error(err.stack);
+var https = require('https'),
+  di = require('di'),
+  request = require('request'),
+  Q = require('q'),
+  serverFactory = require('./server'),
+  logger = require('./logger'),
+  conf = require('./conf'),
+  primus = require('./primus'),
+  Primus = require('primus'),
+  streamFactory = require('./stream'),
+  multiplex = require('primus-multiplex'),
+  resourceFactory = require('./resources').resourceFactory,
+  channelFactory = require('./channel'),
+  fileSystemResourceFactory = require('./resources').fileSystemResourceFactory,
+  hostResourceFactory = require('./resources').hostResourceFactory,
+  targetResourceFactory = require('./resources').targetResourceFactory,
+  targetOstMetricsResourceFactory = require('./resources').targetOstMetricsResourceFactory;
 
-  process.exit(1);
-});
+var modules = [{
+  conf: ['value', conf],
+  https: ['value', https],
+  logger: ['value', logger],
+  Primus: ['value', Primus],
+  multiplex: ['value', multiplex],
+  request: ['value', request],
+  Q: ['value', Q],
+  channelFactory: ['factory', channelFactory],
+  Stream: ['factory', streamFactory],
+  FileSystemResource: ['factory', fileSystemResourceFactory],
+  HostResource: ['factory', hostResourceFactory],
+  primus: ['factory', primus],
+  Resource: ['factory', resourceFactory],
+  server: ['factory', serverFactory],
+  TargetResource: ['factory', targetResourceFactory],
+  TargetOstMetricsResource: ['factory', targetOstMetricsResourceFactory]
+}];
 
-d.run(function initialize() {
-  var https = require('https'),
-    di = require('di'),
-    request = require('request'),
-    serverFactory = require('./server'),
-    logger = require('./logger'),
-    conf = require('./conf'),
-    primus = require('./primus'),
-    Primus = require('primus'),
-    streamFactory = require('./stream'),
-    multiplex = require('primus-multiplex'),
-    resourceFactory = require('./resources').resourceFactory,
-    channelFactory = require('./channel'),
-    fileSystemResourceFactory = require('./resources').fileSystemResourceFactory,
-    hostResourceFactory = require('./resources').hostResourceFactory,
-    targetResourceFactory = require('./resources').targetResourceFactory,
-    targetOstMetricsResourceFactory = require('./resources').targetOstMetricsResourceFactory;
+var injector = new di.Injector(modules);
 
-  var modules = [{
-    conf: ['value', conf],
-    https: ['value', https],
-    logger: ['value', logger],
-    Primus: ['value', Primus],
-    multiplex: ['value', multiplex],
-    request: ['value', request],
-    channelFactory: ['factory', channelFactory],
-    Stream: ['factory', streamFactory],
-    FileSystemResource: ['factory', fileSystemResourceFactory],
-    HostResource: ['factory', hostResourceFactory],
-    primus: ['factory', primus],
-    Resource: ['factory', resourceFactory],
-    server: ['factory', serverFactory],
-    TargetResource: ['factory', targetResourceFactory],
-    TargetOstMetricsResource: ['factory', targetOstMetricsResourceFactory]
-  }];
+injector.invoke(function (logger, channelFactory,
+                          FileSystemResource, HostResource, TargetResource, TargetOstMetricsResource) {
 
-  var injector = new di.Injector(modules);
+  logger.info('Realtime Module started.');
 
-  injector.invoke(function (logger, channelFactory,
-                            FileSystemResource, HostResource, TargetResource, TargetOstMetricsResource) {
-
-    logger.info('Realtime Module started.');
-
-    channelFactory('filesystem', FileSystemResource);
-    channelFactory('host', HostResource);
-    channelFactory('target', TargetResource);
-    channelFactory('targetostmetrics', TargetOstMetricsResource);
-  });
+  channelFactory('filesystem', FileSystemResource);
+  channelFactory('host', HostResource);
+  channelFactory('target', TargetResource);
+  channelFactory('targetostmetrics', TargetOstMetricsResource);
 });

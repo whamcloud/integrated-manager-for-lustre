@@ -8,7 +8,7 @@ var Primus = require('primus'),
 require('https').globalAgent.options.rejectUnauthorized = false;
 
 describe('target ost metrics channel', function () {
-  var client, targetOstMetricsChannel;
+  var client, targetOstMetricsChannel, params;
 
   beforeEach(function () {
     var Socket = Primus.createSocket({parser: 'JSON', transformer: 'socket.io', plugin: {
@@ -19,6 +19,13 @@ describe('target ost metrics channel', function () {
     client = new Socket(conf.primusUrl);
 
     targetOstMetricsChannel = client.channel('targetostmetrics');
+
+    params = {
+      qs: {
+        latest: true,
+        metrics: 'stats_close'
+      }
+    };
   });
 
   afterEach(function () {
@@ -28,7 +35,7 @@ describe('target ost metrics channel', function () {
 
   it('should call beforeStreaming once streaming is started', function (done) {
     targetOstMetricsChannel.on('beforeStreaming', function (ack) {
-      ack('httpGetMetrics');
+      ack('httpGetMetrics', params);
       done();
     });
 
@@ -36,13 +43,6 @@ describe('target ost metrics channel', function () {
   });
 
   it('should stream data when everything is setup', function (done) {
-    var params = {
-      qs: {
-        latest: true,
-        metrics: 'stats_close'
-      }
-    };
-
     targetOstMetricsChannel.on('beforeStreaming', function (ack) {
       ack('httpGetMetrics', params);
     });

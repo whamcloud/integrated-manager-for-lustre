@@ -16,13 +16,14 @@
     "moment": "2.5.1",
     "uritemplate": "0.3.4",
     "dotty": "0.0.2",
-    "async": "0.2.10"
+    "q": "1.0.0"
   },
   "devDependencies": {
     "socket.io-client": "0.9.16",
     "sinon": "1.7.3",
     "jasmine-sinon": "0.3.1",
     "jasmine-node": "1.13.0",
-    "proxyquire": "0.5.2"
+    "proxyquire": "0.5.2",
+    "jasmine-n-matchers": "0.0.3"
   }
 }

@@ -22,10 +22,15 @@ describe('server', function () {
     };
 
     https = {
-      createServer: sinon.mock().returns(server)
+      createServer: sinon.mock().returns(server),
+      globalAgent: {}
     };
 
     serverFactory(conf, https);
+  });
+
+  it('should set globalAgent.maxSockets to 25', function () {
+    expect(https.globalAgent.maxSockets).toBe(25);
   });
 
   it('should create the server with the provided files', function () {

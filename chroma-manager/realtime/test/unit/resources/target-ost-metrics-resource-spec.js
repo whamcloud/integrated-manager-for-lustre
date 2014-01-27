@@ -1,9 +1,7 @@
 'use strict';
 
-var sinon = require('sinon'),
+var Q = require('q'),
   targetOstMetricsResourceFactory = require('../../../resources/target-ost-metrics-resource');
-
-require('jasmine-sinon');
 
 describe('Target ost metrics resource', function () {
   var TargetResource, TargetOstMetricsResource, targetOstMetricsResource;
@@ -13,112 +11,124 @@ describe('Target ost metrics resource', function () {
 
     };
 
-    TargetResource.prototype.httpGetMetrics = sinon.spy();
-    TargetResource.prototype.httpGetList = sinon.spy();
+    TargetResource.prototype.httpGetMetrics = jasmine.createSpy('targetResource.httpGetMetrics');
+    TargetResource.prototype.httpGetList = jasmine.createSpy('targetResource.httpGetList');
 
-    sinon.stub(TargetResource, 'call');
+    spyOn(TargetResource, 'call');
 
-
-    TargetOstMetricsResource = targetOstMetricsResourceFactory(TargetResource);
+    TargetOstMetricsResource = targetOstMetricsResourceFactory(TargetResource, Q);
     targetOstMetricsResource = new TargetOstMetricsResource();
   });
 
   it('should call the TargetResource', function () {
-    expect(TargetResource.call).toHaveBeenCalledWithExactly(targetOstMetricsResource);
+    expect(TargetResource.call).toHaveBeenCalledOnceWith(targetOstMetricsResource);
   });
 
   describe('getting ost metrics scenarios', function () {
     it('should return a list of metrics with target.name as key', function (done) {
-      targetOstMetricsResource.httpGetOstMetrics({}, cb);
+      TargetResource.prototype.httpGetMetrics.andReturn(Q.when({
+        body: {
+          '1': {fakeMetricsProp: 'fakeMetricsValue'}
+        }
+      }));
 
-      TargetResource.prototype.httpGetMetrics.callArgWith(1, null, [
-        { fakeRespProp: 'fakeRespValue' },
-        { '1': {fakeMetricsProp: 'fakeMetricsValue'} }
-      ]);
-
-      TargetResource.prototype.httpGetList.callArgWith(1, null, [
-        { fakeRespProp: 'fakeRespValue' },
-        {
+      TargetResource.prototype.httpGetList.andReturn(Q.when({
+        body: {
           objects: [
-            {id: '1', name: 'foo'}
+            { id: '1', name: 'foo' }
           ]
         }
-      ]);
+      }));
 
-      function cb () {
-        expect(arguments).toEqual([
-          null,
-          { fakeRespProp : 'fakeRespValue' },
-          {
-            foo : { fakeMetricsProp : 'fakeMetricsValue' }
-          },
-          {}
-        ]);
+      targetOstMetricsResource.httpGetOstMetrics({}).then(function (resp) {
+        expect(resp.body).toEqual({
+          foo : { fakeMetricsProp : 'fakeMetricsValue' }
+        });
 
         done();
-      }
+      });
     });
 
     it('should leave the key if it can\'t find a target match', function (done) {
-      targetOstMetricsResource.httpGetOstMetrics({}, cb);
+      TargetResource.prototype.httpGetMetrics.andReturn(Q.when({
+        body: {
+          '1': {fakeMetricsProp: 'fakeMetricsValue'}
+        }
+      }));
 
-      TargetResource.prototype.httpGetMetrics.callArgWith(1, null, [
-        { fakeRespProp: 'fakeRespValue' },
-        { '1': {fakeMetricsProp: 'fakeMetricsValue'} }
-      ]);
-
-      TargetResource.prototype.httpGetList.callArgWith(1, null, [
-        { fakeRespProp: 'fakeRespValue' },
-        {
+      TargetResource.prototype.httpGetList.andReturn(Q.when({
+        body: {
           objects: [
-            {id: '2', name: 'foo'}
+            { id: '2', name: 'foo' }
           ]
         }
-      ]);
+      }));
 
-      function cb () {
-        expect(arguments).toEqual([
-          null,
-          { fakeRespProp : 'fakeRespValue' },
-          {
-            1: { fakeMetricsProp : 'fakeMetricsValue' }
-          },
-          {}
-        ]);
+      targetOstMetricsResource.httpGetOstMetrics({}).then(function (resp) {
+        expect(resp.body).toEqual({
+          1: { fakeMetricsProp : 'fakeMetricsValue' }
+        });
 
         done();
-      }
+      });
     });
 
     it('should handle any errors', function (done) {
       var err = new Error('boom!');
 
-      targetOstMetricsResource.httpGetOstMetrics({}, cb);
+      TargetResource.prototype.httpGetMetrics.andReturn(Q.fcall(function () {
+        throw err;
+      }));
 
-      TargetResource.prototype.httpGetMetrics.callArgWith(1, err);
+      TargetResource.prototype.httpGetList.andReturn(Q.when({
+        body: {
+          objects: [
+            { id: '2', name: 'foo' }
+          ]
+        }
+      }));
 
-      TargetResource.prototype.httpGetList.callArgWith(1, null, {});
-
-      function cb () {
-        expect(arguments).toEqual([err]);
+      targetOstMetricsResource.httpGetOstMetrics({}).catch(function (error) {
+        expect(error).toBe(err);
 
         done();
-      }
+      });
+    });
+
+    it('should return an empty object if there were no metrics', function (done) {
+      TargetResource.prototype.httpGetMetrics.andReturn(Q.when({
+        body: {
+          '2': []
+        }
+      }));
+
+      TargetResource.prototype.httpGetList.andReturn(Q.when({
+        body: {
+          objects: [
+            {id: '2', name: 'foo'}
+          ]
+        }
+      }));
+
+      targetOstMetricsResource.httpGetOstMetrics({}).then(function (resp) {
+        expect(resp.body).toEqual({});
+
+        done();
+      });
     });
   });
 
   describe('getting ost metrics', function () {
-    var params, cb;
+    var params;
 
     beforeEach(function () {
       params = {};
-      cb = sinon.spy();
 
-      targetOstMetricsResource.httpGetOstMetrics(params, cb);
+      targetOstMetricsResource.httpGetOstMetrics(params);
     });
 
     it('should get the metrics', function () {
-      expect(TargetResource.prototype.httpGetMetrics).toHaveBeenAlwaysCalledWithExactly(params, sinon.match.func);
+      expect(TargetResource.prototype.httpGetMetrics).toHaveBeenCalledOnceWith(params);
     });
 
     it('should get the target list', function () {
@@ -129,7 +139,7 @@ describe('Target ost metrics resource', function () {
         }
       };
 
-      expect(TargetResource.prototype.httpGetList).toHaveBeenAlwaysCalledWithExactly(listParams, sinon.match.func);
+      expect(TargetResource.prototype.httpGetList).toHaveBeenCalledOnceWith(listParams);
     });
   });
 });

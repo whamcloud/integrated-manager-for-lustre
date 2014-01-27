@@ -19,6 +19,7 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
+/** @module resources/resource */
 
 'use strict';
 
@@ -28,17 +29,42 @@ var url = require('url'),
   dotty = require('dotty'),
   _ = require('lodash');
 
-module.exports = function resourceFactory(conf, request, logger) {
+var pendCount = 0;
+
+/**
+ * Creates a new Resource CLASS when called
+ * @param {conf} conf
+ * @param {request} request
+ * @param {Object} logger
+ * @param {Q} Q
+ * @returns {Resource}
+ */
+module.exports = function resourceFactory(conf, request, logger, Q) {
   /*
    * The Base Resource
+   * @name Resource
    * @constructor
    */
   function Resource (path) {
     if (!path)
       throw new Error('path not provided to resource');
 
+    /**
+     * @methodOf Resource
+     * @type {Object}
+     */
     this.log = logger.child({resource: this.constructor.name});
+
+    /**
+     * @methodOf Resource
+     * @type {string}
+     */
     this.baseUrl = url.resolve(conf.apiUrl, path);
+
+    /**
+     * @methodOf Resource
+     * @type {Object}
+     */
     this.request = this.requestFor();
 
     //Look for defaults.
@@ -53,13 +79,13 @@ module.exports = function resourceFactory(conf, request, logger) {
    * If a subclass lists this as a default method it will be used without the leading __.
    * This could probably be mixed in instead.
    * @param {Object} params
-   * @param {Function} cb
+   * @returns {Q.promise}
    * @private
    */
-  Resource.prototype.__httpGetList = function __httpGetList(params, cb) {
+  Resource.prototype.__httpGetList = function __httpGetList(params) {
     params = params || {};
 
-    this.request.get(params, this.createGenericGetHandler(cb, params));
+    return this.request.get(params);
   };
 
   /**
@@ -67,9 +93,9 @@ module.exports = function resourceFactory(conf, request, logger) {
    * Converts a sliding window duration in qs.unit, qs.size to qs.begin, qs.end
    * This could probably be mixed in instead.
    * @param {Object} params
-   * @param {Function} cb
+   * @returns {Q.promise}
    */
-  Resource.prototype.__httpGetMetrics = function __httpGetMetrics (params, cb) {
+  Resource.prototype.__httpGetMetrics = function __httpGetMetrics (params) {
     var end;
 
     var clonedParams = _.cloneDeep(params || {}),
@@ -83,47 +109,70 @@ module.exports = function resourceFactory(conf, request, logger) {
       dotty.put(clonedParams, 'qs.begin', end.subtract(unit, size).toISOString());
     }
 
-    this.requestFor({extraPath: 'metric'}).get(clonedParams, this.createGenericGetHandler(cb, params));
+    return this.requestFor({extraPath: 'metric'}).get(clonedParams);
   };
 
   /**
    * This creates a new default request with the option to expand a template.
    * Trailing slash is enforced and normalized.
    * @param {Object} [templateParams]
-   * @returns {Request}
+   * @returns {Object}
    */
   Resource.prototype.requestFor = function requestFor(templateParams) {
+    var self = this;
+
     var expanded = uriTemplate
       .parse(this.baseUrl + '{/extraPath}{/id}')
       .expand(templateParams || {})
       .replace(/\/*$/, '/');
 
-    return request.defaults({
+    var defaultRequest = request.defaults({
       jar: true,
       json: true,
       ca: conf.caFile,
       url: expanded,
       strictSSL: false
     });
-  };
 
-  /**
-   * A higher order function that returns a GET response handler.
-   * @param {Function} cb
-   * @returns {Function}
-   */
-  Resource.prototype.createGenericGetHandler = function createGenericGetHandler(cb, params) {
-    return function genericGetHandler(err, resp, body) {
-      if (err) {
-        cb({error: err});
-      } else if (resp.statusCode >= 400) {
-        cb({status: resp.statusCode, error: body });
-      } else {
-        cb(null, resp, body, params);
+    return {
+      get: function (params) {
+        var time = process.hrtime();
+
+        pendCount += 1;
+
+        return Q.ninvoke(defaultRequest, 'get', params)
+          .spread(function (resp, body) {
+            var diff = process.hrtime(time);
+            var elapsed = parseInt(diff[1] / 1000000, 10); // divide by a million to get nano to milli
+
+            self.log.debug('%s: %s (%d.%d seconds)', resp.statusCode, resp.request.href, diff[0], elapsed);
+
+            pendCount -= 1;
+
+            self.log.debug('pend count is: %d', pendCount);
+
+            if (body)
+              self.log.debug(body);
+
+            if (resp.statusCode >= 400) {
+              var message;
+
+              try {
+                message = JSON.stringify(body);
+              } catch (e) {
+                message = body;
+              }
+
+              throw new Error('status: ' + resp.statusCode + ', message: ' + message);
+            }
+
+            return resp;
+          }, function () {
+            pendCount -= 1;
+          });
       }
     };
   };
-
 
   /**
    * Gets the subclass resource methods based on naming conventions.
@@ -132,6 +181,7 @@ module.exports = function resourceFactory(conf, request, logger) {
     var regExp = new RegExp('^http.+$'),
       arr = [];
 
+    /*jshint forin: false */
     for (var key in this) {
       var result = regExp.exec(key);
 
