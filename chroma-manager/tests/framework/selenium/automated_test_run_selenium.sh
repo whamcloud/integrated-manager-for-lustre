@@ -38,10 +38,12 @@ EOF
 cd \$HOME/chroma_test_env/chroma/chroma-manager/realtime
 ./node_modules/jasmine-node/bin/jasmine-node --verbose --captureExceptions --junitreport --output \$HOME/test_reports/ ./test/ || true
 
-# Run protractor selenium tests (new ui)
+# Run protractor selenium tests in Chrome and Firefox (new ui)
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
-./node_modules/protractor/bin/protractor ./test/selenium/protractor-conf.js --seleniumServerJar=\$HOME/bin/selenium-server-standalone.jar --config=\$HOME/cluster_config.json --baseUrl="https://$CHROMA_MANAGER/ui_new/"  # TODO: Remove baseUrl param once we retire the old ui
-mv protractor-selenium-test-*.xml \$HOME/test_reports/
+./node_modules/protractor/bin/protractor ./test/selenium/protractor-conf.js --seleniumServerJar=\$HOME/bin/selenium-server-standalone.jar --config=\$HOME/cluster_config.json --baseUrl="https://$CHROMA_MANAGER/ui_new/" || true  # TODO: Remove baseUrl param once we retire the old ui
+mv *protractor-selenium-test*.xml \$HOME/test_reports/
+./node_modules/protractor/bin/protractor ./test/selenium/protractor-conf.js --seleniumServerJar=\$HOME/bin/selenium-server-standalone.jar --config=\$HOME/cluster_config.json --browser=firefox --baseUrl="https://$CHROMA_MANAGER/ui_new/" || true  # TODO: Remove baseUrl param once we retire the old ui
+mv *protractor-selenium-test*.xml \$HOME/test_reports/
 
 #######################################
 # Old UI Tests
@@ -57,7 +59,7 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager
 CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=\$HOME/test_reports/selenium-test-results.xml --tc-format=json --tc-file=\$HOME/cluster_config.json tests/selenium/ || true
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=17
+NUM_EXPECTED_TEST_REPORTS=18
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."

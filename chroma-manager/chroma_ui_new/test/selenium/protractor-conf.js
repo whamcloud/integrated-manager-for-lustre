@@ -22,12 +22,13 @@ exports.config = {
   onPrepare: function() {
     // Use jasmine-reporters junit reporter to create a results file consumable by Jenkins.
     require('jasmine-reporters');
-    var reporter = new jasmine.JUnitXmlReporter('protractor-selenium-test-', true, false);
+    var reporter = new jasmine.JUnitXmlReporter('', true, false);
 
     // Lets get a more organized test report by puting all the results in "protractor-selenium-tests"
     reporter.getFullNameForSpec = reporter.getFullName;
+    reporter.browserName = this.capabilities.browserName;
     reporter.getFullName = function (suite, isFilename) {
-      return 'protractor-selenium-tests.' + this.getFullNameForSpec(suite, isFilename);
+      return 'protractor-selenium-tests.' + this.browserName + '.' + this.getFullNameForSpec(suite, isFilename);
     }
 
     jasmine.getEnv().addReporter(reporter);
