@@ -196,7 +196,7 @@ echo \"Now with EPEL configured\"
 cat <<EOF > /etc/yum.repos.d/epel.repo
 [epel]
 name=epel
-baseurl=http://172.24.111.129/cobbler/repo_mirror/epel-6-x86_64/
+baseurl=http://${COBBLER_SERVER:-10.14.80.6}/cobbler/repo_mirror/EPEL-6-x86_64/
 enabled=1
 priority=1
 gpgcheck=0
