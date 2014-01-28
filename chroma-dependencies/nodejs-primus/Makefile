@@ -1,6 +1,6 @@
 NAME		:= primus
-VERSION		:= 1.5.0
-SHA1SUM		:= 4cb59a6e90cf3d37c1c2daf86293bd1cf331024d
+VERSION		:= 1.5.2
+SHA1SUM		:= 4c548966d6ecd44d99e1bf23e110ecbb3f14ca8b
 DEPENDENCIES	:= load extendable
 
 include ../include/Makefile.rpm-from-npm

@@ -1,5 +1,5 @@
 NAME		:= moment
-VERSION		:= 2.4.0
-SHA1SUM		:= 06dd8dfbbfdb53a03510080ac788163c9490e75d
+VERSION		:= 2.5.1
+SHA1SUM		:= 7146a3900533064ca799d5e792f4e480ee0e82bc
 
 include ../include/Makefile.rpm-from-npm

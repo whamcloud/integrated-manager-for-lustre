@@ -1,6 +1,6 @@
 NAME		:= tough-cookie
-VERSION		:= 0.9.15
-SHA1SUM		:= 75617ac347e3659052b0350131885829677399f6
+VERSION		:= 0.12.1
+SHA1SUM		:= 8220c7e21abd5b13d96804254bd5a81ebf2c7d62
 DEPENDENCIES	:= punycode
 
 include ../include/Makefile.rpm-from-npm
