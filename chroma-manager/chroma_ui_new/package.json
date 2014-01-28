@@ -16,6 +16,7 @@
     "gulp-csso": "0.2.1",
     "gulp-rimraf": "0.0.8",
     "gulp-less": "1.1.10",
+    "jasmine-reporters": "0.2.1",
     "karma": "0.11.13",
     "karma-jasmine": "0.1.5",
     "karma-firefox-launcher": "0.1.3",
