@@ -145,7 +145,7 @@ describe('heat map model', function () {
   });
 
   describe('mouse events', function () {
-    var mouseOverSpy, mouseOutSpy, mouseMoveSpy, data;
+    var mouseOverSpy, mouseOutSpy, mouseMoveSpy, mouseClickSpy, data;
 
     beforeEach(function () {
       angular.element('body').append($el);
@@ -153,10 +153,12 @@ describe('heat map model', function () {
       mouseOverSpy = jasmine.createSpy('onMouseOver');
       mouseOutSpy = jasmine.createSpy('onMouseOut');
       mouseMoveSpy = jasmine.createSpy('onMouseMove');
+      mouseClickSpy = jasmine.createSpy('onMouseClick');
 
       heatMapModel.onMouseOver(mouseOverSpy);
       heatMapModel.onMouseOut(mouseOutSpy);
       heatMapModel.onMouseMove(mouseMoveSpy);
+      heatMapModel.onMouseClick(mouseClickSpy);
 
       data = {
         z: 50,
@@ -219,6 +221,20 @@ describe('heat map model', function () {
       expected.size = 960;
 
       expect(mouseMoveSpy).toHaveBeenCalledOnceWith(expected, jasmine.any(Object));
+    });
+
+    it('should fire on mouse click in a cell', function () {
+      var event = new MouseEvent('click', {
+        bubbles: true
+      });
+
+      $heatMapGroup.find('.cell')[0].dispatchEvent(event);
+
+      var expected = _.clone(data);
+      expected.key = 'label';
+      expected.size = 960;
+
+      expect(mouseClickSpy).toHaveBeenCalledOnceWith(expected, jasmine.any(Object));
     });
   });
 

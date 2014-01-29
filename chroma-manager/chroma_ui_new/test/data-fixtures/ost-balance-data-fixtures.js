@@ -7,7 +7,8 @@ angular.module('dataFixtures').value('ostBalanceDataFixtures', [
             kbytesfree: 1980009,
             kbytestotal: 2015824
           },
-          ts: '2013-11-18T22:45:30+00:00'
+          ts: '2013-11-18T22:45:30+00:00',
+          id: '18'
         }
       ],
       19: [
@@ -16,7 +17,8 @@ angular.module('dataFixtures').value('ostBalanceDataFixtures', [
             kbytesfree: 2015824,
             kbytestotal: 2015824
           },
-          ts: '2013-11-18T22:45:30+00:00'
+          ts: '2013-11-18T22:45:30+00:00',
+          id: '19'
         }
       ]
     },

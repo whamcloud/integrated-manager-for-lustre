@@ -36,6 +36,8 @@ module.exports = function(config) {
       bowerDir('angular/angular.js'),
       bowerDir('angular-resource/angular-resource.js'),
       bowerDir('angular-bindonce/bindonce.js'),
+      bowerDir('angular-route/angular-route.js'),
+      bowerDir('angular-route-segment/build/angular-route-segment.js'),
       bowerDir('lodash/dist/lodash.js'),
       bowerDir('underscore-contrib/underscore.function.iterators.js'),
       bowerDir('momentjs/moment.js'),
@@ -49,6 +51,7 @@ module.exports = function(config) {
       imlDir('**/*.js'),
       imlDir('**/*.html'),
       bowerDir('angular-mocks/angular-mocks.js'),
+      bowerDir('timecop/timecop-0.1.1.js'),
       testDir('mocks/mock.js'),
       testDir('**/*-module.js'),
       testDir('data-fixtures/data-fixtures-module.js'),
@@ -66,7 +69,6 @@ module.exports = function(config) {
     // list of files to exclude
     exclude: [
       imlDir('iml.js'),
-      imlDir('router.js'),
       testDir('selenium/**/*')
     ],
 

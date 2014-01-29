@@ -24,7 +24,7 @@
   'use strict';
 
   angular.module('iml', ['ui.bootstrap', 'environment', 'exception', 'login', 'app',
-      'ngAnimate', 'ngRoute', 'route-segment', 'view-segment'])
+      'ngAnimate', 'imlRoutes'])
     .config(['$locationProvider', function ($locationProvider) {
       $locationProvider.html5Mode(true).hashPrefix('!');
     }])

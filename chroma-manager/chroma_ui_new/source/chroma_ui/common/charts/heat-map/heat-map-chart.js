@@ -178,7 +178,7 @@ function heatMapChartFactory(d3, nv, chartParamMixins, chartUtils, heatMapLegend
       });
     }
 
-    d3.rebind(chart, heatMapModel, 'onMouseOver', 'onMouseMove', 'onMouseOut');
+    d3.rebind(chart, heatMapModel, 'onMouseOver', 'onMouseMove', 'onMouseOut', 'onMouseClick');
 
     chart.options = nv.utils.optionsFunc.bind(chart);
 

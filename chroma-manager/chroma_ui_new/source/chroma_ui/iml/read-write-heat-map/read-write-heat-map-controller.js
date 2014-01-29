@@ -22,9 +22,9 @@
 
 angular.module('readWriteHeatMap', ['charts', 'stream'])
   .controller('ReadWriteHeatMapCtrl',
-    ['$scope', 'd3', 'ReadWriteHeatMapStream', 'DURATIONS', 'formatBytes', ReadWriteHeatMapCtrl]);
+    ['$scope', '$location', 'd3', 'ReadWriteHeatMapStream', 'DURATIONS', 'formatBytes', ReadWriteHeatMapCtrl]);
 
-function ReadWriteHeatMapCtrl($scope, d3, ReadWriteHeatMapStream, DURATIONS, formatBytes) {
+function ReadWriteHeatMapCtrl($scope, $location, d3, ReadWriteHeatMapStream, DURATIONS, formatBytes) {
   'use strict';
 
   $scope.readWriteHeatMap = {
@@ -64,6 +64,23 @@ function ReadWriteHeatMapCtrl($scope, d3, ReadWriteHeatMapStream, DURATIONS, for
             isVisible: false
           };
         }));
+
+        chart.onMouseClick(function mouseClickHandler (d, el) {
+          var end;
+
+          var start = el.__data__.x.toISOString(),
+            next = el.nextSibling,
+            id = el.__data__.id;
+
+          if (next)
+            end = next.__data__.x.toISOString();
+          else
+            end = new Date().toISOString();
+
+          $scope.$apply(function () {
+            $location.path('dashboard/jobstats/%s/%s/%s'.sprintf(id, start, end));
+          });
+        });
 
         chart.xAxis().showMaxMin(false);
       }

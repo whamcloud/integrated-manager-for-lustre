@@ -28,7 +28,7 @@ describe('Target ost metrics resource', function () {
     it('should return a list of metrics with target.name as key', function (done) {
       TargetResource.prototype.httpGetMetrics.andReturn(Q.when({
         body: {
-          '1': {fakeMetricsProp: 'fakeMetricsValue'}
+          '1': [{}]
         }
       }));
 
@@ -42,7 +42,7 @@ describe('Target ost metrics resource', function () {
 
       targetOstMetricsResource.httpGetOstMetrics({}).then(function (resp) {
         expect(resp.body).toEqual({
-          foo : { fakeMetricsProp : 'fakeMetricsValue' }
+          foo: [{ id : '1' }]
         });
 
         done();
@@ -52,7 +52,7 @@ describe('Target ost metrics resource', function () {
     it('should leave the key if it can\'t find a target match', function (done) {
       TargetResource.prototype.httpGetMetrics.andReturn(Q.when({
         body: {
-          '1': {fakeMetricsProp: 'fakeMetricsValue'}
+          '1': [{}]
         }
       }));
 
@@ -66,7 +66,7 @@ describe('Target ost metrics resource', function () {
 
       targetOstMetricsResource.httpGetOstMetrics({}).then(function (resp) {
         expect(resp.body).toEqual({
-          1: { fakeMetricsProp : 'fakeMetricsValue' }
+          1: [{id: '1'}]
         });
 
         done();
