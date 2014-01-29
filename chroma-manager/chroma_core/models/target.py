@@ -27,7 +27,7 @@ import uuid
 from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
-from chroma_core.lib.job import  DependOn, DependAny, DependAll, Step, job_log
+from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
@@ -62,15 +62,15 @@ LUSTRE_FILESYSTEM_TYPE = 'ext4'
 class ManagedTarget(StatefulObject):
     __metaclass__ = DeletableDowncastableMetaclass
     name = models.CharField(max_length = 64, null = True, blank = True,
-            help_text = "Lustre target name, e.g. 'testfs-OST0001'.  May be null\
-            if the target has not yet been registered.")
+                            help_text = "Lustre target name, e.g. 'testfs-OST0001'.  May be null\
+                            if the target has not yet been registered.")
 
     uuid = models.CharField(max_length = 64, null = True, blank = True,
-            help_text = "UUID of the target's internal file system.  May be null\
-                    if the target has not yet been formatted")
+                            help_text = "UUID of the target's internal file system.  May be null\
+                            if the target has not yet been formatted")
 
     ha_label = models.CharField(max_length = 64, null = True, blank = True,
-            help_text = "Label used for HA layer; human readable but unique")
+                                help_text = "Label used for HA layer; human readable but unique")
 
     volume = models.ForeignKey('Volume')
 
@@ -78,7 +78,7 @@ class ManagedTarget(StatefulObject):
     bytes_per_inode = models.IntegerField(null = True, blank = True, help_text = "Constant used during formatting to "
                                           "determine inode count by dividing the volume size by ``bytes_per_inode``")
     inode_count = models.BigIntegerField(null = True, blank = True, help_text = "The number of inodes in this target's"
-                                      "backing store")
+                                         "backing store")
 
     def get_hosts(self, primary=True):
         """Getting all the hosts, and filtering in python is less db hits"""
@@ -110,11 +110,11 @@ class ManagedTarget(StatefulObject):
         This results in a join query to get data with fewer DB hits
         """
 
-        return Volume.objects.all().select_related('storage_resource',
+        return Volume.objects.all().select_related(
+            'storage_resource',
             'storage_resource__resource_class',
             'storage_resource__resource_class__storage_plugin'
-        ).prefetch_related('volumenode_set',
-            'volumenode_set__host').get(pk=self.volume.pk)
+        ).prefetch_related('volumenode_set', 'volumenode_set__host').get(pk=self.volume.pk)
 
     def secondary_servers(self):
         return [tm.host for tm in self.managedtargetmount_set.filter(primary = False)]
@@ -233,7 +233,7 @@ class ManagedTarget(StatefulObject):
             filesystem_id = self.downcast().filesystem_id
             filesystem = ObjectCache.get_by_id(ManagedFilesystem, filesystem_id)
             deps.append(DependOn(filesystem, 'available',
-                acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
+                                 acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
             target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
@@ -416,8 +416,8 @@ class TargetRecoveryInfo(models.Model):
     def update(target, recovery_status):
         TargetRecoveryInfo.objects.filter(target = target).delete()
         instance = TargetRecoveryInfo.objects.create(
-                target = target,
-                recovery_status = json.dumps(recovery_status))
+            target = target,
+            recovery_status = json.dumps(recovery_status))
         return instance.is_recovering(recovery_status)
 
     def is_recovering(self, data = None):
@@ -487,6 +487,12 @@ class RemoveConfiguredTargetJob(StateChangeJob):
         steps = []
         for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
             steps.append((UnconfigurePacemakerStep, {
+                'target_mount': target_mount,
+                'target': target_mount.target,
+                'host': target_mount.host
+            }))
+        for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
+            steps.append((UnconfigureTargetStoreStep, {
                 'target_mount': target_mount,
                 'target': target_mount.target,
                 'host': target_mount.host
@@ -592,6 +598,37 @@ class GenerateHaLabelStep(Step):
         job_log.debug("Generated ha_label=%s for target %s (%s)" % (target.ha_label, target.id, target.name))
 
 
+class ConfigureTargetStoreStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        target = kwargs['target']
+        target_mount = kwargs['target_mount']
+        volume_node = kwargs['volume_node']
+        host = kwargs['host']
+
+        assert(volume_node is not None)
+
+        self.invoke_agent(host, "configure_target_store", {
+            'device': volume_node.path,
+            'uuid': target.uuid,
+            'primary': target_mount.primary,
+            'mount_point': target_mount.mount_point})
+
+
+class UnconfigureTargetStoreStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        target = kwargs['target']
+        target_mount = kwargs['target_mount']
+        host = kwargs['host']
+
+        self.invoke_agent(host, "unconfigure_target_store", {
+            'uuid': target.uuid,
+            'primary': target_mount.primary})
+
+
 class ConfigurePacemakerStep(Step):
     idempotent = True
 
@@ -619,11 +656,9 @@ class UnconfigurePacemakerStep(Step):
         target_mount = kwargs['target_mount']
 
         self.invoke_agent(kwargs['host'], "unconfigure_target_ha",
-            {
-                'ha_label': target.ha_label,
-                'uuid': target.uuid,
-                'primary': target_mount.primary
-            })
+                          {'ha_label': target.ha_label,
+                           'uuid': target.uuid,
+                           'primary': target_mount.primary})
 
 
 class ConfigureTargetJob(StateChangeJob):
@@ -641,6 +676,14 @@ class ConfigureTargetJob(StateChangeJob):
 
     def get_steps(self):
         steps = []
+
+        for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
+            steps.append((ConfigureTargetStoreStep, {
+                'host': target_mount.host,
+                'target': target_mount.target,
+                'target_mount': target_mount,
+                'volume_node': target_mount.volume_node
+            }))
 
         for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
             steps.append((ConfigurePacemakerStep, {
@@ -1052,8 +1095,8 @@ class FailbackTargetJob(MigrateTargetJob):
             return False
 
         return len(instance.failover_hosts) > 0 and \
-                instance.active_host is not None and\
-                instance.primary_host != instance.active_host
+            instance.active_host is not None and\
+            instance.primary_host != instance.active_host
         # HYD-1238: once we have a valid online/offline piece of info for each host,
         # reinstate the condition
         #instance.primary_host.is_available() and \
@@ -1105,7 +1148,7 @@ class FailoverTargetJob(MigrateTargetJob):
             return False
 
         return len(instance.failover_hosts) > 0 and\
-               instance.primary_host == instance.active_host
+            instance.primary_host == instance.active_host
     # HYD-1238: once we have a valid online/offline piece of info for each host,
     # reinstate the condition
 #                instance.failover_hosts[0].is_available() and \

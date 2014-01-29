@@ -344,6 +344,8 @@ def unconfigure_target_ha(primary, ha_label, uuid):
                                        "<rsc_location id=\"%s-secondary\">" %
                                        ha_label])
 
+
+def unconfigure_target_store(primary, uuid):
     try:
         target = config.get('targets', uuid)
         os.rmdir(target['mntpt'])
@@ -352,6 +354,11 @@ def unconfigure_target_ha(primary, ha_label, uuid):
     except IOError:
         console_log.warn("Cannot remove target mount folder: %s" % target['mntpt'])
     config.delete('targets', uuid)
+
+
+def configure_target_store(primary, device, uuid, mount_point):
+
+    config.set('targets', uuid, {"bdev": device, "mntpt": mount_point})
 
 
 def configure_target_ha(primary, device, ha_label, uuid, mount_point):
@@ -368,9 +375,6 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
             else:
                 raise RuntimeError("A resource with the name %s already exists" % ha_label)
 
-    config.set('targets', uuid, {"bdev": device, "mntpt": mount_point})
-
-    if primary:
         tmp_f, tmp_name = tempfile.mkstemp()
         os.write(tmp_f, "<primitive class=\"ocf\" provider=\"chroma\" type=\"Target\" id=\"%s\">\
   <meta_attributes id=\"%s-meta_attributes\">\
@@ -684,4 +688,4 @@ ACTIONS = [purge_configuration, register_target, configure_target_ha,
            writeconf_target, failback_target,
            failover_target, target_running,
            #migrate_target, unmigrate_target,
-           clear_targets]
+           clear_targets, configure_target_store, unconfigure_target_store]

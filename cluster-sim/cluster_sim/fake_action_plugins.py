@@ -125,6 +125,8 @@ class FakeActionPlugins():
                 return
             elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker']:
                 return
+            elif cmd in ['configure_target_store', 'unconfigure_target_store']:
+                return
             elif cmd == 'configure_repo':
                 return
             elif cmd == 'kernel_status':
