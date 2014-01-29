@@ -8,6 +8,7 @@
 # (2) Warns the developer it will wipe all data on their cluster.
 # (3) Runs the tests, with an xml report if requested.
 
+NOSE_ARGS=${NOSE_ARGS:-""}
 FORCED=false
 CONFIG_FILE=tests/integration/shared_storage_configuration/sample_cluster_cfg.json
 XML_REPORT=''
@@ -86,4 +87,4 @@ if [ -n "$XML_REPORT" ]; then
 else
     XUNIT_ARGS=""
 fi
-nosetests --verbosity=2 --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" $XUNIT_ARGS $TESTS
+nosetests --verbosity=2 --exclude=".*test_cluster_setup.*" --tc-format=json --tc-file="$CONFIG_FILE" $XUNIT_ARGS $NOSE_ARGS $TESTS

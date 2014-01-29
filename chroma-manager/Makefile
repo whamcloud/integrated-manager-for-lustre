@@ -138,6 +138,7 @@ fci full_cluster_integration: $(FCI_CLUSTER_CONFIG) running_supervisor
 
 integration_tests: running_supervisor
 	@echo "Running integration tests against the simulator..."
+	NOSE_ARGS=$(NOSE_ARGS) \
 	$(CURDIR)/tests/integration/run_tests -c $(SIM_CLUSTER_CONFIG) \
 		$(CURDIR)/tests/integration/shared_storage_configuration \
 		2>&1 | tee sim-integration.log; \
