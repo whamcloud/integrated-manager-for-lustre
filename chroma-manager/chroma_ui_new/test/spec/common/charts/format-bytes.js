@@ -11,11 +11,11 @@ describe('Format bytes', function () {
     tests = [
       {
         in: [320, 3],
-        out: '320 b'
+        out: '320 B'
       },
       {
         in: [200000],
-        out: '195.3 KB'
+        out: '195.3 kB'
       },
       {
         in: [3124352],

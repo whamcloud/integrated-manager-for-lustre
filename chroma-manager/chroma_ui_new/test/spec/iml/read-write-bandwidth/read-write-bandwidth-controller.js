@@ -99,7 +99,7 @@ describe('read write bandwidth controller', function () {
       });
 
       it('should format bytes', function () {
-        expect(captor.value(300000)).toEqual('293 KB/s');
+        expect(captor.value(300000)).toEqual('293 kB/s');
       });
 
       it('should leave 0 untouched', function () {

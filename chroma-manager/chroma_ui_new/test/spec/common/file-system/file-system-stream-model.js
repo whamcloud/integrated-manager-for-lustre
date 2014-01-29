@@ -48,11 +48,11 @@ describe('file system stream model', function () {
     });
 
     it('should return the used space', function () {
-      expect(fileSystemStreamModel.getUsedSpace()).toBe('87.89 KB');
+      expect(fileSystemStreamModel.getUsedSpace()).toBe('87.89 kB');
     });
 
     it('should return the total space', function () {
-      expect(fileSystemStreamModel.getTotalSpace()).toBe('97.66 KB');
+      expect(fileSystemStreamModel.getTotalSpace()).toBe('97.66 kB');
     });
 
     it('should return the used files', function () {
