@@ -17,11 +17,15 @@ rpms: $(SPECNAME) $(TARBALL)
 	for dep in $(DEPS); do                 \
 		$(MAKE) -C ../$$dep pkg_install; \
 	done
-	$(MAKE) -f ../include/Makefile.rpmbuild $@
+	$(MAKE) -f ../include/Makefile.rpmbuild RPM_OPTS=$(RPM_OPTS) RPMBUILD_OPTS=$(RPMBUILD_OPTS) $@
 
 install pkg_install: rpms
-	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE="$(SPECNAME)" $@
+	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" RPM_OPTS=$(RPM_OPTS) SPECFILE="$(SPECNAME)" $@
 
+# Grab a tarball and build without all the python stuff
+ifeq ($(TARBALL_NOT_PYTHON), TRUE)
+$(SPECNAME): $(TARBALL) spec.ed Makefile
+else
 # only create a spec if one was not checked into git
 ifeq ($(shell git ls-files --error-unmatch $(SPECNAME) >/dev/null 2>&1; echo $$?), 0)
 $(SPECNAME):
@@ -58,6 +62,7 @@ $(SPECNAME): $(TARBALL) spec.ed Makefile ../include/setuptools-pypi-rpm_spec.ed
 	fi
 	(cat spec.ed ; echo -e "w\nq") | ed $(SPECNAME) 2>/dev/null
 	rm -rf tmp
+endif
 endif
 
 spec.ed:
