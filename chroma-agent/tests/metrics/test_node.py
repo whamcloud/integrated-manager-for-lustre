@@ -1,13 +1,15 @@
-from django.utils import unittest
 import os
 from chroma_agent.device_plugins.audit.node import NodeAudit
 
+from tests.test_utils import PatchedContextTestCase
 
-class TestNodeMetrics(unittest.TestCase):
+
+class TestNodeMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        self.audit = NodeAudit(fscontext=test_root)
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        super(TestNodeMetrics, self).setUp()
+        self.audit = NodeAudit()
         self.metrics = self.audit.metrics()
 
     def test_node_cpustats(self):

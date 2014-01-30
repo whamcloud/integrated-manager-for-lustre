@@ -27,10 +27,8 @@ from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 
 class NodeAudit(BaseAudit, FileSystemMixin):
-    def __init__(self, fscontext=None, **kwargs):
+    def __init__(self, **kwargs):
         super(NodeAudit, self).__init__(**kwargs)
-        if fscontext:
-            self.fscontext = fscontext
 
         self.raw_metrics['node'] = {}
 

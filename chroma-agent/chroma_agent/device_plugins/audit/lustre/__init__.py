@@ -33,12 +33,12 @@ DISABLE_BRW_STATS = True
 JOB_STATS_LIMIT = 20  # only return the most active jobs
 
 
-def local_audit_classes(fscontext=None):
+def local_audit_classes():
     import chroma_agent.device_plugins.audit.lustre
     return [cls for cls in
                 [getattr(chroma_agent.device_plugins.audit.lustre, name) for name in
                     dir(chroma_agent.device_plugins.audit.lustre) if name.endswith('Audit')]
-            if hasattr(cls, 'is_available') and cls.is_available(fscontext)]
+            if hasattr(cls, 'is_available') and cls.is_available()]
 
 
 class LustreAudit(BaseAudit, FileSystemMixin):
@@ -47,15 +47,15 @@ class LustreAudit(BaseAudit, FileSystemMixin):
     Contains methods which are common to all Lustre cluster component types.
     """
     @classmethod
-    def is_available(cls, fscontext=None):
+    def is_available(cls):
         """Returns a boolean indicating whether or not this audit class should
         be instantiated.
         """
-        return (cls.kmod_is_loaded(fscontext) and
-                cls.device_is_present(fscontext))
+        return (cls.kmod_is_loaded() and
+                cls.device_is_present())
 
     @classmethod
-    def device_is_present(cls, fscontext=None):
+    def device_is_present(cls):
         """Returns a boolean indicating whether or not this class
         has any corresponding Lustre device entries.
         """
@@ -68,18 +68,18 @@ class LustreAudit(BaseAudit, FileSystemMixin):
         if modname in exceptions:
             return True
 
-        obj = cls(fscontext=fscontext)
+        obj = cls()
         entries = [dev for dev in obj.devices() if dev['type'] == modname]
         return len(entries) > 0
 
     @classmethod
-    def kmod_is_loaded(cls, fscontext=None):
+    def kmod_is_loaded(cls):
         """Returns a boolean indicating whether or not this class'
         corresponding Lustre module is loaded.
         """
         modname = cls.__name__.replace('Audit', '').lower()
         filter = lambda line: line.startswith(modname)
-        obj = cls(fscontext=fscontext)
+        obj = cls()
         try:
             modules = list(obj.read_lines("/proc/modules", filter))
         except IOError:
@@ -87,10 +87,8 @@ class LustreAudit(BaseAudit, FileSystemMixin):
 
         return len(modules) == 1
 
-    def __init__(self, fscontext=None, **kwargs):
+    def __init__(self, **kwargs):
         super(LustreAudit, self).__init__(**kwargs)
-        if fscontext:
-            self.fscontext = fscontext
 
         self.raw_metrics['lustre'] = {}
 
@@ -239,10 +237,10 @@ class TargetAudit(LustreAudit):
 class MdsAudit(TargetAudit):
     """In Lustre < 2.x, the MDT stats were mis-named as MDS stats."""
     @classmethod
-    def is_available(cls, fscontext=None):
+    def is_available(cls):
         """Stupid override to prevent this being used on 2.x+ filesystems."""
-        if MdsAudit(fscontext=fscontext).version_info()[0] < 2:
-            return super(MdsAudit, cls).is_available(fscontext)
+        if MdsAudit().version_info()[0] < 2:
+            return super(MdsAudit, cls).is_available()
         else:
             return False
 
@@ -440,7 +438,7 @@ class ObdfilterAudit(TargetAudit):
         return histograms
 
     def read_job_stats(self, target):
-        path = self.fscontext.abs(os.path.join(self.target_root, target, 'job_stats'))
+        path = self.abs(os.path.join(self.target_root, target, 'job_stats'))
         try:
             stats = yaml.load(open(path))['job_stats'] or []
         except IOError:
@@ -463,18 +461,18 @@ class ObdfilterAudit(TargetAudit):
 
 class OstAudit(ObdfilterAudit):
     @classmethod
-    def is_available(cls, fscontext=None):
+    def is_available(cls):
         # Not pretty, but it works. On 2.4+, the ost module is loaded,
         # but the obdfilter module is not. Pre-2.4, both are loaded, so
         # we need to prevent double audits. Really, this whole method of
         # determining which audits to run needs to be reworked. Later.
-        lustre_version = cls(fscontext=fscontext).version_info()
+        lustre_version = cls().version_info()
         if lustre_version[0] < 2:
             return False
         elif (lustre_version[0] == 2 and lustre_version[1] < 4):
             return False
         else:
-            return super(OstAudit, cls).is_available(fscontext)
+            return super(OstAudit, cls).is_available()
 
 
 class LnetAudit(LustreAudit):

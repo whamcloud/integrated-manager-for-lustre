@@ -26,27 +26,26 @@ from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 
 class LocalAudit(BaseAudit, FileSystemMixin):
-    def __init__(self, fscontext=None, **kwargs):
+    def __init__(self, **kwargs):
         super(LocalAudit, self).__init__(**kwargs)
-        if fscontext:
-            self.fscontext = fscontext
 
     # FIXME: This probably ought to be a memoized property, but I'm lazy.
     def audit_classes(self):
         if not hasattr(self, 'audit_classes_list'):
-            self.audit_classes_list = chroma_agent.device_plugins.audit.local_audit_classes(self.fscontext)
+            self.audit_classes_list = chroma_agent.device_plugins.audit.local_audit_classes()
         return self.audit_classes_list
 
     # Flagrantly "borrowed" from:
     # http://stackoverflow.com/questions/5575124/python-combine-several-nested-lists-into-a-dictionary
     def __mergedicts(self, *dicts):
         """Recursively merge an arbitrary number of dictionaries.
-        >>> import pprint
+        pyflakes:ignore >>> import pprint
         >>> d1 = {'a': {'b': {'x': '1',
         ...                   'y': '2'}}}
         >>> d2 = {'a': {'c': {'gg': {'m': '3'},
         ...                   'xx': '4'}}}
-        >>> pprint.pprint(mergedicts(d1, d2), width=2)
+        pyflakes:ignore >>> pprint.pprint(mergedicts(d1, d2), width=2)
+            self.fscontext = fscontext
         {'a': {'b': {'x': '1',
                      'y': '2'},
                'c': {'gg': {'m': '3'},
@@ -73,7 +72,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
         """Returns an aggregated dict of all subclass metrics."""
         agg_raw = {}
         for cls in self.audit_classes():
-            audit = cls(fscontext=self.fscontext)
+            audit = cls()
             audit_metrics = audit.metrics()
             agg_raw = self.__mergedicts(agg_raw, audit_metrics['raw'])
 

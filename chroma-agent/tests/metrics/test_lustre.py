@@ -1,4 +1,3 @@
-from django.utils import unittest
 import tempfile
 from django.utils.unittest.case import skipIf
 import os
@@ -6,16 +5,20 @@ import shutil
 from chroma_agent.device_plugins.audit.local import LocalAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, DISABLE_BRW_STATS
 
+from tests.test_utils import PatchedContextTestCase
 
-class TestLocalLustreMetrics(unittest.TestCase):
+
+class TestLocalLustreMetrics(PatchedContextTestCase):
     def setUp(self):
         self.tests = os.path.join(os.path.dirname(__file__), '..')
+        super(TestLocalLustreMetrics, self).setUp()
 
     def test_mdsmgs_metrics(self):
         """Test that the various MGS/MDS metrics are collected and aggregated."""
-        audit = LocalAudit()
-        audit.fscontext = os.path.join(self.tests,
+        self.test_root = os.path.join(self.tests,
                                      "data/lustre_versions/2.0.66/mds_mgs")
+        self.setUp()
+        audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-MDT0000']['filesfree'], 511954)
         self.assertEqual(metrics['target']['MGS']['num_exports'], 4)
@@ -23,9 +26,10 @@ class TestLocalLustreMetrics(unittest.TestCase):
 
     def test_mdt_hsm_metrics(self):
         """Test that the HSM metrics are collected and aggregated."""
-        audit = LocalAudit()
-        audit.fscontext = os.path.join(self.tests,
+        self.test_root = os.path.join(self.tests,
                                      "data/lustre_versions/2.5.0/mds")
+        self.setUp()
+        audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']['target']['lustre-MDT0000']['hsm']
         self.assertEqual(metrics['agents']['idle'], 1)
         self.assertEqual(metrics['agents']['busy'], 1)
@@ -38,30 +42,45 @@ class TestLocalLustreMetrics(unittest.TestCase):
 
     def test_oss_metrics(self):
         """Test that the various OSS metrics are collected and aggregated."""
+        self.test_root = os.path.join(self.tests,
+                                      "data/lustre_versions/2.0.66/oss")
+        self.setUp()
         audit = LocalAudit()
-        audit.fscontext = os.path.join(self.tests,
-                                     "data/lustre_versions/2.0.66/oss")
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 127575)
         self.assertEqual(metrics['lnet']['recv_count'], 547181)
 
     def test_24_oss_metrics(self):
         """Test that the various OSS metrics are collected and aggregated (2.4+)."""
+        self.test_root = os.path.join(self.tests,
+                                      "data/lustre_versions/2.5.0/oss")
+        self.setUp()
         audit = LocalAudit()
-        audit.fscontext = os.path.join(self.tests,
-                                     "data/lustre_versions/2.5.0/oss")
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 524040)
         self.assertEqual(metrics['lnet']['recv_count'], 156747)
 
 
-class TestPathologicalUseCases(unittest.TestCase):
+class TestPathologicalUseCases(PatchedContextTestCase):
     # AKA: The world will always build a better idiot! ;)
+    def setUp(self):
+        self.test_root = tempfile.mkdtemp()
+        super(TestPathologicalUseCases, self).setUp()
+        os.makedirs(os.path.join(self.test_root, "proc"))
+        with open(os.path.join(self.test_root, "proc/mounts"), "w") as f:
+            f.write("\n")
+
+    def tearDown(self):
+        # Just to make super-duper sure it's gone.
+        try:
+            shutil.rmtree(self.test_root)
+        except OSError:
+            pass
+
     def test_loaded_module_no_stats(self):
         """Loaded modules with no stats files should be skipped."""
         # An easily-repeatable example of when this happens is when
         # lnet.ko is loaded but LNet is stopped.
-        self.test_root = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.test_root, "proc/sys/lnet"))
 
         f = open(os.path.join(self.test_root, "proc/modules"), "w+")
@@ -78,7 +97,7 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
         f.write("cpu  24601 2 33757 3471279 10892 6 676 0 0\n")
         f.close()
 
-        audit = LocalAudit(fscontext=self.test_root)
+        audit = LocalAudit()
         assert LnetAudit in audit.audit_classes()
 
         # this shouldn't raise a runtime error
@@ -88,7 +107,6 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
 
     def test_missing_brw_stats(self):
         """Catch a race where brw_stats hasn't been created yet."""
-        self.test_root = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
 
         f = open(os.path.join(self.test_root, "proc/modules"), "w+")
@@ -107,7 +125,7 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
         f.write("cpu  24601 2 33757 3471279 10892 6 676 0 0\n")
         f.close()
 
-        audit = LocalAudit(fscontext=self.test_root)
+        audit = LocalAudit()
         assert ObdfilterAudit in audit.audit_classes()
 
         # this shouldn't raise a runtime error
@@ -122,7 +140,6 @@ lnet 233888 3 ptlrpc,ksocklnd,obdclass, Live 0xffffffffa076e000
         # by creating a /proc/modules file with one of our Audit
         # classes' modules in it and an empty /proc/fs/lustre/devices
         # file.
-        self.test_root = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.test_root, "proc/fs/lustre"))
 
         # Create a modules file with...  I dunno, lnet and mgs entries.
@@ -140,21 +157,18 @@ mgc 50620 2 mgs, Live 0xffffffffa0a90000
 
         # Ideally, our audit aggregator should never instantiate the
         # audit in the first place.
-        audit = LocalAudit(fscontext=self.test_root)
+        audit = LocalAudit()
         assert MgsAudit not in audit.audit_classes()
 
         # On the other hand, some modules don't have a corresponding
         # device entry, and therefore the audit should be instantiated.
-        audit = LocalAudit(fscontext=self.test_root)
+        audit = LocalAudit()
         assert LnetAudit in audit.audit_classes()
 
         shutil.rmtree(self.test_root)
 
     def test_no_lustre_modules_loaded(self):
         """Audit shouldn't fail if there are no Lustre modules loaded."""
-        self.test_root = tempfile.mkdtemp()
-        os.makedirs(os.path.join(self.test_root, "proc"))
-
         # Create a modules file with no Lustre modules in it.
         f = open(os.path.join(self.test_root, "proc/modules"), "w+")
         f.write("""
@@ -179,26 +193,20 @@ dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
         f.write("cpu  24601 2 33757 3471279 10892 6 676 0 0\n")
         f.close()
 
-        audit = LocalAudit(fscontext=self.test_root)
+        audit = LocalAudit()
         # FIXME: this gethostname() should probably be stubbed out
         import socket
         self.assertEqual(audit.metrics(), {'raw': {'node': {'hostname': socket.gethostname(), 'cpustats': {'iowait': 10892, 'idle': 3471279, 'total': 3540537, 'user': 24601, 'system': 33763}, 'meminfo': {'MemTotal': 3991680}}}})
 
         shutil.rmtree(self.test_root)
 
-    def tearDown(self):
-        # Just to make super-duper sure it's gone.
-        try:
-            shutil.rmtree(self.test_root)
-        except OSError:
-            pass
 
-
-class TestMdtMetrics(unittest.TestCase):
+class TestMdtMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        audit = MdtAudit(fscontext=test_root)
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        super(TestMdtMetrics, self).setUp()
+        audit = MdtAudit()
         self.metrics = audit.metrics()['raw']['lustre']['target']
 
     def test_mdt_stats_list(self):
@@ -226,11 +234,12 @@ class TestMdtMetrics(unittest.TestCase):
         self.assertEqual(self.metrics['lustre-MDT0000']['filesfree'], 511954)
 
 
-class TestLnetMetrics(unittest.TestCase):
+class TestLnetMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        audit = LnetAudit(fscontext=test_root)
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        super(TestLnetMetrics, self).setUp()
+        audit = LnetAudit()
         self.metrics = audit.metrics()
 
     def test_lnet_send_count(self):
@@ -238,11 +247,12 @@ class TestLnetMetrics(unittest.TestCase):
         self.assertEqual(self.metrics['raw']['lustre']['lnet']['send_count'], 218887)
 
 
-class TestMgsMetrics(unittest.TestCase):
+class TestMgsMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        audit = MgsAudit(fscontext=test_root)
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        super(TestMgsMetrics, self).setUp()
+        audit = MgsAudit()
         self.metrics = audit.metrics()['raw']['lustre']['target']['MGS']
 
     def test_mgs_stats_list(self):
@@ -267,11 +277,12 @@ class TestMgsMetrics(unittest.TestCase):
         self.assertEqual(self.metrics['threads_max'], 32)
 
 
-class TestObdfilterMetrics(unittest.TestCase):
+class TestObdfilterMetrics(PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
-        audit = ObdfilterAudit(fscontext=test_root)
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
+        super(TestObdfilterMetrics, self).setUp()
+        audit = ObdfilterAudit()
         self.metrics = audit.metrics()['raw']['lustre']['target']
 
     def test_obdfilter_stats_list(self):
@@ -331,10 +342,11 @@ class TestObdfilterMetrics(unittest.TestCase):
         self.assertEqual(hist['buckets'], {})
 
 
-class TestJobStats(unittest.TestCase):
+class TestJobStats(PatchedContextTestCase):
     def setUp(self):
-        test_root = os.path.normpath(os.path.join(__file__, '../../data/lustre_versions/2.3/oss'))
-        audit = ObdfilterAudit(fscontext=test_root)
+        self.test_root = os.path.normpath(os.path.join(__file__, '../../data/lustre_versions/2.3/oss'))
+        super(TestJobStats, self).setUp()
+        audit = ObdfilterAudit()
         self.metrics = audit.metrics()['raw']['lustre']
 
     def test(self):
