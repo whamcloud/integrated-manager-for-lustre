@@ -20,31 +20,23 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.device_plugins.audit.fscontext import FileSystemContext
+import os
 
 
 class FileSystemMixin(object):
     """Mixin for Audit subclasses.  Classes that inherit from
-    this mixin will get a number of methods for interacting with a
-    filesystem.  The context property provides a way to override the
+    this mixin will get some convenience methods for interacting with a
+    filesystem.  The fscontext property provides a way to override the
     default filesystem context ("/") for unit testing.
     """
+    # Unit tests should patch this attribute when using fixture data.
+    fscontext = "/"
 
-    def __set_fscontext(self, ctx):
-        if hasattr(ctx, "root"):
-            self.__fscontext = ctx
+    def abs(self, path):
+        if os.path.isabs(path):
+            return os.path.join(self.fscontext, path[1:])
         else:
-            self.__fscontext = FileSystemContext(ctx)
-
-    def __get_fscontext(self):
-        # This bit of hackery is necessary due to the fact that mixins
-        # can't have an __init__() to set things up.
-        if not '_FileSystemMixin__fscontext' in self.__dict__:
-            self.__fscontext = FileSystemContext()
-        return self.__fscontext
-
-    fscontext = property(__get_fscontext, __set_fscontext, doc="""
-        The filesystem context (defaults to "/")""")
+            return os.path.join(self.fscontext, path)
 
     def read_lines(self, filename, filter_f=None):
         """Return a generator for stripped lines read from the file.
@@ -52,7 +44,7 @@ class FileSystemMixin(object):
         If the optional filter_f argument is supplied, it will be applied
         prior to stripping each line.
         """
-        for line in open(self.fscontext.abs(filename)):
+        for line in open(self.abs(filename)):
             if filter_f:
                 if filter_f(line):
                     yield line.rstrip("\n")

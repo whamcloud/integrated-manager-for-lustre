@@ -185,3 +185,31 @@ class TestMounts(unittest.TestCase):
         with patch_open(path_to_result):
             result = Mounts().all()
             self.assertListEqual(result, expected_result)
+
+
+class PatchedContextTestCase(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(PatchedContextTestCase, self).__init__(*args, **kwargs)
+        self.test_root = None
+
+    def _find_subclasses(self, klass):
+        """Introspectively find all descendents of a class"""
+        subclasses = []
+        for subclass in klass.__subclasses__():
+            subclasses.append(subclass)
+            subclasses.extend(self._find_subclasses(subclass))
+        return subclasses
+
+    def setUp(self):
+        if not self.test_root:
+            return
+
+        from chroma_agent.device_plugins.audit import BaseAudit
+        for subclass in self._find_subclasses(BaseAudit):
+            mock.patch.object(subclass, 'fscontext', self.test_root).start()
+
+        # These classes aren't reliably detected for patching.
+        from chroma_agent.device_plugins.audit.node import NodeAudit
+        mock.patch.object(NodeAudit, 'fscontext', self.test_root).start()
+
+        self.addCleanup(mock.patch.stopall)

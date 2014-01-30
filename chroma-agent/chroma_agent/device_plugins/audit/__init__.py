@@ -20,9 +20,9 @@
 # express and approved by Intel in writing.
 
 
-def local_audit_classes(fscontext=None):
+def local_audit_classes():
     classes = []
-    classes.extend(lustre.local_audit_classes(fscontext))
+    classes.extend(lustre.local_audit_classes())
     classes.append(getattr(node, 'NodeAudit'))
     return classes
 
