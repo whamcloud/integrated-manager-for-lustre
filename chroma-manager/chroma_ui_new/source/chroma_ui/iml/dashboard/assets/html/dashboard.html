@@ -1,34 +1,38 @@
-<h4 class="section-header">File Systems</h4>
-<div class="row file-system-info" ng-controller="FileSystemInfoCtrl">
-  <div class="col-lg-12">
-    <table class="table table-condensed">
-      <thead>
-        <tr>
-          <th>File System</th>
-          <th>Type</th>
-          <th>Space Used / Total</th>
-          <th>Files Used / Total</th>
-          <th>Clients</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr bindonce ng-repeat="fileSystem in fileSystemInfo.data.objects track by fileSystem.id">
-          <td>{{ fileSystem.name }}</td>
-          <td>{{ fileSystem.getState() }}</td>
-          <td><pie-graph chart-data="fileSystem.spaceGraphData"></pie-graph>{{ fileSystem.getUsedSpace() }} / {{ fileSystem.getTotalSpace() }}</td>
-          <td><pie-graph chart-data="fileSystem.usageGraphData"></pie-graph>{{ fileSystem.getUsedFiles() }} / {{ fileSystem.getTotalFiles() }}</td>
-          <td>{{ fileSystem.client_count }}</td>
-        </tr>
-      </tbody>
-    </table>
+<h3 class="page-header"><i class="fa fa-bar-chart-o"></i> Dashboard</h3>
+<div class="container container-full">
+  <h4 class="section-header">File Systems</h4>
+  <div class="row file-system-info" ng-controller="FileSystemInfoCtrl">
+    <div class="col-lg-12">
+      <table class="table table-condensed">
+        <thead>
+          <tr>
+            <th>File System</th>
+            <th>Type</th>
+            <th>Space Used / Total</th>
+            <th>Files Used / Total</th>
+            <th>Clients</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr bindonce ng-repeat="fileSystem in fileSystemInfo.data.objects track by fileSystem.id">
+            <td>{{ fileSystem.name }}</td>
+            <td>{{ fileSystem.getState() }}</td>
+            <td><pie-graph chart-data="fileSystem.spaceGraphData"></pie-graph>{{ fileSystem.getUsedSpace() }} / {{ fileSystem.getTotalSpace() }}</td>
+            <td><pie-graph chart-data="fileSystem.usageGraphData"></pie-graph>{{ fileSystem.getUsedFiles() }} / {{ fileSystem.getTotalFiles() }}</td>
+            <td>{{ fileSystem.client_count }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
 
-<h4 class="section-header">Charts</h4>
-<div class="row dashboard" sorter items="dashboard.charts" key="'chart'">
-  <div ng-repeat="chart in dashboard.charts track by chart.name">
-    <div class="col-lg-6 dashboard-chart full-screen" sort-item>
-      <div ng-include="chart.name"></div>
+  <h4 class="section-header">Charts</h4>
+  <div class="row dashboard" sorter items="dashboard.charts" key="'chart'">
+    <div ng-repeat="chart in dashboard.charts track by chart.name">
+      <div class="col-lg-6 dashboard-chart full-screen" sort-item>
+        <div ng-include="chart.name"></div>
+      </div>
     </div>
   </div>
 </div>
+

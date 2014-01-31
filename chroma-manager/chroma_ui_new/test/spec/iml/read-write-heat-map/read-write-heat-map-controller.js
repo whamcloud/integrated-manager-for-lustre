@@ -1,12 +1,21 @@
 describe('read write heat map controller', function () {
   'use strict';
 
-  var $scope, ReadWriteHeatMapStream, readWriteHeatMapStream, chart, d3;
+  var $scope, $location, ReadWriteHeatMapStream, readWriteHeatMapStream, chart, d3;
+
+  mock.factory(function $location () {
+    return {
+      path: jasmine.createSpy('$location.path')
+    };
+  });
 
   beforeEach(module('readWriteHeatMap'));
 
-  beforeEach(inject(function ($controller, $rootScope) {
+  mock.beforeEach('$location');
+
+  beforeEach(inject(function ($controller, $rootScope, _$location_) {
     $scope = $rootScope.$new();
+    $location = _$location_;
 
     readWriteHeatMapStream = {
       restart: jasmine.createSpy('restart'),
@@ -37,7 +46,8 @@ describe('read write heat map controller', function () {
       d3: d3
     });
 
-    chart = jasmine.createSpyObj('chart', ['options', 'onMouseOver', 'onMouseMove', 'onMouseOut', 'xAxis']);
+    chart = jasmine.createSpyObj('chart', ['options', 'onMouseOver', 'onMouseMove',
+      'onMouseOut', 'onMouseClick', 'xAxis']);
 
     chart.xAxis.andReturn({
       showMaxMin: jasmine.createSpy('showMaxMin')
@@ -137,6 +147,54 @@ describe('read write heat map controller', function () {
       chart.onMouseOut.mostRecentCall.args[0]();
 
       expect($scope.readWriteHeatMap.isVisible).toBe(false);
+    });
+
+    describe('mouse click', function () {
+      var params, el, now;
+
+      beforeEach(function () {
+        now = new Date(2013, 1, 29, 14, 30);
+
+        Timecop.install();
+        Timecop.freeze(now);
+
+        params = {
+          x: new Date('2013-01-05T05:00:00.000Z'),
+          y: 'ost 0000',
+          z: '2000000',
+          id: '2'
+        };
+
+        el = {
+          __data__: params,
+          nextSibling: {
+            __data__: {
+              x: new Date('2013-01-06T05:00:00.000Z')
+            }
+          }
+        };
+      });
+
+      afterEach(function () {
+        Timecop.returnToPresent();
+        Timecop.uninstall();
+      });
+
+      it('should navigate the page', function () {
+        chart.onMouseClick.mostRecentCall.args[0](params, el);
+
+        expect($location.path)
+          .toHaveBeenCalledOnceWith('dashboard/jobstats/2/2013-01-05T05:00:00.000Z/2013-01-06T05:00:00.000Z');
+      });
+
+      it('should use the current date if nextSibling is null', function () {
+        el.nextSibling = null;
+
+        chart.onMouseClick.mostRecentCall.args[0](params, el);
+
+        expect($location.path).toHaveBeenCalledOnceWith('dashboard/jobstats/2/2013-01-05T05:00:00.000Z/%s'
+          .sprintf(now.toISOString()));
+      });
     });
   });
 });

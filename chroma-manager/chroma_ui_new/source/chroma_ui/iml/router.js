@@ -20,7 +20,8 @@
 // express and approved by Intel in writing.
 
 
-angular.module('iml').config(['$routeSegmentProvider', function ($routeSegmentProvider) {
+angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment'])
+  .config(['$routeSegmentProvider', function ($routeSegmentProvider) {
   'use strict';
 
   $routeSegmentProvider.options.autoLoadTemplates = true;
@@ -43,5 +44,43 @@ angular.module('iml').config(['$routeSegmentProvider', function ($routeSegmentPr
   $routeSegmentProvider.within('app').segment('dashboard', {
     controller: 'DashboardCtrl',
     templateUrl: 'iml/dashboard/assets/html/dashboard.html'
+  });
+
+  $routeSegmentProvider.when('/dashboard/jobstats/:id/:startDate/:endDate', 'app.jobstats');
+
+  $routeSegmentProvider.within('app').segment('jobstats', {
+    controller: 'JobStatsCtrl',
+    controllerAs: 'jobStats',
+    templateUrl: 'iml/job-stats/assets/html/job-stats.html',
+    resolve: {
+      target: ['$route', 'TargetModel', function resolveTarget($route, TargetModel) {
+        return TargetModel.get({
+          id: $route.current.params.id
+        }).$promise;
+      }],
+      metrics: ['$q', '$route', 'TargetMetricModel', function resolveMetrics($q, $route, TargetMetricModel) {
+        var commonParams = {
+          begin: $route.current.params.startDate,
+          end: $route.current.params.endDate,
+          job: 'id',
+          id: $route.current.params.id
+        };
+        var metrics = ['read_bytes', 'write_bytes', 'read_iops', 'write_iops'];
+
+        var promises = metrics.reduce(function reducer(out, metric) {
+
+          var params = _.extend({}, commonParams, {metrics: metric});
+
+          out[metric] = TargetMetricModel.getJobAverage(params);
+
+          return out;
+        }, {});
+
+        return $q.all(promises);
+      }]
+    },
+    untilResolved: {
+      templateUrl: 'common/loading/assets/html/loading.html'
+    }
   });
 }]);

@@ -69,6 +69,10 @@ module.exports = function targetOstMetricsResourceFactory(TargetResource, Q) {
 
         var record = _.find(objects, {id: key});
 
+        metrics[key].forEach(function (item) {
+          item.id = key;
+        });
+
         if (record)
           obj[record.name] = metrics[key];
         else

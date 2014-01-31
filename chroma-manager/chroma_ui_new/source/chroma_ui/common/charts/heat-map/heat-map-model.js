@@ -45,6 +45,7 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
       onMouseOver: _.noop,
       onMouseMove: _.noop,
       onMouseOut: _.noop,
+      onMouseClick: _.noop,
       margin: {top: 0, right: 0, bottom: 0, left: 0},
       transitionDuration: 250
     };
@@ -98,6 +99,8 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
         d3.select(cl(MODEL_SEL)).on('mousemove', getMouseHandler(chart.onMouseMove()));
 
         d3.select(cl(MODEL_SEL)).on('mouseout', getMouseHandler(chart.onMouseOut()));
+
+        d3.select(cl(MODEL_SEL)).on('click', getMouseHandler(chart.onMouseClick()));
 
         var gridHeight = availableHeight / keys.length;
 

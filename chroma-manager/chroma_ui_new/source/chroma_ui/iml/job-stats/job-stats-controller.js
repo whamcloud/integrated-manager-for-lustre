@@ -20,42 +20,18 @@
 // express and approved by Intel in writing.
 
 
-angular.module('readWriteHeatMap').factory('readWriteHeatMapTransformer', [readWriteHeatMapTransformerFactory]);
+angular.module('jobStats')
+.controller('JobStatsCtrl', ['$routeSegment', 'metrics', 'target', JobStatsCtrl]);
 
-function readWriteHeatMapTransformerFactory() {
+function JobStatsCtrl($routeSegment, metrics, target) {
   'use strict';
 
-  /**
-   * Transforms incoming protocol data to display write as a negative value.
-   * @param {Object} resp The response.
-   * @param {Object} deferred The deferred to pipe through.
-   */
-  return function transformer(resp, deferred) {
-    var newVal = resp.body;
+  var jobStatsCtrl = this;
 
-    if (!_.isPlainObject(newVal))
-      throw new Error('readWriteHeatMapTransformer expects resp.body to be an object!');
+  jobStatsCtrl.name = target.name;
 
-    /*jshint validthis: true */
-    var type = this.type;
+  jobStatsCtrl.startDate = $routeSegment.$routeParams.startDate;
+  jobStatsCtrl.endDate = $routeSegment.$routeParams.endDate;
 
-    resp.body = Object.keys(newVal).reduce(function (arr, key) {
-      var ost = {key: key, values: []};
-
-      newVal[key].forEach(function (item) {
-        ost.values.push({
-          x: new Date(item.ts),
-          z: item.data[type],
-          id: item.id
-        });
-      });
-
-      arr.push(ost);
-
-      return arr;
-    }, []);
-
-    deferred.resolve(resp);
-  };
+  _.extend(jobStatsCtrl, metrics);
 }
-
