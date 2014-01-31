@@ -22,6 +22,8 @@
 
 'use strict';
 
+var _ = require('lodash');
+
 module.exports = function streamFactory(logger) {
   /**
    * Sets up a loop.
@@ -35,7 +37,7 @@ module.exports = function streamFactory(logger) {
    * Stop streaming.
    */
   Stream.prototype.stop = function stop () {
-    clearInterval(this.timer);
+    clearTimeout(this.timer);
 
     this.timer = null;
   };
@@ -43,20 +45,30 @@ module.exports = function streamFactory(logger) {
   /**
    * Starts streaming a passed resource method every interval.
    * Only one stream can be running on an instance.
-   * @param {Function} cb
+   * @param {function (?Object, Function)} cb
    */
   Stream.prototype.start = function start(cb) {
+    var self = this,
+      partialCb = _.partialRight(cb, done);
+
     if (this.timer) {
       var err = new Error('Already streaming.');
 
       logger.error({err: err});
-      cb({error: err});
+      partialCb({error: err});
       return;
     }
 
-    cb();
+    partialCb(null);
 
-    this.timer = setInterval(cb, this.interval);
+    function done() {
+      self.timer = setTimeout(function (err) {
+        if (self.timer == null)
+          return;
+
+        partialCb(err);
+      }, self.interval);
+    }
   };
 
   return Stream;

@@ -23,11 +23,10 @@
 'use strict';
 
 var inherits = require('util').inherits,
-  async = require('async'),
   _ = require('lodash');
 
 
-module.exports = function targetOstMetricsResourceFactory(TargetResource) {
+module.exports = function targetOstMetricsResourceFactory(TargetResource, Q) {
   /**
    * Extension of the TargetResource.
    * Used for joining target names to OST metrics.
@@ -43,9 +42,8 @@ module.exports = function targetOstMetricsResourceFactory(TargetResource) {
    * Gets OST metrics and joins them with their related target name by id.
    * Metrics will be returned with record.name instead of their original key.
    * @param {Object} params
-   * @param {Function} cb
    */
-  TargetOstMetricsResource.prototype.httpGetOstMetrics = function httpGetOstMetrics(params, cb) {
+  TargetOstMetricsResource.prototype.httpGetOstMetrics = function httpGetOstMetrics(params) {
     var getListParams = {
       qs: {
         kind: 'OST',
@@ -53,24 +51,22 @@ module.exports = function targetOstMetricsResourceFactory(TargetResource) {
       }
     };
 
-    async.parallel([
-      this.httpGetMetrics.bind(this, params),
-      this.httpGetList.bind(this, getListParams)
-    ], allDone);
+    return Q.all([
+      this.httpGetMetrics(params),
+      this.httpGetList(getListParams)
+    ]).spread(allDone);
 
-    function allDone(err, responses) {
-      if (err) {
-        cb(err);
-        return;
-      }
-
-      var metrics = responses[0][1],
-        targets = responses[1][1],
+    function allDone(metricsResp, targetsResp) {
+      var metrics = metricsResp.body,
+        targets = targetsResp.body,
         objects = targets.objects;
 
-      var metricsJoinedWithTargets = Object.keys(metrics).reduce(buildMetricsJoinedWithTargets, {});
+      metricsResp.body = Object.keys(metrics).reduce(buildMetricsJoinedWithTargets, {});
 
       function buildMetricsJoinedWithTargets(obj, key) {
+        if (Array.isArray(metrics[key]) && metrics[key].length === 0)
+          return obj;
+
         var record = _.find(objects, {id: key});
 
         if (record)
@@ -81,7 +77,7 @@ module.exports = function targetOstMetricsResourceFactory(TargetResource) {
         return obj;
       }
 
-      cb(null, responses[0][0], metricsJoinedWithTargets, params);
+      return metricsResp;
     }
   };
 

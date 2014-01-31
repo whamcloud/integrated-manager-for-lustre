@@ -20,6 +20,8 @@
 // express and approved by Intel in writing.
 
 
+/** @module conf */
+
 'use strict';
 
 var conf = require('./conf.json'),

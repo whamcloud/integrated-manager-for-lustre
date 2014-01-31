@@ -44,8 +44,7 @@ describe('file system channel', function () {
       expect(data).toEqual({
         headers: jasmine.any(Object),
         statusCode: 200,
-        body: jasmine.any(Object),
-        params: jasmine.any(Object)
+        body: jasmine.any(Object)
       });
 
       done();

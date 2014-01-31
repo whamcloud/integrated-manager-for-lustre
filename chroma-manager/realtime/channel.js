@@ -40,52 +40,50 @@ module.exports = function channelFactory (primus, logger, Stream) {
 
       resource.getHttpMethods().forEach(function (method) {
         spark.on(method, function (params, cb) {
-          resource[method](params, function (err, resp, body, reqParams) {
-            if (err) {
-              log.error({err: err});
-              spark.send('streamingError', errorSerializer(err));
-            } else {
-              var data = {
+          resource[method](params)
+            .then(function (resp) {
+              cb({
                 headers: resp.headers,
                 statusCode: resp.statusCode,
-                body: body,
-                params: reqParams
-              };
+                body: resp.body,
+                params: params
+              });
+            })
+            .catch(function (err) {
+              log.error({err: err});
+              spark.send('streamingError', errorSerializer(err));
+            });
 
-              cb(data);
-            }
-          });
         });
       });
 
       spark.on('startStreaming', function startStreaming() {
         if (stream.timer) return;
 
-        stream.start(function callback(err) {
+        stream.start(function callback(err, done) {
           if (err != null) {
             log.error({err: err});
             spark.send('streamingError', errorSerializer(err));
           }
 
           spark.send('beforeStreaming', function (method, params) {
-            log.info('sending request', params);
+            resource[method](params)
+              .then(function (resp) {
+                var data = {
+                  headers: resp.headers,
+                  statusCode: resp.statusCode,
+                  body: resp.body,
+                  params: params
+                };
 
-            resource[method](params, function (err, resp, body, reqParams) {
-              if (err != null) {
+                spark.send('stream', data);
+              })
+              .catch(function (err) {
                 log.error({err: err});
                 spark.send('streamingError', errorSerializer(err));
-                return;
-              }
-
-              var data = {
-                headers: resp.headers,
-                statusCode: resp.statusCode,
-                body: body,
-                params: reqParams
-              };
-
-              spark.send('stream', data);
-            });
+              })
+              .finally(done)
+              .done();
           });
         });
       });

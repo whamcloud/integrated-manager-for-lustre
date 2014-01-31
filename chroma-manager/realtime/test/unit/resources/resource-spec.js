@@ -3,15 +3,22 @@
 var sinon = require('sinon'),
   resourceFactory = require('../../../resources/resource');
 
-require('jasmine-sinon');
-
 describe('resource', function () {
-  var Resource, conf, request, requestInstance, logger, log, clock;
+  var Resource, conf, request, requestInstance, logger, log, Q, clock;
 
   beforeEach(function () {
-    log = sinon.spy();
+    Q = {
+      ninvoke: jasmine.createSpy('Q.ninvoke').andReturn({
+        spread: jasmine.createSpy('Q.ninvoke.spread')
+      })
+    };
 
     clock = sinon.useFakeTimers(1330688329321);
+
+    log = {
+      info: jasmine.createSpy('log.info'),
+      debug: jasmine.createSpy('log.debug')
+    };
 
     conf = {
       apiUrl: 'https://fake.com/api/',
@@ -19,18 +26,18 @@ describe('resource', function () {
     };
 
     requestInstance = {
-      get: sinon.spy()
+      get: jasmine.createSpy('request')
     };
 
     logger = {
-      child: sinon.stub().returns(log)
+      child: jasmine.createSpy('logger.child').andReturn(log)
     };
 
     request = {
-      defaults: sinon.stub().returns(requestInstance)
+      defaults: jasmine.createSpy('request.defaults').andReturn(requestInstance)
     };
 
-    Resource = resourceFactory(conf, request, logger);
+    Resource = resourceFactory(conf, request, logger, Q);
   });
 
   afterEach(function () {
@@ -70,7 +77,7 @@ describe('resource', function () {
     });
 
     it('should create a logger', function () {
-      expect(logger.child).toHaveBeenAlwaysCalledWith({resource: 'Resource'});
+      expect(logger.child).toHaveBeenCalledOnceWith({resource: 'Resource'});
     });
 
     it('should make the logger available', function () {
@@ -82,16 +89,18 @@ describe('resource', function () {
     });
 
     it('should set the request', function () {
-      expect(resource.request).toBe(requestInstance);
+      expect(resource.request).toEqual({
+        get: jasmine.any(Function)
+      });
     });
 
     describe('httpMethods', function () {
       it('should provide a httpGetList method', function () {
         var params = {foo: 'bar'};
 
-        resource.__httpGetList(params, function () {});
+        resource.__httpGetList(params);
 
-        expect(requestInstance.get).toHaveBeenAlwaysCalledWith(params, sinon.match.func);
+        expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', params);
       });
 
       it('should provide a httpGetMetrics method', function () {
@@ -102,39 +111,39 @@ describe('resource', function () {
           }
         };
 
-        resource.__httpGetMetrics(params, function () {});
+        resource.__httpGetMetrics(params);
 
-        expect(requestInstance.get).toHaveBeenAlwaysCalledWith({
+        expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', {
           qs: {
             end: '2012-03-02T11:38:49.321Z',
             begin: '2012-03-02T11:28:49.321Z',
             size: 10,
             unit: 'minutes'
           }
-        }, sinon.match.func);
+        });
       });
 
       describe('request for', function () {
         it('should provide a way to expand the path', function () {
           resource.requestFor({extraPath: 'hello'});
 
-          var config = request.defaults.getCall(1).args[0];
+          var url = request.defaults.mostRecentCall.args[0].url;
 
-          expect(config.url).toBe(conf.apiUrl + path + '/' + 'hello/');
+          expect(url).toBe(conf.apiUrl + path + '/' + 'hello/');
         });
 
         it('should provide a way to add an id', function () {
           resource.requestFor({id: 5});
 
-          var config = request.defaults.getCall(1).args[0];
+          var url = request.defaults.mostRecentCall.args[0].url;
 
-          expect(config.url).toBe(conf.apiUrl + path + '/5/');
+          expect(url).toBe(conf.apiUrl + path + '/5/');
         });
 
         it('should call defaults with the expected config', function () {
           resource.requestFor();
 
-          var config = request.defaults.getCall(1).args[0];
+          var config = request.defaults.mostRecentCall.args[0];
 
           expect(config).toEqual({
             jar: true,
@@ -146,34 +155,41 @@ describe('resource', function () {
         });
       });
 
-      describe('generic GET handler', function () {
-        var genericGetHandler, cb, params;
+      describe('get handling', function () {
+        var params = {}, spread;
 
         beforeEach(function () {
-          cb = sinon.spy();
-          params = {};
+          resource.requestFor().get(params);
 
-          genericGetHandler = resource.createGenericGetHandler(cb, params);
+          spread = Q.ninvoke.plan().spread.mostRecentCall.args[0];
         });
 
-        it('should call with an error', function () {
-          var err = new Error('boom!');
-
-          genericGetHandler(err);
-
-          expect(cb).toHaveBeenAlwaysCalledWith({error: err});
+        it('should invoke request.get with params', function () {
+          expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', params);
         });
 
-        it('should call with an error if resp is >= 400', function () {
-          genericGetHandler(null, {statusCode: 500}, []);
+        it('should throw if resp.statusCode is >= 400', function () {
+          var resp = {
+            request: {},
+            statusCode: 400
+          };
 
-          expect(cb).toHaveBeenAlwaysCalledWith({error: [], status: 500});
+          function shouldThrow() {
+            spread(resp, {});
+          }
+
+          expect(shouldThrow).toThrow();
         });
 
-        it('should call when there is no error', function () {
-          genericGetHandler(null, {statusCode: 200}, []);
+        it('should return resp if resp.statusCode is < 400', function () {
+          var resp = {
+            request: {},
+            statusCode: 200
+          };
 
-          expect(cb).toHaveBeenAlwaysCalledWith(null, {statusCode: 200}, [], params);
+          var result = spread(resp, {});
+
+          expect(result).toBe(resp);
         });
       });
     });

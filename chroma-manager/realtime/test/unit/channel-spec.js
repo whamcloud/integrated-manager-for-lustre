@@ -1,42 +1,40 @@
 'use strict';
 
-var sinon = require('sinon'),
+var Q = require('q'),
   channelFactory = require('../../channel');
-
-require('jasmine-sinon');
 
 describe('channel', function () {
   var logger, Stream, Resource, primus, setup, channelInstance, spark, log;
 
   beforeEach(function () {
     log = {
-      info: sinon.spy(),
-      error: sinon.spy()
+      info: jasmine.createSpy('log.info'),
+      error: jasmine.createSpy('log.error')
     };
 
     logger = {
-      child: sinon.stub().returns(log)
+      child: jasmine.createSpy('logger').andReturn(log)
     };
 
     Resource = function Resource() {};
-    Resource.prototype.getHttpMethods = sinon.stub();
+    Resource.prototype.getHttpMethods = jasmine.createSpy('resource.getHttpMethods');
 
     Stream = function Stream() {};
-    Stream.prototype.start = sinon.spy();
-    Stream.prototype.stop = sinon.spy();
+    Stream.prototype.start = jasmine.createSpy('stream.start');
+    Stream.prototype.stop = jasmine.createSpy('stream.end');
 
     spark = {
-      on: sinon.spy(),
-      send: sinon.spy(),
-      removeAllListeners: sinon.spy()
+      on: jasmine.createSpy('spark.on'),
+      send: jasmine.createSpy('spark.send'),
+      removeAllListeners: jasmine.createSpy('spark.removeAllListeners')
     };
 
     channelInstance = {
-      on: sinon.spy()
+      on: jasmine.createSpy('channelInstance.on')
     };
 
     primus = {
-      channel: sinon.stub().returns(channelInstance)
+      channel: jasmine.createSpy('primus.channel').andReturn(channelInstance)
     };
 
     setup = channelFactory(primus, logger, Stream);
@@ -52,55 +50,55 @@ describe('channel', function () {
     });
 
     it('should create a child log', function () {
-      expect(logger.child).toHaveBeenAlwaysCalledWith({channelName: channelName});
+      expect(logger.child).toHaveBeenCalledOnceWith({channelName: channelName});
     });
 
     it('should create a channel', function () {
-      expect(primus.channel).toHaveBeenAlwaysCalledWith(channelName);
+      expect(primus.channel).toHaveBeenCalledOnceWith(channelName);
     });
 
     it('should register a connection listener to the channel', function () {
-      expect(channelInstance.on).toHaveBeenAlwaysCalledWith('connection', sinon.match.func);
+      expect(channelInstance.on).toHaveBeenCalledOnceWith('connection', jasmine.any(Function));
     });
 
     describe('connection', function () {
       var connectionHandler;
 
       beforeEach(function () {
-        connectionHandler = channelInstance.on.getCall(0).args[1];
+        connectionHandler = channelInstance.on.mostRecentCall.args[1];
 
-        Resource.prototype.getHttpMethods.returns([]);
+        Resource.prototype.getHttpMethods.andReturn([]);
 
         connectionHandler(spark);
       });
 
       it('should log the connection', function () {
-        expect(log.info).toHaveBeenCalledWith('connected');
+        expect(log.info).toHaveBeenCalledOnceWith('connected');
       });
 
       it('should register a listener on startStreaming', function () {
-        expect(spark.on).toHaveBeenCalledWith('startStreaming', sinon.match.func);
+        expect(spark.on).toHaveBeenCalledOnceWith('startStreaming', jasmine.any(Function));
       });
 
       it('should register a listener on stopStreaming', function () {
-        expect(spark.on).toHaveBeenCalledWith('stopStreaming', sinon.match.func);
+        expect(spark.on).toHaveBeenCalledWith('stopStreaming', jasmine.any(Function));
       });
 
       it('should register a listener on end', function () {
-        expect(spark.on).toHaveBeenCalledWith('end', sinon.match.func);
+        expect(spark.on).toHaveBeenCalledWith('end', jasmine.any(Function));
       });
 
       describe('start streaming', function () {
         var startStreamingHandler;
 
         beforeEach(function () {
-          startStreamingHandler = spark.on.getCall(0).args[1];
+          startStreamingHandler = spark.on.calls[0].args[1];
         });
 
         it('should start the stream', function () {
           startStreamingHandler();
 
-          expect(Stream.prototype.start).toHaveBeenAlwaysCalledWith(sinon.match.func);
+          expect(Stream.prototype.start).toHaveBeenCalledOnceWith(jasmine.any(Function));
         });
 
         it('should return if stream already has a timer', function () {
@@ -116,13 +114,13 @@ describe('channel', function () {
 
           beforeEach(function () {
             startStreamingHandler();
-            streamStartHandler = Stream.prototype.start.getCall(0).args[0];
+            streamStartHandler = Stream.prototype.start.mostRecentCall.args[0];
           });
 
           it('should send beforeStreaming from the spark', function () {
             streamStartHandler();
 
-            expect(spark.send).toHaveBeenCalledWith('beforeStreaming', sinon.match.func);
+            expect(spark.send).toHaveBeenCalledWith('beforeStreaming', jasmine.any(Function));
           });
 
           it('should log an error if one occurs', function () {
@@ -138,76 +136,95 @@ describe('channel', function () {
 
             streamStartHandler(err);
 
-            expect(spark.send).toHaveBeenCalledWith('streamingError', sinon.match.object);
+            expect(spark.send).toHaveBeenCalledWith('streamingError', jasmine.any(Object));
           });
 
           describe('beforeStreaming', function () {
-            var beforeStreamingHandler;
+            var beforeStreamingHandler, done, defer;
 
             beforeEach(function () {
-              streamStartHandler();
-              beforeStreamingHandler = spark.send.getCall(0).args[1];
+              defer = Q.defer();
 
-              Resource.prototype.foo = sinon.stub();
+              done = jasmine.createSpy('done');
+              streamStartHandler(null, done);
+              beforeStreamingHandler = spark.send.mostRecentCall.args[1];
+
+              spyOn(Q.makePromise.prototype, 'finally').andCallThrough();
+
+              Resource.prototype.foo = jasmine.createSpy('resource.foo').andReturn(defer.promise);
 
               beforeStreamingHandler('foo', {});
             });
 
-            it('should log the request params', function () {
-              expect(log.info).toHaveBeenCalledWith('sending request', {});
-            });
-
-            it('should log an error if one occurs from the resource method', function () {
+            it('should log an error if one occurs from the resource method', function (done) {
               var err = new Error('boom!');
 
-              Resource.prototype.foo.callArgWith(1, err);
+              defer.reject(err);
 
-              expect(log.error).toHaveBeenCalledWith({err: err});
+              defer.promise.finally(function () {
+                expect(log.error).toHaveBeenCalledWith({err: err});
+                done();
+              });
             });
 
-            it('should send a streamingError from the spark', function () {
+            it('should send a streamingError from the spark', function (done) {
               var err = new Error('boom!');
 
-              Resource.prototype.foo.callArgWith(1, err);
+              defer.reject(err);
 
-              expect(spark.send).toHaveBeenCalledWith('streamingError', sinon.match.object);
+              defer.promise.finally(function () {
+                expect(spark.send).toHaveBeenCalledWith('streamingError', jasmine.any(Object));
+                done();
+              });
             });
 
-            it('should send stream of data', function () {
-              var resp = {headers: {}, statusCode: 200},
-                body = [],
-                reqParams = {param: 'value'};
+            describe('sending data', function () {
+              beforeEach(function () {
+                var resp = {
+                  headers: {},
+                  statusCode: 200,
+                  body: []
+                };
 
-              Resource.prototype.foo.callArgWith(1, null, resp, body, reqParams);
+                defer.resolve(resp);
+              });
 
-              expect(spark.send).toHaveBeenCalledWith('stream', {
-                headers: {},
-                statusCode: 200,
-                body: [],
-                params: reqParams
+              it('should send stream of data', function (done) {
+                defer.promise.then(function () {
+                  expect(spark.send).toHaveBeenCalledOnceWith('stream', {
+                    headers: {},
+                    statusCode: 200,
+                    body: [],
+                    params: {}
+                  });
+
+                  done();
+                });
+              });
+
+              it('should call done', function () {
+                expect(Q.makePromise.prototype.finally).toHaveBeenCalledOnceWith(done);
               });
             });
           });
-
         });
-
       });
 
       describe('stop streaming', function () {
         var stopStreamingHandler, fn;
 
         beforeEach(function () {
-          fn = sinon.spy();
-          stopStreamingHandler = spark.on.getCall(1).args[1];
+          fn = jasmine.createSpy('fn');
+          stopStreamingHandler = spark.on.calls[1].args[1];
           stopStreamingHandler(fn);
         });
 
         it('should stop the stream', function () {
-          expect(Stream.prototype.stop).toHaveBeenCalledOnce();
+          expect(Stream.prototype.stop).toHaveBeenCalled();
         });
 
         it('should call the ack function', function () {
-          expect(fn).toHaveBeenCalledOnce();
+          expect(fn).toHaveBeenCalled();
         });
       });
 
@@ -215,13 +232,13 @@ describe('channel', function () {
         var endHandler;
 
         beforeEach(function () {
-          endHandler = spark.on.getCall(2).args[1];
+          endHandler = spark.on.calls[2].args[1];
 
           endHandler();
         });
 
         it('should remove all listeners from the spark', function () {
-          expect(spark.removeAllListeners).toHaveBeenCalledOnce();
+          expect(spark.removeAllListeners).toHaveBeenCalled();
         });
 
         it('should log the stream has ended', function () {
@@ -229,7 +246,7 @@ describe('channel', function () {
         });
 
         it('should stop the stream', function () {
-          expect(Stream.prototype.stop).toHaveBeenCalledOnce();
+          expect(Stream.prototype.stop).toHaveBeenCalled();
         });
       });
     });

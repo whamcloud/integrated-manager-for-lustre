@@ -40,6 +40,8 @@ describe('stream', function () {
       cb = sinon.spy();
 
       stream.start(cb);
+
+      cb.callArg(1);
     });
 
     it('should call the callback', function () {
