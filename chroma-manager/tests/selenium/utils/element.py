@@ -5,6 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
+from tests.selenium.utils.constants import wait_time
+
 
 def element_visible(element):
     try:
@@ -91,7 +93,10 @@ def enter_text_for_element(driver, selector_or_element, text_value):
         element = selector_or_element
     element.clear()
     element.send_keys(text_value)
-    WebDriverWait(driver, 10).until(lambda driver: element.get_attribute('value') == text_value)
+    WebDriverWait(driver, wait_time['medium']).until(
+        lambda driver: element.get_attribute('value') == text_value,
+        "Expected the text '%s' to be entered into the element, but instead found the text '%s'" % (text_value, element.get_attribute('value'))
+    )
 
 
 def select_element_option(driver, selector, index):

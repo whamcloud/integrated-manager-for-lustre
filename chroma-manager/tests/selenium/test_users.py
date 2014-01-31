@@ -1,16 +1,17 @@
 from functools import partial
+
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from testconfig import config
-from tests.selenium.views.login import Login
 
 from utils.sample_data import Testdata
 from utils.messages_text import validation_messages
 
 from tests.selenium.views.users import Users
 from tests.selenium.base import SeleniumBaseTestCase
+from tests.selenium.views.login import Login
 from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.element import enter_text_for_element, select_element_option
 
@@ -189,9 +190,9 @@ class TestUsers(SeleniumBaseTestCase):
         the_call = partial(self.driver.find_element_by_css_selector, self.user_page.accept_eula_checkbox)
 
         with wrapped_login(self, fsadmin.username):
-            self.user_page._open_account_dialog()
+            self.user_page.open_account_dialog()
             self.assertRaises(NoSuchElementException, the_call)
-            self.user_page.account_dialog_close()
+            self.user_page.close_account_dialog()
 
         self.navigation.go("Configure", "Users")
         self.delete_user(fsadmin)
@@ -283,4 +284,5 @@ class TestUsers(SeleniumBaseTestCase):
             setattr(verify_user, arg, kwargs[arg])
 
         subscribed_alerts = self.user_page.list_own_subscribed_alerts()
+
         self.assertEqual(verify_user.alert_type_subscriptions, subscribed_alerts)

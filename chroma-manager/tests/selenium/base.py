@@ -16,6 +16,25 @@ from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.patch_driver_execute import patch_driver_execute
 
 
+# Setup up the main log for test actions
+log = logging.getLogger('test')
+log.setLevel(logging.DEBUG)
+handler = logging.FileHandler('selenium_test.log')
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+log.addHandler(handler)
+
+# Setup the log for Chrome console messages
+console_log = logging.getLogger('console')
+console_log.setLevel(logging.DEBUG)
+console_handler = logging.FileHandler('%s_console.log' % config['browser'])
+console_handler.setLevel(logging.DEBUG)
+console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(console_formatter)
+console_log.addHandler(console_handler)
+
+
 def quiesce_api(driver, timeout):
     for i in xrange(timeout):
         busy = driver.execute_script('return ($.active != 0);')
@@ -39,23 +58,21 @@ def wait_for_transition(driver, timeout):
     # but updates to changed objects are run asynchronously.
     quiesce_api(driver, timeout)
 
-# Setup up the main log for test actions
-log = logging.getLogger('test')
-log.setLevel(logging.DEBUG)
-handler = logging.FileHandler('selenium_test.log')
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-log.addHandler(handler)
+def take_debug_screenshot(driver, name):
+    """Take a screenshot to use for debugging."""
+    debug_screen_shot_dir = "%s/debug-screen-shots" % os.getcwd()
 
-# Setup the log for Chrome console messages
-console_log = logging.getLogger('console')
-console_log.setLevel(logging.DEBUG)
-console_handler = logging.FileHandler('console.log')
-console_handler.setLevel(logging.DEBUG)
-console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(console_formatter)
-console_log.addHandler(console_handler)
+    if not os.path.exists(debug_screen_shot_dir):
+        os.makedirs(debug_screen_shot_dir)
+
+    filename = "%s/%s_%s.png" % (
+        debug_screen_shot_dir,
+        name,
+        datetime.datetime.now().isoformat()
+    )
+
+    log.debug("Saving screen shot to %s", filename)
+    driver.get_screenshot_as_file(filename)
 
 
 class SeleniumBaseTestCase(TestCase):
@@ -73,6 +90,13 @@ class SeleniumBaseTestCase(TestCase):
         self.medium_wait = wait_time['medium']
         self.long_wait = wait_time['long']
 
+        self.browser = config['browser']
+
+    def id(self):
+        """We want to override the default description of each test to help differentiate
+        the results when running multiple times with different browsers."""
+        return "selenium_old_ui.%s.%s" % (self.browser, super(SeleniumBaseTestCase, self).id())
+
     def setUp(self):
         if not config['chroma_managers'][0]['server_http_url']:
             raise RuntimeError("Please set server_http_url in config file")
@@ -85,8 +109,7 @@ class SeleniumBaseTestCase(TestCase):
         if not self.driver:
             patch_driver_execute()
 
-            browser = config['chroma_managers'][0]['browser']
-            if browser == 'Chrome':
+            if self.browser == 'Chrome':
                 self.addCleanup(self._capture_chromedriver_log_on_failure)
 
                 options = webdriver.ChromeOptions()
@@ -99,7 +122,7 @@ class SeleniumBaseTestCase(TestCase):
                 options.add_argument('v=1000')  # Get all levels of vlogs
 
                 self.driver = webdriver.Chrome(chrome_options=options, service_args=["--verbose", "--log-path=chromedriver.log"])
-            elif browser == 'Firefox':
+            elif self.browser == 'Firefox':
                 self.driver = webdriver.Firefox()
 
         self.driver.set_window_size(1024, 768)
@@ -262,7 +285,7 @@ class SeleniumBaseTestCase(TestCase):
     def _capture_chromedriver_log_on_failure(self):
         test_failed = False if sys.exc_info() == (None, None, None) else True
 
-        if test_failed and config['chroma_managers'][0]['browser'] == 'Chrome':
+        if test_failed and self.browser == 'Chrome':
             failed_browser_log_dir = os.path.join(os.getcwd(), 'failed-browser-logs')
 
             if not os.path.exists(failed_browser_log_dir):
@@ -283,10 +306,9 @@ class SeleniumBaseTestCase(TestCase):
                 self.log.error("Did not find chromedriver.log in the expected location. Skipping.")
 
     def _log_console(self):
-        if config['chroma_managers'][0]['browser'] == 'Chrome':
-            console = self.driver.get_log('browser')
+        console = self.driver.get_log('browser')
 
-            if not isinstance(console, (list, dict)):
-                console = []
+        if not isinstance(console, (list, dict)):
+            console = []
 
-            console_log.info("\n\nConsole for test %s:\n\n '%s'" % (self.id(), json.dumps(console)))
+        console_log.info("\n\nConsole for test %s:\n\n '%s'" % (self.id(), json.dumps(console)))

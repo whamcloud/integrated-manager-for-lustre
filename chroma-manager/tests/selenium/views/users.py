@@ -1,4 +1,6 @@
 from functools import wraps
+from selenium.webdriver.support.ui import WebDriverWait
+
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
 from tests.selenium.utils.element import (
@@ -16,7 +18,7 @@ def open_and_save_account(tab_type="details"):
             tab = getattr(self, "user_%s_tab" % tab_type)
             save_button = getattr(self, "save_%s_button" % tab_type)
 
-            self._open_account_dialog()
+            self.open_account_dialog()
             self.driver.find_element_by_css_selector(tab).click()
 
             val = func(*args, **kwargs)
@@ -24,7 +26,7 @@ def open_and_save_account(tab_type="details"):
             # Click save button
             self.driver.find_element_by_css_selector(save_button).click()
             # Click close button
-            self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
+            self.close_account_dialog()
             self.quiesce()
             return val
 
@@ -89,12 +91,20 @@ class Users(DatatableView):
     def create_new_user_button(self):
         return self.driver.find_element_by_css_selector("#create_user")
 
-    def _open_account_dialog(self):
+    def open_account_dialog(self):
         account_button = wait_for_element_by_css_selector(self.driver, "#account", 10)
-        self.quiesce()
         account_button.click()
         self._reset_ui()
         wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
+
+    def close_account_dialog(self):
+        # Click the close button
+        self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
+        # Wait for the account dialog to no longer be visible
+        WebDriverWait(self.driver, self.standard_wait).until_not(
+            lambda driver: driver.find_element_by_css_selector(self.user_detail).is_displayed(),
+            "Expected the user dialog to close, but it is still visible after %s seconds." % self.standard_wait
+        )
 
     def add(self, user_group, username, first_name, last_name, email, password, confirm_password):
         # Enter data for adding new user
@@ -126,8 +136,7 @@ class Users(DatatableView):
                 self.driver.find_element_by_css_selector(self.save_details_button).click()
                 wait_for_element_by_xpath(self.driver, '//div[@id="user_save_result"][contains(., "Changes saved successfully.")]', self.medium_wait)
                 # Click close button
-                self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
-                assert not find_visible_element_by_css_selector(self.driver, self.user_detail)
+                self.close_account_dialog()
                 self.quiesce()
                 return
 
@@ -147,8 +156,7 @@ class Users(DatatableView):
                 # Click save button
                 self.driver.find_element_by_css_selector(self.save_password_button).click()
                 # Click close button
-                self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
-                self.quiesce()
+                self.close_account_dialog()
                 return
 
         raise RuntimeError("Cannot change password for user: %s" + username)
@@ -170,8 +178,7 @@ class Users(DatatableView):
                 # Click save button
                 self.driver.find_element_by_css_selector(self.save_alerts_button).click()
                 # Click close button
-                self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
-                self.quiesce()
+                self.close_account_dialog()
                 return
 
         raise RuntimeError("Cannot edit alerts for user: %s" + username)
@@ -213,14 +220,13 @@ class Users(DatatableView):
         enter_text_for_element(self.driver, self.edit_last_name, last_name)
 
     def list_own_subscribed_alerts(self):
-        self._open_account_dialog()
+        self.open_account_dialog()
+
         self.driver.find_element_by_css_selector(self.user_alerts_tab).click()
         alerts_form = self.driver.find_element_by_css_selector(self.user_alerts_form)
         subscribed = [el.get_attribute('name') for el in alerts_form.find_elements_by_css_selector('input[type="checkbox"]') if el.is_selected()]
 
-        # Click close button
-        self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
-        self.quiesce()
+        self.close_account_dialog()
 
         return subscribed
 
@@ -286,6 +292,3 @@ class Users(DatatableView):
     def creation_dialog_close(self):
         self.get_visible_element_by_css_selector(".cancel_button").click()
         assert not find_visible_element_by_css_selector(self.driver, self.create_user_dialog)
-
-    def account_dialog_close(self):
-        self.get_visible_element_by_css_selector(self.close_account_dialog_button).click()
