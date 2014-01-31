@@ -29,8 +29,10 @@
       var requestAnimationFrame = $window.requestAnimationFrame;
       var lastTime = 0;
 
-      for(var x = 0; x < vendors.length && !requestAnimationFrame; x += 1)
-        requestAnimationFrame = $window[vendors[x]+'RequestAnimationFrame'];
+      if (!requestAnimationFrame)
+        vendors.some(function (vendor) {
+          return (requestAnimationFrame = $window[vendor + 'RequestAnimationFrame']);
+        });
 
       if (!requestAnimationFrame)
         requestAnimationFrame = function(callback) {
@@ -47,10 +49,11 @@
     .factory('cancelAnimationFrame', ['$window', function ($window) {
       var cancelAnimationFrame = $window.cancelAnimationFrame;
 
-      for (var x = 0; x < vendors.length && !cancelAnimationFrame; x += 1) {
-        cancelAnimationFrame =
-          $window[vendors[x]+'CancelAnimationFrame'] || $window[vendors[x]+'CancelRequestAnimationFrame'];
-      }
+      if (!cancelAnimationFrame)
+        vendors.some(function (vendor) {
+          return (cancelAnimationFrame =
+            $window[vendor + 'CancelAnimationFrame'] || $window[vendor + 'CancelRequestAnimationFrame']);
+        });
 
       if (!cancelAnimationFrame)
         cancelAnimationFrame = function(id) {
