@@ -32,6 +32,26 @@ from chroma_agent.log import console_log, daemon_log
 from chroma_agent.plugin_manager import ActionPluginManager
 
 
+def raw_result(wrapped):
+    """
+    Decorator for functions whose output should not be JSON-serialized.
+    """
+    def wrapper(*args, **kwargs):
+        result = wrapped(*args, **kwargs)
+        return {'raw_result': result}
+
+    # These contortions are necessary to retain compatibility with
+    # argparse's ability to generate CLI options by signature inspection.
+    import functools
+    wrapped_signature = inspect.getargspec(wrapped)
+    formatted_args = inspect.formatargspec(*wrapped_signature)
+    compat_name = "_%s" % wrapped.func_name
+    compat_def = 'lambda %s: %s%s' % (formatted_args.lstrip('(').rstrip(')'),
+                                      compat_name, formatted_args)
+    compat_fn = eval(compat_def, {compat_name: wrapper})
+    return functools.wraps(wrapped)(compat_fn)
+
+
 def _register_function(parser, name, fn):
     """
     Generate approximate mapping of ActionPlugin functions
@@ -81,9 +101,12 @@ def main():
         shell.thread_state.enable_save()
         args = parser.parse_args()
         result = args.func(args)
-        sys.stderr.write(json.dumps(shell.thread_state.get_subprocesses(), indent = 2))
-        sys.stderr.write("\n\n")
-        print json.dumps({'success': True, 'result': result}, indent = 2)
+        try:
+            print result['raw_result']
+        except (TypeError, KeyError):
+            sys.stderr.write(json.dumps(shell.thread_state.get_subprocesses(), indent = 2))
+            sys.stderr.write("\n\n")
+            print json.dumps({'success': True, 'result': result}, indent = 2)
     except SystemExit:
         raise
     except Exception:

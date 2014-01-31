@@ -44,24 +44,13 @@ GET_REQUEST_TIMEOUT = 60.0
 # FIXME: this file needs a concurrency review pass
 
 
-class AgentClient(object):
-    def __init__(self, url, action_plugins, device_plugins, server_properties, crypto):
-
-        self._fqdn = server_properties.fqdn
-        self._nodename = server_properties.nodename
-        self._crypto = crypto
-
-        self.boot_time = server_properties.boot_time
-        self.start_time = datetime.datetime.utcnow()
-
+class CryptoClient(object):
+    def __init__(self, url, crypto, fqdn=None):
         self.url = url
-        self.action_plugins = action_plugins
-        self.device_plugins = device_plugins
-        self.writer = HttpWriter(self)
-        self.reader = HttpReader(self)
-        self.sessions = SessionTable(self)
-
-        self.stopped = threading.Event()
+        self._crypto = crypto
+        self.fqdn = fqdn
+        if not self.fqdn:
+            self.fqdn = socket.getfqdn()
 
     def get(self, **kwargs):
         kwargs['timeout'] = GET_REQUEST_TIMEOUT
@@ -94,6 +83,25 @@ class AgentClient(object):
             return response.json()
         except ValueError:
             return None
+
+
+class AgentClient(CryptoClient):
+    def __init__(self, url, action_plugins, device_plugins, server_properties, crypto):
+        super(AgentClient, self).__init__(url, crypto)
+
+        self._fqdn = server_properties.fqdn
+        self._nodename = server_properties.nodename
+
+        self.boot_time = server_properties.boot_time
+        self.start_time = datetime.datetime.utcnow()
+
+        self.action_plugins = action_plugins
+        self.device_plugins = device_plugins
+        self.writer = HttpWriter(self)
+        self.reader = HttpReader(self)
+        self.sessions = SessionTable(self)
+
+        self.stopped = threading.Event()
 
     def start(self):
         self.reader.start()
@@ -139,6 +147,7 @@ class AgentClient(object):
             raise
         else:
             return result
+
 
 MESSAGE_TYPES = ["SESSION_CREATE_REQUEST",
                  "SESSION_CREATE_RESPONSE",
