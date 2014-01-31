@@ -23,24 +23,34 @@
 'use strict';
 
 var bunyan = require('bunyan'),
+  path = require('path'),
   Logger = require('bunyan/lib/bunyan');
 
-module.exports = bunyan.createLogger({
-  name: 'realtime',
-  serializers: {
-    err: Logger.stdSerializers.err
-  },
-  streams: [
-    {
-      level: 'info',
-      stream: process.stdout           // log INFO and above to stdout
+module.exports = function loggerFactory(conf) {
+  var logPath, level;
+
+  if (conf.isProd) {
+    logPath = '/var/log/chroma';
+    level = 'info';
+  } else {
+    logPath = '';
+    level = 'debug';
+  }
+
+  return bunyan.createLogger({
+    name: 'realtime',
+    serializers: {
+      err: Logger.stdSerializers.err
     },
-    {
-      type: 'rotating-file',
-      path: './realtime.log',
-      closeOnExit: true,
-      period: '1d',   // daily rotation
-      count: 5        // keep 5 back copies
-    }
-  ]
-});
+    streams: [
+      {
+        level: level,
+        stream: process.stdout
+      },
+      {
+        type: 'file',
+        path: path.join(logPath, 'realtime.log')
+      }
+    ]
+  });
+};

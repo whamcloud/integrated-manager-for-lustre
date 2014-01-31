@@ -48,10 +48,14 @@ module.exports = {
   get caFile() {
     return getFile('authority.crt');
   },
+  get isProd() {
+    return conf.MODE === 'PROD';
+  },
   primusPort: conf.PRIMUS_PORT,
   primusUrl: url.format(parsedPrimusHttpUrl),
   parsedApiUrl: parsedApiHttpUrl,
-  apiUrl: url.format(parsedApiHttpUrl)
+  apiUrl: url.format(parsedApiHttpUrl),
+  mode: conf.MODE
 };
 
 /**
