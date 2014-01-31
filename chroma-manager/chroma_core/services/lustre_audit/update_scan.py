@@ -27,7 +27,8 @@ from django.db import transaction
 
 from chroma_core.lib.util import normalize_nid
 from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
-from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo
+from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo, LustreClientMount
+from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTargetMount
 import chroma_core.models.package
@@ -62,6 +63,7 @@ class UpdateScan(object):
         self.update_lnet()
         self.update_resource_locations()
         self.update_target_mounts()
+        self.update_client_mounts()
 
     def run(self, host_id, host_data):
         host = ManagedHost.objects.get(pk=host_id)
@@ -127,6 +129,48 @@ class UpdateScan(object):
             if self.host_data['lnet_nids']:
                 current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
                 LNetNidsChangedAlert.notify(self.host, not current)
+
+    def update_client_mounts(self):
+        # Client mount audit comes in via metrics due to the way the
+        # ClientAudit is implemented.
+        try:
+            client_mounts = self.host_data['metrics']['raw']['lustre_client_mounts']
+        except KeyError:
+            client_mounts = []
+
+        expected_fs_mounts = LustreClientMount.objects.select_related('filesystem').filter(host = self.host)
+        actual_fs_mounts = [m['mountspec'].split(':/')[1] for m in client_mounts]
+
+        # Don't bother with the rest if there's nothing to do.
+        if len(expected_fs_mounts) == 0 and len(actual_fs_mounts) == 0:
+            return
+
+        for expected_mount in expected_fs_mounts:
+            if expected_mount.active and expected_mount.filesystem.name not in actual_fs_mounts:
+                update = dict(state = 'unmounted', mountpoint = None)
+                JobSchedulerClient.notify(expected_mount,
+                                          self.started_at,
+                                          update)
+                log.info("updated mount %s on %s -> inactive" % (expected_mount.mountpoint, self.host))
+
+        for actual_mount in client_mounts:
+            fsname = actual_mount['mountspec'].split(':/')[1]
+            try:
+                mount = [m for m in expected_fs_mounts if m.filesystem.name == fsname][0]
+                log.debug("mount: %s" % mount)
+                if not mount.active:
+                    update = dict(state = 'mounted',
+                                  mountpoint = actual_mount['mountpoint'])
+                    JobSchedulerClient.notify(mount,
+                                              self.started_at,
+                                              update)
+                    log.info("updated mount %s on %s -> active" % (actual_mount['mountpoint'], self.host))
+            except IndexError:
+                log.info("creating new mount %s on %s" % (actual_mount['mountpoint'], self.host))
+                filesystem = ManagedFilesystem.objects.get(name = fsname)
+                JobSchedulerClient.create_client_mount(self.host,
+                                                       filesystem,
+                                                       actual_mount['mountpoint'])
 
     def update_target_mounts(self):
         # Loop over all mountables we expected on this host, whether they

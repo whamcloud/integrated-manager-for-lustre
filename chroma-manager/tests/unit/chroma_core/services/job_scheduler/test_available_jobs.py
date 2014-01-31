@@ -114,7 +114,8 @@ class TestAvailableJobs(TestCase):
         it regressed.
         """
 
-        EXPECTED_QUERIES = 6  # but 3 are for setup
+        # 20131217 - mjmac: bumped to 7 for new Client management jobs
+        EXPECTED_QUERIES = 7  # but 3 are for setup
 
         host_ct_key = ContentType.objects.get_for_model(
             self.host.downcast()).natural_key()

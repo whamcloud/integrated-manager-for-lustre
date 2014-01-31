@@ -10,6 +10,11 @@ logger.setLevel(logging.DEBUG)
 
 class TestClusterSetup(TestCase):
 
+    @property
+    def config_servers(self):
+        return [s for s in config['lustre_servers']
+                if not 'worker' in s.get('profile', "")]
+
     def test_config_import(self):
         self.assertTrue(config, """
 
@@ -20,10 +25,10 @@ class TestClusterSetup(TestCase):
 
     def test_config_contains_minimum_components(self):
         # Verify there are enough hosts present for the test
-        self.assertGreaterEqual(len(config['lustre_servers']), 4)
+        self.assertGreaterEqual(len(self.config_servers), 4)
 
         # Verify we have at least 2 device nodes on each host.
-        for host_config in config['lustre_servers']:
+        for host_config in self.config_servers:
             device_paths = host_config['device_paths']
             self.assertGreaterEqual(len(set(device_paths)), 2)
 
@@ -33,7 +38,7 @@ class TestClusterSetup(TestCase):
         # information configured to test it.
         if config['failover_is_configured'] and not config.get('simulator'):
             self.assertGreaterEqual(len(config['hosts']), 1)
-            for lustre_server in config['lustre_servers']:
+            for lustre_server in self.config_servers:
                 self.assertTrue(lustre_server['host'])
                 self.assertTrue(lustre_server['destroy_command'])
 
@@ -50,7 +55,7 @@ class TestClusterSetup(TestCase):
             response = {}
             response['num_replies'], response['stdout'] = \
                 self.remote_operations.omping(server,
-                                              config['lustre_servers'],
+                                              self.config_servers,
                                               count=num_requests)
             pipe.send(json.dumps(response))
 
@@ -61,7 +66,7 @@ class TestClusterSetup(TestCase):
             processes = {}
             # TODO: This is basically pdsh.  Generalize it so that everyone
             #       can use it.
-            for server in config['lustre_servers']:
+            for server in self.config_servers:
                 pout, pin = multiprocessing.Pipe()
                 process = multiprocessing.Process(target=run_omping,
                                                   args=(pin, server, num_requests))
@@ -71,10 +76,10 @@ class TestClusterSetup(TestCase):
 
             passed = True
             stdouts = []
-            for server in config['lustre_servers']:
+            for server in self.config_servers:
                 response = json.loads(pipe_outs[server['nodename']].recv())
                 # Ensure no more than 10% lost.
-                if response['num_replies'] < (0.9 * num_requests * (len(config['lustre_servers']) - 1)):
+                if response['num_replies'] < (0.9 * num_requests * (len(self.config_servers) - 1)):
                     passed = False
                 stdouts.append("""----------------
 %s

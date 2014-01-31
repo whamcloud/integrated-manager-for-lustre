@@ -18,6 +18,21 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
     of tests, please see the *_testcase_mixin modules in this same directory.
     """
 
+    def get_host_profile(self, address):
+        try:
+            host = [h for h in config['lustre_servers']
+                    if h['address'] == address][0]
+            response = self.chroma_manager.get("/api/server_profile/?name=%s" % host['profile'])
+            return response.json['objects'][0]
+        except KeyError:
+            if config.get('managed'):
+                response = self.chroma_manager.get("/api/server_profile/?managed=true&worker=false")
+            else:
+                response = self.chroma_manager.get("/api/server_profile/?managed=false")
+            return response.json['objects'][0]
+        except IndexError:
+            raise RuntimeError("No host in config with address %s" % address)
+
     def add_hosts(self, addresses):
         """
         Add a list of lustre servers to chroma and ensure lnet is started.
@@ -29,15 +44,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(response.successful, True, response.text)
         pre_existing_hosts = response.json['objects']
 
-        response = None
-        if config.get('managed'):
-            response = self.chroma_manager.get("/api/server_profile/?managed=true")
-        else:
-            response = self.chroma_manager.get("/api/server_profile/?managed=false")
-        profile = response.json['objects'][0]
-
         host_create_command_ids = []
         for host_address in addresses:
+            profile = self.get_host_profile(host_address)
+
             if hasattr(self, 'simulator'):
                 # FIXME: should look up fqdn from address rather than
                 # assuming they are the same.  note that address is
@@ -197,6 +207,17 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.remote_operations.check_ha_config(hosts, filesystem)
 
         return filesystem_id
+
+    def create_client_mount(self, host_uri, filesystem_uri, mountpoint):
+        # Normally this is done as part of copytool creation, but we need
+        # to give the test harness some way of doing it via API.
+        response = self.chroma_manager.post(
+            '/api/client_mount/',
+            body = dict(host = host_uri,
+                        filesystem = filesystem_uri, mountpoint = mountpoint)
+        )
+        self.assertTrue(response.successful, response.text)
+        return response.json['client_mount']
 
     def get_shared_volumes(self, required_hosts = 2):
         """

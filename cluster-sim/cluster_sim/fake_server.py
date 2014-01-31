@@ -52,6 +52,7 @@ class FakeServer(Persisted):
     hostname and NIDs, subsequently manages/modifies its own /proc/ etc.
     """
     default_state = {
+        'worker': False,
         'shutting_down': False,
         'starting_up': False,
         'lnet_loaded': False,
@@ -60,7 +61,7 @@ class FakeServer(Persisted):
         'packages': {}
     }
 
-    def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nids):
+    def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nids, worker=False, client_mounts=None):
         self.fqdn = fqdn
 
         super(FakeServer, self).__init__(simulator.folder)
@@ -92,17 +93,57 @@ class FakeServer(Persisted):
             os.makedirs(crypto_folder)
         self.crypto = Crypto(crypto_folder)
 
+        if not client_mounts:
+            client_mounts = {}
+
         self.state['id'] = server_id
         self.state['nids'] = nids
         self.state['nodename'] = nodename
         self.state['fqdn'] = fqdn
+        self.state['worker'] = worker
+        self.state['client_mounts'] = client_mounts
         self.save()
+
+    @property
+    def is_worker(self):
+        with self._lock:
+            return self.state['worker']
+
+    @property
+    def node_type(self):
+        return 'worker' if self.is_worker else 'server'
+
+    @property
+    def lustre_client_mounts(self):
+        mounts = []
+        with self._lock:
+            for mountspec, mountpoint in self.state['client_mounts'].items():
+                mounts.append({'mountspec': mountspec, 'mountpoint': mountpoint})
+            return mounts
+
+    def add_client_mount(self, mountspec):
+        fsname = mountspec.split(':/')[1]
+        mountpoint = "/mnt/lustre/%s" % fsname
+        with self._lock:
+            self.start_lnet()
+            self.state['client_mounts'][mountspec] = mountpoint
+            self.save()
+        log.debug("Mounted %s on %s" % (mountspec, mountpoint))
+
+    def del_client_mount(self, mountspec):
+        with self._lock:
+            try:
+                del self.state['client_mounts'][mountspec]
+                self.save()
+            except KeyError:
+                pass
+        log.debug("Unmounted %s" % mountspec)
 
     def scan_packages(self):
         packages = {
             'foobundle': {}
         }
-        for package, available_version in self._simulator.available_packages.items():
+        for package, available_version in self._simulator.available_packages(self.node_type).items():
             try:
                 installed = [self.get_package_version(package)]
             except KeyError:
@@ -118,9 +159,9 @@ class FakeServer(Persisted):
     def install_packages(self, packages, force_dependencies=False):
         for package in packages:
             try:
-                self.state['packages'][package] = self._simulator.available_packages[package]
+                self.state['packages'][package] = self._simulator.available_packages(self.node_type)[package]
             except KeyError:
-                raise RuntimeError("Package '%s' not found (available: %s)!" % (package, self._simulator.available_packages))
+                raise RuntimeError("Package '%s' not found (available: %s)!" % (package, self._simulator.available_packages(self.node_type)))
 
         self.save()
 
@@ -445,7 +486,7 @@ class FakeServer(Persisted):
         Start the simulated server.
         :param simulate_bootup: Simulate a server bootup, delays and all.
         """
-        if not self.has_power:
+        if not 'worker' in self.fqdn and not self.has_power:
             log.warning("%s can't start; no PSUs have power" % self.fqdn)
             return
         if not self.registered:

@@ -1,8 +1,10 @@
 import mock
 from django.test import TestCase
-from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
-from chroma_core.models import HostContactAlert, HostOfflineAlert
-from chroma_core.models import FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob
+from tests.unit.chroma_core.helper import synthetic_host, synthetic_host_optional_profile, load_default_profile
+from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
+from chroma_core.models import FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob, MountLustreFilesystemsJob, UnmountLustreFilesystemsJob
+
+from chroma_core.lib.cache import ObjectCache
 
 
 class TestAdvertisedJobCoverage(TestCase):
@@ -238,3 +240,117 @@ class TestAdvertisedPowerJobs(TestCase):
         # No outlets associated
         self.host.outlet_list[:] = []
         self.assertFalse(PoweronHostJob.can_run(self.host))
+
+
+class TestClientManagementJobs(TestCase):
+    normal_host_state = 'lnet_up'
+
+    def load_worker_profile(self):
+        worker_profile = ServerProfile(name='test_worker_profile',
+                                       ui_name='Managed Lustre client',
+                                       ui_description='Client available for IML admin tasks',
+                                       managed=True, worker=True)
+        worker_profile.save()
+        return worker_profile
+
+    def create_fake_filesystem_client(self, active=False):
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, LustreClientMount
+        from tests.unit.chroma_core.helper import synthetic_volume_full
+
+        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name = "MGS")
+        fs = ManagedFilesystem.objects.create(mgs = mgt, name = 'testfs')
+        ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem = fs)
+        ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem = fs)
+        state = 'mounted' if active else 'unmounted'
+        self.mount = LustreClientMount.objects.create(host = self.worker, filesystem = fs, state = state)
+
+        ObjectCache.add(LustreClientMount, self.mount)
+
+    def toggle_fake_client_state(self):
+        state = 'mounted' if not self.mount.active else 'unmounted'
+        self.mount.state = state
+        self.mount.save()
+        ObjectCache.update(self.mount)
+
+    def setUp(self):
+        super(TestClientManagementJobs, self).setUp()
+
+        load_default_profile()
+        self.worker = synthetic_host_optional_profile(server_profile=self.load_worker_profile())
+        self.worker.immutable_state = False
+        self.worker.state = self.normal_host_state
+
+        self.server = synthetic_host()
+        self.server.immutable_state = False
+        self.server.state = self.normal_host_state
+
+        # If the test that just ran imported storage_plugin_manager, it will
+        # have instantiated its singleton, and created some DB records.
+        # Django TestCase rolls back the database, so make sure that we
+        # also roll back (reset) this singleton.
+        import chroma_core.lib.storage_plugin.manager
+        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
+
+    def tearDown(self):
+        super(TestClientManagementJobs, self).tearDown()
+
+        # clear out the singleton to avoid polluting other tests
+        ObjectCache.clear()
+
+    def test_MountLustreFilesystemsJob(self):
+        # Servers should never be able to run this job
+        self.assertFalse(MountLustreFilesystemsJob.can_run(self.server))
+
+        # Worker nodes should not be able to run this job if not
+        # associated with a filesystem
+        self.assertFalse(MountLustreFilesystemsJob.can_run(self.worker))
+
+        # Worker nodes should be able to run this job if associated
+        # but the associated filesystem hasn't been mounted
+        self.create_fake_filesystem_client(active=False)
+        self.assertTrue(MountLustreFilesystemsJob.can_run(self.worker))
+
+        # Bad states
+        for state in ['removed', 'undeployed', 'unconfigured']:
+            self.worker.state = state
+            self.assertFalse(MountLustreFilesystemsJob.can_run(self.worker))
+            self.worker.state = self.normal_host_state
+
+        # Active host alerts
+        for klass in [HostOfflineAlert, HostContactAlert]:
+            klass.notify(self.worker, True)
+            self.assertFalse(MountLustreFilesystemsJob.can_run(self.worker))
+            klass.notify(self.worker, False)
+
+        # Associated filesystem already mounted
+        self.toggle_fake_client_state()
+        self.assertFalse(MountLustreFilesystemsJob.can_run(self.worker))
+
+    def test_UnmountLustreFilesystemsJob(self):
+        # Servers should never be able to run this job
+        self.assertFalse(UnmountLustreFilesystemsJob.can_run(self.server))
+
+        # Worker nodes should not be able to run this job if not
+        # associated with a filesystem
+        self.assertFalse(UnmountLustreFilesystemsJob.can_run(self.worker))
+
+        # Worker nodes should be able to run this job if associated
+        # and the associated filesystem is mounted
+        self.create_fake_filesystem_client(active=True)
+        self.assertTrue(UnmountLustreFilesystemsJob.can_run(self.worker))
+
+        # Bad states
+        for state in ['removed', 'undeployed', 'unconfigured']:
+            self.worker.state = state
+            self.assertFalse(UnmountLustreFilesystemsJob.can_run(self.worker))
+            self.worker.state = self.normal_host_state
+
+        # Active host alerts
+        for klass in [HostOfflineAlert, HostContactAlert]:
+            klass.notify(self.worker, True)
+            self.assertFalse(UnmountLustreFilesystemsJob.can_run(self.worker))
+            klass.notify(self.worker, False)
+
+        # Associated filesystem already Unmounted
+        self.toggle_fake_client_state()
+        self.assertFalse(UnmountLustreFilesystemsJob.can_run(self.worker))

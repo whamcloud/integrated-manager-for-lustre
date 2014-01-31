@@ -31,6 +31,9 @@ var ServerDetail = Backbone.View.extend({
     var cleanModel = this.model.toJSON();
     var rendered = this.template({'server': cleanModel});
     $(this.el).find('.ui-dialog-content').html(rendered);
+    if (!cleanModel.client_mounts || cleanModel.client_mounts.length < 1) {
+      $(this.el).find('tr.client_mounts').hide();
+    }
 
     var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
     generateCommandDropdown.generateDropdown($(this.el).find('div[command-dropdown]'), cleanModel);

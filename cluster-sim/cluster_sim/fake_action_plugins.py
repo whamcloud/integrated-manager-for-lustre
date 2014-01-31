@@ -132,12 +132,19 @@ class FakeActionPlugins():
             elif cmd == 'kernel_status':
                 return {
                     'running': 'fake_kernel-0.1',
-                    'latest': 'fake_kernel-0.1'
+                    'required': 'fake_kernel-0.1',
+                    'available': ['fake_kernel-0.1']
                 }
             elif cmd in ['configure_fencing', 'unconfigure_fencing']:
                 return
             elif cmd == "host_corosync_config":
                 return {}
+            elif cmd == 'mount_lustre_filesystems':
+                for filesystem in kwargs['filesystems']:
+                    self._server.add_client_mount(filesystem)
+            elif cmd == 'unmount_lustre_filesystems':
+                for filesystem in kwargs['filesystems']:
+                    self._server.del_client_mount(filesystem)
             else:
                 try:
                     fn = getattr(self._server, cmd)

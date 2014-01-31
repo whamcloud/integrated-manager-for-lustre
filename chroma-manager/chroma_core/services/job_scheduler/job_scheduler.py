@@ -49,7 +49,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
     ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob, ForceRemoveHostJob, \
-    DeployHostJob, UpdatesAvailableAlert
+    DeployHostJob, UpdatesAvailableAlert, LustreClientMount
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -1080,6 +1080,36 @@ class JobScheduler(object):
             for index, target_data in enumerate(target_group):
                 target_data['index'] = index
         return sorted(targets_data, key=operator.itemgetter('index'))
+
+    def create_client_mount(self, host_id, filesystem_id, mountpoint):
+        # RPC-callable
+        host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
+        filesystem = ObjectCache.get_one(ManagedFilesystem, lambda mf: mf.id == filesystem_id)
+
+        mount = self._create_client_mount(host, filesystem, mountpoint)
+
+        self.progress.advance()
+        return mount.id
+
+    def _create_client_mount(self, host, filesystem, mountpoint):
+        # Used for intra-JobScheduler calls
+        log.debug("Creating client mount for %s as %s:%s" % (filesystem, host, mountpoint))
+
+        with self._lock:
+            from django.db import transaction
+            with transaction.commit_on_success():
+                mount, created = LustreClientMount.objects.get_or_create(
+                                                        host = host,
+                                                        filesystem = filesystem)
+                mount.mountpoint = mountpoint
+                mount.save()
+
+            ObjectCache.add(LustreClientMount, mount)
+
+        if created:
+            log.info("Created client mount: %s" % mount)
+
+        return mount
 
     def create_filesystem(self, fs_data):
         # FIXME: HYD-970: check that the MGT or hosts aren't being removed while

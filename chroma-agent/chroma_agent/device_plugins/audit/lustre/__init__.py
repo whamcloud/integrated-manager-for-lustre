@@ -24,6 +24,8 @@ import re
 import os
 import heapq
 from tablib.packages import yaml
+
+from chroma_agent.utils import Mounts
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
@@ -497,3 +499,29 @@ class LnetAudit(LustreAudit):
 
     def _gather_raw_metrics(self):
         self.raw_metrics['lustre']['lnet'] = self.parse_lnet_stats()
+
+
+class ClientAudit(LustreAudit):
+    """
+    Audit Lustre client information. Included in audit payload when
+    a mounted Lustre client is detected.
+    """
+    @classmethod
+    def is_available(cls):
+        return len(cls._client_mounts())
+
+    @classmethod
+    def _client_mounts(cls):
+        spec = re.compile(r'@\w+:/\w+')
+        # Mounts().all() returns a list of tuples in which the third element
+        # is the filesystem type.
+        return [mount for mount in Mounts().all()
+                if mount[2] == 'lustre' and spec.search(mount[0])]
+
+    def _gather_raw_metrics(self):
+        client_mounts = []
+        for mount in self.__class__._client_mounts():
+            client_mounts.append(dict(mountspec = mount[0],
+                                      mountpoint = mount[1]))
+
+        self.raw_metrics['lustre_client_mounts'] = client_mounts

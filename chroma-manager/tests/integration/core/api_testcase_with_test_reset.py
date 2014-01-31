@@ -80,7 +80,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # Register the default bundles and profile again
             result = self.remote_command(
                 chroma_manager['address'],
-                "for bundle_pat in lustre* iml-agent* e2fsprogs*; do chroma-config bundle register /var/lib/chroma/repo/$bundle_pat; done &> config_bundle.log",
+                "for bundle_meta in /var/lib/chroma/repo/*/meta; do chroma-config bundle register $(dirname $bundle_meta); done &> config_bundle.log",
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
@@ -100,7 +100,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (result.stdout.read(), result.stderr.read()))
             result = self.remote_command(
                 chroma_manager['address'],
-                "for profile_pat in base_managed.profile base_monitored.profile; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log",
+                "for profile_pat in base_managed.profile base_monitored.profile posix_copytool_worker.profile; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log",
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status

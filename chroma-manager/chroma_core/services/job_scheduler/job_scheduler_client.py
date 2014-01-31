@@ -53,6 +53,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'create_host_ssh',
                'test_host_contact',
                'create_filesystem',
+               'create_client_mount',
                'create_host',
                'create_targets',
                'available_transitions',
@@ -246,6 +247,15 @@ class JobSchedulerClient(object):
 
         target_ids, command_id = JobSchedulerRpc().create_targets(targets_data)
         return list(ManagedTarget.objects.filter(id__in=target_ids)), Command.objects.get(pk = command_id)
+
+    @classmethod
+    def create_client_mount(cls, host, filesystem, mountpoint):
+        from chroma_core.models import LustreClientMount
+
+        client_mount_id = JobSchedulerRpc().create_client_mount(host.id,
+                                                                filesystem.id,
+                                                                mountpoint)
+        return LustreClientMount.objects.get(id = client_mount_id)
 
     @classmethod
     def get_locks(cls, obj_key, obj_id):

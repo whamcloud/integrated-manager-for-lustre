@@ -169,6 +169,7 @@ mgc 50620 2 mgs, Live 0xffffffffa0a90000
 
     def test_no_lustre_modules_loaded(self):
         """Audit shouldn't fail if there are no Lustre modules loaded."""
+
         # Create a modules file with no Lustre modules in it.
         f = open(os.path.join(self.test_root, "proc/modules"), "w+")
         f.write("""

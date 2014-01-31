@@ -1,6 +1,5 @@
 from collections import defaultdict
 
-from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 
@@ -12,9 +11,9 @@ class ChromaHaTestCase(ChromaIntegrationTestCase):
         super(ChromaHaTestCase, self).setUp()
 
         # Wipe out any corosync config on the test hosts -- no safety net!
-        self.remote_operations.remove_config(config['lustre_servers'])
+        self.remote_operations.remove_config(self.config_servers)
 
-        self.add_hosts([s['address'] for s in config['lustre_servers']])
+        self.add_hosts([s['address'] for s in self.config_servers])
 
         def all_servers_up():
             servers = self.get_list("/api/host/")
@@ -22,7 +21,7 @@ class ChromaHaTestCase(ChromaIntegrationTestCase):
 
         self.wait_until_true(all_servers_up)
 
-        self.EXPECTED_CLUSTER_COUNT = len(self.TEST_SERVERS) / self.SERVERS_PER_HA_CLUSTER
+        self.EXPECTED_CLUSTER_COUNT = len(self.config_servers) / self.SERVERS_PER_HA_CLUSTER
 
     def wait_for_cluster_count(self, count):
         def cluster_count_matches(count):
@@ -37,7 +36,7 @@ class TestHaClusters(ChromaHaTestCase):
         self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
 
         clusters = self.get_list("/api/ha_cluster/")
-        server_count = len(config['lustre_servers'])
+        server_count = len(self.config_servers)
 
         if server_count >= (self.SERVERS_PER_HA_CLUSTER * 2):
             # If we have at least 4 servers, then we should have at least

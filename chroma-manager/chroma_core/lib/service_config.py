@@ -808,7 +808,11 @@ def register_profile(profile_file):
         log.error("Bundles not found for profile '%s': %s" % (data['name'], ", ".join(missing_bundles)))
         sys.exit(-1)
 
-    profile_fields = ['ui_name', 'ui_description', 'managed']
+    # Backwards-compatiblity with older profile definitions
+    if not 'worker' in data:
+        data['worker'] = False
+
+    profile_fields = ['ui_name', 'ui_description', 'managed', 'worker']
     try:
         profile = ServerProfile.objects.get(name=data['name'])
         log.debug("Updating profile %s" % data['name'])

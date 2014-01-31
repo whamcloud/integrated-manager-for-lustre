@@ -118,7 +118,8 @@ class BaseFakeLustrePlugin(DevicePlugin):
             'metrics': {
                 'raw': {
                     'node': self._server.get_node_stats(),
-                    'lustre': self._server.get_lustre_stats()
+                    'lustre': self._server.get_lustre_stats(),
+                    'lustre_client_mounts': self._server.lustre_client_mounts
                 }
             },
             'packages': packages,

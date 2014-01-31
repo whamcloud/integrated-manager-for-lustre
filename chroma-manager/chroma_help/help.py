@@ -22,6 +22,8 @@
 
 
 help_text = {
+    'mount_lustre_filesystems': 'Mount all associated Lustre filesystems on this worker.',
+    'unmount_lustre_filesystems': 'Unmount all associated Lustre filesystems on this worker.',
     'advanced_settings': '<b>Use care when changing these parameters as they can significantly impact functionality or performance.</b> For help with these settings, contact your storage solution provider.',
     'bytes_per_inode': 'File system space (in bytes) per MDS inode. The default is 2048, meaning one MDS inode per each 2048 bytes of file system space. In the "Lustre Operations Manual", see Section 5.3.3: Setting the Number of Inodes for the MDS.',
     'commands': 'Shows past and currently running commands that the manager is executing to perform tasks, such as formatting or starting a file system.',

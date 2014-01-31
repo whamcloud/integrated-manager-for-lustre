@@ -32,7 +32,7 @@ FCI_CLUSTER_CONFIG ?= $(CURDIR)/tests/full_cluster.json
 # Location of the cluster-sim script
 CLUSTER_SIM_BIN := $(shell if which cluster-sim 2>/dev/null; then true; else echo $(word 1,$(subst :, ,$(PATH)))/cluster-sim; fi)
 CLUSTER_SIM_CFG ?= $(CURDIR)/cluster_sim
-CLUSTER_SIM_SETUP_ARGS ?= --cluster_size 2 --psu_count 2
+CLUSTER_SIM_SETUP_ARGS ?= --cluster_size 2 --psu_count 2 --worker_count 4
 CLUSTER_SIM_REGISTER_ARGS ?= --username $(DEV_USERNAME) --password $(DEV_PASSWORD) --create_pdu_entries
 
 # Misc test config

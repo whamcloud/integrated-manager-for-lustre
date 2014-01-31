@@ -68,19 +68,32 @@ chroma-agent-management-99.01-3061.noarch
 
     def test_kernel_status(self):
         def try_run(args):
-            if args == ["rpm", "-q", "kernel", "--qf", "%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH} %{INSTALLTIME}\\n"]:
-                return """kernel-2.6.32-358.el6.x86_64 1363856095
-kernel-2.6.32-358.2.1.el6.x86_64 1363856467
-kernel-2.6.32-279.14.1.el6_lustre.x86_64 1366712894
+            if args == ["rpm", "-qR", "lustre-modules"]:
+                return """/bin/sh
+/bin/sh
+/bin/sh
+kernel = 2.6.32-358.18.1.el6
+rpmlib(CompressedFileNames) <= 3.0.4-1
+rpmlib(FileDigests) <= 4.6.0-1
+rpmlib(PayloadFilesHavePrefix) <= 4.0-1
+rpmlib(PayloadIsXz) <= 5.2-1
 """
             elif args == ["uname", "-r"]:
                 return "2.6.32-358.2.1.el6.x86_64\n"
+            elif args == ["rpm", "-q", "kernel"]:
+                return """kernel-2.6.32-358.2.1.el6.x86_64
+kernel-2.6.32-358.18.1.el6.x86_64
+"""
 
         with patch('chroma_agent.shell.try_run', side_effect=try_run):
-            result = manage_updates.kernel_status(".*lustre.*")
+            result = manage_updates.kernel_status()
             self.assertDictEqual(result, {
-                'latest': 'kernel-2.6.32-279.14.1.el6_lustre.x86_64',
-                'running': 'kernel-2.6.32-358.2.1.el6.x86_64'
+                'required': 'kernel-2.6.32-358.18.1.el6.x86_64',
+                'running': 'kernel-2.6.32-358.2.1.el6.x86_64',
+                'available': [
+                    "kernel-2.6.32-358.2.1.el6.x86_64",
+                    "kernel-2.6.32-358.18.1.el6.x86_64"
+                ]
             })
 
     def test_install_packages_force(self):

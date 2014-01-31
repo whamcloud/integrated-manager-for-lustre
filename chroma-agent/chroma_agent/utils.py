@@ -21,6 +21,7 @@
 
 
 from chroma_agent import shell
+from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 import os
 import re
@@ -47,14 +48,13 @@ def normalize_device(device):
     return _d.get(u_device, u_device)
 
 
-class Mounts(object):
+class Mounts(FileSystemMixin):
     def __init__(self):
         # NB we must use /proc/mounts instead of `mount` because `mount` sometimes
         # reports out of date information from /etc/mtab when a lustre service doesn't
         # tear down properly.
         self.mounts = []
-        mount_text = open("/proc/mounts").read()
-        for line in mount_text.split("\n"):
+        for line in self.read_lines("/proc/mounts"):
             result = re.search("([^ ]+) ([^ ]+) ([^ ]+) ", line)
             if not result:
                 continue

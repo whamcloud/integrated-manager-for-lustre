@@ -27,6 +27,7 @@ from chroma_agent.log import daemon_log
 
 import re
 import os
+import platform
 from chroma_agent import shell, config
 from chroma_agent.crypto import Crypto
 
@@ -125,26 +126,35 @@ def install_packages(packages, force_dependencies=False):
     return lustre.scan_packages()
 
 
-def kernel_status(kernel_regex):
+def kernel_status():
     """
-    :param kernel_regex: Regex which kernels must match to be considered for 'latest'
-    :return: {'running': {'kernel-X.Y.Z'}, 'latest': <'kernel-A.B.C' or None>}
+    :return: {'running': {'kernel-X.Y.Z'}, 'required': <'kernel-A.B.C' or None>}
     """
     running_kernel = "kernel-%s" % shell.try_run(["uname", "-r"]).strip()
-    installed_kernel_stdout = shell.try_run(["rpm", "-q", "kernel", "--qf", "%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH} %{INSTALLTIME}\\n"])
+    try:
+        required_kernel_stdout = shell.try_run(["rpm", "-qR", "lustre-modules"])
+    except shell.CommandExecutionError:
+        try:
+            required_kernel_stdout = shell.try_run(["rpm", "-qR", "lustre-client-modules"])
+        except shell.CommandExecutionError:
+            required_kernel_stdout = None
 
-    latest_matching_kernel = None
-    for line in [l.strip() for l in installed_kernel_stdout.strip().split("\n")]:
-        package, installtime = line.split()
-        installtime = int(installtime)
+    required_kernel = None
+    if required_kernel_stdout:
+        for line in required_kernel_stdout.split("\n"):
+            if line.startswith('kernel'):
+                required_kernel = "kernel-%s.%s" % (line.split(" = ")[1],
+                                                    platform.machine())
 
-        if re.match(kernel_regex, package):
-            if not latest_matching_kernel or installtime > latest_matching_kernel[1]:
-                latest_matching_kernel = (package, installtime)
+    available_kernels = []
+    for installed_kernel in shell.try_run(["rpm", "-q", "kernel"]).split("\n"):
+        if installed_kernel:
+            available_kernels.append(installed_kernel)
 
     return {
         'running': running_kernel,
-        'latest': latest_matching_kernel[0] if latest_matching_kernel else None
+        'required': required_kernel,
+        'available': available_kernels
     }
 
 

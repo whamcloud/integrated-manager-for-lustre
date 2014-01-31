@@ -15,7 +15,7 @@ class TestWriteconf(ChromaIntegrationTestCase):
     def testUpdateNids(self):
         """Test that running UpdateNids on a filesystem leaves it in a working state,
            note: we're not actually *changing* any NIDs here, just exercising the code."""
-        self.assertGreaterEqual(len(config['lustre_servers']), 4)
+        self.assertGreaterEqual(len(self.config_servers), 4)
 
         self.hosts = self.add_hosts([
             config['lustre_servers'][0]['address'],

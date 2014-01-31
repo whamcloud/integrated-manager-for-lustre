@@ -44,17 +44,12 @@ class TestFirewall(ChromaIntegrationTestCase):
     def test_agent(self):
         """Test that when hosts are added and a filesytem is created, that all required firewall accesses are installed"""
 
-        for server in config['lustre_servers']:
+        for server in self.TEST_SERVERS:
             self.remote_operations.get_iptables_rules(server)
 
-        self.assertGreaterEqual(len(config['lustre_servers']), 4)
+        self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
 
-        self.hosts = self.add_hosts([
-            config['lustre_servers'][0]['address'],
-            config['lustre_servers'][1]['address'],
-            config['lustre_servers'][2]['address'],
-            config['lustre_servers'][3]['address']
-        ])
+        self.hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
 
         volumes = self.get_shared_volumes(required_hosts = 4)
         self.assertGreaterEqual(len(volumes), 4)
@@ -87,7 +82,7 @@ class TestFirewall(ChromaIntegrationTestCase):
         })
 
         mcastports = {}
-        for server in config['lustre_servers']:
+        for server in self.TEST_SERVERS:
 
             contents = self.remote_operations.get_file_content(server,
                                                                "/selinux/enforce")
@@ -113,7 +108,7 @@ class TestFirewall(ChromaIntegrationTestCase):
         # tear it down and make sure firewall rules are cleaned up
         self.graceful_teardown(self.chroma_manager)
         found = 0
-        for server in config['lustre_servers']:
+        for server in self.TEST_SERVERS:
             mcastport = mcastports[server['address']]
             for rule in self.remote_operations.get_iptables_rules(server):
                 if rule["target"] == "ACCEPT" and \

@@ -78,6 +78,7 @@ import chroma_api.notification
 
 api.register(chroma_api.host.HostResource())
 api.register(chroma_api.host.ServerProfileResource())
+api.register(chroma_api.host.ClientMountResource())
 api.register(chroma_api.host.HostTestResource())
 api.register(chroma_api.registration_token.RegistrationTokenResource())
 api.register(chroma_api.filesystem.FilesystemResource())

@@ -8,11 +8,12 @@ from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixin, ChromaIntegrationTestCase):
     TESTS_NEED_POWER_CONTROL = True
+    TEST_SERVERS = config['lustre_servers'][0:4]
 
     def test_create_filesystem_with_failover(self):
         # Add hosts as managed hosts
-        self.assertGreaterEqual(len(config['lustre_servers']), 4)
-        hosts = self.add_hosts([h['address'] for h in config['lustre_servers'][:4]])
+        self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
+        hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
 
         # Set up power control for fencing -- needed to ensure that
         # failover completes. Pacemaker won't fail over the resource
@@ -227,12 +228,12 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
             )
 
     def test_lnet_operational_after_failover(self):
-        self.remote_operations.reset_server(config['lustre_servers'][0]['fqdn'])
-        self.remote_operations.await_server_boot(config['lustre_servers'][0]['fqdn'])
+        self.remote_operations.reset_server(self.TEST_SERVERS[0]['fqdn'])
+        self.remote_operations.await_server_boot(self.TEST_SERVERS[0]['fqdn'])
 
         # Add two hosts
-        host_1 = self.add_hosts([config['lustre_servers'][0]['address']])[0]
-        host_2 = self.add_hosts([config['lustre_servers'][1]['address']])[0]
+        host_1 = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
+        host_2 = self.add_hosts([self.TEST_SERVERS[1]['address']])[0]
 
         # Set volume mounts
         ha_volumes = self.get_shared_volumes()

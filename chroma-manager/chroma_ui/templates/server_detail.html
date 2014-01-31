@@ -13,6 +13,16 @@
               </ul>
           </td></tr>
           <tr><th><a data-topic='lnet_state' class='help_hover'>State</a>:</th><td><%= LiveObject.state(server) %></td></tr>
+          <tr class='client_mounts'>
+            <th>File System Clients:</th>
+            <td>
+              <ul>
+                <% _.each(server.client_mounts, function(mount) { %>
+                  <li><%= mount.filesystem_name %> <% if (mount.state === 'mounted') { %> on <%= mount.mountpoint %> <% } else { %> (unmounted) <% } %></li>
+                <% }); %>
+              </ul>
+            </td>
+          </tr>
           <tr><th>Boot time:</th><td><%= shortLocalTime(server.boot_time) %></td></tr>
           <tr><th><a data-topic='state_changed' class='help_hover'>State changed</a>:</th><td><%= shortLocalTime(server.state_modified_at) %></td></tr>
           <tr><th>Alerts:</th><td><%= LiveObject.alertLabel(server) %></td></tr>

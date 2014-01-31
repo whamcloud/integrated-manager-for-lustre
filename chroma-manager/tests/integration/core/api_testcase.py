@@ -62,8 +62,9 @@ class ApiTestCase(UtilityTestCase):
             daemon_log.setLevel(logging.DEBUG)
 
             self.simulator = ClusterSimulator(state_path, config['chroma_managers'][0]['server_http_url'])
-            volume_count = max([len(s['device_paths']) for s in config['lustre_servers']])
-            self.simulator.setup(len(config['lustre_servers']),
+            volume_count = max([len(s['device_paths']) for s in self.config_servers])
+            self.simulator.setup(len(self.config_servers),
+                                 len(self.config_workers),
                                  volume_count,
                                  self.SIMULATOR_NID_COUNT,
                                  self.SIMULATOR_CLUSTER_SIZE,
@@ -98,7 +99,7 @@ class ApiTestCase(UtilityTestCase):
             # Erase all volumes if the config does not indicate that there is already
             # a pres-existing file system (in the case of the monitoring only tests).
             for server in self.TEST_SERVERS:
-                for path in server['device_paths']:
+                for path in server.get('device_paths', []):
                     self.remote_operations.erase_block_device(server['fqdn'], path)
 
             # Ensure that config from previous runs doesn't linger into
@@ -148,6 +149,16 @@ class ApiTestCase(UtilityTestCase):
             self.initial_supervisor_controlled_process_start_times,
             self.get_supervisor_controlled_process_start_times()
         )
+
+    @property
+    def config_servers(self):
+        return [s for s in config['lustre_servers']
+                if not 'worker' in s.get('profile', "")]
+
+    @property
+    def config_workers(self):
+        return [w for w in config['lustre_servers']
+                if 'worker' in w.get('profile', "")]
 
     @property
     def chroma_manager(self):

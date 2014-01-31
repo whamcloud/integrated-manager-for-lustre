@@ -76,6 +76,14 @@
                 "ring1_iface": "eth1",
                 "mcast_port": "4244"
             }
+        },
+        {
+            "distro": "el6.4",
+            "selinux_enabled": true,
+            "firewall_enabled": true,
+            "root_password": "lustre",
+            "repos": ["chroma"],
+            "profile": "posix_copytool_worker"
         }
     ],
     "lustre_clients": [

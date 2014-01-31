@@ -73,6 +73,38 @@
                 "/dev/disk/by-id/scsi-FAKEDEVICE005-scsi0-0-0"
             ],
             "distro": "mock"
+        },
+        {
+            "address": "worker000.localdomain",
+            "root_password": "",
+            "nodename": "worker000",
+            "fqdn": "worker000.localdomain",
+            "profile": "posix_copytool_worker",
+            "distro": "mock"
+        },
+        {
+            "address": "worker001.localdomain",
+            "root_password": "",
+            "nodename": "worker001",
+            "fqdn": "worker001.localdomain",
+            "profile": "posix_copytool_worker",
+            "distro": "mock"
+        },
+        {
+            "address": "worker002.localdomain",
+            "root_password": "",
+            "nodename": "worker002",
+            "fqdn": "worker002.localdomain",
+            "profile": "posix_copytool_worker",
+            "distro": "mock"
+        },
+        {
+            "address": "worker003.localdomain",
+            "root_password": "",
+            "nodename": "worker003",
+            "fqdn": "worker003.localdomain",
+            "profile": "posix_copytool_worker",
+            "distro": "mock"
         }
     ],
     "lustre_clients": [

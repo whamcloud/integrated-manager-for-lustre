@@ -49,7 +49,10 @@ class ClusterSimulator(Persisted):
     """
     filename = 'simulator.json'
     default_state = {
-        'packages': {}
+        'packages': {
+            'server': {},
+            'worker': {}
+        }
     }
 
     def __init__(self, folder, url):
@@ -71,10 +74,10 @@ class ClusterSimulator(Persisted):
         self._load_controllers()
         self._load_servers()
 
-    def update_packages(self, packages):
+    def update_packages(self, packages, node_type='server'):
         log.info("Updating packages: %s" % packages)
         for k, v in packages.items():
-            self.state['packages'][k] = v
+            self.state['packages'][node_type][k] = v
         self.save()
 
         # The agent only reports new versions at the start of sessions
@@ -85,9 +88,8 @@ class ClusterSimulator(Persisted):
             self.stop_server(fqdn)
             self.start_server(fqdn)
 
-    @property
-    def available_packages(self):
-        return self.state['packages']
+    def available_packages(self, node_type='server'):
+        return self.state['packages'][node_type]
 
     def _get_cluster_for_server(self, server_id):
         cluster_id = server_id / self.state['cluster_size']
@@ -109,7 +111,9 @@ class ClusterSimulator(Persisted):
                 conf['id'],
                 conf['fqdn'],
                 conf['nodename'],
-                conf['nids'])
+                conf['nids'],
+                conf['worker'],
+                conf['client_mounts'])
 
     def _load_controllers(self):
         for controller_conf in glob.glob("%s/fake_controller_*.json" % self.folder):
@@ -133,10 +137,28 @@ class ClusterSimulator(Persisted):
 
         return server
 
-    def setup(self, server_count, volume_count, nid_count, cluster_size, pdu_count, su_size):
+    def _create_worker(self, i, nid_count):
+        nids = []
+        nodename = "worker%.3d" % i
+        fqdn = "%s.localdomain" % nodename
+        x, y = (i / 256, i % 256)
+        for network in range(0, nid_count):
+            nids.append("10.%d.%d.%d@tcp%d" % (network, x, y, network))
+
+        log.info("_create_worker: %s" % fqdn)
+
+        # Use -1 as the special cluster for workers
+        worker = FakeServer(self, self._get_cluster_for_server(-1),
+                            i, fqdn, nodename, nids, worker=True)
+        self.servers[fqdn] = worker
+
+        return worker
+
+    def setup(self, server_count, worker_count, volume_count, nid_count, cluster_size, pdu_count, su_size):
         """
 
         :param server_count: How many servers in total should exist after call
+        :param worker_count: How many worker nodes in total should exist after call
         :param volume_count: How many volumes in total should exist after call
         :param nid_count: How many NIDs each server should have
         :param cluster_size: How many servers per corosync cluster
@@ -149,8 +171,14 @@ class ClusterSimulator(Persisted):
 
         # Packages which the FakeServers will report as availble
         self.state['packages'] = {
-            'lustre': (0, "2.1.4", "1", "x86_64"),
-            'lustre-modules': (0, "2.1.4", "1", "x86_64")
+            'server': {
+                'lustre': (0, "2.1.4", "1", "x86_64"),
+                'lustre-modules': (0, "2.1.4", "1", "x86_64")
+            },
+            'worker': {
+                'lustre-client': (0, "2.5.0", "1", "x86_64"),
+                'lustre-client-modules': (0, "2.5.0", "1", "x86_64")
+            }
         }
         self.save()
 
@@ -172,6 +200,9 @@ class ClusterSimulator(Persisted):
                 self._create_server(i, nid_count)
 
             self.devices.add_presented_luns(volume_count, self.servers.keys())
+
+        for i in range(0, worker_count):
+            self._create_worker(i, nid_count)
 
     def clear_clusters(self):
         for cluster in self.clusters.values():
@@ -239,12 +270,15 @@ class ClusterSimulator(Persisted):
             print traceback.format_exc()
             raise
 
-    def register_all(self, secret):
+    def register_all(self, server_secret, worker_secret):
         register_count = 0
         self.power.start()
         for fqdn, server in self.servers.items():
             if server.crypto.certificate_file is None:
-                self.register(fqdn, secret)
+                if server.is_worker:
+                    self.register(fqdn, worker_secret)
+                else:
+                    self.register(fqdn, server_secret)
                 register_count += 1
             else:
                 self.start_server(fqdn)
@@ -257,11 +291,12 @@ class ClusterSimulator(Persisted):
         try:
             log.debug("register %s" % fqdn)
             server = self.servers[fqdn]
+
             if server.agent_is_running:
                 # e.g. if the server was added then force-removed then re-added
                 server.shutdown_agent()
 
-            if not self.power.server_has_power(fqdn):
+            if not server.is_worker and not self.power.server_has_power(fqdn):
                 raise RuntimeError("Not registering %s, none of its PSUs are powered" % fqdn)
 
             client = AgentClient(
