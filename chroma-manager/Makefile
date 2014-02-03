@@ -8,8 +8,8 @@ NPM := $(shell if which npm 2>/dev/null; then true; else echo npm; fi)
 PREFIXED_PROXIES := if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"* ]]; then \
 	export HTTP_PROXY=http://$(HTTP_PROXY); \
 	export http_proxy=http://$(HTTP_PROXY); \
-	export HTTPS_PROXY=https://$(HTTPS_PROXY); \
-	export https_proxy=https://$(HTTPS_PROXY); \
+	export HTTPS_PROXY=http://$(HTTPS_PROXY); \
+	export https_proxy=http://$(HTTPS_PROXY); \
 fi;
 
 # Override this if you don't want to use detected bundles
@@ -58,7 +58,7 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
-develop: version realtime
+develop: version realtime/node_modules
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
@@ -68,20 +68,20 @@ $(NPM):
 	@echo "You need to install $@ first... (brew install $@?)"
 	exit 1
 
-realtime: realtime/package.json $(NPM)
-	@echo "Setting up realtime module for development..."
+realtime/node_modules: realtime/package.json $(NPM)
+	@echo "Setting up realtime module for development..."; \
 	$(PREFIXED_PROXIES) \
 	cd realtime && \
 	npm install
 
-ui_new: $(NPM)
-	@echo "Setting up the New Ui for development..."
+chroma_ui_new/node_modules: chroma_ui_new/package.json $(NPM)
+	@echo "Setting up the New Ui for development..."; \
 	$(PREFIXED_PROXIES) \
 	cd chroma_ui_new && \
 	npm install
 
-gulp_build: $(NPM) realtime ui_new
-	@echo "Building New UI files for deployment..."
+gulp_build: $(NPM) realtime/node_modules chroma_ui_new/node_modules
+	@echo "Building New UI files for deployment..."; \
 	cd chroma_ui_new && \
 	./node_modules/.bin/gulp build
 
@@ -229,4 +229,4 @@ docs: requirements version
 	fi ; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
-.PHONY: docs realtime
+.PHONY: docs
