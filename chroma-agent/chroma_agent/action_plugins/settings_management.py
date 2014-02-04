@@ -28,6 +28,21 @@ from chroma_agent import config
 from chroma_agent.config_store import ConfigKeyExistsError
 
 
+def get_api_profile():
+    from urlparse import urlparse
+    import socket
+    from chroma_agent.crypto import Crypto
+    from chroma_agent.agent_client import CryptoClient
+    scheme, netloc = urlparse(config.get('settings', 'server')['url'])[:2]
+    host_uri = '%s://%s/api/host/?fqdn=%s' % (scheme, netloc, socket.getfqdn())
+    client = CryptoClient(host_uri, Crypto(config.path))
+    profile = client.get()['objects'][0]['server_profile']
+    try:
+        config.set('settings', 'profile', profile)
+    except ConfigKeyExistsError:
+        config.update('settings', 'profile', profile)
+
+
 def set_server_url(url):
     server_conf = dict(url = url)
     try:
@@ -79,4 +94,4 @@ def convert_agent_config():
     _convert_agentstore_config()
 
 
-ACTIONS = [set_server_url, set_agent_config, get_agent_config, reset_agent_config, convert_agent_config]
+ACTIONS = [set_server_url, set_agent_config, get_api_profile, get_agent_config, reset_agent_config, convert_agent_config]

@@ -452,6 +452,7 @@ def install_agent():
 
 def configure_server():
     launch_command('chroma-agent set_server_url --url %s' % base_url + 'agent/')
+    launch_command('chroma-agent get_api_profile')
 
 
 def start_agent():

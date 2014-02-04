@@ -1,3 +1,7 @@
+from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+
 from selenium.common.exceptions import NoSuchElementException, ElementNotVisibleException
 from selenium.webdriver import ActionChains
 
@@ -23,6 +27,8 @@ class Servers(DatatableView):
         self.add_host_confirm_button = 'a.add_host_confirm_button'
         self.add_host_close_button = '#ssh_tab a.add_host_close_button'
         self.add_host_add_another_button = 'a.add_host_back_button'
+        self.add_host_profile_dropdown = 'div.add_host_prompt select.add_server_profile'
+        self.default_profile = 'Managed storage server'
 
         self.add_dialog_div = '#add_host_dialog'
         self.prompt_dialog_div = '#add_host_prompt'
@@ -109,7 +115,23 @@ class Servers(DatatableView):
         self.new_add_server_button.click()
 
     def add_server_enter_address(self, host_name):
+        self.quiesce()
         enter_text_for_element(self.driver, self.host_address_text, host_name)
+
+    def add_server_select_profile(self, profile_text=None):
+        if not profile_text:
+            profile_text = self.default_profile
+
+        self.quiesce()
+        wait = WebDriverWait(self.driver, self.short_wait)
+        dropdown = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,
+                                              self.add_host_profile_dropdown)),
+                              "'%s' wasn't clickable before timeout" % self.add_host_profile_dropdown)
+        profile_list = Select(dropdown)
+        self.log.debug("Server profiles: %s" % ", ".join(["'%s'" % o.text for o in profile_list.options]))
+        self.quiesce()
+        profile_list.select_by_visible_text(profile_text)
+        self.log.debug("Selected '%s'" % profile_text)
 
     def add_server_submit_address(self):
         self.driver.find_element_by_css_selector(self.host_continue_button).click()
@@ -142,6 +164,7 @@ class Servers(DatatableView):
 
             self.add_server_open()
             self.add_server_enter_address(host_name)
+            self.add_server_select_profile()
             self.add_server_submit_address()
             self.add_server_confirm()
             self.add_server_close()

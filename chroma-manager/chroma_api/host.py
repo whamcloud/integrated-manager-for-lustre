@@ -164,7 +164,8 @@ class HostResource(MetricResource, StatefulModelResource):
     private_key_passphrase = fields.CharField(help_text = "passphrase to "
                                                           "decrypt private key")
 
-    server_profile = fields.ToOneField(ServerProfileResource, 'server_profile')
+    server_profile = fields.ToOneField(ServerProfileResource, 'server_profile',
+                                       full = True)
 
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(

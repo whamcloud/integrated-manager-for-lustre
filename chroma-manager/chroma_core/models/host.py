@@ -158,8 +158,16 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         return self.server_profile.worker
 
     @property
+    def is_lustre_server(self):
+        return not self.server_profile.worker
+
+    @property
     def is_managed(self):
         return self.server_profile.managed
+
+    @property
+    def is_monitor_only(self):
+        return not self.server_profile.managed
 
     def get_label(self):
         """Return the FQDN if it is known, else the address"""
@@ -747,18 +755,23 @@ class SetupHostJob(StateChangeJob):
 
     def get_steps(self):
         steps = [(ConfigureNTPStep, {'host': self.managed_host}),
-                 (ConfigureRsyslogStep, {'host': self.managed_host}),
-                 (LearnDevicesStep, {'host': self.managed_host})]
+                 (ConfigureRsyslogStep, {'host': self.managed_host})]
 
-        if self.managed_host.server_profile.managed:
+        if self.managed_host.is_lustre_server:
+            steps.append((LearnDevicesStep, {'host': self.managed_host}))
+
+        if not self.managed_host.is_monitor_only:
             steps.append((InstallPackagesStep, {
                 'host': self.managed_host,
                 'packages': list(self.managed_host.server_profile.packages)
             }))
 
-            steps.append((RebootIfNeededStep, {'host': self.managed_host, 'timeout': settings.INSTALLATION_REBOOT_TIMEOUT}))
+            steps.append((RebootIfNeededStep, {
+                'host': self.managed_host,
+                'timeout': settings.INSTALLATION_REBOOT_TIMEOUT
+            }))
 
-            if not self.managed_host.server_profile.worker:
+            if self.managed_host.is_lustre_server:
                 steps.extend([
                     (ConfigureCorosyncStep, {'host': self.managed_host}),
                     (ConfigurePacemakerStep, {'host': self.managed_host})

@@ -166,6 +166,16 @@ def main():
             daemon_log.error("No configuration found (must be registered before running the agent service)")
             return
 
+        if config.get('settings', 'profile')['worker']:
+            # This is kind of terrible. The design of DevicePluginManager is
+            # such that it can be called with either class methods or
+            # instantiated and then called with instance methods. As such,
+            # we can't pass in a list of excluded plugins to the instance
+            # constructor. Well, we could, but it would only work some
+            # of the time and that would be even more awful.
+            import chroma_agent.plugin_manager
+            chroma_agent.plugin_manager.EXCLUDED_PLUGINS += ['linux', 'corosync']
+
         agent_client = AgentClient(
             conf['url'] + "message/",
             ActionPluginManager(),

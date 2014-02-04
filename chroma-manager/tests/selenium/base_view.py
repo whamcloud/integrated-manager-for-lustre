@@ -153,6 +153,7 @@ class BaseView(object):
     def volume_chooser_open_and_select(self, chooser_id, server_address, volume_name, multi = False):
         """Click storage button and select an MGT from chooser"""
         chooser_button = self.driver.find_element_by_css_selector("#%s_outer" % chooser_id)
+        self.quiesce()
         chooser_button.click()
         self.quiesce()
         self.volume_chooser_select(chooser_id, server_address, volume_name, multi)
