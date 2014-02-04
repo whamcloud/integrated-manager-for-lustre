@@ -17,7 +17,7 @@
       "chroma_ui/bower_components/ngstorage/ngStorage.js",
       "chroma_ui/vendor/angular-animate-patched/angular-animate.js",
       "chroma_ui/bower_components/angular-route-segment/build/angular-route-segment.js",
-      "chroma_ui/vendor/ui-bootstrap-tpls-0.6.0-SNAPSHOT.js",
+      "chroma_ui/bower_components/angular-bootstrap/ui-bootstrap-tpls.js",
       "chroma_ui/iml/environment.js",
       "chroma_ui/iml/help.js",
       "chroma_ui/common/**/*-module.js",

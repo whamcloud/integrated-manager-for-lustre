@@ -37,6 +37,8 @@ function AppCtrl ($routeSegment, SessionModel, navigate, CONFMENU_URL) {
     self.onClick = (self.loggedIn ? self.logout : self.login);
   });
 
+  this.isCollapsed = true;
+
   this.login = function login() {
     navigate('login/');
   };

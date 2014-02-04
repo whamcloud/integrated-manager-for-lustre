@@ -6,22 +6,20 @@
     padding-bottom: 0;
   }
 
-  .dropdown-menu {
-    background-color: @gray-darker;
+  .inverse-dropdown {
+    background-color: @navbar-inverse-bg;
+    border-color: @navbar-inverse-border;
     font-size: 12px;
-  }
+    padding-top: 10px;
 
-  .dropdown-menu li {
-    display:inline-block;
-    width: 100%;
-  }
+    & > li > a {
+      color: @navbar-inverse-color;
 
-  .dropdown-menu li a {
-    padding: 10px 15px 10px 15px;
-  }
-
-  .dropdown-wrapper:hover > .dropdown-menu {
-    display: block;
+      &:hover{
+        color: @navbar-inverse-link-hover-color;
+        background-color: @navbar-inverse-link-active-bg;
+      }
+    }
   }
 
   .logo {

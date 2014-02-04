@@ -1,28 +1,29 @@
 <nav class="navbar navbar-inverse" role="navigation">
   <div class="navbar-header">
+    <button class="navbar-toggle" ng-click="app.isCollapsed = !app.isCollapsed">
+      <i class="fa fa-bars"></i>
+    </button>
     <a class="navbar-brand" route-to="">
       <div class="logo"></div>
     </a>
   </div>
-  <div class="collapse navbar-collapse navbar-ex1-collapse">
+  <div class="collapse navbar-collapse" collapse="app.isCollapsed">
     <ul class="nav navbar-nav">
       <li ng-class="{active: app.$routeSegment.contains('dashboard')}">
         <a route-to="dashboard/"><i class="fa fa-bar-chart-o"></i> Dashboard</a>
       </li>
-    </ul>
-    <ul class="nav navbar-nav">
-      <li ng-class="{active: app.$routeSegment.contains('configure')}" class="dropdown-wrapper">
-          <a class="dropdown" href="#"><i class="fa fa-cog"></i> Configuration</a>
-          <ul class="dropdown-menu navbar-nav" role="menu" aria-labelledby="dropdownMenu">
-              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/server/">Servers</a></li>
-              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/volume/">Volumes</a></li>
-              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/power/">Power Control</a></li>
-              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/mgt/">MGTs</a></li>
-              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/filesystem/">File Systems</a></li>
-              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/storage/">Storage</a></li>
-              <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/user/">Users</a></li>
-          </ul>
-        </li>
+      <li ng-class="{active: app.$routeSegment.contains('configure')}">
+        <a class="dropdown-toggle" href="#"><i class="fa fa-cog"></i> Configuration <i class="fa fa-caret-down"></i></a>
+        <ul class="dropdown-menu inverse-dropdown" role="menu" aria-labelledby="dropdownMenu">
+          <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/server/">Servers</a></li>
+          <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/volume/">Volumes</a></li>
+          <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/power/">Power Control</a></li>
+          <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/mgt/">MGTs</a></li>
+          <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/filesystem/">File Systems</a></li>
+          <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/storage/">Storage</a></li>
+          <li><a tabindex="-1" href="{{ app.CONFMENU_URL }}/user/">Users</a></li>
+        </ul>
+      </li>
     </ul>
     <ul class="nav navbar-nav navbar-right">
       <li ng-if="app.loggedIn"><a>{{ app.user.username }}</a></li>

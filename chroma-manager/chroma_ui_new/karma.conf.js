@@ -43,6 +43,7 @@ module.exports = function(config) {
       bowerDir('momentjs/moment.js'),
       bowerDir('twix/bin/twix.js'),
       bowerDir('d3/d3.js'),
+      bowerDir('angular-bootstrap/ui-bootstrap-tpls.js'),
       vendorDir('**/*.js'),
       commonDir('**/*-module.js'),
       commonDir('**/*.js'),

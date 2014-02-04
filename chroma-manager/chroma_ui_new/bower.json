@@ -8,6 +8,7 @@
     "angular-route": "1.2.10",
     "angular-route-segment": "1.2.0",
     "angular-bindonce": "0.2.2",
+    "angular-bootstrap": "0.10.0",
     "font-awesome": "git://github.com/FortAwesome/Font-Awesome.git#~4.0.3",
     "bootstrap": "3.0.3",
     "lodash": "2.4.1",
