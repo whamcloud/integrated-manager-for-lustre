@@ -61,13 +61,16 @@ class Command(BaseCommand):
 
         if kwargs.get('type') == 'dev':
             ssl = SITE_ROOT
+            mode = 'DEV'
         else:
             ssl = production_settings.get('ssl')
+            mode = 'PROD'
 
         conf = {
             "PRIMUS_PORT": 8888,
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
-            "SSL": ssl
+            "SSL": ssl,
+            "MODE": mode
         }
 
         json.dump(conf, open(CONF, 'w'), indent=2)
