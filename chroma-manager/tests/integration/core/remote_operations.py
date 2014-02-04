@@ -650,8 +650,12 @@ class RealRemoteOperations(RemoteOperations):
                         "crm_mon -1"
                     )
                     node_status = result.stdout.read()
-                    if re.search('Online: \[.* %s .*\]' %
-                                 boot_server['nodename'], node_status):
+
+                    logger.info("Response running crm_mon -1 on %s:  %s" % (boot_server['nodename'], node_status))
+                    err = result.stderr.read()
+                    if err:
+                        logger.error("    result.stderr:  %s" % err)
+                    if re.search('Online: \[.* %s .*\]' % boot_server['nodename'], node_status):
                         break
                 else:
                     # No monitor server, take SSH offline-ness as evidence for being booted
