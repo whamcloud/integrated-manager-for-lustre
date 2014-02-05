@@ -93,7 +93,14 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         self.wait_until_true(lambda: self.get_filesystem(filesystem_id).get('client_count') == starting_client_count)
 
         # Check bytes free are what we expect after the writing above
-        self.wait_until_true(lambda: expected_bytes_written == starting_bytes_free - self.get_filesystem(filesystem_id).get('bytes_free'))
+        def _check():
+            current_bytes_free = self.get_filesystem(filesystem_id).get('bytes_free')
+            actual_bytes_written = starting_bytes_free - current_bytes_free
+            logger.debug("expected: %s, actual: %s from starting: %s - current: %s" %
+                         (expected_bytes_written, actual_bytes_written, starting_bytes_free, current_bytes_free))
+
+            return expected_bytes_written == actual_bytes_written
+        self.wait_until_true(_check)
 
         # Check files free are what we expect after the writing above
         self.wait_until_true(lambda: starting_files_free - 1 == self.get_filesystem(filesystem_id).get('files_free'))
