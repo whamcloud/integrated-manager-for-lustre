@@ -22,15 +22,29 @@
 (function () {
   'use strict';
 
-  angular.module('environment', [])
-    .constant('STATIC_URL', window.STATIC_URL)
-    .constant('UI_ROOT', document.baseURI)
-    .constant('HELP_TEXT', window.HELP_TEXT)
-    .constant('IS_RELEASE', window.IS_RELEASE)
-    .constant('VERSION', window.VERSION)
-    .constant('BUILD', window.BUILD)
-    .constant('BASE', '%s//%s'.sprintf(window.location.protocol, window.location.hostname))
-    .constant('CONFMENU_URL', '/ui/configure')
-    .constant('API', '%s//%s:%s/api/'
-      .sprintf(window.location.protocol, window.location.hostname, window.location.port));
+  var ENV = Object.freeze({
+    STATIC_URL: window.STATIC_URL,
+    UI_ROOT: document.baseURI,
+    HELP_TEXT: window.HELP_TEXT,
+    IS_RELEASE: window.IS_RELEASE,
+    VERSION: window.VERSION,
+    BUILD: window.BUILD,
+    BASE: '%s//%s'.sprintf(window.location.protocol, window.location.hostname),
+    API: '%s//%s:%s/api/'
+      .sprintf(window.location.protocol, window.location.hostname, window.location.port),
+    get RUNTIME_VERSION () {
+      if (this.IS_RELEASE)
+        return this.VERSION;
+      else
+        return 'Build ' + this.BUILD;
+    }
+  });
+
+  var environmentModule = angular.module('environment', []);
+
+  environmentModule.constant('ENV', ENV);
+
+  Object.keys(ENV).forEach(function (key) {
+    environmentModule.constant(key, ENV[key]);
+  });
 }());
