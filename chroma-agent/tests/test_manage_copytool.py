@@ -28,12 +28,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         self.ct_bin_path = '/usr/sbin/lhsmtool_foo'
         self.ct_arguments = '-p /archive/testfs'
         self.ct_filesystem = 'testfs'
-        self.ct_id = configure_copytool(self.ct_id,
-                                       self.ct_index,
-                                       self.ct_bin_path,
-                                       self.ct_archive,
-                                       self.ct_filesystem,
-                                       self.ct_arguments)
+        self._configure_copytool()
         self.ct_vars = _copytool_vars(self.ct_id)
 
         self.addCleanup(patch.stopall)
@@ -42,6 +37,14 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         super(TestCopytoolManagement, self).setUp()
 
         shutil.rmtree(self.mock_config.path)
+
+    def _configure_copytool(self):
+        self.ct_id = configure_copytool(self.ct_id,
+                                       self.ct_index,
+                                       self.ct_bin_path,
+                                       self.ct_archive,
+                                       self.ct_filesystem,
+                                       self.ct_arguments)
 
     def test_start_monitored_copytool(self):
         start_monitored_copytool(self.ct_id)
@@ -64,6 +67,27 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         self.assertRan(['/sbin/stop', 'copytool-monitor',
                         'id=%s' % self.ct_id])
 
+    def test_start_should_be_idempotent(self):
+        from chroma_agent import shell
+        from chroma_agent.shell import CommandExecutionError
+
+        real_try_run = shell.try_run
+
+        def fake_try_run(*args):
+            if args[0][0] == '/sbin/start':
+                raise CommandExecutionError('Job is already running')
+            else:
+                real_try_run(*args)
+
+        with patch('chroma_agent.shell.try_run', fake_try_run):
+            start_monitored_copytool(self.ct_id)
+            self.assertRan(['/sbin/restart', 'copytool-monitor',
+                            'id=%s' % self.ct_id])
+            self.assertRan(['/sbin/restart', 'copytool',
+                            'ct_arguments=%s' % self.ct_vars['ct_arguments'],
+                            'ct_path=%s' % self.ct_bin_path,
+                            'id=%s' % self.ct_id])
+
     def test_stop_should_be_idempotent(self):
         from chroma_agent.shell import CommandExecutionError
 
@@ -72,6 +96,18 @@ class TestCopytoolManagement(CommandCaptureTestCase):
 
         with patch('chroma_agent.shell.try_run', side_effect=raise_error):
             stop_monitored_copytool(self.ct_id)
+
+    def test_configure_should_be_idempotent(self):
+        expected_kwargs = dict(
+            index = self.ct_index,
+            bin_path = self.ct_bin_path,
+            filesystem = self.ct_filesystem,
+            archive_number = self.ct_archive,
+            hsm_arguments = self.ct_arguments
+        )
+        with patch('chroma_agent.action_plugins.manage_copytool.update_copytool') as patched_update_copytool:
+            self._configure_copytool()
+            patched_update_copytool.assert_called_with(self.ct_id, **expected_kwargs)
 
     @patch('chroma_agent.action_plugins.manage_copytool.stop_monitored_copytool')
     def test_unconfigure_copytool(self, stop_monitored_copytool):

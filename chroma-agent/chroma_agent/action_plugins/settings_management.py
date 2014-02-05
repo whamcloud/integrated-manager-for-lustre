@@ -25,11 +25,15 @@ import re
 import json
 
 from chroma_agent import config
+from chroma_agent.config_store import ConfigKeyExistsError
 
 
 def set_server_url(url):
     server_conf = dict(url = url)
-    config.set('settings', 'server', server_conf)
+    try:
+        config.set('settings', 'server', server_conf)
+    except ConfigKeyExistsError:
+        config.update('settings', 'server', server_conf)
 
 
 def set_agent_config(key, val):
