@@ -91,16 +91,20 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                 )
                 self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout.read())
 
-            # FIXME: should reinstall the actual profiles from the installer, this is a hardcoded copy
             result = self.remote_command(
                 chroma_manager['address'],
                 "ls /tmp/ieel-*/",
                 expected_return_code = None
             )
-            self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (result.stdout.read(), result.stderr.read()))
+            installer_contents = result.stdout.read()
+            self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr.read()))
+
+            # get a list of profiles in the installer and re-register them
+            profiles = [line for line in installer_contents.split("\n")
+                        if 'profile' in line]
             result = self.remote_command(
                 chroma_manager['address'],
-                "for profile_pat in base_managed.profile base_monitored.profile posix_copytool_worker.profile; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log",
+                "for profile_pat in %s; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log" % " ".join(profiles),
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
