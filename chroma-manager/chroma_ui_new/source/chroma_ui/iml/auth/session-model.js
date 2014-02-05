@@ -20,24 +20,30 @@
 // express and approved by Intel in writing.
 
 
-angular.module('auth').factory('SessionModel', ['modelFactory', 'UserModel', function (modelFactory, UserModel) {
-  'use strict';
+angular.module('auth')
+  .factory('SessionModel', ['modelFactory', 'UserModel', function (modelFactory, UserModel) {
+    'use strict';
 
-  var Session = modelFactory({ url: 'session' });
+    var Session = modelFactory({ url: 'session' });
 
-  Session.subTypes = {
-    user: UserModel
-  };
+    Session.subTypes = {
+      user: UserModel
+    };
 
-  Session.login = function (username, password) {
-    var session = Session.save({username: username, password: password});
+    Session.login = function (username, password) {
+      var session = Session.save({username: username, password: password});
 
-    session.$promise = session.$promise.then(function (resp) {
-      return resp.$get();
-    });
+      session.$promise = session.$promise.then(function (resp) {
+        return resp.$get();
+      });
 
-    return session;
-  };
+      return session;
+    };
 
-  return Session;
-}]);
+    return Session;
+  }])
+  .service('sessionModelSingleton', ['SessionModel', function (SessionModel) {
+    'use strict';
+
+    return SessionModel.get();
+  }]);

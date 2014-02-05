@@ -12,16 +12,17 @@
       <li ng-class="{active: app.$routeSegment.contains('dashboard')}">
         <a route-to="dashboard/"><i class="fa fa-bar-chart-o"></i> Dashboard</a>
       </li>
-      <li ng-class="{active: app.$routeSegment.contains('configure')}">
+      <li ng-class="{active: app.$routeSegment.contains('configure')}" restrict-to="{{ app.GROUPS.FS_ADMINS }}">
         <a class="dropdown-toggle" href="#"><i class="fa fa-cog"></i> Configuration <i class="fa fa-caret-down"></i></a>
         <ul class="dropdown-menu inverse-dropdown" role="menu" aria-labelledby="dropdownMenu">
           <li><a tabindex="-1" route-to="server/" target="_self">Servers</a></li>
-          <li><a tabindex="-1" route-to="volume/" target="_self">Volumes</a></li>
           <li><a tabindex="-1" route-to="power/" target="_self">Power Control</a></li>
-          <li><a tabindex="-1" route-to="mgt/" target="_self">MGTs</a></li>
           <li><a tabindex="-1" route-to="filesystem/" target="_self">File Systems</a></li>
+          <li><a tabindex="-1" route-to="hsm/">HSM</a></li>
           <li><a tabindex="-1" route-to="storage/" target="_self">Storage</a></li>
           <li><a tabindex="-1" route-to="user/" target="_self">Users</a></li>
+          <li><a tabindex="-1" route-to="volume/" target="_self">Volumes</a></li>
+          <li><a tabindex="-1" route-to="mgt/" target="_self">MGTs</a></li>
         </ul>
       </li>
       <li>
@@ -32,9 +33,6 @@
       </li>
       <li>
         <a route-to="log/" target="_self"><i class="fa fa-book"></i> Logs</a>
-      </li>
-      <li ng-class="{active: app.$routeSegment.contains('hsm')}">
-        <a route-to="hsm/"><i class="fa fa-cog"></i> HSM</a>
       </li>
     </ul>
     <ul class="nav navbar-nav navbar-right">
