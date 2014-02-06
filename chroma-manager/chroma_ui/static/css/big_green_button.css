@@ -8,7 +8,7 @@
 
 span[ng-controller="BigGreenButtonCtrl"] {
     position: absolute;
-    top: 12.5px;
+    top: 18px;
     width: 12px;
     height: 12px;
     display: inline-block;

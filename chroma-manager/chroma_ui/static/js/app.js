@@ -49,5 +49,7 @@
           return STATIC_URL + url;
         }
       };
+
+      $rootScope.isCollapsed = true;
     }]);
 }());

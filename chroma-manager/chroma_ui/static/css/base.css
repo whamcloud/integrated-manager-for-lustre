@@ -28,6 +28,7 @@ html, body
 	font-family:Verdana, Arial, Helvetica, sans-serif;
 	background-color:#eeeeee;
 
+  height: 100%;
 }
 
 body {
@@ -35,8 +36,13 @@ body {
     padding: 0;
 }
 
-strong
-{
+@media (max-width: 767px) {
+  html body {
+    padding: 0;
+  }
+}
+
+strong {
 	font-weight: bold;
 }
 

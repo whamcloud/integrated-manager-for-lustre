@@ -1,56 +1,79 @@
-<div class="logohead">
-  <a class='navigation' href="">
-    <div class="logo"></div>
-  </a>
-  <div class="top_links read_enabled_only">
-    <div>
-    <ul class="navigation">
-      <li><a id="dashboard_menu" class="navigation" href="dashboard/"><i class="icon-bar-chart"></i>Dashboard</a></li>
-      <li class='fsadmin_only nav'>
-
-          <div class="dropdown">
-              <a class="navigation dropdown-toggle" data-toggle="dropdown-menu" id="configure_menu" data-target="#" href="#"><i class="icon-cog"></i>Configuration</a>
-              <ul class="dropdown-menu" role="menu">
-                  <li><a id="server-conf-item" href="/ui/configure/server/" title='servers'>Servers</a></li>
-                  <li><a id="volume-conf-item" href='/ui/configure/volume/' title='volumes'>Volumes</a></li>
-                  <li><a id="power-conf-item" href='/ui/configure/power/' title='power'>Power Control</a></li>
-                  <li><a id="mgt-conf-item" href='/ui/configure/mgt/' title='mgts'>MGTs</a></li>
-                  <li><a id="filesystem-conf-item" href='/ui/configure/filesystem/' title='filesystems'>File Systems</a></li>
-                  <li><a id="storage-conf-item" href='/ui/configure/storage/' title='storage'>Storage</a></li>
-                  <li><a id="user-conf-item" class="superuser_only" href='/ui/configure/user/' title='users'>Users</a></li>
-              </ul>
-          </div>
-      </li>
-      <li><a id="alert_menu" class="navigation" href="alert/"><i class="icon-warning-sign"></i>Alerts</a></li>
-      <li><a id="event_menu" class="navigation" href="event/"><i class="icon-time"></i>History</a></li>
-      <li><a id="log_menu" class="navigation" href="log/"><i class="icon-book"></i>Logs</a></li>
-      <li class='fsadmin_only'><a id="help_menu" class="navigation skip_router" href="{{STATIC_URL}}webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i>Help</a></li>
-      <li>
-        <a id="status_menu" class="navigation status-nav" href="/ui/status/" context-tooltip="status_light" tooltip-placement="bottom">
-          <span ng-controller="BigGreenButtonCtrl" ng-class="state" class="ng-cloak" ></span>
-          <span class="status-text">Status</span>
-        </a>
-      </li>
-    </ul>
-    </div>
-    <span id="user_info">
-      <span id="authenticated">
-        <span id="username"></span>
-        <span class='account_links'><a href='#' id='account'>Account</a> <a href="#" id='logout'>Logout</a></span>
-      </span>
-      <span id="anonymous">
-        <a href="/ui/login/" id='login'>Login</a>
-      </span>
-    </span>
-    <span class='header_version'>
-        <a class='navigation' href="/ui/about/">
-      {% if IS_RELEASE %}
-      {{VERSION}}
-      {% else %}
-      Build {{BUILD}}
-      {% endif %}
+<div class="navbar navbar-inverse">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" ng-click="isCollapsed = !isCollapsed">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+      </a>
+      <a class="brand" href="">
+        <span class="logo"></span>
+      </a>
+      <div class="nav-collapse collapse navbar-inverse-collapse" collapse="isCollapsed">
+        <ul class="nav">
+          <li>
+            <a id="dashboard_menu" class="navigation skip_router" href="/ui/dashboard/"><i class="icon-bar-chart"></i> Dashboard</a>
+          </li>
+          <li class="dropdown fsadmin_only">
+            <a class="navigation dropdown-toggle" id="configure_menu" href="#"><i class="icon-cog"></i> Configuration <i class="icon-caret-down"></i></a>
+            <ul class="dropdown-menu" role="menu">
+              <li><a id="server-conf-item" href="/ui/configure/server/" title='servers'>Servers</a></li>
+              <li><a id="volume-conf-item" href='/ui/configure/volume/' title='volumes'>Volumes</a></li>
+              <li><a id="power-conf-item" href='/ui/configure/power/' title='power'>Power Control</a></li>
+              <li><a id="mgt-conf-item" href='/ui/configure/mgt/' title='mgts'>MGTs</a></li>
+              <li><a id="filesystem-conf-item" href='/ui/configure/filesystem/' title='filesystems'>File Systems</a></li>
+              <li><a id="storage-conf-item" href='/ui/configure/storage/' title='storage'>Storage</a></li>
+              <li><a id="user-conf-item" class="superuser_only" href='/ui/configure/user/' title='users'>Users</a></li>
+            </ul>
+          </li>
+          <li>
+            <a id="alert_menu" class="navigation" href="alert/"><i class="icon-warning-sign"></i> Alerts</a>
+          </li>
+          <li>
+            <a id="event_menu" class="navigation" href="event/"><i class="icon-time"></i> History</a>
+          </li>
+          <li>
+            <a id="log_menu" class="navigation" href="log/"><i class="icon-book"></i> Logs</a>
+          </li>
+          <li class='fsadmin_only'>
+            <a id="help_menu" class="navigation skip_router" href="{{STATIC_URL}}webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i> Help</a>
+          </li>
+          <li>
+            <a id="status_menu" class="navigation status-nav" href="/ui/status/" context-tooltip="status_light" tooltip-placement="bottom">
+              <span ng-controller="BigGreenButtonCtrl" ng-class="state" class="ng-cloak" ></span>
+              <span class="status-text">Status</span>
             </a>
-    </span>
+          </li>
+        </ul>
+        <ul class="nav pull-right">
+          <li>
+            <span class='header_version'>
+              <a class='navigation' href="/ui/about/">
+                {% if IS_RELEASE %}
+                  {{VERSION}}
+                {% else %}
+                  Build {{BUILD}}
+                {% endif %}
+              </a>
+            </span>
+          </li>
+          <li>
+            <span id="user_info">
+              <span id="authenticated">
+                <span id="username"></span>
+                <span class='account_links'>
+                  <a href='#' id='account'>Account</a>
+                  <a href="#" id='logout'>Logout</a>
+                </span>
+              </span>
+              <span id="anonymous">
+                <a href="/ui/login/" id='login'>Login</a>
+              </span>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 

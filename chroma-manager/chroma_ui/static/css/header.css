@@ -1,24 +1,104 @@
+.logohead {
+  width: 100%;
+  height: 37px;
+  color: #ccc;
 
-.logohead{
-    width: 100%;
-    height: 37px;
-    color: #ccc;
+  background-color: #2C2C2C;
+}
 
-    background-color: #2C2C2C;
+.logohead .logo {
+  margin-top: 5px;
+  margin-left: 5px;
 }
 
 .logohead a {
-    color: #ccc;
+  color: #ccc;
 }
 
-.logo{
-    background-image: url(../images/intel-logo-white-trans-80x31.png);
-    background-repeat: no-repeat;
-    background-size: 80px 31px;
-    width: 80px;
-    height: 31px;
-    float: left;
-    margin: 3px 10px 2px 5px;
+.logo {
+  display: inline-block;
+  background-image: url(../images/intel-logo-white-small.png);
+  background-repeat: no-repeat;
+  background-size: 38px 25px;
+  width: 38px;
+  height: 25px;
+  float: left;
+  font-size: 18px;
+  line-height: 20px;
+}
+
+.navbar.navbar-inverse .brand {
+  margin-left: -15px;
+  padding: 12px 15px 13px;
+}
+
+.navbar.navbar-inverse .btn.btn-navbar {
+  margin-top: 11px;
+}
+
+.navbar.navbar-inverse .logo {
+  margin: 0;
+}
+
+.navbar.navbar-inverse .nav {
+  padding-left: 0;
+}
+
+.navbar.navbar-inverse .nav a,
+.navbar.navbar-inverse #username {
+  height: 30px;
+  line-height: 30px;
+  font-size: 14px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.navbar-inverse .navbar-nav > .active > a:hover,
+.navbar.navbar-inverse .account_links a:hover {
+  color: #FFFFFF;
+  background-color: #080808;
+}
+
+.navbar.navbar-inverse .navbar-inner {
+  border-radius: 0;
+  padding: 0 15px;
+}
+
+.navbar.navbar-inverse .header_version,
+.navbar.navbar-inverse .account_links a,
+.navbar.navbar-inverse #username,
+.navbar.navbar-inverse .nav > li > .dropdown-menu a {
+  color: #999999;
+}
+
+.navbar.navbar-inverse .account_links a {
+  text-decoration: none;
+}
+
+.navbar.navbar-inverse {
+  margin-bottom: 0;
+}
+
+.navbar.navbar-inverse .nav > li > .dropdown-menu:before,
+.navbar.navbar-inverse .nav > li > .dropdown-menu:after {
+  display: none;
+  border: 0;
+}
+
+.navbar.navbar-inverse .nav > li > .dropdown-menu {
+  background-color: #222222;
+  margin-top: 0;
+}
+
+.navbar.navbar-inverse .nav > li > .dropdown-menu li a {
+  font-size: 12px;
+  line-height: 20px;
+  padding: 10px 15px;
+}
+
+.navbar.navbar-inverse .nav > li > .dropdown-menu li a:hover {
+  background-color: transparent;
+  color: #FFFFFF;
+  background-image: none;
 }
 
 @media only screen and (min--moz-device-pixel-ratio: 2),
@@ -26,12 +106,11 @@
     only screen and (-webkit-min-device-pixel-ratio: 2),
     only screen and (min-device-pixel-ratio: 2) {
     .logo {
-        background-image: url(../images/intel-logo-white-trans-160x62.png);
+        background-image: url(../images/intel-logo-white-large.png);
     }
 }
 
-
-span#user_info{
+span#user_info {
     float: right;
     font-size: 9pt;
     margin-left: 12px;
@@ -39,7 +118,7 @@ span#user_info{
     margin-top: 10px;
 }
 
-span#authenticated{
+span#authenticated {
     float: left;
 }
 
@@ -73,6 +152,7 @@ span#username {
 
 .top_links ul.navigation li {
     border: none;
+    height: 50px;
     padding: 0;
 }
 
@@ -81,8 +161,8 @@ span#username {
     color: #FFFFFF;
     text-decoration: none;
     display: block;
-    height: 37px;
-    line-height: 37px;
+    height: 50px;
+    line-height: 50px;
     padding: 0px 10px;
 }
 

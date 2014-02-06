@@ -106,6 +106,8 @@ class SeleniumBaseTestCase(TestCase):
             elif browser == 'Firefox':
                 self.driver = webdriver.Firefox()
 
+        self.driver.set_window_size(1024, 768)
+
         self.driver.get(config['chroma_managers'][0]['server_http_url'])
 
         self.addCleanup(self.stop_driver)

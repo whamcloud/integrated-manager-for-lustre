@@ -15,7 +15,7 @@ ssh chromatest@$TEST_RUNNER <<EOC
 set -ex
 mkdir test_reports
 source chroma_test_env/bin/activate
-vncserver :1
+vncserver :1 -geometry 1024x768
 export DISPLAY=\$(hostname):1
 
 #######################################
