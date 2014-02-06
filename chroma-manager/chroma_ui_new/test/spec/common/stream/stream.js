@@ -63,6 +63,13 @@ describe('stream module', function () {
       expect(streamInstance.getter()).toBe($scope.data);
     });
 
+    it('should expose the scope setter as a function', function () {
+      var newData = ['foo', 'bar'];
+
+      streamInstance.setter(newData);
+      expect($scope.data).toBe(newData);
+    });
+
     it('should expose the default params used to create the instance', function () {
       expect(streamInstance.defaultParams).toEqual({});
     });
@@ -223,6 +230,9 @@ describe('stream module', function () {
         expect(streamInstance.getter).toBeNull();
       });
 
+      it('should null the setter function', function () {
+        expect(streamInstance.setter).toBeNull();
+      });
     });
   });
 });

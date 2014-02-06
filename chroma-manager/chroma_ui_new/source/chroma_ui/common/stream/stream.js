@@ -48,6 +48,7 @@
         this.scope = scope;
         this.defaultParams = _.merge(clonedDefaultParams, params);
         this.getter = _.partial(parsed, scope);
+        this.setter = _.partial(parsed.assign, scope);
         this.channel = primus().channel(channelName);
 
         scope.$on('$destroy', function destroy() {
@@ -175,6 +176,9 @@
        * @returns {function}
        */
       Stream.prototype.generateTransformProcessor = function generateTransformProcessor(queue) {
+        if (!Array.isArray(queue))
+          queue = [queue];
+
         queue = queue.map(function bindTransformers(transformer) {
           return _.bind(transformer, this);
         }, this);
@@ -203,6 +207,7 @@
         this.channel = null;
         this.scope = null;
         this.getter = null;
+        this.setter = null;
       };
 
       return Stream;

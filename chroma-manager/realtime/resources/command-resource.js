@@ -22,14 +22,21 @@
 
 'use strict';
 
-exports.resourceFactory = require('./resource');
-exports.fileSystemResourceFactory = require('./file-system-resource');
-exports.hsmCopytoolResourceFactory = require('./hsm-copytool-resource');
-exports.hsmCopytoolOperationResourceFactory = require('./hsm-copytool-operation-resource');
-exports.hostResourceFactory = require('./host-resource');
-exports.targetResourceFactory = require('./target-resource');
-exports.targetOstMetricsResourceFactory = require('./target-ost-metrics-resource');
-exports.alertResourceFactory = require('./alert-resource');
-exports.eventResourceFactory = require('./event-resource');
-exports.commandResourceFactory = require('./command-resource');
-exports.notificationResourceFactory = require('./notification-resource').notificationResourceFactory;
+var inherits = require('util').inherits;
+
+
+module.exports = function commandResourceFactory(Resource) {
+  /**
+   * Bridge to the command api endpoint.
+   * @constructor
+   */
+  function CommandResource () {
+    this.defaults = ['GetList'];
+
+    Resource.call(this, 'command');
+  }
+
+  inherits(CommandResource, Resource);
+
+  return CommandResource;
+};
