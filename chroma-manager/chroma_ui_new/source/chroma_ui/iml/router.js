@@ -33,13 +33,14 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment'])
     templateUrl: 'common/login/assets/html/login.html'
   });
 
-  $routeSegmentProvider.when('/', 'app').segment('app', {
+  $routeSegmentProvider.segment('app', {
     controller: 'AppCtrl',
     controllerAs: 'app',
     templateUrl: 'iml/app/assets/html/app.html'
   });
 
   $routeSegmentProvider.when('/dashboard', 'app.dashboard');
+  $routeSegmentProvider.when('/', 'app.dashboard');
 
   $routeSegmentProvider.within('app').segment('dashboard', {
     controller: 'DashboardCtrl',
