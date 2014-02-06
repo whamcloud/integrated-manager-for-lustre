@@ -99,6 +99,8 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             installer_contents = result.stdout.read()
             self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr.read()))
 
+            logger.debug("Installer contents: %s" % installer_contents)
+
             # get a list of profiles in the installer and re-register them
             profiles = [line for line in installer_contents.split("\n")
                         if 'profile' in line]
