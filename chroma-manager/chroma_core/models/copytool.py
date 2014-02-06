@@ -506,18 +506,6 @@ class ForceRemoveCopytoolJob(AdvertisedJob):
     def description(self):
         return "Force remove copytool %s from configuration" % self.copytool
 
-    def get_deps(self):
-        copytool = ObjectCache.get_one(Copytool,
-                                       lambda ct: ct.id == self.copytool_id)
-        client_mount = ObjectCache.get_one(LustreClientMount,
-                            lambda cm: cm.id == self.copytool.client_mount_id)
-
-        deps = [DependOn(copytool, 'stopped',
-                         acceptable_states=self.copytool.not_state('removed')),
-                DependOn(client_mount, 'unmounted')]
-
-        return DependAll(deps)
-
     def get_steps(self):
         return [(CancelActiveOperationsStep, {'copytool': self.copytool}),
                 (DeleteCopytoolStep, {'copytool': self.copytool})]

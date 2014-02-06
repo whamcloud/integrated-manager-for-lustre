@@ -24,24 +24,37 @@ import time
 import copy
 
 from chroma_agent import config
+from chroma_agent.config_store import ConfigKeyExistsError
 from chroma_agent.cli import raw_result
 from chroma_agent import shell
 from chroma_agent.shell import CommandExecutionError
 from chroma_agent.copytool_monitor import Copytool, COPYTOOL_PROGRESS_INTERVAL
+from chroma_agent.log import copytool_log
 
 
 def start_monitored_copytool(id):
     # Start the monitor first so that we have a reader on the FIFO when
     # the copytool begins emitting events.
-    shell.try_run(['/sbin/start', 'copytool-monitor', 'id=%s' % id])
+    try:
+        shell.try_run(['/sbin/start', 'copytool-monitor', 'id=%s' % id])
+    except CommandExecutionError as e:
+        if 'is already running' in str(e):
+            copytool_log.warn("Copytool monitor %s was already running -- restarting" % id)
+            shell.try_run(['/sbin/restart', 'copytool-monitor', 'id=%s' % id])
     time.sleep(1)
     shell.try_run(['/sbin/status', 'copytool-monitor', 'id=%s' % id])
 
     # Next, try to start the copytool, then sleep for a second before checking
     # its status. This will catch some of the more obvious problems which
     # result in the process (re-)spawn failing right away.
-    shell.try_run(['/sbin/start', 'copytool'] +
-                  ["%s=%s" % item for item in _copytool_vars(id).items()])
+    try:
+        shell.try_run(['/sbin/start', 'copytool'] +
+                      ["%s=%s" % item for item in _copytool_vars(id).items()])
+    except CommandExecutionError as e:
+        if 'is already running' in str(e):
+            copytool_log.warn("Copytool %s was already running -- restarting" % id)
+            shell.try_run(['/sbin/restart', 'copytool'] +
+                          ["%s=%s" % item for item in _copytool_vars(id).items()])
     time.sleep(1)
     shell.try_run(['/sbin/status', 'copytool', 'id=%s' % id])
 
@@ -69,7 +82,15 @@ def configure_copytool(id, index, bin_path, archive_number, filesystem, hsm_argu
                         hsm_arguments = hsm_arguments,
                         archive_number = archive_number)
 
-    config.set('copytools', copytool.id, copytool.as_dict())
+    try:
+        config.set('copytools', copytool.id, copytool.as_dict())
+    except ConfigKeyExistsError:
+        # This can happen when we've redeployed on a worker that was
+        # already configured (force-removed, etc.)
+        copytool_log.warn("Copytool %s was already configured -- assuming we need to update" % copytool.id)
+        update_kwargs = copytool.as_dict()
+        del update_kwargs['id']
+        update_copytool(copytool.id, **update_kwargs)
 
     return copytool.id
 
