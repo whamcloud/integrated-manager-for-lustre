@@ -110,6 +110,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             # Leaving the previous debug code in for data collection.
             if not profiles:
                 profiles = "base_managed.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile"
+                logger.error("bug: TEI-1479")
                 logger.error("Had to provide hard coded profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
