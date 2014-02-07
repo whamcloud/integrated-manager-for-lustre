@@ -58,7 +58,7 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
-develop: version realtime/node_modules
+develop: version realtime/node_modules dev_httpd/mod_proxy_wstunnel.so
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
@@ -84,6 +84,10 @@ gulp_build: $(NPM) realtime/node_modules chroma_ui_new/node_modules
 	@echo "Building New UI files for deployment..."; \
 	cd chroma_ui_new && \
 	./node_modules/.bin/gulp build
+
+dev_httpd/mod_proxy_wstunnel.so:
+	mkdir -p dev_httpd
+	$(MAKE) -C ../chroma-dependencies/mod_proxy_wstunnel BUILD_TYPE=DEVEL
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \

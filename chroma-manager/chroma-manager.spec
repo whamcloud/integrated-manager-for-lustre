@@ -25,6 +25,7 @@ Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
 Requires: mod_wsgi mod_ssl httpd ntp ed
+Requires: mod_proxy_wstunnel
 Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse

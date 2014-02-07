@@ -27,5 +27,6 @@ production_settings = {
     "HTTPS_FRONTEND_PORT": "443",
     "HTTP_AGENT_PORT": "8002",
     "HTTP_API_PORT": "8001",
+    "REALTIME_PORT": "8888",
     "ssl": "/var/lib/chroma"
 }
