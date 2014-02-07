@@ -25,9 +25,9 @@
 
   angular.module('primus', [])
     .value('Primus', window.Primus)
-    .factory('primus', ['Primus', 'BASE', 'disconnectModal', '$rootScope', primusFactory]);
+    .factory('primus', ['Primus', 'BASE', 'disconnectModal', '$rootScope', '$window', primusFactory]);
 
-  function primusFactory(Primus, BASE, disconnectModal, $rootScope) {
+  function primusFactory(Primus, BASE, disconnectModal, $rootScope, $window) {
     var primus, modal;
 
     /**
@@ -37,7 +37,7 @@
     return function get () {
       if (primus) return primus;
 
-      primus = new Primus(BASE + ':8888');
+      primus = new Primus(BASE + ':' + $window.location.port);
 
       primus.on('reconnecting', $applyFunc(function onReconnecting() {
         if (!modal)

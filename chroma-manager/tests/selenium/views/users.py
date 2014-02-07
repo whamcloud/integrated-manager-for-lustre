@@ -93,7 +93,7 @@ class Users(DatatableView):
         account_button = wait_for_element_by_css_selector(self.driver, "#account", 10)
         self.quiesce()
         account_button.click()
-        self.quiesce()
+        self._reset_ui()
         wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
 
     def add(self, user_group, username, first_name, last_name, email, password, confirm_password):

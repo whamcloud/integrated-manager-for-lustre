@@ -21,11 +21,11 @@ class Navigation(BaseView):
 
         self.links = {
             # Elements in Main Menu
-            'Dashboard': '#dashboard_menu',
-            'Configure': '#configure_menu',
-            'Alerts': '#alert_menu',
-            'Events': '#event_menu',
-            'Logs': '#log_menu',
+            'Dashboard': '#dashboard-menu',
+            'Configure': '#configure-menu',
+            'Alerts': '#alert-menu',
+            'Events': '#event-menu',
+            'Logs': '#log-menu',
 
             # Elements under configure tab
             'Filesystems': "a#filesystem-conf-item",
@@ -56,16 +56,14 @@ class Navigation(BaseView):
 
     def reset(self):
         self.driver.get(config['chroma_managers'][0]['server_http_url'])
-        wait_for_element_by_css_selector(self.driver, '#dashboard_menu', 10)
+        wait_for_element_by_css_selector(self.driver, '#dashboard-menu', 10)
         self._reset_ui()
 
     def go(self, *args):
         self.log.info("Navigation.go: %s" % (args,))
         for page in args:
             self.click(self.links[page])
-        self.quiesce()
-        self.wait_for_angular()
-        self.quiesce()
+        self._reset_ui()
 
     def click(self, selector):
         """

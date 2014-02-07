@@ -6,6 +6,9 @@ from django.contrib.auth.models import User
 
 from mock import patch
 
+from settings import SITE_ROOT
+from os import path, remove
+
 from chroma_core.lib.service_config import SupervisorStatus
 
 
@@ -13,6 +16,8 @@ credentials = {
     "username": "non_superuser",
     "password": "foo"
 }
+
+base_template = path.join(SITE_ROOT, 'chroma_ui', 'templates', 'new', 'base.html')
 
 
 @patch.object(SupervisorStatus, "get_non_running_services")
@@ -23,9 +28,11 @@ class TestLoginView(TestCase):
 
         self.get_login_page = partial(self.client.get, "/ui/login/")
 
+        open(base_template, 'a').close()
+
     def test_login_page_is_rendered(self, mock_method):
         mock_method.return_value = []
-        with self.assertTemplateUsed("login.html"):
+        with self.assertTemplateUsed("new/login.html"):
             self.get_login_page()
 
     @patch("chroma_ui.views._build_cache")
@@ -56,3 +63,5 @@ class TestLoginView(TestCase):
     def tearDown(self):
         self.user.delete()
         self.super_user.delete()
+
+        remove(base_template)

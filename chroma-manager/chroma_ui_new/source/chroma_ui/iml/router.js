@@ -47,7 +47,7 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment'])
     templateUrl: 'iml/dashboard/assets/html/dashboard.html'
   });
 
-  $routeSegmentProvider.when('/hsm', 'app.hsm');
+  $routeSegmentProvider.when('/configure/hsm', 'app.hsm');
 
   $routeSegmentProvider.within('app').segment('hsm', {
     controller: 'HsmCtrl',

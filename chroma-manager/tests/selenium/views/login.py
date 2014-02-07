@@ -11,7 +11,7 @@ class Login(BaseView):
 
     @property
     def container(self):
-        return self.driver.find_element_by_class_name("login-container")
+        return self.driver.find_element_by_class_name("login-partial")
 
     @property
     def username(self):
@@ -27,7 +27,7 @@ class Login(BaseView):
 
     @property
     def logout_button(self):
-        return self.driver.find_element_by_id("logout")
+        return self.driver.find_element_by_class_name("logout")
 
     def go_to_page(self):
         """
@@ -56,10 +56,10 @@ class Login(BaseView):
         Eula(self.driver).accept(must_accept)
 
         # After refresh we should see the username field.
-        WebDriverWait(self.driver, self.short_wait).until(lambda driver: driver.find_element_by_id("username"))
+        WebDriverWait(self.driver, self.short_wait).until(lambda driver: driver.find_element_by_id("account"))
 
         # Page should be reloaded, make sure it is usable.
-        self._reset_ui()
+        self._reset_ui(angular_only=True)
 
         return self
 
@@ -75,7 +75,7 @@ class Login(BaseView):
 
         def wait_for_refresh(login):
             try:
-                return login.username.get_attribute("value") == ""
+                return login.username.get_attribute("value") == username
             except StaleElementReferenceException:
                 return False
 

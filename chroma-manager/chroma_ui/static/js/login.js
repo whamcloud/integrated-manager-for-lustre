@@ -46,7 +46,7 @@ var Login = (function () {
     $('#user_info #authenticated').hide();
     $('#user_info #anonymous').show();
 
-    $('#user_info #authenticated #logout').click(function(event) {
+    $('#user_info #authenticated .logout').click(function(event) {
       Api.delete("session/", {}, success_callback = function() {
         window.location.href = '%slogin/'.sprintf(Api.UI_ROOT);
       });
@@ -78,7 +78,7 @@ var Login = (function () {
         $('#user_info #authenticated').hide();
         $('#user_info #anonymous').show();
       } else {
-        $('#user_info #authenticated #username').html(user.username);
+        $('#user_info #authenticated #account').html(user.username);
         $('#user_info #authenticated').show();
         $('#user_info #anonymous').hide();
       }

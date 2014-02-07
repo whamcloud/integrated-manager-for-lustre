@@ -30,6 +30,14 @@ describe('Primus', function () {
       {
         name: 'disconnectModal',
         value: disconnectModal
+      },
+      {
+        name: '$window',
+        value: {
+          location: {
+            port: '8888'
+          }
+        }
       }
     ];
   });

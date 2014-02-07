@@ -10,35 +10,44 @@
   <div class="collapse navbar-collapse" collapse="app.isCollapsed">
     <ul class="nav navbar-nav">
       <li ng-class="{active: app.$routeSegment.contains('dashboard')}">
-        <a route-to="dashboard/"><i class="fa fa-bar-chart-o"></i> Dashboard</a>
+        <a route-to="dashboard/" id="dashboard-menu"><i class="fa fa-bar-chart-o"></i> Dashboard</a>
       </li>
       <li ng-class="{active: app.$routeSegment.contains('configure')}" restrict-to="{{ app.GROUPS.FS_ADMINS }}">
-        <a class="dropdown-toggle" href="#"><i class="fa fa-cog"></i> Configuration <i class="fa fa-caret-down"></i></a>
+        <a class="dropdown-toggle" href="#" id="configure-menu"><i class="fa fa-cog"></i> Configuration <i class="fa fa-caret-down"></i></a>
         <ul class="dropdown-menu inverse-dropdown" role="menu" aria-labelledby="dropdownMenu">
-          <li><a tabindex="-1" route-to="server/" target="_self">Servers</a></li>
-          <li><a tabindex="-1" route-to="power/" target="_self">Power Control</a></li>
-          <li><a tabindex="-1" route-to="filesystem/" target="_self">File Systems</a></li>
-          <li><a tabindex="-1" route-to="hsm/">HSM</a></li>
-          <li><a tabindex="-1" route-to="storage/" target="_self">Storage</a></li>
-          <li><a tabindex="-1" route-to="user/" target="_self">Users</a></li>
-          <li><a tabindex="-1" route-to="volume/" target="_self">Volumes</a></li>
-          <li><a tabindex="-1" route-to="mgt/" target="_self">MGTs</a></li>
+          <li><a tabindex="-1" id="server-conf-item" route-to="configure/server/" target="_self">Servers</a></li>
+          <li><a tabindex="-1" id="power-conf-item" route-to="configure/power/" target="_self">Power Control</a></li>
+          <li><a tabindex="-1" id="filesystem-conf-item" route-to="configure/filesystem/" target="_self">File Systems</a></li>
+          <li><a tabindex="-1" id="hsm-conf-item" route-to="configure/hsm/">HSM</a></li>
+          <li><a tabindex="-1" id="storage-conf-item" route-to="configure/storage/" target="_self">Storage</a></li>
+          <li><a tabindex="-1" id="user-conf-item" route-to="configure/user/" target="_self">Users</a></li>
+          <li><a tabindex="-1" id="volume-conf-item" route-to="configure/volume/" target="_self">Volumes</a></li>
+          <li><a tabindex="-1" id="mgt-conf-item" route-to="configure/mgt/" target="_self">MGTs</a></li>
         </ul>
       </li>
       <li>
-        <a route-to="alert/" target="_self"><i class="fa fa-exclamation-triangle"></i> Alerts</a>
+        <a id="alert-menu" route-to="alert/" target="_self"><i class="fa fa-exclamation-triangle"></i> Alerts</a>
       </li>
       <li>
-        <a route-to="history/" target="_self"><i class="fa fa-clock-o"></i> History</a>
+        <a id="event-menu" route-to="event/" target="_self"><i class="fa fa-clock-o"></i> History</a>
       </li>
       <li>
-        <a route-to="log/" target="_self"><i class="fa fa-book"></i> Logs</a>
+        <a id="log-menu" route-to="log/" target="_self"><i class="fa fa-book"></i> Logs</a>
+      </li>
+      <li restrict-to="{{ app.GROUPS.FS_ADMINS }}">
+        <a id="help-menu" href="/static/webhelp/help_wrapper.html" target="_blank"><i class="fa fa-question-circle"></i> Help</a>
       </li>
     </ul>
     <ul class="nav navbar-nav navbar-right">
-      <li><a route-to="about/" target="_self">{{ app.RUNTIME_VERSION }}</a></li>
-      <li ng-if="app.loggedIn"><a>{{ app.user.username }}</a></li>
-      <li><a class="login-toggle" ng-class="{login: !app.loggedIn, logout: app.loggedIn}" ng-click="app.onClick()">{{ app.loggedIn? 'Logout': 'Login' }}</a></li>
+      <li>
+        <a route-to="about/" target="_self">{{ app.RUNTIME_VERSION }}</a>
+      </li>
+      <li ng-if="app.loggedIn">
+        <a id="account" route-to="user/{{app.user.id}}/" target="_self">{{ app.user.username }}</a>
+      </li>
+      <li>
+        <a class="login-toggle" ng-class="{login: !app.loggedIn, logout: app.loggedIn}" ng-click="app.onClick()">{{ app.loggedIn? 'Logout': 'Login' }}</a>
+      </li>
     </ul>
   </div>
 </nav>

@@ -39,6 +39,7 @@ from django.core.urlresolvers import reverse
 from django.contrib import auth
 
 from chroma_core.models import UserProfile
+from django.db.models import Q
 
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
@@ -115,6 +116,20 @@ def _check_for_problems(request):
             }))
 
 
+def _render_template_or_error(template_name, request):
+    try:
+        cache = json.dumps(_build_cache(request), cls=django_json.DjangoJSONEncoder)
+    except:
+        # An exception here indicates an internal error (bug or fatal config problem)
+        # in any of the chroma_api resource classes
+        return render_to_response("backend_error.html", RequestContext(request, {
+            'description': "Exception rendering resources: %s" % traceback.format_exc(),
+            'debug_info': _debug_info(request)
+        }))
+
+    return render_to_response(template_name, RequestContext(request, {'cache': cache}))
+
+
 @ensure_csrf_cookie
 def login(request):
     """
@@ -136,7 +151,7 @@ def login(request):
     if problem:
         return problem
 
-    return render_to_response("login.html", RequestContext(request))
+    return render_to_response("new/login.html", RequestContext(request))
 
 
 def index(request):
@@ -157,14 +172,74 @@ def index(request):
     if problem:
         return problem
 
-    try:
-        cache = json.dumps(_build_cache(request), cls=django_json.DjangoJSONEncoder)
-    except:
-        # An exception here indicates an internal error (bug or fatal config problem)
-        # in any of the chroma_api resource classes
-        return render_to_response("backend_error.html", RequestContext(request, {
-            'description': "Exception rendering resources: %s" % traceback.format_exc(),
-            'debug_info': _debug_info(request)
-        }))
+    return _render_template_or_error("new/index.html", request)
 
-    return render_to_response("base.html", RequestContext(request, {'cache': cache}))
+
+def old_index(request):
+    """
+        Serve either the javascript UI, an advice HTML page
+        if the backend isn't ready yet, or a blocking error page
+        if the backend is in a bad state.
+
+        Alternatively redirect to login if the user is not
+        authenticated and anonymous users are forbidden.
+    """
+
+    if not request.user.is_authenticated() and not settings.ALLOW_ANONYMOUS_READ:
+        return HttpResponseRedirect(reverse(login))
+
+    problem = _check_for_problems(request)
+
+    if problem:
+        return problem
+
+    return _render_template_or_error("base.html", request)
+
+
+def old_index_fs_user(request):
+    """
+        Serve either the javascript UI, an advice HTML page
+        if the backend isn't ready yet, or a blocking error page
+        if the backend is in a bad state.
+
+        Alternatively redirect to login if the user is not
+        authenticated and anonymous users are forbidden.
+    """
+
+    if not request.user.is_authenticated() and not settings.ALLOW_ANONYMOUS_READ:
+        return HttpResponseRedirect(reverse(login))
+
+    if not request.user.groups.filter(
+        Q(name='filesystem_users') | Q(name='filesystem_administrators') | Q(name='superusers')).exists():
+        return HttpResponseRedirect(reverse(index))
+
+    problem = _check_for_problems(request)
+
+    if problem:
+        return problem
+
+    return _render_template_or_error("base.html", request)
+
+
+def old_index_fs_admin(request):
+    """
+        Serve either the javascript UI, an advice HTML page
+        if the backend isn't ready yet, or a blocking error page
+        if the backend is in a bad state.
+
+        Alternatively redirect to login if the user is not
+        authenticated and anonymous users are forbidden.
+    """
+
+    if not request.user.is_authenticated() and not settings.ALLOW_ANONYMOUS_READ:
+        return HttpResponseRedirect(reverse(login))
+
+    if not request.user.groups.filter(Q(name='filesystem_administrators') | Q(name='superusers')).exists():
+        return HttpResponseRedirect(reverse(index))
+
+    problem = _check_for_problems(request)
+
+    if problem:
+        return problem
+
+    return _render_template_or_error("base.html", request)

@@ -52,10 +52,12 @@ class EditFilesystem(BaseView):
         link = get_link()
 
         try:
+            self.driver.execute_script("arguments[0].scrollIntoView(true);", link)
             link.click()
         except StaleElementReferenceException:
             # Try a second time, since the reference might be staled
             new_link = get_link()
+            self.driver.execute_script("arguments[0].scrollIntoView(true);", new_link)
             new_link.click()
 
         self.quiesce()

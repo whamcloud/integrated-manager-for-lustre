@@ -29,7 +29,7 @@ class Eula(BaseView):
 
     @property
     def access_denied(self):
-        return self.driver.find_element_by_class_name("access-denied-modal")
+        return self.driver.find_element_by_class_name("access-denied")
 
     def accept(self, must_accept=False):
         """

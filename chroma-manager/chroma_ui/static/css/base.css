@@ -1,39 +1,12 @@
-/* Float Clearing
- ---------------------------------------------------------------------*/
-.module:after
-{
-	clear: both;
-	content: ".";
-	display: block;
-	height: 0;
-	visibility: hidden;
-}
-
-/* float clearing for IE6 */
-* html .module
-{
-	height: 1%;
-	overflow: visible;
-}
-
-/* float clearing for IE7 */
-* + html .module
-{
-	min-height: 1%;
-}
-
-
 html, body
 {
 	font-family:Verdana, Arial, Helvetica, sans-serif;
-	background-color:#eeeeee;
-
   height: 100%;
 }
 
 body {
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 @media (max-width: 767px) {
@@ -215,113 +188,10 @@ pre
     white-space: nowrap;
 }
 
-.columns {
-    position: relative;
-}
-
-.leftpanel{
-	position:absolute;
-    left: 0px;
-    top: 0px;
-	width:23px;
-	height:600px;
-    border-right: 1px solid #d6d6d6;
-    font-size:10px;
-    background-color: #ededed;
-}
-
 .notification_icon {
     margin-left: 4px;
     margin-top: 4px;
     display: none;
-}
-
-.rightpanel{
-    float:left;
-    padding-left: 23px;
-    overflow-x: hidden;
-    overflow-y: visible;
-}
-
-a#sidebar_open {
-	color:#fff;
-	text-decoration:none;
-	font-weight:bold;
-	-webkit-border-radius:4px;
-	-moz-border-radius:4px;
-	border-radius:4px;
-}
-
-a#sidebar_open {
-	color:#666!important;
-	outline:none;
-}
-
-div#sidebar_header {
-    height: 28px;
-}
-
-button#sidebar_close {
-    float:right;
-    width: auto;
-    width: 16px;
-    height: 16px;
-}
-
-button#sidebar_close {
-    padding: 0px;
-    width: 24px;
-    height: 24px;
-	display:block;
-    margin-top: 2px;
-}
-
-button#sidebar_close .ui-icon{
-    margin-left: -3px;
-}
-
-
-#sidebar h2 {
-    font-size: 10pt;
-    font-weight: bold;
-    margin-left: 7px;
-    margin-top: 7px;
-    margin-bottom: 7px;
-    color: black;
-    float: left;
-    display: block;
-}
-
-#sidebar {
-	display:none;
-	position:absolute;
-	top: 0px;
-    left: 0px;
-	width:400px;
-    height: 400px;
-	padding:2px;
-	*margin-top: 5px;
-	font-size:11px;
-	-moz-border-radius:5px;
-	-moz-border-radius-topleft:0;
-	-webkit-border-radius:5px;
-	-webkit-border-top-left-radius:0;
-	border-radius:5px;
-	border-top-left-radius:0;
-	z-index:1000;
-    background-color: #bbb;
-
-}
-
-#sidebar p {
-	margin:0;
-}
-#sidebar label {
-	font-weight:normal;
-}
-
-#sidebar .ui-accordion-content {
-    padding: 6px;
 }
 
 .submit {
@@ -397,11 +267,11 @@ table.fs th:first-child {
 }
 
 h1.page-header {
-  font-size: 15pt;
+  font-size: 24px;
   color: #FFFFFF;
+  font-weight: 500;
   background-color: #0067B4;
-  padding: 10px;
-  border-radius: 2px;
+  padding: 15px 20px;
   margin: 0;
 }
 
@@ -503,41 +373,6 @@ div.toplevel, div.relative {
     background-color: white;
 }
 
-h1.dashboard-title {
-  margin-top: 0;
-}
-
-div.dashboard_page {
-    padding: 0;
-    margin: 0;
-    height: auto;
-    display: none;
-    position: absolute;
-    top: 40px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-}
-
-table.chart_grid {
-    height: 100%;
-    width: 100%;
-}
-
-table.chart_grid tr {
-}
-
-table.chart_grid tr td {
-    vertical-align: top;
-}
-
-table.chart_grid td div.chart {
-}
-
-
-table.chart_grid td table {
-}
-
 .resource_alert {
   color: #ff0000;
 }
@@ -553,6 +388,16 @@ table.chart_grid td table {
   display: none;
 }
 
+.page-wrapper {
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  margin: 0 auto -60px;
+  padding-bottom: 60px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
 /* Only visible for users in the filesystem administration group */
 .fsadmin_only {
   display: none;
@@ -563,32 +408,10 @@ table.chart_grid td table {
   display: none;
 }
 
-tr.alert_row_dismissed {
-  background-color: #CCC;
-  text-align:       center;
-  color:            #999;
-}
-
-tr.alert_row_dismissed td.icon_column {
-  opacity: 0.2;
-  filter: alpha(opacity=20);
-}
-
 .icon_column{
   padding:2px;
   width: 20px;
   background-color: transparent;
-}
-
-.dismiss_column {
-  padding:2px;
-  width: 20px;
-  background-color: transparent;
-  vertical-align: top;
-}
-
-.dismiss_column img {
-  cursor: pointer;
 }
 
 table.validated_form th {
@@ -633,10 +456,6 @@ div.command_job_list span.job_description {
   padding-left: 2px;
 }
 
-div.dialog_tabs {
-    /*height: 100%;*/
-}
-
 div.job_step_list h3 a {
   text-decoration: none;
   font-size: 11pt;
@@ -657,28 +476,6 @@ div.job_summary {
 div.job_summary ul {
   list-style-type: none;
   padding-left: 6px;
-}
-
-html {
-    overflow-y: scroll;
-    overflow: -moz-scrollbars-vertical;
-}
-
-ul.navigation li {
-  border-left: 2px solid #ddd;
-  float:left;
-  margin: 0px;
-  padding: 0px 3px 0px 3px;
-}
-
-ul.navigation li:first-child {
-  border-left: none;
-}
-
-ul.navigation {
-  list-style-type: none;
-  margin: 0px;
-  padding: 0px;
 }
 
 div.step_header {
@@ -709,12 +506,10 @@ span.volume_chooser_selected {
 
 .volume_chooser_background {
     border-radius: 3px;
-    /*background: #eee;*/
     margin-bottom: 6px;
 }
 
 .volume_chooser_background table {
-    /*height: 100%;*/
     width: 100%;
 }
 
@@ -727,9 +522,6 @@ span.volume_chooser_selected {
     max-height: 300px;
     overflow-x: hidden;
     overflow-y: auto;
-}
-
-.volume_chooser_header {
 }
 
 #mdt_advanced {
@@ -777,10 +569,6 @@ table.properties td ul {
     margin: 0;
 }
 
-table#global_filesystem_table {
-    width: 100%
-}
-
 .job_row a.navigation {
     text-decoration: none;
 }
@@ -789,29 +577,23 @@ table#global_filesystem_table {
     text-decoration: underline;
 }
 
-.chart_info_pane {
-    padding: 6px;
+footer {
+  height: 60px;
 }
 
-.chart_info_pane h2 {
-    margin-top: 3px;
-    margin-bottom: 3px;
+footer small {
+  color: #888888;
 }
 
-.chart_info_pane table {
-    font-size: 9pt;
+footer .row {
+  text-align: center;
+  position: relative;
+  height: 60px;
 }
 
-.chart_info_pane .icon-dashboard, .chart_info_pane .icon-cogs {
-    font-size: 11pt;
-}
-
-
-p.footer {
-    font-size: 6.5pt;
-    text-align: center;
-    margin-top: 12px;
-    margin-bottom: 12px;
+footer .row .span12 {
+  position: absolute;
+  bottom: 0;
 }
 
 div.about_box {
@@ -828,28 +610,6 @@ div.about_box_logo {
     width: 160px;
     height: 62px;
     margin: 12px auto 12px auto;
-}
-
-table#global_filesystem_table {
-    background-color: rgb(240, 240, 255);
-    border: 1px solid #4572a7;
-    border-radius: 5px;
-    padding: 2px;
-}
-
-table#global_filesystem_table th {
-    font-size: 13px;
-    -webkit-font-smoothing: antialiased;
-    font-weight: normal;
-    text-align: right;
-}
-
-table#global_filesystem_table td {
-    text-align: right;
-}
-
-table#global_filesystem_table td.filesystem_name {
-    text-align: left;
 }
 
 .contextual_help_icon {
@@ -935,7 +695,7 @@ ul.alert_selection_list {
 }
 
 div.content {
-    padding-left: 0.5em;
+  padding: 0 25px;
 }
 
 table.layout {

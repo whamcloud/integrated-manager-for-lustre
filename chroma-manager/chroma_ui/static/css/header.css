@@ -52,8 +52,7 @@
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-.navbar-inverse .navbar-nav > .active > a:hover,
-.navbar.navbar-inverse .account_links a:hover {
+.navbar.navbar-inverse li a:hover {
   color: #FFFFFF;
   background-color: #080808;
 }
@@ -63,14 +62,8 @@
   padding: 0 15px;
 }
 
-.navbar.navbar-inverse .header_version,
-.navbar.navbar-inverse .account_links a,
-.navbar.navbar-inverse #username,
-.navbar.navbar-inverse .nav > li > .dropdown-menu a {
+.navbar.navbar-inverse li a {
   color: #999999;
-}
-
-.navbar.navbar-inverse .account_links a {
   text-decoration: none;
 }
 
@@ -87,12 +80,14 @@
 .navbar.navbar-inverse .nav > li > .dropdown-menu {
   background-color: #222222;
   margin-top: 0;
+  padding-top: 10px;
 }
 
 .navbar.navbar-inverse .nav > li > .dropdown-menu li a {
   font-size: 12px;
-  line-height: 20px;
-  padding: 10px 15px;
+  height: 23px;
+  padding: 3px 20px;
+  line-height: 1.428571429;
 }
 
 .navbar.navbar-inverse .nav > li > .dropdown-menu li a:hover {
@@ -112,37 +107,15 @@
 
 span#user_info {
     float: right;
-    font-size: 9pt;
+    font-size: 14px;
     margin-left: 12px;
     margin-right: 12px;
     margin-top: 10px;
 }
 
-span#authenticated {
-    float: left;
-}
-
-span.header_version {
-    float: right;
-    font-size: 9pt;
-    margin-top: 10px;
-}
-
-span.header_version a {
-    color: #777;
-    text-decoration: none;
-}
-
-span.account_links {
-    font-size: 9pt;
-    float: left;
-    margin-left: 6px;
-}
-
-span#username {
-    font-size: 9pt;
-    font-weight: bold;
-    float: left;
+span#user_info .logout,
+span#user_info .login {
+  padding-left: 15px;
 }
 
 .top_links ul.navigation {

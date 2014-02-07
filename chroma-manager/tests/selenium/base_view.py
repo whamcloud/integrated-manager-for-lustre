@@ -39,8 +39,7 @@ class BaseView(object):
     def quiesce(self):
         for i in xrange(self.long_wait):
             busy = self.driver.execute_script('return ($.active != 0);')
-            animated = self.driver.execute_script('return $(":animated").length;')
-            if not busy and not animated:
+            if not busy:
                 self.log.debug('quiesced in %s iterations' % i)
                 return
             else:
@@ -88,6 +87,8 @@ class BaseView(object):
 
         if not dropdown_menu.is_displayed():
             dropdown.click()
+
+        dropdown_menu.location_once_scrolled_into_view
 
         anchor = self._find_state_anchor(dropdown_menu, state)
         anchor.click()
@@ -192,7 +193,7 @@ class BaseView(object):
            testing -- call this after any non-ajax navigation"""
         self.quiesce()
         self.log.debug("Calling testMode")
-        self.driver.execute_script('return Api.testMode(true);')
+        self.driver.execute_script('if (window.Api && window.Api.testMode) return Api.testMode(true);')
         # The fade-out of the blocking animation can still be in progress, wait for it to hide
         self.wait_for_removal("div.blockUI")
 

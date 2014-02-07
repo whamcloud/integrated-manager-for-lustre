@@ -11,6 +11,7 @@ var gulp = require('gulp'),
   concat = require('gulp-concat'),
   rimraf = require('gulp-rimraf'),
   rev = require('gulp-rev'),
+  replace = require('gulp-replace'),
   minifyHtml = require('gulp-minify-html'),
   ngHtml2Js = require('gulp-ng-html2js');
 
@@ -86,6 +87,12 @@ gulp.task('jshint', function() {
     .pipe(jshint.reporter(stylish));
 });
 
+gulp.task('base-href', ['less:build'], function(){
+  gulp.src('templates/chroma_ui/base.html')
+    .pipe(replace(/(<base href=").+(" \/>)/, '$1/ui/$2'))
+    .pipe(gulp.dest('templates/new', {cwd: '../chroma_ui'}));
+});
+
 // The default task (called when you run `gulp`)
 gulp.task('default', function() {
   gulp.run('copy-templates', 'less:dev');
@@ -115,5 +122,5 @@ gulp.task('default', function() {
 });
 
 gulp.task('build', function build() {
-  gulp.run('copy-templates', 'less:build', 'static:build');
+  gulp.run('copy-templates', 'base-href', 'static:build');
 });

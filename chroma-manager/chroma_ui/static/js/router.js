@@ -103,19 +103,12 @@ var ChromaRouter = Backbone.Router.extend({
     "configure/filesystem/create/": "filesystemCreate",
     "configure/:tab/": "configure",
     "configure/": "configureIndex",
-    "dashboard/": "dashboard",
-    "dashboard/:type/": "dashboard_type",
-    "dashboard/filesystem/:filesystem_id/": "dashboard_filesystems",
-    "dashboard/filesystem/:filesystem_id/target/:target_id/": "dashboard_filesystems",
-    "dashboard/server/:server_id/": "dashboard_servers",
-    "dashboard/server/:server_id/target/:target_id/": "dashboard_servers",
     "command/:id/": 'command_detail',
     "target/:id/": 'target_detail',
     "host/:id/": 'server_detail',
     "user/:id/": 'user_detail',
     "storage_resource/:id/": 'storage_resource_detail',
     "job/:id/": 'job_detail',
-    "": "dashboard",
     "alert/": "alert",
     "event/": "event",
     "log/around-:aroundDatetime/": "log",
@@ -231,9 +224,8 @@ var ChromaRouter = Backbone.Router.extend({
   failed_filesystem_admin_check: function() {
     if ( Login.userHasGroup('filesystem_administrators') )
       return false;
-    this.navigate('dashboard/',{replace: true});
-    this.dashboard();
-    return true;
+
+    window.location.href = '%sdashboard/'.sprintf(Api.UI_ROOT);
   },
   configureIndex: function()
   {
@@ -250,8 +242,13 @@ var ChromaRouter = Backbone.Router.extend({
       angular.element('html').injector().get('pageTitle').set('Status');
     }
 
-    $('a.navigation').removeClass('active');
-    $("#" + name + "_menu").addClass('active');
+    var navAnchors = $('a.navigation'),
+      menuItem = $("#" + name + "_menu");
+
+    navAnchors.removeClass('active');
+    navAnchors.parent('li').removeClass('active');
+    menuItem.addClass('active');
+    menuItem.parent('li').addClass('active');
 
     if (name == 'alert') {
       AlertView.draw();
@@ -259,11 +256,6 @@ var ChromaRouter = Backbone.Router.extend({
       EventView.draw();
     } else if (name == 'log') {
       LogView.draw(aroundDatetime);
-    }
-
-    // FIXME: generalise this once there is a global ChartManager
-    if (name != 'dashboard') {
-      Dashboard.stopPollingUpdaters();
     }
   },
   configureTab: function(tab)
@@ -315,20 +307,5 @@ var ChromaRouter = Backbone.Router.extend({
       return;
     this.filesystemPage('create');
     FilesystemCreateView.draw(this)
-  },
-  dashboard: function() {
-    this.dashboard_type('filesystem');
-  },
-  dashboard_type: function(type) {
-    this.toplevel('dashboard');
-    Dashboard.setPath(type);
-  },
-  dashboard_servers: function(server_id, target_id) {
-    this.toplevel('dashboard');
-    Dashboard.setPath('server', server_id, target_id);
-  },
-  dashboard_filesystems: function(filesystem_id, target_id) {
-    this.toplevel('dashboard');
-    Dashboard.setPath('filesystem', filesystem_id, target_id);
   }
 });

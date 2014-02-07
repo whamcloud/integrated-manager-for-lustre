@@ -9,10 +9,10 @@ import json
 
 from django.utils.unittest import TestCase
 from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
 from testconfig import config
 
 from tests.selenium.utils.constants import wait_time
-from tests.selenium.utils.element import find_visible_element_by_css_selector
 from tests.selenium.utils.patch_driver_execute import patch_driver_execute
 
 
@@ -31,17 +31,13 @@ def wait_for_transition(driver, timeout):
     (call quiesce after state change operations to ensure that if the busy icon
     is going to appear, it will have appeared)"""
 
-    for timer in xrange(timeout):
-        if find_visible_element_by_css_selector(driver, "img#notification_icon_jobs"):
-            time.sleep(1)
-        else:
-            # We have to quiesce here because the icon is hidden on command completion
-            # but updates to changed objects are run asynchronously.
-            quiesce_api(driver, timeout)
-            return
+    WebDriverWait(driver, timeout).until(
+        lambda driver: driver.find_element_by_id("notification_icon_jobs").value_of_css_property('display') == 'none',
+        'Timeout after %s seconds waiting for transition to complete' % timeout)
 
-    raise RuntimeError('Timeout after %s seconds waiting for transition to complete' % timeout)
-
+    # We have to quiesce here because the icon is hidden on command completion
+    # but updates to changed objects are run asynchronously.
+    quiesce_api(driver, timeout)
 
 # Setup up the main log for test actions
 log = logging.getLogger('test')

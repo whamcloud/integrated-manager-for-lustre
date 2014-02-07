@@ -1,5 +1,8 @@
 from functools import partial
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.by import By
 from testconfig import config
 from tests.selenium.views.login import Login
 
@@ -32,11 +35,9 @@ class wrapped_login(object):
         try:
             self.outer_user = self.test_case.users[outer_user]
         except KeyError:
-            api_user = self.test_case.driver.execute_script('return Login.getUser();')
-            if len(api_user) > 0:
-                self.outer_user = self.test_case.users[api_user['username']]
-            else:
-                self.outer_user = None
+            account = WebDriverWait(self.test_case.driver, wait_time['short']).until(
+                EC.element_to_be_clickable((By.ID, 'account')), 'Account link not found.')
+            self.outer_user = self.test_case.users[account.text]
 
     def __enter__(self):
         self.login_page.logout().login_and_accept_eula_if_presented(self.inner_user.username, self.inner_user.password)
@@ -50,6 +51,7 @@ class wrapped_login(object):
         if self.outer_user:
             from selenium.common.exceptions import ElementNotVisibleException
             try:
+                self.test_case.user_page._reset_ui()
                 self.test_case.navigation.logout()
             except ElementNotVisibleException:
                 # I guess we're already logged out?
@@ -230,7 +232,7 @@ class TestUsers(SeleniumBaseTestCase):
         """Try logging in as a particular user"""
 
         with wrapped_login(self, user.username):
-            displayed_username = self.driver.find_element_by_css_selector('#username').text
+            displayed_username = self.driver.find_element_by_css_selector('#account').text
             if not displayed_username == user.username:
                 raise RuntimeError("Username markup is '%s', should be '%s'" % (displayed_username, user.username))
 

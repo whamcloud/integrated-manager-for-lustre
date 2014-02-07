@@ -36,10 +36,10 @@
           <tr ng-repeat="copytoolOperation in hsm.copytoolOperations.objects track by copytoolOperation.id">
             <td>{{ copytoolOperation.copytool.host.label }}</td>
             <td class="operation">
-                <div ng-include="'iml/hsm/assets/html/ops/' + copytoolOperation.type + '.html'"></div>
+                <div ng-include="'iml/hsm/assets/html/ops/' + (copytoolOperation.type | lowercase) + '.html'"></div>
             </td>
             <td class="state">
-              <div ng-include="'iml/hsm/assets/html/states/' + copytoolOperation.state + '.html'"></div>
+              <div ng-include="'iml/hsm/assets/html/states/' + (copytoolOperation.state | lowercase) + '.html'"></div>
             </td>
             <td>
               <div class="throughput">

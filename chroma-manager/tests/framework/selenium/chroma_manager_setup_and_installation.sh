@@ -55,7 +55,7 @@ set -ex
 mkdir $HOME/bin
 
 # Install Chromedriver
-wget http://chromedriver.storage.googleapis.com/2.6/chromedriver_linux64.zip
+wget http://chromedriver.storage.googleapis.com/2.9/chromedriver_linux64.zip
 unzip chromedriver_linux64.zip -d $HOME/bin/
 
 # Download Selenium jar

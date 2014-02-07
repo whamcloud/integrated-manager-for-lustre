@@ -63,7 +63,7 @@ setup(
                       "static/css/*.css", "static/images/fugue/*.png",
                       "static/images/datatables/*.png", "static/images/datatables/*.jpg",
                       "static/images/*.ico", "static/images/*.png",
-                      "static/images/*.gif", "templates/*"],
+                      "static/images/*.gif", "templates/*.html", "templates/new/*.html"],
         'chroma_ui_new': ["static/chroma_ui/bower_components/font-awesome/fonts/*",
                           "static/chroma_ui/common/login/assets/images/*.png",
                           "static/chroma_ui/iml/app/assets/images/*",

@@ -17,11 +17,6 @@
       var HELP_TEXT = {{help_text|safe}};
       var UI_ROOT = "/ui/";
 
-      // Note: these limits do not control the window size, they limit
-      // the max size to which we will scale up our content
-      var MAX_WIDTH = 800;
-      var MAX_HEIGHT = 600;
-
       // Set Dependencies for this portion of the application
       window.dependencies = ['controllers', 'models', 'interceptors', 'ngResource', 'constants',
         'ui.bootstrap', 'services', 'filters', 'ui', 'directives', 'timing', 'exception'];
@@ -143,7 +138,6 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/api_cache.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/router.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/login.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/sidebar.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/notifications.js" ></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/highcharts_theme.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/help.js"></script>
@@ -157,7 +151,6 @@
     <script type='text/javascript' src="{{STATIC_URL}}js/target_detail.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/storage_resource_detail.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/command_detail.js"></script>
-    <script type="text/javascript" src="{{STATIC_URL}}js/dashboard.js"></script>
     <script type="text/javascript" src="{{STATIC_URL}}js/system_status.js"></script>
 
     <!-- Templates -->
@@ -168,59 +161,12 @@
   </head>
 
   <script type='text/javascript'>
-        function updateSizes() {
-          $('div.rightpanel').width(Math.max(MAX_WIDTH, $(window).width()) - $('div.leftpanel').width());
-          $('div.rightpanel').height(Math.max(MAX_HEIGHT, $(window).height()) - $('div.logohead').height());
-          $('div.toplevel').css('min-height', $('div.rightpanel').height());
-          updateChartSizes();
-        }
-
-        function updateChartSizes() {
-          var dashboardPage = $('div.dashboard_page');
-          var dashboardNavigationHeight = $('#dashboard_navigation').height() + 2;
-
-          dashboardPage.css('margin-top', dashboardNavigationHeight);
-
-          var dashboardPageHeight = ($('div.rightpanel').height()
-            - dashboardNavigationHeight
-            - 16
-            - parseInt(dashboardPage.css('top'), 10));
-
-          dashboardPage.height(dashboardPageHeight);
-
-          $('.chart_grid').each(function() {
-            var grid = $(this);
-            if (grid.is(":visible")) {
-              var grid_width = grid.parent().width();
-              var grid_height = grid.parent().height();
-              var chart_pad_x = 6;
-              var chart_pad_y = 6;
-
-              var row_count = grid.children('tbody').children('tr').length;
-              grid.children('tbody').children('tr').each(function() {
-                var row = $(this);
-                var col_count = row.children('td').length;
-                var chart_width = (grid_width / col_count) - chart_pad_x;
-                var chart_height = (grid_height / row_count) - chart_pad_y;
-                row.find('.chart').each(function() {
-                  var chart = $(this);
-                  chart.width(chart_width);
-                  chart.height(chart_height);
-                });
-              });
-            }
-          });
-        }
-
     $(document).ready(function() {
-
         $('div.rightpanel').css('visibility', 'hidden');
         Login.init();
         ContextualHelp.init();
         ConfigureTabs.init();
 
-        updateSizes();
-        $(window).resize(updateSizes);
         $('div.rightpanel').css('visibility', 'visible');
         window.loaded = true;
 
@@ -232,19 +178,14 @@
   </script>
 
   <body>
-    {% include 'header.html'%}
-    <noscript>
-      <p>Chroma requires JavaScript to be enabled.</p>
-    </noscript>
-    <div class='columns read_enabled_only'>
-      <div style="clear:both"></div>
-      {% include 'notification_slider.html' %}
-      <div class='rightpanel'>
+    <div class='page-wrapper'>
+      {% include 'header.html'%}
+      <noscript>
+        <p>Chroma requires JavaScript to be enabled.</p>
+      </noscript>
+      <div class='read_enabled_only rightpanel'>
         <div class="toplevel" id='toplevel-configure' style="display: none;">
           {% include 'configuration.html' %}
-        </div>
-        <div class="toplevel" id='toplevel-dashboard' style="display: none;">
-          {% include 'dashboard.html' %}
         </div>
         <div class="toplevel" id='toplevel-alert' style="display: none;">
           {% include 'alerts.html' %}
@@ -264,13 +205,20 @@
             <h1 class="page-header"><i class="icon-dashboard"></i> Status</h1>
             <div ng-include="(( config.asStatic('partials/status.html') ))"></div>
           </div>
-          <p class='footer'>
-              Intel&reg; Manager for Lustre* software {{VERSION}} (build {{BUILD}}) is Copyright &copy; {{server_time.year|safe}} Intel Corporation. All rights reserved.
-              <a href="/ui/about/" class='navigation'>About Intel&reg; Manager for Lustre* software</a>
-              &nbsp;
-              <a class='superuser_only' href="/ui/system_status/" class='navigation'>System status</a>
-          </p>
       </div>
     </div>
+    <footer class="container logo-footer">
+      <div class="row">
+        <div class="span12">
+          <small>
+            Intel&reg; Manager for Lustre* software {{ VERSION }} (build {{ BUILD }}) is
+            Copyright &copy; {{ server_time.year|safe }} Intel Corporation. All rights reserved.
+            <a href="/ui/about/" class='navigation'>About Intel&reg; Manager for Lustre* software</a>
+            &nbsp;
+            <a class='superuser_only' href="/ui/system_status/" class='navigation'>System status</a>
+          </small>
+        </div>
+      </div>
+    </footer>
   </body>
 </html>

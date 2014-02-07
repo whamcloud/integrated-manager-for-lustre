@@ -1680,6 +1680,42 @@
     "from": {
       "version": "0.1.3",
       "from": "from@0.1.3"
+    },
+    "gulp-replace": {
+      "version": "0.2.0",
+      "from": "gulp-replace@",
+      "dependencies": {
+        "event-stream": {
+          "version": "3.0.20",
+          "from": "event-stream@~3.0.18",
+          "dependencies": {
+            "duplexer": {
+              "version": "0.1.1",
+              "from": "duplexer@~0.1.1"
+            },
+            "map-stream": {
+              "version": "0.0.4",
+              "from": "map-stream@~0.0.3"
+            },
+            "pause-stream": {
+              "version": "0.0.11",
+              "from": "pause-stream@0.0.11"
+            },
+            "split": {
+              "version": "0.2.10",
+              "from": "split@0.2"
+            },
+            "stream-combiner": {
+              "version": "0.0.4",
+              "from": "stream-combiner@~0.0.3"
+            }
+          }
+        },
+        "replacestream": {
+          "version": "0.0.6",
+          "from": "replacestream@0.0.6"
+        }
+      }
     }
   }
 }

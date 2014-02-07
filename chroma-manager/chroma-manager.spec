@@ -97,12 +97,6 @@ Requires: %{name} = %{version}-%{release}
 %description devel
 This package contains the .py files stripped out of the production build.
 
-%package ui_new
-Summary: Contains the New Ui
-Group: Development
-%description ui_new
-This package contains the New Ui, built into dist files.
-
 %prep
 %setup -n %{name}-%{version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
@@ -252,6 +246,8 @@ fi
 %{manager_root}/*.wsgi
 %{manager_root}/chroma_ui/templates/*
 %{manager_root}/chroma_ui/static/*
+%{manager_root}/chroma_ui_new/templates/*
+%{manager_root}/chroma_ui_new/static/*
 %{manager_root}/realtime/*
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
@@ -283,9 +279,3 @@ fi
 
 %files -f devel.files devel
 %defattr(-,root,root)
-
-%files ui_new
-%defattr(-,root,root)
-%attr(0644,root,root)/etc/logrotate.d/chroma-manager
-%{manager_root}/chroma_ui_new/templates/*
-%{manager_root}/chroma_ui_new/static/*
