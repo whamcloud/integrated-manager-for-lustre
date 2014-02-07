@@ -102,11 +102,18 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             logger.debug("Installer contents: %s" % installer_contents)
 
             # get a list of profiles in the installer and re-register them
-            profiles = [line for line in installer_contents.split("\n")
-                        if 'profile' in line]
+            profiles = " ".join([line for line in installer_contents.split("\n")
+                                 if 'profile' in line])
+            logger.debug("Found these profiles: %s" % profiles)
+            # FIXME: For some reason, doing this correctly randomly fails
+            # on the EFS tests. For the moment, just hard-code the list.
+            # Leaving the previous debug code in for data collection.
+            if not profiles:
+                profiles = "base_managed.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile"
+                logger.error("Had to provide hard coded profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
-                "for profile_pat in %s; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log" % " ".join(profiles),
+                "for profile_pat in %s; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log" % profiles,
                 expected_return_code = None
             )
             chroma_config_exit_status = result.exit_status
