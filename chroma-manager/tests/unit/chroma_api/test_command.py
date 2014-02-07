@@ -27,7 +27,7 @@ class TestCommandResource(ChromaApiTestCase):
                 'message': "Test command",
                 'jobs': [
                     {
-                        'class_name': 'RelearnNidsJob',
+                        'class_name': 'UpdateNidsJob',
                         'args': {'hosts': [api.get_resource_uri(h) for h in hosts]}
                     }
                 ]
@@ -35,4 +35,4 @@ class TestCommandResource(ChromaApiTestCase):
             self.assertEqual(response.status_code, 201)
 
             host_ids = "[%s]" % ", ".join([str(h.id) for h in hosts])
-            JobSchedulerClient.command_run_jobs.assert_called_once_with([{'class_name': 'RelearnNidsJob', 'args': {'host_ids': host_ids}}], 'Test command')
+            JobSchedulerClient.command_run_jobs.assert_called_once_with([{'class_name': 'UpdateNidsJob', 'args': {'host_ids': host_ids}}], 'Test command')

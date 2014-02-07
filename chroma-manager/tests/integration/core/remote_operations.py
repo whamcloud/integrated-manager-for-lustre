@@ -173,6 +173,10 @@ class SimulatorRemoteOperations(RemoteOperations):
         # and that the filesystem targets are up
         pass
 
+    def clear_lnet_config(self, servers):
+        for server in servers:
+            self._simulator.servers[server['fqdn']].unconfigure_lnet()
+
     def reset_server(self, fqdn):
         self._simulator.reboot_server(fqdn)
 
@@ -209,7 +213,7 @@ class SimulatorRemoteOperations(RemoteOperations):
     def write_config(self, *args):
         pass
 
-    def clear_ha(self, *args):
+    def clear_ha(self, servers):
         self._simulator.clear_clusters()
 
     def inject_log_message(self, fqdn, message):
@@ -702,7 +706,7 @@ class RealRemoteOperations(RemoteOperations):
                 client['address'],
                 'umount -t lustre -a'
             )
-            if not client in [server['address'] for server in config['lustre_servers']]:
+            if client not in [server['address'] for server in config['lustre_servers']]:
                 # Skip this check if the client is also a server, because
                 # both targets and clients look like 'lustre' mounts
                 result = self._ssh_address(
@@ -916,6 +920,28 @@ EOF
                     )
             else:
                 logger.info("%s does not appear to have pacemaker - skipping any removal of targets." % server['address'])
+
+    def clear_lnet_config(self, server_list):
+        """
+        Removes the lnet configuration file for the server list passed.
+         """
+
+        # This isn't really that bad because the file will not be recreated if I delete it so probably ammounts
+        # to at most an extra reboot cycle per test session.
+        # Note the sleep ensures the reboot really happens otherwise it might look alive in the await_server_boot
+        for server in server_list:
+            self._ssh_address(server['address'],
+                              '''
+                              [ -f /etc/modprobe.d/iml_lnet_module_parameters.conf ] &&
+                              rm -f /etc/modprobe.d/iml_lnet_module_parameters.conf &&
+                              reboot &&
+                              sleep 20
+                              ''',
+                              expected_return_code = None)              # Keep going if it failed - may be none there.
+
+        # Now ensure they have all comeback to life
+        for server in server_list:
+            self.await_server_boot(server['fqdn'], restart = True)
 
     def install_upgrades(self):
         raise NotImplementedError("Automated test of upgrades is HYD-1739")

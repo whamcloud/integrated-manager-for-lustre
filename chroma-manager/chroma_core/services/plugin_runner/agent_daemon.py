@@ -119,10 +119,18 @@ class AgentPluginHandler(object):
                 instance = self._plugin_klass(self._resource_manager, record.id)
                 instance.do_agent_session_start(data)
 
+    @transaction.commit_on_success
+    def update_host_resources(self, host_id, data):
+        with self._processing_lock:
+            session = self._sessions.get(host_id, None)
+
+            if session:
+                session.plugin.do_agent_session_continue(data)
+
     def _create_plugin_instance(self, host):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 
-        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
+        resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class(self._plugin_name, 'PluginAgentResources')
         # FIXME: it is weird that the PluginAgentResources class lives in the linux plugin but
         # is used by all of them
         record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': self._plugin_name, 'host_id': host.id})

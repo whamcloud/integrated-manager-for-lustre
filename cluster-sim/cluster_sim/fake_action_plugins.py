@@ -109,11 +109,6 @@ class FakeActionPlugins():
                 return
             elif cmd == 'unconfigure_rsyslog':
                 return
-            elif cmd == 'lnet_scan':
-                if self._server.state['lnet_up']:
-                    return self._server.nids
-                else:
-                    raise RuntimeError('LNet is not up')
             elif cmd == 'failover_target':
                 return self._server._cluster.failover(kwargs['ha_label'])
             elif cmd == 'failback_target':

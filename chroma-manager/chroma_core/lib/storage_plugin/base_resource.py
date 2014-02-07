@@ -126,6 +126,31 @@ class BaseStorageResource(object):
 
     icon = 'default'
 
+    def __init__(self, **kwargs):
+        self._storage_dict = {}
+        self._handle = None
+        self._handle_global = None
+        if 'parents' in kwargs:
+            self._parents = list(kwargs['parents'])
+            del kwargs['parents']
+        else:
+            self._parents = []
+
+        # Accumulate changes since last call to flush_deltas()
+        self._delta_lock = threading.Lock()
+        self._delta_attrs = {}
+        self._delta_parents = []
+
+        # Accumulate in between calls to flush_stats()
+        self._delta_stats_lock = threading.Lock()
+        self._delta_stats = defaultdict(list)
+
+        for k, v in kwargs.items():
+            if not k in self._meta.storage_attributes:
+                raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._meta.storage_attributes.keys()))
+            setattr(self, k, v)
+        self.flush_deltas()
+
     @classmethod
     def alert_message(cls, alert_class):
         return cls._meta.alert_classes[alert_class].message
@@ -171,31 +196,6 @@ class BaseStorageResource(object):
     @classmethod
     def get_attribute_properties(cls, name):
         return cls._meta.storage_attributes[name]
-
-    def __init__(self, **kwargs):
-        self._storage_dict = {}
-        self._handle = None
-        self._handle_global = None
-        if 'parents' in kwargs:
-            self._parents = list(kwargs['parents'])
-            del kwargs['parents']
-        else:
-            self._parents = []
-
-        # Accumulate changes since last call to flush_deltas()
-        self._delta_lock = threading.Lock()
-        self._delta_attrs = {}
-        self._delta_parents = []
-
-        # Accumulate in between calls to flush_stats()
-        self._delta_stats_lock = threading.Lock()
-        self._delta_stats = defaultdict(list)
-
-        for k, v in kwargs.items():
-            if not k in self._meta.storage_attributes:
-                raise KeyError("Unknown attribute %s (not one of %s)" % (k, self._meta.storage_attributes.keys()))
-            setattr(self, k, v)
-        self.flush_deltas()
 
     def flush_deltas(self):
         with self._delta_lock:

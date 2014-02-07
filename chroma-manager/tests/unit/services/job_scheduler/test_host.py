@@ -4,41 +4,11 @@ from copy import deepcopy
 from itertools import chain
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-
-from tests.unit.chroma_core.helper import MockAgentRpc, MockAgentSsh, synthetic_host, synthetic_volume_full
-from chroma_core.models.host import NoLNetInfo
-from tests.unit.chroma_core.helper import freshen
-import django.utils.timezone
+from chroma_api.urls import api
+from tests.unit.chroma_core.helper import MockAgentRpc, MockAgentSsh
+from tests.unit.chroma_core.helper import synthetic_host, synthetic_volume_full
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, Nid
 from tests.unit.services.job_scheduler.job_test_case import JobTestCase
-
-
-class TestSetup(JobTestCase):
-    mock_servers = {
-        'myaddress': {
-            'fqdn': 'myaddress.mycompany.com',
-            'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
-        }
-    }
-
-    def test_nid_learning(self):
-        """Test that if a host is added and then acquired lnet_up state passively,
-        we will go and get the NIDs"""
-        try:
-            MockAgentRpc.fail_commands = [('device_plugin', {'plugin': 'lustre'})]
-            host = synthetic_host('myaddress')
-        finally:
-            MockAgentRpc.fail_commands = []
-
-        self.assertState(host, 'configured')
-        self.assertState(host.lnetconfiguration, 'nids_unknown')
-        now = django.utils.timezone.now()
-        with self.assertRaises(NoLNetInfo):
-            freshen(host).lnetconfiguration.get_nids()
-        JobSchedulerClient.notify(freshen(host), now, {'state': 'lnet_up'}, ['configured'])
-        self.assertState(host.lnetconfiguration, 'nids_known')
-        freshen(host).lnetconfiguration.get_nids()
 
 
 class NidTestCase(JobTestCase):
@@ -51,9 +21,13 @@ class NidTestCase(JobTestCase):
         super(NidTestCase, self).tearDown()
 
     def assertNidsCorrect(self, host):
-        self.assertSetEqual(
-            set([n.nid_string for n in Nid.objects.filter(lnet_configuration__host = host)]),
-            set(self.mock_servers[host.address]['nids']))
+        JobSchedulerClient.command_run_jobs([{'class_name': 'UpdateDevicesJob', 'args': {'hosts': [api.get_resource_uri(host)]}}], "Test update of nids")
+        self.drain_progress()
+
+        mock_nids = set([str(Nid.nid_tuple_to_string(Nid.Nid(n[0], n[1], n[2]))) for n in self.mock_servers[host.address]['nids']])
+        recorded_nids = set([str(n.nid_string) for n in Nid.objects.filter(lnet_configuration__host = host)])
+
+        self.assertSetEqual(mock_nids, recorded_nids)
 
 
 class TestNidChange(NidTestCase):
@@ -61,25 +35,21 @@ class TestNidChange(NidTestCase):
         'myaddress': {
             'fqdn': 'myaddress.mycompany.com',
             'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp0"]
+            'nids': [Nid.Nid('192.168.0.1', 'tcp', 0)]
         }
     }
 
     def attempt_nid_change(self, new_nids):
         host = synthetic_host('myaddress', self.mock_servers['myaddress']['nids'])
-        self.set_state(host.lnetconfiguration, 'nids_known')
         self.assertNidsCorrect(host)
         self.mock_servers['myaddress']['nids'] = new_nids
-        from chroma_api.urls import api
-        JobSchedulerClient.command_run_jobs([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(host)]}}], "Test relearn nids")
-        self.drain_progress()
         self.assertNidsCorrect(host)
 
     def test_relearn_change(self):
-        self.attempt_nid_change(["192.168.0.2@tcp0"])
+        self.attempt_nid_change([Nid.Nid('192.168.0.2', 'tcp', 0)])
 
     def test_relearn_add(self):
-        self.attempt_nid_change(["192.168.0.1@tcp0", "192.168.0.2@tcp0"])
+        self.attempt_nid_change([Nid.Nid('192.168.0.1', 'tcp', 0), Nid.Nid('192.168.0.2', 'tcp', 0)])
 
     def test_relearn_remove(self):
         self.attempt_nid_change([])
@@ -90,17 +60,17 @@ class TestUpdateNids(NidTestCase):
         'mgs': {
             'fqdn': 'mgs.mycompany.com',
             'nodename': 'mgs.mycompany.com',
-            'nids': ["192.168.0.1@tcp0"]
+            'nids': [Nid.Nid('192.168.0.1', 'tcp', 0)]
         },
         'mds': {
             'fqdn': 'mds.mycompany.com',
             'nodename': 'mds.mycompany.com',
-            'nids': ["192.168.0.2@tcp0"]
+            'nids': [Nid.Nid('192.168.0.2', 'tcp', 0)]
         },
         'oss': {
             'fqdn': 'oss.mycompany.com',
             'nodename': 'oss.mycompany.com',
-            'nids': ["192.168.0.3@tcp0"]
+            'nids': [Nid.Nid('192.168.0.3', 'tcp', 0)]
         },
     }
 
@@ -120,12 +90,9 @@ class TestUpdateNids(NidTestCase):
         for tm in chain(mgt_tms, mdt_tms, ost_tms):
             ObjectCache.add(ManagedTargetMount, tm)
 
-        self.set_state(self.fs, 'available')
+        self.fs = self.set_and_assert_state(self.fs, 'available')
 
-        self.mock_servers['mgs']['nids'] = ['192.168.0.99@tcp0']
-        from chroma_api.urls import api
-        JobSchedulerClient.command_run_jobs([{'class_name': 'RelearnNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test relearn nids")
-        self.drain_progress()
+        self.mock_servers['mgs']['nids'] = [Nid.Nid('192.168.0.99', 'tcp', 0)]
         self.assertNidsCorrect(mgs)
 
         JobSchedulerClient.command_run_jobs([{'class_name': 'UpdateNidsJob', 'args': {'hosts': [api.get_resource_uri(mgs)]}}], "Test update nids")
@@ -142,7 +109,7 @@ class TestHostAddRemove(JobTestCase):
         'myaddress': {
             'fqdn': 'myaddress.mycompany.com',
             'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
+            'nids': [Nid.Nid("192.168.0.1", "tcp", 0)]
         }
     }
 
@@ -153,7 +120,7 @@ class TestHostAddRemove(JobTestCase):
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
 
-        self.set_state(host, 'removed')
+        host = self.set_and_assert_state(host, 'removed')
         with self.assertRaises(ManagedHost.DoesNotExist):
             ManagedHost.objects.get(address = 'myaddress')
         self.assertEqual(ManagedHost.objects.count(), 0)
@@ -191,10 +158,10 @@ class TestHostAddRemove(JobTestCase):
         self.create_simple_filesystem(host)
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
 
-        self.set_state(self.fs, 'available')
-        self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
-        self.assertEqual(ManagedMdt.objects.get(pk = self.mdt.pk).state, 'mounted')
-        self.assertEqual(ManagedOst.objects.get(pk = self.ost.pk).state, 'mounted')
+        self.fs = self.set_and_assert_state(self.fs, 'available')
+        self.assertState(self.mgt.managedtarget_ptr, 'mounted')
+        self.assertState(self.mdt.managedtarget_ptr, 'mounted')
+        self.assertState(self.ost.managedtarget_ptr, 'mounted')
         self.assertEqual(ManagedFilesystem.objects.get(pk = self.fs.pk).state, 'available')
 
         # The host disappears, never to be seen again

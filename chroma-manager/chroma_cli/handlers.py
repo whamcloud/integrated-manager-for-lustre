@@ -561,9 +561,10 @@ class NidsHandler(Handler):
         self.output(self.api.endpoints['command'].create(**kwargs))
 
     def relearn(self, ns):
+        # Relearn really makes no sense now, the nids are always known, but this keeps compatibility
         host = self.api.endpoints['host'].show(ns.subject)
-        kwargs = {'message': "Relearning NIDs on %s" % host.label,
-                  'jobs': [{'class_name': 'RelearnNidsJob', 'args': {
+        kwargs = {'message': "Updating device info on %s" % host.label,
+                  'jobs': [{'class_name': 'UpdateDevicesJob', 'args': {
                       'host_id': host['id']
         }}]}
         self.output(self.api.endpoints['command'].create(**kwargs))

@@ -64,6 +64,7 @@ import chroma_api.volume
 import chroma_api.volume_node
 import chroma_api.storage_resource
 import chroma_api.storage_resource_class
+import chroma_api.network_interface
 
 import chroma_api.power_control
 
@@ -110,6 +111,9 @@ api.register(chroma_api.client_error.ClientErrorResource())
 api.register(chroma_api.notification.NotificationResource())
 api.register(chroma_api.copytool.CopytoolResource())
 api.register(chroma_api.copytool.CopytoolOperationResource())
+api.register(chroma_api.network_interface.NetworkInterfaceResource())
+api.register(chroma_api.network_interface.NidResource())
+api.register(chroma_api.network_interface.LNetConfigurationResource())
 
 urlpatterns = patterns('',
     (r'^', include(api.urls)),

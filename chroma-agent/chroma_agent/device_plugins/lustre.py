@@ -28,7 +28,6 @@ import datetime
 import ConfigParser
 
 from chroma_agent.utils import Mounts, normalize_device
-from chroma_agent.action_plugins.lnet_scan import lnet_status, get_nids
 from chroma_agent import shell
 from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
@@ -152,11 +151,6 @@ class LustrePlugin(DevicePlugin):
         started_at = datetime.datetime.utcnow().isoformat() + "Z"
 
         metrics = LocalAudit().metrics()
-        lnet_loaded, lnet_up = lnet_status()
-        if lnet_up:
-            lnet_nids = get_nids()
-        else:
-            lnet_nids = None
 
         # Only set resource_locations if we have the management package
         try:
@@ -179,9 +173,6 @@ class LustrePlugin(DevicePlugin):
             "agent_version": agent_version(),
             "capabilities": ActionPluginManager().capabilities,
             "metrics": metrics,
-            "lnet_loaded": lnet_loaded,
-            "lnet_nids": lnet_nids,
-            "lnet_up": lnet_up,
             "mounts": mounts,
             "packages": packages,
             "resource_locations": resource_locations

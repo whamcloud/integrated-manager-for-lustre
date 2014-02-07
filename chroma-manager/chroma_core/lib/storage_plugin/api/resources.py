@@ -128,3 +128,23 @@ class PhysicalDisk(BaseStorageResource):
     class Meta:
         label = 'Physical disk'
         icon = 'physical_disk'
+
+
+class NetworkInterface(BaseStorageResource):
+    host_id = attributes.Integer()
+
+    class Meta:
+        label = 'Network node'
+
+
+class LNETInterface(BaseStorageResource):
+
+    class Meta:
+        label = 'LNET Interface'
+
+
+class LNETModules(BaseStorageResource):
+    host_id = attributes.Integer()
+
+    class Meta:
+        label = 'LNET State'

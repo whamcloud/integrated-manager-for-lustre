@@ -150,8 +150,7 @@ class BaseStoragePlugin(object):
     def generate_handle(self):
         with self._handle_lock:
             self._handle_counter += 1
-            handle = self._handle_counter
-            return handle
+            return self._handle_counter
 
     def __init__(self, resource_manager, scannable_id = None):
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
@@ -335,6 +334,19 @@ class BaseStoragePlugin(object):
             self._delta_delete_resources.append(resource)
             # TODO: it would be useful if local resource instances had a
             # way to invalidate their handles to detect buggy plugins
+
+    def remove_by_attr(self, klass, **attrs):
+        '''
+        Removes an instance of a resource based on the attributes supplied.
+        :param klass: The klass of resource to remove
+        :param attrs: The set of attributes that allow the resource to be uniquely indentifed
+        :return: True if the resource is removed, False if not matching resource was found.
+        '''
+        try:
+            self.remove(self._index.get(klass, **attrs))
+            return True
+        except ResourceNotFound:
+            return False
 
     def _notify_alert(self, active, severity, resource, alert_name, attribute = None):
         # This will be flushed through to the database by update_scan

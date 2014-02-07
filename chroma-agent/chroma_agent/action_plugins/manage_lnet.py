@@ -22,10 +22,14 @@
 
 from chroma_agent import shell
 from chroma_agent.log import console_log
+import simplejson as json
+import os
 
 
 # Extra deps not expressed in lsmod's list of dependent modules
 RMMOD_EXTRA_DEPS = {"lquota": set(["lov", "osc", "mgc", "mds", "mdc", "lmv"])}
+
+IML_CONFIGURATION_FILE = '/etc/modprobe.d/iml_lnet_module_parameters.conf'
 
 
 class Module:
@@ -102,5 +106,46 @@ def unload_lnet():
     _rmmod('lnet')
 
 
-ACTIONS = [start_lnet, stop_lnet, load_lnet, unload_lnet]
+def configure_lnet(lnet_configuration):
+    '''
+    :param lnet_configuration: Contains a list of modprobe entries for the modules.conf file
+    The entries are a single array in an element name 'modprobe_entries' these elements are
+    then writen out to a file before lnet is restarted. The level of restart required is dependent
+    on the current state of lnet, up,down or unloaded. The state of lnet before and after should
+    be the same.
+
+    A second array call nid_tuples should also provided, this is of use to the simulator and not used
+    by this routine.
+
+    :return: None
+    '''
+    modprobe_fname = IML_CONFIGURATION_FILE
+
+    with open(modprobe_fname, 'w') as file:
+        file.write('# This file is auto-generated for Lustre NID configuration by IML\n' +
+                   '# Do not overwrite this file or edit its contents directly\n')
+
+        if (len(lnet_configuration['modprobe_entries']) > 0):
+            file.write('options lnet networks=%s\n' % ','.join(lnet_configuration['modprobe_entries']))
+        else:
+            file.write('# No NIDs configured for Lustre\n')
+
+        file.write('\n### LNet Configuration Data\n')
+
+        for line in json.dumps(lnet_configuration, indent = 2).split("\n"):
+            file.write('### %s\n' % line)
+
+
+def unconfigure_lnet():
+    '''
+    No parameters just remove the IML configuration file.
+    '''
+    try:
+        os.remove(IML_CONFIGURATION_FILE)
+    except OSError as e:
+        if e.errno is not 2:        # 2 is no such file
+            raise e
+
+
+ACTIONS = [start_lnet, stop_lnet, load_lnet, unload_lnet, configure_lnet, unconfigure_lnet]
 CAPABILITIES = ['manage_lnet']

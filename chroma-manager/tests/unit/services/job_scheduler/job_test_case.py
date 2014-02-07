@@ -2,13 +2,14 @@ import json
 from contextlib import contextmanager
 from itertools import chain
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import Command, ManagedTarget, ManagedTargetMount, LNetConfiguration
+from chroma_core.models import Command, ManagedTarget, ManagedTargetMount, LNetConfiguration, Nid
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 from django.test import TestCase
 import mock
-from tests.unit.chroma_core.helper import MockAgentRpc, synthetic_volume_full, freshen, MockAgentSsh, log, load_default_profile, synthetic_host
+from tests.unit.chroma_core.helper import MockAgentRpc, synthetic_volume_full, freshen
+from tests.unit.chroma_core.helper import MockAgentSsh, log, load_default_profile, synthetic_host, parse_synthentic_device_info
 
 
 class JobTestCase(TestCase):
@@ -28,7 +29,17 @@ class JobTestCase(TestCase):
     def _test_lun(self, primary_host, *args):
         return synthetic_volume_full(primary_host, *args)
 
-    def set_state(self, obj, state, check = True, run = True):
+    def _synthetic_host_with_nids(self, address):
+        return synthetic_host(address, self.mock_servers[address]['nids'])
+
+    ###
+    # set_and_assert_state
+    #
+    # Bit weird because if you say check = True then the state is set and asserted and the updated
+    # object is returned, but if check = False then it returns the command that is going to change the
+    # state
+    #
+    def set_and_assert_state(self, obj, state, check = True, run = True):
         command = Command.set_state([(obj, state)], "Unit test transition %s to %s" % (obj, state), run = run)
         log.debug("calling drain_progress")
         self.drain_progress()
@@ -36,10 +47,11 @@ class JobTestCase(TestCase):
             if command:
                 self.assertEqual(Command.objects.get(pk = command.id).complete, True)
             try:
-                self.assertState(obj, state)
+                return self.assertState(obj, state)
             except obj.__class__.DoesNotExist:
-                pass
-        return command
+                return obj
+        else:
+            return command
 
     def set_state_delayed(self, obj_state_pairs):
         """Schedule some jobs without executing them"""
@@ -51,7 +63,9 @@ class JobTestCase(TestCase):
         self.assertEqual(Command.objects.filter(complete = False).count(), 0)
 
     def assertState(self, obj, state):
-        self.assertEqual(freshen(obj).state, state)
+        obj = freshen(obj)
+        self.assertEqual(obj.state, state)
+        return obj
 
     def drain_progress(self, skip_advance = False):
         while not self.job_scheduler.progress.empty():
@@ -107,7 +121,11 @@ class JobTestCase(TestCase):
 
             rpc_class._call = mock.Mock(side_effect = rpc_local)
 
-        patch_daemon_rpc(AgentDaemonRpcInterface, AgentPluginHandlerCollection(resource_manager))
+        aphc = AgentPluginHandlerCollection(resource_manager)
+
+        patch_daemon_rpc(AgentDaemonRpcInterface, aphc)
+
+        aphc.update_host_resources = mock.Mock(side_effect = parse_synthentic_device_info)
 
         patch_daemon_rpc(HttpAgentRpc, HttpAgentService())
 
@@ -204,9 +222,8 @@ class JobTestCase(TestCase):
             ObjectCache.add(ManagedTargetMount, tm)
 
         if start:
-            self.set_state(self.fs, 'available')
+            self.fs = self.set_and_assert_state(self.fs, 'available')
             self.mgt = freshen(self.mgt)
-            self.fs = freshen(self.fs)
             self.mdt = freshen(self.mdt)
             self.ost = freshen(self.ost)
 
@@ -216,7 +233,7 @@ class JobTestCaseWithHost(JobTestCase):
         'myaddress': {
             'fqdn': 'myaddress.mycompany.com',
             'nodename': 'test01.myaddress.mycompany.com',
-            'nids': ["192.168.0.1@tcp"]
+            'nids': [Nid.Nid("192.168.0.1", "tcp", 0)]
         }
     }
 

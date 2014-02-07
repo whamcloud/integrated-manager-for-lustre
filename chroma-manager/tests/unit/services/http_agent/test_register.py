@@ -1,5 +1,5 @@
 import json
-from chroma_core.models import ManagedHost, ServerProfile
+from chroma_core.models import ManagedHost, ServerProfile, Nid
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -16,7 +16,7 @@ class TestRegistration(TestCase):
     mock_servers = {'mynewhost': {
         'fqdn': 'mynewhost.mycompany.com',
         'nodename': 'test01.mynewhost.mycompany.com',
-        'nids': ["192.168.0.1@tcp"],
+        'nids': [Nid.Nid("192.168.0.1", "tcp", 0)],
     }}
 
     def setUp(self):

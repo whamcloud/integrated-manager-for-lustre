@@ -39,6 +39,10 @@ class AgentPluginHandlerCollection(object):
         for plugin_name, data in updates.items():
             self.handlers[plugin_name].setup_host(host_id, data)
 
+    def update_host_resources(self, host_id, updates):
+        for plugin_name, data in updates.items():
+            self.handlers[plugin_name].update_host_resources(host_id, data)
+
     def remove_host_resources(self, host_id):
         for handler in self.handlers.values():
             handler.remove_host_resources(host_id)

@@ -31,7 +31,7 @@ from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
-from chroma_core.models.host import ManagedHost, LNetConfiguration, VolumeNode, Volume, HostContactAlert
+from chroma_core.models.host import ManagedHost, VolumeNode, Volume, HostContactAlert
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_help.help import help_text
@@ -980,9 +980,10 @@ class FormatTargetJob(StateChangeJob):
 
         hosts = set()
         for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id):
-            hosts.add(tm.host_id)
-        for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in hosts):
-            deps.append(DependOn(lnc, 'nids_known'))
+            hosts.add(tm.host)
+
+        for host in hosts:
+            deps.append(DependOn(host, 'lnet_up'))
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -992,10 +993,10 @@ class FormatTargetJob(StateChangeJob):
 
             mgs_hosts = set()
             for tm in ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == mgt_id):
-                mgs_hosts.add(tm.host_id)
+                mgs_hosts.add(tm.host)
 
-            for lnc in ObjectCache.get(LNetConfiguration, lambda lnc: lnc.host_id in mgs_hosts):
-                deps.append(DependOn(lnc, 'nids_known'))
+            for host in mgs_hosts:
+                deps.append(DependOn(host, 'lnet_up'))
 
         return DependAll(deps)
 

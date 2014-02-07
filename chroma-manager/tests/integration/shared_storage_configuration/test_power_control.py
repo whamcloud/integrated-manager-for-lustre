@@ -44,7 +44,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
         self.wait_for_command(self.chroma_manager, command['id'])
 
         for outlet_uri in server_outlets:
-            self.wait_for_assert(lambda: self.assertIsNone(self.get_by_uri(outlet_uri)['host']))
+            self.wait_for_assert(lambda: self.assertIsNone(self.get_json_by_uri(outlet_uri)['host']))
 
         # TODO: Check that no async stuff happened as a result of the
         # outlet disassociation (STONITH reconfiguration, etc.)
@@ -63,10 +63,10 @@ class TestPduSetup(ChromaPowerControlTestCase):
         self.wait_for_command(self.chroma_manager, response.json['command']['id'])
 
         with self.assertRaises(AssertionError):
-            self.get_by_uri(self.server['resource_uri'])
+            self.get_json_by_uri(self.server['resource_uri'])
 
         for outlet_uri in server_outlets:
-            self.wait_for_assert(lambda: self.assertIsNone(self.get_by_uri(outlet_uri)['host']))
+            self.wait_for_assert(lambda: self.assertIsNone(self.get_json_by_uri(outlet_uri)['host']))
 
 
 class TestHostFencingConfig(ChromaPowerControlTestCase):
@@ -122,7 +122,7 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
 
         def get_powercycle_job():
             # Refresh the server so we get an accurate list of available jobs.
-            self.server = self.get_by_uri(self.server['resource_uri'])
+            self.server = self.get_json_by_uri(self.server['resource_uri'])
 
             for job in self.server['available_jobs']:
                 if job['class_name'] == 'PowercycleHostJob':
@@ -160,7 +160,7 @@ class TestPduOperations(ChromaPowerControlTestCase):
 
         def get_power_job(job_class):
             # Refresh the server so we get an accurate list of available jobs.
-            self.server = self.get_by_uri(self.server['resource_uri'])
+            self.server = self.get_json_by_uri(self.server['resource_uri'])
 
             for job in self.server['available_jobs']:
                 if job['class_name'] == job_class:
@@ -208,7 +208,7 @@ class TestPduOperations(ChromaPowerControlTestCase):
         # 2. Test that the job actually works.
 
         # Refresh the server so we get an accurate list of available jobs.
-        self.server = self.get_by_uri(self.server['resource_uri'])
+        self.server = self.get_json_by_uri(self.server['resource_uri'])
         pre_boot_time = self.server['boot_time']
 
         powercycle_job = None
@@ -226,7 +226,7 @@ class TestPduOperations(ChromaPowerControlTestCase):
         self.wait_for_command(self.chroma_manager, command['id'])
 
         def boot_time_is_newer():
-            server = self.get_by_uri(self.server['resource_uri'])
+            server = self.get_json_by_uri(self.server['resource_uri'])
             post_boot_time = server['boot_time']
             return post_boot_time > pre_boot_time
 

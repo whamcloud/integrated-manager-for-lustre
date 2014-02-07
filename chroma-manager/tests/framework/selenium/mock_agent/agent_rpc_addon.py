@@ -1,17 +1,19 @@
 from tests.unit.chroma_core.helper import MockAgentRpc
 from tests.unit.chroma_core.helper import MockAgentSsh
+from chroma_core.models import Nid
+
 AgentRpc = MockAgentRpc
 AgentSsh = MockAgentSsh
 MockAgentRpc.mock_servers = {
     'kp-ss-storage-appliance-1': {
         'fqdn': 'kp-ss-storage-appliance-1',
         'nodename': 'kp-ss-storage-appliance-1',
-        'nids': ['192.168.1.22@tcp']
+        'nids': [Nid.Nid('192.168.1.22', 'tcp', 0)]
     },
     'kp-ss-storage-appliance-2': {
         'fqdn': 'kp-ss-storage-appliance-2',
         'nodename': 'kp-ss-storage-appliance-2',
-        'nids': ['192.168.1.17@tcp']
+        'nids': [Nid.Nid('192.168.1.17', 'tcp', 0)]
     },
 }
 

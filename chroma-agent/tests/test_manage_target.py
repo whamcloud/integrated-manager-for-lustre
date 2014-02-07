@@ -46,8 +46,8 @@ class TestWriteconfTarget(CommandCaptureTestCase):
         writeconf_target(device='/dev/foo',
                          writeconf = True,
                          erase_params = True,
-                         mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1'], ['1.2.3.5@tcp', '4.3.2.2@tcp1']])
-        self.assertRan(["tunefs.lustre", "--erase-params", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp,4.3.2.2@tcp1", "--writeconf", "/dev/foo"])
+                         mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
+        self.assertRan(["tunefs.lustre", "--erase-params", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1", "--writeconf", "/dev/foo"])
 
     def test_unknown_opt(self):
         self.assertRaises(TypeError, writeconf_target, unknown='whatever')
@@ -94,14 +94,14 @@ ext4
     def test_single_mgs_multiple_nids(self):
         format_target(device='/dev/foo',
                       target_types=['ost'],
-                      mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1']])
-        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "/dev/foo"])
+                      mgsnode = [['1.2.3.4@tcp0', '4.3.2.1@tcp1']])
+        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1", "/dev/foo"])
 
     def test_mgs_pair_multiple_nids(self):
         format_target(device='/dev/foo',
                       target_types=['ost'],
-                      mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1'], ['1.2.3.5@tcp', '4.3.2.2@tcp1']])
-        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp,4.3.2.2@tcp1", "/dev/foo"])
+                      mgsnode = [['1.2.3.4@tcp0', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
+        self.assertRan(["mkfs.lustre", "--ost", "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1", "/dev/foo"])
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case

@@ -36,6 +36,9 @@ fi
 
 # need to remove the chroma repositories configured by the provisioner
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+# Clean out any yum info, if this is a manual system not automated the underlying repos might have changed.
+yum clean all
+
 $PROXY yum install -y omping
 if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
     cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
@@ -128,8 +131,9 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install and setup chroma manager
-scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+# Install and setup chroma manager on integration test runner, use rsync incase the connection is slow
+ssh root@$TEST_RUNNER yum install -y rsync
+rsync -avz $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 # install cman here to test that the fence-agents-iml package is being a
@@ -138,6 +142,7 @@ set -ex
 yum -y install expect cman
 # Install from the installation package
 cd /tmp
+rm -rf $(basename $ARCHIVE_NAME .tar.gz)
 tar xzvf $ARCHIVE_NAME
 cd $(basename $ARCHIVE_NAME .tar.gz)
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then

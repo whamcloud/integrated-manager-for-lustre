@@ -1,5 +1,5 @@
 import json
-from chroma_core.models import Command
+from chroma_core.models import Command, Nid
 import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helper import fake_log_message, synthetic_host, synthetic_volume_full, create_targets_patch, create_filesystem_patch
@@ -89,14 +89,14 @@ class TestTargetResource(ChromaApiTestCase):
 
     def test_log_links(self):
         """Test that log viewer only displays valid links."""
-        host = synthetic_host('myserver', ['192.168.0.1@tcp0'])
-        self.create_simple_filesystem(host)
+        self.host = synthetic_host('myserver-with-nids', [Nid.Nid('192.168.0.1', 'tcp', 0)])
+        self.create_simple_filesystem(self.host)
         fake_log_message('192.168.0.1@tcp testfs-MDT0000')
         response = self.api_client.get('/api/log/')
         event, = self.deserialize(response)['objects']
         self.assertEqual(len(event['substitutions']), 2)
-        host.state = 'removed'
-        host.save()
+        self.host.state = 'removed'
+        self.host.save()
         self.mdt.not_deleted = False
         self.mdt.save()
         response = self.api_client.get('/api/log/')

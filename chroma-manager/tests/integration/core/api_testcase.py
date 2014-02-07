@@ -118,6 +118,7 @@ class ApiTestCase(UtilityTestCase):
             self.remote_operations.unmount_clients()
             self.api_force_clear()
             self.remote_operations.clear_ha(self.TEST_SERVERS)
+            self.remote_operations.clear_lnet_config(self.TEST_SERVERS)
 
         if config.get('managed'):
             # Erase all volumes if the config does not indicate that there is already
@@ -238,8 +239,8 @@ class ApiTestCase(UtilityTestCase):
         print ''
 
         for job_uri in command['jobs']:
-            job = self.get_by_uri(job_uri)
-            job_steps = [self.get_by_uri(s) for s in job['steps']]
+            job = self.get_json_by_uri(job_uri)
+            job_steps = [self.get_json_by_uri(s) for s in job['steps']]
             if disposition == "FAILED":
                 if job['errored']:
                     print "Job %s Errored:" % job['id']
@@ -267,12 +268,12 @@ class ApiTestCase(UtilityTestCase):
                     print step
 
     def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
-        logger.debug("wait_for_command: %s" % self.get_by_uri('/api/command/%s/' % command_id))
+        logger.debug("wait_for_command: %s" % self.get_json_by_uri('/api/command/%s/' % command_id))
         # TODO: More elegant timeout?
         running_time = 0
         command_complete = False
         while running_time < timeout and not command_complete:
-            command = self.get_by_uri('/api/command/%s/' % command_id)
+            command = self.get_json_by_uri('/api/command/%s/' % command_id)
             command_complete = command['complete']
             if not command_complete:
                 time.sleep(1)
@@ -281,7 +282,7 @@ class ApiTestCase(UtilityTestCase):
         if running_time >= timeout:
             self._print_command(command, "TIMED OUT")
         else:
-            logger.debug("command complete: %s" % self.get_by_uri('/api/command/%s/' % command_id))
+            logger.debug("command complete: %s" % self.get_json_by_uri('/api/command/%s/' % command_id))
 
         self.assertTrue(command_complete, command)
         if verify_successful and (command['errored'] or command['cancelled']):
@@ -300,10 +301,16 @@ class ApiTestCase(UtilityTestCase):
         self.assertEqual(response.status_code, 200, response.content)
         return response.json['objects']
 
-    def get_by_uri(self, uri):
+    def get_by_uri(self, uri, verify_successful=True):
         response = self.chroma_manager.get(uri)
-        self.assertEqual(response.status_code, 200, response.content)
-        return response.json
+
+        if verify_successful:
+            self.assertEqual(response.status_code, 200, response.content)
+
+        return response
+
+    def get_json_by_uri(self, uri, verify_successful=True):
+        return self.get_by_uri(uri, verify_successful).json
 
     def run_command(self, jobs, message = None, verify_successful = True):
         logger.debug("Running %s (%s)" % (jobs, message))
@@ -315,23 +322,52 @@ class ApiTestCase(UtilityTestCase):
         if verify_successful:
             self.wait_for_command(self.chroma_manager, command['id'])
 
-    def set_state(self, uri, state, verify_successful=True):
-        logger.debug("set_state %s %s" % (uri, state))
-        object = self.get_by_uri(uri)
-        object['state'] = state
+    def post_by_uri(self, uri, object, verify_successful=True):
+        logger.debug("post_by_uri(%s, ...)" % uri)
+        response = self.chroma_manager.post(uri, body = object)
 
-        response = self.chroma_manager.put(uri, body = object)
         if response.status_code == 204:
-            logger.warning("set_state %s %s - no-op" % (uri, state))
+            logger.warning("post_by_uri(%s, ...) - no-op" % uri)
             command = None
         else:
             self.assertEquals(response.status_code, 202, response.content)
             command = self.wait_for_command(self.chroma_manager, response.json['command']['id'], verify_successful=verify_successful)
 
+        return command
+
+    def set_value(self, uri, value_name, value, verify_successful=True):
+        logger.debug("set_%s %s %s" % (value_name, uri, value))
+        object = self.get_json_by_uri(uri)
+        object[value_name] = value
+
+        response = self.chroma_manager.put(uri, body = object)
+        if response.status_code == 204:
+            logger.warning("set_%s %s %s - no-op" % (value_name, uri, value))
+            command = None
+        else:
+            self.assertEquals(response.status_code, 202, response.content)
+
+            # If the state is not a change command will be none and so we have nothing to wait for.
+            if response.json['command'] is None:
+                command = None
+            else:
+                command = self.wait_for_command(self.chroma_manager, response.json['command']['id'], verify_successful=verify_successful)
+
         if verify_successful:
-            self.assertState(uri, state)
+            self.assertValue(uri, value_name, value)
 
         return command
+
+    def set_state(self, uri, state, verify_successful=True):
+        return self.set_value(uri, 'state', state, verify_successful)
+
+    def delete_by_uri(self, uri, verify_successful=True):
+        response = self.chroma_manager.delete(uri)
+
+        if verify_successful:
+            self.assertEqual(response.status_code, 204)
+
+        return response
 
     def assertNoAlerts(self, uri, of_severity=None, of_type=None):
         """Fail if alert_item (as tastypie uri) is found in any active alerts"""
@@ -388,13 +424,16 @@ class ApiTestCase(UtilityTestCase):
 
         return alerts[0]
 
+    def assertValue(self, uri, value_name, value):
+        logger.debug("assertValue %s %s %s" % (value_name, uri, value))
+        obj = self.get_json_by_uri(uri)
+        self.assertEqual(obj[value_name], str(value))           # Need to convert to string because the value will always come back as a string
+
     def assertState(self, uri, state):
-        logger.debug("assertState %s %s" % (uri, state))
-        obj = self.get_by_uri(uri)
-        self.assertEqual(obj['state'], state)
+        self.assertValue(uri, 'state', state)
 
     def get_filesystem(self, filesystem_id):
-        return self.get_by_uri("/api/filesystem/%s/" % filesystem_id)
+        return self.get_json_by_uri("/api/filesystem/%s/" % filesystem_id)
 
     def get_filesystem_by_name(self, name):
         filesystems = self.get_list("/api/filesystem/")

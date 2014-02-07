@@ -25,9 +25,8 @@ from chroma_core.services import log_register
 import dateutil.parser
 from django.db import transaction
 
-from chroma_core.lib.util import normalize_nid
 from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
-from chroma_core.models.host import ManagedHost, LNetNidsChangedAlert, NoLNetInfo
+from chroma_core.models.host import ManagedHost
 from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -48,8 +47,6 @@ class UpdateScan(object):
     def is_valid(self):
         try:
             assert(isinstance(self.host_data, dict))
-            assert('lnet_up' in self.host_data)
-            assert('lnet_loaded' in self.host_data)
             assert('mounts' in self.host_data)
             assert('metrics' in self.host_data)
             assert('resource_locations' in self.host_data)
@@ -61,7 +58,6 @@ class UpdateScan(object):
     @transaction.commit_on_success
     def audit_host(self):
         self.update_packages(self.host_data['packages'])
-        self.update_lnet()
         self.update_resource_locations()
         self.update_target_mounts()
         self.update_client_mounts()
@@ -109,27 +105,6 @@ class UpdateScan(object):
 
         log.info("update_packages(%s): updates=%s" % (self.host, needs_update))
         JobSchedulerClient.notify(self.host, self.started_at, {'needs_update': needs_update})
-
-    def update_lnet(self):
-        # Update LNet status
-        lnet_state = {(False, False): 'lnet_unloaded',
-                (True, False): 'lnet_down',
-                (True, True): 'lnet_up'}[(self.host_data['lnet_loaded'],
-                                          self.host_data['lnet_up'])]
-
-        JobSchedulerClient.notify(self.host,
-                                  self.started_at,
-                                  {'state': lnet_state},
-                                  ['lnet_unloaded', 'lnet_down', 'lnet_up', 'configured'])
-
-        try:
-            known_nids = self.host.lnetconfiguration.get_nids()
-        except NoLNetInfo:
-            pass
-        else:
-            if self.host_data['lnet_nids']:
-                current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
-                LNetNidsChangedAlert.notify(self.host, not current)
 
     def update_client_mounts(self):
         # Client mount audit comes in via metrics due to the way the

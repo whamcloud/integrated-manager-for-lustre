@@ -23,12 +23,14 @@
 from django.db import transaction
 from chroma_core.lib.util import normalize_nids
 from chroma_core.services import log_register
-from chroma_core.models import NoLNetInfo
+from chroma_core.models import NoNidsPresent
 from chroma_core.models.event import LearnEvent
 from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.host import ManagedHost, VolumeNode, Nid
+from chroma_core.models.host import ManagedHost, VolumeNode
 from chroma_core.models.target import ManagedMgs, ManagedTargetMount, ManagedTarget, FilesystemMember, ManagedMdt, ManagedOst
 from chroma_core.lib.cache import ObjectCache
+import re
+
 
 log = log_register(__name__)
 
@@ -102,23 +104,29 @@ class DetectScan(object):
             self.log("Discovered no new filesystems")
 
     def _nids_to_mgs(self, host, nid_strings):
-        """nid_strings: nids of a target.  host: host on which the target was seen.
-        Return a ManagedMgs or raise ManagedMgs.DoesNotExist"""
+        '''
+        :param host: host on which the target was seen.
+        :param nid_strings: nids of a target
+        :return: a ManagedMgs or raise ManagedMgs.DoesNotExist
+        '''
         if set(nid_strings) == set(["0@lo"]) or len(nid_strings) == 0:
             return ManagedMgs.objects.get(managedtargetmount__host = host)
 
-        from django.db.models import Count
-        nids = Nid.objects.values('nid_string').filter(lnet_configuration__host__not_deleted = True, nid_string__in = nid_strings).annotate(Count('id'))
-        unique_nids = [n['nid_string'] for n in nids if n['id__count'] == 1]
+        hosts = set()
 
-        if not len(unique_nids):
-            log.warning("nids_to_mgs: No unique NIDs among %s!" % nids)
+        for nid_string in nid_strings:
+            try:
+                hosts.add(ManagedHost.get_by_nid(nid_string))
+            except ManagedHost.DoesNotExist:
+                pass
 
-        hosts = list(ManagedHost.objects.filter(lnetconfiguration__nid__nid_string__in = unique_nids).distinct())
+        if (len(hosts) == 0):
+            log.warning("nids_to_mgs: No unique NIDs among %s!" % nid_strings)
+
         try:
             mgs = ManagedMgs.objects.distinct().get(managedtargetmount__host__in = hosts)
         except ManagedMgs.MultipleObjectsReturned:
-            log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, unique_nids))
+            log.error("Unhandled case: two MGSs have mounts on host(s) %s for nids %s" % (hosts, nid_strings))
             # TODO: detect and report the pathological case where someone has given
             # us two NIDs that refer to different hosts which both have a
             # targetmount for a ManagedMgs, but they're not the
@@ -128,9 +136,6 @@ class DetectScan(object):
         return mgs
 
     def is_primary(self, host, local_target_info):
-        if host.lnetconfiguration.state != 'nids_known':
-            raise NoLNetInfo("Cannot setup target %s without LNet info" % local_target_info['name'])
-
         local_nids = set(host.lnetconfiguration.get_nids())
 
         if not 'failover.node' in local_target_info['params']:
@@ -147,7 +152,7 @@ class DetectScan(object):
 
             primary = not (local_nids & failover_nids)
         else:
-            raise NoLNetInfo("Host %s has no NIDS!" % host)
+            raise NoNidsPresent("Host %s has no NIDS!" % host)
 
         return primary
 
@@ -252,7 +257,7 @@ class DetectScan(object):
                             target.active_mount = tm
                             target.save()
 
-                    except NoLNetInfo:
+                    except NoNidsPresent:
                         log.warning("Cannot set up target %s on %s until LNet is running" % (local_info['name'], host))
 
     def _get_volume_node(self, host, paths):
@@ -294,7 +299,6 @@ class DetectScan(object):
                     self.log("Can't find MGS for target %s on %s" % (name, host))
                     continue
 
-                import re
                 fsname, index_str = re.search("([\w\-]+)-(\w)+", name).groups()
                 index = int(index_str, 16)
                 try:

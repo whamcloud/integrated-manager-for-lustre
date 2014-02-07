@@ -11,7 +11,7 @@ from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
 
 class LinuxPluginTestCase(TestCase):
     def setUp(self):
-        self.manager = load_plugins(['linux'])
+        self.manager = load_plugins(['linux', 'linux_network'])
 
         import chroma_core.lib.storage_plugin.manager
         self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager

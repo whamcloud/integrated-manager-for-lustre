@@ -119,7 +119,7 @@ class TestReformatTarget(ChromaIntegrationTestCase):
         self.assertTrue(command['errored'])
         failed_job = None
         for job_uri in command['jobs']:
-            job = self.get_by_uri(job_uri)
+            job = self.get_json_by_uri(job_uri)
             if job['errored']:
                 failed_job = job
                 break
@@ -127,7 +127,7 @@ class TestReformatTarget(ChromaIntegrationTestCase):
 
         failed_step = None
         for step_uri in failed_job['steps']:
-            step = self.get_by_uri(step_uri)
+            step = self.get_json_by_uri(step_uri)
             if step['state'] == 'failed':
                 failed_step = step
                 break

@@ -1,6 +1,6 @@
 from chroma_api.urls import api
 from chroma_core.models import Bundle, Command
-from chroma_core.models.host import ManagedHost
+from chroma_core.models.host import ManagedHost, Nid
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.services.job_scheduler import job_scheduler_client
 import mock
@@ -18,7 +18,7 @@ class TestHostResource(ChromaApiTestCase):
         MockAgentRpc.mock_servers = {'foo': {
             'fqdn': 'myvm.mycompany.com',
             'nodename': 'test01.myvm.mycompany.com',
-            'nids': ["192.168.0.19@tcp"]
+            'nids': [Nid.Nid("192.168.0.19", "tcp", 0)]
         }}
 
     @create_host_ssh_patch

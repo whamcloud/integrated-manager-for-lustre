@@ -107,7 +107,7 @@ class UtilityTestCase(TestCase):
         running_time = 0
         while running_time < timeout:
             logger.debug("Waiting for '%s' in %s's available_actions" % (job_class if job_class else state, victim['resource_uri']))
-            for action in self.get_by_uri(victim['resource_uri'])['available_actions']:
+            for action in self.get_json_by_uri(victim['resource_uri'])['available_actions']:
                 try:
                     if job_class == action['class_name']:
                         return action

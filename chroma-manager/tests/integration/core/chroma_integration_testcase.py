@@ -1,5 +1,6 @@
 import logging
 
+from collections import namedtuple
 from testconfig import config
 from tests.integration.core.api_testcase_with_test_reset import ApiTestCaseWithTestReset
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
@@ -183,6 +184,17 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 }
             )
         """
+
+        # For debug just read the lnet state, this will cause it to be displayed.
+        response = self.chroma_manager.get(
+            '/api/host/',
+            params = {'limit': 0}
+        )
+        self.assertTrue(response.successful, response.text)
+
+        for host in response.json['objects']:
+            self._get_lnet_info(host)
+
         response = self.chroma_manager.post(
             '/api/filesystem/',
             body = filesystem
@@ -378,3 +390,30 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             except IndexError:
                 obj = self.create_power_control_device_outlet(new)
                 logger.debug("Created %s" % obj)
+
+    LNetInfo = namedtuple("LNetInfo", ("nids", "network_interfaces", "lnet_configuration", "host"))
+
+    def _get_lnet_info(self, host):
+        '''
+        :return: Returns a named tuple of network and lnet configuration
+        '''
+
+        # We fetch the host again so that it's state is updated.
+        hosts = self.get_list("/api/host/", args={'fqdn': host['fqdn']})
+        self.assertEqual(len(hosts), 1, "Expected a single host to be returned got %s" % len(hosts))
+        host = hosts[0]
+
+        lnet_configuration = self.get_list("/api/lnet_configuration", args={'host__id': host["id"]})
+        self.assertEqual(len(lnet_configuration), 1, "Expected a single lnet configuration to be returned got %s" % len(lnet_configuration))
+        lnet_configuration = lnet_configuration[0]
+
+        network_interfaces = self.get_list("/api/network_interface", args={'host__id': host["id"]})
+
+        nids = self.get_list("/api/nid/", args={'lnet_configuration__id': lnet_configuration["id"]})
+
+        logger.debug("Fetched Lnet info for %s" % host['fqdn'])
+        logger.debug("Nid info %s" % nids)
+        logger.debug("NetworkInterfaces info %s" % network_interfaces)
+        logger.debug("LNetConfiguration info %s" % lnet_configuration)
+
+        return self.LNetInfo(nids, network_interfaces, lnet_configuration, host)

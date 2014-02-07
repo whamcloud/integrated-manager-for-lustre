@@ -1,4 +1,4 @@
-from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst
+from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst, Nid
 from django.test import TestCase
 from tests.unit.chroma_core.helper import synthetic_host, synthetic_volume_full, load_default_profile
 
@@ -16,11 +16,11 @@ class TestNidStrings(TestCase):
 
     def _host_with_nids(self, address):
         host_nids = {
-            'primary-mgs': ['1.2.3.4@tcp'],
-            'failover-mgs': ['1.2.3.5@tcp'],
-            'primary-mgs-twonid': ['1.2.3.4@tcp', '4.3.2.1@tcp1'],
-            'failover-mgs-twonid': ['1.2.3.5@tcp', '4.3.2.2@tcp1'],
-            'othernode': ['1.2.3.6@tcp', '4.3.2.3@tcp1']
+            'primary-mgs': [Nid.Nid('1.2.3.4', 'tcp', 0)],
+            'failover-mgs': [Nid.Nid('1.2.3.5', 'tcp', 5)],
+            'primary-mgs-twonid': [Nid.Nid('1.2.3.4', 'tcp', 0), Nid.Nid('4.3.2.1', 'tcp', 1)],
+            'failover-mgs-twonid': [Nid.Nid('1.2.3.5', 'tcp', 5), Nid.Nid('4.3.2.2', 'tcp', 1)],
+            'othernode': [Nid.Nid('1.2.3.6', 'tcp', 0), Nid.Nid('4.3.2.3', 'tcp', 1)]
         }
         return synthetic_host(address, host_nids[address])
 
@@ -44,8 +44,8 @@ class TestNidStrings(TestCase):
         ManagedMdt.create_for_volume(synthetic_volume_full(other).id, filesystem = fs)
         ManagedOst.create_for_volume(synthetic_volume_full(other).id, filesystem = fs)
 
-        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0',), (u'1.2.3.5@tcp0',)))
-        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0:1.2.3.5@tcp0')
+        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0',), (u'1.2.3.5@tcp5',)))
+        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0:1.2.3.5@tcp5')
 
     def test_two_nids_no_failover(self):
         mgs0 = self._host_with_nids('primary-mgs-twonid')
@@ -67,5 +67,5 @@ class TestNidStrings(TestCase):
         ManagedMdt.create_for_volume(synthetic_volume_full(other).id, filesystem = fs)
         ManagedOst.create_for_volume(synthetic_volume_full(other).id, filesystem = fs)
 
-        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0', u'4.3.2.1@tcp1'), (u'1.2.3.5@tcp0', u'4.3.2.2@tcp1')))
-        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0,4.3.2.1@tcp1:1.2.3.5@tcp0,4.3.2.2@tcp1')
+        self.assertEqual(mgt.nids(), ((u'1.2.3.4@tcp0', u'4.3.2.1@tcp1'), (u'1.2.3.5@tcp5', u'4.3.2.2@tcp1')))
+        self.assertEqual(fs.mgs_spec(), u'1.2.3.4@tcp0,4.3.2.1@tcp1:1.2.3.5@tcp5,4.3.2.2@tcp1')

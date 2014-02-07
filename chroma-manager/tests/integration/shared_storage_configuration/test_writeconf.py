@@ -14,7 +14,10 @@ class TestWriteconf(ChromaIntegrationTestCase):
 
     def testUpdateNids(self):
         """Test that running UpdateNids on a filesystem leaves it in a working state,
-           note: we're not actually *changing* any NIDs here, just exercising the code."""
+           note: we're not actually *changing* any NIDs here, just exercising the code.
+           CRG: I have left this test in but with the UpdateNids removed because we don't
+           require it anymore. We still validate some stuff works, but someone might decide
+           to just remove this file"""
         self.assertGreaterEqual(len(self.config_servers), 4)
 
         self.hosts = self.add_hosts([
@@ -52,15 +55,6 @@ class TestWriteconf(ChromaIntegrationTestCase):
         )
 
         self._exercise_simple(self.filesystem_id)
-
-        for host in self.hosts:
-            response = self.chroma_manager.post("/api/command/", body = {
-                'jobs': [{'class_name': 'RelearnNidsJob', 'args': {'hosts': [host['resource_uri']]}}],
-                'message': "Test relearn nids"
-            })
-            self.assertEqual(response.status_code, 201)
-            command = response.json
-            self.wait_for_command(self.chroma_manager, command['id'])
 
         response = self.chroma_manager.post("/api/command/", body = {
             'jobs': [{'class_name': 'UpdateNidsJob', 'args': {}}],

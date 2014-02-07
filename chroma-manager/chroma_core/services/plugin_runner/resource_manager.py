@@ -50,7 +50,7 @@ from chroma_core.models import StorageResourceAlert, StorageResourceOffline
 from chroma_core.models import HaCluster
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import Event
-
+from chroma_core.models import LNetConfiguration, NetworkInterface, Nid
 from django.db import transaction
 
 from collections import defaultdict
@@ -327,6 +327,7 @@ class ResourceManager(object):
             self._cull_lost_resources(session, initial_resources)
 
             self._persist_lun_updates(scannable_id)
+            self._persist_nid_updates(scannable_id, None, None)
 
             # Plugins are allowed to create VirtualMachine objects, indicating that
             # we should created a ManagedHost to go with it (e.g. discovering VMs)
@@ -506,7 +507,7 @@ class ResourceManager(object):
             resource_class__in = node_klass_ids, storage_id_scope = scannable_id).annotate(
             child_count = Count('resource_parent'))
 
-        # DeviceNodes elegible for use as a VolumeNode (leaves)
+        # DeviceNodes eligible for use as a VolumeNode (leaves)
         usable_node_resources = [nr for nr in node_resources if nr.child_count == 0]
 
         # DeviceNodes which are usable but don't have VolumeNode
@@ -760,12 +761,132 @@ class ResourceManager(object):
 
         return False
 
-    def session_update_resource(self, scannable_id, local_resource_id, attrs):
-        #with self._instance_lock:
-        #    session = self._sessions[scannable_id]
-        #    record_pk = session.local_id_to_global_id[local_resource_id]
-        #    # TODO: implement
-        pass
+    # Fixme: This function that should just not be in resource_manager will leave just looking at networks
+    @transaction.commit_on_success
+    def _delete_nid_resource(self, scannable_id, deleted_resource_id):
+        from chroma_core.lib.storage_plugin.api.resources import LNETInterface, NetworkInterface as SrcNetworkInterface
+        resource = StorageResourceRecord.objects.get(pk = deleted_resource_id).to_resource()
+
+        # Shame to do this twice, but it seems that the scannable resource might not always be a host
+        # according to this test_subscriber
+        # But we will presume only a host can have a NetworkInterface or an LNetInterface
+        if isinstance(resource, SrcNetworkInterface) or isinstance(resource, LNETInterface):
+            scannable_resource = ResourceQuery().get_resource(scannable_id)
+            host = ManagedHost.objects.get(pk = scannable_resource.host_id)
+
+            if isinstance(resource, SrcNetworkInterface):
+                log.error("Deleting NetworkInterface %s from %s" % (resource.name, host.fqdn))
+                NetworkInterface.objects.filter(host = host,
+                                                name = resource.name).delete()
+            elif isinstance(resource, LNETInterface):
+                log.error("Deleting Nid %s from %s" % (resource.name, host.fqdn))
+                network_interface = NetworkInterface.objects.get(host = host,
+                                                                 name = resource.name)          # Presumes Nid name == Interface Name, that is asserted when it is added!yes
+                Nid.objects.filter(network_interface = network_interface).delete()
+
+    @transaction.commit_on_success
+    def _persist_nid_updates(self, scannable_id, changed_resource_id, changed_attrs):
+        from chroma_core.lib.storage_plugin.api.resources import LNETInterface, LNETModules, NetworkInterface as SrcNetworkInterface
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+
+        scannable_resource = ResourceQuery().get_resource(scannable_id)
+
+        # Fixme: This is a bit of rubbish where this routine gets called when it should. Heh you should have called
+        # me so I'll exit. Functions that anticipate the requirements by knowing the caller a seriously flawed.
+        if not isinstance(scannable_resource, HostsideResource):
+            return
+        else:
+            log.debug("_persist_nid_updates for scope record %s" % scannable_id)
+            host = ManagedHost.objects.get(pk = scannable_resource.host_id)
+
+        node_resources = {}
+
+        for resource_klass in [LNETInterface, LNETModules, SrcNetworkInterface]:
+            # Get all classes on this host
+            node_klass_ids = [storage_plugin_manager.get_resource_class_id(klass)
+                              for klass in all_subclasses(resource_klass)]
+
+            # Now get all the node resources for that scannable_id (Host)
+            node_resources[resource_klass] = StorageResourceRecord.objects.filter(
+                resource_class__in = node_klass_ids, storage_id_scope = scannable_id).annotate(
+                child_count = Count('resource_parent'))
+
+        nw_interfaces = {}
+
+        for nw_resource in node_resources[SrcNetworkInterface]:
+            nw_resource = nw_resource.to_resource()
+
+            if (nw_resource.host_id == host.id):
+                nw_interface, created = NetworkInterface.objects.get_or_create(host = host,
+                                                                               name = nw_resource.name)
+
+                nw_interface.inet4_address = nw_resource.inet4_address
+                nw_interface.type = nw_resource.type
+                nw_interface.state_up = nw_resource.up
+                nw_interface.save()
+
+                nw_interfaces[nw_resource._handle] = nw_interface
+
+                log.debug("_persist_nid_updates nw_resource %s %s" % (nw_interface, "created" if created else "updated"))
+
+        for lnet_state_resource in node_resources[LNETModules]:
+            lnet_state = lnet_state_resource.to_resource()
+
+            if (lnet_state.host_id == host.id):
+                lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = lnet_state.host_id)
+
+                lnet_configuration.state = lnet_state.state
+
+                lnet_configuration.save()
+
+                log.debug("_persist_nid_updates lnet_configuration %s %s" % (lnet_configuration, "created" if created else "updated"))
+
+                # This is temporary whilst the host strangely has the lnet state in it, rather than the lnet configuration.
+                # If the host is in an 'lnet state' but not the right one.
+                # It seems odd that one of the from states is 'configured' but I think this just highlights how lnet configuration
+                # is not a 'state' of a host
+                # Search for this comment in _completion_hooks in job_scheduler.py - because we have to do this in 2 places to
+                # be sure it hangs together.
+                # We can just set the state of the host, no transition is required. This is not a good thing to do but as an interim
+                # change until we complete dynamic lnet it is OK.
+                if (host.state in ['configured', 'lnet_unloaded', 'lnet_down', 'lnet_up']) and (host.state != lnet_configuration.state):
+                    host.set_state(lnet_configuration.state)
+                    host.save()
+
+        # Only get the lnet_configuration if we actually have a LNetInterface (nid) to add.
+        if (len(node_resources[LNETInterface]) > 0):
+            # So get all the Nid's for this host, we will have to expand this to do network cards but
+            # one step at a time.
+            lnet_configuration = LNetConfiguration.objects.get(host = host)
+
+            for nid_resource in node_resources[LNETInterface]:
+                source_nid = nid_resource.to_resource()
+                parent = self._record_find_ancestor(nid_resource.id, SrcNetworkInterface)
+
+                # This is checking if this nid is on this host.
+                if parent in nw_interfaces:
+                    nid, created = Nid.objects.get_or_create(lnet_configuration = lnet_configuration,
+                                                             network_interface = nw_interfaces[parent])
+
+                    nid.lnd_network = source_nid.lnd_network
+                    nid.save()
+
+                    log.debug("_persist_nid_updates nid %s %s" % (nid, "created" if created else "updated"))
+
+    def session_update_resource(self, scannable_id, record_id, attrs):
+        """
+        This is a first pass implementation by Chris, not really sure what this is trying to do but I
+        need a solution to deal with lnet configuration including nids changing. So don't rely on this
+        as the way to do it, just a way do do it.
+
+        This implementation is really so sub optimal at the moment it is untrue, because it gets called
+        for every field that changes for every record. I may change this comment if I can work out a solution!
+        """
+        with self._instance_lock:
+            self._resource_persist_update_attributes(scannable_id, record_id, attrs)
+            #self._persist_lun_updates(scannable_id)
+            self._persist_nid_updates(scannable_id, record_id, attrs)
+            #self._persist_created_hosts(scannable_id, scannable_id, resources)
 
     def session_resource_add_parent(self, scannable_id, local_resource_id, local_parent_id):
         with self._instance_lock:
@@ -824,10 +945,24 @@ class ResourceManager(object):
             record.parents.add(parent_pk)
 
     @transaction.autocommit
-    def _resource_persist_update_attributes(self, record_pk, attrs):
+    def _resource_persist_update_attributes(self, scannable_id, local_record_id, attrs):
+        session = self._sessions[scannable_id]
+
+        global_record_id = session.local_id_to_global_id[local_record_id]
+
         from chroma_core.models import StorageResourceRecord
-        record = StorageResourceRecord.objects.get(record_pk)
-        record.update_attributes(attrs)
+        record = StorageResourceRecord.objects.get(pk = global_record_id)
+
+        ''' Sometimes we are given reference to a BaseStorageResource and so we need to store the id
+            not the type. This code does the translation '''
+        cleaned_id_attrs = {}
+        for key, val in attrs.items():
+            if isinstance(val, BaseStorageResource):
+                cleaned_id_attrs[key] = session.local_id_to_global_id[val._handle]
+            else:
+                cleaned_id_attrs[key] = val
+
+        record.update_attributes(cleaned_id_attrs)
 
     def session_add_resources(self, scannable_id, resources):
         """NB this is plural because new resources may be interdependent
@@ -837,6 +972,7 @@ class ResourceManager(object):
             session = self._sessions[scannable_id]
             self._persist_new_resources(session, resources)
             self._persist_lun_updates(scannable_id)
+            self._persist_nid_updates(scannable_id, None, None)
             self._persist_created_hosts(session, scannable_id, resources)
 
     @transaction.commit_on_success
@@ -847,6 +983,7 @@ class ResourceManager(object):
             for local_resource in resources:
                 try:
                     resource_global_id = session.local_id_to_global_id[local_resource._handle]
+                    self._delete_nid_resource(scannable_id, resource_global_id)
                     self._delete_resource(StorageResourceRecord.objects.get(pk = resource_global_id))
                 except KeyError:
                     pass
@@ -1382,3 +1519,15 @@ class ResourceManager(object):
                     ancestors.remove(descendent_ld)
                     if len(ancestors) == 1:
                         Volume.objects.filter(storage_resource = descendent_ld).update(label = self.get_label(ld_id))
+
+    @transaction.commit_on_success
+    def _persist_changed_resource(self, session, changed_resources):
+        # This is a incomplete solution based on getting some lnet stuff to work
+        # There seems to be a flaw in John's thinking because the resources are created as a blop
+        # because you have to sort them etc, and then he seems to think we can update the in isolation.
+        # We need a solution for 2.1, this doesn't break anything and so is a step forwards.
+        #for resource, attrs in changed_resources:
+        #    resource.update_attributes(session.local_id_to_global_id,
+        #                             changed_resources,
+        #                             session.plugin_manager.resource_attribute_serialized)
+        pass

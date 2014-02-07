@@ -44,16 +44,77 @@ class BaseFakeLinuxPlugin(DevicePlugin):
         }
 
 
-class FakeLinuxNetworkPlugin(DevicePlugin):
+class BaseFakeLinuxNetworkPlugin(DevicePlugin):
+    _server = None
+
+    def __init__(self, session):
+        super(BaseFakeLinuxNetworkPlugin, self).__init__(session)
+
+        # This is a bit crappy, but these plugins are not persistant at all, even within a session
+        # so create somewhere to store this information
+        try:
+            if self._server.nid_last_result:
+                pass
+        except AttributeError:
+            self._server.nid_last_result = None
+
+    def _lnet_state(self):
+        return {(False, False): 'lnet_unloaded',
+                 (False, True): 'lnet_unloaded',
+                 (True, False): 'lnet_down',
+                 (True, True): 'lnet_up'}[(self._server.state['lnet_loaded'], self._server.state['lnet_up'])]
+
     def start_session(self):
-        return [{
-            "tx_bytes": "24400222349",
-            "name": "eth0",
-            "rx_bytes": "1789870413"
-        }]
+        return self.update_session()
 
     def update_session(self):
-        return self.start_session()
+        result = self._get_results()
+
+        # Default to nothing deleted
+        result['interfaces']['deleted'] = []
+        result['lnet']['nids']['deleted'] = []
+
+        if result['lnet']['state'] == 'lnet_up':
+            if self._server.nid_last_result is not None:
+                result['interfaces']['deleted'] = [item for item in self._server.nid_last_result['interfaces']['active'] if item not in result['interfaces']['active']]
+                result['lnet']['nids']['deleted'] = [item for item in self._server.nid_last_result['lnet']['nids']['active'] if item not in result['lnet']['nids']['active']]
+
+            self._server.nid_last_result = result
+
+        return result
+
+    def _get_results(self):
+        names = {'tcp': 'eth', 'o2ib': 'ib'}
+        interfaces = {}
+        nids = {}
+
+        for inet4_address in self._server.network_interfaces.keys():
+            interface = self._server.network_interfaces[inet4_address]
+            name = '%s%s' % (names[interface['type']], interface['interface_no'])
+
+            interfaces[name] = {'mac_address': '12:34:56:78:90:1%s' % interface['interface_no'],
+                                'inet4_address': inet4_address,
+                                'inet6_address': 'Need An inet6 Simulated Address',
+                                'type': interface['type'],                          # We report LND types for consistancy, the real version does as well
+                                'rx_bytes': '24400222349',
+                                'tx_bytes': '1789870413',
+                                'up': True}
+
+            if (self._server.state['lnet_up']) and (interface['lnd_network'] is not None):
+                nids[name] = {'nid_address': inet4_address,
+                              'type': interface['type'],
+                              'lnd_network': interface['lnd_network'],
+                              'status': '?',
+                              'refs': '?',
+                              'peer': '?',
+                              'rtr': '?',
+                              'max': '?',
+                              'tx': '?',
+                              'min': '?'}
+
+        return {'interfaces': {'active': interfaces},
+                'lnet': {'state': self._lnet_state(),
+                         'nids': {'active': nids}}}
 
 
 class BaseFakeSyslogPlugin(DevicePlugin):
@@ -66,7 +127,7 @@ class BaseFakeSyslogPlugin(DevicePlugin):
                     'source': 'cluster_sim',
                     'severity': 1,
                     'facility': 1,
-                    'message': "Lustre: Cluster simulator syslog session start %s %s" % (self._server.fqdn, datetime.datetime.now()),
+                    'message': 'Lustre: Cluster simulator syslog session start %s %s' % (self._server.fqdn, datetime.datetime.now()),
                     'datetime': datetime.datetime.utcnow().isoformat() + 'Z'
                 }
             ]
@@ -91,11 +152,6 @@ class BaseFakeLustrePlugin(DevicePlugin):
         return self.update_session(first=True)
 
     def update_session(self, first=False):
-        if self._server.state['lnet_up']:
-            nids = self._server.nids
-        else:
-            nids = None
-
         mounts = []
         for resource in self._server._cluster.get_running_resources(self._server.nodename):
             mounts.append({
@@ -112,8 +168,6 @@ class BaseFakeLustrePlugin(DevicePlugin):
 
         return {
             'resource_locations': self._server._cluster.resource_locations(),
-            'lnet_loaded': self._server.state['lnet_loaded'],
-            'lnet_nids': nids,
             'capabilities': ['manage_targets'],
             'metrics': {
                 'raw': {
@@ -124,8 +178,7 @@ class BaseFakeLustrePlugin(DevicePlugin):
             },
             'packages': packages,
             'mounts': mounts,
-            'lnet_up': self._server.state['lnet_up'],
-            'started_at': datetime.datetime.utcnow().isoformat() + "Z",
+            'started_at': datetime.datetime.utcnow().isoformat() + 'Z',
             'agent_version': 'dummy'
         }
 
@@ -135,9 +188,9 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
     _server = None
 
     @staticmethod
-    def get_test_message(utc_iso_date_str="2013-01-11T19:04:07+00:00",
+    def get_test_message(utc_iso_date_str='2013-01-11T19:04:07+00:00',
                          node_status_list=None):
-        """Simulate a message from the Corosync agent plugin
+        '''Simulate a message from the Corosync agent plugin
 
         The plugin currently sends datetime in UTC of the nodes localtime.
 
@@ -149,7 +202,7 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
         TODO: This method is also in tests/unit/services/test_corosync.py.
         Some effort shoudl be considered to consolidate this, so that both
         tests can use the same source.
-        """
+        '''
 
         #  First whack up some fake node data based on input infos
         nodes = {}
@@ -158,18 +211,18 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
                 node = hs[0]
                 status = hs[1] and 'true' or 'false'
                 node_dict = {node: {
-                    "name": node, "standby": "false",
-                    "standby_onfail": "false",
-                    "expected_up": "true",
-                    "is_dc": "true", "shutdown": "false",
-                    "online": status, "pending": "false",
-                    "type": "member", "id": node,
-                    "resources_running": "0", "unclean": "false"}}
+                    'name': node, 'standby': 'false',
+                    'standby_onfail': 'false',
+                    'expected_up': 'true',
+                    'is_dc': 'true', 'shutdown': 'false',
+                    'online': status, 'pending': 'false',
+                    'type': 'member', 'id': node,
+                    'resources_running': '0', 'unclean': 'false'}}
                 nodes.update(node_dict)
 
         #  Second create the message with the nodes and other envelope data.
-        message = {"nodes": nodes,
-                   "datetime": utc_iso_date_str}
+        message = {'nodes': nodes,
+                   'datetime': utc_iso_date_str}
 
         return message
 
@@ -186,12 +239,12 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
         #  This implementation looks at ALL the servers in the simulator,
         #  and those ones that are also join'ed in the cluster are online.
 
-        log.debug("cluster nodes:  %s" % self._server._cluster.state['nodes'])
+        log.debug('cluster nodes:  %s' % self._server._cluster.state['nodes'])
 
         nodes = [(node_dict['nodename'], node_dict['online']) for node_dict
                             in self._server._cluster.state['nodes'].values()]
 
-        log.debug("Nodes and state:  %s" % nodes)
+        log.debug('Nodes and state:  %s' % nodes)
 
         dt = datetime.datetime.utcnow().isoformat()
         message = self.get_test_message(utc_iso_date_str=dt,
@@ -205,16 +258,19 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
 
 
 class FakeDevicePlugins():
-    """
+    '''
     Fake versions of the device plugins, sending monitoring
     information derived from the simulator state (e.g. corosync
     resource locations come from FakeCluster, lustre target
     statistics come from FakeDevices).
-    """
+    '''
     def __init__(self, server):
         self._server = server
 
         class FakeLinuxPlugin(BaseFakeLinuxPlugin):
+            _server = self._server
+
+        class FakeLinuxNetworkPlugin(BaseFakeLinuxNetworkPlugin):
             _server = self._server
 
         class FakeLustrePlugin(BaseFakeLustrePlugin):

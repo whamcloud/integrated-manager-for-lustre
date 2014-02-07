@@ -7,6 +7,7 @@ import datetime
 import time
 from django.db import transaction
 
+from collections import namedtuple
 from tests.services.supervisor_test_case import SupervisorTestCase
 from tests.services.agent_http_client import AgentHttpClient
 from tests.utils import wait
@@ -15,8 +16,10 @@ from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler import agent_rpc
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration, ClientCertificate
+from chroma_core.models import ServerProfile
 
 RABBITMQ_GRACE_PERIOD = 1
+RABBITMQ_LONGWAIT_PERIOD = 360
 
 
 class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
@@ -65,14 +68,24 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
     def setUp(self):
         if not ManagedHost.objects.filter(fqdn = self.CLIENT_NAME).count():
+            if not ServerProfile.objects.filter(name = 'TestAgentRpcProfile').count():
+                server_profile = ServerProfile.objects.create(
+                        name = 'TestAgentRpcProfile',
+                        ui_name = 'Profile created to TestAgentRpc can work',
+                        managed = True,
+                        worker = False)
+            else:
+                server_profile = ServerProfile.objects.get(name = 'TestAgentRpcProfile')
+
             self.host = ManagedHost.objects.create(
                 fqdn = self.CLIENT_NAME,
                 nodename = self.CLIENT_NAME,
                 address = self.CLIENT_NAME,
                 state = 'lnet_down',
-                state_modified_at = datetime.datetime.now(tz = dateutil.tz.tzutc())
+                state_modified_at = datetime.datetime.now(tz = dateutil.tz.tzutc()),
+                server_profile = server_profile
             )
-            LNetConfiguration.objects.create(host = self.host, state = 'nids_known')
+            LNetConfiguration.objects.create(host = self.host, state = 'lnet_down')
             ClientCertificate.objects.create(host = self.host, serial = self.CLIENT_CERT_SERIAL)
         else:
             self.host = ManagedHost.objects.get(fqdn = self.CLIENT_NAME)
@@ -110,15 +123,29 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self.assertEqual(response_message['session_id'], None)
         self.assertEqual(response_message['body'], None)
 
+    ActionsRequested = namedtuple('ActionsRequested', ['command_id', 'actions'])
+
     def _request_action(self, state = 'lnet_up'):
         # Start a job which should generate an action
         command_id = JobSchedulerClient.command_set_state([(self.host.content_type.natural_key(), self.host.id, state)], "Test")
         command = self._get_command(command_id)
         self.assertEqual(len(command.jobs.all()), 1)
         self.last_action = time.time()
-        return command_id
 
-    def _handle_action_receive(self, session_id):
+        # This have to be hardcoded and kept up to data, a bit crappy, but at least they are in one place and asserts when it
+        # doesn't know what to do.
+        # This is basically describing the messages that we expect to receive when a command is sent. We can then receive and
+        # validate each message as it arrives.
+        if state == 'lnet_up':
+            actions = ['start_lnet', 'device_plugin', 'device_plugin', 'device_plugin']    # It will do start_lnet, followed by 2 requests for data.
+        elif state == 'lnet_down':
+            actions = ['stop_lnet', 'device_plugin', 'device_plugin', 'device_plugin']      # It will do stop_lnet, followed by 2 requests for data.
+        else:
+            raise AssertionError("Unknown state '%s' requested for _request_action" % state)
+
+        return self.ActionsRequested(command_id, actions)
+
+    def _handle_action_receive(self, session_id, action):
         # Listen and wait for the action
         action_rpc_request, = self._receive_messages()
         msg = "elapsed {0}".format(time.time() - self.last_action)
@@ -126,13 +153,15 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self.assertEqual(action_rpc_request['plugin'], self.PLUGIN)
         self.assertEqual(action_rpc_request['session_seq'], None)
         self.assertEqual(action_rpc_request['session_id'], session_id)
-        self.assertEqual(action_rpc_request['body']['action'], 'start_lnet')
+        if (action_rpc_request['body']['action'] != action):
+            pass
+        self.assertEqual(action_rpc_request['body']['action'], action)
 
         return action_rpc_request['body']
 
     def _handle_action_respond(self, session_id, rpc_request_body):
         # Send it a success response
-        success_message = {
+        message = {
             'fqdn': self.CLIENT_NAME,
             'type': 'DATA',
             'plugin': self.PLUGIN,
@@ -146,12 +175,27 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
                 'subprocesses': []
             }
         }
-        action_data_response = self._post([success_message])
+
+        # Now we are going to simulate some alternative replys, this are simple and hardcoded but
+        # but we do have an assert for cases we don't understand and this is not trying to be a simulator
+        action = rpc_request_body['action']
+        if (action in ['start_lnet', 'stop_lnet']):
+            pass
+        elif (action == 'device_plugin'):
+            assert(rpc_request_body['args']['plugin'] in ['linux_network', 'linux'])
+            message['body']['exception'] = "No data provided by test scripts - this is intentional"
+        else:
+            raise AssertionError("_handle_action_respond can't respond to %s" % action)
+
+        action_data_response = self._post([message])
         self.assertResponseOk(action_data_response)
 
-    def _handle_action(self, session_id):
-        rpc_request_body = self._handle_action_receive(session_id)
-        return self._handle_action_respond(session_id, rpc_request_body)
+    def _handle_action(self, session_id, actions):
+        for action in actions:
+            rpc_request_body = self._handle_action_receive(session_id, action)
+            response = self._handle_action_respond(session_id, rpc_request_body)
+
+        return response
 
     def _get_command(self, command_id):
         with transaction.commit_manually():
@@ -164,17 +208,26 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
             command = self._get_command(command_id)
             if command.complete:
                 return command
-        raise AssertionError("Command didn't complete")
+
+        for index in wait(RABBITMQ_LONGWAIT_PERIOD):
+            command = self._get_command(command_id)
+            if command.complete:
+                break
+
+        if command.complete:
+            raise AssertionError("Command didn't complete after %s seconds but did after %s seconds" % (timeout, RABBITMQ_LONGWAIT_PERIOD))
+        else:
+            raise AssertionError("Command didn't complete even after %s seconds" % RABBITMQ_LONGWAIT_PERIOD)
 
     def test_run_action(self):
         # Prepare to receive actions
         agent_session_id = self._open_sessions()
 
-        command_id = self._request_action()
+        request_action = self._request_action()
 
-        self._handle_action(agent_session_id)
+        self._handle_action(agent_session_id, request_action.actions)
 
-        command = self._wait_for_command(command_id, RABBITMQ_GRACE_PERIOD)
+        command = self._wait_for_command(request_action.command_id, RABBITMQ_GRACE_PERIOD)
         self.assertFalse(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -184,9 +237,9 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         """
 
         # Start a job which should generate an action
-        command_id = self._request_action()
+        request_action = self._request_action()
 
-        command = self._wait_for_command(command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
+        command = self._wait_for_command(request_action.command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -196,14 +249,14 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         """
 
         # Start a job which should generate an action
-        command_id = self._request_action()
+        request_action = self._request_action()
 
         time.sleep(agent_rpc.SESSION_WAIT_TIMEOUT / 2)
 
         session_id = self._open_sessions()
-        self._handle_action(session_id)
+        self._handle_action(session_id, request_action.actions)
 
-        command = self._wait_for_command(command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
+        command = self._wait_for_command(request_action.command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
         self.assertFalse(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -214,24 +267,24 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
         agent_session_id = self._open_sessions()
 
-        command_id = self._request_action()
+        first_request_action = self._request_action()
 
         # Create another job which will be enqueued
-        enqueued_command_id = self._request_action('lnet_down')
+        queued_request_action = self._request_action('lnet_down')
 
         # Start 'running' the action
-        self._handle_action_receive(agent_session_id)
+        self._handle_action_receive(agent_session_id, first_request_action.actions[0])
 
         # Clean stop
         self.stop('job_scheduler')
 
         # Running command should have its AgentRpc errored
-        running_command = self._get_command(command_id)
+        running_command = self._get_command(first_request_action.command_id)
         self.assertTrue(running_command.complete)
         self.assertTrue(running_command.errored)
 
         # Waiting command should have been marked cancelled
-        enqueued_command = self._get_command(enqueued_command_id)
+        enqueued_command = self._get_command(queued_request_action.command_id)
         self.assertTrue(enqueued_command.complete)
         self.assertTrue(enqueued_command.cancelled)
         self.assertFalse(enqueued_command.errored)
@@ -251,10 +304,10 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         """While and agent rpc is in flight, restart the http_agent service, check that the command is errored"""
         agent_session_id = self._open_sessions()
 
-        command_id = self._request_action()
+        request_action = self._request_action()
 
         # Start 'running' the action
-        self._handle_action_receive(agent_session_id)
+        self._handle_action_receive(agent_session_id, request_action.actions[0])
 
         # Clean stop
         self.restart('http_agent')
@@ -269,7 +322,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
-        command = self._wait_for_command(command_id, 5)
+        command = self._wait_for_command(request_action.command_id, 5)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -278,17 +331,17 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
         agent_session_id = self._open_sessions()
 
-        command_id = self._request_action()
+        request_action = self._request_action()
 
         # Start 'running' the action
-        self._handle_action_receive(agent_session_id)
+        self._handle_action_receive(agent_session_id, request_action.actions[0])
 
         # Simulate an agent restart
         self._open_sessions(expect_initial = False, expect_reopen = True)
 
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
-        command = self._wait_for_command(command_id, 5)
+        command = self._wait_for_command(request_action.command_id, 5)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -299,17 +352,17 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         """
         agent_session_id = self._open_sessions()
 
-        command_id = self._request_action()
+        request_action = self._request_action()
 
         # Start 'running' the action
-        self._handle_action_receive(agent_session_id)
+        self._handle_action_receive(agent_session_id, request_action.actions[0])
 
         # Allow session to time out
         time.sleep(HostState.CONTACT_TIMEOUT + HostStatePoller.POLL_INTERVAL + RABBITMQ_GRACE_PERIOD)
 
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
-        command = self._wait_for_command(command_id, 5)
+        command = self._wait_for_command(request_action.command_id, 5)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -322,11 +375,11 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         # Allow session to time out
         time.sleep(HostState.CONTACT_TIMEOUT + HostStatePoller.POLL_INTERVAL + RABBITMQ_GRACE_PERIOD)
 
-        command_id = self._request_action()
+        request_action = self._request_action()
 
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
-        command = self._wait_for_command(command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
+        command = self._wait_for_command(request_action.command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -337,10 +390,10 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         promptly on the manager.
         """
         agent_session_id = self._open_sessions()
-        command_id = self._request_action()
-        rpc_request = self._handle_action_receive(agent_session_id)
+        request_action = self._request_action()
+        rpc_request = self._handle_action_receive(agent_session_id, request_action.actions[0])
 
-        command = self._get_command(command_id)
+        command = self._get_command(request_action.command_id)
         for job in command.jobs.all():
             JobSchedulerClient.cancel_job(job.id)
 
@@ -361,8 +414,8 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
             }
         )
 
-    def test_(self):
+    def test_HYD_2389(self):
         "Initial test to check if HYD-2389 only reproduces on first run."
         agent_session_id = self._open_sessions()
-        self._request_action()
-        self._handle_action_receive(agent_session_id)
+        request_action = self._request_action()
+        self._handle_action_receive(agent_session_id, request_action.actions[0])

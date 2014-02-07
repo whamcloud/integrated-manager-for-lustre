@@ -1,5 +1,6 @@
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.target import ManagedTargetMount
+from chroma_core.models.host import Nid
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
 
@@ -12,10 +13,10 @@ class TestMkfsOverrides(JobTestCaseWithHost):
         import settings
 
         self.create_simple_filesystem(self.host, start = False)
-        self.set_state(self.mgt.managedtarget_ptr, "mounted")
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
 
         settings.LUSTRE_MKFS_OPTIONS_MDT = "-E block_size=1024"
-        self.set_state(self.mdt.managedtarget_ptr, "formatted")
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mdt.managedtarget_ptr, "formatted")
         cmd, args = MockAgentRpc.last_call()
         self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_MDT}, args)
@@ -24,10 +25,10 @@ class TestMkfsOverrides(JobTestCaseWithHost):
         import settings
 
         self.create_simple_filesystem(self.host, start = False)
-        self.set_state(self.mgt.managedtarget_ptr, "mounted")
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
 
         settings.LUSTRE_MKFS_OPTIONS_OST = "-E block_size=2048"
-        self.set_state(self.ost.managedtarget_ptr, "formatted")
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.ost.managedtarget_ptr, "formatted")
         cmd, args = MockAgentRpc.last_call()
         self.assertEqual(cmd, "format_target")
         self.assertDictContainsSubset({'mkfsoptions': settings.LUSTRE_MKFS_OPTIONS_OST}, args)
@@ -45,14 +46,14 @@ class TestTargetTransitions(JobTestCaseWithHost):
 
     def test_start_stop(self):
         from chroma_core.models import ManagedMgs
-        self.set_state(freshen(self.mgt.managedtarget_ptr), 'unmounted')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'unmounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'unmounted')
-        self.set_state(freshen(self.mgt.managedtarget_ptr), 'mounted')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).state, 'mounted')
 
     def test_removal(self):
         from chroma_core.models import ManagedMgs
-        self.set_state(freshen(self.mgt.managedtarget_ptr), 'removed')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(freshen(self.mgt.managedtarget_ptr), 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
             ManagedMgs.objects.get(pk = self.mgt.pk)
         self.assertEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
@@ -61,8 +62,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
         """Test that when removing, if target mounts cannot be unconfigured,
         the target is not removed"""
         from chroma_core.models import ManagedMgs
-
-        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
         try:
             # Make it so that the mount unconfigure operations will fail
             MockAgentRpc.succeed = False
@@ -70,7 +70,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
             # -> the TargetMount removal parts of this operation will fail, we
             # want to make sure that this means that Target deletion part
             # fails as well
-            self.set_state(self.mgt.managedtarget_ptr, 'removed', check = False)
+            self.set_and_assert_state(self.mgt.managedtarget_ptr, 'removed', check = False)
 
             ManagedMgs.objects.get(pk = self.mgt.pk)
             self.assertNotEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
@@ -78,7 +78,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
             MockAgentRpc.succeed = True
 
         # Now let the op go through successfully
-        self.set_state(self.mgt.managedtarget_ptr, 'removed')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'removed')
         with self.assertRaises(ManagedMgs.DoesNotExist):
             ManagedMgs.objects.get(pk = self.mgt.pk)
         self.assertEqual(ManagedMgs._base_manager.get(pk = self.mgt.pk).state, 'removed')
@@ -87,9 +87,9 @@ class TestTargetTransitions(JobTestCaseWithHost):
         """Test that if I try to stop LNet on a host where a target is running,
         stopping the target calculated as a dependency of that"""
 
-        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
-        self.assertState(self.host, 'lnet_up')
-        consequences = JobSchedulerClient.get_transition_consequences(freshen(self.host), 'lnet_down')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.host = self.assertState(self.host, 'lnet_up')
+        consequences = JobSchedulerClient.get_transition_consequences(self.host, 'lnet_down')
         self.assertEqual(len(consequences['dependency_jobs']), 1)
         self.assertEqual(consequences['dependency_jobs'][0]['class'], 'StopTargetJob')
 
@@ -104,7 +104,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
         try:
             MockAgentRpc.fail_commands = [('format_target', {'device': path, 'target_types': 'mgs'})]
 
-            command = self.set_state(self.mgt.managedtarget_ptr, 'formatted', check=False)
+            command = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'formatted', check=False)
             self.assertEqual(freshen(command).complete, True)
             self.assertEqual(freshen(command).errored, True)
         finally:
@@ -114,7 +114,7 @@ class TestTargetTransitions(JobTestCaseWithHost):
         self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path, 'target_types': 'mgs'}))
 
         # This one should succeed
-        self.set_state(self.mgt.managedtarget_ptr, 'formatted', check=True)
+        self.set_and_assert_state(self.mgt.managedtarget_ptr, 'formatted', check=True)
 
         # Check that it passed the reformat flag
         self.assertEqual(MockAgentRpc.last_call(), ('format_target', {'device': path, 'target_types': 'mgs', 'reformat': True}))
@@ -125,12 +125,12 @@ class TestSharedTarget(JobTestCaseWithHost):
             'pair1': {
                 'fqdn': 'pair1.mycompany.com',
                 'nodename': 'test01.pair1.mycompany.com',
-                'nids': ["192.168.0.1@tcp"]
+                'nids': [Nid.Nid("192.168.0.1", "tcp", 0)]
             },
             'pair2': {
                 'fqdn': 'pair2.mycompany.com',
                 'nodename': 'test02.pair2.mycompany.com',
-                'nids': ["192.168.0.1@tcp"]
+                'nids': [Nid.Nid("192.168.0.2", "tcp", 0)]
             }
     }
 
@@ -150,7 +150,7 @@ class TestSharedTarget(JobTestCaseWithHost):
 
     def test_clean_setup(self):
         # Start it normally the way the API would on creation
-        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
         self.assertEqual(ManagedTarget.objects.get(pk = self.mgt.pk).state, 'mounted')
         self.assertEqual(ManagedTarget.objects.get(pk = self.mgt.pk).active_mount, ManagedTargetMount.objects.get(host = self.hosts[0], target = self.mgt))
 
@@ -159,7 +159,7 @@ class TestSharedTarget(JobTestCaseWithHost):
         try:
             # We should need no agent ops to remove something we never formatted
             MockAgentRpc.succeed = False
-            self.set_state(self.mgt.managedtarget_ptr, 'removed')
+            self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'removed')
         finally:
             MockAgentRpc.succeed = True
 
@@ -167,36 +167,34 @@ class TestSharedTarget(JobTestCaseWithHost):
             ManagedTarget.objects.get(pk = self.mgt.pk)
 
     def test_teardown_remove_primary_host(self):
-        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
-        self.set_state(self.mgt.primary_server(), 'removed')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.set_and_assert_state(self.mgt.primary_server(), 'removed')
 
         # Removing the primary server removes the target
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk = self.mgt.pk)
 
     def test_teardown_remove_secondary_host(self):
-        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
-        self.set_state(self.mgt.secondary_servers()[0], 'removed')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.set_and_assert_state(self.mgt.secondary_servers()[0], 'removed')
 
         # Removing the secondary server removes the target
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk = self.mgt.pk)
 
     def test_teardown_friendly_user(self):
-        self.set_state(self.mgt.managedtarget_ptr, 'mounted')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
 
         # Friendly user stops the target
-        self.set_state(self.mgt.managedtarget_ptr, 'unmounted')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'unmounted')
 
         # Friendly user removes the target
-        self.set_state(self.mgt.managedtarget_ptr, 'removed')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'removed')
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk = self.mgt.pk)
 
         # Friendly user removes the secondary host
-        self.set_state(self.hosts[1], 'removed')
-        self.assertEqual(ManagedHost._base_manager.get(id=self.hosts[1].id).state, 'removed')
+        self.hosts[1] = self.set_and_assert_state(self.hosts[1], 'removed')
 
         # Friendly user removes the primary host
-        self.set_state(self.hosts[0], 'removed')
-        self.assertEqual(ManagedHost._base_manager.get(id=self.hosts[0].id).state, 'removed')
+        self.hosts[0] = self.set_and_assert_state(self.hosts[0], 'removed')

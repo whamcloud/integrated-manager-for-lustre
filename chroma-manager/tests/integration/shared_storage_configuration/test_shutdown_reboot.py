@@ -87,7 +87,7 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         # server after it's been added and set up.
         def saw_expected_transitions(test_job_classes):
             available_job_classes = [j['class_name'] for j in
-                self.get_by_uri(test_server['resource_uri'])['available_jobs']
+                self.get_json_by_uri(test_server['resource_uri'])['available_jobs']
                 if j['class_name'] in test_job_classes
             ]
             logger.debug("Found these available jobs: '%s'" % available_job_classes)
@@ -113,14 +113,14 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
         self.wait_until_true(lambda: get_host_unavailable_alerts(test_server))
 
         # Check to make sure the reboot/shutdown jobs are not advertised.
-        job_classes = [j['class_name'] for j in self.get_by_uri(test_server['resource_uri'])['available_jobs']]
+        job_classes = [j['class_name'] for j in self.get_json_by_uri(test_server['resource_uri'])['available_jobs']]
         for class_name in test_job_classes:
             self.assertNotIn(class_name, job_classes)
 
         # Finally, start the server back up to lower the HostOfflineAlert,
         self.remote_operations.await_server_boot(test_server['fqdn'], restart = True)
         self.wait_until_true(lambda: not get_host_unavailable_alerts(test_server))
-        self.wait_until_true(lambda: self.get_by_uri(test_server['resource_uri'])['state'] not in ['removed', 'undeployed', 'unconfigured'])
+        self.wait_until_true(lambda: self.get_json_by_uri(test_server['resource_uri'])['state'] not in ['removed', 'undeployed', 'unconfigured'])
 
         # and ensure that we see the reboot/shutdown jobs again.
         self.wait_until_true(lambda: saw_expected_transitions(test_job_classes))

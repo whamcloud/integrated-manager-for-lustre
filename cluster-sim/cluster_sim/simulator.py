@@ -125,7 +125,7 @@ class ClusterSimulator(Persisted):
                 conf['id'],
                 conf['fqdn'],
                 conf['nodename'],
-                conf['nids'],
+                conf['network_interfaces'],
                 conf['worker'],
                 conf['client_mounts'])
 
@@ -135,16 +135,19 @@ class ClusterSimulator(Persisted):
             self.controllers[conf['controller_id']] = FakeController(self.folder, conf['controller_id'])
 
     def _create_server(self, i, nid_count):
-        nids = []
+        interface_names = ['tcp', 'o2ib']
+        nid_tuples = []
         nodename = "test%.3d" % i
         fqdn = "%s.localdomain" % nodename
         x, y = (i / 256, i % 256)
         for network in range(0, nid_count):
-            nids.append("10.%d.%d.%d@tcp%d" % (network, x, y, network))
+            name = interface_names[network % len(interface_names)]
+            address = '10.%d.%d.%d' % (network, x, y)
+            nid_tuples.append((address, name, network))
 
         log.info("_create_server: %s" % fqdn)
 
-        server = FakeServer(self, self._get_cluster_for_server(i), i, fqdn, nodename, nids)
+        server = FakeServer(self, self._get_cluster_for_server(i), i, fqdn, nodename, nid_tuples)
         self.servers[fqdn] = server
 
         self.power.add_server(fqdn)
@@ -152,18 +155,18 @@ class ClusterSimulator(Persisted):
         return server
 
     def _create_worker(self, i, nid_count):
-        nids = []
+        nid_tuples = []
         nodename = "worker%.3d" % i
         fqdn = "%s.localdomain" % nodename
         x, y = (i / 256, i % 256)
         for network in range(0, nid_count):
-            nids.append("10.%d.%d.%d@tcp%d" % (network, x, y, network))
+            nid_tuples.append(('10.%d.%d.%d' % (network, x, y), 'tcp', network))
 
         log.info("_create_worker: %s" % fqdn)
 
         # Use -1 as the special cluster for workers
         worker = FakeServer(self, self._get_cluster_for_server(-1),
-                            i, fqdn, nodename, nids, worker=True)
+                            i, fqdn, nodename, nid_tuples, worker=True)
         self.servers[fqdn] = worker
 
         return worker

@@ -55,6 +55,8 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'create_filesystem',
                'create_client_mount',
                'create_copytool',
+               'update_nids',
+               'update_lnet_configuration',
                'create_host',
                'create_targets',
                'available_transitions',
@@ -227,6 +229,14 @@ class JobSchedulerClient(object):
     @classmethod
     def create_filesystem(cls, fs_data):
         return JobSchedulerRpc().create_filesystem(fs_data)
+
+    @classmethod
+    def update_nids(cls, nid_data):
+        return JobSchedulerRpc().update_nids(nid_data)
+
+    @classmethod
+    def update_lnet_configuration(cls, lnet_configuration_list):
+        return JobSchedulerRpc().update_lnet_configuration(lnet_configuration_list)
 
     @classmethod
     def create_host(cls, fqdn, nodename, address, server_profile_id):

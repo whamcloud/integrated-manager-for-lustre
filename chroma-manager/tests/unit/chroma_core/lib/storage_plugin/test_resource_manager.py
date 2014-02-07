@@ -4,7 +4,7 @@ from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 from django.db import connection
 from django.db.models.query_utils import Q
 from chroma_core.lib.util import dbperf
-from chroma_core.models.host import Volume, VolumeNode, ManagedHost, LNetConfiguration
+from chroma_core.models.host import Volume, VolumeNode, ManagedHost, LNetConfiguration, Nid
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from helper import load_plugins
 import mock
@@ -21,11 +21,12 @@ class ResourceManagerTestCase(TestCase):
             nodename = 'myaddress.mycompany.com',
             immutable_state = False,
             address = 'myaddress.mycompany.com')
-        LNetConfiguration.objects.create(host = self.host, state = 'nids_known')
+        LNetConfiguration.objects.create(host = self.host, state = 'lnet_down')
 
         self.manager = load_plugins([
             'example_plugin',
             'linux',
+            'linux_network',
             'subscription_plugin',
             'virtual_machine_plugin',
             'alert_plugin'])
@@ -185,7 +186,7 @@ class TestVirtualMachines(ResourceManagerTestCase):
         self.mock_servers = {'myvm': {
             'fqdn': 'myvm.mycompany.com',
             'nodename': 'test01.myvm.mycompany.com',
-            'nids': ["192.168.0.19@tcp"]
+            'nids': [Nid.Nid("192.168.0.19", "tcp", 0)]
         }}
         MockAgentRpc.mock_servers = self.mock_servers
 

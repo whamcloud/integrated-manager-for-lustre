@@ -8,6 +8,7 @@ from tests.unit.chroma_core.helper import MockAgentRpc, freshen
 import datetime
 import django.utils.timezone
 from tests.unit.services.job_scheduler.job_test_case import JobTestCaseWithHost
+from chroma_api.urls import api
 
 
 class TestTransitionsWithCommands(JobTestCaseWithHost):
@@ -16,29 +17,43 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
         # This tests a state transition which is done by a single job
-        command_id = Command.set_state([(freshen(self.host), 'lnet_down')]).id
+        command_id = JobSchedulerClient.command_run_jobs([{'class_name': 'UpdateDevicesJob', 'args': {'hosts': [api.get_resource_uri(self.host)]}}], "Test single job action")
         self.drain_progress()
 
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 1)
 
         # Test that if I try to run the same again I get None
-        command = Command.set_state([(freshen(self.host), 'lnet_down')])
+        command = Command.set_state([(freshen(self.host), 'lnet_up')])
         self.assertEqual(command, None)
 
     def test_2steps(self):
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
         # This tests a state transition which requires two jobs acting on the same object
-        command_id = Command.set_state([(freshen(self.host), 'lnet_unloaded')]).id
+        # lnet_up -> lnet_down issues an UnloadLNetJob and a GetLNetStateJob
+        command_id = Command.set_state([(freshen(self.host), 'lnet_down')]).id
         self.drain_progress()
 
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
+        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_down')
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 2)
 
 
 class TestStateManager(JobTestCaseWithHost):
+    def setUp(self):
+        super(TestStateManager, self).setUp()
+
+        self._completion_hook_count = 0
+        self.job_scheduler.add_completion_hook(self._completion_hook)
+
+    def tearDown(self):
+        super(TestStateManager, self).tearDown()
+        self.job_scheduler.del_completion_hook(self._completion_hook)
+
+    def _completion_hook(self, changed_item, command, updated_attrs):
+        self._completion_hook_count += 1
+
     def test_failing_job(self):
         mgt, tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name = "MGS")
         ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
@@ -47,20 +62,19 @@ class TestStateManager(JobTestCaseWithHost):
 
         try:
             MockAgentRpc.succeed = False
-            self.set_state(ManagedTarget.objects.get(pk = mgt.pk), 'mounted', check = False)
             # This is to check that the scheduler doesn't run past the failed job (like in HYD-1572)
-            self.assertState(mgt, 'unformatted')
+            self.set_and_assert_state(mgt.managedtarget_ptr, 'mounted', check = False)
+            mgt = self.assertState(mgt, 'unformatted')
         finally:
             MockAgentRpc.succeed = True
-            self.set_state(ManagedTarget.objects.get(pk = mgt.pk), 'mounted')
+            mgt.managedtarget_ptr = self.set_and_assert_state(mgt.managedtarget_ptr, 'mounted')
 
     def test_opportunistic_execution(self):
         # Set up an MGS, leave it offline
         self.create_simple_filesystem(self.host)
 
-        self.set_state(ManagedTarget.objects.get(pk = self.mgt.pk), 'unmounted')
-        self.assertState(self.mgt, 'unmounted')
-        self.assertState(self.fs, 'unavailable')
+        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'unmounted')
+        self.fs = self.assertState(self.fs, 'unavailable')
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version, 0)
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version_applied, 0)
 
@@ -76,15 +90,15 @@ class TestStateManager(JobTestCaseWithHost):
         finally:
             MockAgentRpc.succeed = True
 
-        self.set_state(freshen(self.fs), 'available')
-        self.assertState(self.mgt, 'mounted')
+        self.fs = self.set_and_assert_state(self.fs, 'available')
+        self.mgt = self.assertState(self.mgt, 'mounted')
 
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version, 1)
         self.assertEqual(ManagedMgs.objects.get(pk = self.mgt.pk).conf_param_version_applied, 1)
 
     def test_invalid_state(self):
         with self.assertRaisesRegexp(SchedulingError, "is invalid for"):
-            self.set_state(self.host, 'lnet_rhubarb')
+            self.host = self.set_and_assert_state(self.host, 'lnet_rhubarb')
 
     def test_1step(self):
         # Should be a simple one-step operation
@@ -92,21 +106,22 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
         # One job
-        self.set_state(self.host, 'lnet_down')
-        self.assertState(self.host, 'lnet_down')
+        self.host = self.set_and_assert_state(self.host, 'lnet_down')
 
         # One more job
-        self.set_state(self.host, 'lnet_unloaded')
-        self.assertState(self.host, 'lnet_unloaded')
+        self.host = self.set_and_assert_state(self.host, 'lnet_unloaded')
 
     def test_completion_hook(self):
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
-        # This exercises the completion hooks (learning NIDs is a hook for lnet coming up)
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).lnetconfiguration.state, 'nids_known')
+        self.assertEqual(self.host.state, 'lnet_up')
+        # This exercises the completion hooks
+        for x in range(10):
+            self.host = self.set_and_assert_state(self.host, 'lnet_down')   # 2 _completion_hook_count
+            self.host = self.set_and_assert_state(self.host, 'lnet_up')     # 1 _completion_hook_count difference is because the emulation is not perfect. Should be fixed.
+            self.assertEqual(self._completion_hook_count, ((x + 1) * 3))
 
     def test_notification(self):
         """Test that state notifications cause the state of an object to change"""
-        self.assertState(self.host, 'lnet_up')
+        self.host = self.assertState(self.host, 'lnet_up')
         now = django.utils.timezone.now()
         JobSchedulerClient.notify(freshen(self.host), now, {'state': 'lnet_down'}, ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_down')
@@ -114,7 +129,7 @@ class TestStateManager(JobTestCaseWithHost):
     def test_late_notification(self):
         """Test that notifications are droppped when they are older than
         the last change to an objects state"""
-        self.assertState(self.host, 'lnet_up')
+        self.host = self.assertState(self.host, 'lnet_up')
         awhile_ago = django.utils.timezone.now() - datetime.timedelta(seconds = 120)
         JobSchedulerClient.notify(freshen(self.host), awhile_ago, {'state': 'lnet_down'}, ['lnet_up'])
         self.assertEqual(freshen(self.host).state, 'lnet_up')
@@ -122,7 +137,7 @@ class TestStateManager(JobTestCaseWithHost):
     def test_buffered_notification(self):
         """Test that notifications for locked items are buffered and
         replayed when the locking Job has completed."""
-        self.assertState(self.host, 'lnet_up')
+        self.host = self.assertState(self.host, 'lnet_up')
 
         # Set boot_time to something that should change.
         now = django.utils.timezone.now()
@@ -146,8 +161,8 @@ class TestStateManager(JobTestCaseWithHost):
 
         # Run any job, doesn't matter -- we just want to ensure that the
         # notification buffer is drained after the job completes.
-        self.set_state(self.host, 'lnet_down')
-        self.assertEqual(freshen(self.host).boot_time, later)
+        self.host = self.set_and_assert_state(self.host, 'lnet_down')
+        self.assertEqual(self.host.boot_time, later)
 
         # Just for completeness, check that the notification buffer for this
         # host was completely drained and removed.
@@ -160,8 +175,7 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
 
         # This tests a state transition which requires two jobs acting on the same object
-        self.set_state(self.host, 'lnet_unloaded')
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_unloaded')
+        self.host = self.set_and_assert_state(self.host, 'lnet_unloaded')
 
     def test_cancel_pending(self):
         """Test cancelling a Job which is in state 'pending'"""

@@ -9,11 +9,12 @@ from collections import defaultdict
 from tastypie.serializers import Serializer
 import mock
 
-from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, StorageResourceRecord, LNetConfiguration, Nid, ManagedTarget, Bundle, Command, ServerProfile
+from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, LNetConfiguration
+from chroma_core.models import NetworkInterface, Nid, ManagedTarget, Bundle, Command, ServerProfile
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.lib.util import normalize_nid
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
+from chroma_core.models import StorageResourceRecord
 from chroma_core.services.log import log_register
 from tests.unit.chroma_api.tastypie_test import TestApiClient
 
@@ -94,16 +95,10 @@ def synthetic_host_optional_profile(address=None, nids = list([]), storage_resou
         state='lnet_up' if nids else 'configured',
         server_profile=server_profile
     )
-    if nids:
-        lnet_configuration = LNetConfiguration.objects.create(host = host, state = 'nids_known')
-        normalized_nids = [normalize_nid(n) for n in nids]
-        for nid in normalized_nids:
-            Nid.objects.create(lnet_configuration = lnet_configuration, nid_string = normalize_nid(nid))
-    else:
-        normalized_nids = []
-        LNetConfiguration.objects.create(host = host, state = 'nids_unknown')
 
-    log.debug("synthetic_host: %s %s" % (address, normalized_nids))
+    lnet_configuration = synthetic_host_create_lnet_configuration(host, nids)
+
+    log.debug("synthetic_host: %s %s" % (address, lnet_configuration.get_nids()))
 
     if storage_resource:
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
@@ -116,7 +111,126 @@ def synthetic_host_optional_profile(address=None, nids = list([]), storage_resou
 def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None):
 
     server_profile = ServerProfile.objects.get(name='test_profile')
-    return synthetic_host_optional_profile(address, nids, storage_resource, fqdn, nodename, server_profile)
+    return synthetic_host_optional_profile(address,
+                                           nids,
+                                           storage_resource,
+                                           fqdn,
+                                           nodename,
+                                           server_profile)
+
+
+def synthetic_host_create_lnet_configuration(host, nids):
+    lnet_configuration, _ = LNetConfiguration.objects.get_or_create(host = host)
+
+    # Now delete any existing nids as we will recreate them if some have been requested.
+    Nid.objects.filter(lnet_configuration = lnet_configuration).delete()
+
+    if nids:
+        assert(type(nids[0]) == Nid.Nid)
+
+        lnet_configuration.state = 'lnet_up'
+
+        interface_no = 0
+        for nid in nids:
+            network_interface, _ = NetworkInterface.objects.get_or_create(host = host,
+                                                                          name = "eth%s" % interface_no,
+                                                                          type = nid.lnd_type)
+
+            network_interface.inet4_address = nid.nid_address
+            network_interface.state_up = True
+            network_interface.save()
+
+            nid_record = Nid.objects.create(lnet_configuration = lnet_configuration,
+                                            network_interface = network_interface)
+
+            nid_record.lnd_network = nid.lnd_network
+            nid_record.save()
+
+            interface_no += 1
+    else:
+        lnet_configuration.state = "lnet_unloaded"
+
+    lnet_configuration.save()
+
+    return lnet_configuration
+
+
+def create_synthetic_device_info(host, mock_server, plugin):
+    ''' Creates the data returned from plugins for integration test purposes. Only does lnet data because
+    at present that is all we need. '''
+
+    # Default is an empty dict.
+    result = {}
+
+    # First see if there is any explicit mocked data
+    try:
+        result = mock_server['device-plugin'][plugin]
+    except KeyError:
+        pass
+
+    # This should come from the simulator, so I am adding to the state of this code.
+    # It is a little inconsistent because network devices come and go as nids come and go.
+    # really they should be consistent. But I am down to the wire on this and this preserves
+    # the current testing correctly. So it is not a step backwards.
+    if (plugin == 'linux_network') and (result == {}):
+        interfaces = {}
+        nids = {}
+
+        if host.state.startswith('lnet'):
+            lnet_state = host.state
+        else:
+            lnet_state = 'lnet_unloaded'
+
+        mock_nids = mock_server['nids']
+        interface_no = 0
+        if mock_nids:
+            for nid in mock_nids:
+                name = 'eth%s' % interface_no
+                interfaces[name] = {'mac_address': '12:34:56:78:90:%s' % interface_no,
+                                    'inet4_address': nid.nid_address,
+                                    'inet6_address': 'Need An inet6 Simulated Address',
+                                    'type': 'Ethernet' if nid.lnd_type == 'tcp' else 'InfiniBand',
+                                    'rx_bytes': '24400222349',
+                                    'tx_bytes': '1789870413',
+                                    'up': True}
+
+                nids[name] = {'nid_address': nid.nid_address,
+                              'lnd_type': nid.lnd_type,
+                              'lnd_network': nid.lnd_network,
+                              'status': '?',
+                              'refs': '?',
+                              'peer': '?',
+                              'rtr': '?',
+                              'max': '?',
+                              'tx': '?',
+                              'min': '?'}
+
+                interface_no += 1
+
+        result = {'interfaces': {'active': interfaces},
+                  'lnet': {'state': lnet_state,
+                           'nids': {'active': nids}}}
+
+    return {plugin: result}
+
+
+def parse_synthentic_device_info(host_id, data):
+    ''' Parses the data returned from plugins for integration test purposes. On does lnet data because
+        at present that is all we need. '''
+
+    # This creates nid tuples so it can use synthetic_host_create_lnet_configuration to do the
+    # actual writes to the database
+    for plugin, device_data in data.items():
+        if plugin == 'linux_network':
+            if len(device_data['lnet']['nids']['active']) > 0:
+                nid_tuples = []
+
+                for name, nid in device_data['lnet']['nids']['active'].items():
+                    nid_tuples.append(Nid.Nid(nid['nid_address'], nid['lnd_type'], nid['lnd_network']))
+            else:
+                nid_tuples = None
+
+            synthetic_host_create_lnet_configuration(ManagedHost.objects.get(id = host_id), nid_tuples)
 
 
 def _passthrough_create_targets(target_data):
@@ -261,8 +375,6 @@ class MockAgentRpc(object):
 
     @classmethod
     def _call(cls, host, cmd, args):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
         cls.calls.append((cmd, args))
         cls.host_calls[host].append((cmd, args))
 
@@ -275,8 +387,16 @@ class MockAgentRpc(object):
         mock_server = cls.mock_servers[host.address]
 
         log.info("invoke_agent %s %s %s" % (host, cmd, args))
-        if cmd == "lnet_scan":
-            return mock_server['nids']
+
+        # This isn't really accurate because lnet is scanned asynchonously, but it is as close as we can get today
+        # Fixme: Also I know think this is writing to the wrong thing and should be changing the mock_server entries.
+        # to lnet_up, I guess the mock_server needs an lnet state really, rather than relying on nids present.
+        if cmd == "load_lnet":
+            synthetic_host_create_lnet_configuration(host, mock_server['nids'])
+            return
+        elif cmd == "device_plugin":
+            # Only returns nid info today.
+            return create_synthetic_device_info(host, mock_server, args['plugin'])
         elif cmd == 'host_properties':
             return {
                 'time': datetime.datetime.utcnow().isoformat() + "Z",
@@ -316,11 +436,6 @@ class MockAgentRpc(object):
             return {'label': label}
         elif cmd == 'detect_scan':
             return mock_server['detect-scan']
-        elif cmd == 'device_plugin' and args['plugin'] == 'lustre':
-            return {'lustre': {
-                'lnet_up': True,
-                'lnet_loaded': True
-            }}
         elif cmd == 'register_server':
             api_client = TestApiClient()
             old_is_authenticated = CsrfAuthentication.is_authenticated
@@ -349,15 +464,6 @@ class MockAgentRpc(object):
                 'required': 'fake_kernel-0.1',
                 'available': ['fake_kernel-0.1']
             }
-        elif cmd == 'device_plugin':
-            try:
-                data = mock_server['device-plugin']
-            except KeyError:
-                data = {}
-            if args['plugin'] in data:
-                return {args['plugin']: data[args['plugin']]}
-            else:
-                raise AgentException(host.fqdn, cmd, args, "")
         elif cmd == 'reboot_server':
             from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
             now = datetime.datetime.utcnow()

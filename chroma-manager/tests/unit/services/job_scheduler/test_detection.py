@@ -4,6 +4,7 @@ from django.test import TestCase
 import mock
 import os
 from chroma_core.models.filesystem import ManagedFilesystem
+from chroma_core.models.host import Nid
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, DetectTargetsJob
 from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
 from tests.unit.chroma_core.helper import synthetic_host, synchronous_run_job, load_default_profile
@@ -21,7 +22,7 @@ class TestDetection(TestCase):
 
         for path in fixture_glob("*_nid.txt"):
             address = os.path.basename(path).split("_")[0]
-            nids = [l.strip() for l in open(path).readlines()]
+            nids = [Nid.split_nid_string(l.strip()) for l in open(path).readlines()]
             synthetic_host(address, nids)
 
         host_data = {}

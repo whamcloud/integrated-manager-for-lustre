@@ -53,7 +53,7 @@ class TestUpdates(ChromaIntegrationTestCase):
         self.assertRegexpMatches(alerts[0]['message'], "Updates are ready.*")
 
         # The needs_update flag should be set on the host
-        self.assertEqual(self.get_by_uri(host['resource_uri'])['needs_update'], True)
+        self.assertEqual(self.get_json_by_uri(host['resource_uri'])['needs_update'], True)
 
         # Get the hosts package list and check that the available updates are represented
         packages = self.get_list("/api/package/", {'host': host['id'], 'limit': 0})

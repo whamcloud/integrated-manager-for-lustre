@@ -119,15 +119,6 @@
         });
       });
 
-      $('div#server_list button.rescan_nids_button').click(function() {
-        ServerCommandPrompt({
-            help_topic: 'rescan_NIDs-dialog',
-            message: "Re-scanning NIDs",
-            job_class: 'RelearnNidsJob',
-            multi_job: false
-        });
-      });
-
         $('div#server_list button.writeconf_button').click(function() {
             ServerCommandPrompt({
             help_topic: 'rewrite_target_configuration-dialog',

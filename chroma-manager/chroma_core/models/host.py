@@ -21,6 +21,7 @@
 
 
 import json
+import re
 import logging
 import itertools
 
@@ -30,10 +31,11 @@ from django.db import IntegrityError
 
 from django.db.models.aggregates import Aggregate, Count
 from django.db.models.sql import aggregates as sql_aggregates
+from django.core.exceptions import ObjectDoesNotExist
+from collections import namedtuple
 
 from django.db.models.query_utils import Q
 
-from chroma_core.lib.util import normalize_nid
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.event import Event
@@ -209,7 +211,15 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
          NID to hostname for historical logs).
         """
 
-        hosts = ManagedHost._base_manager.filter(lnetconfiguration__nid__nid_string = nid_string)
+        # Check we at least have a @
+        if not "@" in nid_string:
+            raise ManagedHost.DoesNotExist()
+
+        nid = Nid.split_nid_string(nid_string)
+
+        hosts = ManagedHost._base_manager.filter(networkinterface__inet4_address = nid.nid_address,
+                                                 networkinterface__type = nid.lnd_type,
+                                                 not_deleted = True)
         # We can resolve the NID to a host if there is exactly one not-deleted
         # host with that NID (and 0 or more deleted hosts), or if there are
         # no not-deleted hosts with that NID but exactly one deleted host with that NID
@@ -376,15 +386,23 @@ class VolumeNode(models.Model):
         return "%s:%s" % (self.host, self.path)
 
 
-class LNetConfiguration(StatefulObject):
-    states = ['nids_unknown', 'nids_known']
-    initial_state = 'nids_unknown'
+class LNetConfiguration(models.Model):
+
+    # Chris: This will move to a stateful object at some point
+    #StatefulObject):
+    #states = ['nids_unknown', 'nids_known']
+    #initial_state = 'nids_unknown'
 
     host = models.OneToOneField('ManagedHost')
 
+    # Valid states are 'lnet_up', 'lnet_down', 'lnet_unloaded'. As we fully implement dynamic lnet these object
+    # may go back to being a StatefulObject but we need to do this one step at a time. So for now we just do it
+    # like this.
+    state = models.CharField(max_length = 16, help_text = "The current state of the lnet configuration")
+
     def get_nids(self):
-        if self.state != 'nids_known':
-            raise NoLNetInfo("Nids not known yet for host %s" % self.host)
+        #if self.state != 'nids_known':
+        #    raise NoNidsPresent("Nids not known yet for host %s" % self.host)
         return [n.nid_string for n in self.nid_set.all()]
 
     def __str__(self):
@@ -395,60 +413,78 @@ class LNetConfiguration(StatefulObject):
         ordering = ['id']
 
 
+class NetworkInterface(models.Model):
+    host = models.ForeignKey('ManagedHost')
+
+    name = models.CharField(max_length=32)
+    inet4_address = models.CharField(max_length=128)
+    type = models.CharField(max_length=32)          # tcp, o2ib, ... (best stick to lnet types!)
+    state_up = models.BooleanField()
+
+    def __str__(self):
+        return "%s-%s" % (self.host, self.name)
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+        unique_together = ('host', 'name')
+
+
 class Nid(models.Model):
     """Simplified NID representation for those we detect already-configured"""
     lnet_configuration = models.ForeignKey(LNetConfiguration)
-    nid_string = models.CharField(max_length=128)
+    network_interface = models.OneToOneField(NetworkInterface, primary_key = True)
+
+    lnd_network = models.IntegerField(null=True)
+
+    @property
+    def nid_string(self):
+        return ("%s@%s%s" % (self.network_interface.inet4_address,
+                             self.network_interface.type,
+                             self.lnd_network))
+
+    @property
+    def modprobe_entry(self):
+        return("%s%s(%s)" % (self.network_interface.type,
+                             self.lnd_network,
+                             self.network_interface.name))
+
+    @property
+    def to_tuple(self):
+        return tuple([self.network_interface.inet4_address,
+                      self.network_interface.type,
+                      self.lnd_network])
+
+    @classmethod
+    def nid_tuple_to_string(cls, nid):
+        return ("%s@%s%s" % (nid.nid_address,
+                             nid.lnd_type,
+                             nid.lnd_network))
+
+    #current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
+    #LNetNidsChangedAlert.notify(self.host, not current)
+
+    Nid = namedtuple("Nid", ["nid_address", "lnd_type", "lnd_network"])
+
+    @classmethod
+    def split_nid_string(cls, nid_string):
+        assert '@' in nid_string, "Malformed NID?!: %s"
+
+        # Split the nid so we can search correctly on its parts.
+        nid_address = nid_string.split("@")[0]
+        type_network_no = nid_string.split("@")[1]
+        m = re.match('([a-zA-Z]*)([0-9]*)', type_network_no)
+        lnd_type = m.group(1)
+        if (m.group(2) != ''):
+            lnd_network = m.group(2)
+        else:
+            lnd_network = 0
+
+        return Nid.Nid(nid_address, lnd_type, lnd_network)
 
     class Meta:
         app_label = 'chroma_core'
-        ordering = ['id']
-
-
-class LearnNidsStep(Step):
-    idempotent = True
-    database = True
-
-    def run(self, kwargs):
-        from chroma_core.models import Nid
-
-        host = kwargs['host']
-        result = self.invoke_agent(host, "lnet_scan")
-
-        self.log("Scanning NIDs on host %s..." % host)
-
-        nids = []
-        for nid_string in result:
-            nid, created = Nid.objects.get_or_create(
-                lnet_configuration = host.lnetconfiguration,
-                nid_string = normalize_nid(nid_string))
-            if created:
-                self.log("Learned new nid %s:%s" % (host, nid.nid_string))
-            nids.append(nid)
-
-        for old_nid in Nid.objects.filter(~Q(id__in = [n.id for n in nids]), lnet_configuration = host.lnetconfiguration):
-            self.log("Removed old nid %s:%s" % (host, old_nid.nid_string))
-            old_nid.delete()
-
-
-class ConfigureLNetJob(StateChangeJob):
-    state_transition = (LNetConfiguration, 'nids_unknown', 'nids_known')
-    stateful_object = 'lnet_configuration'
-    lnet_configuration = models.ForeignKey(LNetConfiguration)
-    state_verb = 'Configure LNet'
-
-    def description(self):
-        return "Configure LNet on %s" % self.lnet_configuration.host
-
-    def get_steps(self):
-        return [(LearnNidsStep, {'host': self.lnet_configuration.host})]
-
-    def get_deps(self):
-        return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lnet_configuration.host_id), "lnet_up")
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
+        ordering = ['network_interface']
 
 
 class ConfigurePacemakerStep(Step):
@@ -540,19 +576,16 @@ class GetLNetStateStep(Step):
     database = True
 
     def run(self, kwargs):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
         host = kwargs['host']
 
-        lustre_data = self.invoke_agent(host, "device_plugin", {'plugin': 'lustre'})['lustre']
-
-        if lustre_data['lnet_up']:
-            state = 'lnet_up'
-        elif lustre_data['lnet_loaded']:
-            state = 'lnet_down'
-        else:
-            state = 'lnet_unloaded'
-
-        host.set_state(state)
-        host.save()
+        try:
+            lnet_data = self.invoke_agent(host, "device_plugin", {'plugin': 'linux_network'})['linux_network']['lnet']
+            host.set_state(lnet_data['state'])
+            host.save()
+        except AgentException as e:
+            self.log("No data for plugin linux_network from host %s due to exception %s" % (host, e))
 
 
 class GetLNetStateJob(Job):
@@ -582,6 +615,106 @@ class GetLNetStateJob(Job):
 
     def get_steps(self):
         return [(GetLNetStateStep, {'host': self.host})]
+
+    def get_deps(self):
+        # This is another piece of  HYD-1215 and test stuff, this just forces the lnet to be loaded if this is
+        # the first time this is called - the configured state doesn't really exist it is really lnet_unloaded.
+        # Of course if the host is not managed we can't depend on it's state - because the would change it's state.
+        if self.host.is_managed and self.host.state == 'configured':
+            return DependOn(self.host, 'lnet_up')
+        else:
+            return super(GetLNetStateJob, self).get_deps()
+
+
+class ConfigureLNetStep(Step):
+    idempotent = True
+
+    # FIXME: using database=True to do the alerting update inside .set_state but
+    # should do it in a completion
+    database = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        nid_updates = kwargs['config_changes']['nid_updates']
+        nid_deletes = kwargs['config_changes']['nid_deletes']
+
+        modprobe_entries = []
+        nid_tuples = []
+
+        network_interfaces = NetworkInterface.objects.filter(host=host)
+        lnet_configuration = LNetConfiguration.objects.get(host=host)
+
+        for network_interface in network_interfaces:
+            # See if we have deleted the nid for this network interface or
+            # see if we have a new configuration for this if we do then it
+            # will replace the current configuration.
+            #
+            # The int will have become a string - we should use a PickledObjectField really.
+            if str(network_interface.id) in nid_deletes:
+                nid = None
+            elif str(network_interface.id) in nid_updates:
+                nid = Nid(network_interface = network_interface,
+                          lnet_configuration = lnet_configuration,
+                          lnd_network = nid_updates[str(network_interface.id)]['lnd_network'])
+            else:
+                try:
+                    nid = Nid.objects.get(network_interface = network_interface)
+                except ObjectDoesNotExist:
+                    nid = None
+                    pass
+
+            if nid is not None:
+                modprobe_entries.append(nid.modprobe_entry)
+                nid_tuples.append(nid.to_tuple)
+
+        self.invoke_agent(host,
+                          "configure_lnet",
+                          {'lnet_configuration': {'state': lnet_configuration.state,
+                                                  'modprobe_entries': modprobe_entries,
+                                                  'network_interfaces': nid_tuples}})
+
+
+class UnconfigureLNetStep(Step):
+    idempotent = True
+
+    def run(self, kwargs):
+        host = kwargs['host']
+        if not host.immutable_state:
+            self.invoke_agent(host, "unconfigure_lnet")
+
+
+class ConfigureLNetJob(Job):
+    host = models.ForeignKey(ManagedHost)
+    config_changes = models.CharField(max_length = 4096, help_text = "A json string describing the configuration changes")
+    requires_confirmation = False
+    state_verb = "Configure LNet"
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+    def create_locks(self):
+        return [StateLock(
+            job = self,
+            locked_item = self.host,
+            write = True
+        )]
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host': host}
+
+    def description(self):
+        return "Configure LNet for %s" % self.host
+
+    def get_steps(self):
+        return [(ConfigureLNetStep, {'host': self.host, 'config_changes': json.loads(self.config_changes)}),
+                (LoadLNetStep, {'host': self.host}),
+                (StartLNetStep, {'host': self.host}),
+                (UpdateDevicesStep, {'host': self.host})]
+
+    def get_deps(self):
+        return DependOn(self.host, 'lnet_unloaded')
 
 
 class RemoveServerConfStep(Step):
@@ -614,6 +747,34 @@ class LearnDevicesStep(Step):
                 self.log("No data for plugin %s from host %s" % (plugin, host))
 
         AgentDaemonRpcInterface().setup_host(host.id, plugin_data)
+
+
+class UpdateDevicesStep(Step):
+    idempotent = True
+
+    # Require database to talk to plugin_manager
+    database = True
+
+    def run(self, kwargs):
+        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        # Get the device-scan output
+        host = kwargs['host']
+
+        plugin_data = {}
+        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
+        for plugin in storage_plugin_manager.loaded_plugin_names:
+            try:
+                plugin_data[plugin] = self.invoke_agent(host, 'device_plugin', {'plugin': plugin})[plugin]
+            except AgentException as e:
+                self.log("No data for plugin %s from host %s due to exception %s" % (plugin, host, e))
+
+        # This enables services tests to run see - _handle_action_respond in test_agent_rpc.py for more info
+        if (plugin_data != {}):
+            AgentDaemonRpcInterface().update_host_resources(host.id, plugin_data)
+        else:
+            pass
 
 
 class DeployStep(Step):
@@ -840,7 +1001,7 @@ class DetectTargetsJob(Job, HostListMixin):
     def get_deps(self):
         deps = []
         for host in self.hosts.all():
-            deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
+            deps.append(DependOn(host, 'lnet_up'))
 
         return DependAll(deps)
 
@@ -895,7 +1056,27 @@ class LoadLNetJob(StateChangeJob):
         return "Load LNet module on %s" % self.host
 
     def get_steps(self):
-        return [(LoadLNetStep, {'host': self.host})]
+        return [(LoadLNetStep, {'host': self.host}),
+                (UpdateDevicesStep, {'host': self.host})]
+
+
+class UpdateDevicesJob(Job, HostListMixin):
+    def description(self):
+        return "Update the device info held for hosts %s" % ",".join([h.fqdn for h in self.hosts.all()])
+
+    def get_deps(self):
+        deps = []
+        for host in self.hosts.all():
+            deps.append(DependOn(host, "lnet_up"))
+        return DependAll(deps)
+
+    def get_steps(self):
+        return [(UpdateDevicesStep, {'host': host})
+                for host in self.hosts.all()]
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class UnloadLNetJob(StateChangeJob):
@@ -916,7 +1097,8 @@ class UnloadLNetJob(StateChangeJob):
         return "Unload LNet module on %s" % self.host
 
     def get_steps(self):
-        return [(UnloadLNetStep, {'host': self.host})]
+        return [(UnloadLNetStep, {'host': self.host}),
+                (UpdateDevicesStep, {'host': self.host})]
 
 
 class StartLNetJob(StateChangeJob):
@@ -937,7 +1119,8 @@ class StartLNetJob(StateChangeJob):
         return "Start LNet on %s" % self.host
 
     def get_steps(self):
-        return [(StartLNetStep, {'host': self.host})]
+        return [(StartLNetStep, {'host': self.host}),
+                (UpdateDevicesStep, {'host': self.host})]
 
 
 class StopLNetJob(StateChangeJob):
@@ -958,7 +1141,8 @@ class StopLNetJob(StateChangeJob):
         return "Stop LNet on %s" % self.host
 
     def get_steps(self):
-        return [(StopLNetStep, {'host': self.host})]
+        return [(StopLNetStep, {'host': self.host}),
+                (UpdateDevicesStep, {'host': self.host})]
 
 
 class DeleteHostStep(Step):
@@ -1045,6 +1229,7 @@ class RemoveHostJob(StateChangeJob):
                 (UnconfigurePacemakerStep, {'host': self.host}),
                 (UnconfigureCorosyncStep, {'host': self.host}),
                 (UnconfigureRsyslogStep, {'host': self.host}),
+                (UnconfigureLNetStep, {'host': self.host}),
                 (RemoveServerConfStep, {'host': self.host}),
                 (DeleteHostStep, {'host': self.host, 'force': False})]
 
@@ -1303,27 +1488,6 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
         return self.long_description
 
 
-class RelearnNidsJob(Job, HostListMixin):
-    def description(self):
-        return "Relearn NIDS on hosts %s" % ",".join([h.fqdn for h in self.hosts.all()])
-
-    def get_deps(self):
-        deps = []
-        for host in self.hosts.all():
-            deps.append(DependOn(host, "lnet_up"))
-            deps.append(DependOn(host.lnetconfiguration, 'nids_known'))
-        return DependAll(deps)
-
-    def get_steps(self):
-        return [
-            (LearnNidsStep, {'host': host})
-            for host in self.hosts.all()]
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-
 class UpdatePackagesStep(RebootIfNeededStep):
     # Require database because we update package records
     database = True
@@ -1461,7 +1625,6 @@ class UpdateNidsJob(Job, HostListMixin):
 
         return DependAll(
             [DependOn(host, 'lnet_up') for host in target_primary_hosts]
-            + [DependOn(host.lnetconfiguration, 'nids_known') for host in target_hosts]
             + [DependOn(fs, 'stopped') for fs in filesystems]
             + [DependOn(t, 'unmounted') for t in targets]
         )
@@ -1658,5 +1821,5 @@ class UpdatesAvailableAlert(AlertState):
         ordering = ['id']
 
 
-class NoLNetInfo(Exception):
+class NoNidsPresent(Exception):
     pass

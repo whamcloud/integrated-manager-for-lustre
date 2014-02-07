@@ -46,7 +46,7 @@ class TestAlerting(ChromaIntegrationTestCase):
     def test_alerts(self):
         fs_id = self.create_filesystem_simple()
 
-        fs = self.get_by_uri("/api/filesystem/%s/" % fs_id)
+        fs = self.get_json_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]
 
         self.wait_alerts(0, active=True, severity='ERROR')
@@ -86,7 +86,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         self.set_state(fs['resource_uri'], 'stopped')
 
         # Check that an alert is raised when lnet unexpectedly goes down
-        host = self.get_by_uri(host['resource_uri'])
+        host = self.get_json_by_uri(host['resource_uri'])
         self.assertEqual(host['state'], 'lnet_up')
         self.remote_operations.stop_lnet(host['fqdn'])
         self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'], of_severity='INFO'))

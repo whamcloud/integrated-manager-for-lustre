@@ -61,13 +61,22 @@ class FakeServer(Persisted):
         'packages': {}
     }
 
-    def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nids, worker=False, client_mounts=None):
+    def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nid_tuples_or_network_interfaces, worker=False, client_mounts=None):
         self.fqdn = fqdn
 
         super(FakeServer, self).__init__(simulator.folder)
 
         self.nodename = nodename
-        self.nids = nids
+
+        if type(nid_tuples_or_network_interfaces) is dict:
+            self.network_interfaces = nid_tuples_or_network_interfaces
+        else:
+            self.network_interfaces = {}
+            interface_no = 0
+            for nid in nid_tuples_or_network_interfaces:
+                self.network_interfaces[nid[0]] = {'interface_no': interface_no, 'type': nid[1], 'lnd_network': nid[2]}
+                interface_no += 1
+
         self.boot_time = datetime.datetime.utcnow()
         self.id = server_id
 
@@ -97,7 +106,7 @@ class FakeServer(Persisted):
             client_mounts = {}
 
         self.state['id'] = server_id
-        self.state['nids'] = nids
+        self.state['network_interfaces'] = self.network_interfaces
         self.state['nodename'] = nodename
         self.state['fqdn'] = fqdn
         self.state['worker'] = worker
@@ -138,6 +147,18 @@ class FakeServer(Persisted):
             except KeyError:
                 pass
         log.debug("Unmounted %s" % mountspec)
+
+    @property
+    def nids(self):
+        nids = []
+
+        for inet4_address in self.network_interfaces.keys():
+            interface = self.network_interfaces[inet4_address]
+
+            if interface['lnd_network'] is not None:
+                nids.append("%s@%s%s" % (inet4_address, interface['type'], interface['lnd_network']))
+
+        return nids
 
     def scan_packages(self):
         packages = {
@@ -576,6 +597,40 @@ class FakeServer(Persisted):
         self.state['lnet_up'] = False
         self.save()
 
+    def configure_lnet(self, **kwargs):
+        lnet_configuration = kwargs['lnet_configuration']
+
+        self.unconfigure_lnet()
+
+        # Now place the nid info in place.
+        for nid in lnet_configuration['network_interfaces']:
+            inet4_address = nid[0]
+            self.network_interfaces[inet4_address]['lnd_network'] = nid[2]
+
+        self.state['network_interfaces'] = self.network_interfaces
+
+        if (lnet_configuration['state'] == 'lnet_up'):
+            self.stop_lnet()
+
+        if (lnet_configuration['state'] != 'lnet_unloaded'):
+            self.unload_lnet()
+            self.load_lnet()
+
+        if (lnet_configuration['state'] == 'lnet_up'):
+            self.start_lnet()
+
+        self.save()
+
+    def unconfigure_lnet(self):
+        # Erase the current settings, but keep the interfaces except the first because in real life a
+        # single nid always exits.
+        first = True
+        for inet4_address in self.network_interfaces:
+            if first:
+                first = False
+            else:
+                self.network_interfaces[inet4_address]['lnd_network'] = None
+
     def writeconf_target(self, writeconf=False, erase_params=False, device=None, mgsnode=None, failnode=None):
         if mgsnode is None:
             # When writeconfing an MGS, erase its simulated conf params
@@ -587,6 +642,9 @@ class FakeServer(Persisted):
         return self._devices.state['local_filesystems'].get(serial, None)
 
     def format_target(self, device = None, target_types = None, mgsnode = None, fsname = None, failnode = None, reformat = None, mkfsoptions = None, index = None):
+        def mgs_key(mgsnode):
+            return ":".join([",".join(sorted(mgsnids)) for mgsnids in sorted(mgsnode)])   # Create a consistent mgs_key by sorting the nids
+
         if 'mgs' in target_types:
             label = "MGS"
             mgsnode = tuple(self.nids)
@@ -594,7 +652,7 @@ class FakeServer(Persisted):
                 mgsnode = tuple([mgsnode, tuple(failnode)])
             else:
                 mgsnode = tuple([mgsnode])
-            self._devices.mgt_create(":".join([",".join(mgsnids) for mgsnids in mgsnode]))
+            self._devices.mgt_create(mgs_key(mgsnode))
         elif 'mdt' in target_types:
             label = "%s-MDT%.4x" % (fsname, index)
         else:
@@ -605,7 +663,7 @@ class FakeServer(Persisted):
         target = {
             'label': label,
             'uuid': tgt_uuid,
-            'mgsnode': ":".join([",".join(mgsnids) for mgsnids in mgsnode]),
+            'mgsnode': mgs_key(mgsnode),
             'fsname': fsname,
             'index': index,
             'primary_nid': None

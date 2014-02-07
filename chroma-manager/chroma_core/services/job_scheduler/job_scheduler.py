@@ -47,9 +47,12 @@ import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.server_profile import ServerProfile
-from chroma_core.models import Command, StateLock, ConfigureLNetJob, ManagedHost, ManagedMdt, FilesystemMember, GetLNetStateJob, ManagedTarget, ApplyConfParams, \
-    ManagedOst, Job, DeletableStatefulObject, StepResult, ManagedMgs, ManagedFilesystem, LNetConfiguration, ManagedTargetMount, VolumeNode, ConfigureHostFencingJob, ForceRemoveHostJob, \
-    DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
+from chroma_core.models import Command, StateLock, ManagedHost, ManagedMdt, FilesystemMember
+from chroma_core.models import ConfigureLNetJob, GetLNetStateJob, ForceRemoveHostJob
+from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult
+from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
+from chroma_core.models import ManagedTargetMount, VolumeNode, ConfigureHostFencingJob
+from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -490,6 +493,10 @@ class JobScheduler(object):
 
         self.progress = JobProgress(self)
 
+        """ This is an actual list of hooks, so that we can actually have completion hooks in our code. Basic today
+        but maybe improved in the future. """
+        self.completion_hooks = []
+
     def join_run_threads(self):
         for job_id, thread in self._run_threads.items():
             log.info("Joining thread for job %s" % job_id)
@@ -608,6 +615,12 @@ class JobScheduler(object):
         # of this job and any new jobs added by completion hooks
         self._job_collection.update_commands(job)
 
+    def add_completion_hook(self, addition):
+        self.completion_hooks.append(addition)
+
+    def del_completion_hook(self, deletion):
+        self.completion_hooks.remove(deletion)
+
     def _completion_hooks(self, changed_item, command = None, updated_attrs = []):
         """
         :param command: If set, any created jobs are added
@@ -615,6 +628,9 @@ class JobScheduler(object):
         """
         log.debug("_completion_hooks command %s, %s (%s) state=%s" % (
             None if command is None else command.id, changed_item, changed_item.__class__, changed_item.state))
+
+        for hook in self.completion_hooks:
+            hook(changed_item, command, updated_attrs)
 
         def running_or_failed(klass, **kwargs):
             """Look for jobs of the same type with the same params, either incomplete (don't start the job because
@@ -645,16 +661,15 @@ class JobScheduler(object):
                     self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'unavailable'}, ['available'])
 
         if isinstance(changed_item, ManagedHost):
-            if changed_item.state == 'lnet_up' and changed_item.lnetconfiguration.state != 'nids_known':
-                if not running_or_failed(ConfigureLNetJob, lnet_configuration = changed_item.lnetconfiguration):
-                    job = ConfigureLNetJob(lnet_configuration = changed_item.lnetconfiguration, old_state = 'nids_unknown')
-                    if not command:
-                        command = Command.objects.create(message = "Configuring LNet on %s" % changed_item)
-                    CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
-                else:
-                    log.debug('running_or_failed')
-
-            if changed_item.state == 'configured':
+            # This is temporary whilst the host strangely has the lnet state in it, rather than the lnet configuration.
+            # If the host is in an 'lnet state' but not the right one.
+            # It seems odd that one of the from states is 'configured' but I think this just highlights how lnet configuration
+            # is not a 'state' of a host
+            # Search for this comment in _persist_nid_updates - because we have to do this in 2 places to
+            # be sure it hangs together.
+            # We can just set the state of the host, no transition is required. This is not a good thing to do but as an interim
+            # change until we complete dynamic lnet it is OK. This is all link in with  HYD-1215
+            if (changed_item.state in ['configured', 'lnet_unloaded', 'lnet_down', 'lnet_up']) and (changed_item.state != changed_item.lnetconfiguration.state):
                 if (not running_or_failed(GetLNetStateJob, host = changed_item)
                     and not running_or_failed(ForceRemoveHostJob, host = changed_item)):
                     job = GetLNetStateJob(host = changed_item)
@@ -1166,7 +1181,6 @@ class JobScheduler(object):
             else:
                 mgt_id = mgt_data['id']
 
-            from django.db import transaction
             with transaction.commit_on_success():
                 mgs = ManagedMgs.objects.get(id = mgt_id)
                 fs = ManagedFilesystem(mgs=mgs, name = fs_data['name'])
@@ -1465,3 +1479,56 @@ class JobScheduler(object):
             pass
 
         return locks
+
+    def update_nids(self, nid_list):
+        # Although this is creating/deleting a NID it actually rewrites the whole NID configuration for the node
+        # this is all in here for now, but as we move to dynamic lnet it will probably get it's own file.
+        with self._lock:
+            hosts = set()
+            host_nid_data = defaultdict(lambda: {'nid_updates': {}, 'nid_deletes': {}})
+
+            for nid_data in nid_list:
+                network_interface = NetworkInterface.objects.get(id = nid_data['network_interface'])
+                host = ManagedHost.objects.get(id = network_interface.host_id)
+                hosts.add(host)
+
+                if str(nid_data['lnd_network']) == '-1':
+                    host_nid_data[host]['nid_deletes'][network_interface.id] = nid_data
+                else:
+                    host_nid_data[host]['nid_updates'][network_interface.id] = nid_data
+
+            jobs = []
+            for host in hosts:
+                jobs.append(ConfigureLNetJob(host = host,
+                                             config_changes = json.dumps(host_nid_data[host])))
+
+            with transaction.commit_on_success():
+                command = Command.objects.create(message = "Configuring NIDS for hosts")
+                CommandPlan(self._lock_cache, self._job_collection).add_jobs(jobs, command)
+
+        self.progress.advance()
+
+        return host.id, command.id
+
+    def update_lnet_configuration(self, lnet_configuration_list):
+        with self._lock:
+            host_states = []
+
+            # This today uses the state change of the Host mechanism, this makes no sense, but we have to
+            # move slowly.
+            # The correct way is to change the state of the LNetConfiguration so we probably need to make
+            # that a stateful object, but that is for lnet mk2 I think
+            for lnet_configuration_data in lnet_configuration_list:
+                host = ManagedHost.objects.get(id = lnet_configuration_data["host_id"])
+                current_lnet_configuration = LNetConfiguration.objects.get(host=host)
+
+                # Now should we just do it, or only do it when it changes?
+                if (current_lnet_configuration.state != lnet_configuration_data['state']):
+                    host_states.append((host, lnet_configuration_data['state']))
+
+        command = Command.set_state(host_states)
+
+        if command:
+            return command.id
+        else:
+            return None
