@@ -24,7 +24,7 @@ start() {
             exit 0
         fi
     fi
-    action "Starting ${SERVICE_NAME}" supervisord --pidfile=${PID_FILE} -c ${SUPERVISOR_CONFIG} -d ${PROJECT_PATH} -l ${LOG_DIR}/supervisord.log
+    action "Starting ${SERVICE_NAME}" supervisord --pidfile=${PID_FILE} -c ${SUPERVISOR_CONFIG} -d ${PROJECT_PATH} -e debug -l ${LOG_DIR}/supervisord.log
     echo
 }
 
