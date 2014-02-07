@@ -517,11 +517,16 @@ class RealRemoteOperations(RemoteOperations):
             self._test_case.wait_until_true(lambda: self._test_case.get_filesystem(filesystem['id']).get('bytes_free'))
             filesystem = self._test_case.get_filesystem(filesystem['id'])
 
+        bytes_free = filesystem.get('bytes_free')
+        assert bytes_free > 0, "Expected bytes_free to be > 0"
+        logger.debug("exercise_filesystem: API reports %s has %s bytes free"
+                     % (filesystem['name'], bytes_free))
+
         self._ssh_address(
             client_address,
             "dd if=/dev/zero of=/mnt/%s/exercisetest.dat bs=1000 count=%s" % (
                 filesystem['name'],
-                min((filesystem.get('bytes_free') * 0.4), 512000) / 1000
+                min((bytes_free * 0.4), 512000) / 1000
             )
         )
 
