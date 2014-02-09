@@ -102,6 +102,8 @@
             clonePosition = position.positioner(clone),
             windowPosition = position.positioner(position.$window);
 
+          jqClone.css('display', 'block');
+
           // place the clone.
           jqElement.after(clone);
 
