@@ -43,7 +43,6 @@ module.exports = function channelFactory (primus, logger, Stream) {
           resource[method](params)
             .then(function (resp) {
               cb({
-                headers: resp.headers,
                 statusCode: resp.statusCode,
                 body: resp.body,
                 params: params
@@ -70,7 +69,6 @@ module.exports = function channelFactory (primus, logger, Stream) {
             resource[method](params)
               .then(function (resp) {
                 var data = {
-                  headers: resp.headers,
                   statusCode: resp.statusCode,
                   body: resp.body,
                   params: params

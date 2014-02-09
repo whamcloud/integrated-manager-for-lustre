@@ -42,7 +42,6 @@ describe('file system channel', function () {
 
     fileSystemChannel.on('stream', function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object)
       });
@@ -56,7 +55,6 @@ describe('file system channel', function () {
   it('should provide a httpGetList method', function (done) {
     fileSystemChannel.send('httpGetList', {}, function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object),
         params: jasmine.any(Object)

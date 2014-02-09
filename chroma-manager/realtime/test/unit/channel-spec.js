@@ -181,7 +181,6 @@ describe('channel', function () {
             describe('sending data', function () {
               beforeEach(function () {
                 var resp = {
-                  headers: {},
                   statusCode: 200,
                   body: []
                 };
@@ -192,7 +191,6 @@ describe('channel', function () {
               it('should send stream of data', function (done) {
                 defer.promise.then(function () {
                   expect(spark.send).toHaveBeenCalledOnceWith('stream', {
-                    headers: {},
                     statusCode: 200,
                     body: [],
                     params: {}

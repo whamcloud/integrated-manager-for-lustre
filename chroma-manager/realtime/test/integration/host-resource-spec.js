@@ -49,7 +49,6 @@ describe('host channel', function () {
 
     hostChannel.on('stream', function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object),
         params: jasmine.any(Object)
@@ -72,7 +71,6 @@ describe('host channel', function () {
 
     hostChannel.send('httpGetMetrics', params, function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object),
         params: jasmine.any(Object)

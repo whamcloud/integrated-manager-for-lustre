@@ -49,7 +49,6 @@ describe('target ost metrics channel', function () {
 
     targetOstMetricsChannel.on('stream', function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object),
         params: jasmine.any(Object)
@@ -72,7 +71,6 @@ describe('target ost metrics channel', function () {
 
     targetOstMetricsChannel.send('httpGetMetrics', params, function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object),
         params: jasmine.any(Object)
@@ -85,7 +83,6 @@ describe('target ost metrics channel', function () {
   it('should provide a httpGetList method', function (done) {
     targetOstMetricsChannel.send('httpGetList', {}, function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object),
         params: jasmine.any(Object)
@@ -117,7 +114,6 @@ describe('target ost metrics channel', function () {
 
     targetOstMetricsChannel.send('httpGetOstMetrics', params, function (data) {
       expect(data).toEqual({
-        headers: jasmine.any(Object),
         statusCode: 200,
         body: jasmine.any(Object),
         params: jasmine.any(Object)
