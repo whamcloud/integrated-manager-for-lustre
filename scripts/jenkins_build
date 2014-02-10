@@ -41,6 +41,12 @@ clean_uncommitted_artifacts()
             git clean -dfx $subdir
         fi
     done
+
+    # Not really sure why we added chroma-bundles to the exclude list,
+    # since we shouldn't be caching anything between builds there. For
+    # the moment, take the conservative approach.
+    # HYD-2899
+    rm -fr chroma-bundles/hadoop
 }
 
 run_pre_commit_hook()
