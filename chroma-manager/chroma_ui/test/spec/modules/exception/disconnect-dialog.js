@@ -9,7 +9,7 @@ describe('disconnect dialog', function () {
     expect($dialog.dialog).toHaveBeenCalledWith({
       dialogFade: true,
       backdropClick: false,
-      dialogClass: 'modal disconnect-dialog',
+      dialogClass: 'modal disconnect-modal',
       keyboard: false,
       template: jasmine.any(String)
     });

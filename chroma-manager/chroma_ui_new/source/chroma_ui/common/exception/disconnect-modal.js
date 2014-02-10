@@ -26,7 +26,7 @@
   // This is gross but we can't depend on $http to be working when we are getting 0 status codes.
   // We also may not auto cache templates at dev time.
   var template = '<div> \
-    <div class="modal-body"> \
+    <div class="modal-body disconnect-modal"> \
       <h3>Disconnected From Server, Retrying. <i class="fa fa-spinner fa-spin fa-lg"></i></h3>\
     </div> \
   </div>';

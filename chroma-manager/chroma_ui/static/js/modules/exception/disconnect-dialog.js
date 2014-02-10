@@ -35,7 +35,7 @@
     return $dialog.dialog({
       dialogFade: true,
       backdropClick: false,
-      dialogClass: 'modal disconnect-dialog',
+      dialogClass: 'modal disconnect-modal',
       keyboard: false,
       template: template
     });

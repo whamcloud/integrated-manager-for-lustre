@@ -36,8 +36,8 @@ def patch_driver_execute():
 
         if driver_command == Command.CLICK_ELEMENT:
             WebDriverWait(self, long_wait).until_not(
-                lambda driver: driver.find_element_by_class_name("disconnect-dialog"),
-                "Disconnect dialog still visible after %s seconds!" % long_wait)
+                lambda driver: driver.find_element_by_class_name("disconnect-modal"),
+                "Disconnect modal still visible after %s seconds!" % long_wait)
 
         return old_execute(self, driver_command, params)
 
