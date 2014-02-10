@@ -1,17 +1,24 @@
 describe('stream module', function () {
   'use strict';
 
-  var stream, $scope, primus, expression;
+  var stream, $scope, primus, expression, pageVisibility;
 
   beforeEach(module('stream'));
 
-  mock.beforeEach('BASE', 'primus');
+  mock.factory(function pageVisibility () {
+    return {
+      onChange: jasmine.createSpy('pageVisibility.onChange').andReturn(
+        jasmine.createSpy('deregister')
+      )
+    };
+  });
 
-  beforeEach(inject(function (_stream_, _primus_, $rootScope) {
+  mock.beforeEach('BASE', 'primus', 'pageVisibility');
+
+  beforeEach(inject(function (_stream_, _primus_, _pageVisibility_, $rootScope) {
     primus = _primus_;
-
     stream = _stream_;
-
+    pageVisibility = _pageVisibility_;
     $scope = $rootScope.$new();
 
     $scope.data = [];
@@ -89,6 +96,26 @@ describe('stream module', function () {
         expect(primus._primusInstance_.on).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
       });
 
+      it('should add a listener that toggles the stream when page visibility changes', function () {
+        expect(pageVisibility.onChange).toHaveBeenCalledOnceWith(jasmine.any(Function));
+      });
+
+      it('should stop the stream if the page is hidden', function () {
+        var cb = pageVisibility.onChange.mostRecentCall.args[0];
+
+        cb(true);
+
+        expect(primus._channelInstance_.send).toHaveBeenCalledOnceWith('stopStreaming');
+      });
+
+      it('should start the stream if the page is not hidden', function () {
+        var cb = pageVisibility.onChange.mostRecentCall.args[0];
+
+        cb(false);
+
+        expect(primus._channelInstance_.send).toHaveBeenCalledTwiceWith('startStreaming');
+      });
+
       it('should call the callback with method and params beforeStreaming', function () {
         var beforeStreamingCall = primus._channelInstance_.on.mostRecentCallThat(function(call) {
           return call.args[0] === 'beforeStreaming';
@@ -138,6 +165,12 @@ describe('stream module', function () {
 
         it('should remove the open listener from primus', function () {
           expect(primus._primusInstance_.removeListener).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
+        });
+
+        it('should remove the page visibility listener from the page visibility service', function () {
+          var deregister = pageVisibility.onChange.plan();
+
+          expect(deregister).toHaveBeenCalledOnce();
         });
       });
 
