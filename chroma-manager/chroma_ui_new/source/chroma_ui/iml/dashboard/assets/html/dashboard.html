@@ -17,8 +17,18 @@
           <tr bindonce ng-repeat="fileSystem in fileSystemInfo.data.objects track by fileSystem.id">
             <td>{{ fileSystem.name }}</td>
             <td>{{ fileSystem.getState() }}</td>
-            <td><pie-graph chart-data="fileSystem.spaceGraphData"></pie-graph>{{ fileSystem.getUsedSpace() }} / {{ fileSystem.getTotalSpace() }}</td>
-            <td><pie-graph chart-data="fileSystem.usageGraphData"></pie-graph>{{ fileSystem.getUsedFiles() }} / {{ fileSystem.getTotalFiles() }}</td>
+            <td ng-if="fileSystem.bytes_total != null">
+              <pie-graph chart-data="fileSystem.spaceGraphData"></pie-graph>{{ fileSystem.getUsedSpace() }} / {{ fileSystem.getTotalSpace() }}
+            </td>
+            <td ng-if="fileSystem.bytes_total == null">
+              Calculating...
+            </td>
+            <td ng-if="fileSystem.files_total != null">
+              <pie-graph chart-data="fileSystem.usageGraphData"></pie-graph>{{ fileSystem.getUsedFiles() }} / {{ fileSystem.getTotalFiles() }}
+            </td>
+            <td ng-if="fileSystem.files_total == null">
+              Calculating...
+            </td>
             <td>{{ fileSystem.client_count }}</td>
           </tr>
         </tbody>
