@@ -88,8 +88,17 @@
 
       Api.get("group/", {limit: 0, order_by: 'name'}, success_callback = function(data) {
         $.each(data.objects, function(i, group) {
-          var option = "<option value='" + group.resource_uri + "'>"+ group.name + "</option>";
-          $('div.create_user_dialog select[name=group]').prepend(option)
+          /* HYD-2914: Remove filesystem_adminstrators group from IML
+           * This is phase 1 -- remove the option of creating a user with
+           * the group. Phase 2 will be to go through the codebase and
+           * completely excise all mentions of the group. Or perhaps
+           * overhaul the entire concept of group/user roles into something
+           * more useful.
+           */
+          if (group.name !== 'filesystem_administrators') {
+            var option = "<option value='" + group.resource_uri + "'>"+ group.name + "</option>";
+            $('div.create_user_dialog select[name=group]').prepend(option)
+          }
         });
       });
 

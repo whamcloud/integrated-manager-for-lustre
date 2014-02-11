@@ -161,17 +161,6 @@ class TestUsers(SeleniumBaseTestCase):
         self.navigation.go('Configure', 'Users')
         self.delete_user(fsuser)
 
-    def test_adding_filesystem_administrator_user(self):
-        """Test that fs admins can edit themselves and whatnot"""
-        fsadmin = self.users['fsadmin']
-        self.add_user(fsadmin)
-        with wrapped_login(self, fsadmin.username):
-            self.edit_user_password(fsadmin)
-            self.edit_user_details(fsadmin)
-            self.edit_alert_subscriptions(fsadmin)
-        self.navigation.go('Configure', 'Users')
-        self.delete_user(fsadmin)
-
     def test_resetting_eula(self):
         """Tests that resetting the eula will make the eula appear on next superuser login"""
         superuser = self.users["superuser"]
@@ -184,18 +173,18 @@ class TestUsers(SeleniumBaseTestCase):
 
     def test_non_superuser_does_not_see_reset_eula(self):
         """Tests that a non-superuser does not see the result eula checkbox in the account dialog"""
-        fsadmin = self.users["fsadmin"]
-        self.add_user(fsadmin)
+        fsuser = self.users["fsuser"]
+        self.add_user(fsuser)
 
         the_call = partial(self.driver.find_element_by_css_selector, self.user_page.accept_eula_checkbox)
 
-        with wrapped_login(self, fsadmin.username):
+        with wrapped_login(self, fsuser.username):
             self.user_page.open_account_dialog()
             self.assertRaises(NoSuchElementException, the_call)
             self.user_page.close_account_dialog()
 
         self.navigation.go("Configure", "Users")
-        self.delete_user(fsadmin)
+        self.delete_user(fsuser)
 
     def add_user(self, user, all_fields=False):
         # Add user
