@@ -2,6 +2,7 @@ var manager = require('./util/manager');
 
 exports.config = {
   seleniumServerJar: '/usr/local/opt/selenium-server-standalone/selenium-server-standalone-2.39.0.jar',
+  seleniumArgs: ['-log', 'selenium_server.log'],
 
   specs: [
     'spec/global.js',
