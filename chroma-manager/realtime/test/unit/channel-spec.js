@@ -214,15 +214,21 @@ describe('channel', function () {
         beforeEach(function () {
           fn = jasmine.createSpy('fn');
           stopStreamingHandler = spark.on.calls[1].args[1];
-          stopStreamingHandler(fn);
         });
 
         it('should stop the stream', function () {
+          stopStreamingHandler(fn);
           expect(Stream.prototype.stop).toHaveBeenCalled();
         });
 
         it('should call the ack function', function () {
+          stopStreamingHandler(fn);
           expect(fn).toHaveBeenCalled();
+        });
+
+        it('should work without an ack function', function () {
+          stopStreamingHandler();
+          expect(Stream.prototype.stop).toHaveBeenCalled();
         });
       });
 

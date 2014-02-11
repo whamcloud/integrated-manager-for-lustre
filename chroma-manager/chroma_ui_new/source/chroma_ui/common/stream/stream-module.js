@@ -20,4 +20,4 @@
 // express and approved by Intel in writing.
 
 
-angular.module('stream', ['primus']);
+angular.module('stream', ['primus', 'pageVisibility']);

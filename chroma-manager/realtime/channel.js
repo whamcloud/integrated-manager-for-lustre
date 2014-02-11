@@ -22,7 +22,8 @@
 
 'use strict';
 
-var errorSerializer = require('bunyan/lib/bunyan').stdSerializers.err;
+var errorSerializer = require('bunyan/lib/bunyan').stdSerializers.err,
+  _ = require('lodash');
 
 module.exports = function channelFactory (primus, logger, Stream) {
   return function setup(channelName, Resource) {
@@ -87,6 +88,8 @@ module.exports = function channelFactory (primus, logger, Stream) {
       });
 
       spark.on('stopStreaming', function stopStreaming (fn) {
+        if (typeof fn !== 'function') fn = _.noop;
+
         stream.stop();
         fn('done');
       });
