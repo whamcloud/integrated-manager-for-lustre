@@ -30,8 +30,9 @@ angular.module('charts').factory('formatBytes', [function () {
     precision = precision || 4;
 
     bytes = Math.max(bytes, 0);
-    var pwr = Math.floor((bytes ? Math.log(bytes) : 0) / Math.log(1024));
+    var pwr = Math.floor(Math.log(bytes) / Math.log(1024));
     pwr = Math.min(pwr, units.length - 1);
+    pwr = Math.max(pwr, 0);
     bytes /= Math.pow(1024, pwr);
     return '%s %s'.sprintf((bytes).toPrecision(precision), units[pwr]);
   };
