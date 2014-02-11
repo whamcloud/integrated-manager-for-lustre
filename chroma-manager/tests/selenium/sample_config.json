@@ -2,10 +2,10 @@
     "headless": false,
     "screenshots": true,
     "clean_up_on_failure": true,
+    "browser": "Chrome",
     "chroma_managers": [
         {
             "server_http_url": "https://localhost:8000/ui/",
-            "browser": "Chrome",
             "users": [
                 {
                     "username": "debug",

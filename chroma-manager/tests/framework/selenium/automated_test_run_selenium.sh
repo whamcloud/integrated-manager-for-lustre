@@ -56,10 +56,11 @@ mv test-results.xml \$HOME/test_reports/karma-test-results-old-ui.xml
 
 # Run Selenium GUI Tests (old ui)
 cd \$HOME/chroma_test_env/chroma/chroma-manager
-CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=\$HOME/test_reports/selenium-test-results.xml --tc-format=json --tc-file=\$HOME/cluster_config.json tests/selenium/ || true
+CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=\$HOME/test_reports/selenium-test-results-chrome.xml --tc-format=json --tc-file=\$HOME/cluster_config.json tests/selenium/ || true
+CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=\$HOME/test_reports/selenium-test-results-firefox.xml --tc-format=json --tc-file=\$HOME/cluster_config.json --tc=browser:Firefox tests/selenium/ || true
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=18
+NUM_EXPECTED_TEST_REPORTS=19
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."

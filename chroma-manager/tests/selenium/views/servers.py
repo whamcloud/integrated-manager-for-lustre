@@ -9,7 +9,9 @@ from tests.selenium.base import wait_for_transition
 from tests.selenium.base_view import DatatableView
 from tests.selenium.utils.constants import static_text
 from tests.selenium.utils.element import (
-    enter_text_for_element, find_visible_element_by_css_selector
+    enter_text_for_element,
+    find_visible_element_by_css_selector,
+    wait_for_element_by_css_selector
 )
 
 
@@ -30,7 +32,7 @@ class Servers(DatatableView):
         self.add_host_profile_dropdown = 'div.add_host_prompt select.add_server_profile'
         self.default_profile = 'Managed storage server'
 
-        self.add_dialog_div = '#add_host_dialog'
+        self.add_dialog = '.add_host_dialog'
         self.prompt_dialog_div = '#add_host_prompt'
         self.loading_dialog_div = 'div.add_host_loading'
         self.confirm_dialog_div = 'div.add_host_confirm'
@@ -113,6 +115,7 @@ class Servers(DatatableView):
 
     def add_server_open(self):
         self.new_add_server_button.click()
+        wait_for_element_by_css_selector(self.driver, self.add_dialog, self.medium_wait)
 
     def add_server_enter_address(self, host_name):
         self.quiesce()
