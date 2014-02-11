@@ -37,7 +37,11 @@
           .clipEdge(true);
       },
       onUpdate: function onUpdate(chart, data) {
+        if (!Array.isArray(data)) return;
+
         var values = data[0].values;
+
+        if (!Array.isArray(values)) return;
 
         var start = values[0].x,
           end = values[values.length - 1].x,
