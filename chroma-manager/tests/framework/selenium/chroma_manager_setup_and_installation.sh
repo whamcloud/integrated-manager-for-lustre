@@ -15,8 +15,11 @@ echo "Beginning installation and setup on $CHROMA_MANAGER..."
 
 ssh root@$TEST_RUNNER <<EOF
 set -ex
-yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm git firefox java-1.7.0-openjdk
+yum install --setopt=retries=50 --setopt=timeout=180 -y unzip tar bzip2 python-virtualenv python-devel gcc make tigervnc-server npm git firefox java-1.7.0-openjdk haveged
 yum update --setopt=retries=50 --setopt=timeout=180 -y nss
+
+# Selenium server needs entropy
+service haveged start
 
 if [ ! -z "$GOOGLE_REPO" ]; then
   # Install Google Chrome
