@@ -336,7 +336,7 @@ def unconfigure_target_ha(primary, ha_label, uuid):
                                        ha_label])
 
 
-def unconfigure_target_store(primary, uuid):
+def unconfigure_target_store(uuid):
     try:
         target = config.get('targets', uuid)
         os.rmdir(target['mntpt'])
@@ -347,7 +347,7 @@ def unconfigure_target_store(primary, uuid):
     config.delete('targets', uuid)
 
 
-def configure_target_store(primary, device, uuid, mount_point):
+def configure_target_store(device, uuid, mount_point):
 
     config.set('targets', uuid, {"bdev": device, "mntpt": mount_point})
 
@@ -602,9 +602,9 @@ def target_running(uuid):
     from chroma_agent.utils import Mounts
     try:
         info = config.get('targets', uuid)
-    except KeyError:
+    except (KeyError, TypeError):
         # it can't possibly be running here if the config entry for
-        # it doesn't even exist
+        # it doesn't even exist, or if the store doesn't even exist!
         _exit(1)
 
     def devices_match(a, b):

@@ -612,7 +612,6 @@ class ConfigureTargetStoreStep(Step):
         self.invoke_agent(host, "configure_target_store", {
             'device': volume_node.path,
             'uuid': target.uuid,
-            'primary': target_mount.primary,
             'mount_point': target_mount.mount_point})
 
 
@@ -621,12 +620,10 @@ class UnconfigureTargetStoreStep(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        target_mount = kwargs['target_mount']
         host = kwargs['host']
 
         self.invoke_agent(host, "unconfigure_target_store", {
-            'uuid': target.uuid,
-            'primary': target_mount.primary})
+            'uuid': target.uuid})
 
 
 class ConfigurePacemakerStep(Step):
