@@ -70,6 +70,11 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
           domain = d3.extent(mergedValues, getProp('z')),
           dateExtent = d3.extent(mergedValues, getProp('x'));
 
+        chart.destroy = function () {
+          container.remove();
+          selection = null;
+        };
+
         if (mergedValues.length === 0) {
           container.selectAll(cl(MODEL_SEL)).remove();
           return;
@@ -144,11 +149,6 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
           .attr('fill', function (d) { return z(d.z); });
 
         cell.exit().transition().duration(chart.transitionDuration()).remove();
-
-        chart.destroy = function () {
-          container.remove();
-          selection = null;
-        };
       });
     }
 

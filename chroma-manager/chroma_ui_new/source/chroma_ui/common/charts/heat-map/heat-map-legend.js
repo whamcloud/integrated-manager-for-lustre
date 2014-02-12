@@ -63,6 +63,14 @@
 
           elRefs.container = d3.select(this);
 
+          chart.destroy = function destroy () {
+            if(chart.requestID)
+              raf.cancelAnimationFrame(chart.requestID);
+
+            elRefs.container.remove();
+            elRefs = null;
+          };
+
           var values = _.pluck(data, 'values'),
             mergedValues = d3.merge(values);
 
@@ -151,14 +159,6 @@
             else
               elRefs.wrap.attr('transform', translator(margin.left, margin.top));
           });
-
-          chart.destroy = function destroy () {
-            if(chart.requestID)
-              raf.cancelAnimationFrame(chart.requestID);
-
-            elRefs.container.remove();
-            elRefs = null;
-          };
         });
       }
 
