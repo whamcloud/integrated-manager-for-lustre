@@ -30,6 +30,8 @@
         bInfo: false,
         fnServerData: function(url, data, callback, settings) {
           Api.get_datatables(url, data, function(data) {
+            var calculating = false;
+
             $.each(data.aaData, function(i, row) {
               if (row.mdts.length) {
                 mdt_hostname = row.mdts[0].primary_server_name
@@ -42,12 +44,31 @@
                 row.mds_hostname = "";
               }
               row.client_count = formatBigNumber(row.client_count);
-              row.bytes_total = formatBytes(row.bytes_total);
-              row.bytes_free = formatBytes(row.bytes_free);
+
+              if (row.bytes_total == null) {
+                row.bytes_total = 'Calculating...';
+                calculating = true;
+              } else {
+                row.bytes_total = formatBytes(row.bytes_total);
+              }
+
+              if (row.bytes_free == null) {
+                row.bytes_free = 'Calculating...';
+                calculating = true;
+              } else {
+                row.bytes_free = formatBytes(row.bytes_free);
+              }
+
               row.state_transitions = '';
               row.notification_icons = LiveObject.icons(row);
             });
             callback(data);
+
+            if (calculating)
+              window.setTimeout(function checkAgain() {
+                oTable.fnDraw();
+              }, 10000);
+
           }, settings, {});
         },
         "aoColumns": [
