@@ -1,13 +1,14 @@
 describe('App controller', function () {
   'use strict';
 
-  var $routeSegment, appController, sessionFixture, $httpBackend, navigate, fixtures;
+  var $routeSegment, appController, sessionFixture, $httpBackend, navigate, help, fixtures;
 
   beforeEach(module('app'));
 
-  mock.beforeEach('navigate', '$routeSegment');
+  mock.beforeEach('navigate', '$routeSegment', 'help');
 
-  beforeEach(inject(function (_$routeSegment_, $controller, _$httpBackend_, _navigate_, _fixtures_) {
+  beforeEach(inject(function (_$routeSegment_, $controller, _help_, _$httpBackend_, _navigate_, _fixtures_) {
+    help = _help_;
     $routeSegment = _$routeSegment_;
     appController = $controller('AppCtrl');
     $httpBackend = _$httpBackend_;
@@ -25,6 +26,13 @@ describe('App controller', function () {
   afterEach(function() {
     $httpBackend.verifyNoOutstandingExpectation();
     $httpBackend.verifyNoOutstandingRequest();
+  });
+
+  it('should retrieve the copyright year from help text', function () {
+    $httpBackend.flush();
+
+    expect(help.get).toHaveBeenCalledOnceWith('copyright_year');
+    expect(appController.COPYRIGHT_YEAR).toBe(help.get('copyright_year'));
   });
 
   it('should have a method to redirect to login', function () {

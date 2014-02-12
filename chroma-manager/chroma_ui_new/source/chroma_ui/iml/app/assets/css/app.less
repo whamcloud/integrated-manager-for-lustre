@@ -1,9 +1,30 @@
+div[app-view-segment="0"] {
+  height: 100%;
+}
+
+.body-wrap {
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  margin: 0 auto -60px;
+  padding: 0 0 60px;
+}
+
 .navbar {
   border-radius: 0;
+  margin-bottom: 0;
 
   .navbar-brand {
     padding-top: 12px;
     padding-bottom: 0;
+  }
+
+  a, button {
+    outline: 0;
+  }
+
+  .navbar-toggle .fa-bars {
+    color: @white;
   }
 
   .inverse-dropdown {
@@ -15,7 +36,7 @@
     & > li > a {
       color: @navbar-inverse-color;
 
-      &:hover{
+      &:hover {
         color: @navbar-inverse-link-hover-color;
         background-color: @navbar-inverse-link-active-bg;
       }
@@ -35,5 +56,38 @@
     only screen and (min-device-pixel-ratio: 2) {
       background-image: url('@{base-path}/iml/app/assets/images/intel-logo-white-large.png');
     }
+  }
+}
+
+footer {
+  @footer-height: 60px;
+
+  height: @footer-height;
+
+  .row {
+    position: relative;
+    height: @footer-height;
+
+    .col-lg-12 {
+      position: absolute;
+      bottom: 0;
+    }
+  }
+
+  small {
+    color: @gray-light;
+  }
+
+  #system-status {
+    margin-left: 5px;
+  }
+}
+
+@media (max-width: 767px) {
+  footer {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }

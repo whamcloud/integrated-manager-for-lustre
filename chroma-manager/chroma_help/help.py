@@ -175,5 +175,6 @@ help_text = {
     """,
     "continue_as_anonymous": "Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Intel&reg; Manager for Lustre* software.",
     "no_dismiss_message_alert": "This alert relates to an active problem. When the problem is fixed you may dismiss.",
-    "no_dismiss_message_command": "This command is incomplete. When it has completed you may dismiss."
+    "no_dismiss_message_command": "This command is incomplete. When it has completed you may dismiss.",
+    "copyright_year": "2014"
 }

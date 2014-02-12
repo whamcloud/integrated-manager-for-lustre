@@ -181,6 +181,9 @@
         Api.on_available(function() {
             Backbone.history.start({root: UI_ROOT, pushState: true})
         });
+
+        var copyrightElement = document.getElementsByClassName('copyright-year')[0];
+        copyrightElement.innerHTML = window.HELP_TEXT.copyright_year;
     });
   </script>
 
@@ -219,7 +222,7 @@
         <div class="span12">
           <small>
             Intel&reg; Manager for Lustre* software {{ VERSION }} (build {{ BUILD }}) is
-            Copyright &copy; {{ server_time.year|safe }} Intel Corporation. All rights reserved.
+            Copyright &copy; <span class="copyright-year"></span> Intel Corporation. All rights reserved.
             <a href="/ui/about/" class='navigation'>About Intel&reg; Manager for Lustre* software</a>
             &nbsp;
             <a class='superuser_only' href="/ui/system_status/" class='navigation'>System status</a>
