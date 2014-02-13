@@ -28,7 +28,7 @@
   // We also may not auto cache templates at dev time.
   var template = '<div> \
     <div class="modal-header"> \
-        <h3>An Error Has Occured!</h3> \
+        <h3>An Error Has Occurred!</h3> \
     </div> \
     <div class="modal-body"> \
       <ul> \
