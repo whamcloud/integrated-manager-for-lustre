@@ -106,7 +106,7 @@ cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
 retries=50
 timeout=180
 EOF
-yum install -y python-mock expect chroma-manager-ui_new  # remove chroma-manager-ui_new once new ui packaging complete
+yum install -y python-mock expect
 if $MEASURE_COVERAGE; then
     yum install -y python-coverage
 fi
