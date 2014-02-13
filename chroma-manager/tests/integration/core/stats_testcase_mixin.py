@@ -4,6 +4,7 @@ import logging
 import time
 
 from testconfig import config
+from tests.utils import wait
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 
 logger = logging.getLogger('test')
@@ -17,6 +18,15 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
     multiple inheritance just for the integration test classes that we
     would like to check on the stats.
     """
+
+    def assert_fs_stat(self, fs_id, name, value):
+        "Wait until filesystem stat matches."
+        initial = self.get_filesystem(fs_id).get(name)
+        for index in wait(timeout=60):
+            fs = self.get_filesystem(fs_id)
+            if fs.get(name) == value:
+                return fs
+        self.assertEqual(fs.get(name), value, "initial {0}: {1}".format(name, initial))
 
     def check_stats(self, filesystem_id):
         """
@@ -87,10 +97,10 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         # Make sure client cache is flushed and check client count while we are at it
         starting_client_count = filesystem['client_count']
         self.remote_operations.unmount_filesystem(client, filesystem)
-        self.wait_until_true(lambda: self.get_filesystem(filesystem_id).get('client_count') == starting_client_count - 1)
+        self.assert_fs_stat(filesystem_id, 'client_count', starting_client_count - 1)
 
         self.remote_operations.mount_filesystem(client, filesystem)
-        self.wait_until_true(lambda: self.get_filesystem(filesystem_id).get('client_count') == starting_client_count)
+        self.assert_fs_stat(filesystem_id, 'client_count', starting_client_count)
 
         # Check bytes free are what we expect after the writing above
         def _check():
@@ -103,7 +113,7 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         self.wait_until_true(_check)
 
         # Check files free are what we expect after the writing above
-        self.wait_until_true(lambda: starting_files_free - 1 == self.get_filesystem(filesystem_id).get('files_free'))
+        self.assert_fs_stat(filesystem_id, 'files_free', starting_files_free - 1)
 
         #Check total bytes remained the same
         self.assertEqual(bytes_total, self.get_filesystem(filesystem_id).get('bytes_total'))
