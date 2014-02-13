@@ -60,12 +60,7 @@ module.exports = function channelFactory (primus, logger, Stream) {
       spark.on('startStreaming', function startStreaming() {
         if (stream.timer) return;
 
-        stream.start(function callback(err, done) {
-          if (err != null) {
-            log.error({err: err});
-            spark.send('streamingError', errorSerializer(err));
-          }
-
+        stream.start(function callback(done) {
           spark.send('beforeStreaming', function (method, params) {
             resource[method](params)
               .then(function (resp) {
@@ -88,7 +83,8 @@ module.exports = function channelFactory (primus, logger, Stream) {
       });
 
       spark.on('stopStreaming', function stopStreaming (fn) {
-        if (typeof fn !== 'function') fn = _.noop;
+        if (typeof fn !== 'function')
+          fn = _.noop;
 
         stream.stop();
         fn('done');

@@ -1,22 +1,12 @@
 'use strict';
 
-var Primus = require('primus'),
-  multiplex = require('primus-multiplex'),
-  Emitter = require('primus-emitter'),
-  conf = require('../../conf');
-
-require('https').globalAgent.options.rejectUnauthorized = false;
+var getClient = require('../util/get-client');
 
 describe('file system channel', function () {
   var client, fileSystemChannel;
 
   beforeEach(function () {
-    var Socket = Primus.createSocket({parser: 'JSON', transformer: 'socket.io', plugin: {
-      multiplex: multiplex,
-      emitter: Emitter
-    }});
-
-    client = new Socket(conf.primusUrl);
+    client = getClient();
 
     fileSystemChannel = client.channel('filesystem');
   });

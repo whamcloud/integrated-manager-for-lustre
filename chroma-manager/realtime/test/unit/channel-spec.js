@@ -123,22 +123,6 @@ describe('channel', function () {
             expect(spark.send).toHaveBeenCalledWith('beforeStreaming', jasmine.any(Function));
           });
 
-          it('should log an error if one occurs', function () {
-            var err = new Error('boom!');
-
-            streamStartHandler(err);
-
-            expect(log.error).toHaveBeenCalledWith({err: err});
-          });
-
-          it('should send a streamingError if one occurs', function () {
-            var err = new Error('boom!');
-
-            streamStartHandler(err);
-
-            expect(spark.send).toHaveBeenCalledWith('streamingError', jasmine.any(Object));
-          });
-
           describe('beforeStreaming', function () {
             var beforeStreamingHandler, done, defer;
 
@@ -146,7 +130,7 @@ describe('channel', function () {
               defer = Q.defer();
 
               done = jasmine.createSpy('done');
-              streamStartHandler(null, done);
+              streamStartHandler(done);
               beforeStreamingHandler = spark.send.mostRecentCall.args[1];
 
               spyOn(Q.makePromise.prototype, 'finally').andCallThrough();
@@ -162,7 +146,7 @@ describe('channel', function () {
               defer.reject(err);
 
               defer.promise.finally(function () {
-                expect(log.error).toHaveBeenCalledWith({err: err});
+                expect(log.error).toHaveBeenCalledOnceWith({err: err});
                 done();
               });
             });
@@ -173,7 +157,7 @@ describe('channel', function () {
               defer.reject(err);
 
               defer.promise.finally(function () {
-                expect(spark.send).toHaveBeenCalledWith('streamingError', jasmine.any(Object));
+                expect(spark.send).toHaveBeenCalledOnceWith('streamingError', jasmine.any(Object));
                 done();
               });
             });
@@ -188,7 +172,7 @@ describe('channel', function () {
                 defer.resolve(resp);
               });
 
-              it('should send stream of data', function (done) {
+              it('should send a stream of data', function (done) {
                 defer.promise.then(function () {
                   expect(spark.send).toHaveBeenCalledOnceWith('stream', {
                     statusCode: 200,

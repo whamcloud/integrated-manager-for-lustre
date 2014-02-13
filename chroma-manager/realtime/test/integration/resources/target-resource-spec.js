@@ -1,22 +1,12 @@
 'use strict';
 
-var Primus = require('primus'),
-  multiplex = require('primus-multiplex'),
-  Emitter = require('primus-emitter'),
-  conf = require('../../conf');
-
-require('https').globalAgent.options.rejectUnauthorized = false;
+var getClient = require('../util/get-client');
 
 describe('target channel', function () {
   var client, targetChannel;
 
   beforeEach(function () {
-    var Socket = Primus.createSocket({parser: 'JSON', transformer: 'socket.io', plugin: {
-      multiplex: multiplex,
-      emitter: Emitter
-    }});
-
-    client = new Socket(conf.primusUrl);
+    client = getClient();
 
     targetChannel = client.channel('target');
   });

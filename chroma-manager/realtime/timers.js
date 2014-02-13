@@ -22,59 +22,9 @@
 
 'use strict';
 
-module.exports = function streamFactory(Q, timers) {
-  /**
-   * A class used for looping, with a latch function.
-   * @param [interval] number of seconds between polls. Defaults to 10s.
-   * @constructor
-   */
-  function Stream (interval) {
-    if (interval == null)
-      this.interval = 10000;
-    else
-      this.interval = interval;
-  }
 
-  /**
-   * Calling this starts looping.
-   * @param {Function} func
-   */
-  Stream.prototype.start = function start(func) {
-    if (this.deferred != null || this.timer != null)
-      return;
-
-    this.deferred = Q.defer();
-
-    this.deferred.promise.progress(func);
-
-    var stream = this;
-
-    notify();
-
-    function notify() {
-      if (stream.deferred == null)
-        return;
-
-      stream.deferred.notify(notifyLoop);
-    }
-
-    function notifyLoop() {
-      stream.timer = timers.setTimeout(notify, stream.interval);
-    }
-  };
-
-  /**
-   * Calling this stops looping.
-   */
-  Stream.prototype.stop = function stop() {
-    if (this.deferred)
-      this.deferred.resolve();
-
-    if (this.timer)
-      timers.clearTimeout(this.timer);
-
-    this.timer = this.deferred = null;
-  };
-
-  return Stream;
+module.exports = {
+  setTimeout: setTimeout,
+  setInterval: setInterval,
+  clearTimeout: clearTimeout
 };

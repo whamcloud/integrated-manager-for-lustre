@@ -1,79 +1,135 @@
 'use strict';
 
-var sinon = require('sinon'),
-  streamFactory = require('../../stream');
+var streamFactory = require('../../stream'),
+  Q = require('q');
 
 describe('stream', function () {
-  var Stream, stream, clock, logger;
+  var Stream, deferred, timers, cb;
 
   beforeEach(function () {
-    logger = {
-      error: jasmine.createSpy('logger.error')
+    timers = {
+      setTimeout: jasmine.createSpy('timers.setTimeout').andReturn({}),
+      clearTimeout: jasmine.createSpy('timers.clearTimeout')
     };
 
-    Stream = streamFactory(logger);
-    stream = new Stream();
+    deferred = Q.defer();
 
-    clock = sinon.useFakeTimers();
+    spyOn(Q, 'defer').andReturn(deferred);
+    spyOn(Q.makePromise.prototype, 'progress').andCallThrough();
+    spyOn(deferred, 'notify').andCallThrough();
+    spyOn(deferred, 'resolve').andCallThrough();
+
+    Stream = streamFactory(Q, timers);
+
+    cb = jasmine.createSpy('callback');
   });
 
-  afterEach(function () {
-    clock.restore();
-  });
+  it('should default to 10 seconds for polling', function () {
+    var stream = new Stream();
 
-  it('should default to 10 seconds', function () {
     expect(stream.interval).toBe(10000);
   });
 
-  it('should be configurable via constructor param', function () {
-    var stream = new Stream(5000);
+  it('should allow seconds to be configurable', function () {
+    var seconds = 5000;
 
-    expect(stream.interval).toBe(5000);
+    var stream = new Stream(seconds);
+
+    expect(stream.interval).toBe(seconds);
   });
 
   describe('start', function () {
-    var cb;
+    var stream;
 
     beforeEach(function () {
-      cb = jasmine.createSpy('callback');
+      stream = new Stream();
+      stream.start(cb);
+    });
 
+    it('should setup a deferred on start', function () {
+      debugger;
+      expect(Q.defer).toHaveBeenCalledOnce();
+    });
+
+    it('should call the callback on progress', function () {
+      expect(Q.makePromise.prototype.progress).toHaveBeenCalledOnceWith(jasmine.any(Function));
+    });
+
+    it('should notify the callback', function () {
+      expect(deferred.notify).toHaveBeenCalledOnceWith(jasmine.any(Function));
+    });
+
+    it('should notify every 10 seconds', function () {
+      var notifyLoop = deferred.notify.mostRecentCall.args[0];
+
+      notifyLoop();
+
+      expect(timers.setTimeout).toHaveBeenCalledOnceWith(jasmine.any(Function), 10000);
+    });
+
+    it('should return early if deferred is already defined', function () {
       stream.start(cb);
 
-      cb.mostRecentCall.args[1]();
+      expect(Q.defer).toHaveBeenCalledOnce();
     });
 
-    it('should call the callback', function () {
-      expect(cb).toHaveBeenCalledOnce();
-    });
-
-    it('should call after the interval period', function () {
-      clock.tick(10001);
-
-      expect(cb).toHaveBeenCalledTwice();
-    });
-
-    it('should call with error if timer has already started', function () {
+    it('should return early if timer is already defined', function () {
       stream.start(cb);
 
-      expect(cb).toHaveBeenCalledWith({error: new Error('Already streaming')}, jasmine.any(Function));
+      expect(Q.defer).toHaveBeenCalledOnce();
     });
 
+    it('should not notify if stream was stopped', function () {
+      var notifyLoop = deferred.notify.mostRecentCall.args[0];
 
-    describe('stop', function () {
-      beforeEach(function () {
-        stream.stop();
-      });
+      notifyLoop();
 
-      it('should null the timer', function () {
-        expect(stream.timer).toBeNull();
-      });
+      var notify = timers.setTimeout.mostRecentCall.args[0];
 
-      it('should clear the interval', function () {
-        clock.tick(10001);
+      stream.stop();
 
-        expect(cb).toHaveBeenCalledOnce();
-      });
+      function callNotify () {
+        notify();
+      }
+      expect(callNotify).not.toThrow();
     });
   });
 
+  describe('stop', function () {
+    var stream;
+
+    beforeEach(function () {
+      stream = new Stream();
+    });
+
+    it('should not resolve a non-existent deferred', function () {
+      stream.stop();
+      expect(deferred.resolve).not.toHaveBeenCalledOnce();
+    });
+
+    it('should resolve the deferred on a started stream', function () {
+      stream.start(cb);
+
+      stream.stop();
+
+      expect(deferred.resolve).toHaveBeenCalledOnce();
+    });
+
+    it('should not clearTimeout on a non-existent timer', function () {
+      stream.stop();
+      expect(timers.clearTimeout).not.toHaveBeenCalledOnce();
+    });
+
+    it('should clearTimeout on a started stream', function () {
+      stream.start(cb);
+
+      var notifyLoop = deferred.notify.mostRecentCall.args[0];
+
+      notifyLoop();
+
+      stream.stop();
+
+      expect(timers.clearTimeout).toHaveBeenCalledOnce();
+    });
+  });
 });

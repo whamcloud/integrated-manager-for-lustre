@@ -54,7 +54,8 @@ var https = require('https'),
   targetResourceFactory = require('./resources').targetResourceFactory,
   hsmCopytoolResourceFactory = require('./resources').hsmCopytoolResourceFactory,
   hsmCopytoolOperationResourceFactory = require('./resources').hsmCopytoolOperationResourceFactory,
-  targetOstMetricsResourceFactory = require('./resources').targetOstMetricsResourceFactory;
+  targetOstMetricsResourceFactory = require('./resources').targetOstMetricsResourceFactory,
+  timers = require('./timers');
 
 var modules = [{
   conf: ['value', conf],
@@ -64,6 +65,7 @@ var modules = [{
   multiplex: ['value', multiplex],
   request: ['value', request],
   Q: ['value', Q],
+  timers: ['value', timers],
   channelFactory: ['factory', channelFactory],
   Stream: ['factory', streamFactory],
   FileSystemResource: ['factory', fileSystemResourceFactory],
