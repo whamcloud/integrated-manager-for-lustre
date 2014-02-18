@@ -1,10 +1,6 @@
 'use strict';
 
-var serverFactory = require('../../server'),
-  sinon = require('sinon');
-
-require('jasmine-sinon');
-
+var serverFactory = require('../../server');
 
 describe('server', function () {
   var https, conf, server;
@@ -18,11 +14,11 @@ describe('server', function () {
     };
 
     server = {
-      listen: sinon.spy()
+      listen: jasmine.createSpy('server.listen')
     };
 
     https = {
-      createServer: sinon.mock().returns(server),
+      createServer: jasmine.createSpy('https.createServer').andReturn(server),
       globalAgent: {}
     };
 
@@ -34,7 +30,7 @@ describe('server', function () {
   });
 
   it('should create the server with the provided files', function () {
-    expect(https.createServer).toHaveBeenCalledWithExactly({
+    expect(https.createServer).toHaveBeenCalledOnceWith({
       cert: conf.certFile,
       key: conf.keyFile,
       ca: conf.caFile
@@ -42,6 +38,6 @@ describe('server', function () {
   });
 
   it('should listen on the primus port', function () {
-    expect(server.listen).toHaveBeenCalledWithExactly(conf.primusPort);
+    expect(server.listen).toHaveBeenCalledOnceWith(conf.primusPort);
   });
 });

@@ -1,19 +1,16 @@
 'use strict';
 
-var sinon = require('sinon'),
-  primusFactory = require('../../primus');
-
-require('jasmine-sinon');
+var primusFactory = require('../../primus');
 
 describe('primus', function () {
   var Primus, server, multiplex, primus, ret;
 
   beforeEach(function () {
     primus = {
-      use: sinon.spy()
+      use: jasmine.createSpy('primus.use')
     };
 
-    Primus = sinon.mock().returns(primus);
+    Primus = jasmine.createSpy('Primus').andReturn(primus);
 
     server = multiplex = {};
 
@@ -21,11 +18,11 @@ describe('primus', function () {
   });
 
   it('should create a primus instance', function () {
-    expect(Primus).toHaveBeenCalledWithExactly(server, {parser: 'JSON', transformer: sinon.match.string});
+    expect(Primus).toHaveBeenCalledOnceWith(server, {parser: 'JSON', transformer: jasmine.any(String)});
   });
 
   it('should use the multiplex plugin', function () {
-    expect(primus.use).toHaveBeenCalledWithExactly('multiplex', multiplex);
+    expect(primus.use).toHaveBeenCalledOnceWith('multiplex', multiplex);
   });
 
   it('should return the primus instance', function () {

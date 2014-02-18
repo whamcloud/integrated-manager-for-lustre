@@ -3,14 +3,12 @@
 var sinon = require('sinon'),
   streamFactory = require('../../stream');
 
-require('jasmine-sinon');
-
 describe('stream', function () {
   var Stream, stream, clock, logger;
 
   beforeEach(function () {
     logger = {
-      error: sinon.spy()
+      error: jasmine.createSpy('logger.error')
     };
 
     Stream = streamFactory(logger);
@@ -37,11 +35,11 @@ describe('stream', function () {
     var cb;
 
     beforeEach(function () {
-      cb = sinon.spy();
+      cb = jasmine.createSpy('callback');
 
       stream.start(cb);
 
-      cb.callArg(1);
+      cb.mostRecentCall.args[1]();
     });
 
     it('should call the callback', function () {
@@ -57,7 +55,7 @@ describe('stream', function () {
     it('should call with error if timer has already started', function () {
       stream.start(cb);
 
-      expect(cb).toHaveBeenCalledWith({error: new Error('Already streaming')});
+      expect(cb).toHaveBeenCalledWith({error: new Error('Already streaming')}, jasmine.any(Function));
     });
 
 

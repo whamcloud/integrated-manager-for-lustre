@@ -1,17 +1,14 @@
 'use strict';
 
-var sinon = require('sinon'),
-  fileSystemResourceFactory = require('../../../resources/file-system-resource');
-
-require('jasmine-sinon');
+var fileSystemResourceFactory = require('../../../resources/file-system-resource');
 
 describe('file system resource', function () {
   var Resource, FileSystemResource, fileSystemResource;
 
   beforeEach(function () {
-    Resource = sinon.spy();
+    Resource = jasmine.createSpy('Resource');
 
-    sinon.stub(Resource, 'call');
+    spyOn(Resource, 'call');
 
     FileSystemResource = fileSystemResourceFactory(Resource);
 
@@ -19,7 +16,7 @@ describe('file system resource', function () {
   });
 
   it('should call the Resource', function () {
-    expect(Resource.call).toHaveBeenCalledWithExactly(fileSystemResource, 'filesystem');
+    expect(Resource.call).toHaveBeenCalledOnceWith(fileSystemResource, 'filesystem');
   });
 
   it('should allow GetList', function () {
