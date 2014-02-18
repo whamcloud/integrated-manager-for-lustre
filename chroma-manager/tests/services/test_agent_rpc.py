@@ -48,7 +48,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         if expect_initial:
             response = self._post([dict(message, type='DATA')])
             self.assertResponseOk(response)
-            messages = self._receive_messages(2, allow_extras=True)
+            messages = self._receive_messages(2)
             self.assertEqual([m['type'] for m in messages], ['SESSION_TERMINATE_ALL', 'SESSION_TERMINATE'])
 
         # Send a session create request on the RX channel
@@ -56,7 +56,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         self.assertResponseOk(response)
 
         # Read from the TX channel
-        create_response, = self._receive_messages(allow_extras=True)
+        create_response, = self._receive_messages()
         self.assertEqual(create_response['type'], 'SESSION_CREATE_RESPONSE')
         self.assertEqual(create_response['plugin'], self.PLUGIN)
         self.assertEqual(create_response['session_seq'], None)
@@ -115,19 +115,14 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         command_id = JobSchedulerClient.command_set_state([(self.host.content_type.natural_key(), self.host.id, state)], "Test")
         command = self._get_command(command_id)
         self.assertEqual(len(command.jobs.all()), 1)
+        self.last_action = time.time()
         return command_id
 
-    def _handle_action_receive(self, session_id, retry=2):
+    def _handle_action_receive(self, session_id):
         # Listen and wait for the action
-        for index in wait(count=retry):
-            try:
-                action_rpc_request, = self._receive_messages(1)
-                break
-            except RuntimeError as exc:
-                print 'attempt', index, exc
-        else:
-            raise
-        self.assertEqual(action_rpc_request['type'], 'DATA')
+        action_rpc_request, = self._receive_messages()
+        msg = "elapsed {0}".format(time.time() - self.last_action)
+        self.assertEqual(action_rpc_request['type'], 'DATA', msg)
         self.assertEqual(action_rpc_request['plugin'], self.PLUGIN)
         self.assertEqual(action_rpc_request['session_seq'], None)
         self.assertEqual(action_rpc_request['session_id'], session_id)
