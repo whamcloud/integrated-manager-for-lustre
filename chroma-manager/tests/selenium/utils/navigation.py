@@ -40,6 +40,10 @@ class Navigation(BaseView):
         if needs_patching:
             self.patch_api()
 
+    @property
+    def configure_dropdown(self):
+        return self.driver.find_element_by_css_selector(".navbar .dropdown-menu")
+
     def login(self, username, password):
         login = Login(self.driver)
 
@@ -61,6 +65,10 @@ class Navigation(BaseView):
 
     def go(self, *args):
         self.log.info("Navigation.go: %s" % (args,))
+
+        if self.configure_dropdown.is_displayed():
+            self.click(self.links['Configure'])
+
         for page in args:
             self.click(self.links[page])
         self._reset_ui()

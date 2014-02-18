@@ -58,6 +58,7 @@ def wait_for_transition(driver, timeout):
     # but updates to changed objects are run asynchronously.
     quiesce_api(driver, timeout)
 
+
 def take_debug_screenshot(driver, name):
     """Take a screenshot to use for debugging."""
     debug_screen_shot_dir = "%s/debug-screen-shots" % os.getcwd()
