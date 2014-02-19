@@ -92,7 +92,6 @@ class TestEditFilesystem(SeleniumBaseTestCase):
 
         # Navigate away and back, check validation messages are cleared
         self.edit_filesystem_page.close_conf_params()
-        self.navigation.go("Configure", "Volumes")
         self.navigation.go('Configure', 'Filesystems')
         fs_page = Filesystem(self.driver)
         fs_page.edit(self.filesystem_name)

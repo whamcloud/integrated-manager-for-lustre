@@ -30,7 +30,7 @@ class BaseView(object):
         self.short_wait = wait_time['short']
 
         #store selectors and selectors to be formatted.
-        self.dropdown_class_name = 'dropdown'
+        self.dropdown_class_name = 'dropdown-toggle'
         self.dropdown_selector = '.%s' % self.dropdown_class_name
         self.dropdown_menu_class_name = 'dropdown-menu'
         self.dropdown_menu_selector = '.%s' % self.dropdown_menu_class_name
@@ -83,7 +83,7 @@ class BaseView(object):
         wait_for_element_by_css_selector(container, self.dropdown_selector, self.standard_wait)
 
         dropdown = container.find_element_by_class_name(self.dropdown_class_name)
-        dropdown_menu = dropdown.find_element_by_class_name(self.dropdown_menu_class_name)
+        dropdown_menu = container.find_element_by_class_name(self.dropdown_menu_class_name)
 
         if not dropdown_menu.is_displayed():
             dropdown.click()
