@@ -31,7 +31,9 @@
     </div> \
   </div>';
 
-  angular.module('exception').factory('disconnectModal', ['$modal', function ($modal) {
+  angular.module('exception').factory('disconnectModal', ['$modal', '$window', function ($modal, $window) {
+    var unloading = false;
+
     var defaultOptions = {
       backdrop: 'static',
       keyboard: false,
@@ -39,7 +41,14 @@
       windowClass: 'disconnect-modal'
     };
 
+    $window.addEventListener('beforeunload', function beforeUnload() {
+      unloading = true;
+    });
+
     return function open(opts) {
+      if (unloading)
+        return null;
+
       var options = _.merge(defaultOptions, opts);
 
       return $modal.open(options);

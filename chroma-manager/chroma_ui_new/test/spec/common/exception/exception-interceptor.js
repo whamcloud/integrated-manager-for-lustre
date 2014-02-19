@@ -1,12 +1,9 @@
 describe('Exception interceptor', function () {
   'use strict';
 
-  var exceptionInterceptor, exceptionHandler, response, $rootScope, error, errbackSpy, disconnectHandler;
+  var exceptionInterceptor, exceptionHandler, response, $rootScope, error, errbackSpy;
 
   beforeEach(module({STATIC_URL: '/api/'}, 'exception', function ($provide) {
-    disconnectHandler = { add: jasmine.createSpy('add') };
-
-    $provide.value('disconnectHandler', disconnectHandler);
 
     $provide.value('$exceptionHandler', jasmine.createSpy('$exceptionHandler'));
   }));
@@ -88,29 +85,12 @@ describe('Exception interceptor', function () {
       expect(exceptionHandler.callCount).toBe(0);
     });
 
-    it('should not call the $exceptionHandler with an error on 0s', function () {
+    it('should call the $exceptionHandler with an error on 0s', function () {
       response.status = 0;
 
       exceptionInterceptor.responseError(response);
 
-      expect(exceptionHandler.callCount).toBe(0);
-    });
-
-    it('should call the disconnectHandler on a 0', function () {
-      response.status = 0;
-
-      exceptionInterceptor.responseError(response);
-
-      expect(disconnectHandler.add).toHaveBeenCalled();
-    });
-
-    it('should not call the disconnectHandler on a 0 replay', function () {
-      response.status = 0;
-      response.config.UI_REPLAY = true;
-
-      exceptionInterceptor.responseError(response);
-
-      expect(disconnectHandler.add).not.toHaveBeenCalled();
+      expect(exceptionHandler.callCount).toBe(1);
     });
 
     it('should reject 500 errors', function () {

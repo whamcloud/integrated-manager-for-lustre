@@ -16,6 +16,7 @@ mock.register('$window', function () {
           return hrefSpy.mostRecentCall.args[0];
         }
       }
-    })
+    }),
+    addEventListener: jasmine.createSpy('$window.addEventListener')
   };
 });

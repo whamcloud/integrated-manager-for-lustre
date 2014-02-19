@@ -29,12 +29,9 @@
    * Intercepts requests and responses from the $http service and calls the $exceptionHandler if necessary.
    * @param {function} $exceptionHandler
    * @param {object} $q
-   * @param {object} $injector
    * @returns {{requestError: function, responseError: function}}
    */
-  function exceptionInterceptor($exceptionHandler, $q, $injector) {
-    var cached = {};
-
+  function exceptionInterceptor($exceptionHandler, $q) {
     return {
       requestError: function requestError(rejection) {
         var args = [];
@@ -57,13 +54,7 @@
         var rejected = $q.reject(response);
 
         //400s do not trigger the modal. It is the responsibility of the base model to handle them.
-        //Pass through replays if they failed for the same reason.
-        if (response.status === 400 || (response.status === 0 && response.config.UI_REPLAY)) return rejected;
-
-        //Currently Angular does not have a nice way to determine whether a request was aborted on purpose.
-        //@Fixme: Look at this again when https://github.com/angular/angular.js/issues/4491 is resolved.
-        if (response.status === 0 && get('replay').isIdempotent(response.config))
-          return get('disconnectHandler').add(response.config);
+        if (response.status === 400) return rejected;
 
         var error = new Error('Response Error!');
 
@@ -80,14 +71,10 @@
         return rejected;
       }
     };
-
-    function get(serviceName) {
-      return cached[serviceName] || (cached[serviceName] = $injector.get(serviceName));
-    }
   }
 
   angular.module('exception')
-    .factory(factoryName, ['$exceptionHandler', '$q', '$injector', exceptionInterceptor])
+    .factory(factoryName, ['$exceptionHandler', '$q', exceptionInterceptor])
     .config(['$httpProvider', function ($httpProvider) {
       $httpProvider.interceptors.push(factoryName);
     }]);

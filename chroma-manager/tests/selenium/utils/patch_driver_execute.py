@@ -37,7 +37,7 @@ def patch_driver_execute():
         if driver_command == Command.CLICK_ELEMENT:
             def find_modal_components(driver):
                 driver.find_element_by_class_name("modal-backdrop")
-                driver.find_element_by_class_name("disconnect-modal")
+                return driver.find_element_by_class_name("disconnect-modal")
 
             WebDriverWait(self, long_wait).until_not(find_modal_components,
                                                  "Disconnect modal still visible after %s seconds!" % long_wait)
