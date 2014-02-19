@@ -22,7 +22,7 @@ class Navigation(BaseView):
         self.links = {
             # Elements in Main Menu
             'Dashboard': '#dashboard-menu',
-            'Configure': '#configure-menu',
+            'Configure': '.dropdown-toggle',
             'Alerts': '#alert-menu',
             'Events': '#event-menu',
             'Logs': '#log-menu',
