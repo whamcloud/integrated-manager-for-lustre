@@ -1,30 +1,28 @@
 'use strict';
 
-var sinon = require('sinon'),
-  proxyquire = require('proxyquire');
-
-require('jasmine-sinon');
+var proxyquire = require('proxyquire');
 
 describe('generate lib', function () {
   var generateLib, httpStub, serverStub, PrimusStub,
     primusStub, primusMultiplexStub, lib;
 
   beforeEach(function () {
-    serverStub = sinon.spy();
+    serverStub = jasmine.createSpy('serverStub');
 
     httpStub = {
-      createServer: sinon.mock().returns(serverStub)
+      createServer: jasmine.createSpy('https.createServer').andReturn(serverStub)
     };
 
-    PrimusStub = sinon.mock();
+    PrimusStub = jasmine.createSpy('Primus');
 
-    primusStub = sinon.mock().returns({
+    primusStub = jasmine.createSpy('primus')
+      .andReturn({
       library: function () {
         return 'foo';
       }
     });
 
-    primusMultiplexStub = sinon.spy();
+    primusMultiplexStub = jasmine.createSpy('primusMultiplex');
 
     generateLib = proxyquire('../../generate-lib', {
       http: httpStub,
@@ -41,7 +39,7 @@ describe('generate lib', function () {
   });
 
   it('should create Primus with the expected params', function () {
-    expect(primusStub).toHaveBeenCalledWith(PrimusStub, serverStub, primusMultiplexStub);
+    expect(primusStub).toHaveBeenCalledOnceWith(PrimusStub, serverStub, primusMultiplexStub);
   });
 
   it('should return the client lib when called', function () {

@@ -1,17 +1,14 @@
 'use strict';
 
-var sinon = require('sinon'),
-  targetResourceFactory = require('../../../resources/target-resource');
-
-require('jasmine-sinon');
+var targetResourceFactory = require('../../../resources/target-resource');
 
 describe('Host resource', function () {
   var Resource, TargetResource, targetResource;
 
   beforeEach(function () {
-    Resource = sinon.spy();
+    Resource = jasmine.createSpy('Resource');
 
-    sinon.stub(Resource, 'call');
+    spyOn(Resource, 'call');
 
     TargetResource = targetResourceFactory(Resource);
 
@@ -19,7 +16,7 @@ describe('Host resource', function () {
   });
 
   it('should call the Resource', function () {
-    expect(Resource.call).toHaveBeenCalledWithExactly(targetResource, 'target');
+    expect(Resource.call).toHaveBeenCalledOnceWith(targetResource, 'target');
   });
 
   it('should allow GetMetrics', function () {

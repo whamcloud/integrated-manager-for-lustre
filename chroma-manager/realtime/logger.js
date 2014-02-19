@@ -44,11 +44,13 @@ module.exports = function loggerFactory(conf) {
     },
     streams: [
       {
+        type: 'stream',
         level: level,
         stream: process.stdout
       },
       {
         type: 'file',
+        level: level,
         path: path.join(logPath, 'realtime.log')
       }
     ]
