@@ -911,7 +911,6 @@ EOF
                         server['address'],
                         '''
                         rm -rf /var/lib/chroma/*;
-                        rm -f /var/log/chroma-*.log
                         ''',
                         expected_return_code = None  # Keep going if it failed - may be none there.
                     )

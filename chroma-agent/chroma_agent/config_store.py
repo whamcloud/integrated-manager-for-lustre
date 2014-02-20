@@ -27,6 +27,7 @@ import multiprocessing
 import json
 import base64
 import tempfile
+from chroma_agent.log import daemon_log
 
 
 class ConfigKeyExistsError(Exception):
@@ -160,6 +161,10 @@ class ConfigStore(object):
                     elif not key in self.get_section_keys(section):
                         raise KeyError("Invalid key '%s' for config section '%s'"
                                        % (key, section))
+                raise
+            except Exception as e:
+                daemon_log.warn("Json error %s, file was %s" % (e, os.path.join(dir, safe_key)))
+                daemon_log.warn("File contents %s" % open(os.path.join(dir, safe_key), "r").read())
                 raise
 
     def delete(self, section, key):
