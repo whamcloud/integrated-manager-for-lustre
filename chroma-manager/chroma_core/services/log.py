@@ -124,20 +124,32 @@ def log_disable_stdout():
 
 
 def custom_log_register(log_name, filename=None):
-    """Create another custom log handler within service in addition to default one
+    """Create another custom log handler to an optional file
 
-    logger can have a file handler, no handler at all.  In the second case
+    logger can have a file handler, or no handler at all.  In the second case
     you can then add your own handlers after the call to this method.
 
     Uses settings.LOG_LEVEL
+
+    Be aware that the user that calls this method will own the log file.  Or the file
+    may be created in some other manner owned by anyone.
+    If any other process then tries to register this same log file it may not be
+    able to read/write, and an IOError will be raised.  That is left uncaught, because
+    it's a siutation you shouldn't leave unchecked in your calling code.
     """
 
     logger = logging.getLogger(log_name)
     logger.setLevel(settings.LOG_LEVEL)
 
+    # If a filename is requested for this logger,
+    # make sure it will be created in the right place.
     if filename:
         if not filename.startswith(settings.LOG_PATH):
             filename = os.path.join(settings.LOG_PATH, filename)
+
+        # NB: this will fail if the permissions prevent opening the file.
+        # Generally just make sure the user (process) creating the file is
+        # the same one that will write to it.
         _add_file_handler(logger, filename)
 
     _loggers.add(logger)
