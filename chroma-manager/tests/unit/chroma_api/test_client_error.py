@@ -25,17 +25,12 @@ class TestClientErrorResource(ChromaApiTestCase):
         expected_os = "MacOS Macintosh X 10.9.0"
         expected_browser = "Chrome 32.0.1678.0"
 
-        with open(os.path.join(settings.LOG_PATH, 'client_errors.log')) as log:
-            # simulate empty log by saving the current end
-            # and searching from there below.
-            log_initial_size = len(log.read())
-
         resp = self.api_client.post("/api/client_error/", data=data, HTTP_USER_AGENT=user_agent)
 
         self.assertHttpCreated(resp)
 
         with open(os.path.join(settings.LOG_PATH, 'client_errors.log')) as log:
-            log_contents_after = log.read()[log_initial_size:]
+            log_contents_after = log.read()
 
             self.assertTrue(len(log_contents_after) > 0, "No new log messages.")
 
