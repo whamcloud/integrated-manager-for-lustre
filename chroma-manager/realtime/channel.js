@@ -88,6 +88,8 @@ module.exports = function channelFactory (primus, logger, Stream) {
 
         stream.stop();
         fn('done');
+
+        log.info('stopped');
       });
 
       spark.on('end', function disconnect () {

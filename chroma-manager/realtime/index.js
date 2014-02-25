@@ -37,6 +37,7 @@ process.on('SIGTERM', function () {
 });
 
 var https = require('https'),
+  http = require('http'),
   di = require('di'),
   request = require('request'),
   Q = require('q'),
@@ -60,6 +61,7 @@ var https = require('https'),
 var modules = [{
   conf: ['value', conf],
   https: ['value', https],
+  http: ['value', http],
   logger: ['factory', loggerFactory],
   Primus: ['value', Primus],
   multiplex: ['value', multiplex],

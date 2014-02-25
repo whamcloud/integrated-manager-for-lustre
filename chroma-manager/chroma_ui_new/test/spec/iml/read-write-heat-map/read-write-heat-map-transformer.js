@@ -1,25 +1,22 @@
 describe('read write heat map transformer', function () {
   'use strict';
 
-  var $q, $rootScope, boundTransformer, deferred, stream, fixtures;
+  var boundTransformer, stream, fixtures;
 
   beforeEach(module('readWriteHeatMap', 'dataFixtures'));
 
-  beforeEach(inject(function (readWriteHeatMapTransformer, _$rootScope_, _$q_, readWriteHeatMapDataFixtures) {
+  beforeEach(inject(function (readWriteHeatMapTransformer, readWriteHeatMapDataFixtures) {
     stream = {
       type: 'stats_read_bytes'
     };
-    $q = _$q_;
-    $rootScope = _$rootScope_;
     boundTransformer = readWriteHeatMapTransformer.bind(stream);
-    deferred = $q.defer();
     fixtures = _.cloneDeep(readWriteHeatMapDataFixtures);
   }));
 
 
   it('should throw if resp.body is not an object', function () {
     function shouldThrow() {
-      boundTransformer({}, deferred);
+      boundTransformer({});
     }
 
     expect(shouldThrow).toThrow('readWriteHeatMapTransformer expects resp.body to be an object!');
@@ -27,29 +24,21 @@ describe('read write heat map transformer', function () {
 
   it('should transform data', function () {
     fixtures.forEach(function (item) {
-      var deferred = $q.defer();
+      var resp = boundTransformer({body: item.in});
 
-      boundTransformer({body: item.in}, deferred);
-
-      deferred.promise.then(function (resp) {
-        var data = resp.body;
-
-        data.forEach(function (item) {
-          item.values.forEach(function (value) {
-            value.x = value.x.toJSON();
-          });
+      resp.body.forEach(function (item) {
+        item.values.forEach(function (value) {
+          value.x = value.x.toJSON();
         });
-
-        item.out.forEach(function (item) {
-          item.values.forEach(function (value) {
-            value.z = value.stats_read_bytes;
-          });
-        });
-
-        expect(data).toEqual(item.out);
       });
 
-      $rootScope.$digest();
+      item.out.forEach(function (item) {
+        item.values.forEach(function (value) {
+          value.z = value.stats_read_bytes;
+        });
+      });
+
+      expect(resp.body).toEqual(item.out);
     });
   });
 
@@ -57,36 +46,26 @@ describe('read write heat map transformer', function () {
     stream.type = 'stats_write_bytes';
 
     fixtures.forEach(function (item) {
-      var deferred = $q.defer();
+      var resp = boundTransformer({body: item.in});
 
-      boundTransformer({body: item.in}, deferred);
-
-      deferred.promise.then(function (resp) {
-        var data = resp.body;
-
-        data.forEach(function (item) {
-          item.values.forEach(function (value) {
-            value.x = value.x.toJSON();
-          });
+      resp.body.forEach(function (item) {
+        item.values.forEach(function (value) {
+          value.x = value.x.toJSON();
         });
-
-        item.out.forEach(function (item) {
-          item.values.forEach(function (value) {
-            value.z = value.stats_write_bytes;
-          });
-        });
-
-        expect(data).toEqual(item.out);
       });
 
-      $rootScope.$digest();
+      item.out.forEach(function (item) {
+        item.values.forEach(function (value) {
+          value.z = value.stats_write_bytes;
+        });
+      });
+
+      expect(resp.body).toEqual(item.out);
     });
   });
 
   it('should normalize empty values to 0', function () {
-    var deferred = $q.defer();
-
-    boundTransformer({
+    var resp = boundTransformer({
       body: {
         'fs-OST0000': [{
           data: {
@@ -96,14 +75,8 @@ describe('read write heat map transformer', function () {
           id: '3'
         }]
       }
-    }, deferred);
-
-    deferred.promise.then(function (resp) {
-      var data = resp.body;
-
-      expect(data[0].values[0].z).toBe(0);
     });
 
-    $rootScope.$digest();
+    expect(resp.body[0].values[0].z).toBe(0);
   });
 });

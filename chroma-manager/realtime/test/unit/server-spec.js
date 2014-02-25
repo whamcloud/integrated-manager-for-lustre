@@ -3,7 +3,7 @@
 var serverFactory = require('../../server');
 
 describe('server', function () {
-  var https, conf, server;
+  var https, http, conf, server;
 
   beforeEach(function () {
     conf = {
@@ -22,11 +22,19 @@ describe('server', function () {
       globalAgent: {}
     };
 
-    serverFactory(conf, https);
+    http = {
+      globalAgent: {}
+    };
+
+    serverFactory(conf, https, http);
   });
 
-  it('should set globalAgent.maxSockets to 25', function () {
+  it('should set https globalAgent.maxSockets to 25', function () {
     expect(https.globalAgent.maxSockets).toBe(25);
+  });
+
+  it('should set http globalAgent.maxSockets to 25', function () {
+    expect(http.globalAgent.maxSockets).toBe(25);
   });
 
   it('should create the server with the provided files', function () {

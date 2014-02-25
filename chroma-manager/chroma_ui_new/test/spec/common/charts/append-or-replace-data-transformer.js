@@ -1,7 +1,7 @@
 describe('append or replace data transformer', function () {
   'use strict';
 
-  var appendOrReplaceDataTransformer, stream, deferred, resp, replaceTransformer, appendDataTransformer;
+  var appendOrReplaceDataTransformer, stream, resp, replaceTransformer, appendDataTransformer;
 
   beforeEach(module('charts'));
 
@@ -24,7 +24,7 @@ describe('append or replace data transformer', function () {
     }
   );
 
-  beforeEach(inject(function ($q, _$rootScope_, _appendOrReplaceDataTransformer_) {
+  beforeEach(inject(function (_appendOrReplaceDataTransformer_) {
     appendOrReplaceDataTransformer = _appendOrReplaceDataTransformer_;
 
     resp = {
@@ -34,8 +34,6 @@ describe('append or replace data transformer', function () {
     };
 
     stream = {};
-
-    deferred = $q.defer();
   }));
 
   it('should throw if resp.params.qs is not an object', function () {
@@ -52,14 +50,14 @@ describe('append or replace data transformer', function () {
     resp.params.qs.unit = 'minutes';
     resp.params.qs.size = '25';
 
-    appendOrReplaceDataTransformer(resp, deferred);
+    appendOrReplaceDataTransformer(resp);
 
-    expect(replaceTransformer).toHaveBeenCalledOnceWith(resp, deferred);
+    expect(replaceTransformer).toHaveBeenCalledOnceWith(resp);
   });
 
   it('should call the append transformer if unit and size are not set', function () {
-    appendOrReplaceDataTransformer(resp, deferred);
+    appendOrReplaceDataTransformer(resp);
 
-    expect(appendDataTransformer).toHaveBeenCalledOnceWith(resp, deferred);
+    expect(appendDataTransformer).toHaveBeenCalledOnceWith(resp);
   });
 });

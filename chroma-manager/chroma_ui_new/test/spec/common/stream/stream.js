@@ -31,10 +31,10 @@ describe('stream module', function () {
 
     beforeEach(function () {
       Stream = stream('foo', 'bar', {
-        transformers: [function transformBodyToDuck(resp, deferred) {
+        transformers: [function transformBodyToDuck(resp) {
           resp.body = 'Duck';
 
-          deferred.resolve(resp);
+          return resp;
         }]
       });
 

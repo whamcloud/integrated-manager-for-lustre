@@ -29,9 +29,8 @@ angular.module('hsm')
     /**
      * Transforms incoming stream data to HsmCopytoolOperationModel instances.
      * @param {Array|undefined} newVal The new data.
-     * @param {Object} deferred The deferred to pipe through.
      */
-    return function transformer(resp, deferred) {
+    return function transformer(resp) {
       if (!_.isPlainObject(resp.body) )
         throw new Error('hsmCopytoolOperationStreamTransformer expects resp.body to be an object!');
 
@@ -39,7 +38,7 @@ angular.module('hsm')
         return new HsmCopytoolOperationModel(item);
       });
 
-      deferred.resolve(resp);
+      return resp;
     };
   }
 ]);

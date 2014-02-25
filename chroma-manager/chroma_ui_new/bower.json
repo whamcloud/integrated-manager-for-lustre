@@ -16,8 +16,8 @@
     "underscore-contrib": "git://github.com/documentcloud/underscore-contrib.git#0.2.0",
     "animate.css": "3.0.0",
     "ngstorage": "0.3.0",
-    "d3": "3.4.1",
-    "nvd3": "1.1.15-beta",
+    "d3": "3.4.2",
+    "nvd3": "git://github.com/jgrund/nvd3#fix-legend",
     "momentjs": "2.5.1",
     "twix": "0.3.0"
   },
@@ -28,6 +28,6 @@
     "jasmine-n-matchers": "0.0.2"
   },
   "resolutions": {
-    "d3": "3.4.1"
+    "d3": "3.4.2"
   }
 }

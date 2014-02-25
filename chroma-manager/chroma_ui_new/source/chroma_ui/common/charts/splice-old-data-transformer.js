@@ -28,7 +28,7 @@ angular.module('charts').factory('spliceOldDataTransformer', ['moment', spliceOl
 function spliceOldDataTransformerFactory(moment) {
   'use strict';
 
-  return function spliceOldDataTransformer(resp, deferred) {
+  return function spliceOldDataTransformer(resp) {
     var data = this.getter(),
       errorString = '%s is required for the spliceOldDataTransfomer!';
 
@@ -60,7 +60,7 @@ function spliceOldDataTransformerFactory(moment) {
         item.values.splice(0, deleteCount);
     });
 
-    deferred.resolve(resp);
+    return resp;
   };
 }
 

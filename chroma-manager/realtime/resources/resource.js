@@ -131,7 +131,10 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
       json: true,
       ca: conf.caFile,
       url: expanded,
-      strictSSL: false
+      strictSSL: false,
+      maxSockets: 25,
+      forever: true,
+      timeout: 120000 // 2 minutes
     });
 
     return {
@@ -149,10 +152,10 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
 
             pendCount -= 1;
 
-            self.log.debug('pend count is: %d', pendCount);
+            self.log.trace('pend count is: %d', pendCount);
 
             if (body)
-              self.log.debug(body);
+              self.log.trace(body);
 
             if (resp.statusCode >= 400) {
               var message;

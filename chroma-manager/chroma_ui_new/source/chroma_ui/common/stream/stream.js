@@ -22,9 +22,10 @@
 (function () {
   'use strict';
 
-  angular.module('stream').factory('stream', ['$parse', '$q', 'primus', 'pageVisibility', streamFactory]);
+  angular.module('stream').factory('stream',
+    ['$parse', '$q', 'primus', 'pageVisibility', '$exceptionHandler', streamFactory]);
 
-  function streamFactory($parse, $q, primus, pageVisibility) {
+  function streamFactory($parse, $q, primus, pageVisibility, $exceptionHandler) {
     return function getStream(channelName, defaultStreamMethod, defaults) {
       defaults = _.merge({
         params: {},
@@ -79,19 +80,21 @@
         var transformers = this.generateTransformProcessor(defaults.transformers);
 
         this.channel.on('stream', function (resp) {
-          scope.$apply(function $apply() {
+          localApply(scope, function runTransformers() {
             transformers(resp);
           });
         });
 
         this.channel.on('streamingError', function handleError(err) {
-          scope.$apply(function $apply() {
-            console.log(err);
+          localApply(scope, function handleStreamingError() {
+            $exceptionHandler(err);
+
+            self.end();
           });
         });
 
         this.channel.on('beforeStreaming', function (cb) {
-          scope.$apply(function $apply() {
+          localApply(scope, function handleBeforeStreaming() {
             self.beforeStreaming(streamMethod || defaultStreamMethod, merged, cb);
           });
         });
@@ -109,7 +112,7 @@
         primus().on('open', start);
 
         this._removePageVisibilityListener = pageVisibility.onChange(function (isHidden) {
-          scope.$apply(function $apply () {
+          localApply(scope, function toggleVisibility () {
             if (isHidden) {
               self.channel.send('stopStreaming');
             } else {
@@ -166,28 +169,22 @@
       Stream.prototype.restart = Stream.prototype.updateParams;
 
       /**
-       * Returns a function that when called recursively iterates the list.
+       * Returns a function that when called iterates the list.
        * Each transformer has Stream as a context.
        * @param {array} queue
-       * @returns function
+       * @returns {function}
        */
       Stream.prototype.generateTransformProcessor = function generateTransformProcessor(queue) {
         queue = queue.map(function bindTransformers(transformer) {
           return _.bind(transformer, this);
         }, this);
 
-        return function processTransform(newVal, index) {
-          index = (index == null ? 0 : index);
-
-          if (index === queue.length) return;
-
-          var deferred = $q.defer();
-
-          queue[index](newVal, deferred);
-
-          index += 1;
-
-          deferred.promise.then(function (data) { processTransform(data, index); });
+        return function processTransform(val) {
+          queue.reduce(function iterator (promise, transformer) {
+            return promise.then(function then(val) {
+              return transformer(val);
+            });
+          }, $q.when(val));
         };
       };
 
@@ -210,5 +207,20 @@
 
       return Stream;
     };
+
+    function localApply(scope, expr) {
+      try {
+        return scope.$eval(expr);
+      } catch (e) {
+        $exceptionHandler(e);
+      } finally {
+        try {
+          scope.$digest();
+        } catch (e) {
+          $exceptionHandler(e);
+          throw e;
+        }
+      }
+    }
   }
 }());
