@@ -1,0 +1,135 @@
+#!/bin/bash
+
+set -e
+
+. $HOME/auth.sh
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+# For autotest:
+#PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
+PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+
+export UPSTREAM_DISTRO=el6.4
+JOB_URL="${JENKINS_URL}job/${BUILD_JOB_NAME}/arch=x86_64,distro=$UPSTREAM_DISTRO/${BUILD_JOB_BUILD_NUMBER}/artifact"
+cd $WORKSPACE
+
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+curl -k -O -u jenkins-pull:"$JENKINS_PULL" "$JOB_URL/build_info.txt"
+
+curl -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-1.0.1.tar.gz"
+set -x
+
+sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration_tests/full_cluster/shared_storage_configuration_cluster_cfg.json
+
+python chroma/chroma-manager/tests/framework/integration_tests/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration_tests/full_cluster/shared_storage_configuration_cluster_cfg.json provisioner_input.json
+
+cat provisioner_input.json
+echo
+
+# Gather logs from nodes and release the cluster at exit
+cleanup() {
+    set -x
+    set +e
+    if $got_aborted; then
+        tmpfile=/tmp/abort.$$.debug
+        exec 2>/tmp/tmpfile
+    fi
+    python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs shared_storage_configuration_cluster_cfg.json | tee $WORKSPACE/log_collector_out 2>&1 || true
+    # look for known failures in the logs
+    if grep "LDISKFS-fs (.*): group descriptors corrupted" $WORKSPACE/test_logs/*-messages.log; then
+        echo "bug: TEI-39" test_output
+    fi
+    if egrep "^ssh: Could not resolve hostname lotus-[0-9][0-9]*vm1*4\.iml\.intel\.com: Name or service not known" $WORKSPACE/log_collector_out; then
+        echo "bug: TEI-1327"
+    fi
+    rm -f $WORKSPACE/log_collector_out
+    if grep "AssertionError: 300 not less than 300 : Timed out waiting for host to come back online" $WORKSPACE/test_logs/*-chroma_test.log; then
+        echo "bug: HYD-2889"
+    fi
+    if grep "Could not match packages: Cannot retrieve repository metadata (repomd.xml) for repository: lustre-client. Please verify its path and try again" $WORKSPACE/test_logs/*-chroma_test.log; then
+        echo "bug: HYD-2948"
+    fi
+    sed -e 's/provision": *true/provision": false/' provisioner_output.json < provisioner_output.json | $PROVISIONER || true
+    echo "exit trap done"
+    if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
+        cat $tmpfile | mail -s "job aborted" brian.murrell@intel.com
+        #rm $tmpfile
+    fi
+}
+
+got_aborted=false
+trap cleanup EXIT
+
+trap "set -x
+got_aborted=true
+echo \"Got SIGTERM\"
+ps axf
+exit 1" TERM
+
+rc=0
+cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=$?
+
+cat provisioner_output.json
+echo
+
+if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' provisioner_output.json; then
+    echo "Cluster provisioner failed"
+    cat provisioner.json
+    exit 1
+fi
+
+python chroma/chroma-manager/tests/framework/integration_tests/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json
+cat shared_storage_configuration_cluster_cfg.json
+
+# see if this cures the 401 errors from jenkins
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py shared_storage_configuration_cluster_cfg.json)
+pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
+fi
+cd /etc/yum.repos.d/
+for f in *.repo; do
+  sed -i -e 's/distro=el6.5/distro=el6.4/' \$f
+done" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+set +e
+
+echo "Beginning automated test run..."
+MEASURE_COVERAGE=$MEASURE_COVERAGE \
+chroma/chroma-manager/tests/framework/integration_tests/full_cluster/automated_test_run_shared_storage_configuration_with_provisioning.sh
+echo "Automated test run complete."
+
+# Gather logs from nodes
+# done in the EXIT trap now
+# python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs shared_storage_configuration_cluster_cfg.json
+
+# Combine coverage reports from the different nodes.
+if $MEASURE_COVERAGE; then
+  ls .coverage*
+  echo "
+[paths]
+source1 =
+    $WORKSPACE/chroma/chroma-manager/
+    /usr/share/chroma-manager/
+source2 =
+    $WORKSPACE/chroma/chroma-agent/chroma_agent/
+    /usr/lib/python2.6/site-packages/chroma_agent/
+
+[report]
+include =
+    $WORKSPACE/chroma/*
+omit =
+    *junk.py
+    */tests/*
+" > .coveragerc
+
+  coverage combine
+  coverage report -m
+  coverage xml --ignore-errors
+fi
