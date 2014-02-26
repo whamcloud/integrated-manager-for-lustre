@@ -10,7 +10,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
     TESTS_NEED_POWER_CONTROL = True
     TEST_SERVERS = config['lustre_servers'][0:4]
 
-    def test_create_filesystem_with_failover(self):
+    def _test_create_filesystem_with_failover(self):
         # Add hosts as managed hosts
         self.assertGreaterEqual(len(self.TEST_SERVERS), 4)
         hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
@@ -136,6 +136,14 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
+        return (filesystem_id, target_hosts, volumes_expected_hosts_in_normal_state,
+                mgt_volume, mdt_volume, ost_volume_1, ost_volume_2)
+
+    def test_create_filesystem_with_failover_mgs(self):
+
+        (filesystem_id, target_hosts, volumes_expected_hosts_in_normal_state,
+         mgt_volume, mdt_volume, ost_volume_1, ost_volume_2) = self._test_create_filesystem_with_failover()
+
         # Test failover if the cluster config indicates that failover has
         # been properly configured with stonith, etc.
         if config['failover_is_configured']:
@@ -161,6 +169,15 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
                 volumes_expected_hosts_in_normal_state
             )
 
+    def test_create_filesystem_with_failover_mds(self):
+
+        (filesystem_id, target_hosts, volumes_expected_hosts_in_normal_state,
+         mgt_volume, mdt_volume, ost_volume_1, ost_volume_2) = self._test_create_filesystem_with_failover()
+
+        # Test failover if the cluster config indicates that failover has
+        # been properly configured with stonith, etc.
+        if config['failover_is_configured']:
+
             # Test MDS failover
             volumes_expected_hosts_in_failover_state = {
                 mgt_volume['id']: target_hosts['mgt']['primary'],
@@ -183,6 +200,15 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
                 volumes_expected_hosts_in_normal_state
             )
 
+    def test_create_filesystem_with_failover_oss(self):
+
+        (filesystem_id, target_hosts, volumes_expected_hosts_in_normal_state,
+         mgt_volume, mdt_volume, ost_volume_1, ost_volume_2) = self._test_create_filesystem_with_failover()
+
+        # Test failover if the cluster config indicates that failover has
+        # been properly configured with stonith, etc.
+        if config['failover_is_configured']:
+
             # Test failing over an OSS
             volumes_expected_hosts_in_failover_state = {
                 mgt_volume['id']: target_hosts['mgt']['primary'],
@@ -204,6 +230,15 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
                 filesystem_id,
                 volumes_expected_hosts_in_normal_state
             )
+
+    def test_create_filesystem_with_failover_oss_chroma_controlled(self):
+
+        (filesystem_id, target_hosts, volumes_expected_hosts_in_normal_state,
+         mgt_volume, mdt_volume, ost_volume_1, ost_volume_2) = self._test_create_filesystem_with_failover()
+
+        # Test failover if the cluster config indicates that failover has
+        # been properly configured with stonith, etc.
+        if config['failover_is_configured']:
 
             # Test failing over an OSS using chroma to do a controlled failover
             volumes_expected_hosts_in_failover_state = {
