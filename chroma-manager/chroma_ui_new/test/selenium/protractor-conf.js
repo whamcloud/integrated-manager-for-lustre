@@ -1,3 +1,7 @@
+/*jslint node: true */
+
+'use strict';
+
 var manager = require('./util/manager');
 
 exports.config = {
@@ -12,7 +16,8 @@ exports.config = {
   capabilities: {
     browserName: 'chrome',
     chromeOptions: {
-        args: ['ignore-certificate-errors', 'no-proxy-server', 'enable-crash-reporter', 'full-memory-crash-report', 'enable-logging=stderr', 'log-level=""', 'v=1000']
+      args: ['ignore-certificate-errors', 'no-proxy-server', 'enable-crash-reporter',
+        'full-memory-crash-report', 'enable-logging=stderr', 'log-level=""', 'v=1000']
     },
     verbose: 'true',
     'log-path': 'chromedriver.log'
@@ -30,7 +35,7 @@ exports.config = {
     reporter.browserName = this.capabilities.browserName;
     reporter.getFullName = function (suite, isFilename) {
       return 'protractor-selenium-tests.' + this.browserName + '.' + this.getFullNameForSpec(suite, isFilename);
-    }
+    };
 
     jasmine.getEnv().addReporter(reporter);
   },
@@ -38,6 +43,6 @@ exports.config = {
   jasmineNodeOpts: {
     showColors: true,
     isVerbose: true,
-    defaultTimeoutInterval: 10000
+    defaultTimeoutInterval: 600000 // 10 minutes.
   }
 };
