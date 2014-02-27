@@ -28,6 +28,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         self.ct_bin_path = '/usr/sbin/lhsmtool_foo'
         self.ct_arguments = '-p /archive/testfs'
         self.ct_filesystem = 'testfs'
+        self.ct_mountpoint = '/mnt/testfs'
         self._configure_copytool()
         self.ct_vars = _copytool_vars(self.ct_id)
 
@@ -44,6 +45,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
                                        self.ct_bin_path,
                                        self.ct_archive,
                                        self.ct_filesystem,
+                                       self.ct_mountpoint,
                                        self.ct_arguments)
 
     def test_start_monitored_copytool(self):
@@ -102,6 +104,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
             index = self.ct_index,
             bin_path = self.ct_bin_path,
             filesystem = self.ct_filesystem,
+            mountpoint = self.ct_mountpoint,
             archive_number = self.ct_archive,
             hsm_arguments = self.ct_arguments
         )

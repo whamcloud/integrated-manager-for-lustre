@@ -22,6 +22,7 @@
 
 from collections import defaultdict
 import copy
+import re
 
 from django.core.urlresolvers import resolve
 from tastypie import fields
@@ -40,6 +41,22 @@ from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
 log = log_register(__name__)
+
+
+# A list of copytool options which are known to cause problems if supplied
+# via the HSM agent arguments field when creating a copytool.
+INVALID_AGENT_ARGUMENTS = {
+        '-A': "is already automatically supplied",
+        '--archive': "is already automatically supplied",
+        '--daemon': "conflicts with copytool management automation",
+        '--dry-run': "makes no sense in this context",
+        '-q': "is already automatically supplied",
+        '--quiet': "is already automatically supplied",
+        '-u': "is already automatically supplied",
+        '--update-interval': "is already automatically supplied",
+        '-v': "makes no sense in this context",
+        '--verbose': "makes no sense in this context"
+}
 
 
 class CopytoolOperationResource(ModelResource):
@@ -92,6 +109,12 @@ class CopytoolValidation(Validation):
 
             if errors:
                 return errors
+
+        for argument in re.split(r'\s+', bundle.data['hsm_arguments']):
+            if argument in INVALID_AGENT_ARGUMENTS:
+                error = "Invalid argument '%s': %s" % (argument,
+                                            INVALID_AGENT_ARGUMENTS[argument])
+                errors['hsm_arguments'].append(error)
 
         try:
             HostResource().get_via_uri(bundle.data['host'])

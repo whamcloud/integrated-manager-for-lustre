@@ -253,12 +253,13 @@ class CopytoolMonitor(ExceptionCatchingThread):
 
 
 class Copytool(object):
-    def __init__(self, id, index, bin_path, archive_number, filesystem, hsm_arguments):
+    def __init__(self, id, index, bin_path, archive_number, filesystem, mountpoint, hsm_arguments):
         self.id = id
         self.index = index
         self.bin_path = bin_path
         self.archive_number = archive_number
         self.filesystem = filesystem
+        self.mountpoint = mountpoint
         self.hsm_arguments = hsm_arguments
 
     def __str__(self):
@@ -270,15 +271,11 @@ class Copytool(object):
         fifo_dir = config.get('settings', 'agent')['copytool_fifo_directory']
         return os.path.join(fifo_dir, "%s-events" % self)
 
-    @property
-    def mountpoint(self):
-        client_root = config.get('settings', 'agent')['lustre_client_root']
-        return os.path.join(client_root, self.filesystem)
-
     def as_dict(self):
         return dict(id = self.id, index=self.index, bin_path=self.bin_path,
                     archive_number=self.archive_number,
                     filesystem=self.filesystem,
+                    mountpoint=self.mountpoint,
                     hsm_arguments=self.hsm_arguments)
 
 

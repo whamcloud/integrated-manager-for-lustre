@@ -358,6 +358,7 @@ class ConfigureCopytoolJob(StateChangeJob):
     def get_steps(self):
         return [(ConfigureCopytoolStep, {'host': self.copytool.host,
                                          'filesystem': self.copytool.filesystem,
+                                         'client_mount': self.copytool.client_mount,
                                          'copytool': self.copytool})]
 
 
@@ -365,6 +366,7 @@ class ConfigureCopytoolStep(Step):
     def run(self, kwargs):
         host = kwargs['host']
         filesystem = kwargs['filesystem']
+        client_mount = kwargs['client_mount']
         copytool = kwargs['copytool']
 
         payload = dict(
@@ -373,6 +375,7 @@ class ConfigureCopytoolStep(Step):
             bin_path = copytool.bin_path,
             archive_number = copytool.archive,
             filesystem = filesystem.name,
+            mountpoint = client_mount.mountpoint,
             hsm_arguments = copytool.hsm_arguments
         )
         self.invoke_agent(host, "configure_copytool", payload)
@@ -414,6 +417,19 @@ class RemoveCopytoolJob(StateChangeJob):
                 (UnconfigureCopytoolStep, {'host': self.copytool.host,
                                            'copytool': self.copytool}),
                 (DeleteCopytoolStep, {'copytool': self.copytool})]
+
+    def get_deps(self):
+        search = lambda ct: ct.host == self.copytool.host
+        copytools = ObjectCache.get(Copytool, search)
+
+        # Only force an unmount if this is the only copytool associated
+        # with the host.
+        if len(copytools) == 1:
+            search = lambda cm: cm.id == self.copytool.client_mount_id
+            client_mount = ObjectCache.get_one(LustreClientMount, search)
+            return DependOn(client_mount, 'unmounted')
+        else:
+            return DependAll()
 
 
 class CancelActiveOperationsStep(Step):
@@ -467,9 +483,17 @@ class RemoveUnconfiguredCopytoolJob(StateChangeJob):
         return [(DeleteCopytoolStep, {'copytool': self.copytool})]
 
     def get_deps(self):
-        client_mount = ObjectCache.get_one(LustreClientMount,
-                                           lambda cm: cm.id == self.copytool.client_mount_id)
-        return DependOn(client_mount, 'unmounted')
+        search = lambda ct: ct.host == self.copytool.host
+        copytools = ObjectCache.get(Copytool, search)
+
+        # Only force an unmount if this is the only copytool associated
+        # with the host.
+        if len(copytools) == 1:
+            search = lambda cm: cm.id == self.copytool.client_mount_id
+            client_mount = ObjectCache.get_one(LustreClientMount, search)
+            return DependOn(client_mount, 'unmounted')
+        else:
+            return DependAll()
 
 
 class DeleteCopytoolStep(Step):
