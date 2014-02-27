@@ -20,4 +20,4 @@
 // express and approved by Intel in writing.
 
 
-angular.module('iml-tooltip', ['position']);
+angular.module('iml-tooltip', ['position', 'help']);
