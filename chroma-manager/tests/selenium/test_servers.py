@@ -67,6 +67,7 @@ class TestServer(SeleniumBaseTestCase):
 
         # Enter something valid, complete adding and opt to add another
         self.server_page.add_server_enter_address(self.host_list[0]['address'])
+        self.server_page.add_server_select_profile()
         self.server_page.add_server_submit_address()
         self.server_page.add_server_confirm()
         self.server_page.add_server_add_another()

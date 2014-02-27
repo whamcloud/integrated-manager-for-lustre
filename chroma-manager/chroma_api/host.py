@@ -43,25 +43,29 @@ log = log_register(__name__)
 
 
 class HostValidation(Validation):
+    mandatory_message = "This field is mandatory"
+
     def is_valid(self, bundle, request=None):
         errors = defaultdict(list)
         if request.method != 'POST':
             return errors
 
         try:
+            bundle.data['server_profile']
+        except KeyError:
+            errors['server_profile'].append(self.mandatory_message)
+
+        try:
             address = bundle.data['address']
         except KeyError:
-            errors['address'].append("This field is mandatory")
+            errors['address'].append(self.mandatory_message)
         else:
-            if not len(address.strip()):
-                errors['address'].append("This field is mandatory")
-            else:
-                # TODO: validate URI
-                try:
-                    ManagedHost.objects.get(address = address)
-                    errors['address'].append("This address is already in use")
-                except ManagedHost.DoesNotExist:
-                    pass
+            # TODO: validate URI
+            try:
+                ManagedHost.objects.get(address = address)
+                errors['address'].append("This address is already in use")
+            except ManagedHost.DoesNotExist:
+                pass
 
         return errors
 
@@ -75,20 +79,20 @@ class HostTestValidation(HostValidation):
             auth_type = bundle.data['auth_type']
             if auth_type == 'id_password_root':
                 try:
-                    root_password = bundle.data.get('root_password')
+                    root_password = bundle.data['root_password']
                 except KeyError:
-                    errors['root_password'].append("This field is mandatory")
+                    errors['root_password'].append(self.mandatory_message)
                 else:
                     if not len(root_password.strip()):
-                        errors['root_password'].append("This field is mandatory")
+                        errors['root_password'].append(self.mandatory_message)
             elif auth_type == 'private_key_choice':
                 try:
-                    private_key = bundle.data.get('private_key')
+                    private_key = bundle.data['private_key']
                 except KeyError:
-                    errors['private_key'].append("This field is mandatory")
+                    errors['private_key'].append(self.mandatory_message)
                 else:
                     if not len(private_key.strip()):
-                        errors['private_key'].append("This field is mandatory")
+                        errors['private_key'].append(self.mandatory_message)
         except KeyError:
             #  What?  Now auth_type? assume existing key default case.
             pass
@@ -275,6 +279,8 @@ class HostTestResource(Resource):
     """
     address = fields.CharField(help_text = "Same as ``address`` "
                                            "field on host resource.")
+
+    server_profile = fields.CharField(help_text="Server profile chosen")
 
     root_pw = fields.CharField(help_text = "ssh root password to new server.")
     private_key = fields.CharField(help_text = "ssh private key matching a "

@@ -133,7 +133,7 @@ var ValidatedForm = function() {
           element.find('input, textarea').removeClass('error');
           $.each(errors, function(attr_name, error_list) {
             $.each(error_list, function(i, error) {
-              var sel = 'input[name='+attr_name+'], textarea[name='+attr_name+']';
+              var sel = 'input[name="%1$s"], textarea[name="%1$s"], select[name="%1$s"]'.sprintf(attr_name);
               add_error(element.find(sel), error);
             });
           });

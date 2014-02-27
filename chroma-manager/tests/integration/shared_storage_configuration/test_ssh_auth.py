@@ -25,6 +25,32 @@ class TestSshAuth(ChromaIntegrationTestCase):
     TODO:  HYD-1902 update this test to use different auth schemes
     """
 
+    def _post_to_test_host(self, extra_params):
+        """
+        This is a helper function that calls /api/test_host.
+        Extra params to post can be provided.
+        @type extra_params: dict | (dict) -> dict
+        @param extra_params: If a dict, updates the body directly.
+          If a lambda is given a server config and returns dict based on lookup in that config.
+        @rtype: tests.utils.http_requests.HttpResponse
+        @return: A HttpResponse.
+        """
+        server_config_1 = config['lustre_servers'][0]
+
+        profile = self.get_host_profile(server_config_1['address'])
+
+        body = {
+            'server_profile': profile['resource_uri'],
+            'address': server_config_1['address']
+        }
+
+        if callable(extra_params):
+            extra_params = extra_params(server_config_1)
+
+        body.update(extra_params)
+
+        return self.chroma_manager.post('/api/test_host/', body=body)
+
     @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_public_private_key(self):
         """Test using .ssh/id_rsa private key to authenticate
@@ -32,12 +58,7 @@ class TestSshAuth(ChromaIntegrationTestCase):
         This is how all current ssh authentication works.  This will no
         """
 
-        server_config_1 = config['lustre_servers'][0]
-
-        response = self.chroma_manager.post(
-            '/api/test_host/',
-            body = {'address': server_config_1['address']}
-        )
+        response = self._post_to_test_host({})
 
         self.assertTrue(response.json['auth'])
 
@@ -45,13 +66,7 @@ class TestSshAuth(ChromaIntegrationTestCase):
     def test_root_password(self):
         """Passing a root password with effect a root/pw based auth"""
 
-        server_config_1 = config['lustre_servers'][0]
-
-        response = self.chroma_manager.post(
-            '/api/test_host/',
-            body = {'address': server_config_1['address'],
-                    'root_pw': server_config_1['root_password']}
-        )
+        response = self._post_to_test_host(lambda server_config: {'root_pw': server_config['root_password']})
 
         self.assertTrue(response.json['auth'])
 
@@ -59,14 +74,7 @@ class TestSshAuth(ChromaIntegrationTestCase):
     def test_entered_private_key(self):
         """Test user can submit a private key to authenticate"""
 
-        server_config_1 = config['lustre_servers'][0]
-
-        response = self.chroma_manager.post(
-            '/api/test_host/',
-            body = {'address': server_config_1['address'],
-                    'private_key': "REPLACE_WITH_PRIVATE_KEY"
-                                   "FROM_CONFIG"}
-        )
+        response = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY FROM_CONFIG"})
 
         self.assertTrue(response.json['auth'])
 
@@ -74,14 +82,8 @@ class TestSshAuth(ChromaIntegrationTestCase):
     def test_entered_private_key_with_passphrase(self):
         """Test user can submit an enc private key and passphrase to auth"""
 
-        server_config_1 = config['lustre_servers'][0]
-
-        response = self.chroma_manager.post(
-            '/api/test_host/',
-            body = {'address': server_config_1['address'],
-                    'private_key': "REPLACE_WITH_PRIVATE_KEY_FROM_CONFIG",
-                    'private_key_passphrase': "REPLACE_WITH_PRIVATE_KEY "
-                                              "PASSPHRASE_FROM_CONFIG"}
-        )
+        response = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY_FROM_CONFIG",
+                                            'private_key_passphrase': "REPLACE_WITH_PRIVATE_KEY "
+                                                                      "PASSPHRASE_FROM_CONFIG"})
 
         self.assertTrue(response.json['auth'])

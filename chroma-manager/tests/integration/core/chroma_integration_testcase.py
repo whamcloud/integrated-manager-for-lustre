@@ -74,7 +74,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             else:
                 response = self.chroma_manager.post(
                     '/api/test_host/',
-                    body = {'address': host_address}
+                    body = {
+                        'address': host_address,
+                        'server_profile': profile['resource_uri']
+                    }
                 )
                 self.assertEqual(response.successful, True, response.text)
                 if not config.get('ssh_config', None):

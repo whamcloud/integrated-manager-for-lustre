@@ -172,8 +172,10 @@ function add_host_dialog(serverProfile) {
           .add('#id_add_host_address, select.add_server_profile, #id_failed_validations')
           .serializeArray()
           .reduce(function (hash, pair) {
+            if (pair.value.trim().length > 0)
               hash[pair.name] = pair.value;
-              return hash;
+
+            return hash;
           }, {commit: true, auth_type: auth_group});
       return form_params;
   }
@@ -226,14 +228,23 @@ function add_host_dialog(serverProfile) {
 
   function get_profiles() {
     Api.get("server_profile/?order_by=default&order_by=-managed", {limit: 0}, success_callback = function(data) {
-      var $select = $('div.add_host_dialog select[name=\'server_profile\']');
+      var $select = $('div.add_host_dialog select[name="server_profile"]');
+
+      //unshift an empty option into the objects.
+      data.objects.unshift({
+        resource_uri: undefined,
+        ui_name: '---'
+      });
+
       data.objects.forEach(function(profile) {
-        var option = "<option value='%s'%s>%s</option>".sprintf(
-          profile.resource_uri,
-          (profile.resource_uri === serverProfile() ? " selected='selected'" : ''),
+
+        var option = '<option value="%s"%s>%s</option>'.sprintf(
+          (profile.resource_uri == null ? '': profile.resource_uri),
+          (profile.resource_uri === serverProfile() ? 'selected="selected"' : ''),
           profile.ui_name
         );
-        $select.append(option)
+
+        $select.append(option);
       });
     });
   }
