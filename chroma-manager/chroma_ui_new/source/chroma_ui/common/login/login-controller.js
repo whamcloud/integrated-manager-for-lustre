@@ -28,8 +28,6 @@
   );
 
   function LoginCtrl($modal, $q, SessionModel, help, navigate) {
-    this.continueAsAnonymous = help.get('continue_as_anonymous');
-
     /**
      * Initializes the eula modal and opens it.
      * @param {UserModel} user

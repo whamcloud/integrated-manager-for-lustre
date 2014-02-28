@@ -24,7 +24,8 @@
   'use strict';
 
   angular.module('iml-tooltip')
-    .directive('imlTooltip', ['position', '$timeout', 'strategies', imlTooltip]);
+    .directive('imlTooltip', ['position', '$timeout', 'strategies', imlTooltip])
+    .directive('helpTooltip', ['help', helpTooltip]);
 
   function imlTooltip(position, $timeout, strategies) {
     return {
@@ -41,7 +42,13 @@
 
         var jqPreviousEl = jqElement.prev();
 
-        if (!jqPreviousEl.length) throw new Error('Previous element not found for tooltip!');
+        // look at the parent's previous sibling
+        if (!jqPreviousEl.length)
+          jqPreviousEl = jqElement.parent().prev();
+
+        if (!jqPreviousEl.length)
+          throw new Error('Previous element not found for tooltip!');
+
 
         var directions = _.values(position.DIRECTIONS),
           directionsJoined = directions.join(' ');
@@ -133,6 +140,25 @@
           clone = null;
           jqClone = null;
         }
+      }
+    };
+  }
+
+  function helpTooltip (help) {
+    return {
+      scope: {
+        toggle: '=?',
+        topic: '@',
+        direction: '@'
+      },
+      restrict: 'E',
+      replace: true,
+      templateUrl: 'common/tooltip/assets/html/help-tooltip.html',
+      link: function link(scope) {
+        scope.message = help.get(scope.topic);
+
+        if (scope.hasOwnProperty('toggle'))
+          scope.hasToggle = true;
       }
     };
   }
