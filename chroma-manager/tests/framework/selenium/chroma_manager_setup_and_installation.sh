@@ -86,6 +86,7 @@ done
 python tests/utils/pip_install_requirements.py ~/pip_cache
 
 # Install npm-based requirements
+npm config set strict-ssl false
 cd chroma_ui
 npm install
 cd ../chroma_ui_new
