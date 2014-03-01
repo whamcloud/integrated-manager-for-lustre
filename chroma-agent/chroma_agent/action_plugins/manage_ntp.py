@@ -23,6 +23,8 @@
 import os
 
 from chroma_agent import shell
+from tempfile import mkstemp
+from time import sleep
 
 
 def unconfigure_ntp():
@@ -30,13 +32,16 @@ def unconfigure_ntp():
 
 
 def configure_ntp(ntp_server):
-    from tempfile import mkstemp
-    from time import sleep
-    tmp_f, tmp_name = mkstemp(dir = '/etc')
-    f = open('/etc/ntp.conf', 'r')
     added_server = False
+    PRECHROMA_NTP_FILE = '/etc/ntp.conf.pre-chroma'
+    NTP_FILE = '/etc/ntp.conf'
     COMMENT_PREFIX = "# Commented by chroma-agent: "
     ADD_SUFFIX = " # Added by chroma-agent"
+
+    tmp_f, tmp_name = mkstemp(dir = '/etc')
+
+    f = open(NTP_FILE, 'r')
+
     for line in f.readlines():
         if ntp_server:
             # Comment out existing server lines and add one of our own
@@ -61,9 +66,9 @@ def configure_ntp(ntp_server):
     f.close()
     os.close(tmp_f)
     os.chmod(tmp_name, 0644)
-    if not os.path.exists("/etc/ntp.conf.pre-chroma"):
-        os.rename("/etc/ntp.conf", "/etc/ntp.conf.pre-chroma")
-    os.rename(tmp_name, "/etc/ntp.conf")
+    if not os.path.exists(PRECHROMA_NTP_FILE):
+        os.rename(NTP_FILE, PRECHROMA_NTP_FILE)
+    os.rename(tmp_name, NTP_FILE)
 
     if ntp_server:
         # If we have a server, sync time to it now before letting ntpd take over
