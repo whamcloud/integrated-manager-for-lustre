@@ -20,33 +20,38 @@
 // express and approved by Intel in writing.
 
 
-(function () {
-  'use strict';
-
-  angular.module('charts').directive('lineChart', ['moment', 'dateTicks', 'baseChart', lineChart]);
-
-  function lineChart (moment, dateTicks, baseChart) {
-    return baseChart({
-      generateChart: function (nv) {
-        return nv.models.lineChart();
-      },
-      onUpdate: function onUpdate(chart, data) {
-        if (!Array.isArray(data) || !data[0]) return;
-
-        var values = data[0].values;
-
-        if (!Array.isArray(values)) return;
-
-        var start = values[0].x,
-          end = values[values.length - 1].x,
-          range = moment(start).twix(end);
-
-        chart.xAxis
-          .axisLabel(range.format({implicitYear: false}))
-          .ticks(5)
-          .showMaxMin(false)
-          .tickFormat(dateTicks.getTickFormatFunc(range));
-      }
+_.mixin({
+  /**
+   * Truncates the destination array and pushes the source into it.
+   * Operates in place.
+   * @param {Array} destination
+   * @param {Array} source
+   * @returns {Array} The destination.
+   */
+  replace: function (destination, source) {
+    if (!Array.isArray(destination) || !Array.isArray(source))
+      throw new Error('Both arguments to replace must be arrays!');
+    destination.length = 0;
+    source.forEach(function (item) {
+      destination.push(item);
     });
+    return destination;
+  },
+  /**
+   * Takes an object and deletes the keys it holds.
+   * @param {Object} obj
+   * @returns {Object} Returns the passed in obj.
+   */
+  clear: function (obj) {
+    var keys;
+    try {
+      keys = Object.keys(obj);
+    } catch (error) {
+      throw new Error('Object to clear must be an object!');
+    }
+    keys.forEach(function (key) {
+      delete obj[key];
+    });
+    return obj;
   }
-}());
+});

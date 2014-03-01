@@ -144,4 +144,21 @@ describe('Command controller', function () {
       expect(fakeVictim.changeState).toHaveBeenCalledWith(fakeAction.state);
     });
   });
+
+  describe('handling conf_param updates', function () {
+    var fakeVictim, fakeParam;
+
+    beforeEach(function () {
+      fakeVictim = jasmine.createSpyObj('FakeTarget', ['$update']);
+      fakeVictim.conf_params = {};
+
+      fakeParam = { param_key: 'fake.param', param_value: 'hai!' };
+    });
+
+    it('should call $update on the victim', function () {
+      commandController.setConfParam(fakeVictim, fakeParam);
+
+      expect(fakeVictim.$update).toHaveBeenCalled();
+    });
+  });
 });

@@ -23,33 +23,72 @@
 /**
  * This creates a transformer that replaces data in the scope with data from the backend.
  */
-angular.module('stream').factory('replaceTransformer', [function replaceStreamFactory() {
+angular.module('stream').factory('replaceTransformer', [function replaceTransformerFactory() {
   'use strict';
 
+  function updateObject(oldObject, newObject) {
+    // If there is a version to compare, only update existing objects
+    // with newer data.
+    if (newObject.version != null &&
+        parseFloat(newObject.version) <= parseFloat(oldObject.version))
+      return;
+
+    _(oldObject).clear().assign(newObject);
+  }
+
+  function updateResourceArray(currentObjects, incomingObjects) {
+    var updateObjects = [];
+
+    incomingObjects.forEach(function (item) {
+      if (item.id == null)
+        throw new Error('Incoming resources must have an .id property!');
+
+      var currentObject = _.find(currentObjects, { id: item.id });
+      if (currentObject == null) {
+        // Not found. New object.
+        updateObjects.push(item);
+      } else {
+        updateObject(currentObject, item);
+        updateObjects.push(currentObject);
+      }
+    });
+
+    // Replace the current list of objects with our list of updated
+    // and new objects. This way we handle deleted objects.
+    _.replace(currentObjects, updateObjects);
+  }
+
+  /**
+   * Test for the characteristics of a Tastypie resource list
+   * (e.g. GET /api/foo/).
+   */
+  function isResourceList(data) {
+    return (data != null && Array.isArray(data.objects));
+  }
+
+  /**
+   * Update data in the bound scope variable with incoming stream data.
+   *   Metric data is completely replaced.
+   *   API resource objects are individually updated.
+   */
   return function replaceScope(resp) {
-    var data = this.getter();
+    var scopeData = this.getter();
+    var newData = resp.body;
 
-    var isArray = Array.isArray(data);
+    if (isResourceList(scopeData) && isResourceList(newData)) {
+      /* Looks like a Tastypie resource list. */
+      updateResourceArray(scopeData.objects, newData.objects);
+    } else if (Array.isArray(scopeData)) {
+      /* Looks like a list of metric datapoints. */
+      if (!Array.isArray(newData))
+        throw new Error('scopeData and newData must both be the same type!');
 
-    if (isArray !== Array.isArray(resp.body))
-      throw new Error('data and resp.body must both be the same type!');
-
-    if (isArray) {
-      data.length = 0;
-
-      resp.body.forEach(function (item) {
-        data.push(item);
-      });
+      _.replace(scopeData, newData);
     } else {
-      Object.keys(data).forEach(function (key) {
-        delete data[key];
-      });
-
-      Object.keys(resp.body).forEach(function (key) {
-        data[key] = resp.body[key];
-      });
+      /* Does anything in production use this case? */
+      updateObject(scopeData, newData);
     }
 
-    return data;
+    return scopeData;
   };
 }]);

@@ -3,12 +3,12 @@
   <div ng-controller="HsmCtrl" class="with-transitions">
 
     <div class="controls">
-        Displaying HSM information for:
-        <select ng-model="hsm.selectedFileSystem" ng-options="f.label for f in hsm.fileSystems.objects track by f.id" ng-change="onFileSystemSelection()">
-          <option value="">All File Systems</option>
-        </select>
+      Displaying HSM information for:
+      <select ng-model="hsm.selectedFileSystem" ng-options="f.label for f in hsm.fileSystems.objects track by f.id" ng-change="onFileSystemSelection()">
+        <option value="">All File Systems</option>
+      </select>
+      <hsm-cdt-status ng-if="hsm.selectedFileSystem" file-system="hsm.selectedFileSystem"></hsm-cdt-status>
     </div>
-
     <h4 class="section-header">Outstanding Agent Requests vs. Idle Copytool Workers</h4>
     <div class="controls">
       <duration-picker start-unit="{{ hsm.unit }}" start-size="{{ hsm.size }}" on-update="hsm.onUpdate(unit, size)"></duration-picker>
@@ -48,7 +48,7 @@
               </div>
             </td>
             <td>
-              <div class="file">{{ copytoolOperation.path | pathMaxLength:60 }} <i tooltip="{{copytoolOperation.description}}" class="icon-info-sign"></i></div>
+              <div class="current-file">{{ copytoolOperation.path | pathMaxLength:60 }} <i tooltip="{{copytoolOperation.description}}" class="icon-info-sign"></i></div>
             </td>
           </tr>
         </tbody>
@@ -56,8 +56,8 @@
     </div>
 
     <div ng-if="hsm.copytools.objects.length === 0" class="no-copy-tools well txtcenter">
-      <text class="nvd3 nv-noData">No Copytools Available. </text>
-      <button ng-click="newCopytoolModal()" class="btn btn-primary"><i class="fa fa-plus"></i> Add Copytool</button>
+      <text class="nvd3 nv-noData txtright">No Copytools Available.</text>
+      <button ng-click="newCopytoolModal()" class="btn btn-primary"><i class="fa fa-plus"></i>Add Copytool</button>
     </div>
 
     <div ng-if="hsm.copytools.objects.length > 0">
@@ -81,7 +81,7 @@
               <div class="dropdown">
                 <a class="dropdown-toggle btn-mini btn">Actions <i class="fa fa-caret-down"></i></a>
                 <ul class="dropdown-menu">
-                  <li ng-repeat="action in copytool.available_actions">
+                  <li ng-repeat="action in copytool.available_actions track by action.verb">
                     <a ng-controller="CommandCtrl" ng-click="onActionSelection(copytool, action)">
                       {{ action.verb }}
                     </a>
@@ -95,7 +95,7 @@
       </table>
     </div>
     <div class="button-row" ng-if="hsm.copytools.objects.length > 0">
-      <button ng-click="newCopytoolModal()" class="btn btn-primary"><i class="fa fa-plus"></i> Add Copytool</button>
+      <button ng-click="newCopytoolModal()" class="btn btn-primary"><i class="fa fa-plus"></i><span class="add-copytool">Add Copytool</span></button>
     </div>
   </div>
 </div>

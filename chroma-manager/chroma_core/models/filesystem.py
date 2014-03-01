@@ -31,6 +31,23 @@ from django.db.models import Q
 from chroma_help.help import help_text
 
 
+HSM_CONTROL_KEY = 'mdt.hsm_control'
+HSM_CONTROL_PARAMS = {
+    'disabled': {
+        'verb': "Disable",
+        'long_description': help_text['hsm_control_disabled']
+    },
+    'enabled': {
+        'verb': "Enable",
+        'long_description': help_text['hsm_control_enabled']
+    },
+    'shutdown': {
+        'verb': "Shutdown",
+        'long_description': help_text['hsm_control_shutdown']
+    }
+}
+
+
 class ManagedFilesystem(StatefulObject, MeasuredEntity):
     __metaclass__ = DeletableDowncastableMetaclass
 
