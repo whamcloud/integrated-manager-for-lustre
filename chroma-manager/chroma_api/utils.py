@@ -223,12 +223,8 @@ class StatefulModelResource(CustomModelResource):
 
         batch = []
         for bundle in to_be_serialized['objects']:
-            obj = bundle.obj
-            so_id = obj.id
-            so_ct_key = ContentType.objects.get_for_model(
-                                                obj.downcast()).natural_key()
-
-            batch.append((so_ct_key, so_id,))
+            so_ct_key = ContentType.objects.get_for_model(bundle.obj.downcast()).natural_key()
+            batch.append((so_ct_key, bundle.obj.id,))
 
         computed_transitions = JobSchedulerClient.available_transitions(batch)
         computed_jobs = JobSchedulerClient.available_jobs(batch)
@@ -237,7 +233,20 @@ class StatefulModelResource(CustomModelResource):
         #  and install in the bundle for return
         for idx, bundle in enumerate(to_be_serialized['objects']):
 
+            # Refresh the obj.  At the top of this method bundle.obj related to the
+            # value in the DB at that time.  By the time we get here, after getting
+            # available transitions and jobs, it could be that another process has
+            # changed the state of obj.  In fact, when does that in this span of
+            # code that is ticket HYD-2714.  When the UI or any client calls this
+            # API, it just wants to know the jobs and trans, it doesn't know or really
+            # care what the state is coming in.  This refresh will make sure that we
+            # prepare the correct lists of return values for the actual value.
+            # NB:  This does use the fact that we have an SOA multi-process system using
+            # RPCs that is effectively tranfering state through an underlying DB.
+            bundle.obj = bundle.obj.__class__.objects.get(id=bundle.obj.id)
+
             obj_transitions = computed_transitions[str(bundle.obj.id)]
+
             verbed_trans = self._add_verb(bundle.obj, obj_transitions)
             obj_jobs = computed_jobs[str(bundle.obj.id)]
 
