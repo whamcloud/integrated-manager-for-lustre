@@ -72,12 +72,14 @@ realtime/node_modules: realtime/package.json $(NPM)
 	@echo "Setting up realtime module for development..."; \
 	$(PREFIXED_PROXIES) \
 	cd realtime && \
+	npm config set strict-ssl false && \
 	npm install
 
 chroma_ui_new/node_modules: chroma_ui_new/package.json $(NPM)
 	@echo "Setting up the New Ui for development..."; \
 	$(PREFIXED_PROXIES) \
 	cd chroma_ui_new && \
+    npm config set strict-ssl false && \
 	npm install
 
 gulp_build: $(NPM) realtime/node_modules chroma_ui_new/node_modules
