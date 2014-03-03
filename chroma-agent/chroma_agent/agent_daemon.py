@@ -189,10 +189,10 @@ def main():
 
         if not args.foreground:
             handlers = {
-                    signal.SIGTERM: teardown_callback,
-                    signal.SIGUSR1: decrease_loglevel,
-                    signal.SIGUSR2: increase_loglevel
-                }
+                signal.SIGTERM: teardown_callback,
+                signal.SIGUSR1: decrease_loglevel,
+                signal.SIGUSR2: increase_loglevel
+            }
             set_signal_handlers(handlers)
         else:
             signal.signal(signal.SIGINT, teardown_callback)
