@@ -24,31 +24,9 @@ from chroma_agent import shell
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 from collections import defaultdict
-import os
 import re
-import glob
 import time
 import itertools
-
-
-def normalize_device(device):
-    from chroma_agent.device_plugins.linux import DeviceHelper
-    _d = normalize_device._devices = getattr(normalize_device, '_devices', {})
-
-    d_majmin = DeviceHelper()._dev_major_minor(device)
-    u_device = os.path.realpath(device)
-    if not _d or u_device not in _d or d_majmin != DeviceHelper()._dev_major_minor(_d[u_device]):
-        lookup_paths = ["/dev/disk/by-id/*", "/dev/mapper/*"]
-
-        for p in lookup_paths:
-            for f in glob.glob(p):
-                _d[os.path.realpath(f)] = f
-
-        root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
-        if '/dev/root' not in _d and os.path.exists(root):
-            _d['/dev/root'] = root
-
-    return _d.get(u_device, u_device)
 
 
 class Mounts(FileSystemMixin):

@@ -23,11 +23,19 @@
 from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import shell
-from chroma_agent.utils import normalize_device, BlkId
+from chroma_agent.utils import BlkId
 
 import os
 import glob
 import re
+import errno
+# Python errno doesn't include this code
+errno.NO_MEDIA_ERRNO = 123
+
+MAPPERPATH = os.path.join('/dev', 'mapper')
+DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
+DISKBYPATHPATH = os.path.join('/dev', 'disk', 'by-path')
+MDRAIDPATH = os.path.join('/dev', 'md')
 
 
 class LinuxDevicePlugin(DevicePlugin):
@@ -106,14 +114,57 @@ class DeviceHelper(object):
         for device in source_devices:
             drives = [self._dev_major_minor(dp) for dp in device['device_paths']]
 
-            # Check that none of the drives in the array are None (i.e. not found) if we found them all
-            # then we create the mds entry.
+            # Check that none of the drives in the list are None (i.e. not found) if we found them all
+            # then we create the entry.
             if drives.count(None) == 0:
                 devices[device['uuid']] = {'path': device["path"],
                                            'block_device': device['mm'],
                                            'drives': drives}
 
+                # Finally add these devices to the canonical path list.
+                for device_path in device['device_paths']:
+                    self.add_normalized_device(device_path, device['path'])
+
         return devices
+
+    normalize_device_cache = {}
+
+    def normalized_device_path(self, device_path):
+        normalized_path = os.path.realpath(device_path)
+
+        if normalized_path not in DeviceHelper.normalize_device_cache:
+            lookup_paths = ["%s/*" % DISKBYIDPATH, "%s/*" % MAPPERPATH]
+
+            for path in lookup_paths:
+                for f in glob.glob(path):
+                    DeviceHelper.normalize_device_cache[os.path.realpath(f)] = f
+
+            root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
+
+            if os.path.exists(root):
+                DeviceHelper.normalize_device_cache['/dev/root'] = root
+
+        # This checks we have a completely normalized path, perhaps the stack means our current
+        # normal path can actually be normalized further. So if the root to normalization takes multiple
+        # steps this will deal with it
+        # So if /dev/sdx normalizes to /dev/mmapper/special-device
+        # but /dev/mmapper/special-device normalizaes to /dev/md/mdraid1
+        # /dev/sdx will normalize to /dev/md/mdraid1
+        while normalized_path in DeviceHelper.normalize_device_cache:
+            normalized_path = DeviceHelper.normalize_device_cache[normalized_path]
+
+        return normalized_path
+
+    def add_normalized_device(self, path, normalized_path):
+        '''
+        Add an entry to the normalized path list, adding to often does no harm and adding something that
+        is not completely canonical does no harm either, because the search routine is recursive so if
+        A=>B and B=>C then A,B and C will all evaluate to the canonical value of C.
+        :param path: device path
+        :param normalized_path: canonical path
+        :return: No return value
+        '''
+        DeviceHelper.normalize_device_cache[path] = normalized_path
 
 
 class BlockDevices(DeviceHelper):
@@ -172,9 +223,9 @@ class BlockDevices(DeviceHelper):
         return info
 
     def _parse_sys_block(self):
-        mapper_devs = self._find_block_devs("/dev/mapper/")
-        by_id_nodes = self._find_block_devs("/dev/disk/by-id/")
-        by_path_nodes = self._find_block_devs("/dev/disk/by-path/")
+        mapper_devs = self._find_block_devs(MAPPERPATH)
+        by_id_nodes = self._find_block_devs(DISKBYIDPATH)
+        by_path_nodes = self._find_block_devs(DISKBYPATHPATH)
 
         def get_path(major_minor, device_name):
             # Try to find device nodes for these:
@@ -218,14 +269,11 @@ class BlockDevices(DeviceHelper):
             try:
                 open("/dev/%s" % device_name, 'w')
             except IOError, e:
-                import errno
-                # Python errno doesn't include this code
-                NO_MEDIA_ERRNO = 123
-                if e.errno == errno.EROFS or e.errno == NO_MEDIA_ERRNO:
+                if e.errno == errno.EROFS or e.errno == errno.NO_MEDIA_ERRNO:
                     return
 
             # Resolve a major:minor to a /dev/foo
-            path = normalize_device(get_path(major_minor, device_name))
+            path = self.normalized_device_path(get_path(major_minor, device_name))
             if path:
                 block_device_nodes[major_minor] = self._device_node(device_name, major_minor, path, size, parent)
                 node_block_devices[path] = major_minor
@@ -275,7 +323,7 @@ class MdRaid(DeviceHelper):
     def _get_md(self):
         try:
             matches = re.finditer("^(md\d+) : active", open('/proc/mdstat').read().strip(), flags = re.MULTILINE)
-            dev_md_nodes = self._find_block_devs("/dev/md/")
+            dev_md_nodes = self._find_block_devs(MDRAIDPATH)
 
             devs = []
             for match in matches:
@@ -295,6 +343,7 @@ class MdRaid(DeviceHelper):
                     device_uuid = re.search("UUID=(.*)[ \\n]", detail.strip(), flags = re.MULTILINE).group(1)
                     device_list_csv = re.search("^\s+devices=(.*)$", detail.strip(), flags = re.MULTILINE).group(1)
                     device_list = device_list_csv.split(",")
+
                     devs.append({
                         "uuid": device_uuid,
                         "path": device_path,
@@ -334,7 +383,7 @@ class EMCPower(DeviceHelper):
                     out = shell.try_run(['powermt', 'display', 'dev=%s' % name])
 
                     # The command above returns something like below, so use the === lines as keys to search for different things.
-                    # above search for the logcial device ID and below search for the devices used by the emcpower device.
+                    # above search for the logical device ID and below search for the devices used by the emcpower device.
 
                     # VNX ID=APM00122204204 [NGS1]\n"
                     # Logical device ID=600601603BC12D00C4CECB092F1FE311 [LUN 11]\n"
@@ -382,7 +431,7 @@ class EMCPower(DeviceHelper):
             return []
 
 
-class DmsetupTable(object):
+class DmsetupTable(DeviceHelper):
     """Uses various devicemapper commands to learn about LVM and Multipath"""
 
     def __init__(self, block_devices):
@@ -496,12 +545,12 @@ class DmsetupTable(object):
 
         def _read_lv_partition(block_device, parent_lv_name, vg_name):
             # HYD-744: FIXME: compose path in a way that copes with hyphens
-            parent_block_device = self.block_devices.node_block_devices["/dev/mapper/%s-%s" % (vg_name, parent_lv_name)]
+            parent_block_device = self.block_devices.node_block_devices["%s/%s-%s" % (MAPPERPATH, vg_name, parent_lv_name)]
             self.block_devices.block_device_nodes[block_device]['parent'] = parent_block_device
 
         def _read_mpath_partition(block_device, parent_mpath_name):
             # A non-LV partition
-            parent_block_device = self.block_devices.node_block_devices["/dev/mapper/%s" % parent_mpath_name]
+            parent_block_device = self.block_devices.node_block_devices["%s/%s" % (MAPPERPATH, parent_mpath_name)]
             self.block_devices.block_device_nodes[block_device]['parent'] = parent_block_device
 
         # Make a note of which VGs/LVs are in the table so that we can
@@ -514,7 +563,7 @@ class DmsetupTable(object):
             name = tokens[0].strip(":")
             dm_type = tokens[3]
 
-            node_path = os.path.join("/dev/mapper", name)
+            node_path = os.path.join(MAPPERPATH, name)
             block_device = self.block_devices.node_block_devices[node_path]
 
             if dm_type in ['linear', 'striped']:
@@ -594,6 +643,10 @@ class DmsetupTable(object):
                 devices = [self.block_devices.block_device_nodes[i] for i in major_minors]
                 if name in self.mpaths:
                     raise RuntimeError("Duplicated mpath device %s" % name)
+
+                # Add this devices to the canonical path list.
+                for device in devices:
+                    self.add_normalized_device(device['path'], "%s/%s" % (MAPPERPATH, name))
 
                 self.mpaths[name] = {
                     "name": name,

@@ -2,7 +2,7 @@ import json
 import mock
 import os
 from django.utils import unittest
-from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems, MdRaid, EMCPower
+from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems, MdRaid, EMCPower, DeviceHelper
 from tests.test_utils import patch_open, patch_run
 
 
@@ -17,7 +17,24 @@ class MockDmsetupTable(DmsetupTable):
         self._parse_dm_table(dmsetup_data)
 
 
-class DummyDataTestCase(unittest.TestCase):
+class LinuxAgentTests(unittest.TestCase):
+    def assertNormalizedPaths(self, normalized_values):
+        class mock_open:
+            def __init__(self, fname):
+                pass
+
+            def read(self):
+                return "root=/not/a/real/path"
+
+        with mock.patch('__builtin__.open', mock_open):
+            device_helper = DeviceHelper()
+
+            for path, normalized_path in normalized_values.items():
+                self.assertEqual(normalized_path, device_helper.normalized_device_path(path),
+                                 "Normalized path failure %s != %s" % (normalized_path, device_helper.normalized_device_path(path)))
+
+
+class DummyDataTestCase(LinuxAgentTests):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/device_plugins/linux")
@@ -27,51 +44,65 @@ class DummyDataTestCase(unittest.TestCase):
 
 
 class TestDmSetupParse(DummyDataTestCase):
-    def test_dmsetup_table(self):
-        """This is a regression test using data from a test/dev machine which includes LVs and multipath, all the data
-           is just as it is when run through on Chroma 1.0.0.0: this really is a *regression* test rather than
-           a correctness test.  The system from which this data was gathered ran CentOS 5.6"""
-        self._test_dmsetup('devices_1.txt', 'dmsetup_1.txt', 'mpaths_1.txt')
-
-    def _test_dmsetup(self, devices_filename, dmsetup_filename, mpaths_filename):
+    def _test_dmsetup(self, devices_filename, dmsetup_filename, mpaths_filename, normalized_paths_filename):
         devices_data = json.loads(self.load(devices_filename))
         dmsetup_data = self.load(dmsetup_filename)
         actual_mpaths = MockDmsetupTable(dmsetup_data, devices_data).mpaths
         expected_mpaths = json.loads(self.load(mpaths_filename))
+        expected_normalized_paths = json.loads(self.load(normalized_paths_filename))
 
         self.assertDictEqual(actual_mpaths, expected_mpaths)
+        self.assertNormalizedPaths(expected_normalized_paths)
+
+    def test_dmsetup_table(self):
+        """This is a regression test using data from a test/dev machine which includes LVs and multipath, all the data
+           is just as it is when run through on Chroma 1.0.0.0: this really is a *regression* test rather than
+           a correctness test.  The system from which this data was gathered ran CentOS 5.6"""
+        self._test_dmsetup('devices_1.json',
+                           'dmsetup_1.json',
+                           'mpaths_1.json',
+                           'normalized_1.json')
 
     def test_HYD_1383(self):
         """Minimal reproducer for HYD-1383.  The `dmsetup table` output is authentic, the other inputs are hand crafted to
            let it run through far enough to experience failure."""
-        self._test_dmsetup('devices_NTAP-12-min.txt', 'dmsetup_NTAP-12-min.txt', 'mpaths_NTAP-12-min.txt')
+        self._test_dmsetup('devices_NTAP-12-min.json',
+                           'dmsetup_NTAP-12-min.json',
+                           'mpaths_NTAP-12-min.json',
+                           'normalized_NTAP-12-min.json')
 
     def test_HYD_1385(self):
         """Minimal reproducer for HYD-1385.  The `dmsetup table` output is authentic, the other inputs are hand crafted to
            let it run through far enough to experience failure."""
-        self._test_dmsetup('devices_HYD-1385.txt', 'dmsetup_HYD-1385.txt', 'mpaths_HYD-1385.txt')
+        self._test_dmsetup('devices_HYD-1385.json',
+                           'dmsetup_HYD-1385.json',
+                           'mpaths_HYD-1385.json',
+                           'normalized_HYD-1385.json')
 
     def test_HYD_1390(self):
         """Minimal reproducer for HYD-1385.  The `dmsetup table` output is authentic, the other inputs are hand crafted to
            let it run through far enough to experience failure."""
-        self._test_dmsetup('devices_HYD-1390.txt', 'dmsetup_HYD-1390.txt', 'mpaths_HYD-1390.txt')
+        self._test_dmsetup('devices_HYD-1390.json',
+                           'dmsetup_HYD-1390.json',
+                           'mpaths_HYD-1390.json',
+                           'normalized_HYD-1390.json')
 
 
 class TestNonLocalLvmComponents(DummyDataTestCase):
     def test_HYD_2431(self):
-        devices_data = json.loads(self.load('devices_HYD-2431.txt'))
-        dmsetup_data = self.load('dmsetup_HYD-2431.txt')
+        devices_data = json.loads(self.load('devices_HYD-2431.json'))
+        dmsetup_data = self.load('dmsetup_HYD-2431.json')
 
         actual_lvs = MockDmsetupTable(dmsetup_data, devices_data).lvs
-        expected_lvs = json.loads(self.load('lvs_HYD-2431.txt'))
+        expected_lvs = json.loads(self.load('lvs_HYD-2431.json'))
         self.assertDictEqual(actual_lvs, expected_lvs)
 
         actual_vgs = MockDmsetupTable(dmsetup_data, devices_data).vgs
-        expected_vgs = json.loads(self.load('vgs_HYD-2431.txt'))
+        expected_vgs = json.loads(self.load('vgs_HYD-2431.json'))
         self.assertDictEqual(actual_vgs, expected_vgs)
 
 
-class TestLocalFilesystem(unittest.TestCase):
+class TestLocalFilesystem(LinuxAgentTests):
     def test_HYD_1968(self):
         """Reproducer for HYD-1968, check that local filesystems are reported correctly even when they are
            specified in fstab by UUID rather than device path"""
@@ -115,7 +146,7 @@ UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
                     })
 
 
-class TestMDRaid(unittest.TestCase):
+class TestMDRaid(LinuxAgentTests):
 
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -148,7 +179,12 @@ unused devices: <none>\n""",
                                               'path': '/dev/md/md-name-test:1',
                                               'mm': '9:128',
                                               'device_paths': ['/dev/sdd']
-                                          }]
+                                          }],
+                              'normalized_names': {"/dev/sdd": "/dev/md/md-name-test:1",
+                                                   "/dev/md/md-name-test:1": "/dev/md/md-name-test:1",
+                                                   "/dev/sdb": "/dev/md/md-name-test:123",
+                                                   "/dev/sdc": "/dev/md/md-name-test:123",
+                                                   "/dev/md/md-name-test:123": "/dev/md/md-name-test:123"}
         }
 
     def _load(self, filename):
@@ -199,7 +235,7 @@ unused devices: <none>\n""",
                             return MdRaid(dm_setup_table.block_devices).all()
 
     def test_mdraid_pass(self):
-        mds = self._setup_md_raid('devices_MdRaid_EMCPower.txt', 'dmsetup_MdRaid_EMCPower.txt', self.md_value_good)
+        mds = self._setup_md_raid('devices_MdRaid_EMCPower.json', 'dmsetup_MdRaid_EMCPower.json', self.md_value_good)
 
         self.assertTrue(len(mds) == len(self.md_value_good['results']))
 
@@ -212,16 +248,18 @@ unused devices: <none>\n""",
             for i in range(0, len(value['device_paths'])):
                 self.assertTrue(mds[uuid]['drives'][i] == self.mock_dev_major_minor(value['device_paths'][i]))
 
+        self.assertNormalizedPaths(self.md_value_good['normalized_names'])
+
     # This should not fail as such, but the dmsetup data doesn't contain the device info for the md device so the
     # data is inconsistent. The code should deal with this and return an mddevice with empty drives..
     def test_mdraid_fail(self):
-        mds = self._setup_md_raid('devices_HYD-1385.txt', 'dmsetup_HYD-1385.txt', self.md_value_good)
+        mds = self._setup_md_raid('devices_HYD-1385.json', 'dmsetup_HYD-1385.json', self.md_value_good)
 
         # No data should come back
         self.assertTrue(len(mds) == 0)
 
 
-class TestEMCPower(unittest.TestCase):
+class TestEMCPower(LinuxAgentTests):
 
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
@@ -263,7 +301,14 @@ class TestEMCPower(unittest.TestCase):
                                                     'path': '/dev/emcpowerbb',
                                                     'mm': '98:12',
                                                     'device_paths': ['/dev/sdf', '/dev/sdd', '/dev/sdc']
-                                                }]
+                                                }],
+                                    'normalized_names': {"/dev/sdb": "/dev/emcpowera",
+                                                         "/dev/sde": "/dev/emcpowera",
+                                                         "/dev/emcpowera": "/dev/emcpowera",
+                                                         "/dev/sdc": "/dev/emcpowerbb",
+                                                         "/dev/sdd": "/dev/emcpowerbb",
+                                                         "/dev/sdf": "/dev/emcpowerbb",
+                                                         "/dev/emcpowerbb": "/dev/emcpowerbb"}
         }
 
     def _load(self, filename):
@@ -307,7 +352,7 @@ class TestEMCPower(unittest.TestCase):
                             return EMCPower(dm_setup_table.block_devices).all()
 
     def test_emcpower_pass(self):
-        emcpowers = self._setup_emcpower('devices_MdRaid_EMCPower.txt', 'dmsetup_MdRaid_EMCPower.txt', self.emcpower_value_good)
+        emcpowers = self._setup_emcpower('devices_MdRaid_EMCPower.json', 'dmsetup_MdRaid_EMCPower.json', self.emcpower_value_good)
 
         self.assertTrue(len(emcpowers) == len(self.emcpower_value_good['results']))
 
@@ -320,10 +365,12 @@ class TestEMCPower(unittest.TestCase):
             for i in range(0, len(value['device_paths'])):
                 self.assertTrue(emcpowers[uuid]['drives'][i] == self.mock_dev_major_minor(value['device_paths'][i]))
 
+        self.assertNormalizedPaths(self.emcpower_value_good['normalized_names'])
+
     # This should not fail as such, but the data doesn't contain the emcpower info for the so the
     # data is inconsistent. The code should deal with this and return an emcpowers with empty drives..
     def test_emcpower_fail(self):
-        emcpowers = self._setup_emcpower('devices_HYD-1385.txt', 'dmsetup_HYD-1385.txt', self.emcpower_value_good)
+        emcpowers = self._setup_emcpower('devices_HYD-1385.json', 'dmsetup_HYD-1385.json', self.emcpower_value_good)
 
         # No data should come back
         self.assertTrue(len(emcpowers) == 0)

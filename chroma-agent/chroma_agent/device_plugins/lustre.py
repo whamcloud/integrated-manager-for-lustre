@@ -28,7 +28,8 @@ import glob
 import datetime
 import ConfigParser
 
-from chroma_agent.utils import Mounts, normalize_device
+from chroma_agent.utils import Mounts
+from chroma_agent.device_plugins.linux import DeviceHelper
 from chroma_agent import shell
 from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
@@ -99,7 +100,7 @@ def scan_packages():
     return repo_packages
 
 
-class LustrePlugin(DevicePlugin):
+class LustrePlugin(DevicePlugin, DeviceHelper):
     def _scan_mounts(self):
         mounts = {}
 
@@ -119,7 +120,7 @@ class LustrePlugin(DevicePlugin):
                 self._mount_cache[device]['fs_uuid'] = fs_uuid = shell.try_run(["blkid", "-o", "value", "-s", "UUID", device]).strip()
                 self._mount_cache[device]['fs_label'] = fs_label = shell.try_run(["blkid", "-o", "value", "-s", "LABEL", device]).strip()
 
-            dev_normalized = normalize_device(device)
+            dev_normalized = self.normalized_device_path(device)
 
             recovery_status = {}
             try:

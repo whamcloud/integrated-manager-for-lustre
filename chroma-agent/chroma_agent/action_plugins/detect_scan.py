@@ -23,120 +23,161 @@
 import os
 import re
 import subprocess
+from tempfile import mktemp
+from collections import defaultdict
 
-from chroma_agent.utils import normalize_device, Mounts, BlkId
+from chroma_agent.utils import Mounts, BlkId
 from chroma_agent import shell
+from chroma_agent.device_plugins.linux import DeviceHelper
 
 
-def get_local_targets():
-    # Working set: accumulate device paths for each (uuid, name).  This is
-    # necessary because in multipathed environments we will see the same
-    # lustre target on more than one block device.  The reason we use name
-    # as well as UUID is that two logical targets can have the same UUID
-    # when we see a combined MGS+MDT
-    uuid_name_to_target = {}
+class LocalTargets(DeviceHelper):
+    '''
+    Allows local targets to be examined. Not the targets are only examined once with the results cached. Detecting change
+    therefore requires a new instance to be created and queried.
+    '''
 
-    for blkid_device in BlkId().all():
-        dev = normalize_device(blkid_device['path'])
+    def __init__(self):
+        super(LocalTargets, self).__init__()
+        self.targets = self._get_targets()
 
-        rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", dev])
-        if rc != 0:
-            # Not lustre
-            continue
+    def _get_targets(self):
+        # Working set: accumulate device paths for each (uuid, name).  This is
+        # necessary because in multipathed environments we will see the same
+        # lustre target on more than one block device.  The reason we use name
+        # as well as UUID is that two logical targets can have the same UUID
+        # when we see a combined MGS+MDT
+        uuid_name_to_target = {}
 
-        # For a Lustre block device, extract name and params
-        # ==================================================
-        name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
-        flags = int(re.search("Flags:\\s+(0x[a-fA-F0-9]+)\n", tunefs_text).group(1), 16)
-        params_re = re.search("Parameters:\\ ([^\n]+)\n", tunefs_text)
-        if params_re:
-            # Dictionary of parameter name to list of instance values
-            params = {}
-            # FIXME: naive parse: can these lines be quoted/escaped/have spaces?
-            for param, value in [t.split('=') for t in params_re.group(1).split()]:
-                if not param in params:
-                    params[param] = []
-                params[param].append(value)
-        else:
-            params = {}
+        for blkid_device in BlkId().all():
+            dev = self.normalized_device_path(blkid_device['path'])
 
-        if name.find("ffff") != -1:
-            # Do not report unregistered lustre targets
-            continue
+            rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", dev])
+            if rc != 0:
+                # Not lustre
+                continue
 
-        mounted = dev in set([normalize_device(m[0]) for m in Mounts().all()])
+            # For a Lustre block device, extract name and params
+            # ==================================================
+            name = re.search("Target:\\s+(.*)\n", tunefs_text).group(1)
+            flags = int(re.search("Flags:\\s+(0x[a-fA-F0-9]+)\n", tunefs_text).group(1), 16)
+            params_re = re.search("Parameters:\\ ([^\n]+)\n", tunefs_text)
+            if params_re:
+                # Dictionary of parameter name to list of instance values
+                params = {}
+                # FIXME: naive parse: can these lines be quoted/escaped/have spaces?
+                for param, value in [t.split('=') for t in params_re.group(1).split()]:
+                    if not param in params:
+                        params[param] = []
+                    params[param].append(value)
+            else:
+                params = {}
 
-        if flags & 0x0005 == 0x0005:
-            # For combined MGS/MDT volumes, synthesise an 'MGS'
-            names = ["MGS", name]
-        else:
-            names = [name]
+            if name.find("ffff") != -1:
+                # Do not report unregistered lustre targets
+                continue
 
-        for name in names:
-            try:
-                target_dict = uuid_name_to_target[(blkid_device['uuid'], name)]
-                target_dict['devices'].append(dev)
-            except KeyError:
-                target_dict = {"name": name,
-                               "uuid": blkid_device['uuid'],
-                               "params": params,
-                               "devices": [dev],
-                               "mounted": mounted}
-                uuid_name_to_target[(blkid_device['uuid'], name)] = target_dict
+            mounted = dev in set([self.normalized_device_path(m[0]) for m in Mounts().all()])
 
-    return uuid_name_to_target.values()
+            if flags & 0x0005 == 0x0005:
+                # For combined MGS/MDT volumes, synthesise an 'MGS'
+                names = ["MGS", name]
+            else:
+                names = [name]
+
+            for name in names:
+                try:
+                    target_dict = uuid_name_to_target[(blkid_device['uuid'], name)]
+                    target_dict['devices'].append(dev)
+                except KeyError:
+                    target_dict = {"name": name,
+                                   "uuid": blkid_device['uuid'],
+                                   "params": params,
+                                   "devices": [dev],
+                                   "mounted": mounted}
+                    uuid_name_to_target[(blkid_device['uuid'], name)] = target_dict
+
+        return uuid_name_to_target.values()
 
 
-def get_mgs_targets(local_targets):
-    """If there is an MGS in local_targets, use debugfs to
-       get a list of targets.  Return a dict of filesystem->(list of targets)"""
+class MgsTargets(object):
     TARGET_NAME_REGEX = "([\w-]+)-(MDT|OST)\w+"
-    mgs_target = None
-    for t in local_targets:
-        if t["name"] == "MGS" and t['mounted']:
-            mgs_target = t
-    if not mgs_target:
-        return ({}, {})
 
-    conf_params = {}
-    mgs_targets = {}
-    dev = mgs_target["devices"][0]
-    ls = shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", dev])
-    filesystems = []
-    targets = []
-    for line in ls.split("\n"):
-        try:
-            name = line.split()[8]
-            size = line.split()[5]
-        except IndexError:
-            pass
+    def __init__(self, local_targets):
+        super(MgsTargets, self).__init__()
+        self.filesystems = defaultdict(lambda: [])
+        self.conf_params = defaultdict(lambda: defaultdict(lambda: {}))
 
-        if not size:
-            continue
+        self._get_targets(local_targets)
 
-        match = re.search("([\w-]+)-client", name)
-        if match is not None:
-            filesystems.append(match.group(1).__str__())
+    def _get_targets(self, local_targets):
+        """If there is an MGS in the local targets, use debugfs to
+           get a list of targets.  Return a dict of filesystem->(list of targets)"""
 
-        match = re.search(TARGET_NAME_REGEX, name)
-        if match != None:
-            targets.append(match.group(0).__str__())
+        mgs_target = None
 
-    def read_log(conf_param_type, conf_param_name, log_name):
+        for t in local_targets:
+            if t["name"] == "MGS" and t['mounted']:
+                mgs_target = t
+
+        if not mgs_target:
+            return
+
+        dev = mgs_target["devices"][0]
+
+        ls = shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", dev])
+        filesystems = []
+        targets = []
+        for line in ls.split("\n"):
+            try:
+                name = line.split()[8]
+
+                match = re.search("([\w-]+)-client", name)
+                if match is not None:
+                    filesystems.append(match.group(1).__str__())
+
+                match = re.search(self.TARGET_NAME_REGEX, name)
+                if match is not None:
+                    targets.append(match.group(0).__str__())
+            except IndexError:
+                pass
+
+        # Read config log "<fsname>-client" for each filesystem
+        for fs in filesystems:
+            self._read_log("filesystem", fs, "%s-client" % fs, dev)
+            self._read_log("filesystem", fs, "%s-param" % fs, dev)
+
+        # Read config logs "testfs-MDT0000" etc
+        for target in targets:
+            self._read_log("target", target, target, dev)
+
+    def _read_log(self, conf_param_type, conf_param_name, log_name, dev):
         # NB: would use NamedTemporaryFile if we didn't support python 2.4
-        from tempfile import mktemp
+        """
+        Uses debugfs to parse information about the filesystem on a device. Return any mgs info
+        and config parameters about that device.
+
+        :param conf_param_type: The type of configuration parameter to store
+        :type conf_param_type: str
+        :param conf_param_name: The name of the configuration parameter to store
+        :type conf_param_name: dict
+        :param log_name: The log name to dump the information about dev into
+        :type log_name: str
+        :param dev: The dev[vice] to parse for log information
+        :type dev: str
+
+        Returns: MgsTargetInfo containing targets and conf found.
+        """
+
         tmpfile = mktemp()
+
         try:
             shell.try_run(["debugfs", "-c", "-R", "dump CONFIGS/%s %s" % (log_name, tmpfile), dev])
-            if not os.path.exists(tmpfile):
+            if not os.path.exists(tmpfile) or os.path.getsize(tmpfile) == 0:
                 # debugfs returns 0 whether it succeeds or not, find out whether
-                # dump worked by looking for output file
+                # dump worked by looking for output file of some length. (LU-632)
                 return
 
-            if os.path.getsize(tmpfile) == 0:
-                # Work around LU-632, wherein an empty config log causes llog_reader to hit
-                # an infinite loop.
-                return
             client_log = subprocess.Popen(["llog_reader", tmpfile], stdout=subprocess.PIPE).stdout.read()
 
             entries = client_log.split("\n#")[1:]
@@ -152,7 +193,7 @@ def get_mgs_targets(local_targets):
                     uuid = re.search("1:(.*)", tokens[3]).group(1)
                     nid = re.search("2:(.*)", tokens[4]).group(1)
 
-                    mgs_targets[fs_name].append({
+                    self.filesystems[fs_name].append({
                         "uuid": uuid,
                         "name": label,
                         "nid": nid})
@@ -171,10 +212,10 @@ def get_mgs_targets(local_targets):
                         # setting
                         param_type = conf_param_type
                         param_name = conf_param_name
-                    elif re.search(TARGET_NAME_REGEX, object):
+                    elif re.search(self.TARGET_NAME_REGEX, object):
                         # Identify target params
                         param_type = 'target'
-                        param_name = re.search(TARGET_NAME_REGEX, object).group(0)
+                        param_name = re.search(self.TARGET_NAME_REGEX, object).group(0)
                     else:
                         # Fall through here for things like 0:testfs-llite, 0:testfs-clilov
                         param_type = conf_param_type
@@ -189,38 +230,19 @@ def get_mgs_targets(local_targets):
                     if clear:
                         val = None
 
-                    if not param_type in conf_params:
-                        conf_params[param_type] = {}
-                    if not param_name in conf_params[param_type]:
-                        conf_params[param_type][param_name] = {}
-                    conf_params[param_type][param_name][key] = val
+                    self.conf_params[param_type][param_name][key] = val
         finally:
             if os.path.exists(tmpfile):
                 os.unlink(tmpfile)
 
-    # Read config log "<fsname>-client" for each filesystem
-    for fs in filesystems:
-        mgs_targets[fs] = []
-        read_log("filesystem", fs, "%s-client" % fs)
-        read_log("filesystem", fs, "%s-param" % fs)
-        # Don't bother reporting on a FS entry with no targets
-        if len(mgs_targets[fs]) == 0:
-            del mgs_targets[fs]
-
-    # Read config logs "testfs-MDT0000" etc
-    for target in targets:
-        read_log("target", target, target)
-
-    return (mgs_targets, conf_params)
-
 
 def detect_scan():
-    local_targets = get_local_targets()
-    mgs_targets, mgs_conf_params = get_mgs_targets(local_targets)
+    local_targets = LocalTargets()
+    mgs_targets = MgsTargets(local_targets.targets)
 
-    return {"local_targets": local_targets,
-        "mgs_targets": mgs_targets,
-        "mgs_conf_params": mgs_conf_params}
+    return {"local_targets": local_targets.targets,
+            "mgs_targets": mgs_targets.filesystems,
+            "mgs_conf_params": mgs_targets.conf_params}
 
 
 ACTIONS = [detect_scan]
