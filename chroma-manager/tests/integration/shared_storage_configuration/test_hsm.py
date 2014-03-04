@@ -75,7 +75,7 @@ class ManagedCopytoolTestCase(ChromaIntegrationTestCase):
             host = self.worker['resource_uri'],
             bin_path = '/usr/sbin/lhsmtool_posix',
             archive = 1,
-            mountpoint = "/mnt/lustre_clients/testfs",
+            mountpoint = "/mnt/testfs",
             hsm_arguments = "-p /tmp"
         )
         response = self.chroma_manager.post(

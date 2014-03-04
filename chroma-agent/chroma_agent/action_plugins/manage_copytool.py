@@ -74,11 +74,12 @@ def stop_monitored_copytool(id):
             raise e
 
 
-def configure_copytool(id, index, bin_path, archive_number, filesystem, hsm_arguments):
+def configure_copytool(id, index, bin_path, archive_number, filesystem, mountpoint, hsm_arguments):
     copytool = Copytool(id = id,
                         index = index,
                         bin_path = bin_path,
                         filesystem = filesystem,
+                        mountpoint = mountpoint,
                         hsm_arguments = hsm_arguments,
                         archive_number = archive_number)
 
@@ -107,10 +108,10 @@ def unconfigure_copytool(id):
     return id
 
 
-def update_copytool(id, index=None, bin_path=None, archive_number=None, filesystem=None, hsm_arguments=None):
+def update_copytool(id, index=None, bin_path=None, archive_number=None, filesystem=None, mountpoint=None, hsm_arguments=None):
     # Need to define the kwargs for argparse -- using an inner function
     # is simpler than inspect.getargvalues() and other hackery.
-    _update_copytool(id, index=index, bin_path=bin_path, archive_number=archive_number, filesystem=filesystem, hsm_arguments=hsm_arguments)
+    _update_copytool(id, index=index, bin_path=bin_path, archive_number=archive_number, filesystem=filesystem, mountpoint=mountpoint, hsm_arguments=hsm_arguments)
 
 
 def _update_copytool(id, **kwargs):
@@ -130,7 +131,8 @@ def _update_copytool(id, **kwargs):
     # register/start the new instance
     configure_copytool(new_ct['id'], new_ct['index'],
                       new_ct['bin_path'], new_ct['archive_number'],
-                      new_ct['filesystem'], new_ct['hsm_arguments'])
+                      new_ct['filesystem'], new_ct['mountpoint'],
+                      new_ct['hsm_arguments'])
     start_monitored_copytool(id)
 
     return id
@@ -149,7 +151,6 @@ def _copytool_vars(id):
     copytool = Copytool(**config.get('copytools', id))
 
     ct = copytool.as_dict()
-    ct['lustre_mountpoint'] = copytool.mountpoint
     ct['event_fifo'] = copytool.event_fifo
     ct['report_interval'] = COPYTOOL_PROGRESS_INTERVAL
 

@@ -19,10 +19,12 @@ class CopytoolTestCase(unittest.TestCase):
         self.ct_id = '42'
         self.ct_bin_path = '/usr/sbin/lhsmtool_foo'
         self.ct_filesystem = 'testfs'
+        self.ct_mountpoint = '/mnt/testfs'
         self.ct_archive = 2
         self.ct_index = 0
         self.ct = Copytool(self.ct_id, self.ct_index, self.ct_bin_path,
-                           self.ct_archive, self.ct_filesystem, "")
+                           self.ct_archive, self.ct_filesystem,
+                           self.ct_mountpoint, "")
 
         self.addCleanup(patch.stopall)
 
@@ -37,12 +39,6 @@ class CopytoolTestCase(unittest.TestCase):
         self.assertEqual(self.ct.event_fifo,
                          '/var/spool/%s-events' % self.ct)
 
-    def test_copytool_mountpoint(self):
-        self.mock_config.set('settings', 'agent',
-                             {'lustre_client_root': '/mnt/lustre'})
-        self.assertEqual(self.ct.mountpoint,
-                         '/mnt/lustre/%s' % self.ct.filesystem)
-
     def test_copytool_as_dict(self):
         self.assertDictEqual(self.ct.as_dict(),
                              dict(id = self.ct.id,
@@ -50,6 +46,7 @@ class CopytoolTestCase(unittest.TestCase):
                                   bin_path = self.ct.bin_path,
                                   archive_number = self.ct.archive_number,
                                   filesystem = self.ct.filesystem,
+                                  mountpoint = self.ct.mountpoint,
                                   hsm_arguments = self.ct.hsm_arguments))
 
 
