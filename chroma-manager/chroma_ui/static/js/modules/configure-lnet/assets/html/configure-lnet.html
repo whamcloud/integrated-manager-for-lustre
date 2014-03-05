@@ -1,0 +1,25 @@
+<div class="configure-lnet">
+    <div class="modal-header">
+        <h2>NID Configuration for ((configureLnetCtrl.hostName))</h2>
+    </div>
+    <div class="modal-body" style="overflow: visible;">
+      <div ng-show="configureLnetCtrl.saving" class="alert alert-info">
+        Saving <i class="icon-spinner icon-spin"></i>
+      </div>
+      <div class="well">
+        <h2 ng-show="!configureLnetCtrl.resolved">Loading... <i class="icon-spinner icon-spin"></i></h2>
+        <ul ng-show="configureLnetCtrl.resolved">
+          <li ng-repeat="networkInterface in configureLnetCtrl.networkInterfaces | orderBy:'name'">
+            <label>((networkInterface.name))</label>
+            <label>((networkInterface.inet4_address))</label>
+            <select ng-model="networkInterface.nid.lnd_network" ng-options="option.value as option.name for option in configureLnetCtrl.options">
+            </select>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a ng-click="configureLnetCtrl.close()" class="btn">Close</a>
+      <a ng-click="configureLnetCtrl.save()" class="btn btn-primary" ng-disabled="configureLnetCtrl.saving">Save</a>
+    </div>
+</div>

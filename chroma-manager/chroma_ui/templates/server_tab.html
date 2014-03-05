@@ -34,7 +34,10 @@
 
     function init()
     {
-      var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
+      var injector = angular.element('html').injector(),
+        generateCommandDropdown = injector.get('generateCommandDropdown'),
+        $compile = injector.get('$compile'),
+        $rootScope = injector.get('$rootScope');
 
       $('#server_configuration').dataTable( {
         bServerSide: true,
@@ -45,10 +48,15 @@
         sAjaxSource: 'host/',
         fnServerData: function(url, data, callback, settings) {
           Api.get_datatables(url, data, function(data) {
-            var processed_data = [];
             $.each(data.aaData, function(i, row) {
               var server = $.extend({}, row);
+              var template = ('<configure-lnet-button resource-uri="%s" host_id="%s" host_name="%s" state="%s">' +
+              '</configure-lnet-button>').sprintf(
+                 server.resource_uri, server.id, server.nodename, server.state
+                );
+
               row['state'] = LiveObject.state(server);
+              row['configure'] = template;
               row['actions'] = '';
               row['icons'] = LiveObject.icons(server);
               /* Although the value comes from the 'label' attribute, we name
@@ -66,11 +74,30 @@
         "oLanguage": {
             "sEmptyTable": "No Servers to display"
         },
-        fnRowCallback: generateCommandDropdown.dataTableCallback(3),
+        fnRowCallback: function (row, data) {
+          var $scope = $rootScope.$new(),
+            template = row.querySelector('.configure-cell').children[0];
+
+          $scope.safeApply(function () {
+            var link = $compile(template),
+              fragment = link($scope);
+
+            fragment.bind('$destroy', function () {
+              $scope.safeApply(function () { $scope.$destroy(); }, $scope);
+
+              fragment.unbind('$destroy');
+            });
+          }, $scope);
+
+          generateCommandDropdown.dataTableCallback(4)(row, data);
+
+          return row;
+        },
         aaSort: [[0, 'asc']],
         "aoColumns": [
           { "sClass": 'txtleft', mDataProp: 'fqdn', bSortable: true},
           { "sClass": 'txtcenter', mDataProp: 'state', bSortable: false},
+          { "sClass": 'txtcenter configure-cell', mDataProp: 'configure', bSortable: false},
           { "sClass": 'txtcenter actions-cell', bSortable: false, mDataProp: 'actions'},
           { "sClass": 'txtcenter', bSortable: false, mDataProp: 'icons'}
         ]
@@ -224,14 +251,21 @@
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="server_configuration" width="100%">
   <thead>
     <tr>
-      <th width="85%">Hostname</th>
+      <th width="84%">Hostname</th>
       <th width="13%"><a class='help_hover' data-topic='lnet_state'>LNet State</a></th>
+      <th width="1%">Configure LNet</th>
       <th width="1%"></th>
       <th width="1%"></th>
     </tr>
   </thead>
   <tbody id="server_configuration_content">
-    <tr><td></td><td></td><td></td><td></td></tr>
+    <tr>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
   </tbody>
 </table>
 
