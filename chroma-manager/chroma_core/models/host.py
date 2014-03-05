@@ -1514,6 +1514,9 @@ class UpdatePackagesStep(RebootIfNeededStep):
         else:
             self.log("No updates installed on %s" % host)
 
+        # Upgrade of pacemaker packages could have left it disabled
+        self.invoke_agent(kwargs['host'], 'enable_pacemaker')
+
         # Check if we are running the required (lustre) kernel
         kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status')
         reboot_needed = (kernel_status['running'] != kernel_status['required']
