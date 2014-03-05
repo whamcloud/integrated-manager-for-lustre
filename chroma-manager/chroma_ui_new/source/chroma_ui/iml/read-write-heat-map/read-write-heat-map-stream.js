@@ -19,6 +19,10 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
+angular.module('readWriteHeatMap').constant('readWriteHeatMapTypes', {
+  READ: 'stats_read_bytes',
+  WRITE: 'stats_write_bytes'
+});
 
 angular.module('readWriteHeatMap').factory('ReadWriteHeatMapStream', ['stream', 'readWriteHeatMapTransformer',
   'replaceTransformer', 'readWriteHeatMapTypes', readWriteHeatMapFactory]);
@@ -50,6 +54,23 @@ function readWriteHeatMapFactory(stream, readWriteHeatMapTransformer,
       return this._value;
     }
   });
+
+  /**
+   * Switches the type, which triggers a watch to fire.
+   * @param {String} type
+   */
+  ReadWriteHeatMapStream.prototype.switchType = function switchType(type) {
+    this.type = type;
+
+    this.getter().map(function getValues(item) {
+      return item.values;
+    })
+    .forEach(function switchItemType(values) {
+      values.forEach(function (item) {
+        item.z = item[this.type];
+      }, this);
+    }, this);
+  };
 
   ReadWriteHeatMapStream.TYPES = readWriteHeatMapTypes;
 

@@ -51,5 +51,25 @@ describe('read write heat map stream', function () {
 
       expect(readWriteHeatMapStream.type).toEqual(value);
     });
+
+    it('should switch the type', function () {
+      var data = [
+        {
+          values: [
+            {
+              stats_read_bytes: 20,
+              stats_write_bytes: 10,
+              z: 20
+            }
+          ]
+        }
+      ];
+
+      readWriteHeatMapStream.getter.andReturn(data);
+
+      readWriteHeatMapStream.switchType('stats_write_bytes');
+
+      expect(data[0].values[0].z).toBe(10);
+    });
   });
 });
