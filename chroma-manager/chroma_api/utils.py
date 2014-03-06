@@ -232,68 +232,21 @@ class StatefulModelResource(CustomModelResource):
         #  decorate the transition lists with verbs
         #  and install in the bundle for return
         for idx, bundle in enumerate(to_be_serialized['objects']):
+            obj_transitions_states_and_verbs = computed_transitions[str(bundle.obj.id)]
 
-            # Refresh the obj.  At the top of this method bundle.obj related to the
-            # value in the DB at that time.  By the time we get here, after getting
-            # available transitions and jobs, it could be that another process has
-            # changed the state of obj.  In fact, when does that in this span of
-            # code that is ticket HYD-2714.  When the UI or any client calls this
-            # API, it just wants to know the jobs and trans, it doesn't know or really
-            # care what the state is coming in.  This refresh will make sure that we
-            # prepare the correct lists of return values for the actual value.
-            # NB:  This does use the fact that we have an SOA multi-process system using
-            # RPCs that is effectively tranfering state through an underlying DB.
-            bundle.obj = bundle.obj.__class__.objects.get(id=bundle.obj.id)
-
-            obj_transitions = computed_transitions[str(bundle.obj.id)]
-
-            verbed_trans = self._add_verb(bundle.obj, obj_transitions)
             obj_jobs = computed_jobs[str(bundle.obj.id)]
 
             # TODO: available_transitions is deprecated, use available_actions
-            bundle.data['available_transitions'] = verbed_trans
+            bundle.data['available_transitions'] = obj_transitions_states_and_verbs
 
             # TODO: available_jobs is deprecated, use available_actions
             bundle.data['available_jobs'] = obj_jobs
 
-            available_actions = sorted(verbed_trans + obj_jobs,
+            available_actions = sorted(obj_transitions_states_and_verbs + obj_jobs,
                                        key=lambda action: action['display_order'])
             bundle.data['available_actions'] = available_actions
 
         return to_be_serialized
-
-    def _add_verb(self, stateful_object, raw_transitions):
-        """Lookup the verb for each available state
-
-        raw_transitions is a list of state names coming from the
-        JobScheduler.
-        a list of dicts containing state and verb are returned.
-        """
-
-        from_state = stateful_object.state
-        transitions = []
-        for to_state in raw_transitions:
-            try:
-                # Fetch the last job in a a list of jobs that will tranisiont this object from from_state to to_state
-                job_class = stateful_object.get_job_class(from_state, to_state, last_job_in_route=True)
-            except KeyError:
-                log.warning("Object %s in state %s advertised an "
-                            "unreachable state %s" % (stateful_object,
-                                                      from_state,
-                                                      to_state))
-            else:
-                # NB: a None verb means its an internal
-                # transition that shouldn't be advertised
-                if job_class.state_verb:
-                    transitions.append({
-                        'state': to_state,
-                        'verb': job_class.state_verb,
-                        'long_description': job_class.get_long_description(stateful_object),
-                        'display_group': job_class.display_group,
-                        'display_order': job_class.display_order
-                    })
-
-        return transitions
 
     # PUT handler for accepting {'state': 'foo', 'dry_run': <true|false>}
     def obj_update(self, bundle, request, **kwargs):

@@ -1,6 +1,6 @@
 import logging
-from chroma_api.utils import StatefulModelResource
 from chroma_core.models import ConfigureLNetJob
+from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helper import synthetic_host
@@ -17,8 +17,7 @@ class TestSortingActions(ChromaApiTestCase):
     integrated systems provide the correct information.
 
         JobSchedulerClient.available_jobs
-        StatefulModelResource._add_verb
-        JobSchedulerClient.available_transitions (indirectly, via _add_verb)
+        JobSchedulerClient.available_transitions
 
     The assumption here is that the production code, that is mocked here,
     will annotate the order and group values appropriately on the jobs
@@ -52,12 +51,13 @@ class TestSortingActions(ChromaApiTestCase):
             #  Return these jobs for this host only.
             return {str(host.id): wrapped_jobs}
 
-        # NB: the superclass will tear down this monkey patch
+        # ChromaApiTestCase.setup() will save off the orginal and monkey patch
+        # Here we redefining the monkey patch for use in this test
+        # letting the superclass set it back to what *it* saved as the original
         from chroma_core.services.job_scheduler import job_scheduler_client
-        self.old_available_jobs = job_scheduler_client.JobSchedulerClient.available_jobs
         job_scheduler_client.JobSchedulerClient.available_jobs = _get_jobs
 
-    def _mock_add_verb(self, expected_jobs):
+    def _mock_available_transitions(self, host, expected_jobs):
         """Mock the StatefulModelResource._add_verb method"""
 
         def _mock_trans_to_job_dict(verb, order, group):
@@ -71,24 +71,16 @@ class TestSortingActions(ChromaApiTestCase):
         wrapped_jobs = [_mock_trans_to_job_dict(verb, order, group)
                         for verb, order, group in expected_jobs]
 
-        def _add_verb(self, stateful_object, raw_transitions):
+        @classmethod
+        def _get_transitions(cls, obj_list):
             #  Return these jobs for this host only.
-            return wrapped_jobs
+            return {str(host.id): wrapped_jobs}
 
-        # NB: the superclass will tear down this monkey patch
-        if not hasattr(self, 'add_verb'):
-            from chroma_api import utils
-            self.add_verb = utils.StatefulModelResource._add_verb
-            utils.StatefulModelResource._add_verb = _add_verb
-
-    def tearDown(self):
-
+        # ChromaApiTestCase.setup() will save off the orginal and monkey patch
+        # Here we redefining the monkey patch for use in this test
+        # letting the superclass set it back to what *it* saved as the original
         from chroma_core.services.job_scheduler import job_scheduler_client
-        job_scheduler_client.JobSchedulerClient.available_jobs = self.old_available_jobs
-
-        from chroma_api import utils
-        if hasattr(self, 'add_verb'):
-            utils.StatefulModelResource._add_verb = self.add_verb
+        job_scheduler_client.JobSchedulerClient.available_transitions = _get_transitions
 
     def test_sorting_actions(self):
         """Ensure direct jobs or transition jobs are sorted together."""
@@ -97,7 +89,7 @@ class TestSortingActions(ChromaApiTestCase):
 
         # These are the values the JobScheduler would return in scrambled order
         # the job.verb, job.order and job.group fields are stubbed
-        self._mock_add_verb([('Job 3', 3, 2), ('Job 1', 1, 1), ('Job 6', 6, 3)])
+        self._mock_available_transitions(host, [('Job 3', 3, 2), ('Job 1', 1, 1), ('Job 6', 6, 3)])
         self._mock_available_jobs(host, [('Job 5', 5, 3), ('Job 2', 2, 1), ('Job 4', 4, 2)])
 
         response = self.api_client.get("/api/host/%s/" % host.id)
@@ -128,7 +120,7 @@ class TestSortingActions(ChromaApiTestCase):
         self.assertTrue(hasattr(host.get_job_class(host.state, 'ignored'), 'state_verb'))
 
         # NB: JobScheduler._fetch_jobs takes an object, but could take a class
-        jobs = StatefulModelResource()._add_verb(host, ['ignored'])
+        jobs = JobScheduler()._add_verbs(host, ['ignored', ])
 
         job_dict = jobs[0]
         self.assertTrue('verb' in job_dict)

@@ -57,9 +57,6 @@ class ClientErrorResource(Resource):
     def _init_log(self):
         """Create the logger to be used in this resource
 
-        This method is idempotent in that it will not init
-        a log that has been init'ed already
-
         Must be certain that the user creating this log file is the same
         user that will need access to write it.  Otherwise, there will be permission issues.
         To do this, it is called from obj_create which ensures creating and writing
@@ -68,8 +65,7 @@ class ClientErrorResource(Resource):
 
         log_filename = 'client_errors.log'
         log_path = os.path.join(settings.LOG_PATH, log_filename)
-        if not os.path.exists(log_path):
-            self.logger = custom_log_register(__name__, log_path)
+        self.logger = custom_log_register(__name__, log_path)
 
     def obj_create(self, bundle, request=None, **kwargs):
 

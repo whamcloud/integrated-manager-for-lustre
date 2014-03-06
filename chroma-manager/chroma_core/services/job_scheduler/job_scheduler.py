@@ -1411,10 +1411,12 @@ class JobScheduler(object):
             for obj_key, obj_id in object_list:
                 try:
                     stateful_object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
+                    log.debug("available_transitions object: %s, state: %s" % (stateful_object, stateful_object.state))
                 except ObjectDoesNotExist:
                     # Do not advertise transitions for an object that does not exist
                     # as can happen if a parallel operation deletes this object
                     transitions[obj_id] = []
+                    log.debug("available_transitions object: %s" % obj_id)
                 else:
                     # We don't advertise transitions for anything which is currently
                     # locked by an incomplete job.  We could alternatively advertise
@@ -1422,20 +1424,53 @@ class JobScheduler(object):
                     # check and using get_expected_state in place of .state below.
                     if self._lock_cache.get_latest_write(stateful_object):
                         transitions[obj_id] = []
+                        log.debug("available_transitions object is LOCKED: %s" % obj_id)
                     else:
                         # XXX: could alternatively use expected_state here if you
                         # want to advertise
                         # what jobs can really be added (i.e. advertise transitions
                         # which will
                         # be available when current jobs are complete)
-                        #from_state = self.get_expected_state(stateful_object)
+                        #  See method self.get_expected_state(stateful_object)
                         from_state = stateful_object.state
-                        available_states = stateful_object.get_available_states(
-                            from_state)
+                        available_states = stateful_object.get_available_states(from_state)
+                        log.debug("available_transitions from_state: %s, states: %s" % (from_state, available_states))
 
-                        transitions[obj_id] = available_states
+                        # Add the job verbs to the possible state transitions for displaying as a choice.
+                        transitions[obj_id] = self._add_verbs(stateful_object, available_states)
 
             return transitions
+
+    def _add_verbs(self, stateful_object, raw_transitions):
+        """Lookup the verb for each available state
+
+        raw_transitions is a list of possible transition state names
+        a list of dicts containing state and verb are returned.
+        """
+
+        log.debug("Adding verbs to %s on %s" % (raw_transitions, stateful_object))
+
+        from_state = stateful_object.state
+        transitions = []
+        for to_state in raw_transitions:
+                # Fetch the last job in a a list of jobs that will tranisiont this object from from_state to to_state
+                job_class = stateful_object.get_job_class(from_state, to_state, last_job_in_route=True)
+
+                # NB: a None verb means its an internal
+                # transition that shouldn't be advertised
+                if job_class.state_verb:
+                    log.debug("Adding verb: %s, for job_class: %s" % (job_class.state_verb, job_class))
+                    transitions.append({
+                        'state': to_state,
+                        'verb': job_class.state_verb,
+                        'long_description': job_class.get_long_description(stateful_object),
+                        'display_group': job_class.display_group,
+                        'display_order': job_class.display_order
+                    })
+                else:
+                    log.debug("Skipping verb for %s on object %s" % (job_class, stateful_object))
+
+        return transitions
 
     def _fetch_jobs(self, stateful_object):
         from chroma_core.models import AdvertisedJob
