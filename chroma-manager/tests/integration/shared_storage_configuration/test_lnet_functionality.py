@@ -49,7 +49,7 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         # Sanity check.
         self.assertEqual(lnetinfo.nids, lnetinfo.lnet_configuration['nids'])
 
-        # Now change the nid from network 0 to network 1
+        # Now change the nid from network 99 to network 1001
         logger.debug("Setting lnd_network to %s for nid %s" % (1001, lnetinfo.nids[0]['resource_uri']))
         self.set_value(lnetinfo.nids[0]['resource_uri'], 'lnd_network', 1001, False)
 

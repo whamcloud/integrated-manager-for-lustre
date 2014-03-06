@@ -68,6 +68,8 @@ class FakeServer(Persisted):
 
         self.nodename = nodename
 
+        # When reloaded from a file the network interfaces are presented as a dict but when created from code they
+        # are represented as nid_tuples.
         if type(nid_tuples_or_network_interfaces) is dict:
             self.network_interfaces = nid_tuples_or_network_interfaces
         else:

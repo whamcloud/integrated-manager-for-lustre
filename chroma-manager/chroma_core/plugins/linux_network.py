@@ -21,28 +21,27 @@
 
 
 from chroma_core.lib.storage_plugin.api import attributes, statistics
-from chroma_core.lib.storage_plugin.api.identifiers import ScopedId, GlobalId
+from chroma_core.lib.storage_plugin.api.identifiers import ScopedId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
 
 # This plugin is special, it uses chroma-manager internals
 # in a way that third party plugins can't/shouldn't/mustn't
-from chroma_core.lib.storage_plugin.base_resource import HostsideResource
-from chroma_core.models import ManagedHost
+#from chroma_core.lib.storage_plugin.base_resource import HostsideResource
+#from chroma_core.models import ManagedHost
 
 version = 1
 
 
-class PluginAgentResources(resources.Resource, HostsideResource):
+# This is not used anymore it is here purely to satisfy the upgrade requirements of IML.
+class NetworkInterface(resources.Resource):
     class Meta:
-        identifier = GlobalId('host_id', 'plugin_name')
+        identifier = ScopedId('name')
+        charts = [{"title": "Bandwidth", "series": ['rx_bytes', 'tx_bytes']}]
 
-    host_id = attributes.Integer()
-    plugin_name = attributes.String()
-
-    def get_label(self):
-        host = ManagedHost._base_manager.get(pk=self.host_id)
-        return "%s" % host
+    name = attributes.String()
+    rx_bytes = statistics.Counter(units = "Bytes/s")
+    tx_bytes = statistics.Counter(units = "Bytes/s")
 
 
 class HostNetworkInterface(resources.NetworkInterface):

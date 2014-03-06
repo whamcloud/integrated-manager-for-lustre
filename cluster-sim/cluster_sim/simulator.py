@@ -239,7 +239,7 @@ class ClusterSimulator(Persisted):
         self.state['cluster_size'] = cluster_size
         self.save()
 
-        # Packages which the FakeServers will report as availble
+        # Packages which the FakeServers will report as available
         self.state['packages'] = {
             'server': {
                 'lustre': (0, "2.1.4", "1", "x86_64"),

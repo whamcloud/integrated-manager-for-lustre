@@ -1,13 +1,26 @@
 # -*- coding: utf-8 -*-
-import datetime
 from south.db import db
 from south.v2 import SchemaMigration
-from django.db import models
+from chroma_core.models import ManagedHost
 
 
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+
+        # All a bit convoluted, but lnet_configuration_id references a record that is going to disappear, and the
+        # field is going to disappear as well. So delete the field, then delete the table.
+
+        # These need to be in a separate transaction or we get pending transaction errors
+        # http://south.aeracode.org/ticket/1
+        db.start_transaction()
+
+        # Clear the Nid table, because we can't provide default values for the new fields
+        # and its contents are recreated at the first scan of a host
+        db.clear_table('chroma_core_nid')
+
+        db.commit_transaction()
+
         # Deleting model 'RelearnNidsJob'
         db.delete_table('chroma_core_relearnnidsjob')
 
@@ -24,9 +37,6 @@ class Migration(SchemaMigration):
 
         # Adding unique constraint on 'NetworkInterface', fields ['host', 'name']
         db.create_unique('chroma_core_networkinterface', ['host_id', 'name'])
-
-        # Clear the Nid table
-        db.clear_table('chroma_core_nid')
 
         # Adding model 'UpdateDevicesJob'
         db.create_table('chroma_core_updatedevicesjob', (
@@ -51,9 +61,6 @@ class Migration(SchemaMigration):
                       self.gf('django.db.models.fields.IntegerField')(null=True),
                       keep_default=False)
 
-        # Clear the LNetConfiguration table
-        db.clear_table('chroma_core_lnetconfiguration')
-
         # Deleting field 'LNetConfiguration.immutable_state'
         db.delete_column('chroma_core_lnetconfiguration', 'immutable_state')
 
@@ -69,9 +76,24 @@ class Migration(SchemaMigration):
         # Deleting field 'ConfigureLNetJob.lnet_configuration'
         db.delete_column('chroma_core_configurelnetjob', 'lnet_configuration_id')
 
+        # We need to hook the host.id up to something - or allow it to be null - null just leads to other issues
+        # so pick the first host, or zero if there are no hosts
+        # The default is never used other than in this migration so the value is just for
+        # for the inserted values.
+        #
+        # If we have never had a host then we have never had a configurelnetjob so we can just use 0 because although
+        # 0 is a bad number no record will exist to have the field added and so 0 is never used
+        #
+        # If it turns out that we have never had a host but we have add a configurelnetjob then this code will fail
+        # I could add an assert but it will throw an error on its own.
+        if (ManagedHost.objects.get_query_set_with_deleted().count() > 0):
+          host_id = ManagedHost.objects.get_query_set_with_deleted().all()[0].id
+        else:
+          host_id = 0
+
         # Adding field 'ConfigureLNetJob.host'
         db.add_column('chroma_core_configurelnetjob', 'host',
-                      self.gf('django.db.models.fields.related.ForeignKey')(default=0, to=orm['chroma_core.ManagedHost']),
+                      self.gf('django.db.models.fields.related.ForeignKey')(default=host_id, to=orm['chroma_core.ManagedHost']),
                       keep_default=False)
 
         # Adding field 'ConfigureLNetJob.config_changes'
@@ -81,6 +103,16 @@ class Migration(SchemaMigration):
 
 
     def backwards(self, orm):
+        # These need to be in a separate transaction or we get pending transaction errors
+        # http://south.aeracode.org/ticket/1
+        db.start_transaction()
+
+        # Clear the Nid table, because we can't provide default values for the new fields
+        # and its contents are recreated at the first scan of a host
+        db.clear_table('chroma_core_nid')
+
+        db.commit_transaction()
+
         # Removing unique constraint on 'NetworkInterface', fields ['host', 'name']
         db.delete_unique('chroma_core_networkinterface', ['host_id', 'name'])
 
@@ -97,9 +129,6 @@ class Migration(SchemaMigration):
         # Deleting model 'UpdateDevicesJob'
         db.delete_table('chroma_core_updatedevicesjob')
 
-        # Clear the Nid table
-        db.clear_table('chroma_core_nid')
-
         # Adding field 'Nid.nid_string'
         db.add_column('chroma_core_nid', 'nid_string',
                       self.gf('django.db.models.fields.CharField')(default=0, max_length=128),
@@ -115,9 +144,6 @@ class Migration(SchemaMigration):
 
         # Deleting field 'Nid.lnd_network'
         db.delete_column('chroma_core_nid', 'lnd_network')
-
-        # Clear the LNetConfiguration table
-        db.clear_table('chroma_core_lnetconfiguration')
 
         # Adding field 'LNetConfiguration.immutable_state'
         db.add_column('chroma_core_lnetconfiguration', 'immutable_state',

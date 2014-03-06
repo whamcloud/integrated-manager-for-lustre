@@ -41,11 +41,17 @@ class DeletableDowncastableManager(DowncastManager):
     def get_query_set(self):
         return super(DeletableDowncastableManager, self).get_query_set().filter(not_deleted = True)
 
+    def get_query_set_with_deleted(self):
+        return super(DeletableDowncastableManager, self).get_query_set()
+
 
 class DeletableManager(models.Manager):
     """Filters results to return only not-deleted records"""
     def get_query_set(self):
         return super(DeletableManager, self).get_query_set().filter(not_deleted = True)
+
+    def get_query_set_with_deleted(self):
+        return super(DeletableManager, self).get_query_set()
 
 
 def _make_deletable(metaclass, dct):

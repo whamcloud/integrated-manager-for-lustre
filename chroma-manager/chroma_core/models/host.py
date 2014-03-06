@@ -583,6 +583,8 @@ class GetLNetStateStep(Step):
             lnet_data = self.invoke_agent(host, "device_plugin", {'plugin': 'linux_network'})['linux_network']['lnet']
             host.set_state(lnet_data['state'])
             host.save()
+        except TypeError:
+            self.log("Data received from old client. Host %s state cannot be updated until agent is updated" % host)
         except AgentException as e:
             self.log("No data for plugin linux_network from host %s due to exception %s" % (host, e))
 
@@ -600,8 +602,6 @@ class GetLNetStateJob(Job):
         return [StateLock(
             job = self,
             locked_item = self.host,
-            begin_state = "configured",
-            end_state = None,
             write = True
         )]
 
@@ -1793,7 +1793,7 @@ class LNetOfflineAlert(AlertState):
 class LNetNidsChangedAlert(AlertState):
     # This is WARNING because targets on this host will not work
     # correctly until it is addressed, but the filesystem may still
-    # be available if a failover server is not in this conditon.
+    # be available if a failover server is not in this condition.
     default_severity = logging.WARNING
 
     def message(self):
