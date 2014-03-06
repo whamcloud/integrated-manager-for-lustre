@@ -201,7 +201,8 @@ class AlertState(models.Model):
                     begin = now,
                     end = now,
                     dismissed = False,  # Users dismiss, not the software
-                    alert_item = alert_item, **kwargs)
+                    alert_item = alert_item,
+                    **kwargs)
             try:
                 alert_state.save()
                 job_log.info("AlertState: Raised %s on %s "
