@@ -18,8 +18,9 @@ describe('read write heat map controller', function () {
     $location = _$location_;
 
     readWriteHeatMapStream = {
-      restart: jasmine.createSpy('restart'),
-      startStreaming: jasmine.createSpy('startStreaming')
+      restart: jasmine.createSpy('readWriteHeatMapStream.restart'),
+      startStreaming: jasmine.createSpy('readWriteHeatMapStream.startStreaming'),
+      switchType: jasmine.createSpy('readWriteHeatMapStream.switchType')
     };
 
     d3 = {
@@ -88,8 +89,8 @@ describe('read write heat map controller', function () {
   });
 
   it('should toggle the type', function () {
-    $scope.readWriteHeatMap.toggle('write');
-    expect(readWriteHeatMapStream.restart).toHaveBeenCalledOnceWith();
+    $scope.readWriteHeatMap.toggle('stats_write_bytes');
+    expect(readWriteHeatMapStream.switchType).toHaveBeenCalledOnceWith('stats_write_bytes');
   });
 
   describe('chart setup', function () {

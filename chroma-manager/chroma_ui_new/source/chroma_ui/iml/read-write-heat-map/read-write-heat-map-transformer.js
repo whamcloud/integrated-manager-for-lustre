@@ -45,7 +45,9 @@ function readWriteHeatMapTransformerFactory() {
       newVal[key].forEach(function (item) {
         ost.values.push({
           x: new Date(item.ts),
-          z: item.data[type],
+          stats_read_bytes: item.data.stats_read_bytes || 0,
+          stats_write_bytes: item.data.stats_write_bytes || 0,
+          z: item.data[type] || 0,
           id: item.id
         });
       });

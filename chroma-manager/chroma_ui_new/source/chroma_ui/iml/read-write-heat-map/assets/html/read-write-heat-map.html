@@ -16,7 +16,7 @@
     </h4>
     <div class="body">
       <p>{{ readWriteHeatMap.date | date:'medium' }}</p>
-      <p>{{ readWriteHeatMap.bandwidth }}</p>
+      <p>{{ readWriteHeatMap.readableType | capitalize }}: {{ readWriteHeatMap.bandwidth }}</p>
     </div>
   </div>
 </div>

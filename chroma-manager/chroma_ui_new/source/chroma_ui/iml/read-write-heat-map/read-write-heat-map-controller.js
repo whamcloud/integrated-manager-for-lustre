@@ -53,7 +53,8 @@ function ReadWriteHeatMapCtrl($scope, $location, d3, ReadWriteHeatMapStream, DUR
           return {
             date: d.x,
             ostName: d.key,
-            bandwidth: formatter(d.z)
+            bandwidth: formatter(d.z),
+            readableType: readWriteHeatMapStream.type.split('_')[1]
           };
         }));
 
@@ -88,10 +89,7 @@ function ReadWriteHeatMapCtrl($scope, $location, d3, ReadWriteHeatMapStream, DUR
     type: ReadWriteHeatMapStream.TYPES.READ,
     TYPES: ReadWriteHeatMapStream.TYPES,
     toggle: function (type) {
-      $scope.readWriteHeatMap.data.length = 0;
-
-      readWriteHeatMapStream.type = type;
-      readWriteHeatMapStream.restart();
+      readWriteHeatMapStream.switchType(type);
     },
     unit: DURATIONS.MINUTES,
     size: 10

@@ -43,9 +43,6 @@ describe('read write heat map transformer', function () {
         item.out.forEach(function (item) {
           item.values.forEach(function (value) {
             value.z = value.stats_read_bytes;
-
-            delete value.stats_write_bytes;
-            delete value.stats_read_bytes;
           });
         });
 
@@ -76,9 +73,6 @@ describe('read write heat map transformer', function () {
         item.out.forEach(function (item) {
           item.values.forEach(function (value) {
             value.z = value.stats_write_bytes;
-
-            delete value.stats_write_bytes;
-            delete value.stats_read_bytes;
           });
         });
 
@@ -87,5 +81,29 @@ describe('read write heat map transformer', function () {
 
       $rootScope.$digest();
     });
+  });
+
+  it('should normalize empty values to 0', function () {
+    var deferred = $q.defer();
+
+    boundTransformer({
+      body: {
+        'fs-OST0000': [{
+          data: {
+            stats_write_bytes: 0
+          },
+          ts: '2014-02-28T23:15:32.350000+00:00',
+          id: '3'
+        }]
+      }
+    }, deferred);
+
+    deferred.promise.then(function (resp) {
+      var data = resp.body;
+
+      expect(data[0].values[0].z).toBe(0);
+    });
+
+    $rootScope.$digest();
   });
 });
