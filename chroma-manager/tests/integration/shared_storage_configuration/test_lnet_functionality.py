@@ -24,6 +24,10 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
 
         lnetinfo = self._get_lnet_info(self.host)
 
+        # If _get_lnet_info returns None then lnet config is not supported by the version of IML running.
+        if not lnetinfo:
+            return
+
         # Sanity check.
         self.assertEqual(lnetinfo.nids, lnetinfo.lnet_configuration['nids'])
 
@@ -82,6 +86,10 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
 
     def test_lnet_states(self):
         lnetinfo = self._get_lnet_info(self.host)
+
+        # If _get_lnet_info returns None then lnet config is not supported by the version of IML running.
+        if not lnetinfo:
+            return
 
         # Just check some state changes
         states = ['lnet_up', 'lnet_down', 'lnet_unloaded']
