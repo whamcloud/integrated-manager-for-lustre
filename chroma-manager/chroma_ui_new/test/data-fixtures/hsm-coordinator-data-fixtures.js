@@ -16,6 +16,14 @@ angular.module('dataFixtures').value('hsmCdtDataFixtures', [
           'hsm_agents_idle': 13
         },
         'ts': '2013-11-18T20:59:40+00:00'
+      },
+      {
+        'data': {
+          'hsm_actions_running': 2.6000000000000001,
+          'hsm_actions_waiting': 18.800000000000001,
+          'hsm_agents_idle': 0.10000000000000001
+        },
+        'ts': '2013-11-18T20:59:50+00:00'
       }
     ],
     out: [
@@ -29,6 +37,10 @@ angular.module('dataFixtures').value('hsmCdtDataFixtures', [
           {
             y: 1024,
             x: '2013-11-18T20:59:40.000Z'
+          },
+          {
+            y: 19,
+            x: '2013-11-18T20:59:50.000Z'
           }
         ]
       },
@@ -42,6 +54,10 @@ angular.module('dataFixtures').value('hsmCdtDataFixtures', [
           {
             y: 42,
             x: '2013-11-18T20:59:40.000Z'
+          },
+          {
+            y: 3,
+            x: '2013-11-18T20:59:50.000Z'
           }
         ]
       },
@@ -55,6 +71,10 @@ angular.module('dataFixtures').value('hsmCdtDataFixtures', [
           {
             y: 13,
             x: '2013-11-18T20:59:40.000Z'
+          },
+          {
+            y: 0,
+            x: '2013-11-18T20:59:50.000Z'
           }
         ]
       }

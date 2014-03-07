@@ -26,7 +26,6 @@ describe('HSM coordinator transformer', function () {
     expect(resp.body).toEqual([]);
   });
 
-
   it('should transform data as expected', function () {
     hsmCdtDataFixtures.forEach(function (item) {
       var resp = hsmCdtTransformer({body: item.in});

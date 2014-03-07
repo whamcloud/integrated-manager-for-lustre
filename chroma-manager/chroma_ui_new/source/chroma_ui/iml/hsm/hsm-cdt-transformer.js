@@ -21,8 +21,7 @@
 
 
 angular.module('hsm')
-  .factory('hsmCdtTransformer', ['moment',
-  function hsmCdtTransformerFactory(moment) {
+  .factory('hsmCdtTransformer', [function hsmCdtTransformerFactory() {
     'use strict';
 
     /**
@@ -30,12 +29,10 @@ angular.module('hsm')
      * @param {Array|undefined} newVal The new data.
      */
     return function transformer(resp) {
-      var newVal = resp.body;
-
-      if (!Array.isArray(newVal) )
+      if (!Array.isArray(resp.body) )
         throw new Error('Transformer expects resp.body to be an array!');
 
-      if (newVal.length === 0)
+      if (resp.body.length === 0)
         return resp;
 
       var dataPoints = [
@@ -53,11 +50,11 @@ angular.module('hsm')
         }
       ];
 
-      resp.body = newVal.reduce(function (arr, curr) {
-        var waiting = curr.data.hsm_actions_waiting;
-        var running = curr.data.hsm_actions_running;
-        var idle = curr.data.hsm_agents_idle;
-        var now = moment(curr.ts).utc().toDate();
+      resp.body = resp.body.reduce(function (arr, curr) {
+        var waiting = Math.round(curr.data.hsm_actions_waiting);
+        var running = Math.round(curr.data.hsm_actions_running);
+        var idle = Math.round(curr.data.hsm_agents_idle);
+        var now = new Date(curr.ts);
 
         arr[0].values.push({
           y: waiting,
