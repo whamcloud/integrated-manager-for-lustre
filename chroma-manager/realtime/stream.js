@@ -59,6 +59,9 @@ module.exports = function streamFactory(Q, timers) {
     }
 
     function notifyLoop() {
+      if (stream.deferred == null)
+        return;
+
       stream.timer = timers.setTimeout(notify, stream.interval);
     }
   };

@@ -1,22 +1,18 @@
 describe('replace transformer', function () {
   'use strict';
 
-  var $rootScope, replaceTransformer, stream, data, deferred, resp;
+  var replaceTransformer, stream, data, resp;
 
   beforeEach(module('stream'));
 
-  beforeEach(inject(function ($q, _$rootScope_, _replaceTransformer_) {
+  beforeEach(inject(function (_replaceTransformer_) {
     replaceTransformer = _replaceTransformer_;
-
-    $rootScope = _$rootScope_;
 
     data = [];
 
     resp = {
       body: []
     };
-
-    deferred = $q.defer();
 
     stream = {
       getter: jasmine.createSpy('getter').andCallFake(function () {
@@ -30,27 +26,23 @@ describe('replace transformer', function () {
 
     resp.body = [fakeRecord];
 
-    replaceTransformer.call(stream, resp, deferred);
+    replaceTransformer.call(stream, resp);
 
     expect(data).toEqual([fakeRecord]);
   });
 
   it('should resolve with the data', function () {
-    replaceTransformer.call(stream, resp, deferred);
+    var result = replaceTransformer.call(stream, resp);
 
-    deferred.promise.then(function (d) {
-      expect(d).toBe(data);
-    });
-
-    $rootScope.$digest();
+    expect(result).toBe(data);
   });
 
   it('should preserve object identity', function () {
-    function FakeThingy () {};
+    function FakeThingy () {}
 
     resp.body = [new FakeThingy()];
 
-    replaceTransformer.call(stream, resp, deferred);
+    replaceTransformer.call(stream, resp);
 
     expect(data[0].constructor).toEqual(FakeThingy);
   });

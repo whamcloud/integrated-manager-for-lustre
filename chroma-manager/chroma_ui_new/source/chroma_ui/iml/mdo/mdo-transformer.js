@@ -26,19 +26,16 @@ angular.module('mdo').factory('mdoTransformer', [function mdoTransformerFactory(
   /**
    * Transforms incoming stream data to a format nvd3 can use.
    * @param {Array|undefined} newVal The new data.
-   * @param {Object} deferred The deferred to pipe through.
    */
-  return function transformer(resp, deferred) {
+  return function transformer(resp) {
     var newVal = resp.body;
 
     if (!Array.isArray(newVal) )
       throw new Error('mdoTransformer expects resp.body to be an array!');
 
-    if (!newVal.length) {
-      deferred.resolve(resp);
+    if (!newVal.length)
+      return resp;
 
-      return;
-    }
 
     var newData = [
       { key: 'stats_close',    values: [] },
@@ -73,6 +70,6 @@ angular.module('mdo').factory('mdoTransformer', [function mdoTransformerFactory(
 
     resp.body = newData;
 
-    deferred.resolve(resp);
+    return resp;
   };
 }]);

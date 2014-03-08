@@ -28,7 +28,7 @@ angular.module('charts').factory('appendDataTransformer', [appendDataTransformer
 function appendDataTransformerFactory() {
   'use strict';
 
-  return function appendDataTransformer(resp, deferred) {
+  return function appendDataTransformer(resp) {
     var data = this.getter();
 
     if (!Array.isArray(data))
@@ -50,7 +50,7 @@ function appendDataTransformerFactory() {
       [].splice.apply(series.values, params);
     });
 
-    deferred.resolve(data);
+    return data;
   };
 }
 

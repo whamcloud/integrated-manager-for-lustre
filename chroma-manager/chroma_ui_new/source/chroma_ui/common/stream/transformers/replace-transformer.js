@@ -26,7 +26,7 @@
 angular.module('stream').factory('replaceTransformer', [function replaceStreamFactory() {
   'use strict';
 
-  return function replaceScope(resp, deferred) {
+  return function replaceScope(resp) {
     var data = this.getter();
 
     var isArray = Array.isArray(data);
@@ -50,6 +50,6 @@ angular.module('stream').factory('replaceTransformer', [function replaceStreamFa
       });
     }
 
-    deferred.resolve(data);
+    return data;
   };
 }]);

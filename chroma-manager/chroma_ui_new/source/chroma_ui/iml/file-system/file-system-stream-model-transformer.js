@@ -29,9 +29,8 @@ function fileSystemStreamModelTransformerFactory(FileSystemStreamModel) {
   /**
    * Transforms incoming stream data to FileSystemStreamModel instances.
    * @param {Array|undefined} newVal The new data.
-   * @param {Object} deferred The deferred to pipe through.
    */
-  return function transformer(resp, deferred) {
+  return function transformer(resp) {
     var newVal = resp.body;
 
     if (!_.isPlainObject(newVal) )
@@ -48,6 +47,6 @@ function fileSystemStreamModelTransformerFactory(FileSystemStreamModel) {
 
     resp.body = cloned;
 
-    deferred.resolve(resp);
+    return resp;
   };
 }

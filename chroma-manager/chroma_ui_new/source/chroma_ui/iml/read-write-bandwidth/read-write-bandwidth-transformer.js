@@ -28,18 +28,16 @@ function readWriteBandwidthTransformerFactory() {
   /**
    * Transforms incoming protocol data to display write as a negative value.
    * @param {Object} resp The response.
-   * @param {Object} deferred The deferred to pipe through.
    */
-  return function transformer(resp, deferred) {
+  return function transformer(resp) {
     var newVal = resp.body;
 
     if (!Array.isArray(newVal) )
       throw new Error('readWriteBandwidthTransformer expects resp.body to be an array!');
 
-    if (newVal.length === 0) {
-      deferred.resolve(resp);
-      return;
-    }
+    if (newVal.length === 0)
+      return resp;
+
 
     var dataPoints = [
       {
@@ -62,7 +60,7 @@ function readWriteBandwidthTransformerFactory() {
 
     }, dataPoints);
 
-    deferred.resolve(resp);
+    return resp;
   };
 }
 

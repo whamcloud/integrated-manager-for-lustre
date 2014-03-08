@@ -28,9 +28,8 @@ function ostBalanceTransformer(formatBytes) {
   /**
    * Transforms incoming stream data to a format nvd3 can use.
    * @param {Array|undefined} newVal The new data.
-   * @param {Object} deferred The deferred to pipe through.
    */
-  return function transformer(resp, deferred) {
+  return function transformer(resp) {
     var newVal = resp.body;
 
     if (!_.isPlainObject(newVal))
@@ -39,7 +38,7 @@ function ostBalanceTransformer(formatBytes) {
     /*jshint validthis: true */
     var percentage = this.percentage;
 
-    var newData = Object.keys(newVal).reduce(function (arr, key) {
+    resp.body = Object.keys(newVal).reduce(function (arr, key) {
       var data = newVal[key][0].data,
         free = (data.kbytesfree / data.kbytestotal),
         used = 1 - free,
@@ -59,9 +58,7 @@ function ostBalanceTransformer(formatBytes) {
       return arr;
     }, [{key: 'Used bytes', values: []}, {key: 'Free bytes', values: []}]);
 
-    resp.body = newData;
-
-    deferred.resolve(resp);
+    return resp;
   };
 
 

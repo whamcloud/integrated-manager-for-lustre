@@ -1,9 +1,9 @@
 describe('HSM copytoolOperation stream transformer', function () {
   'use strict';
 
-  var $q, $rootScope, HsmCopytoolOperationModel,
+  var HsmCopytoolOperationModel,
       hsmCopytoolOperationStreamTransformer,
-      hsmCopytoolOperationStreamDataFixtures, deferred;
+      hsmCopytoolOperationStreamDataFixtures;
 
   beforeEach(module('hsm', 'dataFixtures', 'modelFactory'));
 
@@ -18,19 +18,16 @@ describe('HSM copytoolOperation stream transformer', function () {
     }
   );
 
-  beforeEach(inject(function (_$q_, _$rootScope_,
+  beforeEach(inject(function (_$rootScope_,
                               _hsmCopytoolOperationStreamTransformer_,
                               _hsmCopytoolOperationStreamDataFixtures_) {
     hsmCopytoolOperationStreamTransformer = _hsmCopytoolOperationStreamTransformer_;
     hsmCopytoolOperationStreamDataFixtures = _hsmCopytoolOperationStreamDataFixtures_;
-    $q = _$q_;
-    deferred = $q.defer();
-    $rootScope = _$rootScope_;
   }));
 
   it('should throw if resp.body is not an object', function () {
     function shouldThrow() {
-      hsmCopytoolOperationStreamTransformer([], deferred);
+      hsmCopytoolOperationStreamTransformer([]);
     }
 
     expect(shouldThrow).toThrow('hsmCopytoolOperationStreamTransformer expects resp.body to be an object!');
@@ -39,27 +36,22 @@ describe('HSM copytoolOperation stream transformer', function () {
   it('should resolve early if resp.body.objects is an empty array', function () {
     var resp = {body: {objects: []}};
 
-    hsmCopytoolOperationStreamTransformer(resp, deferred);
+    hsmCopytoolOperationStreamTransformer(resp);
 
     expect(resp.body.objects).toEqual([]);
   });
 
   it('should transform the objects list as expected', function () {
     hsmCopytoolOperationStreamDataFixtures.forEach(function (item) {
-      var deferred = $q.defer();
       var preTransformMeta = _.cloneDeep(item.body.meta);
 
-      hsmCopytoolOperationStreamTransformer(item, deferred);
+      hsmCopytoolOperationStreamTransformer(item);
 
-      deferred.promise.then(function () {
-        expect(HsmCopytoolOperationModel.calls.length).toEqual(item.body.objects.length);
+      expect(HsmCopytoolOperationModel.calls.length).toEqual(item.body.objects.length);
 
-        // Ensure that the transformer doesn't mess with anything outside
-        // the objects list.
-        expect(item.body.meta).toEqual(preTransformMeta);
-      });
-
-      $rootScope.$digest();
+      // Ensure that the transformer doesn't mess with anything outside
+      // the objects list.
+      expect(item.body.meta).toEqual(preTransformMeta);
     });
   });
 });

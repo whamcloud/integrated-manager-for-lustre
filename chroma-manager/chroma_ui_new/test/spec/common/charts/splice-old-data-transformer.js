@@ -1,7 +1,7 @@
 describe('splice old data transformer', function () {
   'use strict';
 
-  var spliceOldDataTransformer, stream, data, deferred, date;
+  var spliceOldDataTransformer, stream, data, date;
 
   beforeEach(module('charts'));
 
@@ -18,12 +18,10 @@ describe('splice old data transformer', function () {
     };
   });
 
-  beforeEach(inject(function (_spliceOldDataTransformer_, $q) {
+  beforeEach(inject(function (_spliceOldDataTransformer_) {
     spliceOldDataTransformer = _spliceOldDataTransformer_;
 
     data = [];
-
-    deferred = $q.defer();
 
     stream = {
       size: 5,
@@ -75,7 +73,7 @@ describe('splice old data transformer', function () {
 
     date = new Date('12/11/2013');
 
-    spliceOldDataTransformer.call(stream, {}, deferred);
+    spliceOldDataTransformer.call(stream, {});
 
     expect(data[0].values.length).toBe(0);
   });
@@ -91,7 +89,7 @@ describe('splice old data transformer', function () {
 
     date = new Date('12/10/2013');
 
-    spliceOldDataTransformer.call(stream, {}, deferred);
+    spliceOldDataTransformer.call(stream, {});
 
     expect(data[0].values).toEqual([{x: new Date('12/11/2013')}]);
   });
@@ -109,7 +107,7 @@ describe('splice old data transformer', function () {
 
     date = new Date('12/11/2013');
 
-    spliceOldDataTransformer.call(stream, {}, deferred);
+    spliceOldDataTransformer.call(stream, {});
 
     expect(data[0].values).toEqual([{x: new Date('12/11/2013')}]);
   });

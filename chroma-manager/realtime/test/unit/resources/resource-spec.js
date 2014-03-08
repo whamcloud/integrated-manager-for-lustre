@@ -17,7 +17,8 @@ describe('resource', function () {
 
     log = {
       info: jasmine.createSpy('log.info'),
-      debug: jasmine.createSpy('log.debug')
+      debug: jasmine.createSpy('log.debug'),
+      trace: jasmine.createSpy('log.trace')
     };
 
     conf = {
@@ -150,7 +151,10 @@ describe('resource', function () {
             json: true,
             ca: conf.caFile,
             url: conf.apiUrl + path + '/',
-            strictSSL: false
+            strictSSL: false,
+            maxSockets: 25,
+            forever: true,
+            timeout: 120000
           });
         });
       });

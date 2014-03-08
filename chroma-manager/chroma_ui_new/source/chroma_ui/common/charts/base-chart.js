@@ -85,6 +85,25 @@
               svg.selectAll('.noDataOverlay').remove();
             }
 
+            // Nvd3 likes to put data directly on the object.
+            // That ends up triggering another watch.
+            // Clone the val so watch only fires once.
+            var val = _.cloneDeep(newVal);
+
+            //Pull the state nvd3 stores and push back to our raw val.
+            svg.datum().forEach(function iterate(item) {
+              var series = _.findWhere(val, {key: item.key});
+
+              if (series != null) {
+                Object.keys(item).filter(function (key) {
+                  return key !== 'values';
+                }).forEach(function iterate (key) {
+                  series[key] = item[key];
+                });
+              }
+            });
+
+            svg.datum(val);
             chart.update();
           }, true);
 

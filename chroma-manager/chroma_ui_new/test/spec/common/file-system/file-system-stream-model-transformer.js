@@ -1,7 +1,7 @@
 describe('file system stream model transformer', function () {
   'use strict';
 
-  var $rootScope, FileSystemStreamModel, fileSystemStreamModel, fileSystemStreamModelTransformer, deferred, resp;
+  var FileSystemStreamModel, fileSystemStreamModel, fileSystemStreamModelTransformer, resp;
 
   beforeEach(module('fileSystem'));
 
@@ -18,11 +18,8 @@ describe('file system stream model transformer', function () {
     };
   });
 
-  beforeEach(inject(function ($q, _$rootScope_, _fileSystemStreamModelTransformer_) {
+  beforeEach(inject(function (_fileSystemStreamModelTransformer_) {
     fileSystemStreamModelTransformer = _fileSystemStreamModelTransformer_;
-
-    $rootScope = _$rootScope_;
-    deferred = $q.defer();
 
     resp = {
       body: {
@@ -33,14 +30,14 @@ describe('file system stream model transformer', function () {
 
   it('should throw if resp.body is not an object', function () {
     function shouldThrow() {
-      fileSystemStreamModelTransformer({}, deferred);
+      fileSystemStreamModelTransformer({});
     }
 
     expect(shouldThrow).toThrow('fileSystemStreamModelTransformer expects resp.body to be an object!');
   });
 
   describe('enhancing items', function () {
-    var fakeRecord;
+    var fakeRecord, result;
 
     beforeEach(function () {
       fakeRecord = {
@@ -49,7 +46,7 @@ describe('file system stream model transformer', function () {
 
       resp.body.objects.push(fakeRecord);
 
-      fileSystemStreamModelTransformer(resp, deferred);
+      result = fileSystemStreamModelTransformer(resp);
     });
 
     it('should convert objects to FileSystemStreamModels', function () {
@@ -61,11 +58,7 @@ describe('file system stream model transformer', function () {
     });
 
     it('should resolve with the resp', function () {
-      deferred.promise.then(function (out) {
-        expect(out).toBe(resp);
-      });
-
-      $rootScope.$digest();
+      expect(result).toBe(resp);
     });
   });
 });

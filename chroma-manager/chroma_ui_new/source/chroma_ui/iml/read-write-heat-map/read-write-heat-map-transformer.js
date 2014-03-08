@@ -20,17 +20,15 @@
 // express and approved by Intel in writing.
 
 
-angular.module('readWriteHeatMap').factory('readWriteHeatMapTransformer', [readWriteHeatMapTransformerFactory]);
-
-function readWriteHeatMapTransformerFactory() {
+angular.module('readWriteHeatMap').factory('readWriteHeatMapTransformer',
+  [function readWriteHeatMapTransformerFactory() {
   'use strict';
 
   /**
    * Transforms incoming protocol data to display write as a negative value.
    * @param {Object} resp The response.
-   * @param {Object} deferred The deferred to pipe through.
    */
-  return function transformer(resp, deferred) {
+  return function transformer(resp) {
     var newVal = resp.body;
 
     if (!_.isPlainObject(newVal))
@@ -57,7 +55,7 @@ function readWriteHeatMapTransformerFactory() {
       return arr;
     }, []);
 
-    deferred.resolve(resp);
+    return resp;
   };
 }
-
+]);

@@ -26,18 +26,15 @@ angular.module('mds').factory('mdsTransformer', ['moment', function mdsTransform
   /**
    * Transforms incoming stream data to compute cpu and ram usage
    * @param {Array|undefined} newVal The new data.
-   * @param {Object} deferred The deferred to pipe through.
    */
-  return function transformer(resp, deferred) {
+  return function transformer(resp) {
     var newVal = resp.body;
 
     if (!Array.isArray(newVal) )
       throw new Error('mdsTransformer expects resp.body to be an array!');
 
-    if (newVal.length === 0) {
-      deferred.resolve(resp);
-      return;
-    }
+    if (newVal.length === 0)
+      return resp;
 
     var dataPoints = [
       {
@@ -67,6 +64,6 @@ angular.module('mds').factory('mdsTransformer', ['moment', function mdsTransform
 
     }, dataPoints);
 
-    deferred.resolve(resp);
+    return resp;
   };
 }]);

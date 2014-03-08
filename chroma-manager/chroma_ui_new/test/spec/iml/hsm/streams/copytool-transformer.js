@@ -1,8 +1,8 @@
 describe('HSM copytool stream transformer', function () {
   'use strict';
 
-  var $q, $rootScope, HsmCopytoolModel, hsmCopytoolStreamTransformer,
-      hsmCopytoolStreamDataFixtures, deferred;
+  var HsmCopytoolModel, hsmCopytoolStreamTransformer,
+      hsmCopytoolStreamDataFixtures;
 
   beforeEach(module('hsm', 'dataFixtures', 'modelFactory'));
 
@@ -17,19 +17,15 @@ describe('HSM copytool stream transformer', function () {
     }
   );
 
-  beforeEach(inject(function (_$q_, _$rootScope_,
-                              _hsmCopytoolStreamTransformer_,
+  beforeEach(inject(function (_hsmCopytoolStreamTransformer_,
                               _hsmCopytoolStreamDataFixtures_) {
     hsmCopytoolStreamTransformer = _hsmCopytoolStreamTransformer_;
     hsmCopytoolStreamDataFixtures = _hsmCopytoolStreamDataFixtures_;
-    $q = _$q_;
-    deferred = $q.defer();
-    $rootScope = _$rootScope_;
   }));
 
   it('should throw if resp.body is not an object', function () {
     function shouldThrow() {
-      hsmCopytoolStreamTransformer([], deferred);
+      hsmCopytoolStreamTransformer([]);
     }
 
     expect(shouldThrow).toThrow('hsmCopytoolStreamTransformer expects resp.body to be an object!');
@@ -38,27 +34,22 @@ describe('HSM copytool stream transformer', function () {
   it('should resolve early if resp.body.objects is an empty array', function () {
     var resp = {body: {objects: []}};
 
-    hsmCopytoolStreamTransformer(resp, deferred);
+    hsmCopytoolStreamTransformer(resp);
 
     expect(resp.body.objects).toEqual([]);
   });
 
   it('should transform the objects list as expected', function () {
     hsmCopytoolStreamDataFixtures.forEach(function (item) {
-      var deferred = $q.defer();
       var preTransformMeta = _.cloneDeep(item.body.meta);
 
-      hsmCopytoolStreamTransformer(item, deferred);
+      hsmCopytoolStreamTransformer(item);
 
-      deferred.promise.then(function () {
-        expect(HsmCopytoolModel.calls.length).toEqual(item.body.objects.length);
+      expect(HsmCopytoolModel.calls.length).toEqual(item.body.objects.length);
 
-        // Ensure that the transformer doesn't mess with anything outside
-        // the objects list.
-        expect(item.body.meta).toEqual(preTransformMeta);
-      });
-
-      $rootScope.$digest();
+      // Ensure that the transformer doesn't mess with anything outside
+      // the objects list.
+      expect(item.body.meta).toEqual(preTransformMeta);
     });
   });
 });

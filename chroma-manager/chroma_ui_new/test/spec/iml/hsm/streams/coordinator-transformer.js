@@ -1,21 +1,18 @@
 describe('HSM coordinator transformer', function () {
   'use strict';
 
-  var $q, $rootScope, hsmCdtTransformer, hsmCdtDataFixtures, deferred;
+  var hsmCdtTransformer, hsmCdtDataFixtures;
 
   beforeEach(module('hsm', 'dataFixtures'));
 
-  beforeEach(inject(function (_$q_, _$rootScope_, _hsmCdtTransformer_, _hsmCdtDataFixtures_) {
+  beforeEach(inject(function (_hsmCdtTransformer_, _hsmCdtDataFixtures_) {
     hsmCdtTransformer = _hsmCdtTransformer_;
     hsmCdtDataFixtures = _hsmCdtDataFixtures_;
-    $q = _$q_;
-    deferred = $q.defer();
-    $rootScope = _$rootScope_;
   }));
 
   it('should throw if resp.body is not an array', function () {
     function shouldThrow() {
-      hsmCdtTransformer({}, deferred);
+      hsmCdtTransformer({});
     }
 
     expect(shouldThrow).toThrow('Transformer expects resp.body to be an array!');
@@ -24,7 +21,7 @@ describe('HSM coordinator transformer', function () {
   it('should resolve early if resp.body is an empty array', function () {
     var resp = {body: []};
 
-    hsmCdtTransformer(resp, deferred);
+    hsmCdtTransformer(resp);
 
     expect(resp.body).toEqual([]);
   });
@@ -32,23 +29,17 @@ describe('HSM coordinator transformer', function () {
 
   it('should transform data as expected', function () {
     hsmCdtDataFixtures.forEach(function (item) {
-      var deferred = $q.defer();
+      var resp = hsmCdtTransformer({body: item.in});
 
-      hsmCdtTransformer({body: item.in}, deferred);
+      var data = resp.body;
 
-      deferred.promise.then(function (resp) {
-        var data = resp.body;
-
-        data.forEach(function (item) {
-          item.values.forEach(function (value) {
-            value.x = value.x.toJSON();
-          });
+      data.forEach(function (item) {
+        item.values.forEach(function (value) {
+          value.x = value.x.toJSON();
         });
-
-        expect(data).toEqual(item.out);
       });
 
-      $rootScope.$digest();
+      expect(data).toEqual(item.out);
     });
   });
 });
