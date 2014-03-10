@@ -508,8 +508,8 @@ def _test_repos():
                 # ex: https://username:password@example.com'
                 if parse_result.username:
                     l = list(parse_result)
-                    # replace netloc with hostname
-                    l[1] = parse_result.hostname
+                    # replace netloc with a version of the url that doesn't include the user:pass
+                    l[1] = "%s:%s" % (parse_result.hostname, parse_result.port) if parse_result.port else parse_result.hostname
 
                     url = urllib2.Request(urlunparse(tuple(l)))
                     base64string = base64.encodestring(
