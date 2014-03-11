@@ -3,10 +3,12 @@
 'use strict';
 
 var manager = require('./util/manager');
+var format = require('util').format;
 
 exports.config = {
-  seleniumServerJar: '/usr/local/opt/selenium-server-standalone/selenium-server-standalone-2.39.0.jar',
+  seleniumServerJar: '/usr/local/opt/selenium-server-standalone/libexec/selenium-server-standalone-2.40.0.jar',
   seleniumArgs: ['-log', 'selenium_server.log'],
+  chromeDriver: '/usr/local/bin/chromedriver',
 
   specs: [
     'spec/global.js',
@@ -30,14 +32,20 @@ exports.config = {
     require('jasmine-reporters');
     var reporter = new jasmine.JUnitXmlReporter('', true, false);
 
-    // Lets get a more organized test report by puting all the results in "protractor-selenium-tests"
-    reporter.getFullNameForSpec = reporter.getFullName;
-    reporter.browserName = this.capabilities.browserName;
-    reporter.getFullName = function (suite, isFilename) {
-      return 'protractor-selenium-tests.' + this.browserName + '.' + this.getFullNameForSpec(suite, isFilename);
-    };
+    global.browser.getCapabilities().then(function (capabilities) {
+      var browserName = capabilities.caps_.browserName;
 
-    jasmine.getEnv().addReporter(reporter);
+      // Lets get a more organized test report by putting all the results in "protractor-selenium-tests"
+      var oldGetFullName = reporter.getFullName.bind(reporter);
+      reporter.getFullName = function (suite, isFilename) {
+        return format('protractor-selenium-tests.%s.%s',
+          browserName,
+          oldGetFullName(suite, isFilename)
+        );
+      };
+
+      jasmine.getEnv().addReporter(reporter);
+    });
   },
 
   jasmineNodeOpts: {
