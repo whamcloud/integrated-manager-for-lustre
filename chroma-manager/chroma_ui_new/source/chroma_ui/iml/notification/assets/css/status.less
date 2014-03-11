@@ -1,0 +1,41 @@
+span[ng-controller="NotificationCtrl"] {
+  height: 12px;
+  width: 12px;
+  display: inline-block;
+  border-radius: 12px;
+  cursor: pointer;
+
+  .transition(all .2s ease-in-out);
+
+  &.GOOD {
+    background-color: #2C9600;
+    box-shadow: 0 0 6px 0 #55C624;
+  }
+
+  &.WARNING {
+    background-color: #FFBF00;
+    box-shadow: 0 0 6px 0 #FFDF80;
+  }
+
+  &.ERROR {
+    background-color: #FF362B;
+    box-shadow: 0 0 6px 0 #F44847;
+  }
+}
+
+.status-nav.active,
+.status-nav:hover {
+  span[ng-controller="NotificationCtrl"] {
+    &.GOOD {
+      background-color: #30A300;
+    }
+
+    &.WARNING {
+      background-color: #FFD866;
+    }
+
+    &.ERROR {
+      background-color: #F44847;
+    }
+  }
+}

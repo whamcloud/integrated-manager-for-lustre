@@ -39,7 +39,7 @@ process.on('SIGTERM', function () {
 var https = require('https'),
   http = require('http'),
   di = require('di'),
-  request = require('request'),
+  request = require('./request'),
   Q = require('q'),
   serverFactory = require('./server'),
   loggerFactory = require('./logger'),
@@ -52,6 +52,10 @@ var https = require('https'),
   channelFactory = require('./channel'),
   fileSystemResourceFactory = require('./resources').fileSystemResourceFactory,
   hostResourceFactory = require('./resources').hostResourceFactory,
+  alertResourceFactory = require('./resources').alertResourceFactory,
+  eventResourceFactory = require('./resources').eventResourceFactory,
+  commandResourceFactory = require('./resources').commandResourceFactory,
+  notificationResourceFactory = require('./resources').notificationResourceFactory,
   targetResourceFactory = require('./resources').targetResourceFactory,
   hsmCopytoolResourceFactory = require('./resources').hsmCopytoolResourceFactory,
   hsmCopytoolOperationResourceFactory = require('./resources').hsmCopytoolOperationResourceFactory,
@@ -78,15 +82,18 @@ var modules = [{
   TargetResource: ['factory', targetResourceFactory],
   HsmCopytoolResource: ['factory', hsmCopytoolResourceFactory],
   HsmCopytoolOperationResource: ['factory', hsmCopytoolOperationResourceFactory],
-  TargetOstMetricsResource: ['factory', targetOstMetricsResourceFactory]
+  TargetOstMetricsResource: ['factory', targetOstMetricsResourceFactory],
+  AlertResource: ['factory', alertResourceFactory],
+  EventResource: ['factory', eventResourceFactory],
+  CommandResource: ['factory', commandResourceFactory],
+  NotificationResource: ['factory', notificationResourceFactory]
 }];
 
 var injector = new di.Injector(modules);
 
 injector.invoke(function (logger, channelFactory,
-                          FileSystemResource, HostResource, TargetResource,
-                          HsmCopytoolResource, HsmCopytoolOperationResource,
-                          TargetOstMetricsResource) {
+                          FileSystemResource, HostResource, TargetResource, TargetOstMetricsResource,
+                          HsmCopytoolResource, HsmCopytoolOperationResource, NotificationResource) {
 
   logger.info('Realtime Module started.');
 
@@ -96,4 +103,5 @@ injector.invoke(function (logger, channelFactory,
   channelFactory('copytool', HsmCopytoolResource);
   channelFactory('copytool_operation', HsmCopytoolOperationResource);
   channelFactory('targetostmetrics', TargetOstMetricsResource);
+  channelFactory('notification', NotificationResource);
 });

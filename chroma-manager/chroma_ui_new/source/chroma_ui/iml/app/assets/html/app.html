@@ -38,6 +38,9 @@
         <a id="help-menu" href="/static/webhelp/help_wrapper.html" target="_blank"><i class="fa fa-question-circle"></i> Help</a>
       </li>
     </ul>
+    <ul class="nav navbar-nav">
+      <li ng-class="{active: app.$routeSegment.contains('status')}" ng-include src="'iml/notification/assets/html/status.html'"></li>
+    </ul>
     <ul class="nav navbar-nav navbar-right">
       <li>
         <a route-to="about/" target="_self">{{ app.RUNTIME_VERSION }}</a>
