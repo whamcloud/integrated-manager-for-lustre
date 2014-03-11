@@ -44,7 +44,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
         self.wait_for_command(self.chroma_manager, command['id'])
 
         for outlet_uri in server_outlets:
-            self.wait_for_assert(lambda: self.assertIsNone(self.get_json_by_uri(outlet_uri)['host']))
+            self.assertIsNone(self.get_json_by_uri(outlet_uri)['host'])
 
         # TODO: Check that no async stuff happened as a result of the
         # outlet disassociation (STONITH reconfiguration, etc.)
@@ -66,7 +66,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
             self.get_json_by_uri(self.server['resource_uri'])
 
         for outlet_uri in server_outlets:
-            self.wait_for_assert(lambda: self.assertIsNone(self.get_json_by_uri(outlet_uri)['host']))
+            self.assertIsNone(self.get_json_by_uri(outlet_uri)['host'])
 
 
 class TestHostFencingConfig(ChromaPowerControlTestCase):

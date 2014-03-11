@@ -176,14 +176,11 @@ class PowerControlManager(CommandLine):
                 try:
                     stdout = self.try_shell(command(outlet.identifier))[1]
                     log.info("Toggled %s:%s -> %s: %s" % (device, outlet.identifier, toggle_state, stdout))
-                    if toggle_state in ['on', 'reboot']:
-                        outlet.has_power = True
-                    else:
-                        outlet.has_power = False
+                    has_power = toggle_state in ('on', 'reboot')
                 except CommandError, e:
                     log.error("Failed to toggle %s:%s -> %s: %s" % (device, outlet.identifier, toggle_state, e.stderr))
-                    outlet.has_power = None
-                outlet.save(skip_reconfigure = True)
+                    has_power = None
+                PowerControlDeviceOutlet.objects.filter(id=outlet.id).update(has_power=has_power)
 
     @transaction.commit_on_success
     def query_device_outlets(self, device_id):
@@ -203,15 +200,11 @@ class PowerControlManager(CommandLine):
 
                     # These RCs seem to be common across agents.
                     # Verified: fence_apc, fence_wti, fence_xvm
-                    if rc == 0:
-                        outlet.has_power = True
-                    elif rc == 2:
-                        outlet.has_power = False
-                    else:
+                    has_power = {0: True, 2: False}.get(rc)
+                    if has_power is None:
                         log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([outlet.identifier, rc, stdout, stderr])))
-                        outlet.has_power = None
                     log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
-                    outlet.save(skip_reconfigure = True)
+                    PowerControlDeviceOutlet.objects.filter(id=outlet.id).update(has_power=has_power)
             else:
                 # PDU -- one-shot query
                 rc, stdout, stderr = self.try_shell(device.outlet_list_command())
@@ -229,13 +222,9 @@ class PowerControlManager(CommandLine):
                         log.debug("Skipping unknown outlet %s:%s:%s" % (device.sockaddr + tuple([id])))
                         continue
 
-                    if status == "ON":
-                        outlet.has_power = True
-                    elif status == "OFF":
-                        outlet.has_power = False
-                    else:
+                    has_power = {'ON': True, 'OFF': False}.get(status)
+                    if has_power is None:
                         log.error("Unknown outlet state for %s:%s:%s: %s %s %s" % (device.sockaddr + tuple([id, rc, stdout, stderr])))
-                        outlet.has_power = None
 
                     log.debug("Learned outlet %s on %s:%s" % (tuple([outlet]) + device.sockaddr))
-                    outlet.save(skip_reconfigure = True)
+                    PowerControlDeviceOutlet.objects.filter(id=outlet.id).update(has_power=has_power)

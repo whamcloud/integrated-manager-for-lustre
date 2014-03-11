@@ -344,17 +344,14 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         super(PowerControlDeviceOutlet, self).clean()
 
     def save(self, *args, **kwargs):
-        skip_reconfigure = kwargs.pop('skip_reconfigure', False)
+        self.full_clean()
 
-        if not skip_reconfigure:
-            self.full_clean()
-
-            # Grab a copy of the outlet pre-save so that we can determine
-            # which hosts need to have their fencing reconfigured.
-            try:
-                old_self = PowerControlDeviceOutlet.objects.get(pk = self.pk)
-            except PowerControlDeviceOutlet.DoesNotExist:
-                old_self = None
+        # Grab a copy of the outlet pre-save so that we can determine
+        # which hosts need to have their fencing reconfigured.
+        try:
+            old_self = PowerControlDeviceOutlet.objects.get(pk = self.pk)
+        except PowerControlDeviceOutlet.DoesNotExist:
+            old_self = None
 
         super(PowerControlDeviceOutlet, self).save(*args, **kwargs)
 
@@ -362,10 +359,6 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         # configuration is available to other threads (e.g. fence reconfig).
         from django.db import transaction
         transaction.commit()
-
-        if skip_reconfigure:
-            job_log.debug("Skipping reconfigure due to skip_reconfigure = True")
-            return
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
         reconfigure = {'needs_fence_reconfiguration': True}
@@ -381,14 +374,6 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
             if old_self.host is not None:
                 job_log.debug("Triggering reconfigure on %s due to disassociation" % old_self.host)
                 JobSchedulerClient.notify(old_self.host, tznow(), reconfigure)
-
-    def force_host_disassociation(self):
-        """
-        Override save() signals which could result in undesirable async
-        behavior on a forcibly-removed host (don't mess with STONITH, etc.)
-        """
-        self.host = None
-        self.save(skip_reconfigure = True)
 
     @property
     def power_state(self):

@@ -1185,16 +1185,10 @@ class DeleteHostStep(Step):
             pass
 
         # Remove associations with PDU outlets, or delete IPMI BMCs
-        for outlet in host.outlets.select_related().all():
+        for outlet in host.outlets.select_related():
             if outlet.device.is_ipmi:
                 outlet.mark_deleted()
-                continue
-
-            if kwargs['force']:
-                outlet.force_host_disassociation()
-            else:
-                outlet.host = None
-                outlet.save()
+        host.outlets.update(host=None)
 
         # Remove associated lustre mounts
         for mount in host.client_mounts.all():
