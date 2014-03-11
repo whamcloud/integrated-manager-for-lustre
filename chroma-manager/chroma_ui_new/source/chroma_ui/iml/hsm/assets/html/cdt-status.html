@@ -1,0 +1,26 @@
+<div class="hsm-cdt-status">
+  <table>
+    <tr>
+      <th>Coordinator Status</th>
+      <th class="center-heading">Actions</th>
+    </tr>
+    <tr>
+      <td class="status">
+        <div ng-include src="'iml/hsm/assets/html/cdt-status/' + fileSystem.cdt_status + '.html'"></div>
+      </td>
+      <td class="textcenter actions-cell">
+        <div class="dropdown">
+          <a class="dropdown-toggle btn-mini btn">Actions <i class="fa fa-caret-down"></i></a>
+          <ul class="dropdown-menu">
+            <li ng-repeat="param in fileSystem.hsm_control_params track by param.verb">
+              <a ng-controller="CommandCtrl" ng-click="onActionSelection(param.mdt, param)">
+                {{ param.verb }}
+              </a>
+              <iml-tooltip direction="left">{{ param.long_description }}</iml-tooltip>
+            </li>
+          </ul>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>

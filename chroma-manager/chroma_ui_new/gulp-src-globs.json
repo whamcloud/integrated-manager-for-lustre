@@ -3,6 +3,7 @@
     "source": [
       "chroma_ui/vendor/primus-client/primus.js",
       "chroma_ui/bower_components/lodash/dist/lodash.js",
+      "chroma_ui/common/mixins/lodash-mixins.js",
       "chroma_ui/bower_components/underscore-contrib/underscore.function.iterators.js",
       "chroma_ui/vendor/sprintf/sprintf.js",
       "chroma_ui/bower_components/jquery/jquery.js",

@@ -19,34 +19,17 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
-(function () {
-  'use strict';
-
-  angular.module('charts').directive('lineChart', ['moment', 'dateTicks', 'baseChart', lineChart]);
-
-  function lineChart (moment, dateTicks, baseChart) {
-    return baseChart({
-      generateChart: function (nv) {
-        return nv.models.lineChart();
+angular.module('hsm')
+  .directive('hsmCdtStatus', [
+  function HsmCdtStatus() {
+    'use strict';
+    return {
+      scope: {
+        fileSystem: '='
       },
-      onUpdate: function onUpdate(chart, data) {
-        if (!Array.isArray(data) || !data[0]) return;
-
-        var values = data[0].values;
-
-        if (!Array.isArray(values)) return;
-
-        var start = values[0].x,
-          end = values[values.length - 1].x,
-          range = moment(start).twix(end);
-
-        chart.xAxis
-          .axisLabel(range.format({implicitYear: false}))
-          .ticks(5)
-          .showMaxMin(false)
-          .tickFormat(dateTicks.getTickFormatFunc(range));
-      }
-    });
+      restrict: 'E',
+      replace: true,
+      templateUrl: 'iml/hsm/assets/html/cdt-status.html'
+    };
   }
-}());
+]);

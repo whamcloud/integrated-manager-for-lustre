@@ -22,15 +22,24 @@
 
 angular.module('command', [])
   .controller('CommandCtrl', ['$scope', '$modal', 'CommandModel',
-  function CommandCtrl($scope, $modal, CommandModel) {
+                              'modelFactory',
+  function CommandCtrl($scope, $modal, CommandModel, modelFactory) {
     'use strict';
+
+    var ConfParamModel = modelFactory({
+      url: ':resource/:id',
+      params: {
+        resource: '@resource',
+        id: '@id'
+      }
+    });
 
     this.executeJob = function executeJob (victim, action) {
       var job = {class_name: action.class_name, args: action.args};
       var job_message = action.verb + '(' + victim.label + ')';
       function createApiCommand () {
         return CommandModel.save({jobs: [job], message: job_message});
-      };
+      }
 
       if (action.confirmation) {
         $modal.open({
@@ -56,7 +65,7 @@ angular.module('command', [])
       var requiresConfirmation = false;
       function runApiStateChange () {
         return victim.changeState(action.state);
-      };
+      }
 
       victim.testStateChange(action.state)
       .then(function handleStateChange (data) {
@@ -97,9 +106,19 @@ angular.module('command', [])
       });
     };
 
+    this.setConfParam = function setConfParam (victim, param) {
+      victim.conf_params[param.param_key] = param.param_value;
+      if (!victim.$update) {
+        victim = new ConfParamModel(victim);
+      }
+      victim.$update();
+    };
+
     $scope.onActionSelection = function onActionSelection (victim, action) {
       if (action.class_name) {
         this.executeJob(victim, action);
+      } else if (action.param_key) {
+        this.setConfParam(victim, action);
       } else {
         this.changeState(victim, action);
       }

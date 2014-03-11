@@ -110,7 +110,7 @@ class CopytoolValidation(Validation):
             if errors:
                 return errors
 
-        for argument in re.split(r'\s+', bundle.data['hsm_arguments']):
+        for argument in re.split(r'\s+', bundle.data.get('hsm_arguments', "")):
             if argument in INVALID_AGENT_ARGUMENTS:
                 error = "Invalid argument '%s': %s" % (argument,
                                             INVALID_AGENT_ARGUMENTS[argument])
