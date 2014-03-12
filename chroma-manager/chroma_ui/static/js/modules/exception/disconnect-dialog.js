@@ -31,13 +31,30 @@
     </div> \
   </div>';
 
-  angular.module('exception').factory('disconnectDialog', ['$dialog', function ($dialog) {
-    return $dialog.dialog({
+  angular.module('exception').factory('disconnectDialog', ['$dialog', '$window', function ($dialog, $window) {
+    var unloading = false;
+
+    $window.addEventListener('beforeunload', function beforeUnload() {
+      unloading = true;
+    });
+
+    var dialog = $dialog.dialog({
       dialogFade: true,
       backdropClick: false,
       dialogClass: 'modal disconnect-modal',
       keyboard: false,
       template: template
     });
+
+    var oldOpen = dialog.open;
+
+    dialog.open = function() {
+      if (unloading)
+        return null;
+
+      return oldOpen.apply(dialog, arguments);
+    };
+
+    return dialog;
   }]);
 }());
