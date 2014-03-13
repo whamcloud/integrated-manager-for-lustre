@@ -1,5 +1,5 @@
 /*jslint node: true */
-
+  
 'use strict';
 
 var gulp = require('gulp'),
@@ -94,33 +94,21 @@ gulp.task('base-href', ['less:build'], function(){
 });
 
 // The default task (called when you run `gulp`)
-gulp.task('default', function() {
-  gulp.run('copy-templates', 'less:dev');
-
-  gulp.watch(files.js.source, function() {
-    gulp.run('write-js:dev');
-  });
+gulp.task('default', ['copy-templates', 'less:dev'], function() {
+  gulp.watch(files.js.source, ['write-js:dev']);
 
   gulp.watch([
     'source/chroma_ui/**/*.less',
     '!source/chroma_ui/bower_components/**/*',
     '!source/chroma_ui/vendor/**/*'
-  ], function() {
-    gulp.run('less:dev');
-  });
+  ], ['less:dev']);
 
   gulp.watch([
     'source/chroma_ui/**/*.{html,js,png,woff,ttf,svg,ico}',
     '!source/chroma_ui/bower_components/**'
-  ], function () {
-    gulp.run('static:dev');
-  });
+  ], ['static:dev']);
 
-  gulp.watch('templates_source/**/*.html', function () {
-    gulp.run('copy-templates');
-  });
+  gulp.watch('templates_source/**/*.html', ['copy-templates']);
 });
 
-gulp.task('build', function build() {
-  gulp.run('copy-templates', 'base-href', 'static:build');
-});
+gulp.task('build', ['copy-templates', 'base-href', 'static:build']);
