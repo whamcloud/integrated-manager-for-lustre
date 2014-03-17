@@ -1017,10 +1017,4 @@ iptables -I INPUT -p udp --dport 4321 -j ACCEPT
 omping -T %s -c %s %s
 iptables -D INPUT -p udp --dport 4321 -j ACCEPT""" % (timeout, count,
                               " ".join([s['nodename'] for s in servers])))
-        mc_replies = 0
-        stdout = r.stdout.read()
-        for line in stdout.split('\n'):
-            if "multicast, seq=" in line:
-                mc_replies += 1
-
-        return mc_replies, stdout
+        return r.stdout.read()

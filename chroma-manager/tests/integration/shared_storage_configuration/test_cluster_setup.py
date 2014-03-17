@@ -1,3 +1,5 @@
+import re
+
 from django.utils.unittest import TestCase
 
 from testconfig import config
@@ -52,11 +54,9 @@ class TestClusterSetup(TestCase):
         import json
 
         def run_omping(pipe, server, num_requests):
-            response = {}
-            response['num_replies'], response['stdout'] = \
-                self.remote_operations.omping(server,
-                                              self.config_servers,
-                                              count=num_requests)
+            response = self.remote_operations.omping(server,
+                                                     self.config_servers,
+                                                     count=num_requests)
             pipe.send(json.dumps(response))
 
         num_requests = 5
@@ -77,21 +77,24 @@ class TestClusterSetup(TestCase):
             passed = True
             stdouts = []
             for server in self.config_servers:
-                response = json.loads(pipe_outs[server['nodename']].recv())
-                # Ensure no more than 10% lost.
-                if response['num_replies'] < (0.9 * num_requests * (len(self.config_servers) - 1)):
+                omping_result = json.loads(pipe_outs[server['nodename']].recv())
+                # This tests if any of the omping pings failed after the first.
+                # It is fairly common for the first multicast packet to be lost
+                # while it is still creating the multicast tree.
+                pattern = re.compile('\(seq>=2 [1-9][0-9]*%\)')
+                if pattern.search(omping_result):
                     passed = False
+
+                # Store the results for aggregate reporting/logging
                 stdouts.append("""----------------
 %s
-----------------
-%s""" % (server['nodename'], response['stdout']))
+-----------------
+%s""" % (server['nodename'], omping_result))
+
+                # Make sure each omping process terminates
                 processes[server['nodename']].join()
 
-                logger.debug("%s num_replies: %s" %
-                             (server['nodename'], response['num_replies']))
+            aggregate_omping_results = "\n" + " ".join([stdout for stdout in stdouts])
+            logger.debug("Omping results: %s" % aggregate_omping_results)
 
-            message = ""
-            if not passed:
-                message = "\n" + " ".join([stdout for stdout in stdouts])
-
-            self.assertTrue(passed, message)
+            self.assertTrue(passed, aggregate_omping_results)
