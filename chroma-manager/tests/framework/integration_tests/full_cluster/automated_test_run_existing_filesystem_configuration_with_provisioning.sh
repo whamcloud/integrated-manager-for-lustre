@@ -51,51 +51,44 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install and setup integration tests on integration test runner
-scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
-ssh root@$TEST_RUNNER <<EOF
-exec 2>&1; set -xe
-$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install chroma-manager-integration-tests
-
-if $USE_FENCE_XVM; then
-    # make sure the host has fence_virtd installed and configured
-    ssh root@$HOST_IP "exec 2>&1; set -xe
-    uname -a
-    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
-    mkdir -p /etc/cluster
-    echo \"not secure\" > /etc/cluster/fence_xvm.key
-    restorecon -Rv /etc/cluster/
-    cat <<\"EOF1\" > /etc/fence_virt.conf
-backends {
-	libvirt {
-		uri = \"qemu:///system\";
-	}
-
-}
-
-listeners {
-	multicast {
-		port = \"1229\";
-		family = \"ipv4\";
-		address = \"225.0.0.12\";
-		key_file = \"/etc/cluster/fence_xvm.key\";
-		interface = \"virbr0\";
-	}
-
-}
-
-fence_virtd {
-	module_path = \"/usr/lib64/fence-virt\";
-	backend = \"libvirt\";
-	listener = \"multicast\";
-}
-EOF1
-    chkconfig --add fence_virtd
-    chkconfig fence_virtd on
-    service fence_virtd restart"
+# Install and setup chroma manager
+scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
+set -ex
+yum -y install expect
+# Install from the installation package
+cd /tmp
+tar xzvf $ARCHIVE_NAME
+cd $(basename $ARCHIVE_NAME .tar.gz)
+if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
+    rc=${PIPESTATUS[0]}
+    cat /var/log/chroma/install.log
+    exit $rc
 fi
-EOF
+
+cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
+import logging
+LOG_LEVEL = logging.DEBUG
+EOF1
+
+if $MEASURE_COVERAGE; then
+    cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
+[run]
+data_file = /var/tmp/.coverage
+parallel = True
+source = /usr/share/chroma-manager/
+EOF1
+    cat <<\"EOF1\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+import coverage
+cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
+cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
+EOF1
+else
+    # Ensure that coverage is disabled
+    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+fi"
 
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
@@ -160,48 +153,57 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install and setup chroma manager
-scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
-ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
-set -ex
-yum -y install expect
-# Install from the installation package
-cd /tmp
-tar xzvf $ARCHIVE_NAME
-cd $(basename $ARCHIVE_NAME .tar.gz)
-if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
-    rc=${PIPESTATUS[0]}
-    cat /var/log/chroma/install.log
-    exit $rc
+source $CHROMA_DIR/chroma-manager/tests/framework/integration_tests/full_cluster/install_client.sh
+
+# Install and setup integration tests on integration test runner
+scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+ssh root@$TEST_RUNNER <<EOF
+exec 2>&1; set -xe
+$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+$PROXY yum -y install chroma-manager-integration-tests
+
+if $USE_FENCE_XVM; then
+    # make sure the host has fence_virtd installed and configured
+    ssh root@$HOST_IP "exec 2>&1; set -xe
+    uname -a
+    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+    restorecon -Rv /etc/cluster/
+    cat <<\"EOF1\" > /etc/fence_virt.conf
+backends {
+	libvirt {
+		uri = \"qemu:///system\";
+	}
+
+}
+
+listeners {
+	multicast {
+		port = \"1229\";
+		family = \"ipv4\";
+		address = \"225.0.0.12\";
+		key_file = \"/etc/cluster/fence_xvm.key\";
+		interface = \"virbr0\";
+	}
+
+}
+
+fence_virtd {
+	module_path = \"/usr/lib64/fence-virt\";
+	backend = \"libvirt\";
+	listener = \"multicast\";
+}
+EOF1
+    chkconfig --add fence_virtd
+    chkconfig fence_virtd on
+    service fence_virtd restart"
 fi
-
-cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
-import logging
-LOG_LEVEL = logging.DEBUG
-EOF1
-
-if $MEASURE_COVERAGE; then
-    cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
-[run]
-data_file = /var/tmp/.coverage
-parallel = True
-source = /usr/share/chroma-manager/
-EOF1
-    cat <<\"EOF1\" > /usr/lib/python2.6/site-packages/sitecustomize.py
-import coverage
-cov = coverage.coverage(config_file='/usr/share/chroma-manager/.coveragerc', auto_data=True)
-cov.start()
-cov._warn_no_data = False
-cov._warn_unimported_source = False
-EOF1
-else
-    # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-fi"
+EOF
 
 # wait for rebooted nodes
 sleep 5
-nodes="${STORAGE_APPLIANCES[@]}"
+nodes="${STORAGE_APPLIANCES[@]} $CLIENT_1"
 RUNNING_TIME=0
 while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
     for node in $nodes; do

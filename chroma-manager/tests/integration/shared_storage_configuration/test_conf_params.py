@@ -55,7 +55,7 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.remote_operations.mount_filesystem(client, filesystem)
 
         try:
-            self.assertEqual("16", self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"))
+            self.assertIn("max_cached_mb: 16", self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"))
 
             server_address = self.hosts[0]['address']
             self.wait_until_true(lambda: "2097152" == self.remote_operations.read_proc(server_address, "/proc/fs/lustre/lov/testfs-MDT0000-mdtlov/stripesize"))
@@ -130,9 +130,9 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.remote_operations.mount_filesystem(client, filesystem)
         new_conf_params = {'llite.max_cached_mb': '16'}
         try:
-            self.assertNotEqual(
-                self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"),
-                new_conf_params['llite.max_cached_mb'])
+            self.assertNotIn(
+                "max_cached_mb: %s" % new_conf_params['llite.max_cached_mb'],
+                self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"))
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 
@@ -150,9 +150,9 @@ class TestConfParams(ChromaIntegrationTestCase):
         # Mount and check that the new value has made it through
         self.remote_operations.mount_filesystem(client, filesystem)
         try:
-            self.assertEqual(
-                self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"),
-                new_conf_params['llite.max_cached_mb'])
+            self.assertIn(
+                "max_cached_mb: %s" % new_conf_params['llite.max_cached_mb'],
+                self.remote_operations.read_proc(client, "/proc/fs/lustre/llite/*/max_cached_mb"))
         finally:
             self.remote_operations.unmount_filesystem(client, filesystem)
 

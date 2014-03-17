@@ -55,82 +55,6 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install and setup integration tests on integration test runner
-scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
-ssh root@$TEST_RUNNER <<EOF
-exec 2>&1; set -xe
-$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install chroma-manager-integration-tests python-mock
-
-if $USE_FENCE_XVM; then
-    # make sure the host has fence_virtd installed and configured
-    ssh root@$HOST_IP "exec 2>&1; set -xe
-    uname -a
-    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
-    mkdir -p /etc/cluster
-    echo \"not secure\" > /etc/cluster/fence_xvm.key
-    restorecon -Rv /etc/cluster/
-    cat <<\"EOF1\" > /etc/fence_virt.conf
-backends {
-	libvirt {
-		uri = \"qemu:///system\";
-	}
-
-}
-
-listeners {
-	multicast {
-		port = \"1229\";
-		family = \"ipv4\";
-		address = \"225.0.0.12\";
-		key_file = \"/etc/cluster/fence_xvm.key\";
-		interface = \"virbr0\";
-	}
-
-}
-
-fence_virtd {
-	module_path = \"/usr/lib64/fence-virt\";
-	backend = \"libvirt\";
-	listener = \"multicast\";
-}
-EOF1
-    chkconfig --add fence_virtd
-    chkconfig fence_virtd on
-    service fence_virtd restart"
-fi
-EOF
-
-# Install and setup chroma software storage appliances
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-if $MEASURE_COVERAGE; then
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
-[run]
-data_file = /var/tmp/.coverage
-parallel = True
-source = /usr/lib/python2.6/site-packages/chroma_agent/
-EOF
-    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
-import coverage
-cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/.coveragerc', auto_data=True)
-cov.start()
-cov._warn_no_data = False
-cov._warn_unimported_source = False
-EOF
-else
-    # Ensure that coverage is disabled
-    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-fi
-
-if $USE_FENCE_XVM; then
-    # fence_xvm support
-    mkdir -p /etc/cluster
-    echo \"not secure\" > /etc/cluster/fence_xvm.key
-fi" | dshbak -c
-if [ ${PIPESTATUS[0]} != 0 ]; then
-    exit 1
-fi
-
 # Install and setup chroma manager on integration test runner, use rsync incase the connection is slow
 ssh root@$TEST_RUNNER yum install -y rsync
 rsync -avz $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
@@ -175,6 +99,100 @@ else
     # Ensure that coverage is disabled
     rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
 fi"
+
+
+# Install and setup chroma software storage appliances
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+if $MEASURE_COVERAGE; then
+    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
+[run]
+data_file = /var/tmp/.coverage
+parallel = True
+source = /usr/lib/python2.6/site-packages/chroma_agent/
+EOF
+    cat <<\"EOF\" > /usr/lib/python2.6/site-packages/sitecustomize.py
+import coverage
+cov = coverage.coverage(config_file='/usr/lib/python2.6/site-packages/.coveragerc', auto_data=True)
+cov.start()
+cov._warn_no_data = False
+cov._warn_unimported_source = False
+EOF
+else
+    # Ensure that coverage is disabled
+    rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
+fi
+
+if $USE_FENCE_XVM; then
+    # fence_xvm support
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+fi" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+source $CHROMA_DIR/chroma-manager/tests/framework/integration_tests/full_cluster/install_client.sh
+
+# Install and setup integration tests on integration test runner
+scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+ssh root@$TEST_RUNNER <<EOF
+exec 2>&1; set -xe
+$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+$PROXY yum -y install chroma-manager-integration-tests python-mock
+
+# Set up fencing on the vm host
+if $USE_FENCE_XVM; then
+    # make sure the host has fence_virtd installed and configured
+    ssh root@$HOST_IP "exec 2>&1; set -xe
+    uname -a
+    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+    restorecon -Rv /etc/cluster/
+    cat <<\"EOF1\" > /etc/fence_virt.conf
+backends {
+	libvirt {
+		uri = \"qemu:///system\";
+	}
+
+}
+
+listeners {
+	multicast {
+		port = \"1229\";
+		family = \"ipv4\";
+		address = \"225.0.0.12\";
+		key_file = \"/etc/cluster/fence_xvm.key\";
+		interface = \"virbr0\";
+	}
+
+}
+
+fence_virtd {
+	module_path = \"/usr/lib64/fence-virt\";
+	backend = \"libvirt\";
+	listener = \"multicast\";
+}
+EOF1
+    chkconfig --add fence_virtd
+    chkconfig fence_virtd on
+    service fence_virtd restart"
+fi
+EOF
+
+# wait for rebooted nodes
+sleep 5
+nodes="$CLIENT_1"
+RUNNING_TIME=0
+while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
+    for node in $nodes; do
+        if ssh root@$node id; then
+            nodes=$(echo "$nodes" | sed -e "s/$node//" -e 's/^ *//' -e 's/ *$//')
+        fi
+    done
+    (( RUNNING_TIME++ )) || true
+    sleep 1
+done
 
 echo "End installation and setup."
 
