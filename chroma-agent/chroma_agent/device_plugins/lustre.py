@@ -22,6 +22,7 @@
 
 from collections import defaultdict, namedtuple
 from chroma_agent.log import daemon_log
+from chroma_agent.log import console_log
 import os
 import glob
 import datetime
@@ -73,6 +74,9 @@ def scan_packages():
                     version=version,
                     release=release,
                     arch=arch))
+        except ValueError, e:
+            console_log.error("bug HYD-2948. repoquery Output: %s" % (stdout))
+            raise e
         except RuntimeError, e:
             # This is a network operation, so cope with it failing
             daemon_log.error(e)
