@@ -138,7 +138,7 @@ class MdtGenerator(TargetGenerator):
             stat_name = "mdt_stat_%d" % idx
             self.stats[stat_name] = 0
         if options.mdt_stats > 0:
-            self.stats['num_exports'] = 1
+            self.stats['client_count'] = 1
 
     def create_entity(self, fs):
         self.create_volume()

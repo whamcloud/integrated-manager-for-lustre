@@ -218,7 +218,7 @@ class FakeDevices(Persisted):
         if 'MDT' in target['label']:
             # Keep the client count mostly constant, blip it up or down once in a while
             if random.randint(0, 5) == 0:
-                target['stats']['num_exports'] = perturb(target['stats']['num_exports'], 1, 0, 100)
+                target['stats']['client_count'] = perturb(target['stats']['client_count'], 1, 0, 100)
             target['stats']['filesfree'] = perturb(target['stats']['filesfree'], target['stats']['filestotal'] / 10, 0, target['stats']['filestotal'])
             target['stats']['kbytesfree'] = perturb(target['stats']['kbytesfree'], target['stats']['filestotal'] / 10, 0, target['stats']['kbytestotal'])
             for md_op in ['rmdir', 'close', 'open', 'unlink', 'rmdir', 'getxattr', 'mkdir']:

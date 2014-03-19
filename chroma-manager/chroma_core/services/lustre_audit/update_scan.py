@@ -25,7 +25,7 @@ from chroma_core.services import log_register
 import dateutil.parser
 from django.db import transaction
 
-from chroma_core.models.target import ManagedMdt, ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
+from chroma_core.models.target import ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.filesystem import ManagedFilesystem
@@ -241,10 +241,6 @@ class UpdateScan(object):
             # Unknown target -- ignore metrics
             log.warning("Discarding metrics for unknown target: %s" % target_name)
             return []
-
-        # Synthesize the 'client_count' metric (assumes one MDT per filesystem)
-        if isinstance(target, ManagedMdt):
-            metrics['client_count'] = metrics['num_exports'] - 1
 
         return target.metrics.serialize(metrics, jobid_var=self.jobid_var)
 
