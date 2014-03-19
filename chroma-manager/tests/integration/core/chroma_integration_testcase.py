@@ -45,7 +45,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(response.successful, True, response.text)
         pre_existing_hosts = response.json['objects']
 
-        host_create_command_ids = []
+        host_create_command_ids = {}
         for host_address in addresses:
             profile = self.get_host_profile(host_address)
 
@@ -70,7 +70,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
                 # Pass our token to the simulator to register a server
                 registration_result = self.simulator.register(fqdn, token['secret'])
-                host_create_command_ids.append(registration_result['command_id'])
+                host_create_command_ids[host_address] = registration_result['command_id']
             else:
                 response = self.chroma_manager.post(
                     '/api/test_host/',
@@ -97,7 +97,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 )
                 self.assertEqual(response.successful, True, response.text)
                 host_id = response.json['host']['id']
-                host_create_command_ids.append(response.json['command']['id'])
+                host_create_command_ids[host_address] = response.json['command']['id']
                 self.assertTrue(host_id)
 
                 response = self.chroma_manager.get(
@@ -109,7 +109,17 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         # Wait for the host setup to complete
         # Rather a long timeout because this may include installing Lustre and rebooting
-        self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=900)
+        # Capture the rpm state if host setup fails
+        for host_address, command_id in host_create_command_ids.items():
+            try:
+                self.wait_for_command(self.chroma_manager, command_id, timeout=900)
+            except AssertionError:
+                if not hasattr(self, 'simulator'):
+                    for cmd in ('rpm -qa', 'rpm -Va'):
+                        print cmd
+                        result = self.remote_command(host_address, cmd)
+                        print result.stdout.read()
+                raise
 
         # Verify there are now n hosts in the database.
         response = self.chroma_manager.get(
