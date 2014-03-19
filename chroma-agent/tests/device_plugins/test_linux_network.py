@@ -104,12 +104,22 @@ ib0     Link encap:InfiniBand  HWaddr 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:
                 pass
 
             def readlines(self):
+                '''
+                The out of of a 'cat /proc/sys/lnet/nis commaned. I have seen returns with the same entry
+                repeated many times, hences its inclusion.
+                :return: Returns a list of lines as readlines would.
+                '''
                 return ["nid                      status alive refs peer  rtr   max    tx   min",
                         "0@lo                         up     0    3    0    0     0     0     0",
                         "192.168.10.79@tcp1001        up    -1    1    8    0   256   256   256",
                         "192.168.10.78@tcp1002        up    -1    1    8    0   256   256   256",
                         "10.0.0.101@tcp1              up    -1    1    8    0   256   256   256",
-                        "192.168.4.23@tcp99           up    -1    1    8    0   256   256   256"]
+                        "192.168.4.23@o2ib99          up    -1    1    8    0   256   256   256",
+                        "192.168.4.23@o2ib99          up    -1    1    8    0   256   256   256",
+                        "192.168.4.23@o2ib99          up    -1    1    8    0   256   256   256",
+                        "192.168.4.23@o2ib99          up    -1    1    8    0   256   256   256",
+                        "192.168.4.23@o2ib99          up    -1    1    8    0   256   256   256",
+                        "192.168.4.23@o2ib99          up    -1    1    8    0   256   256   256"]
 
         with mock.patch('__builtin__.open', mock_open):
                 device_plugin = LinuxNetworkDevicePlugin(None)
@@ -121,11 +131,11 @@ ib0     Link encap:InfiniBand  HWaddr 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:
 
         self.assertEqual(len(lnet_devices), 3)
 
-        for result_check in [ResultCheck("lo",    "0",             "0",    "tcp", "up", "0",  "3", "0", "0",  "0",  "0",    "0",  False),
-                             ResultCheck("bond0", "192.168.10.79", "1001", "tcp", "up", "-1", "1", "8", "0", "256", "256", "256", True),
-                             ResultCheck("fake",  "192.168.10.78", "1002", "tcp", "up", "-1", "1", "8", "0", "256", "256", "256", False),
-                             ResultCheck("eth4",  "10.0.0.101",    "1",    "tcp", "up", "-1", "1", "8", "0", "256", "256", "256", True),
-                             ResultCheck("ib0",   "192.168.4.23",  "99",   "tcp", "up", "-1", "1", "8", "0", "256", "256", "256", True)]:
+        for result_check in [ResultCheck("lo",    "0",             "0",    "tcp",  "up", "0",  "3", "0", "0",  "0",  "0",    "0",  False),
+                             ResultCheck("bond0", "192.168.10.79", "1001", "tcp",  "up", "-1", "1", "8", "0", "256", "256", "256", True),
+                             ResultCheck("fake",  "192.168.10.78", "1002", "tcp",  "up", "-1", "1", "8", "0", "256", "256", "256", False),
+                             ResultCheck("eth4",  "10.0.0.101",    "1",    "tcp",  "up", "-1", "1", "8", "0", "256", "256", "256", True),
+                             ResultCheck("ib0",   "192.168.4.23",  "99",   "o2ib", "up", "-1", "1", "8", "0", "256", "256", "256", True)]:
             try:
                 nid = lnet_devices[result_check.name]
             except KeyError:

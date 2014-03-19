@@ -401,8 +401,6 @@ class LNetConfiguration(models.Model):
     state = models.CharField(max_length = 16, help_text = "The current state of the lnet configuration")
 
     def get_nids(self):
-        #if self.state != 'nids_known':
-        #    raise NoNidsPresent("Nids not known yet for host %s" % self.host)
         return [n.nid_string for n in self.nid_set.all()]
 
     def __str__(self):
@@ -461,23 +459,23 @@ class Nid(models.Model):
                              nid.lnd_type,
                              nid.lnd_network))
 
-    #current = (set(known_nids) == set([normalize_nid(n) for n in self.host_data['lnet_nids']]))
-    #LNetNidsChangedAlert.notify(self.host, not current)
-
     Nid = namedtuple("Nid", ["nid_address", "lnd_type", "lnd_network"])
 
     @classmethod
     def split_nid_string(cls, nid_string):
+        '''
+        :param nid_string: Can be multiple format tcp0, tcp, tcp1234, o2ib0, o2ib (not number in the word)
+        :return: Nid name tuple containing the address, the lnd_type or the lnd_network
+        '''
         assert '@' in nid_string, "Malformed NID?!: %s"
 
         # Split the nid so we can search correctly on its parts.
         nid_address = nid_string.split("@")[0]
         type_network_no = nid_string.split("@")[1]
-        m = re.match('([a-zA-Z]*)([0-9]*)', type_network_no)
+        m = re.match('(\w+?)(\d+)?$', type_network_no)   # Non word, then optional greedy number at end of line.
         lnd_type = m.group(1)
-        if (m.group(2) != ''):
-            lnd_network = m.group(2)
-        else:
+        lnd_network = m.group(2)
+        if not lnd_network:
             lnd_network = 0
 
         return Nid.Nid(nid_address, lnd_type, lnd_network)

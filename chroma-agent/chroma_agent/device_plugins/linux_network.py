@@ -119,12 +119,13 @@ class LNetNid():
 
         self.nid_address = tokens[0].split("@")[0]  # TODO: Need to convert to an interface
         type_network_no = tokens[0].split("@")[1]
-        m = re.match('([a-zA-Z]*)([0-9]*)', type_network_no)
+
+        m = re.match('(\w+?)(\d+)?$', type_network_no)   # Non word, then optional greedy number at end of line.
         self.lnd_type = m.group(1)
-        if (m.group(2) != ''):
-            self.lnd_network = m.group(2)
-        else:
+        self.lnd_network = m.group(2)
+        if not self.lnd_network:
             self.lnd_network = 0
+
         self.status = tokens[1]
         self.alive = tokens[2]
         self.refs = tokens[3]
