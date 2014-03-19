@@ -62,7 +62,7 @@ wget http://chromedriver.storage.googleapis.com/2.9/chromedriver_linux64.zip
 unzip chromedriver_linux64.zip -d $HOME/bin/
 
 # Download Selenium jar
-wget -O $HOME/bin/selenium-server-standalone.jar https://selenium.googlecode.com/files/selenium-server-standalone-2.39.0.jar
+wget -O $HOME/bin/selenium-server-standalone.jar https://selenium-release.storage.googleapis.com/2.40/selenium-server-standalone-2.40.0.jar
 
 # Set up the virtualenv to run the tests in
 tar -xzf ~/pip_cache.tgz

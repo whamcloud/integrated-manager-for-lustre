@@ -28,8 +28,6 @@
   EulaView.prototype.accept = function accept() {
     var self = this;
 
-    this.ptor.waitForAngular();
-
     this.ptor.wait(function detectNextStep() {
       return !self.onPage() || self.well.isDisplayed();
     }, 30000);

@@ -40,7 +40,7 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager/realtime
 
 # Run protractor selenium tests in Chrome and Firefox (new ui)
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
-./node_modules/protractor/bin/protractor ./test/selenium/protractor-conf.js --seleniumServerJar=\$HOME/bin/selenium-server-standalone.jar --config=\$HOME/cluster_config.json --baseUrl="https://$CHROMA_MANAGER/ui_new/" || true  # TODO: Remove baseUrl param once we retire the old ui
+./node_modules/protractor/bin/protractor ./test/selenium/protractor-conf.js --seleniumServerJar=\$HOME/bin/selenium-server-standalone.jar --config=\$HOME/cluster_config.json --baseUrl="https://$CHROMA_MANAGER/ui_new/" --chromeDriver=\$HOME/bin/chromedriver || true  # TODO: Remove baseUrl param once we retire the old ui
 mv *protractor-selenium-test*.xml \$HOME/test_reports/
 ./node_modules/protractor/bin/protractor ./test/selenium/protractor-conf.js --seleniumServerJar=\$HOME/bin/selenium-server-standalone.jar --config=\$HOME/cluster_config.json --browser=firefox --baseUrl="https://$CHROMA_MANAGER/ui_new/" || true  # TODO: Remove baseUrl param once we retire the old ui
 mv *protractor-selenium-test*.xml \$HOME/test_reports/
