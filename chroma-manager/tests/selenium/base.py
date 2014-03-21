@@ -9,6 +9,7 @@ import json
 
 from django.utils.unittest import TestCase
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.support.wait import WebDriverWait
 from testconfig import config
 
@@ -122,7 +123,31 @@ class SeleniumBaseTestCase(TestCase):
                 options.add_argument('log-level=""')  # log-level interferes with v=1
                 options.add_argument('v=1000')  # Get all levels of vlogs
 
-                self.driver = webdriver.Chrome(chrome_options=options, service_args=["--verbose", "--log-path=chromedriver.log"])
+                chromedriver_service_args = [
+                    "--verbose",
+                    "--log-path=chromedriver.log"
+                ]
+
+                running_time = 0
+                while running_time < self.long_wait and not self.driver:
+                    try:
+                        self.driver = webdriver.Chrome(
+                            chrome_options=options,
+                            service_args=chromedriver_service_args
+                        )
+                    except WebDriverException, e:
+                        # Workaround for TEI-847: ChromeDriver has a bug where
+                        # sometimes its port gets stolen out from under it, and
+                        # there is no real way to prevent this from happening until
+                        # they fix it. So we simply loop until we get a driver.
+                        # Once this bug is resolved, we can convert this whole loop
+                        # back to the single webdriver.Chrome() call.
+                        log.error("Webdriver failed to start with the following exception: %s" % e)
+                        if running_time >= self.long_wait:
+                            raise
+                    time.sleep(1)
+                    running_time += 1
+
             elif self.browser == 'Firefox':
                 self.driver = webdriver.Firefox()
 
