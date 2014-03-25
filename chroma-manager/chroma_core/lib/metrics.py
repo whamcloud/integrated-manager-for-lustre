@@ -247,10 +247,10 @@ class TargetMetricStore(MetricStore):
             for stat in heapq.nlargest(self.JOB_STATS_LIMIT, job_stats, key=lambda stat: stat['read']['sum'] + stat['write']['sum']):
                 # summarize job stats into discrete quantities
                 value = sum(stat[key]['samples'] for key in set(stat).difference(['snapshot_time', 'read', 'write', 'job_id']))
-                update['job_metadata_ops_{0}'.format(stat['job_id'])] = {'value': value, 'type': jobid_var}
+                update['job_metadata_iops_{0}'.format(stat['job_id'])] = {'value': value, 'type': jobid_var}
                 for key in ('read', 'write'):
                     update['job_{0}_bytes_{1}'.format(key, stat['job_id'])] = {'value': stat[key]['sum'], 'type': jobid_var}
-                    update['job_{0}_ops_{1}'.format(key, stat['job_id'])] = {'value': stat[key]['samples'], 'type': jobid_var}
+                    update['job_{0}_iops_{1}'.format(key, stat['job_id'])] = {'value': stat[key]['samples'], 'type': jobid_var}
 
         for group in hsm_stats:
             for stat in hsm_stats[group]:

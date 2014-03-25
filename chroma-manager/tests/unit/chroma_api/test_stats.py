@@ -94,7 +94,7 @@ class TestStats(ChromaApiTestCase):
         self.assertEqual(timestamps, ('2013-04-19T20:34:10+00:00',))
 
         # target detail and list, with job stats
-        for name in ('metadata_ops', 'read_ops', 'write_ops', 'read_bytes', 'write_bytes'):
+        for name in ('read_bytes', 'write_bytes', 'read_iops', 'write_iops', 'metadata_iops'):
             content, = self.fetch('target/{0}/metric/'.format(self.osts[0].id), job='id', metrics=name, begin='2013-04-19T20:30:00Z', end='2013-04-19T20:34:30Z')
             self.assertEqual(content['ts'], '2013-04-19T20:34:20+00:00')
             self.assertEqual(content['data'], {'cp.0': 0.0, 'dd.0': 0.0})
