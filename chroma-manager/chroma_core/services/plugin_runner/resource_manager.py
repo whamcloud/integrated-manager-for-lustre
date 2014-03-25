@@ -44,6 +44,7 @@ from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 from chroma_core.lib.util import all_subclasses
 
 from chroma_core.models import ManagedHost, ManagedTarget
+from chroma_core.models import LNetNidsChangedAlert
 from chroma_core.models import Volume, VolumeNode
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
 from chroma_core.models import StorageResourceAlert, StorageResourceOffline
@@ -799,6 +800,9 @@ class ResourceManager(object):
             log.debug("_persist_nid_updates for scope record %s" % scannable_id)
             host = ManagedHost.objects.get(pk = scannable_resource.host_id)
 
+        # We want to raise an alert if the nid configuration changes. So remember it at the start.
+        previous_nids = host.lnetconfiguration.get_nids()
+
         node_resources = {}
 
         for resource_klass in [LNETInterface, LNETModules, SrcNetworkInterface]:
@@ -872,6 +876,12 @@ class ResourceManager(object):
                     nid.save()
 
                     log.debug("_persist_nid_updates nid %s %s" % (nid, "created" if created else "updated"))
+
+        # We want to raise an alert if the nid configuration changes. So check it at the end.
+        if previous_nids != []:
+            new_nids = host.lnetconfiguration.get_nids()
+            current = (set(previous_nids) == set(new_nids))
+            LNetNidsChangedAlert.notify(host, not current)
 
     def session_update_resource(self, scannable_id, record_id, attrs):
         """

@@ -16,12 +16,9 @@ class ResourceManagerTestCase(TestCase):
     def setUp(self):
         super(ResourceManagerTestCase, self).setUp()
 
-        self.host = ManagedHost.objects.create(
-            fqdn = 'myaddress.mycompany.com',
-            nodename = 'myaddress.mycompany.com',
-            immutable_state = False,
-            address = 'myaddress.mycompany.com')
-        LNetConfiguration.objects.create(host = self.host, state = 'lnet_down')
+        self.host = self._create_host(fqdn = 'myaddress.mycompany.com',
+                                      nodename = 'myaddress.mycompany.com',
+                                      address = 'myaddress.mycompany.com')
 
         self.manager = load_plugins([
             'example_plugin',
@@ -34,6 +31,15 @@ class ResourceManagerTestCase(TestCase):
         import chroma_core.lib.storage_plugin.manager
         self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.manager
+
+    def _create_host(self, fqdn, nodename, address):
+        host = ManagedHost.objects.create(fqdn = fqdn,
+                                          nodename = nodename,
+                                          address = address)
+
+        LNetConfiguration.objects.create(host = host, state = 'lnet_down')
+
+        return host
 
     def tearDown(self):
         import chroma_core.lib.storage_plugin.manager
@@ -191,11 +197,9 @@ class TestVirtualMachines(ResourceManagerTestCase):
         MockAgentRpc.mock_servers = self.mock_servers
 
         def create_host_ssh(address):
-            host = ManagedHost.objects.create(
-                fqdn = address,
-                nodename = address,
-                address = address
-            )
+            host = self._create_host(fqdn = address,
+                                     nodename = address,
+                                     address = address)
             return host, None
 
         self.old_create_host_ssh = JobSchedulerClient.create_host_ssh
@@ -481,11 +485,10 @@ class TestVolumeBalancing(ResourceManagerTestCase):
         for i in range(0, 3):
             address = "host_%d" % i
 
-            host = ManagedHost.objects.create(
-                fqdn = address,
-                nodename = address,
-                address = address
-            )
+            host = self._create_host(fqdn = address,
+                                     nodename = address,
+                                     address = address)
+
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})
             hosts.append({'host': host, 'record': resource_record, 'resource': scannable_resource})
 
@@ -520,11 +523,10 @@ class TestVolumeBalancing(ResourceManagerTestCase):
         for i in [0, 1]:
             address = "host_%d" % i
 
-            host = ManagedHost.objects.create(
-                fqdn = address,
-                nodename = address,
-                address = address
-            )
+            host = self._create_host(fqdn = address,
+                                     nodename = address,
+                                     address = address)
+
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})
             hosts.append({'host': host, 'record': resource_record, 'resource': scannable_resource})
 
