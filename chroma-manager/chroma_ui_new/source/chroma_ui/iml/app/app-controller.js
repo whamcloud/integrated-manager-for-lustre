@@ -20,9 +20,10 @@
 // express and approved by Intel in writing.
 
 
-angular.module('app').controller('AppCtrl', ['$routeSegment', 'SessionModel', 'navigate', 'ENV', 'GROUPS', AppCtrl]);
+angular.module('app').controller('AppCtrl',
+  ['$routeSegment', 'SessionModel', 'navigate', 'ENV', 'GROUPS', 'help', AppCtrl]);
 
-function AppCtrl ($routeSegment, SessionModel, navigate, ENV, GROUPS) {
+function AppCtrl ($routeSegment, SessionModel, navigate, ENV, GROUPS, help) {
   'use strict';
 
   var self = this;
@@ -30,6 +31,8 @@ function AppCtrl ($routeSegment, SessionModel, navigate, ENV, GROUPS) {
   this.$routeSegment = $routeSegment;
 
   this.RUNTIME_VERSION = ENV.RUNTIME_VERSION;
+
+  this.COPYRIGHT_YEAR = help.get('copyright_year');
 
   this.GROUPS = GROUPS;
 
