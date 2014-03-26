@@ -216,7 +216,8 @@ class RemoveLustreClientJob(StateChangeJob):
         return "Remove %s" % self.lustre_client_mount
 
     def get_steps(self):
-        return [(DeleteLustreClientMountStep, {'client_mount': self})]
+        return [(DeleteLustreClientMountStep,
+                 {'client_mount': self.lustre_client_mount})]
 
     class Meta:
         app_label = 'chroma_core'

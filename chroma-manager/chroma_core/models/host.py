@@ -1218,13 +1218,20 @@ class RemoveHostJob(StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
-        steps = [(UnconfigureNTPStep, {'host': self.host}),
+        steps = [(UnconfigureNTPStep, {'host': self.host})]
+
+        if self.host.is_lustre_server:
+            steps.extend([
                 (UnconfigurePacemakerStep, {'host': self.host}),
-                (UnconfigureCorosyncStep, {'host': self.host}),
-                (UnconfigureRsyslogStep, {'host': self.host}),
-                (UnconfigureLNetStep, {'host': self.host}),
-                (RemoveServerConfStep, {'host': self.host}),
-                (DeleteHostStep, {'host': self.host, 'force': False})]
+                (UnconfigureCorosyncStep, {'host': self.host})
+            ])
+
+        steps.extend([
+            (UnconfigureRsyslogStep, {'host': self.host}),
+            (UnconfigureLNetStep, {'host': self.host}),
+            (RemoveServerConfStep, {'host': self.host}),
+            (DeleteHostStep, {'host': self.host, 'force': False})
+        ])
 
         return steps
 
