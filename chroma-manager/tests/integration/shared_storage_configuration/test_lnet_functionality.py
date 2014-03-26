@@ -33,12 +33,10 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
 
         # Now create nids on each interface.
         objects = []
-        lnd_network = 99
-        for interface in lnetinfo.network_interfaces:
+        for lnd_network, interface in enumerate(lnetinfo.network_interfaces, start = 99):
             logger.debug("Setting lnd_network to %s for interface %s" % (lnd_network, interface['name']))
             objects.append({"lnd_network": lnd_network,
                             "network_interface": interface['resource_uri']})
-            lnd_network += 1
 
         # Now post these of values, this will wait for the command to complete.
         self.post_by_uri('/api/nid/', {'objects': objects})
@@ -49,29 +47,31 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         # Sanity check.
         self.assertEqual(lnetinfo.nids, lnetinfo.lnet_configuration['nids'])
 
-        # Now change the nid from network 99 to network 1001
-        logger.debug("Setting lnd_network to %s for nid %s" % (1001, lnetinfo.nids[0]['resource_uri']))
-        self.set_value(lnetinfo.nids[0]['resource_uri'], 'lnd_network', 1001, False)
+        # Check for each position, these are stored in lists and dicts, so try all the positions.
+        for lnd_network, nid in enumerate(lnetinfo.nids, start = 999):
+            # Now change the nid from to something else
+            logger.debug("Setting lnd_network to %s for nid %s" % (lnd_network, lnetinfo.nids[0]['resource_uri']))
+            self.set_value(nid['resource_uri'], 'lnd_network', lnd_network, False)
 
-        # Check it worked ok.
-        self.assertEqual(self.get_json_by_uri(lnetinfo.nids[0]['resource_uri'])['lnd_network'], 1001)
+            # Check it worked ok.
+            self.assertEqual(self.get_json_by_uri(nid['resource_uri'])['lnd_network'], lnd_network)
 
-        # Now delete the nid
-        self.delete_by_uri(lnetinfo.nids[0]['resource_uri'])
+            # Now delete the nid
+            self.delete_by_uri(nid['resource_uri'])
 
-        # Try fetching it and assert it is not found
-        self.wait_for_assert(lambda: self.assertEqual(self.get_by_uri(lnetinfo.nids[0]['resource_uri'], False).status_code, 404))
+            # Try fetching it and assert it is not found
+            self.wait_for_assert(lambda: self.assertEqual(self.get_by_uri(nid['resource_uri'], False).status_code, 404))
 
-        # Ensure that the update worked, we have deleted.
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), len(lnetinfo.nids) - 1)
+            # Ensure that the update worked, we have deleted.
+            self.assertEqual(len(self._get_lnet_info(self.host).nids), len(lnetinfo.nids) - 1)
 
-        # No try posting it back.
-        self.post_by_uri('/api/nid/', lnetinfo.nids[0])
+            # Now try posting it back.
+            self.post_by_uri('/api/nid/', nid)
 
-        # Ensure that the update worked, we have deleted and posted one.
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), len(lnetinfo.nids))
+            # Ensure that the update worked, we have deleted and posted one.
+            self.assertEqual(len(self._get_lnet_info(self.host).nids), len(lnetinfo.nids))
 
-        self.assertEqual(lnetinfo.nids, self._get_lnet_info(self.host).nids)
+            self.assertEqual(lnetinfo.nids, self._get_lnet_info(self.host).nids)
 
         # Finally and as much so that we leave everything in a nice state for others. Delete the configuration
         objects = []

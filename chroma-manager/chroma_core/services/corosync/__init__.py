@@ -47,7 +47,6 @@ class Service(ChromaService):
     PLUGIN_NAME = 'corosync'
 
     def __init__(self):
-
         super(Service, self).__init__()
 
         #  Class to store the in-memory online/offline status and sample times

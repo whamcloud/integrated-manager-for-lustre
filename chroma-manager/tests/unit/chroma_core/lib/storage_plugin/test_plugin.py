@@ -1,13 +1,13 @@
-from chroma_core.services.plugin_runner.resource_manager import ResourceManager
+import mock
+import types
+import sys
+
+from chroma_core.services.plugin_runner.resource_manager import PluginSession
 from django.test import TestCase
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId
 from chroma_core.lib.storage_plugin.api import resources
 from chroma_core.lib.storage_plugin.api.plugin import Plugin
-
-import mock
-import types
-import sys
 
 
 class TestResource(resources.ScannableResource):
@@ -85,33 +85,32 @@ class TestCallbacks(TestCase):
         self.scannable_resource = ResourceQuery().get_resource(scannable_record)
         self.scannable_global_id = scannable_record.pk
 
-        self.resource_manager = mock.Mock(spec_set=ResourceManager)
+        self.resource_manager = mock.Mock(_sessions = {})
+        self.plugin = TestPlugin(self.resource_manager, self.scannable_global_id)
+        self.resource_manager._sessions[self.scannable_global_id] = PluginSession(self.plugin, self.scannable_global_id, 0)
 
     def tearDown(self):
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.orig_manager
 
     def test_initial(self):
-        instance = TestPlugin(self.resource_manager, self.scannable_global_id)
-        instance.initial_scan = mock.Mock()
-        instance.do_initial_scan()
-        instance.initial_scan.assert_called_once()
+        self.plugin.initial_scan = mock.Mock()
+        self.plugin.do_initial_scan()
+        self.plugin.initial_scan.assert_called_once()
 
     def test_update(self):
-        instance = TestPlugin(self.resource_manager, self.scannable_global_id)
-        instance.do_initial_scan()
+        self.plugin.do_initial_scan()
 
-        instance.update_scan = mock.Mock()
-        instance.do_periodic_update()
-        instance.update_scan.assert_called_once()
+        self.plugin.update_scan = mock.Mock()
+        self.plugin.do_periodic_update()
+        self.plugin.update_scan.assert_called_once()
 
     def test_teardown(self):
-        instance = TestPlugin(self.resource_manager, self.scannable_global_id)
-        instance.do_initial_scan()
+        self.plugin.do_initial_scan()
 
-        instance.teardown = mock.Mock()
-        instance.do_teardown()
-        instance.teardown.assert_called_once()
+        self.plugin.teardown = mock.Mock()
+        self.plugin.do_teardown()
+        self.plugin.teardown.assert_called_once()
 
 
 class TestAddRemove(TestCase):
@@ -137,6 +136,11 @@ class TestAddRemove(TestCase):
         import chroma_core.lib.storage_plugin.manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.orig_manager
 
+    def _create_mocked_resource_and_plugin(self):
+        self.resource_manager = mock.Mock(_sessions = {})
+        self.plugin = TestPlugin(self.resource_manager, self.scannable_global_id)
+        self.resource_manager._sessions[self.scannable_global_id] = PluginSession(self.plugin, self.scannable_global_id, 0)
+
     def test_initial_resources(self):
         def report1(self, root_resource):
             self.resource1, created = self.update_or_create(TestSecondResource, name = 'test1')
@@ -145,117 +149,116 @@ class TestAddRemove(TestCase):
             pass
 
         # First session for the scannable, 1 resource present
-        resource_manager = mock.Mock()
-        instance = TestPlugin(resource_manager, self.scannable_global_id)
-        instance.initial_scan = types.MethodType(report1, instance)
+        self._create_mocked_resource_and_plugin()
+
+        self.plugin.initial_scan = types.MethodType(report1, self.plugin)
 
         # Should pass the scannable resource and the one we created to session_open
-        instance.do_initial_scan()
-        resource_manager.session_open.assert_called_once_with(
-                instance._scannable_id,
-                [instance._root_resource, instance.resource1],
-                instance.update_period)
+        self.plugin.do_initial_scan()
+        self.resource_manager.session_open.assert_called_once_with(
+                self.plugin,
+                self.plugin._scannable_id,
+                [self.plugin._root_resource, self.plugin.resource1],
+                self.plugin.update_period)
 
         # Session reporting 0 resource in initial_scan
-        resource_manager = mock.Mock()
-        instance = TestPlugin(resource_manager, self.scannable_global_id)
-        instance.initial_scan = types.MethodType(report0, instance)
-        instance.do_initial_scan()
+        self._create_mocked_resource_and_plugin()
+
+        self.plugin.initial_scan = types.MethodType(report0, self.plugin)
+        self.plugin.do_initial_scan()
 
         # Should just report back the scannable resource to session_open
-        resource_manager.session_open.assert_called_once_with(
-                instance._scannable_id,
-                [instance._root_resource],
-                instance.update_period)
+        self.resource_manager.session_open.assert_called_once_with(
+                self.plugin,
+                self.plugin._scannable_id,
+                [self.plugin._root_resource],
+                self.plugin.update_period)
 
     def test_update_add(self):
-        resource_manager = mock.Mock()
-        instance = TestPlugin(resource_manager, self.scannable_global_id)
-        instance.do_initial_scan()
+        self._create_mocked_resource_and_plugin()
+
+        self.plugin.do_initial_scan()
 
         # Patch in an update_scan which reports one resource
         def report1(self, root_resource):
             self.resource1, created = self.update_or_create(TestSecondResource, name = 'test1')
-        instance.update_scan = types.MethodType(report1, instance)
+        self.plugin.update_scan = types.MethodType(report1, self.plugin)
 
         # Check that doing an update_or_create calls session_add_resources
-        instance.do_periodic_update()
-        resource_manager.session_add_resources.assert_called_once_with(instance._scannable_id, [instance.resource1])
+        self.plugin.do_periodic_update()
+        self.resource_manager.session_add_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
 
-        resource_manager.session_add_resources.reset_mock()
+        self.resource_manager.session_add_resources.reset_mock()
 
         # Check that doing a second update_or_create silently does nothing
-        instance.do_periodic_update()
-        self.assertFalse(resource_manager.session_add_resources.called)
+        self.plugin.do_periodic_update()
+        self.assertFalse(self.resource_manager.session_add_resources.called)
 
     def test_update_remove(self):
-        resource_manager = mock.Mock()
-        instance = TestPlugin(resource_manager, self.scannable_global_id)
-        instance.do_initial_scan()
+        self._create_mocked_resource_and_plugin()
+        self.plugin.do_initial_scan()
 
         def report1(self, root_resource):
             self.resource1, created = self.update_or_create(TestSecondResource, name = 'test1')
-        instance.update_scan = types.MethodType(report1, instance)
+        self.plugin.update_scan = types.MethodType(report1, self.plugin)
 
-        instance.do_periodic_update()
-        resource_manager.session_add_resources.assert_called_once_with(instance._scannable_id, [instance.resource1])
+        self.plugin.do_periodic_update()
+        self.resource_manager.session_add_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
 
         def remove1(self, root_resource):
             self.remove(self.resource1)
-        instance.update_scan = types.MethodType(remove1, instance)
+        self.plugin.update_scan = types.MethodType(remove1, self.plugin)
 
-        instance.do_periodic_update()
-        resource_manager.session_remove_resources.assert_called_once_with(instance._scannable_id, [instance.resource1])
+        self.plugin.do_periodic_update()
+        self.resource_manager.session_remove_resources.assert_called_once_with(self.plugin._scannable_id, [self.plugin.resource1])
 
     def test_update_modify_parents(self):
-        resource_manager = mock.Mock()
-        instance = TestPlugin(resource_manager, self.scannable_global_id)
-        instance.do_initial_scan()
+        self._create_mocked_resource_and_plugin()
+        self.plugin.do_initial_scan()
 
         # Insert two resources, both having no parents
         def report_unrelated(self, root_resource):
             self.resource1, created = self.update_or_create(TestSecondResource, name = 'test1')
             self.resource2, created = self.update_or_create(TestSecondResource, name = 'test2')
             self.resource3, created = self.update_or_create(TestSecondResource, name = 'test3')
-        instance.update_scan = types.MethodType(report_unrelated, instance)
-        instance.do_periodic_update()
+        self.plugin.update_scan = types.MethodType(report_unrelated, self.plugin)
+        self.plugin.do_periodic_update()
 
         # Create a parent relationship between them
         def add_parents(self, root_resource):
             self.resource1.add_parent(self.resource2)
-        instance.update_scan = types.MethodType(add_parents, instance)
-        instance.do_periodic_update()
-        resource_manager.session_resource_add_parent.assert_called_once_with(instance._scannable_id,
-                                                               instance.resource1._handle,
-                                                               instance.resource2._handle)
+        self.plugin.update_scan = types.MethodType(add_parents, self.plugin)
+        self.plugin.do_periodic_update()
+        self.resource_manager.session_resource_add_parent.assert_called_once_with(self.plugin._scannable_id,
+                                                               self.plugin.resource1._handle,
+                                                               self.plugin.resource2._handle)
 
         # Remove the relationship
         def remove_parents(self, root_resource):
             self.resource1.remove_parent(self.resource2)
-        instance.update_scan = types.MethodType(remove_parents, instance)
-        instance.do_periodic_update()
-        resource_manager.session_resource_remove_parent.assert_called_once_with(instance._scannable_id,
-                                                                  instance.resource1._handle,
-                                                                  instance.resource2._handle)
+        self.plugin.update_scan = types.MethodType(remove_parents, self.plugin)
+        self.plugin.do_periodic_update()
+        self.resource_manager.session_resource_remove_parent.assert_called_once_with(self.plugin._scannable_id,
+                                                                  self.plugin.resource1._handle,
+                                                                  self.plugin.resource2._handle)
 
     def test_update_modify_attributes(self):
-        resource_manager = mock.Mock()
-        instance = TestPlugin(resource_manager, self.scannable_global_id)
-        instance.do_initial_scan()
+        self._create_mocked_resource_and_plugin()
+        self.plugin.do_initial_scan()
 
         # Insert two resources, both having no parents
         def report1(self, root_resource):
             self.resource, created = self.update_or_create(TestResourceExtraInfo, name = 'test1', extra_info = 'foo')
-        instance.update_scan = types.MethodType(report1, instance)
-        instance.do_periodic_update()
+        self.plugin.update_scan = types.MethodType(report1, self.plugin)
+        self.plugin.do_periodic_update()
 
         # Modify the extra_info attribute
         def modify(self, root_resource):
             self.resource.extra_info = 'bar'
-        instance.update_scan = types.MethodType(modify, instance)
-        instance.do_periodic_update()
-        resource_manager.session_update_resource.assert_called_once_with(instance._scannable_id,
-                                                           instance.resource._handle,
+        self.plugin.update_scan = types.MethodType(modify, self.plugin)
+        self.plugin.do_periodic_update()
+        self.resource_manager.session_update_resource.assert_called_once_with(self.plugin._scannable_id,
+                                                           self.plugin.resource._handle,
                                                            {'extra_info': 'bar'})
 
     def test_update_statistics(self):

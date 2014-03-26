@@ -1,4 +1,6 @@
 
+from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
+
 from django.test import TestCase
 from django.utils.html import conditional_escape
 
@@ -77,7 +79,6 @@ class TestReferenceAttribute(TestCase):
         import chroma_core.lib.storage_plugin.manager
         self.original_mgr = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
 
-        from helper import load_plugins
         mgr = load_plugins(['loadable_plugin'])
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = mgr
 

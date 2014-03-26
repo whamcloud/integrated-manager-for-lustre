@@ -6,31 +6,46 @@ from django.db.models.query_utils import Q
 from chroma_core.lib.util import dbperf
 from chroma_core.models.host import Volume, VolumeNode, ManagedHost, LNetConfiguration, Nid
 from chroma_core.models.storage_plugin import StorageResourceRecord
-from helper import load_plugins
+from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
 import mock
 from tests.unit.chroma_core.helper import MockAgentRpc
 from django.test import TestCase
+from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
 
 
 class ResourceManagerTestCase(TestCase):
-    def setUp(self):
+    def setUp(self, plugin_name = 'linux'):
+        plugins_to_load = ['example_plugin',
+                           'linux',
+                           'linux_network',
+                           'subscription_plugin',
+                           'virtual_machine_plugin',
+                           'alert_plugin']
+
+        assert plugin_name in plugins_to_load
+
         super(ResourceManagerTestCase, self).setUp()
 
         self.host = self._create_host(fqdn = 'myaddress.mycompany.com',
                                       nodename = 'myaddress.mycompany.com',
                                       address = 'myaddress.mycompany.com')
 
-        self.manager = load_plugins([
-            'example_plugin',
-            'linux',
-            'linux_network',
-            'subscription_plugin',
-            'virtual_machine_plugin',
-            'alert_plugin'])
+        self.manager = load_plugins(plugins_to_load)
 
-        import chroma_core.lib.storage_plugin.manager
-        self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
-        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.manager
+        mock.patch('chroma_core.lib.storage_plugin.manager.storage_plugin_manager', self.manager).start()
+
+        self.resource_manager = ResourceManager()
+
+        # Mock out the plugin queue otherwise we get all sorts of issues in ci. We really shouldn't
+        # need all that ampq stuff just for the unit tests.
+        mock.patch('chroma_core.services.queue.AgentRxQueue').start()
+
+        self.plugin = AgentPluginHandlerCollection(self.resource_manager).handlers[plugin_name]._create_plugin_instance(self.host)
+
+    def tearDown(self):
+        mock.patch.stopall()
+
+        super(ResourceManagerTestCase, self).tearDown()
 
     def _create_host(self, fqdn, nodename, address):
         host = ManagedHost.objects.create(fqdn = fqdn,
@@ -40,12 +55,6 @@ class ResourceManagerTestCase(TestCase):
         LNetConfiguration.objects.create(host = host, state = 'lnet_down')
 
         return host
-
-    def tearDown(self):
-        import chroma_core.lib.storage_plugin.manager
-        chroma_core.lib.storage_plugin.manager.storage_plugin_manager = self.old_manager
-
-        super(ResourceManagerTestCase, self).tearDown()
 
     def __init__(self, *args, **kwargs):
         self._handle_counter = 0
@@ -78,7 +87,7 @@ class ResourceManagerTestCase(TestCase):
 
 class TestSessions(ResourceManagerTestCase):
     def setUp(self):
-        super(TestSessions, self).setUp()
+        super(TestSessions, self).setUp('example_plugin')
 
         resource_class, resource_class_id = self.manager.get_plugin_resource_class('example_plugin', 'Couplet')
         record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {
@@ -87,26 +96,25 @@ class TestSessions(ResourceManagerTestCase):
         self.scannable_resource_id = record.pk
 
     def test_open_close(self):
-        resource_manager = ResourceManager()
-        self.assertEqual(len(resource_manager._sessions), 0)
+        self.assertEqual(len(self.resource_manager._sessions), 0)
 
         # Create a new session (clean slate)
-        resource_manager.session_open(self.scannable_resource_id, [], 60)
-        self.assertEqual(len(resource_manager._sessions), 1)
+        self.resource_manager.session_open(self.plugin, self.scannable_resource_id, [], 60)
+        self.assertEqual(len(self.resource_manager._sessions), 1)
 
         # Create a new session (override previous)
-        resource_manager.session_open(self.scannable_resource_id, [], 60)
-        self.assertEqual(len(resource_manager._sessions), 1)
+        self.resource_manager.session_open(self.plugin, self.scannable_resource_id, [], 60)
+        self.assertEqual(len(self.resource_manager._sessions), 1)
 
         # Close a session
-        resource_manager.session_close(self.scannable_resource_id)
-        self.assertEqual(len(resource_manager._sessions), 0)
+        self.resource_manager.session_close(self.scannable_resource_id)
+        self.assertEqual(len(self.resource_manager._sessions), 0)
 
         # Check that it's allowed to close a non-existent session
         # (plugins don't have to guarantee opening before calling
         # closing in a finally block)
-        resource_manager.session_close(self.scannable_resource_id)
-        self.assertEqual(len(resource_manager._sessions), 0)
+        self.resource_manager.session_close(self.scannable_resource_id)
+        self.assertEqual(len(self.resource_manager._sessions), 0)
 
 
 class TestManyObjects(ResourceManagerTestCase):
@@ -115,7 +123,7 @@ class TestManyObjects(ResourceManagerTestCase):
     being done by the resource manager & how it varies with the number of devices in play
     """
     def setUp(self):
-        super(TestManyObjects, self).setUp()
+        super(TestManyObjects, self).setUp('linux')
 
         resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources',
                 {'plugin_name': 'linux', 'host_id': self.host.id})
@@ -158,12 +166,10 @@ class TestManyObjects(ResourceManagerTestCase):
             dbperf.enabled = True
             connection.use_debug_cursor = True
 
-            resource_manager = ResourceManager()
-
             with dbperf('session_open_host'):
-                resource_manager.session_open(self.host_resource_pk, self.host_resources, 60)
+                self.resource_manager.session_open(self.plugin, self.host_resource_pk, self.host_resources, 60)
             with dbperf('session_open_controller'):
-                resource_manager.session_open(self.couplet_resource_pk, self.controller_resources, 60)
+                self.resource_manager.session_open(self.plugin, self.couplet_resource_pk, self.controller_resources, 60)
 
             host_res_count = self.N * 2 + 1
             cont_res_count = self.N + self.N * self.M + 1
@@ -172,12 +178,12 @@ class TestManyObjects(ResourceManagerTestCase):
             self.assertEqual(VolumeNode.objects.count(), self.N)
 
             with dbperf('global_remove_resource_host'):
-                resource_manager.global_remove_resource(self.host_resource_pk)
+                self.resource_manager.global_remove_resource(self.host_resource_pk)
 
             self.assertEqual(StorageResourceRecord.objects.count(), cont_res_count)
 
             with dbperf('global_remove_resource_controller'):
-                resource_manager.global_remove_resource(self.couplet_resource_pk)
+                self.resource_manager.global_remove_resource(self.couplet_resource_pk)
 
             self.assertEqual(StorageResourceRecord.objects.count(), 0)
 
@@ -188,7 +194,7 @@ class TestManyObjects(ResourceManagerTestCase):
 
 class TestVirtualMachines(ResourceManagerTestCase):
     def setUp(self):
-        super(TestVirtualMachines, self).setUp()
+        super(TestVirtualMachines, self).setUp('virtual_machine_plugin')
         self.mock_servers = {'myvm': {
             'fqdn': 'myvm.mycompany.com',
             'nodename': 'test01.myvm.mycompany.com',
@@ -208,6 +214,8 @@ class TestVirtualMachines(ResourceManagerTestCase):
     def tearDown(self):
         JobSchedulerClient.create_host_ssh = self.old_create_host_ssh
 
+        super(TestVirtualMachines, self).tearDown()
+
     def test_virtual_machine_initial(self):
         """Check that ManagedHosts are created for VirtualMachines when
         present in the initial resource set"""
@@ -216,9 +224,8 @@ class TestVirtualMachines(ResourceManagerTestCase):
 
         self.assertEqual(ManagedHost.objects.count(), 1)
 
-        resource_manager = ResourceManager()
         # Session for host resources
-        resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
+        self.resource_manager.session_open(self.plugin, controller_record.pk, [controller_resource, vm_resource], 60)
         JobSchedulerClient.create_host_ssh.assert_called_once_with('myvm')
 
     def test_virtual_machine_update(self):
@@ -229,11 +236,10 @@ class TestVirtualMachines(ResourceManagerTestCase):
         vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine',
             address = 'myvm')
 
-        resource_manager = ResourceManager()
         # Session for host resources
-        resource_manager.session_open(controller_record.pk, [controller_resource], 60)
+        self.resource_manager.session_open(self.plugin, controller_record.pk, [controller_resource], 60)
         self.assertEqual(ManagedHost.objects.count(), 1)
-        resource_manager.session_add_resources(controller_record.pk, [controller_resource, vm_resource])
+        self.resource_manager.session_add_resources(controller_record.pk, [controller_resource, vm_resource])
         JobSchedulerClient.create_host_ssh.assert_called_once_with('myvm')
         self.assertEqual(ManagedHost.objects.count(), 2)
 
@@ -243,17 +249,16 @@ class TestVirtualMachines(ResourceManagerTestCase):
         controller_record, controller_resource = self._make_global_resource('virtual_machine_plugin', 'Controller', {'address': '192.168.0.1'})
         vm_resource = self._make_local_resource('virtual_machine_plugin', 'VirtualMachine', address = self.host.address)
 
-        resource_manager = ResourceManager()
         # Session for host resources
         self.assertEqual(ManagedHost.objects.count(), 1)
-        resource_manager.session_open(controller_record.pk, [controller_resource, vm_resource], 60)
+        self.resource_manager.session_open(self.plugin, controller_record.pk, [controller_resource, vm_resource], 60)
         self.assertEqual(JobSchedulerClient.create_host_ssh.call_count, 0)
         self.assertEqual(ManagedHost.objects.count(), 1)
 
 
 class TestResourceOperations(ResourceManagerTestCase):
     def setUp(self):
-        super(TestResourceOperations, self).setUp()
+        super(TestResourceOperations, self).setUp('linux')
 
         resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
 
@@ -264,20 +269,24 @@ class TestResourceOperations(ResourceManagerTestCase):
         self.node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/foo", parents = [self.dev_resource], host_id = self.host.id)
 
     def test_re_add(self):
-        resource_manager = ResourceManager()
-        resource_manager.session_open(self.scannable_resource_pk, [self.scannable_resource, self.dev_resource, self.node_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           self.scannable_resource_pk,
+                                           [self.scannable_resource, self.dev_resource, self.node_resource],
+                                           60)
 
         self.assertEqual(StorageResourceRecord.objects.count(), 3)
-        resource_manager.session_remove_resources(self.scannable_resource_pk, [self.node_resource])
+        self.resource_manager.session_remove_resources(self.scannable_resource_pk, [self.node_resource])
         self.assertEqual(StorageResourceRecord.objects.count(), 2)
-        resource_manager.session_add_resources(self.scannable_resource_pk, [self.node_resource])
+        self.resource_manager.session_add_resources(self.scannable_resource_pk, [self.node_resource])
         self.assertEqual(StorageResourceRecord.objects.count(), 3)
 
     def test_global_remove(self):
-        resource_manager = ResourceManager()
-        resource_manager.session_open(self.scannable_resource_pk, [self.scannable_resource, self.dev_resource, self.node_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           self.scannable_resource_pk,
+                                           [self.scannable_resource, self.dev_resource, self.node_resource],
+                                           60)
         self.assertEqual(StorageResourceRecord.objects.count(), 3)
-        resource_manager.global_remove_resource(self.scannable_resource_pk)
+        self.resource_manager.global_remove_resource(self.scannable_resource_pk)
         self.assertEqual(StorageResourceRecord.objects.count(), 0)
 
     def test_reference(self):
@@ -285,9 +294,10 @@ class TestResourceOperations(ResourceManagerTestCase):
         partition = self._make_local_resource('linux', 'Partition',
                                               container = self.dev_resource, number = 0, size = 1024 * 1024 * 500)
 
-        resource_manager = ResourceManager()
-        resource_manager.session_open(self.scannable_resource_pk, [
-            self.scannable_resource, partition, self.dev_resource, self.node_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           self.scannable_resource_pk,
+                                           [self.scannable_resource, partition, self.dev_resource, self.node_resource],
+                                           60)
 
         from chroma_core.models import StorageResourceAttributeReference
         self.assertEqual(StorageResourceAttributeReference.objects.count(), 1)
@@ -299,12 +309,17 @@ class TestResourceOperations(ResourceManagerTestCase):
         lun_resource = self._make_local_resource('subscription_plugin', 'Lun', lun_id = 'foobar', size = 1024 * 1024)
         presentation_resource = self._make_local_resource('subscription_plugin', 'Presentation', host_id = self.host.id, path = '/dev/foo', lun_id = 'foobar')
 
-        resource_manager = ResourceManager()
         # Session for host resources
-        resource_manager.session_open(self.scannable_resource_pk, [self.scannable_resource, self.dev_resource, self.node_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           self.scannable_resource_pk,
+                                           [self.scannable_resource, self.dev_resource, self.node_resource],
+                                           60)
 
         # Session for controller resources
-        resource_manager.session_open(controller_record.pk, [controller_resource, lun_resource, presentation_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           controller_record.pk,
+                                           [controller_resource, lun_resource, presentation_resource],
+                                           60)
 
         # Check relations created
         node_klass, node_klass_id = self.manager.get_plugin_resource_class('linux', 'LinuxDeviceNode')
@@ -322,7 +337,7 @@ class TestResourceOperations(ResourceManagerTestCase):
                 self.assertIn(lun_klass, parent_resources)
 
         count_before = StorageResourceRecord.objects.count()
-        resource_manager.session_remove_resources(controller_record.pk, [presentation_resource])
+        self.resource_manager.session_remove_resources(controller_record.pk, [presentation_resource])
         count_after = StorageResourceRecord.objects.count()
 
         self.assertEqual(StorageResourceRecord.objects.filter(resource_class = presentation_klass_id).count(), 0)
@@ -333,24 +348,24 @@ class TestResourceOperations(ResourceManagerTestCase):
     def test_update_host_lun(self):
         """Test that Volumes are generated from LogicalDrives when they are reported
         in an update rather than the initial resource set"""
-        resource_manager = ResourceManager()
-        resource_manager.session_open(self.scannable_resource_pk, [self.scannable_resource], 60)
+        self.resource_manager.session_open(self.plugin, self.scannable_resource_pk, [self.scannable_resource], 60)
         self.assertEqual(Volume.objects.count(), 0)
         self.assertEqual(VolumeNode.objects.count(), 0)
-        resource_manager.session_add_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
+        self.resource_manager.session_add_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
-        resource_manager.session_remove_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
+        self.resource_manager.session_remove_resources(self.scannable_resource_pk, [self.dev_resource, self.node_resource])
         self.assertEqual(Volume.objects.count(), 0)
         self.assertEqual(VolumeNode.objects.count(), 0)
 
     def test_initial_host_lun(self):
-        resource_manager = ResourceManager()
         child_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode',
             path = "/dev/foobar", parents = [self.node_resource], host_id = self.host.id)
 
-        resource_manager.session_open(
-            self.scannable_resource_pk, [self.scannable_resource, self.dev_resource, self.node_resource, child_node_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           self.scannable_resource_pk,
+                                           [self.scannable_resource, self.dev_resource, self.node_resource, child_node_resource],
+                                           60)
 
         # Check we got a Volume and a VolumeNode
         self.assertEqual(Volume.objects.count(), 1)
@@ -372,9 +387,12 @@ class TestResourceOperations(ResourceManagerTestCase):
 
         # Try closing and re-opening the session, this time without the resources, the Volume/VolumeNode objects
         # should be removed
-        resource_manager.session_close(resource_record.pk)
+        self.resource_manager.session_close(resource_record.pk)
 
-        resource_manager.session_open(resource_record.pk, [self.scannable_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           resource_record.pk,
+                                           [self.scannable_resource],
+                                           60)
 
         self.assertEqual(VolumeNode.objects.count(), 0)
         self.assertEqual(Volume.objects.count(), 0)
@@ -395,10 +413,10 @@ class TestResourceOperations(ResourceManagerTestCase):
         occupied_node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path="/dev/foo",
                                                            parents=[occupied_dev_resource], host_id=self.host.id)
 
-        resource_manager = ResourceManager()
-
-        resource_manager.session_open(
-            self.scannable_resource_pk, [self.scannable_resource, occupied_dev_resource, occupied_node_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           self.scannable_resource_pk,
+                                           [self.scannable_resource, occupied_dev_resource, occupied_node_resource],
+                                           60)
 
         self.assertEqual(Volume.objects.count(), 1)
         self.assertEqual(VolumeNode.objects.count(), 1)
@@ -407,6 +425,9 @@ class TestResourceOperations(ResourceManagerTestCase):
 
 
 class TestEdgeIndex(ResourceManagerTestCase):
+    def setUp(self):
+        super(TestEdgeIndex, self).setUp('example_plugin')
+
     def test_add_remove(self):
         from chroma_core.services.plugin_runner.resource_manager import EdgeIndex
 
@@ -436,10 +457,14 @@ class TestEdgeIndex(ResourceManagerTestCase):
         resource_record, couplet_resource = self._make_global_resource('example_plugin', 'Couplet', {'address_1': 'foo', 'address_2': 'bar'})
         controller_resource = self._make_local_resource('example_plugin', 'Controller', index = 0, parents = [couplet_resource])
 
-        resource_manager = ResourceManager()
-        resource_manager.session_open(resource_record.pk, [couplet_resource, controller_resource], 60)
+        self.resource_manager.session_open(self.plugin,
+                                           resource_record.pk,
+                                           [couplet_resource, controller_resource],
+                                           60)
 
-        controller_record = StorageResourceRecord.objects.get(~Q(id = resource_record.pk))
+        # By not fetching the Couple and not fetching the plugin we should be left with 1 entry, this will raise an exception if the
+        # result is not 1 entry.
+        controller_record = StorageResourceRecord.objects.get(~Q(id = resource_record.pk), ~Q(id = self.plugin._scannable_id))
 
         index = EdgeIndex()
         index.populate()
@@ -464,11 +489,10 @@ class TestSubscriberIndex(ResourceManagerTestCase):
         lun_resource = self._make_local_resource('subscription_plugin', 'Lun', lun_id = 'foobar', size = 1024 * 1024)
         presentation_resource = self._make_local_resource('subscription_plugin', 'Presentation', host_id = self.host.id, path = '/dev/foo', lun_id = 'foobar')
 
-        resource_manager = ResourceManager()
-        resource_manager.session_open(scannable_resource_pk, [scannable_resource, dev_resource, node_resource], 60)
-        resource_manager.session_open(controller_record.pk, [controller_resource, lun_resource, presentation_resource], 60)
+        self.resource_manager.session_open(self.plugin, scannable_resource_pk, [scannable_resource, dev_resource, node_resource], 60)
+        self.resource_manager.session_open(self.plugin, controller_record.pk, [controller_resource, lun_resource, presentation_resource], 60)
 
-        lun_pk = resource_manager._sessions[controller_record.pk].local_id_to_global_id[lun_resource._handle]
+        lun_pk = self.resource_manager._sessions[controller_record.pk].local_id_to_global_id[lun_resource._handle]
 
         from chroma_core.services.plugin_runner.resource_manager import SubscriberIndex
         index = SubscriberIndex()
@@ -479,8 +503,6 @@ class TestSubscriberIndex(ResourceManagerTestCase):
 
 class TestVolumeBalancing(ResourceManagerTestCase):
     def test_volume_balance(self):
-        resource_manager = ResourceManager()
-
         hosts = []
         for i in range(0, 3):
             address = "host_%d" % i
@@ -492,7 +514,7 @@ class TestVolumeBalancing(ResourceManagerTestCase):
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})
             hosts.append({'host': host, 'record': resource_record, 'resource': scannable_resource})
 
-            resource_manager.session_open(resource_record.pk, [scannable_resource], 60)
+            self.resource_manager.session_open(self.plugin, resource_record.pk, [scannable_resource], 60)
 
         for vol in range(0, 3):
             devices = ["serial_%s" % i for i in range(0, 3)]
@@ -502,7 +524,7 @@ class TestVolumeBalancing(ResourceManagerTestCase):
                     dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial=device, size=4096)
                     node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/%s" % device, parents = [dev_resource], host_id = host_info['host'].id)
                     resources.extend([dev_resource, node_resource])
-                resource_manager.session_add_resources(host_info['record'].pk, resources)
+                self.resource_manager.session_add_resources(host_info['record'].pk, resources)
 
         # Check that for 3 hosts, 3 volumes, they get one primary each
         expected = dict([(host_info['host'].address, 1) for host_info in hosts])
@@ -514,8 +536,6 @@ class TestVolumeBalancing(ResourceManagerTestCase):
         Test that the balancing algorithm respects FQDNs and volume labels in order to generate
         a predictable and pleasing assignment
         """
-
-        resource_manager = ResourceManager()
 
         hosts = []
         # NB deliberately shuffled indices to make sure the code is going to sort
@@ -530,7 +550,7 @@ class TestVolumeBalancing(ResourceManagerTestCase):
             resource_record, scannable_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': host.id})
             hosts.append({'host': host, 'record': resource_record, 'resource': scannable_resource})
 
-            resource_manager.session_open(resource_record.pk, [scannable_resource], 60)
+            self.resource_manager.session_open(self.plugin, resource_record.pk, [scannable_resource], 60)
 
         # Balancing code refuses to assign secondaries unless some clustering information is known
         hosts[1]['host'].ha_cluster_peers.add(hosts[0]['host'])
@@ -548,7 +568,7 @@ class TestVolumeBalancing(ResourceManagerTestCase):
                     dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial=device, size=4096)
                     node_resource = self._make_local_resource('linux', 'LinuxDeviceNode', path = "/dev/%s" % device, parents = [dev_resource], host_id = host_info['host'].id)
                     resources.extend([dev_resource, node_resource])
-                resource_manager.session_add_resources(host_info['record'].pk, resources)
+                self.resource_manager.session_add_resources(host_info['record'].pk, resources)
 
         expected = {
             'serial_0': ('host_0', 'host_1')
@@ -566,9 +586,10 @@ class TestVolumeNaming(ResourceManagerTestCase):
     VG = 'foovg'
     LV = 'foolv'
 
-    def _start_plugin_session(self):
-        resource_manager = ResourceManager()
+    def setUp(self):
+        super(TestVolumeNaming, self).setUp('example_plugin')
 
+    def _start_plugin_session(self):
         couplet_record, couplet_resource = self._make_global_resource('example_plugin', 'Couplet', {
             'address_1': 'foo',
             'address_2': 'bar'
@@ -579,11 +600,9 @@ class TestVolumeNaming(ResourceManagerTestCase):
                                                  serial=self.SERIAL.upper(),
                                                  size=4096)
 
-        resource_manager.session_open(couplet_record.pk, [couplet_resource, lun_resource], 60)
+        self.resource_manager.session_open(self.plugin, couplet_record.pk, [couplet_resource, lun_resource], 60)
 
     def _start_host_session(self, lvm=False, partition=False):
-        resource_manager = ResourceManager()
-
         host_record, host_resource = self._make_global_resource('linux', 'PluginAgentResources', {'plugin_name': 'linux', 'host_id': self.host.id})
 
         dev_resource = self._make_local_resource('linux', 'ScsiDevice', serial=self.SERIAL, size=4096)
@@ -604,7 +623,7 @@ class TestVolumeNaming(ResourceManagerTestCase):
                                                                 host_id=self.host.id)
             resources.extend([partition_resource, partition_node_resource])
 
-        resource_manager.session_open(host_record.pk, resources, 60)
+        self.resource_manager.session_open(self.plugin, host_record.pk, resources, 60)
 
     def assertVolumeName(self, name):
         """For simple single-volume tests, check the name of the volume"""
@@ -658,6 +677,9 @@ class TestVolumeNaming(ResourceManagerTestCase):
 
 
 class TestAlerts(ResourceManagerTestCase):
+    def setUp(self):
+        super(TestAlerts, self).setUp('alert_plugin')
+
     def _update_alerts(self, resource_manager, scannable_pk, resource, alert_klass):
         result = []
         for ac in resource._meta.alert_conditions:
@@ -683,14 +705,13 @@ class TestAlerts(ResourceManagerTestCase):
         lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
 
         # Open session
-        resource_manager = ResourceManager()
-        resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
+        self.resource_manager.session_open(self.plugin, resource_record.pk, [controller_resource, lun_resource], 60)
 
         from chroma_core.lib.storage_plugin.api.alert_conditions import ValueCondition
 
         # Go into failed state and send notification
         controller_resource.multi_status = 'FAIL1'
-        alerts = self._update_alerts(resource_manager, resource_record.pk, controller_resource, ValueCondition)
+        alerts = self._update_alerts(self.resource_manager, resource_record.pk, controller_resource, ValueCondition)
         n = 0
         for alert in alerts:
             if alert[2]:
@@ -707,14 +728,13 @@ class TestAlerts(ResourceManagerTestCase):
         lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
 
         # Open session
-        resource_manager = ResourceManager()
-        resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
+        self.resource_manager.session_open(self.plugin, resource_record.pk, [controller_resource, lun_resource], 60)
 
         from chroma_core.lib.storage_plugin.api.alert_conditions import ValueCondition
 
         # Go into failed state and send notification
         controller_resource.status = 'FAILED'
-        self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, ValueCondition))
 
         from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
 
@@ -730,7 +750,7 @@ class TestAlerts(ResourceManagerTestCase):
 
         # Leave failed state and send notification
         controller_resource.status = 'OK'
-        self.assertEqual(False, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(False, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, ValueCondition))
 
         # Check that the alert is now unset on couplet
         self.assertEqual(StorageResourceAlert.objects.filter(active = True).count(), 0)
@@ -740,7 +760,7 @@ class TestAlerts(ResourceManagerTestCase):
         # Now try setting something which should have a different severity (respect difference betwee
         # warn_states and error_states on AlertCondition)
         controller_resource.status = 'BADLY_FAILED'
-        self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, ValueCondition))
         self.assertEqual(StorageResourceAlert.objects.filter(active=True).count(), 1)
         self.assertEqual(StorageResourceAlert.objects.get(active=True).severity, logging.ERROR)
 
@@ -749,14 +769,13 @@ class TestAlerts(ResourceManagerTestCase):
         lun_resource = self._make_local_resource('alert_plugin', 'Lun', lun_id="foo", size = 1024 * 1024 * 650, parents = [controller_resource])
 
         # Open session
-        resource_manager = ResourceManager()
-        resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
+        self.resource_manager.session_open(self.plugin, resource_record.pk, [controller_resource, lun_resource], 60)
 
         from chroma_core.lib.storage_plugin.api.alert_conditions import ValueCondition
 
         # Go into failed state and send notification
         controller_resource.status = 'FAILED'
-        self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, ValueCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, ValueCondition))
 
         from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
 
@@ -765,7 +784,7 @@ class TestAlerts(ResourceManagerTestCase):
         # Check that the alert is now set on controller (propagation)
         self.assertEqual(StorageAlertPropagated.objects.filter().count(), 1)
 
-        resource_manager.global_remove_resource(resource_record.pk)
+        self.resource_manager.global_remove_resource(resource_record.pk)
 
         # Check that the alert is now unset on couplet
         self.assertEqual(StorageResourceAlert.objects.filter(active = True).count(), 0)
@@ -779,17 +798,16 @@ class TestAlerts(ResourceManagerTestCase):
         from chroma_core.lib.storage_plugin.api.alert_conditions import UpperBoundCondition, LowerBoundCondition
 
         # Open session
-        resource_manager = ResourceManager()
-        resource_manager.session_open(resource_record.pk, [controller_resource, lun_resource], 60)
+        self.resource_manager.session_open(self.plugin, resource_record.pk, [controller_resource, lun_resource], 60)
 
         controller_resource.temperature = 86
-        self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, UpperBoundCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, UpperBoundCondition))
 
         controller_resource.temperature = 84
-        self.assertEqual(False, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, UpperBoundCondition))
+        self.assertEqual(False, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, UpperBoundCondition))
 
         controller_resource.temperature = -1
-        self.assertEqual(True, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, LowerBoundCondition))
+        self.assertEqual(True, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, LowerBoundCondition))
 
         controller_resource.temperature = 1
-        self.assertEqual(False, self._update_alerts_anytrue(resource_manager, resource_record.pk, controller_resource, LowerBoundCondition))
+        self.assertEqual(False, self._update_alerts_anytrue(self.resource_manager, resource_record.pk, controller_resource, LowerBoundCondition))

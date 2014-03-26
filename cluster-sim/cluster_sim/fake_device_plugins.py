@@ -95,7 +95,7 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
             interfaces[name] = {'mac_address': '12:34:56:78:90:1%s' % interface['interface_no'],
                                 'inet4_address': inet4_address,
                                 'inet6_address': 'Need An inet6 Simulated Address',
-                                'type': interface['type'],                          # We report LND types for consistancy, the real version does as well
+                                'type': interface['type'],                          # We report LND types for consistency, the real version does as well
                                 'rx_bytes': '24400222349',
                                 'tx_bytes': '1789870413',
                                 'up': True}

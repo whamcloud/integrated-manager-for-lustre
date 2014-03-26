@@ -1,12 +1,14 @@
 import json
-from chroma_core.services.plugin_runner import ResourceManager
-from django.test import TestCase
 import os
-from chroma_core.models.host import Volume, VolumeNode
 
+from chroma_core.services.plugin_runner import ResourceManager
+from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
+from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
+
+from django.test import TestCase
 
 
 class LinuxPluginTestCase(TestCase):
@@ -37,16 +39,11 @@ class LinuxPluginTestCase(TestCase):
 
     def _start_session_with_data(self, host, data_file):
         # This test impersonates AgentDaemon (load and pass things into a plugin instance)
-
-        plugin_klass = self.manager.get_plugin_class('linux')
-
         data = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures/%s" % data_file)))
 
-        resource_record = self._make_global_resource('linux', 'PluginAgentResources',
-                                                     {'plugin_name': 'linux', 'host_id': host.id})
+        plugin = AgentPluginHandlerCollection(self.resource_manager).handlers['linux']._create_plugin_instance(host)
 
-        instance = plugin_klass(self.resource_manager, resource_record.id)
-        instance.do_agent_session_start(data['linux'])
+        plugin.do_agent_session_start(data['linux'])
 
     def test_HYD_1269(self):
         """This test vector caused an exception during Volume generation.

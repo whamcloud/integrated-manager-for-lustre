@@ -205,6 +205,7 @@ class BaseStoragePlugin(object):
         fn(*args)
 
         self._resource_manager.session_open(
+                self,
                 self._scannable_id,
                 self._index.all(),
                 self.update_period)
@@ -218,6 +219,9 @@ class BaseStoragePlugin(object):
         self.commit_alerts()
 
     def _update(self, fn, *args):
+         # Be sure that the session and the plugin match - HYD-3068 was a case where they didn't.
+        assert(self == self._resource_manager._sessions[self._scannable_id]._plugin_instance)
+
         fn(*args)
 
         # Resources created since last update

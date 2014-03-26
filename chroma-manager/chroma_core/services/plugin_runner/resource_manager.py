@@ -28,6 +28,7 @@ WARNING:
 """
 import logging
 from chroma_core.lib.storage_plugin.api.resources import LogicalDrive, LogicalDriveSlice
+from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 
@@ -61,7 +62,10 @@ from chroma_core.models.target import ManagedTargetMount
 
 
 class PluginSession(object):
-    def __init__(self, scannable_id, update_period):
+    def __init__(self, plugin_instance, scannable_id, update_period):
+        # We have to be sure that this PluginSession is only associated with 1 single plugin_instance
+        # otherwise the local<->global mappins don't work (among other possible issues) HYD-3068
+        self._plugin_instance = plugin_instance
         self.local_id_to_global_id = {}
         self.global_id_to_local_id = {}
         self.scannable_id = scannable_id
@@ -300,9 +304,17 @@ class ResourceManager(object):
         dse.patch_models()
 
     def session_open(self,
-            scannable_id,
-            initial_resources,
-            update_period):
+                     plugin_instance,
+                     scannable_id,
+                     initial_resources,
+                     update_period):
+
+        # Assert the types, they are not optional or duckable
+        assert isinstance(plugin_instance, BaseStoragePlugin)
+        assert isinstance(scannable_id, int)
+        assert isinstance(initial_resources, list)
+        assert isinstance(update_period, int)
+
         scannable_class = self._class_index.get(scannable_id)
         assert issubclass(scannable_class, BaseScannableResource) or issubclass(scannable_class, HostsideResource)
         log.debug(">> session_open %s (%s resources)" % (scannable_id, len(initial_resources)))
@@ -311,7 +323,7 @@ class ResourceManager(object):
                 log.warning("Clearing out old session for scannable ID %s" % scannable_id)
                 del self._sessions[scannable_id]
 
-            session = PluginSession(scannable_id, update_period)
+            session = PluginSession(plugin_instance, scannable_id, update_period)
 
             try:
                 # If this returns a BaseStorageResource such as
@@ -1238,7 +1250,7 @@ class ResourceManager(object):
                 try:
                     local_id = session.global_id_to_local_id[record_id]
                     del session.local_id_to_global_id[local_id]
-                    del session.global_id_to_local_id[local_id]
+                    del session.global_id_to_local_id[record_id]
                     del self._label_cache[record_id]
                 except KeyError:
                     pass
@@ -1327,7 +1339,7 @@ class ResourceManager(object):
 
         def order_by_references(resource):
             if resource._handle_global:
-                # Bit of _a weird one: this covers the case where a plugin sessoin
+                # Bit of _a weird one: this covers the case where a plugin session
                 # was given a root resource that had some ResourceReference attributes
                 # that pointed to resources from a different plugin
                 return False
@@ -1390,6 +1402,7 @@ class ResourceManager(object):
                 resource_class_id = resource_class_id,
                 storage_id_str = id_str,
                 storage_id_scope_id = scope_id)
+
             session.local_id_to_global_id[resource._handle] = record.pk
             session.global_id_to_local_id[record.pk] = resource._handle
             self._label_cache[record.id] = resource.get_label()
@@ -1529,15 +1542,3 @@ class ResourceManager(object):
                     ancestors.remove(descendent_ld)
                     if len(ancestors) == 1:
                         Volume.objects.filter(storage_resource = descendent_ld).update(label = self.get_label(ld_id))
-
-    @transaction.commit_on_success
-    def _persist_changed_resource(self, session, changed_resources):
-        # This is a incomplete solution based on getting some lnet stuff to work
-        # There seems to be a flaw in John's thinking because the resources are created as a blop
-        # because you have to sort them etc, and then he seems to think we can update the in isolation.
-        # We need a solution for 2.1, this doesn't break anything and so is a step forwards.
-        #for resource, attrs in changed_resources:
-        #    resource.update_attributes(session.local_id_to_global_id,
-        #                             changed_resources,
-        #                             session.plugin_manager.resource_attribute_serialized)
-        pass

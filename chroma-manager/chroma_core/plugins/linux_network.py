@@ -133,7 +133,7 @@ class LinuxNetwork(Plugin):
 
                 db_nid, created = self.update_or_create(Nid,
                                                         parents = [parent_interface],
-                                                        name = parent_interface.name,
+                                                        name = name,
                                                         host_id = host_id,
                                                         lnd_network = nid['lnd_network'])
 
