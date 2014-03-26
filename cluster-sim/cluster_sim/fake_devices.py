@@ -268,8 +268,18 @@ class FakeDevices(Persisted):
     def mgt_get_target_labels(self, mgsnode):
         return self.state['mgts'][mgsnode]['targets'].keys()
 
+    def get_target_by_label(self, label):
+        for target in self.state['targets'].values():
+            if target['label'] == label:
+                return target
+
+        raise KeyError(label)
+
+    def get_conf_params_by_mgsspec(self, mgsspec):
+        return self.conf_params_with_presentation(self.state['mgts'][mgsspec]['conf_params'])
+
     def mgt_get_conf_params(self, mgsnode):
-        return self.state['mgts'][mgsnode]['conf_params']
+        return self.conf_params_with_presentation(self.state['mgts'][mgsnode]['conf_params'])
 
     def mgt_set_conf_param(self, mgsnode, key, value):
         with self._lock:
@@ -284,12 +294,19 @@ class FakeDevices(Persisted):
 
             self.save()
 
-    def get_target_by_label(self, label):
-        for target in self.state['targets'].values():
-            if target['label'] == label:
-                return target
+    def conf_params_with_presentation(self, conf_params):
+        # Add any additional presentation to the data that is
+        # added by the system. /proc/ is a "special" file that
+        # doesn't really have any contents itself, but is more
+        # just a file interface into somewhere in the kernel.
+        # As such, a retrieval from proc is actual code to
+        # retrieve values, which may add presentation to the
+        # original values we stored.
+        for key, value in conf_params.iteritems():
+            if key.endswith("llite.max_cached_mb"):
+                # max_cached_mb now actually reports multiple stats in the one
+                # file, need to specify a key for the actual max_cached_mb stat
+                # to reflect the format of the real file.
+                conf_params[key] = 'max_cached_mb: %s' % value
 
-        raise KeyError(label)
-
-    def get_conf_params_by_mgsspec(self, mgsspec):
-        return self.state['mgts'][mgsspec]['conf_params']
+        return conf_params

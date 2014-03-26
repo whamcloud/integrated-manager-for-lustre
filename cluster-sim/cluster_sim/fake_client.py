@@ -68,7 +68,7 @@ class FakeClient(Persisted):
         # Resolve path to a conf param path
 
         LLITE_DEFAULTS = {
-            'max_cached_mb': "32"
+                'max_cached_mb': "max_cached_mb: 32"
         }
 
         parts = path.split("/")[1:]
