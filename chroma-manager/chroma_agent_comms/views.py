@@ -99,16 +99,18 @@ class CopytoolEventView(ValidatedClientView):
         copytool_log.debug("Received %d events from %s on %s" %
                   (len(events), copytool, copytool.host))
 
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+
         active_operations = {}
         for event in sorted(events, key=lambda event: event.timestamp):
             copytool_log.debug(event)
 
             # These types aren't associated with active operations
             if event.type == 'UNREGISTER':
-                copytool.unregister()
+                JobSchedulerClient.unregister_copytool(copytool.id)
                 continue
             elif event.type == 'REGISTER':
-                copytool.register(uuid = event.uuid)
+                JobSchedulerClient.register_copytool(copytool.id, event.uuid)
                 continue
             elif event.type == 'LOG':
                 LogMessage.objects.create(fqdn = copytool.host.fqdn,
@@ -125,7 +127,7 @@ class CopytoolEventView(ValidatedClientView):
                 # FIXME: Figure out how to find the uuid after the fact. Maybe
                 # the solution is to send uuid with every event from the
                 # copytool, but that seems kludgy.
-                copytool.register(uuid = UNKNOWN_UUID)
+                JobSchedulerClient.register_copytool(copytool.id, UNKNOWN_UUID)
 
             try:
                 active_operations[event.data_fid] = CopytoolOperation.objects.get(id = event.active_operation)
