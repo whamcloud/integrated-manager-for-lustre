@@ -162,6 +162,8 @@
         });
       }
 
+      chart.destroy = _.noop;
+
       return chart;
     };
   }
