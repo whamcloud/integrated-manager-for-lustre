@@ -128,34 +128,25 @@ class QueueDepthMonitor(threading.Thread):
         while not self._stopping.is_set():
             ts = time.time()
 
-            sample = dict([(queue['name'], queue['messages']) for queue in self._benchmark.get_queues()])
+            sample = dict((queue['name'], queue['messages']) for queue in self._benchmark.get_queues() if 'messages' in queue)
             sample['_timestamp'] = ts
             self.samples.append(sample)
 
             self._stopping.wait(timeout=self._period)
 
     def __str__(self):
-        statistics = defaultdict(lambda: dict({'total': 0, 'min': None, 'max': None, 'count': 0}))
-
+        statistics = defaultdict(list)
         for sample in self.samples:
             for name, val in sample.items():
-                stats = statistics[name]
-                stats['total'] += val
-                stats['min'] = val if stats['min'] is None else min(stats['min'], val)
-                stats['max'] = val if stats['max'] is None else max(stats['max'], val)
-                stats['count'] += 1
+                statistics[name].append(val)
+        del statistics['_timestamp']
 
-        report = ""
-        report += "RabbitMQ queue lengths: (avg, min,max)\n"
-        for name, stats in statistics.items():
-            if name == '_timestamp':
-                continue
-
-            average = stats['total'] / float(stats['count'])
-
-            report += "  %40.40s %06.1f %.4d %.4d\n" % (name, average, stats['min'], stats['max'])
-
-        return report
+        report = ["RabbitMQ queue lengths: (avg, min, max)"]
+        for name, values in statistics.items():
+            average = sum(values) / float(len(values))
+            if average:
+                report.append("  %40.40s %06.1f %.4d %.4d" % (name, average, min(values), max(values)))
+        return os.linesep.join(report)
 
 
 class Benchmark(object):
@@ -631,7 +622,7 @@ def main():
         simulator = ClusterSimulator(folder=None, url=args.url + "/")
         simulator.power.setup(1)
         simulator.start_all()
-        simulator.setup(0, 0, nid_count=1, cluster_size=4, pdu_count=1, su_size=0)
+        simulator.setup(0, 0, 0, nid_count=1, cluster_size=4, pdu_count=1, su_size=0)
     else:
         simulator = xmlrpclib.ServerProxy("http://localhost:%s" % SIMULATOR_PORT, allow_none=True)
 
