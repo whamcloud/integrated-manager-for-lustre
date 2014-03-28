@@ -46,7 +46,7 @@ var hmHeaderTopic = true;
 var tVars = {
    hmHelpPage: "index.html",
    nextP: "getting_help.htm",
-   prevP: "cli_command_example.htm",
+   prevP: "unexpected_file_system_events.htm",
    currP: "glossary.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
@@ -196,7 +196,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText"><span style="font-style: italic; font-weight: bold;">Lustre clients.</span> Lustre clients are computational, visualization, or desktop nodes that are running Lustre client software, allowing them to mount the Lustre file system.</p>
 <p class="p_BodyText"><span style="font-style: italic; font-weight: bold;">Management target (MGT).</span> The MGT stores configuration information for all the Lustre file systems in a cluster and provides this information to other Lustre components. Each Lustre object storage target (OST) contacts the MGT to provide information, and Lustre clients contact the MGT to retrieve information.</p>
 <p class="p_BodyText"><span style="font-style: italic; font-weight: bold;">Metadata target (MDT).</span> Each Lustre file system has one MDT. The MDT stores metadata (such as file names, directories, permissions, and file layout) for attached storage and makes them available to clients.</p>
-<p class="p_BodyText"><span style="font-style: italic; font-weight: bold;">Object storage target (OST)</span> User file data is stored in one or more objects that are located on separate OSTs in the Lustre file system. The number of objects per file is configurable by the user and can be tuned to optimize performance for a given workload.</p>
+<p class="p_BodyText"><span style="font-style: italic; font-weight: bold;">Object storage target (OST).</span> User file data is stored in one or more objects that are located on separate OSTs in the Lustre file system. The number of objects per file is configurable by the user and can be tuned to optimize performance for a given workload.</p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Storage server.</span><span class="f_BodyText"> </span>A server on which an MGT, MDT, or OST is located. </p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Target.</span><span class="f_BodyText"> See metadata target, management target, object storage target.</span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-style: italic; font-weight: bold;">Volumes.</span><span class="f_BodyText"> (also called LUNs or block devices) are the underlying units of storage used to create Lustre file systems. Each Lustre target corresponds to a single volume. If servers in the volume have been configured for high availability, primary and failover servers can be designated for a Lustre target. Only volumes that are not already in use as Lustre targets or local file systems are shown. A volume may be accessible on one or more servers via different device nodes, and it may be accessible via multiple device nodes on the same host.</span></p>

@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Logs page</title>
+   <title>Logs window</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="Logs page" />
@@ -45,18 +45,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "advanced_topics.htm",
+   nextP: "status_page.htm",
    prevP: "history_page.htm",
    currP: "logs_page.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Logs page",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Logs page",
-   sharesubject: "Intel® Manager for Lustre* - Logs page",
+   titleP: "Logs window",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Logs window",
+   sharesubject: "Intel® Manager for Lustre* - Logs window",
    simplesubject: "Documentation%20Feedback",
    mailid: "Logs_Page",
-   mailpath: "All GUI pages and tabs &gt; Logs page /",
+   mailpath: "Graphical User Interface - windows and pages &gt; Logs window /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,7 +113,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Logs page").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Logs window").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
 } catch(err) {}
 });
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Logs page</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Logs window</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Logs page</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Logs window</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -194,7 +194,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <!--ZOOMRESTART-->
 <p class="p_BodyText"><span class="f_BodyText">The </span><span class="f_BodyText" style="font-style: italic;">Logs</span><span class="f_BodyText"> page displays log information and allows filtering by host, date range, and messages from the Lustre* file system or all sources</span></p>
 <p class="p_BodyText"><span class="f_BodyText">For example, if a failover event takes place, the following occurs:</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"> An alert is displayed with a message that a server has failed over in the Notifications panel and on the Alerts page. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"> A warning is recorded on the History page for each target that has failed over.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">The alert icon appears on the Configuration page for the file system. The server on which the target is now running is shown in the </span><span class="f_BodyText" style="font-style: italic;">Started On</span><span class="f_BodyText"> column for that target.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText">An email alert is sent to the system administrator. See the documentation provided by your storage solution provider for how to configure your mail server to enable and set up email alerts.</span></p><p class="p_BodyText"><span class="f_BodyText">Each of the above items generates a log message which is generated and displayed on the Logs page.</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"> An alert is displayed with a message that a server has failed over in the Notifications panel and on the Alerts page. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"> A warning is recorded on the History page for each target that has failed over.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">The alert icon appears on the Configuration page for the file system. The server on which the target is now running is shown in the </span><span class="f_BodyText" style="font-style: italic;">Started On</span><span class="f_BodyText"> column for that target.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">An email alert is sent to the system administrator. See the documentation provided by your storage solution provider for how to configure your mail server to enable and set up email alerts.</span></p><p class="p_BodyText"><span class="f_BodyText">Each of the above items generates a log message which is generated and displayed on the Logs page.</span></p>
 
 <!--ZOOMSTOP-->
 

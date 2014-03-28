@@ -1,0 +1,202 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+   <title>Configure an HSM Agent node</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <meta name="generator" content="Help &amp; Manual" />
+   <meta name="keywords" content="" />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="description" content="At the menu bar, click the Configuration drop-down menu and click Servers to display the Servers page." />
+   <meta http-equiv="Content-Style-Type" content="text/css" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
+<style type="text/css">
+/* No header topics */
+
+/* Breadcrumb trail */
+p#breadcrumbs {
+font-family: Verdana, Tahoma, Helvetica, Sans-Serif;   padding: 2px 0 1px 2px;
+   margin: 0;
+   font-size: 8pt; 
+   color: #999;
+   }   
+p#breadcrumbs a { color: #999; text-decoration: none;}
+p#breadcrumbs a:visited {color: #999;}
+p#breadcrumbs a:hover { color: #333; border-bottom: 1px dotted #333; }
+
+/* Search hightlight color */
+span.highlight {background-color: #ffff40;}
+  div#hmsocialmedia {
+  min-width: 606px;
+  }
+</style>
+<script type="text/javascript">
+var hmHeaderTopic = true;
+
+</script> 
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->	
+<script src="jquery.js"></script>
+<script type="text/javascript" src="jquery.tools.min.js"></script>
+<script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+<script type="text/javascript"> 
+// General topic variables
+var tVars = {
+   hmHelpPage: "index.html",
+   nextP: "add_a_copytool_to_the_agent_se.htm",
+   prevP: "configuring_hierarchical_stora.htm",
+   currP: "configure_an_hsm_agent_server.htm",
+   defP: "intel_manager_for_lustre.htm",
+   mailUrl: "",
+   mailUrlQuery: "",
+   titleP: "Configure an HSM Agent node",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Configure an HSM Agent node",
+   sharesubject: "Intel® Manager for Lustre* - Configure an HSM Agent node",
+   simplesubject: "Documentation%20Feedback",
+   mailid: "Configure_an_HSM_Agent_server",
+   mailpath: "Configuring and Using Hierarchical Storage Management &gt; Configure an HSM Agent node /",
+   mailbody: "Dear Support Staff,",
+   fbtype: false,
+   header: true,
+   background: "bg.png",
+   tablesReady: false,
+   togglesReady: false,
+   webRedirect: true,
+   topicTitleBar: true,
+   printFooter: true,
+   zoomTip: "Click to view full size image",
+   autoPrint: true,
+   printButton: "Print",
+   printButtonTip: "Print the current topic"
+   }
+// Popup configuration
+ var hmpBShadow = true;
+ var hmPopSmallDim = 500;
+ var hmPopKillVideo = true;
+ // AutoTOC variables
+ var hmatocvars = {
+   atoc_show: true,
+   atoc_title: "Contents",
+   atoc_tip: "Jump to:&nbsp;",
+   atoc_minHeaders: 3,
+   atoc_btntip_off: "No contents entries on this page",
+   atoc_btntip_on: "Display/hide topic directory",
+   atoc_toptip: "Jump to top of page",
+   atoc_top: "Scroll to Top of Page",
+   atoc_bg: "#f6f6f6",
+   atoc_border: "silver",
+   atoc_linkcolor: "#444",
+   atoc_linklimit: 45,
+   atoc_hovercolor: "#000",
+   atoc_hoverbgcolor: "#e0e0e0"
+}
+// Sortable tables
+var sortVars = {
+   europeandate: false,
+   germanNumbers: false,
+   imagePath: "",
+   image_up: "arrow-up.gif",
+   image_down: "arrow-down.gif",
+   image_empty: "arrow-empty.gif",
+   image_none: "arrow-none.gif",
+   sort_tip: "Click to sort on this column",
+   umlauts: "false"
+   }
+
+</script>
+
+<script type="text/javascript">
+if (tVars.topicTitleBar) { 
+$(document).ready(function() {
+var doc = document;  
+try {
+if (parent.hmWebHelp.navWidth != null) doc = parent.document;
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Configure an HSM Agent node").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+} catch(err) {}
+});
+}
+</script>
+
+<script type="text/javascript" src="//platform.linkedin.com/in.js"></script>
+<script type="text/javascript" src="helpman_settings.js"></script>
+<script type="text/javascript" src="helpman_topicinit.js"></script>
+<script type="text/javascript" src="hmtopic.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "configure_an_hsm_agent_server.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head>
+<body>
+<!--ZOOMSTOP-->
+<div id="hmsocialmedia">
+	<ul class="social-buttons">
+	<li>
+		<div class="fb-button">
+		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?configure_an_hsm_agent_server.htm"
+        scrolling="no" frameborder="0"
+        style="border:none; width:300px; height:26px"></iframe>
+		</div>
+	</li>
+	<li>
+	<div class="twitter-button">
+		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?configure_an_hsm_agent_server.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
+		<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}})(document,"script","twitter-wjs");</script>
+	</div>
+	</li>
+	<li>
+		<div class="googleplusone-button">
+                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?configure_an_hsm_agent_server.htm"></g:plusone>
+                </div>
+		<script type="text/javascript">
+		window.___gcfg = {lang: 'en-US'};
+      (function(){var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = 'https://apis.google.com/js/plusone.js';var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);})();
+    </script>
+                
+	</li> 
+	<li>
+		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?configure_an_hsm_agent_server.htm"></script></div>
+	</li>
+	<li>
+		<div id="mailthisbutton"><a href="mailto:?body=http://www.ec-software.com/help/index.html%3F<%HREF_CURRENT_PAGE%" class="sbutton">
+		<span id="sbuttontext">Mail This</span>
+		</a></div>
+	</li> 
+	</ul>
+	</div>
+
+
+<ul id="topictabs" class="tabs">
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Configure an HSM Agent node</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hmheader">
+<div id="hmheadercontents">
+ 
+<h1 class="p_Heading1"><span class="f_Heading1">Configure an HSM Agent node</span></h1>
+
+</div>
+<div id="atocIcon" class="navdivs">
+<img class="navicon" id="hmAtocLink" src="contents_off.png" alt="No contents entries on this page" title="No contents entries on this page" />
+<br /><span>Contents</span>
+</div>
+</div>
+<div id="autoTocWrapper" class="topicmenu"></div>
+<div id="idcontent">
+<div id="unclicker"></div>
+
+<!--ZOOMRESTART-->
+<p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">At the menu bar, click the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> drop-down menu and click </span><span class="f_BodyText" style="font-weight: bold;">Servers</span><span class="f_BodyText"> to display the </span><span class="f_BodyText" style="font-style: italic;">Servers</span><span class="f_BodyText"> page.</span></p><p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">+ Add server</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">The </span><span class="f_BodyText" style="font-weight: bold;">Add server</span><span class="f_BodyText"> dialogue window provides two methods to authenticate and add the server(s): SSH and HTTP. </span><span class="f_BodyText">To use the HTTPS, perform steps 4a - 4 e. </span><br />
+<span class="f_BodyText">To use SSH, skip to step 5. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">Click the </span><span class="f_BodyText" style="font-weight: bold;">HTTPS</span><span class="f_BodyText"> tab. This tab will generate a command line that includes a token. You can run this command on each server that you wish to add to the file system. All necessary software will be installed on the server and the server will be registered with Intel® Manager for Lustre. &nbsp;Perform these steps:</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">a.</span><span class="f_BodyText">Under Server profile, select </span><span class="f_BodyText" style="font-weight: bold;">POSIX HSM Agent Node</span><span class="f_BodyText">. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">b.</span><span class="f_BodyText">Using the scroll bar, select the number of servers you want to add using the command. Note that each instance of copytool needs a separate HSM Agent server. You can select to create up 128 HSM Agent servers. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">c.</span><span class="f_BodyText">Using the scroll bar, select the time period for which this command line will be functional.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">d.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Generate</span><span class="f_BodyText">. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">e.</span><span class="f_BodyText">Enter the resulting command at each server you wish to add to a file system. The manager checks that each server is up and connected to the network. It then does an audit of the storage resources on each server. The manager then checks the networking, loads Lustre modules, and makes sure the Lustre networking layer is functioning. When all checks are completed, the server is fully qualified as a Lustre server. This process is complete.</span></p><p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">5.</span><span class="f_BodyText">Click the </span><span class="f_BodyText" style="font-weight: bold;">SSH</span><span class="f_BodyText"> tab (selected by default).</span></p><p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">6.</span><span class="f_BodyText">In the </span><span class="f_BodyText">Hostname</span><span class="f_BodyText"> field, enter the name of the server to be added.</span></p><p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">7.</span><span class="f_BodyText">Under Server profile, select </span><span class="f_BodyText" style="font-weight: bold;">POSIX HSM Agent Node</span><span class="f_BodyText">.</span></p><p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">8.</span><span class="f_BodyText">Under SSH Authentication, select on one of these three methods:</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Existing Key</span><span class="f_BodyText"> to use an existing SSH private key present on this management server. There must be a corresponding SSH public key on server you are adding.</span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Root Password</span><span class="f_BodyText"> and enter a root password for the server you are adding. </span></p><p style="text-align: left; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 29px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Another Key</span><span class="f_BodyText"> and enter a private key that corresponds to a public key present on the server you are adding. If the key is encrypted, enter the passphrase needed to decrypt the private key. </span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 10px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">9.</span><span class="f_BodyText">Click </span><span class="f_BodyText" style="font-weight: bold;">Continue</span><span class="f_BodyText">. The software checks that the Agent node(s) is/are up and connected to the network. The software then does an audit of the &nbsp;resources on each server. The software &nbsp;then checks the networking, loads Lustre modules, and makes sure the Lustre networking layer is functioning. When all checks are completed, the server is fully qualified as a Lustre node.</span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 10px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">10.</span><span class="f_BodyText"> To add another server, click </span><span class="f_BodyText" style="font-weight: bold;">Add Another</span><span class="f_BodyText">. Otherwise, click </span><span class="f_BodyText" style="font-weight: bold;">Close</span><span class="f_BodyText">.</span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 10px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">11.</span><span class="f_BodyText"> Proceed to <a href="configure_the_lnet_nid_for_eac.htm" class="topiclink">Configure LNet NIDs for each server</a>. </span></p>
+<!--ZOOMSTOP-->
+
+</div> <!-- idcontent -->
+</div><!-- hmbox --> 
+</body>
+</html>

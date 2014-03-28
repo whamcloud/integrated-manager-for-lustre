@@ -45,8 +45,8 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "configure_storage_servers.htm",
-   prevP: "creating_a_file_system2.htm",
+   nextP: "pre-requisites_to_creating_a_l.htm",
+   prevP: "a_caution_about_reconfiguring_.htm",
    currP: "ha_and_failover_support_provid.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
@@ -56,7 +56,7 @@ var tVars = {
    sharesubject: "Intel® Manager for Lustre* - High-availability file system support",
    simplesubject: "Documentation%20Feedback",
    mailid: "HA_and_failover_support_provid",
-   mailpath: "Creating a new Lustre* file system &gt; High-availability file system support /",
+   mailpath: "Creating a new Lustre file system &gt; High-availability file system support /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -194,10 +194,10 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <!--ZOOMRESTART-->
 <p class="p_BodyText"><span class="f_BodyText">Intel® Manager for Lustre* software includes several capabilities for configuring and managing highly-available Lustre* file systems. </span></p>
 <p class="p_BodyText"><span class="f_BodyText">Generally, high availability (HA) means that the file system has a degree of fault tolerance and data integrity protection. The key components of this solution are the software components Corosync and Pacemaker. Corosync is responsible for maintaining intra-cluster control and heartbeat communications, and Pacemaker is responsible for managing HA resources (e.g., Lustre* targets).</span></p>
-<p class="p_BodyText"><span class="f_BodyText">To support automatic server failover, each HA server must have a dedicated crossover connection to the other server that will be its HA peer. &nbsp;During file system creation, each HA server is designated as a primary server for one or more targets, and as a failover, peer server for its peer server's targets. This crossover connection is configured as a redundant Corosync communications interface in order to reduce the likelihood of false failover events. &nbsp;Intel® Manager for Lustre* software uses a </span><span class="f_BodyText" style="font-style: italic;">managed server profile</span><span class="f_BodyText"> to automatically configure Corosync Pacemaker. The managed server profile is used <a href="configure_the_volumes.htm" class="topiclink">Configure primary and failover servers</a>. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">To support automatic server failover, each HA server must have a dedicated crossover connection to the other server that will be its HA peer. &nbsp;During file system creation, each HA server is designated as a primary server for one or more targets, and as a failover, peer server for its peer server's targets. This crossover connection is configured as a redundant Corosync communications interface in order to reduce the likelihood of false failover events. &nbsp;Intel® Manager for Lustre* software uses a managed server profile to automatically configure Corosync Pacemaker. The managed server profile is used to configure primary and failover servers. </span></p>
 <p class="p_BodyText"><span class="f_BodyText">Physically, HA peer servers must be cabled to provide equal access to the pool of storage targets allocated to those peers. For example: server 1 and server 2 are cabled as HA peers. Targets A and B have been configured with server 1 as their primary server and server 2 as their failover server. Targets C and D have been configured with server 2 as their primary server and server 1 as their failover server. If server 1 becomes unavailable, server 2 must have access to the block storage devices underlying targets A and B in order to mount them and make them available to Lustre clients. The end result is that server 1 is powered off and server 2 is now exporting targets A, B, C, and D to Lustre clients. </span></p>
-<p class="p_BodyText"><span class="f_BodyText">To support HA failover, each HA server must be able to automatically power-off its peer server if a failover is required. The process of powering off a faulty server is known as STONITH or &quot;node fencing&quot; (also called &quot;server fencing&quot;), and ensures that a shared storage device is not mounted by more than one server at a time. Lustre includes protection against multiple simultaneous device mounts, but automatically powering off the faulty server ensures that failover works properly. Intel® Manager for Lustre* software supports the use of remotely-operable Power Distribution Units (PDUs) for this purpose. See <a href="configure_power_distribution_u.htm" class="topiclink">Add power distribution units</a> and <a href="assign_pdu_outlets_to_servers.htm" class="topiclink">Assign PDU outlets to servers</a>. &nbsp;Alternative to the configuration of PDUs, Intel® Manager for Lustre* software also supports</span> the Intelligent Management Platform Interface (IPMI) and associating baseboard management controllers (BMCs) with servers, to support server monitoring and control.</p>
-<p class="p_BodyText">To create new Lustre file system, begin with <a href="configure_storage_servers.htm" class="topiclink">Add storage servers</a>. </p>
+<p class="p_BodyText"><span class="f_BodyText">To support HA failover, each HA server must be able to automatically power-off its peer server if a failover is required. The process of powering off a faulty server is known as STONITH or &quot;node fencing&quot; (also called &quot;server fencing&quot;), and ensures that a shared storage device is not mounted by more than one server at a time. Lustre includes protection against multiple simultaneous device mounts, but automatically powering off the faulty server ensures that failover works properly. Intel® Manager for Lustre* software supports the use of remotely-operable Power Distribution Units (PDUs) for this purpose. See Add power distribution units and Assign PDU outlets to servers. &nbsp;Alternative to the configuration of PDUs, Intel® Manager for Lustre* software also supports the Intelligent Management Platform Interface (IPMI) and associating baseboard management controllers (BMCs) with servers, to support server monitoring and control.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">To create a new Lustre file system, begin with Add storage servers. </span></p>
 
 <!--ZOOMSTOP-->
 
