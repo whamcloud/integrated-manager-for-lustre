@@ -1,4 +1,4 @@
-/* ------------ Script copyright 2005-2012 EC Software -------------
+/* ------------ Script copyright 2005-2013 EC Software -------------
    This script was created by Help & Manual and is part of the      
    Webhelp export format. This script is designed for use in 
    combination with the output of Help & Manual and must not 
@@ -283,10 +283,15 @@ function intoview(thisnode, tree, selectionchanged) {
 
 function collapseunfocused(toc, selectedID) {
     if (toc) {
-       var nodepath = 'ul'+selectedID.replace(/[isaul]/g,'');
+       var nodepath = 'ul'+selectedID.replace(/[isaul]/g,'') + ".";
+       var nodeCompare = "";
        var items = toc.getElementsByTagName("ul");
        for (var i = 0; i < items.length; i++) {
-          if (nodepath.lastIndexOf(items[i].id)<0) { hmSwitchNode(items[i], false, false); }
+         if (items[i].id.indexOf(".")<0) nodeCompare = items[i].id + ".";
+         else nodeCompare = items[i].id;
+         if (nodepath.lastIndexOf(nodeCompare)<0) {
+           hmSwitchNode(items[i], false, false);
+         }
        }
     }
 }

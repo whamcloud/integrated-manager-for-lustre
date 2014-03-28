@@ -45,7 +45,7 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "the_graphical_user_interface.htm",
+   nextP: "monitor-only_mode_versus_manag.htm",
    prevP: "enterprise_lustre_overview2.htm",
    currP: "new_features_in_this_release.htm",
    defP: "intel_manager_for_lustre.htm",
@@ -193,20 +193,24 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 <!--ZOOMRESTART-->
 <p class="p_BodyText"><span class="f_BodyText">Following are key features afforded by Intel® Manger for Lustre* software (as a component of Intel® Enterprise Edition for Lustre* software)</span></p>
-<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">GUI-based creation and managment of Lustre* file systems</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">GUI-based creation and management of Lustre* file systems</span></p>
 <p class="p_BodyText"><span class="f_BodyText">The Intel® Manager for Lustre* software provides a powerful, yet easy-to-use GUI that enables rapid creation of Lustre file systems. &nbsp;The GUI supports easy configuration for high availability and expansion, and enables performance monitoring and management of multiple Lustre file systems.</span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Graphical charts display real-time performance metrics</span></p>
-<p class="p_BodyText"><span class="f_BodyText">Fully-configurable color charts display a variety of real-time performance metrics for single or multiple file systems, down to individual servers and targets, and reveal metrics such as OST balance, file system capacity, metadata operations, bandwidth, &nbsp;read/write operations, and various resource usage parameters, among others.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Fully-configurable color charts display a variety of real-time performance metrics for single or multiple file systems, down to individual servers and targets, and reveal metrics such as read/write heat maps, OST balance, file system capacity, metadata operations, read/write operations, job statistics, and various resource usage parameters, among others.</span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Auto-configured high-availability clustering for server pairs</span></p>
-<p class="p_BodyText"><span class="f_BodyText">Pacemaker and Corosync are configured automatically when the system design follows configuration guidance. &nbsp;This removes the need for manually installing HA configuration files on storage servers and simplifies high-availability configuration.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Pacemaker and Corosync are configured automatically when the system design follows configuration guidance. &nbsp;This removes the need for manually installing HA configuration files on storage servers, and simplifies high-availability configuration.</span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">PDU configuration and server outlet assignments support automatic failover</span></p>
-<p class="p_BodyText"><span class="f_BodyText">The PDU tab lets you configure and manager power distribution units. At this tab you can add a detected PDU and assign specific PDU outlets to specific servers. When you associate PDU failover outlets with servers using this tool, STONITH is automatically configured. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">The PDU page lets you configure and manager power distribution units. At this page you can add a detected PDU and assign specific PDU outlets to specific servers. When you associate PDU failover outlets with servers using this tool, STONITH is automatically configured. </span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">IPMI and BMC Configuration</span></p>
 <p class="p_BodyText"><span class="f_BodyText">An alternative to PDU configuration, support for Intelligent Platform Management Interface and baseboard management controllers support server monitoring, high-availability configuration, and failover. </span></p>
-<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Simplied ISO-less installation and automated deployment mechanism streamlines overall installation</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Hierarchical Storage Management</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Intel® EE for Lustre* software version 2.0, which builds on version 2.5 of the open source distribution of Lustre, introduces support for hierarchical storage management. HSM provides a way to free up file system storage capacity by archiving the less-frequently accessed files into secondary, archival storage. You can configure the HSM framework directly from the Intel® Manager for Lustre* GUI.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Robinhood Policy Engine</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The Robinhood policy engine is has been incorporated into Lustre 2.5 and is included with Intel® EE for Lustre*. &nbsp;Intel® Manager for Lustre* software performs the provisioning of the Robinhood agent server, which is performed via the manager GUI. Robinhood can be used with the HSM capabilities described above to automate HSM archiving and report generation.  </span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Automated Provisioning of Custom Lustre Service Nodes</span></p>
+<p class="p_BodyText"><span class="f_BodyText">This feature allows users to create custom profiles for new Lustre client types and, based on a given profile, deploy and install custom code to provide new services. HSM copytool (above) is deployed in this way. Other services might include Samba file services, etc.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Simplified ISO-less installation and automated deployment mechanism streamlines overall installation</span></p>
 <p class="p_BodyText"><span class="f_BodyText">The installation strategy removes the need to manually install the software on each server. Intel® Manager for Lustre* software is quickly installed on the manager server, and from there, required packages are automatically deployed to all storage servers. Storage servers and the manager server can run the same standard operating system as the rest of your estate. Additional software built for CentOS or Red Hat will also work on servers managed by Intel® Manager for Lustre* software.</span></p>
-<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Intel® Apache Hadoop adapter </span></p>
-<p class="p_BodyText"><span class="f_BodyText">Installation of the Intel® Apache Hadoop adapter supports integration with the Intel® Apache Hadoop software. For more information about Intel® Apache Hadoop software, see <a href="http://hadoop.intel.com/" target="_blank" class="weblink">http://hadoop.intel.com/</a>.</span></p>
 
 <!--ZOOMSTOP-->
 

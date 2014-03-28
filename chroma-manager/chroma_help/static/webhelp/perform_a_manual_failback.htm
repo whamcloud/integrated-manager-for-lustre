@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Perform a manual failback</title>
+   <title>Perform a manual server failback</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
-   <meta name="keywords" content="object storage target (OST),object storage server (OSS),object storage server (OSS) perform manual failback,failback, perform manual" />
+   <meta name="keywords" content="failback, perform manual,object storage server (OSS),object storage server (OSS) perform manual failback,object storage target (OST)" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="To force a manual failback of a target to its primary server:&nbsp;" />
+   <meta name="description" content="To force a manual failback of a target to its primary server, perform these steps:&nbsp;" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -51,12 +51,12 @@ var tVars = {
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Perform a manual failback",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Perform a manual failback",
-   sharesubject: "Intel® Manager for Lustre* - Perform a manual failback",
+   titleP: "Perform a manual server failback",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Perform a manual server failback",
+   sharesubject: "Intel® Manager for Lustre* - Perform a manual server failback",
    simplesubject: "Documentation%20Feedback",
    mailid: "Perform_a_manual_failback",
-   mailpath: "Managing Storage &gt; Perform a manual failback /",
+   mailpath: "File system maintenance &gt; Perform a manual server failback /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,7 +113,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Perform a manual failback").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Perform a manual server failback").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
 } catch(err) {}
 });
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Perform a manual failback</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Perform a manual server failback</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Perform a manual failback</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Perform a manual server failback</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -192,9 +192,8 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">To force a manual failback of a target to its primary server: </span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">Go to </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> &gt; </span><span class="f_BodyText" style="font-weight: bold;">File Systems</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Select the file system to be modified.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">In the entry for the target to be failed back, click the </span><span class="f_BodyText" style="font-weight: bold;">Actions</span><span class="f_BodyText"> drop-down menu and select </span><span class="f_BodyText" style="font-weight: bold;">Failback</span><span class="f_BodyText">.</span></p><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: The Failback button will be displayed only for targets that are configured for failover and have failed over from a primary server.</span></p>
-<p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+<p class="p_BodyText"><span class="f_BodyText">To force a manual failback of a target to its primary server, perform these steps: </span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">At the menu bar, click the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> drop-down menu and click </span><span class="f_BodyText" style="font-weight: bold;">File Systems</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Select the file system to be modified.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">In the entry for the target to be failed back, click the </span><span class="f_BodyText" style="font-weight: bold;">Actions</span><span class="f_BodyText"> drop-down menu and select </span><span class="f_BodyText" style="font-weight: bold;">Failback</span><span class="f_BodyText">.</span></p><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: The Failback button will be displayed only for targets that are configured for failover and have failed over from a primary server.</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To initiate failback of a target using the CLI, enter:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">$ chroma target-failback &lt;target name, e.g. lustre-OST0000&gt;</span></p>
 

@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Managing Storage</title>
+   <title>File system maintenance</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="managing storage,metadata server,starting a file system" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="This chapter contains several topics pertinent to storage management. In addition to the links below, see Advanced topics." />
+   <meta name="description" content="Intel® Manager for Lustre* software allows you to make changes to the file system architecture, however these changes must be performed using the software. &nbsp;" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -45,18 +45,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "ha_and_failover_support_provid.htm",
-   prevP: "view_a_servers_parameters.htm",
+   nextP: "starting_or_stopping_a_file_sy.htm",
+   prevP: "add_a_robinhood_policy_engine_.htm",
    currP: "managing_storage.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Managing Storage",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Managing Storage",
-   sharesubject: "Intel® Manager for Lustre* - Managing Storage",
+   titleP: "File system maintenance",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - File system maintenance",
+   sharesubject: "Intel® Manager for Lustre* - File system maintenance",
    simplesubject: "Documentation%20Feedback",
    mailid: "managing_storage",
-   mailpath: "Managing Storage /",
+   mailpath: "File system maintenance /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,7 +113,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Managing Storage").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - File system maintenance").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
 } catch(err) {}
 });
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Managing Storage</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>File system maintenance</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Managing Storage</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">File system maintenance</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -192,8 +192,11 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">This chapter contains several topics pertinent to storage management. In addition to the links below, see <a href="advanced_topics.htm" class="topiclink">Advanced topics</a>.</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"><a href="starting_or_stopping_a_file_sy.htm" class="topiclink">Start, stop, or remove a file system</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"><a href="start_or_stop_a_server_for_a_m.htm" class="topiclink">Start or stop a server for an MGT, MDT, or OST</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"><a href="remove_an_ost.htm" class="topiclink">Remove an OST from the file system</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"><a href="perform_a_manual_failover.htm" class="topiclink">Perform a manual failover</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"><a href="perform_a_manual_failback.htm" class="topiclink">Perform a manual failback</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"><a href="decommissioning_a_server_for_a.htm" class="topiclink">Decommission a server for an MGT, MDT, or OST</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#8226;</span><span class="f_BodyText"><a href="handling_network_address_chang.htm" class="topiclink">Handling network address changes (updating NIDs)</a></span></p>
+<p><span class="f_BodyText">Intel® Manager for Lustre* software allows you to make changes to the </span>file system architecture, however these changes <span style="font-style: italic;">must be performed using the software</span>.  </p>
+<p><span class="f_BodyText" style="font-weight: bold;">Warning</span><span class="f_BodyText">: </span>After you have created a Lustre file system using Intel® Manager for Lustre software, yo<span class="f_BodyText">u should NOT make any changes to the underlying file system hardware or configuration outside of Intel® Manager for Lustre* software. </span>Doing so will defeat the ability of Intel® Manager for Lustre software to monitor the file system, and will make the file system unavailable to clients.</p>
+<p>&nbsp;</p>
+<p class="p_BodyText"><span class="f_BodyText">In addition to the links below, see <a href="advanced_topics.htm" class="topiclink">Advanced topics</a>.</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="starting_or_stopping_a_file_sy.htm" class="topiclink">Start, stop, or remove a file system</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="start_or_stop_a_server_for_a_m.htm" class="topiclink">Start or stop an MGT, MDT, or OST</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="remove_an_ost.htm" class="topiclink">Remove an OST from the file system</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="perform_a_manual_failover.htm" class="topiclink">Perform a manual failover</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="perform_a_manual_failback.htm" class="topiclink">Perform a manual failback</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="decommissioning_a_server_for_a.htm" class="topiclink">Decommission a server for an MGT, MDT, or OST</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 13px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Arial Unicode MS','Lucida Sans Unicode','Arial';color:#000000;display:inline-block;width:13px;margin-left:-13px">&#9679;</span><span class="f_BodyText"><a href="handling_network_address_chang.htm" class="topiclink">Handling network address changes (updating NIDs)</a></span></p>
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->

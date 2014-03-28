@@ -133,7 +133,15 @@ p /* Normal */
   box-shadow: 5px 5px 5px #888;
 }
 
-img.dropdown-toggle-icon /* pointer for toggle icons */
+a.dropdown-toggle /* dropdown toggle caption */
+{
+  cursor: pointer;
+}
+a.inline-toggle /* inline toggle caption */
+{
+  cursor: pointer;
+}
+img.dropdown-toggle-icon /* toggle icon */
 {
   cursor: pointer;
 }

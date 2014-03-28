@@ -1,0 +1,480 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+   <title>Unexpected file system events</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <meta name="generator" content="Help &amp; Manual" />
+   <meta name="keywords" content="" />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="description" content="This section discusses several unwanted file system events and how Intel® Manager for Lustre* software responds to them." />
+   <meta http-equiv="Content-Style-Type" content="text/css" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
+<style type="text/css">
+/* No header topics */
+
+/* Breadcrumb trail */
+p#breadcrumbs {
+font-family: Verdana, Tahoma, Helvetica, Sans-Serif;   padding: 2px 0 1px 2px;
+   margin: 0;
+   font-size: 8pt; 
+   color: #999;
+   }   
+p#breadcrumbs a { color: #999; text-decoration: none;}
+p#breadcrumbs a:visited {color: #999;}
+p#breadcrumbs a:hover { color: #333; border-bottom: 1px dotted #333; }
+
+/* Search hightlight color */
+span.highlight {background-color: #ffff40;}
+  div#hmsocialmedia {
+  min-width: 606px;
+  }
+</style>
+<script type="text/javascript">
+var hmHeaderTopic = true;
+
+</script> 
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->	
+<script src="jquery.js"></script>
+<script type="text/javascript" src="jquery.tools.min.js"></script>
+<script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+<script type="text/javascript"> 
+// General topic variables
+var tVars = {
+   hmHelpPage: "index.html",
+   nextP: "glossary.htm",
+   prevP: "errors.htm",
+   currP: "unexpected_file_system_events.htm",
+   defP: "intel_manager_for_lustre.htm",
+   mailUrl: "",
+   mailUrlQuery: "",
+   titleP: "Unexpected file system events",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Unexpected file system events",
+   sharesubject: "Intel® Manager for Lustre* - Unexpected file system events",
+   simplesubject: "Documentation%20Feedback",
+   mailid: "Unexpected_File_System_Events",
+   mailpath: "Errors &gt; Unexpected file system events /",
+   mailbody: "Dear Support Staff,",
+   fbtype: false,
+   header: true,
+   background: "bg.png",
+   tablesReady: false,
+   togglesReady: false,
+   webRedirect: true,
+   topicTitleBar: true,
+   printFooter: true,
+   zoomTip: "Click to view full size image",
+   autoPrint: true,
+   printButton: "Print",
+   printButtonTip: "Print the current topic"
+   }
+// Popup configuration
+ var hmpBShadow = true;
+ var hmPopSmallDim = 500;
+ var hmPopKillVideo = true;
+ // AutoTOC variables
+ var hmatocvars = {
+   atoc_show: true,
+   atoc_title: "Contents",
+   atoc_tip: "Jump to:&nbsp;",
+   atoc_minHeaders: 3,
+   atoc_btntip_off: "No contents entries on this page",
+   atoc_btntip_on: "Display/hide topic directory",
+   atoc_toptip: "Jump to top of page",
+   atoc_top: "Scroll to Top of Page",
+   atoc_bg: "#f6f6f6",
+   atoc_border: "silver",
+   atoc_linkcolor: "#444",
+   atoc_linklimit: 45,
+   atoc_hovercolor: "#000",
+   atoc_hoverbgcolor: "#e0e0e0"
+}
+// Sortable tables
+var sortVars = {
+   europeandate: false,
+   germanNumbers: false,
+   imagePath: "",
+   image_up: "arrow-up.gif",
+   image_down: "arrow-down.gif",
+   image_empty: "arrow-empty.gif",
+   image_none: "arrow-none.gif",
+   sort_tip: "Click to sort on this column",
+   umlauts: "false"
+   }
+
+</script>
+
+<script type="text/javascript">
+if (tVars.topicTitleBar) { 
+$(document).ready(function() {
+var doc = document;  
+try {
+if (parent.hmWebHelp.navWidth != null) doc = parent.document;
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Unexpected file system events").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+} catch(err) {}
+});
+}
+</script>
+
+<script type="text/javascript" src="//platform.linkedin.com/in.js"></script>
+<script type="text/javascript" src="helpman_settings.js"></script>
+<script type="text/javascript" src="helpman_topicinit.js"></script>
+<script type="text/javascript" src="hmtopic.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "unexpected_file_system_events.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head>
+<body>
+<!--ZOOMSTOP-->
+<div id="hmsocialmedia">
+	<ul class="social-buttons">
+	<li>
+		<div class="fb-button">
+		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?unexpected_file_system_events.htm"
+        scrolling="no" frameborder="0"
+        style="border:none; width:300px; height:26px"></iframe>
+		</div>
+	</li>
+	<li>
+	<div class="twitter-button">
+		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?unexpected_file_system_events.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
+		<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}})(document,"script","twitter-wjs");</script>
+	</div>
+	</li>
+	<li>
+		<div class="googleplusone-button">
+                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?unexpected_file_system_events.htm"></g:plusone>
+                </div>
+		<script type="text/javascript">
+		window.___gcfg = {lang: 'en-US'};
+      (function(){var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = 'https://apis.google.com/js/plusone.js';var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);})();
+    </script>
+                
+	</li> 
+	<li>
+		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?unexpected_file_system_events.htm"></script></div>
+	</li>
+	<li>
+		<div id="mailthisbutton"><a href="mailto:?body=http://www.ec-software.com/help/index.html%3F<%HREF_CURRENT_PAGE%" class="sbutton">
+		<span id="sbuttontext">Mail This</span>
+		</a></div>
+	</li> 
+	</ul>
+	</div>
+
+
+<ul id="topictabs" class="tabs">
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Unexpected file system events</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hmheader">
+<div id="hmheadercontents">
+ 
+<h1 class="p_Heading1"><span class="f_Heading1">Unexpected file system events</span></h1>
+
+</div>
+<div id="atocIcon" class="navdivs">
+<img class="navicon" id="hmAtocLink" src="contents_off.png" alt="No contents entries on this page" title="No contents entries on this page" />
+<br /><span>Contents</span>
+</div>
+</div>
+<div id="autoTocWrapper" class="topicmenu"></div>
+<div id="idcontent">
+<div id="unclicker"></div>
+
+<!--ZOOMRESTART-->
+<p>This section discusses several unwanted file system events and how <span class="f_BodyText">Intel® Manager for Lustre* software responds to them.</span></p>
+<p>&nbsp;</p>
+<div style="text-align: left; text-indent: 0px; line-height: 1.20; padding: 0px 0px 0px 0px; margin: 0px 0px 0px 0px;"><table style="border:none; border-spacing:0px;">
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:677px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">A server’s connection to a storage target is lost</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Lustre clients will block if they have requested a file from an unavailable OST. &nbsp;The block will continue until connection to the OST is restored and the OST is again fully online. &nbsp;For OSTs that are still connected to their servers, client access continues unaffected.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">IML / Peer server response:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">No automatic failover. No alerts.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">Suggested remedies:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Repair the connection to the target. In the meantime, the administrator may manually fail the target over to the peer server. </span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><br />
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:677px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">A server’s connection to LNet is lost</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Lustre clients will block waiting for the connection to be re-established. Those portions of the file system that are presented by the affected server are unavailable until then.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">IML / Peer server response: </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">No automatic failover. No alerts.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">Suggested remedies:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Repair the server’s connection to LNet. In the meantime, the administrator may manually fail the target over to the peer server.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:677px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">IML connection to a server (via the management network, ring0) is lost</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">No direct file system impact; the file system remains operational. However, Intel® Manger for Lustre* software can no longer manage or monitor the server.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">IML / Peer server response:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Alerts to administer regarding loss of network connection to server. </span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">Suggested remedies:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Re-establish the management network connection to the server. </span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:694px; padding:0px;"><p><span class="f_BodyText" style="font-weight: bold;">A Lustre server loses connectivity with the power control device for its peer server (IPMI or PDU)</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">None. The file system continues to operate normally. In the event of a peer server failure, the server that has lost connectivity to power control will be unable to power off the failed server and assume responsibility for its resources.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">IML / Peer response:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText"> No response to the loss of connectivity if the file system is operating normally. In the event of a server failure, automatic failover of Lustre targets from the failed server may be disabled.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Suggested remedies: </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Repair the network link to power control (IPMI or PDU).</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><br />
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText" style="font-weight: bold;">The Intel® Manager for Lustre loses connection with a server’s power control device (IPMI or PDU)</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText"> The software's ability to shut down the server is lost.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Manager software/peer server response:  </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Alerts to administer regarding loss of connection to power control device.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Suggested remedies:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Restore the connection between the IML server and affected server’s power control device. </span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><br />
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText" style="font-weight: bold;">A crossover cable between servers is disconnected or the network is down</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Immediate file system consequences:  </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">This is the loss of the ring1 network link, but the ring0 link (the management network) provides complete redundancy. &nbsp;The file system is not affected.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">IML / Peer server response:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">No automatic failover. No alerts.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Suggested remedies: </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Replace/reconnect the cross-over cable, restore the network.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><br />
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText" style="font-weight: bold;">A primary server’s OS kernel crashes</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Each server is used as both a primary and secondary server. Temporarily delayed access to served storage as failover occurs.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">IML / Peer server response:  </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Peer server performs STONITH, failover occurs.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Suggested remedies:  </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">None needed by Admin. &nbsp;Successful STONITH causes the server to be rebooted. </span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><br />
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText" style="font-weight: bold;">LBUG, a Lustre crash on a server</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">This will also crash Linux on the affected server. Temporarily delayed access to served storage as failover occurs.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">IML / Peer server response:  </span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Peer server performs STONITH, failover occurs.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Suggested remedies:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">No Admin action needed.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><br />
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText" style="font-weight: bold;">The primary server spontaneously reboots</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Temporarily delayed access to served storage as failover occurs.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">IML / Peer server response:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">Peer server performs STONITH, failover occurs.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Suggested remedies:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText">No Admin action needed.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><br />
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><br />
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td colspan="2" style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText" style="font-weight: bold;">The management network (ring0) and a peer crossover network (ring1) are both down</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Immediate file system consequences:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText"> The file system is not directly affected and client operations may continue. Affected peer servers may attempt STONITH.</span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">IML / Peer server response:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText"> &nbsp;Peer server performs STONITH and failover occurs. However, each affected server may attempt STONITH on its peer. </span></p>
+</td>
+</tr>
+<tr style="text-align:left;vertical-align:top;">
+<td style="vertical-align:top; width:196px; padding:0px;"><p><span class="f_BodyText">Suggested remedies:</span></p>
+</td>
+<td style="vertical-align:top; width:758px; padding:0px;"><p><span class="f_BodyText"> This condition is unlikely and unstable. The administrator needs to restore network connections for the management network and the cross-over link between affected servers.</span></p>
+</td>
+</tr>
+</table>
+</div>
+
+<!--ZOOMSTOP-->
+
+</div> <!-- idcontent -->
+</div><!-- hmbox --> 
+</body>
+</html>
