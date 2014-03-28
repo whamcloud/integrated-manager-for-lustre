@@ -102,22 +102,11 @@ class AgentPluginHandler(object):
 
     @transaction.commit_on_success
     def setup_host(self, host_id, data):
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-
         with self._processing_lock:
-            host = ManagedHost.objects.get(id = host_id)
+            session = self._sessions.get(host_id, None)
 
-            try:
-                record = ResourceQuery().get_record_by_attributes('linux', 'PluginAgentResources',
-                    plugin_name = self._plugin_name, host_id = host.id)
-            except StorageResourceRecord.DoesNotExist:
-                log.info("Set up plugin %s on host %s" % (self._plugin_name, host))
-                resource_class, resource_class_id = storage_plugin_manager.get_plugin_resource_class('linux', 'PluginAgentResources')
-                record, created = StorageResourceRecord.get_or_create_root(resource_class, resource_class_id, {'plugin_name': self._plugin_name, 'host_id': host.id})
-
-            if data is not None:
-                instance = self._plugin_klass(self._resource_manager, record.id)
-                instance.do_agent_session_start(data)
+            assert(session is not None)
+            session.plugin.do_agent_session_continue(data)
 
     @transaction.commit_on_success
     def update_host_resources(self, host_id, data):

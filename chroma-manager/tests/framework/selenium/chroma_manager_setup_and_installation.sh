@@ -137,12 +137,16 @@ scp -r chroma/chroma-manager/tests/framework/selenium/mock_agent root@$CHROMA_MA
 scp -r chroma/chroma-manager/tests/unit/ root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/unit
 scp chroma/chroma-manager/tests/__init__.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/__init__.py
 
-# copy the .py that was stripped (HYD-1849)
+# copy the .py's that where stripped (HYD-1849)
 scp chroma/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
+scp chroma/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py
 
 ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
 # patch the agent
 cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
+
+# patch the plugin manager
+cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_daemon_addon.py >> /usr/share/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py
 
 if $MEASURE_COVERAGE; then
   cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc
