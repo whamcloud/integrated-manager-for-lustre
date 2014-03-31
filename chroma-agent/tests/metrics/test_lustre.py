@@ -6,6 +6,10 @@ from chroma_agent.device_plugins.audit.local import LocalAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, DISABLE_BRW_STATS
 
 from tests.test_utils import PatchedContextTestCase
+from tests.test_utils import patch_run
+
+CMD = ["lctl", "get_param", "lov.lustre-*.target_obd"]
+lctl_output = "lov.lustre-MDT0000-mdtlov.target_obd=\n0: lustre-OST0000_UUID INACTIVE\n1: lustre-OST0001_UUID INACTIVE\n2: lustre-OST0002_UUID ACTIVE\n3: lustre-OST0003_UUID ACTIVE\n"
 
 
 class TestLocalLustreMetrics(PatchedContextTestCase):
@@ -19,7 +23,8 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
                                      "data/lustre_versions/2.0.66/mds_mgs")
         self.setUp()
         audit = LocalAudit()
-        metrics = audit.metrics()['raw']['lustre']
+        with patch_run(expected_args=CMD, stdout=lctl_output):
+            metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-MDT0000']['filesfree'], 511954)
         self.assertEqual(metrics['target']['MGS']['num_exports'], 4)
         self.assertEqual(metrics['lnet']['send_count'], 218887)
@@ -30,7 +35,8 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
                                      "data/lustre_versions/2.5.0/mds")
         self.setUp()
         audit = LocalAudit()
-        metrics = audit.metrics()['raw']['lustre']['target']['lustre-MDT0000']['hsm']
+        with patch_run(expected_args=CMD, stdout=lctl_output):
+            metrics = audit.metrics()['raw']['lustre']['target']['lustre-MDT0000']['hsm']
         self.assertEqual(metrics['agents']['idle'], 1)
         self.assertEqual(metrics['agents']['busy'], 1)
         self.assertEqual(metrics['agents']['total'], 2)
@@ -208,7 +214,8 @@ class TestMdtMetrics(PatchedContextTestCase):
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         super(TestMdtMetrics, self).setUp()
         audit = MdtAudit()
-        self.metrics = audit.metrics()['raw']['lustre']['target']
+        with patch_run(expected_args=CMD, stdout=lctl_output):
+            self.metrics = audit.metrics()['raw']['lustre']['target']
 
     def test_mdt_stats_list(self):
         """Test that a representative sample of mdt stats is collected."""
@@ -226,7 +233,7 @@ class TestMdtMetrics(PatchedContextTestCase):
 
     def test_mdt_int_metrics(self):
         """Test that the mdt simple integer metrics are collected."""
-        int_list = "num_exports kbytestotal kbytesfree filestotal filesfree".split()
+        int_list = "client_count kbytestotal kbytesfree filestotal filesfree".split()
         for metric in int_list:
             assert metric in self.metrics['lustre-MDT0000'].keys()
 
