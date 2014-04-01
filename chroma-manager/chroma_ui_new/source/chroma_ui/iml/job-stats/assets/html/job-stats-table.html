@@ -4,13 +4,14 @@
       <tr>
         <th>#</th>
         <th>Job ID</th>
-        <th>Throughput</th>
+        <th ng-if="filterBytes">Throughput</th>
+        <th ng-if="!filterBytes">IOPS</th>
       </tr>
       <tr ng-repeat="item in metric | orderBy:'-average' | limitTo: 5">
         <td>{{ $index + 1 }}</td>
         <td>{{ item.name }}</td>
         <td ng-if="filterBytes">{{ item.average | throughput }}</td>
-        <td ng-if="!filterBytes">{{ item.average }}</td>
+        <td ng-if="!filterBytes">{{ item.average | round:3 }} IOPS</td>
       </tr>
     </table>
     <h4 class="text-center" ng-if="!metric.length > 0">
