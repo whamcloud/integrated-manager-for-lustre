@@ -1157,6 +1157,33 @@ class JobScheduler(object):
         self.progress.advance()
         return copytool.id
 
+    def register_copytool(self, copytool_id, uuid):
+        from django.db import transaction
+        with self._lock:
+            copytool = ObjectCache.get_by_id(Copytool, int(copytool_id))
+            log.debug("Registering copytool %s with uuid %s" % (copytool, uuid))
+
+            with transaction.commit_on_success():
+                copytool.register(uuid)
+
+            ObjectCache.update(copytool)
+
+        self.progress.advance()
+
+    def unregister_copytool(self, copytool_id):
+        from django.db import transaction
+
+        with self._lock:
+            copytool = ObjectCache.get_by_id(Copytool, int(copytool_id))
+            log.debug("Unregistering copytool %s" % copytool)
+
+            with transaction.commit_on_success():
+                copytool.unregister()
+
+            ObjectCache.update(copytool)
+
+        self.progress.advance()
+
     def create_filesystem(self, fs_data):
         # FIXME: HYD-970: check that the MGT or hosts aren't being removed while
         # creating the filesystem

@@ -55,6 +55,8 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'create_filesystem',
                'create_client_mount',
                'create_copytool',
+               'register_copytool',
+               'unregister_copytool',
                'update_nids',
                'update_lnet_configuration',
                'create_host',
@@ -274,6 +276,14 @@ class JobSchedulerClient(object):
 
         copytool_id = JobSchedulerRpc().create_copytool(copytool_data)
         return Copytool.objects.get(id = copytool_id)
+
+    @classmethod
+    def register_copytool(cls, copytool_id, uuid):
+        JobSchedulerRpc().register_copytool(copytool_id, uuid)
+
+    @classmethod
+    def unregister_copytool(cls, copytool_id):
+        JobSchedulerRpc().unregister_copytool(copytool_id)
 
     @classmethod
     def get_locks(cls, obj_key, obj_id):
