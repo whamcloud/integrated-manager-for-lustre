@@ -7,14 +7,14 @@ describe('The router', function () {
     $routeSegmentProvider = {
       options: {},
       $get : function() {},
-      segment: jasmine.createSpy('$routeSegmentProvider.segment'),
-      when: jasmine.createSpy('$routeSegmentProvider.when').andCallFake(function () {
-        return $routeSegmentProvider;
-      }),
-      within: jasmine.createSpy('$routeSegmentProvider.within').andCallFake(function () {
-        return $routeSegmentProvider;
-      })
+      segment: jasmine.createSpy('$routeSegmentProvider.segment').andCallFake(routeSegementProvider),
+      when: jasmine.createSpy('$routeSegmentProvider.when').andCallFake(routeSegementProvider),
+      within: jasmine.createSpy('$routeSegmentProvider.within').andCallFake(routeSegementProvider)
     };
+
+    function routeSegementProvider () {
+      return $routeSegmentProvider;
+    }
 
     angular.module('route-segment', []).provider({
       $routeSegment: $routeSegmentProvider

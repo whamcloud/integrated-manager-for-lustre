@@ -48,11 +48,13 @@ function ObjectStorageServersCtrl($scope, MdsStream, DURATIONS) {
     size: 10
   };
 
-  var mdsStream = MdsStream.setup('objectStorageServers.data', $scope, {
+  var params = _.merge({
     qs: {
       role: 'OSS'
     }
-  });
+  }, $scope.params || {});
+
+  var mdsStream = MdsStream.setup('objectStorageServers.data', $scope, params);
 
   mdsStream.setDuration($scope.objectStorageServers.unit, $scope.objectStorageServers.size);
 }

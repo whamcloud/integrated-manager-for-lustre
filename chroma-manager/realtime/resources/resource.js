@@ -27,7 +27,8 @@ var url = require('url'),
   uriTemplate = require('uritemplate'),
   moment = require('moment'),
   dotty = require('dotty'),
-  _ = require('lodash');
+  _ = require('lodash'),
+  jsonMask = require('json-mask');
 
 var pendCount = 0;
 
@@ -83,9 +84,16 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
    * @private
    */
   Resource.prototype.__httpGetList = function __httpGetList(params) {
-    params = params || {};
+    params = _.cloneDeep(params || {});
 
-    return this.request.get(params);
+    if (params.id) {
+      var id = {id: params.id};
+      delete params.id;
+
+      return this.requestFor(id).get(params);
+    } else {
+      return this.request.get(params);
+    }
   };
 
   /**
@@ -96,20 +104,28 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
    * @returns {Q.promise}
    */
   Resource.prototype.__httpGetMetrics = function __httpGetMetrics (params) {
-    var end;
+    var unit = dotty.get(params, 'qs.unit');
+    var size = dotty.get(params, 'qs.size');
 
-    var clonedParams = _.cloneDeep(params || {}),
-      unit = dotty.get(clonedParams, 'qs.unit'),
-      size = dotty.get(clonedParams, 'qs.size');
+    params = _.cloneDeep(params || {});
 
     if (size != null && unit != null) {
-      end = moment().utc();
+      var end = moment().utc();
 
-      dotty.put(clonedParams, 'qs.end', end.toISOString());
-      dotty.put(clonedParams, 'qs.begin', end.subtract(unit, size).toISOString());
+      dotty.put(params, 'qs.end', end.toISOString());
+      dotty.put(params, 'qs.begin', end.subtract(unit, size).toISOString());
     }
 
-    return this.requestFor({extraPath: 'metric'}).get(clonedParams);
+    var requestParams = {
+      extraPath: 'metric'
+    };
+
+    if (params.id) {
+      requestParams.id = params.id;
+      delete params.id;
+    }
+
+    return this.requestFor(requestParams).get(params);
   };
 
   /**
@@ -122,7 +138,7 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
     var self = this;
 
     var expanded = uriTemplate
-      .parse(this.baseUrl + '{/extraPath}{/id}')
+      .parse(this.baseUrl + '{/id}{/extraPath}')
       .expand(templateParams || {})
       .replace(/\/*$/, '/');
 
@@ -139,9 +155,15 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
 
     return {
       get: function (params) {
+        var mask;
         var time = process.hrtime();
 
         pendCount += 1;
+
+        if (typeof params.jsonMask === 'string') {
+          mask = params.jsonMask;
+          delete params.jsonMask;
+        }
 
         return Q.ninvoke(defaultRequest, 'get', params)
           .spread(function (resp, body) {
@@ -149,13 +171,6 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
             var elapsed = parseInt(diff[1] / 1000000, 10); // divide by a million to get nano to milli
 
             self.log.debug('%s: %s (%d.%d seconds)', resp.statusCode, resp.request.href, diff[0], elapsed);
-
-            pendCount -= 1;
-
-            self.log.trace('pend count is: %d', pendCount);
-
-            if (body)
-              self.log.trace(body);
 
             if (resp.statusCode >= 400) {
               var message;
@@ -170,8 +185,20 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
             }
 
             return resp;
-          }, function () {
+          })
+          .then(function (resp) {
+            if (mask && resp.body)
+              resp.body = jsonMask(resp.body, mask);
+
+            if (resp.body)
+              self.log.trace(resp.body);
+
+            return resp;
+          })
+          .finally(function () {
             pendCount -= 1;
+
+            self.log.trace('pend count is: %d', pendCount);
           });
       }
     };

@@ -1,0 +1,9 @@
+<div ng-controller="FileUsageCtrl" class="with-transitions">
+  <h5>File Usage</h5>
+  <div class="controls">
+    <duration-picker start-unit="{{ fileUsage.unit }}" start-size="{{ fileUsage.size }}" on-update="fileUsage.onUpdate(unit, size)"></duration-picker>
+    <a full-screen-btn class="btn btn-primary btn-xs"></a>
+    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
+  </div>
+  <line-chart options="fileUsage.options" chart-data="fileUsage.data"></line-chart>
+</div>

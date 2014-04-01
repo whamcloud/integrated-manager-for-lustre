@@ -19,22 +19,8 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-angular.module('dashboard',
-    ['ostBalance', 'mdo', 'mds', 'sortable',
-      'readWriteBandwidth', 'objectStorageServers', 'readWriteHeatMap', 'fullScreen',
-      'fileSystem'
-    ])
-  .controller('DashboardCtrl', ['$scope', function ($scope) {
-    'use strict';
 
-    $scope.dashboard = {
-      charts: [
-        {name: 'iml/read-write-heat-map/assets/html/read-write-heat-map.html'},
-        {name: 'iml/ost-balance/assets/html/ost-balance.html'},
-        {name: 'iml/mdo/assets/html/mdo.html'},
-        {name: 'iml/read-write-bandwidth/assets/html/read-write-bandwidth.html'},
-        {name: 'iml/mds/assets/html/mds.html'},
-        {name: 'iml/object-storage-servers/assets/html/object-storage-servers.html'}
-      ]
-    };
-  }]);
+angular.module('dashboard', ['ostBalance', 'mdo', 'mds', 'sortable', 'streams',
+  'readWriteBandwidth', 'objectStorageServers', 'readWriteHeatMap', 'fullScreen',
+  'cpu-usage', 'memory-usage', 'space-usage', 'file-usage'
+]);

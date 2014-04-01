@@ -46,7 +46,7 @@ describe('Mds controller', function () {
   });
 
   it('should setup the MdsStream', function () {
-    expect(MdsStream.setup).toHaveBeenCalledOnceWith('mds.data', $scope);
+    expect(MdsStream.setup).toHaveBeenCalledOnceWith('mds.data', $scope, {});
   });
 
   it('should set duration on the mdsStream', function () {

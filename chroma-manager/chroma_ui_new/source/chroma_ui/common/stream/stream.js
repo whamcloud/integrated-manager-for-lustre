@@ -51,7 +51,7 @@
         this.setter = _.partial(parsed.assign, scope);
         this.channel = primus().channel(channelName);
 
-        scope.$on('$destroy', function destroy() {
+        this.removeDestroyListener = scope.$on('$destroy', function destroy() {
           self.end();
         });
       }
@@ -71,14 +71,20 @@
        * Starts the stream
        * @param {Object} [params] These will be merged with the default params.
        * @param {String} [streamMethod] The method to stream from.
+       * @param {Array|function} [prependTransformers] Transformers to append.
        */
-      Stream.prototype.startStreaming = function startStreaming (params, streamMethod) {
+      Stream.prototype.startStreaming = function startStreaming (params, streamMethod, prependTransformers) {
         var cloned = _.cloneDeep(this.defaultParams),
           scope = this.scope,
           merged = _.merge(cloned, params),
           self = this;
 
-        var transformers = this.generateTransformProcessor(defaults.transformers);
+        if (typeof prependTransformers === 'function')
+          prependTransformers = [prependTransformers];
+
+        var transformersList = (prependTransformers || []).concat(defaults.transformers);
+
+        var transformers = this.generateTransformProcessor(transformersList);
 
         this.channel.on('stream', function (resp) {
           localApply(scope, function runTransformers() {
@@ -172,7 +178,7 @@
       /**
        * Returns a function that when called iterates the list.
        * Each transformer has Stream as a context.
-       * @param {array} queue
+       * @param {Array} queue
        * @returns {function}
        */
       Stream.prototype.generateTransformProcessor = function generateTransformProcessor(queue) {
@@ -203,6 +209,10 @@
         if(typeof this._removePageVisibilityListener === 'function')
           this._removePageVisibilityListener();
 
+
+        this.removeDestroyListener();
+        this.removeDestroyListener = null;
+
         this.channel.end();
         this.channel = null;
         this.scope = null;
@@ -226,6 +236,81 @@
           throw e;
         }
       }
+    }
+  }
+
+  angular.module('immutableStream', []).factory('immutableStream', [immutableStreamFactory]);
+
+  /**
+   * This wraps a stream and makes it immutable.
+   * This means that once a stream has started, you can no longer
+   * stop streaming and then restart on the same channel.
+   * Now, when a stream is changed a new channel is created and used instead.
+   * This is a stopgap in a longer term move to simplify the interface between the client and server.
+   * @returns {function}
+   */
+  function immutableStreamFactory () {
+    /**
+     * Captures a Stream and makes it immutable.
+     * @param {Stream} Stream A Stream type
+     * @param {string} expression The expression to databind on the scope
+     * @param {object} $scope The scope to data bind to.
+     * @param {string} [streamMethod] The method to stream on.
+     * @param {function|array} [transformers] Transformers to call.
+     * @returns {{start: create, end: end}} A simple interface to start and end a stream instance.
+     */
+    return function getStream (Stream, expression, $scope, streamMethod, transformers) {
+      var streamInstance;
+
+      return {
+        start: function start(params) {
+          this.end();
+
+          streamInstance = Stream.setup(expression, $scope);
+          streamInstance.startStreaming(params, streamMethod, transformers);
+        },
+        end: function end() {
+          if (streamInstance)
+            streamInstance.end();
+
+          streamInstance = null;
+        }
+      };
+    };
+  }
+
+  angular.module('streams', ['immutableStream', 'host', 'target', 'fileSystem']).factory('streams',
+    ['immutableStream', 'HostStream', 'TargetStream', 'FileSystemStream', streamsFactory]);
+
+  /**
+   * This wraps streams as immutable and exposes an object of streams.
+   * An object is returned to keep our dependencies short.
+   * @param {object} immutableStream
+   * @param {function} HostStream
+   * @param {function} TargetStream
+   * @param {function} FileSystemStream
+   * @returns {{hostStream: function, targetStream: function}}
+   */
+  function streamsFactory (immutableStream, HostStream, TargetStream, FileSystemStream) {
+    return {
+      hostStream: getStream(HostStream),
+      targetStream: getStream(TargetStream),
+      fileSystemStream: getStream(FileSystemStream)
+    };
+
+    /**
+     * This captures a stream and returns a function that creates an immutable stream when invoked.
+     * @param {function} Stream
+     * @returns {function}
+     */
+    function getStream (Stream) {
+      return function createStream () {
+        var args = _.toArray(arguments);
+
+        args.unshift(Stream);
+
+        return immutableStream.apply(immutableStream, args);
+      };
     }
   }
 }());

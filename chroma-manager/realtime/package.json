@@ -16,7 +16,8 @@
     "moment": "2.5.1",
     "uritemplate": "0.3.4",
     "dotty": "0.0.2",
-    "q": "1.0.0"
+    "q": "1.0.0",
+    "json-mask": "0.2.0"
   },
   "devDependencies": {
     "socket.io-client": "0.9.16",

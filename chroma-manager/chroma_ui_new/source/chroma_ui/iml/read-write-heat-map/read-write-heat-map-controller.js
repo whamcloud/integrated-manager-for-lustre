@@ -20,107 +20,109 @@
 // express and approved by Intel in writing.
 
 
-angular.module('readWriteHeatMap', ['charts', 'stream'])
-  .controller('ReadWriteHeatMapCtrl',
-    ['$scope', '$location', 'd3', 'ReadWriteHeatMapStream', 'DURATIONS', 'formatBytes', ReadWriteHeatMapCtrl]);
-
-function ReadWriteHeatMapCtrl($scope, $location, d3, ReadWriteHeatMapStream, DURATIONS, formatBytes) {
+(function () {
   'use strict';
 
-  $scope.readWriteHeatMap = {
-    data: [],
-    onUpdate: function (unit, size) {
-      $scope.readWriteHeatMap.data.length = 0;
+  angular.module('readWriteHeatMap', ['charts', 'stream'])
+    .controller('ReadWriteHeatMapCtrl',
+    ['$scope', '$location', 'd3', 'ReadWriteHeatMapStream', 'DURATIONS', 'formatBytes', ReadWriteHeatMapCtrl]);
 
-      var params = {
-        qs: {
-          unit: unit,
-          size: size
-        }
-      };
+  function ReadWriteHeatMapCtrl($scope, $location, d3, ReadWriteHeatMapStream, DURATIONS, formatBytes) {
+    $scope.readWriteHeatMap = {
+      data: [],
+      onUpdate: function (unit, size) {
+        $scope.readWriteHeatMap.data.length = 0;
 
-      readWriteHeatMapStream.restart(params);
-    },
-    options: {
-      setup: function(chart) {
-        chart.options({
-          showYAxis: false,
-          formatter: formatter,
-          margin: { left: 50 }
-        });
+        var params = _.merge({
+          qs: {
+            unit: unit,
+            size: size
+          }
+        }, $scope.params || {});
 
-        chart.onMouseOver(mouseHandler(function (d) {
-          return {
-            date: d.x,
-            ostName: d.key,
-            bandwidth: formatter(d.z),
-            readableType: readWriteHeatMapStream.type.split('_')[1]
-          };
-        }));
-
-        chart.onMouseMove(mouseHandler());
-
-        chart.onMouseOut(mouseHandler(function () {
-          return {
-            isVisible: false
-          };
-        }));
-
-        chart.onMouseClick(function mouseClickHandler (d, el) {
-          var end;
-
-          var start = el.__data__.x.toISOString(),
-            next = el.nextSibling,
-            id = el.__data__.id;
-
-          if (next)
-            end = next.__data__.x.toISOString();
-          else
-            end = new Date().toISOString();
-
-          $scope.$apply(function () {
-            $location.path('dashboard/jobstats/%s/%s/%s'.sprintf(id, start, end));
+        readWriteHeatMapStream.restart(params);
+      },
+      options: {
+        setup: function(chart) {
+          chart.options({
+            showYAxis: false,
+            formatter: formatter,
+            margin: { left: 50 }
           });
-        });
 
-        chart.xAxis().showMaxMin(false);
-      }
-    },
-    type: ReadWriteHeatMapStream.TYPES.READ,
-    TYPES: ReadWriteHeatMapStream.TYPES,
-    toggle: function (type) {
-      readWriteHeatMapStream.switchType(type);
-    },
-    unit: DURATIONS.MINUTES,
-    size: 10
-  };
+          chart.onMouseOver(mouseHandler(function (d) {
+            return {
+              date: d.x,
+              ostName: d.key,
+              bandwidth: formatter(d.z),
+              readableType: readWriteHeatMapStream.type.split('_')[1]
+            };
+          }));
 
-  var readWriteHeatMapStream = ReadWriteHeatMapStream.setup('readWriteHeatMap.data', $scope, {
-    qs: {
-      unit: $scope.readWriteHeatMap.unit,
-      size: $scope.readWriteHeatMap.size
-    }
-  });
+          chart.onMouseMove(mouseHandler());
 
-  readWriteHeatMapStream.type = ReadWriteHeatMapStream.TYPES.READ;
-  readWriteHeatMapStream.startStreaming();
+          chart.onMouseOut(mouseHandler(function () {
+            return {
+              isVisible: false
+            };
+          }));
 
-  function formatter (z) {
-    return formatBytes(z, 3) + '/s';
-  }
+          chart.onMouseClick(function mouseClickHandler (d, el) {
+            var end;
 
-  function mouseHandler (overrides) {
-    if (!_.isFunction(overrides))
-      overrides = _.iterators.K({});
+            var start = el.__data__.x.toISOString(),
+              next = el.nextSibling,
+              id = el.__data__.id;
 
-    return function (d) {
-      $scope.$apply(function () {
-        _.extend($scope.readWriteHeatMap, {
-          isVisible: true,
-          x: (d3.event.hasOwnProperty('offsetX') ? d3.event.offsetX : d3.event.layerX) + 50,
-          y: (d3.event.hasOwnProperty('offsetY') ? d3.event.offsetY : d3.event.layerY) + 50
-        }, overrides(d));
-      });
+            if (next)
+              end = next.__data__.x.toISOString();
+            else
+              end = new Date().toISOString();
+
+            $scope.$apply(function () {
+              $location.path('dashboard/jobstats/%s/%s/%s'.sprintf(id, start, end));
+            });
+          });
+
+          chart.xAxis().showMaxMin(false);
+        }
+      },
+      type: ReadWriteHeatMapStream.TYPES.READ,
+      TYPES: ReadWriteHeatMapStream.TYPES,
+      toggle: function (type) {
+        readWriteHeatMapStream.switchType(type);
+      },
+      unit: DURATIONS.MINUTES,
+      size: 10
     };
+
+    var readWriteHeatMapStream = ReadWriteHeatMapStream.setup('readWriteHeatMap.data', $scope, $scope.params || {});
+
+    readWriteHeatMapStream.type = ReadWriteHeatMapStream.TYPES.READ;
+    readWriteHeatMapStream.startStreaming({
+      qs: {
+        unit: $scope.readWriteHeatMap.unit,
+        size: $scope.readWriteHeatMap.size
+      }
+    });
+
+    function formatter (z) {
+      return formatBytes(z, 3) + '/s';
+    }
+
+    function mouseHandler (overrides) {
+      if (!_.isFunction(overrides))
+        overrides = _.iterators.K({});
+
+      return function (d) {
+        $scope.$apply(function () {
+          _.extend($scope.readWriteHeatMap, {
+            isVisible: true,
+            x: (d3.event.hasOwnProperty('offsetX') ? d3.event.offsetX : d3.event.layerX) + 50,
+            y: (d3.event.hasOwnProperty('offsetY') ? d3.event.offsetY : d3.event.layerY) + 50
+          }, overrides(d));
+        });
+      };
+    }
   }
-}
+}());

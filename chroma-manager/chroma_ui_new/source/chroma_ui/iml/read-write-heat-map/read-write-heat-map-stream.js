@@ -19,60 +19,63 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-angular.module('readWriteHeatMap').constant('readWriteHeatMapTypes', {
-  READ: 'stats_read_bytes',
-  WRITE: 'stats_write_bytes'
-});
 
-angular.module('readWriteHeatMap').factory('ReadWriteHeatMapStream', ['stream', 'readWriteHeatMapTransformer',
-  'replaceTransformer', 'readWriteHeatMapTypes', readWriteHeatMapFactory]);
-
-function readWriteHeatMapFactory(stream, readWriteHeatMapTransformer,
-                                 replaceTransformer, readWriteHeatMapTypes) {
+(function () {
   'use strict';
 
-  var ReadWriteHeatMapStream = stream('targetostmetrics', 'httpGetOstMetrics', {
-    params: {
-      qs: {
-        kind: 'OST',
-        metrics: 'stats_read_bytes,stats_write_bytes',
-        num_points: '20'
-      }
-    },
-    transformers: [readWriteHeatMapTransformer, replaceTransformer]
+  angular.module('readWriteHeatMap').constant('readWriteHeatMapTypes', {
+    READ: 'stats_read_bytes',
+    WRITE: 'stats_write_bytes'
   });
 
-  Object.defineProperty(ReadWriteHeatMapStream.prototype, 'type', {
-    set: function (value) {
-      if (value in _.invert(readWriteHeatMapTypes)) {
-        this._value = value;
-      } else {
-        throw new Error('Type: %s is not a valid type!'.sprintf(value));
+  angular.module('readWriteHeatMap').factory('ReadWriteHeatMapStream', ['stream', 'readWriteHeatMapTransformer',
+    'replaceTransformer', 'readWriteHeatMapTypes', readWriteHeatMapFactory]);
+
+  function readWriteHeatMapFactory(stream, readWriteHeatMapTransformer,
+                                   replaceTransformer, readWriteHeatMapTypes) {
+    var ReadWriteHeatMapStream = stream('targetostmetrics', 'httpGetOstMetrics', {
+      params: {
+        qs: {
+          kind: 'OST',
+          metrics: 'stats_read_bytes,stats_write_bytes',
+          num_points: '20'
+        }
+      },
+      transformers: [readWriteHeatMapTransformer, replaceTransformer]
+    });
+
+    Object.defineProperty(ReadWriteHeatMapStream.prototype, 'type', {
+      set: function (value) {
+        if (value in _.invert(readWriteHeatMapTypes)) {
+          this._value = value;
+        } else {
+          throw new Error('Type: %s is not a valid type!'.sprintf(value));
+        }
+      },
+      get: function () {
+        return this._value;
       }
-    },
-    get: function () {
-      return this._value;
-    }
-  });
+    });
 
-  /**
-   * Switches the type, which triggers a watch to fire.
-   * @param {String} type
-   */
-  ReadWriteHeatMapStream.prototype.switchType = function switchType(type) {
-    this.type = type;
+    /**
+     * Switches the type, which triggers a watch to fire.
+     * @param {String} type
+     */
+    ReadWriteHeatMapStream.prototype.switchType = function switchType(type) {
+      this.type = type;
 
-    this.getter().map(function getValues(item) {
-      return item.values;
-    })
-    .forEach(function switchItemType(values) {
-      values.forEach(function (item) {
-        item.z = item[this.type];
-      }, this);
-    }, this);
-  };
+      this.getter().map(function getValues(item) {
+        return item.values;
+      })
+        .forEach(function switchItemType(values) {
+          values.forEach(function (item) {
+            item.z = item[this.type];
+          }, this);
+        }, this);
+    };
 
-  ReadWriteHeatMapStream.TYPES = readWriteHeatMapTypes;
+    ReadWriteHeatMapStream.TYPES = readWriteHeatMapTypes;
 
-  return ReadWriteHeatMapStream;
-}
+    return ReadWriteHeatMapStream;
+  }
+}());

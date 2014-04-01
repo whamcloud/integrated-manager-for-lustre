@@ -62,12 +62,14 @@ module.exports = function channelFactory (primus, logger, Stream) {
 
         stream.start(function callback(done) {
           spark.send('beforeStreaming', function (method, params) {
+            var clonedParams = _.cloneDeep(params || {});
+
             resource[method](params)
               .then(function (resp) {
                 var data = {
                   statusCode: resp.statusCode,
                   body: resp.body,
-                  params: params
+                  params: clonedParams
                 };
 
                 spark.send('stream', data);

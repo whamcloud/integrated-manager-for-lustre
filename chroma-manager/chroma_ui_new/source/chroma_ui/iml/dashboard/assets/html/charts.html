@@ -1,0 +1,7 @@
+<div class="row dashboard" sorter items="dashboard.charts" key="'chart'">
+  <div ng-repeat="chart in dashboard.charts track by chart.name">
+    <div class="col-lg-6 dashboard-chart full-screen" sort-item>
+      <div ng-include="chart.name"></div>
+    </div>
+  </div>
+</div>

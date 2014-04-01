@@ -20,17 +20,11 @@
 // express and approved by Intel in writing.
 
 
-angular.module('dashboard')
-  .controller('FileSystemInfoCtrl', ['$scope', 'FileSystemStream', FileSystemInfoCtrl]);
-
-function FileSystemInfoCtrl($scope, FileSystemStream) {
+angular.module('host', ['stream'])
+.factory('HostStream', ['stream', 'replaceTransformer', function (stream, replaceTransformer) {
   'use strict';
 
-  $scope.fileSystemInfo = {
-    data: {}
-  };
-
-  var fileSystemStream = FileSystemStream.setup('fileSystemInfo.data', $scope);
-
-  fileSystemStream.startStreaming();
-}
+  return stream('host', 'httpGetList', {
+    transformers: [replaceTransformer]
+  });
+}]);

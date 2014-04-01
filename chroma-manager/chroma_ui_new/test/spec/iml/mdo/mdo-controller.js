@@ -47,7 +47,7 @@ describe('Mdo controller', function () {
   });
 
   it('should setup the MdoStream', function () {
-    expect(MdoStream.setup).toHaveBeenCalledOnceWith('mdo.data', $scope);
+    expect(MdoStream.setup).toHaveBeenCalledOnceWith('mdo.data', $scope, {});
   });
 
   it('should set duration on the mdoStream', function () {

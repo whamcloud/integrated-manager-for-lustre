@@ -39,13 +39,44 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment'])
     templateUrl: 'iml/app/assets/html/app.html'
   });
 
-  $routeSegmentProvider.when('/dashboard', 'app.dashboard');
-  $routeSegmentProvider.when('/', 'app.dashboard');
+  $routeSegmentProvider.when('/', 'app.dashboard.base')
+    .when('/dashboard', 'app.dashboard.base')
+    .when('/dashboard/fs/:fsId', 'app.dashboard.fs')
+    .when('/dashboard/fs/:fsId/OST/:ostId', 'app.dashboard.ost')
+    .when('/dashboard/fs/:fsId/MDT/:mdtId', 'app.dashboard.mdt')
+    .when('/dashboard/server/:serverId', 'app.dashboard.server')
+    .when('/dashboard/server/:serverId/OST/:ostId', 'app.dashboard.ost')
+    .when('/dashboard/server/:serverId/MDT/:mdtId', 'app.dashboard.mdt');
 
-  $routeSegmentProvider.within('app').segment('dashboard', {
-    controller: 'DashboardCtrl',
-    templateUrl: 'iml/dashboard/assets/html/dashboard.html'
-  });
+  $routeSegmentProvider.within('app')
+    .segment('dashboard', {
+      templateUrl: 'iml/dashboard/assets/html/dashboard.html'
+    })
+    .within()
+      .segment('base', {
+        controller: 'BaseDashboardCtrl',
+        templateUrl: 'iml/dashboard/assets/html/base-dashboard.html'
+      })
+      .segment('fs', {
+        controller: 'FsDashboardCtrl',
+        templateUrl: 'iml/dashboard/assets/html/fs-dashboard.html',
+        dependencies: ['fsId']
+      })
+      .segment('server', {
+        controller: 'ServerDashboardCtrl',
+        templateUrl: 'iml/dashboard/assets/html/server-dashboard.html',
+        dependencies: ['serverId']
+      })
+      .segment('ost', {
+        controller: 'OstDashboardCtrl',
+        templateUrl: 'iml/dashboard/assets/html/ost-dashboard.html',
+        dependencies: ['fsId', 'serverId', 'ostId']
+      })
+      .segment('mdt', {
+        controller: 'MdtDashboardCtrl',
+        templateUrl: 'iml/dashboard/assets/html/mdt-dashboard.html',
+        dependencies: ['fsId', 'serverId', 'mdtId']
+      });
 
   $routeSegmentProvider.when('/configure/hsm', 'app.hsm');
 

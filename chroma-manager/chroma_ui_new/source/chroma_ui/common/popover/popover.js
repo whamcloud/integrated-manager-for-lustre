@@ -54,7 +54,9 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
             scope.work({
               transcludedScope: transcludedScope,
               actions: {
-                recalculate: recalculate,
+                recalculate: function () {
+                  $timeout(recalculate);
+                },
                 hide: hide
               }
             });
@@ -110,6 +112,7 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
          * Figures out the placement of the popover and applies it to the element's style.
          */
         function recalculate () {
+          el.css('min-width', '');
           el.css(position.position(scope.placement, positioner));
         }
       }

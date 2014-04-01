@@ -1,0 +1,9 @@
+<div ng-controller="SpaceUsageCtrl" class="with-transitions">
+  <h5>Space Usage</h5>
+  <div class="controls">
+    <duration-picker start-unit="{{ spaceUsage.unit }}" start-size="{{ spaceUsage.size }}" on-update="spaceUsage.onUpdate(unit, size)"></duration-picker>
+    <a full-screen-btn class="btn btn-primary btn-xs"></a>
+    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
+  </div>
+  <line-chart options="spaceUsage.options" chart-data="spaceUsage.data"></line-chart>
+</div>

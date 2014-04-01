@@ -28,22 +28,25 @@ function fileSystemStreamModelTransformerFactory(FileSystemStreamModel) {
 
   /**
    * Transforms incoming stream data to FileSystemStreamModel instances.
-   * @param {Array|undefined} newVal The new data.
+   * @param {Array|Object|undefined} resp The server response.
    */
   return function transformer(resp) {
-    var newVal = resp.body;
-
-    if (!_.isPlainObject(newVal) )
+    if (!_.isPlainObject(resp.body))
       throw new Error('fileSystemStreamModelTransformer expects resp.body to be an object!');
 
-    var cloned = _.cloneDeep(newVal);
-    cloned.objects.length = 0;
+    var cloned = _.cloneDeep(resp.body);
 
-    newVal.objects.forEach(function enhanceItems(item) {
-      var fileSystemStreamModel = new FileSystemStreamModel(item);
+    if (Array.isArray(cloned.objects)) {
+      cloned.objects.length = 0;
 
-      cloned.objects.push(fileSystemStreamModel);
-    });
+      resp.body.objects.forEach(function enhanceItem(item) {
+        var fileSystemStreamModel = new FileSystemStreamModel(item);
+
+        cloned.objects.push(fileSystemStreamModel);
+      });
+    } else {
+      cloned = new FileSystemStreamModel(cloned);
+    }
 
     resp.body = cloned;
 

@@ -77,11 +77,11 @@
             <td class="status">
               <div ng-include="'iml/hsm/assets/html/states/' + copytool.status() + '.html'"></div>
             </td>
-            <td class="txtcenter actions-cell">
+            <td class="actions-cell">
               <div class="dropdown">
-                <a class="dropdown-toggle btn-mini btn">Actions <i class="fa fa-caret-down"></i></a>
+                <a class="dropdown-toggle btn btn-info btn-sm">Actions <i class="fa fa-caret-down"></i></a>
                 <ul class="dropdown-menu">
-                  <li ng-repeat="action in copytool.available_actions track by action.verb">
+                  <li class="help" ng-repeat="action in copytool.available_actions track by action.verb">
                     <a ng-controller="CommandCtrl" ng-click="onActionSelection(copytool, action)">
                       {{ action.verb }}
                     </a>

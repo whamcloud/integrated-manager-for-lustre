@@ -53,7 +53,7 @@ angular.module('ostBalance', ['charts'])
     }
   };
 
-  var ostBalanceStream = OstBalanceStream.setup('ostBalance.data', $scope);
+  var ostBalanceStream = OstBalanceStream.setup('ostBalance.data', $scope, $scope.params || {});
 
   ostBalanceStream.startStreaming();
 }]);

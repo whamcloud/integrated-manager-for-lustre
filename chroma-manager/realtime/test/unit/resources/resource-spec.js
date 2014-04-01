@@ -1,19 +1,17 @@
 'use strict';
 
-var sinon = require('sinon'),
-  resourceFactory = require('../../../resources/resource');
+var sinon = require('sinon');
+var Q = require('q');
+var resourceFactory = require('../../../resources/resource');
 
 describe('resource', function () {
-  var Resource, conf, request, requestInstance, logger, log, Q, clock;
+  var Resource, conf, request, requestInstance, logger, log, clock;
 
   beforeEach(function () {
-    Q = {
-      ninvoke: jasmine.createSpy('Q.ninvoke').andReturn({
-        spread: jasmine.createSpy('Q.ninvoke.spread')
-      })
-    };
-
-    clock = sinon.useFakeTimers(1330688329321);
+    spyOn(Q, 'ninvoke').andCallThrough();
+    spyOn(Q, 'spread').andCallThrough();
+    spyOn(Q.makePromise.prototype, 'finally').andCallThrough();
+    spyOn(Q.makePromise.prototype, 'then').andCallThrough();
 
     log = {
       info: jasmine.createSpy('log.info'),
@@ -39,10 +37,6 @@ describe('resource', function () {
     };
 
     Resource = resourceFactory(conf, request, logger, Q);
-  });
-
-  afterEach(function () {
-    clock.restore();
   });
 
   it('should throw if path is not passed', function () {
@@ -104,23 +98,61 @@ describe('resource', function () {
         expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', params);
       });
 
-      it('should provide a httpGetMetrics method', function () {
+      it('should have httpGetList work with id', function () {
         var params = {
-          qs: {
-            size: 10,
-            unit: 'minutes'
-          }
+          id: 5
         };
 
-        resource.__httpGetMetrics(params);
+        resource.__httpGetList(params);
 
-        expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', {
-          qs: {
-            end: '2012-03-02T11:38:49.321Z',
-            begin: '2012-03-02T11:28:49.321Z',
-            size: 10,
-            unit: 'minutes'
-          }
+        var url = request.defaults.mostRecentCall.args[0].url;
+
+        expect(url).toBe(conf.apiUrl + path + '/5/');
+      });
+
+      describe('metrics', function () {
+        beforeEach(function () {
+          clock = sinon.useFakeTimers(1330688329321);
+        });
+
+        afterEach(function () {
+          clock.restore();
+        });
+
+        it('should provide a httpGetMetrics method', function () {
+          var params = {
+            qs: {
+              size: 10,
+              unit: 'minutes'
+            }
+          };
+
+          resource.__httpGetMetrics(params);
+
+          expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', {
+            qs: {
+              end: '2012-03-02T11:38:49.321Z',
+              begin: '2012-03-02T11:28:49.321Z',
+              size: 10,
+              unit: 'minutes'
+            }
+          });
+        });
+
+        it('should handle id', function () {
+          var params = {
+            id: 5,
+            qs: {
+              size: 10,
+              unit: 'minutes'
+            }
+          };
+
+          resource.__httpGetMetrics(params);
+
+          var url = request.defaults.mostRecentCall.args[0].url;
+
+          expect(url).toBe(conf.apiUrl + path + '/5/metric/');
         });
       });
 
@@ -139,6 +171,14 @@ describe('resource', function () {
           var url = request.defaults.mostRecentCall.args[0].url;
 
           expect(url).toBe(conf.apiUrl + path + '/5/');
+        });
+
+        it('should build the path and id in the correct order', function () {
+          resource.requestFor({id: 5, extraPath: 'metric'});
+
+          var url = request.defaults.mostRecentCall.args[0].url;
+
+          expect(url).toBe(conf.apiUrl + path + '/5/metric/');
         });
 
         it('should call defaults with the expected config', function () {
@@ -160,40 +200,61 @@ describe('resource', function () {
       });
 
       describe('get handling', function () {
-        var params = {}, spread;
-
-        beforeEach(function () {
-          resource.requestFor().get(params);
-
-          spread = Q.ninvoke.plan().spread.mostRecentCall.args[0];
-        });
+        var params = {};
 
         it('should invoke request.get with params', function () {
+          resource.requestFor().get(params);
+
           expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', params);
         });
 
-        it('should throw if resp.statusCode is >= 400', function () {
-          var resp = {
-            request: {},
-            statusCode: 400
-          };
+        it('should throw if resp.statusCode is >= 400', function (done) {
+          requestInstance.get.andCallFake(function fake(params, cb) {
+            cb(null, {
+              request: {},
+              statusCode: 400
+            });
+          });
 
-          function shouldThrow() {
-            spread(resp, {});
-          }
-
-          expect(shouldThrow).toThrow();
+          resource.requestFor().get(params).catch(function (err) {
+            expect(err).toEqual(jasmine.any(Error));
+            done();
+          });
         });
 
-        it('should return resp if resp.statusCode is < 400', function () {
-          var resp = {
+        it('should return resp if resp.statusCode is < 400', function (done) {
+          var serverResponse = {
             request: {},
             statusCode: 200
           };
 
-          var result = spread(resp, {});
+          requestInstance.get.andCallFake(function fake(params, cb) {
+            cb(null, serverResponse, {});
+          });
 
-          expect(result).toBe(resp);
+          resource.requestFor().get(params).then(function (resp) {
+            expect(resp).toEqual(serverResponse);
+            done();
+          });
+        });
+
+        it('should mask params', function () {
+          var serverResponse = {
+            request: {},
+            statusCode: 200,
+            body: {
+              foo: 'bar',
+              baz: 'bat'
+            }
+          };
+
+          requestInstance.get.andCallFake(function fake (params, cb) {
+            cb(null, serverResponse, serverResponse.body);
+          });
+
+          resource.requestFor().get({jsonMask: 'baz'}).then(function(resp) {
+            expect(resp.body).toEqual({baz: 'bat'});
+          });
         });
       });
     });

@@ -20,13 +20,16 @@
 // express and approved by Intel in writing.
 
 
-angular.module('fileSystem')
-  .factory('FileSystemStream', ['stream', 'fileSystemStreamModelTransformer', 'replaceTransformer', FileSystemStream]);
-
-function FileSystemStream(stream, fileSystemStreamModelTransformer, replaceTransformer) {
+(function () {
   'use strict';
 
-  return stream('filesystem', 'httpGetList', {
-    transformers: [fileSystemStreamModelTransformer, replaceTransformer]
-  });
-}
+  angular.module('fileSystem')
+    .factory('FileSystemStream',
+      ['stream', 'fileSystemStreamModelTransformer', 'replaceTransformer', FileSystemStream]);
+
+  function FileSystemStream(stream, fileSystemStreamModelTransformer, replaceTransformer) {
+    return stream('filesystem', 'httpGetList', {
+      transformers: [fileSystemStreamModelTransformer, replaceTransformer]
+    });
+  }
+}());

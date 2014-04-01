@@ -72,7 +72,7 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
 
         chart.destroy = function () {
           container.remove();
-          selection = null;
+          container = selection = null;
         };
 
         if (mergedValues.length === 0) {

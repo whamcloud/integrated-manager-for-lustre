@@ -65,7 +65,7 @@ angular.module('mdo', ['charts', 'stream'])
     }
   };
 
-  var mdoStream = MdoStream.setup('mdo.data', $scope);
+  var mdoStream = MdoStream.setup('mdo.data', $scope, $scope.params || {});
 
   mdoStream.setDuration($scope.mdo.unit, $scope.mdo.size);
 }]);

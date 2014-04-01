@@ -1,31 +1,20 @@
 describe('file system stream model transformer', function () {
   'use strict';
 
-  var FileSystemStreamModel, fileSystemStreamModel, fileSystemStreamModelTransformer, resp;
+  /**
+   * Empty constructor used to assert instance.
+   * @constructor
+   */
+  function FileSystemStreamModel () {}
 
-  beforeEach(module('fileSystem'));
+  beforeEach(module('fileSystem', {
+    FileSystemStreamModel: FileSystemStreamModel
+  }));
 
-  mock.beforeEach(function createMock() {
-    fileSystemStreamModel = {};
-
-    FileSystemStreamModel = jasmine.createSpy('FileSystemStreamModel').andCallFake(function () {
-      return fileSystemStreamModel;
-    });
-
-    return {
-      name: 'FileSystemStreamModel',
-      value: FileSystemStreamModel
-    };
-  });
+  var fileSystemStreamModelTransformer;
 
   beforeEach(inject(function (_fileSystemStreamModelTransformer_) {
     fileSystemStreamModelTransformer = _fileSystemStreamModelTransformer_;
-
-    resp = {
-      body: {
-        objects: []
-      }
-    };
   }));
 
   it('should throw if resp.body is not an object', function () {
@@ -37,28 +26,44 @@ describe('file system stream model transformer', function () {
   });
 
   describe('enhancing items', function () {
-    var fakeRecord, result;
+    var result, resp;
 
     beforeEach(function () {
-      fakeRecord = {
-        fakeProperty: 'fakeValue'
+      resp = {
+        body: {
+          objects: [{
+            fakeProperty: 'fakeValue'
+          }]
+        }
       };
-
-      resp.body.objects.push(fakeRecord);
 
       result = fileSystemStreamModelTransformer(resp);
     });
 
-    it('should convert objects to FileSystemStreamModels', function () {
-      expect(FileSystemStreamModel).toHaveBeenCalledOnceWith(fakeRecord);
-    });
-
     it('should replace the response body with the vivified objects', function () {
-      expect(resp.body.objects[0]).toBe(fileSystemStreamModel);
+      expect(resp.body.objects[0]).toEqual(jasmine.any(FileSystemStreamModel));
     });
 
     it('should resolve with the resp', function () {
       expect(result).toBe(resp);
+    });
+  });
+
+  describe('enhancing an item', function () {
+    var resp, result;
+
+    beforeEach(function () {
+      resp = {
+        body: {
+          fakeProperty: 'fakeValue'
+        }
+      };
+
+      result = fileSystemStreamModelTransformer(resp);
+    });
+
+    it('should replace the response body with a vivified object', function () {
+      expect(resp.body).toEqual(jasmine.any(FileSystemStreamModel));
     });
   });
 });

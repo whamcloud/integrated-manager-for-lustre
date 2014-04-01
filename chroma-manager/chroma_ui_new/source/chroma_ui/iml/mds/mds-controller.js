@@ -46,7 +46,7 @@ angular.module('mds', ['charts'])
     size: 10
   };
 
-  var mdsStream = MdsStream.setup('mds.data', $scope);
+  var mdsStream = MdsStream.setup('mds.data', $scope, $scope.params || {});
 
   mdsStream.setDuration($scope.mds.unit, $scope.mds.size);
 }]);

@@ -38,7 +38,7 @@ describe('Ost Balance controller', function () {
   });
 
   it('should setup the stream', function () {
-    expect(OstBalanceStream.setup).toHaveBeenCalledWith('ostBalance.data', $scope);
+    expect(OstBalanceStream.setup).toHaveBeenCalledWith('ostBalance.data', $scope, {});
   });
 
   describe('setting up the chart', function () {

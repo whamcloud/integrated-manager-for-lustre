@@ -47,7 +47,6 @@ describe('stream', function () {
     });
 
     it('should setup a deferred on start', function () {
-      debugger;
       expect(Q.defer).toHaveBeenCalledOnce();
     });
 

@@ -33,7 +33,8 @@ describe('file system channel', function () {
     fileSystemChannel.on('stream', function (data) {
       expect(data).toEqual({
         statusCode: 200,
-        body: jasmine.any(Object)
+        body: jasmine.any(Object),
+        params: {}
       });
 
       done();

@@ -85,7 +85,6 @@ angular.module('stream').factory('replaceTransformer', [function replaceTransfor
 
       _.replace(scopeData, newData);
     } else {
-      /* Does anything in production use this case? */
       updateObject(scopeData, newData);
     }
 

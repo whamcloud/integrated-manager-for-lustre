@@ -10,13 +10,13 @@
       </td>
       <td class="textcenter actions-cell">
         <div class="dropdown">
-          <a class="dropdown-toggle btn-mini btn">Actions <i class="fa fa-caret-down"></i></a>
+          <a class="dropdown-toggle btn btn-info btn-sm">Actions <i class="fa fa-caret-down"></i></a>
           <ul class="dropdown-menu">
-            <li ng-repeat="param in fileSystem.hsm_control_params track by param.verb">
+            <li class="help" ng-repeat="param in fileSystem.hsm_control_params track by param.verb">
               <a ng-controller="CommandCtrl" ng-click="onActionSelection(param.mdt, param)">
                 {{ param.verb }}
               </a>
-              <iml-tooltip direction="left">{{ param.long_description }}</iml-tooltip>
+              <iml-tooltip direction="right">{{ param.long_description }}</iml-tooltip>
             </li>
           </ul>
         </div>

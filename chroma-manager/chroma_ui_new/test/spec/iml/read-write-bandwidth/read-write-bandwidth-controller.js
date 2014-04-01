@@ -46,7 +46,7 @@ describe('read write bandwidth controller', function () {
   });
 
   it('should setup the ReadWriteBandwidthStream', function () {
-    expect(ReadWriteBandwidthStream.setup).toHaveBeenCalledOnceWith('readWriteBandwidth.data', $scope);
+    expect(ReadWriteBandwidthStream.setup).toHaveBeenCalledOnceWith('readWriteBandwidth.data', $scope, {});
   });
 
   it('should set duration on the readWriteBandwidthStream', function () {

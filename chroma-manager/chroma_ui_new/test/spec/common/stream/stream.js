@@ -3,17 +3,17 @@ describe('stream module', function () {
 
   var stream, $scope, primus, expression, pageVisibility;
 
-  beforeEach(module('stream'));
+  beforeEach(module('stream', function ($provide) {
+    $provide.factory('pageVisibility', function () {
+      return {
+        onChange: jasmine.createSpy('pageVisibility.onChange').andReturn(
+          jasmine.createSpy('deregister')
+        )
+      };
+    });
+  }));
 
-  mock.factory(function pageVisibility () {
-    return {
-      onChange: jasmine.createSpy('pageVisibility.onChange').andReturn(
-        jasmine.createSpy('deregister')
-      )
-    };
-  });
-
-  mock.beforeEach('BASE', 'primus', 'pageVisibility');
+  mock.beforeEach('BASE', 'primus');
 
   beforeEach(inject(function (_stream_, _primus_, _pageVisibility_, $rootScope) {
     primus = _primus_;
@@ -209,6 +209,29 @@ describe('stream module', function () {
       });
     });
 
+    describe('prependTransformers', function () {
+      var transformer = jasmine.createSpy('transformer').andCallFake(_.identity);
+
+      beforeEach(function () {
+        streamInstance.startStreaming({}, 'fakeStreamMethod', transformer);
+      });
+
+      it('should call the prepend transformer', function () {
+        var streamCall = primus._channelInstance_.on.mostRecentCallThat(function (call) {
+            return call.args[0] === 'stream';
+          }),
+          streamFunc = streamCall.args[1],
+          resp = {
+            body: []
+          };
+
+        streamFunc(resp);
+
+        expect(transformer).toHaveBeenCalledOnceWith(resp);
+      });
+
+    });
+
     describe('destroy', function () {
       beforeEach(function () {
         $scope.$destroy();
@@ -234,5 +257,100 @@ describe('stream module', function () {
         expect(streamInstance.setter).toBeNull();
       });
     });
+  });
+});
+
+describe('immutable stream', function () {
+  'use strict';
+
+  beforeEach(module('immutableStream'));
+
+  var immutableStream, Stream, instance;
+
+  beforeEach(inject(function (_immutableStream_) {
+    immutableStream = _immutableStream_;
+
+    Stream = {
+      setup: jasmine.createSpy('setup').andReturn({
+        startStreaming: jasmine.createSpy('startStreaming'),
+        end: jasmine.createSpy('end')
+      })
+    };
+
+    instance = immutableStream(Stream, 'foo', {});
+  }));
+
+  it('should return a simplified stream wrapper', function () {
+    expect(instance).toContainObject({
+      start: jasmine.any(Function),
+      end: jasmine.any(Function)
+    });
+  });
+
+  it('should start streaming', function () {
+    var params = {foo: 'bar'};
+
+    instance.start(params);
+
+    expect(Stream.setup).toHaveBeenCalledOnceWith('foo', {});
+    expect(Stream.setup.plan().startStreaming)
+      .toHaveBeenCalledOnceWith(params, undefined, undefined);
+  });
+
+  it('should not end if not started', function () {
+    instance.end();
+
+    expect(Stream.setup.plan().end).not.toHaveBeenCalled();
+  });
+
+  it('should end once started', function () {
+    var params = {foo: 'bar'};
+
+    instance.start(params);
+
+    instance.end();
+
+    expect(Stream.setup.plan().end).toHaveBeenCalledOnce();
+  });
+
+  it('should accept a stream method and transformers', function () {
+    var instance = immutableStream(Stream, 'foo', {}, 'method', transformer);
+    var params = {foo: 'bar'};
+
+    function transformer() {}
+
+    instance.start(params);
+
+    expect(Stream.setup.plan().startStreaming)
+      .toHaveBeenCalledOnceWith(params, 'method', transformer);
+  });
+});
+
+describe('streams', function () {
+  'use strict';
+
+  function HostStream () {}
+  function TargetStream() {}
+  function FileSystemStream() {}
+
+  beforeEach(module('streams', function ($provide) {
+    $provide.value('immutableStream', jasmine.createSpy('immutableStream'));
+  }, {
+    HostStream: HostStream,
+    TargetStream: TargetStream,
+    FileSystemStream: FileSystemStream
+  }));
+
+  var streams, immutableStream;
+
+  beforeEach(inject(function (_streams_, _immutableStream_) {
+    streams = _streams_;
+    immutableStream = _immutableStream_;
+  }));
+
+  it('should create an immutable stream', function () {
+    streams.hostStream('foo.bar', {});
+
+    expect(immutableStream).toHaveBeenCalledOnceWith(HostStream, 'foo.bar', {});
   });
 });

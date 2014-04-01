@@ -1,0 +1,9 @@
+<div ng-controller="MemoryUsageCtrl" class="with-transitions">
+  <h5>Memory Usage</h5>
+  <div class="controls">
+    <duration-picker start-unit="{{ memoryUsage.unit }}" start-size="{{ memoryUsage.size }}" on-update="memoryUsage.onUpdate(unit, size)"></duration-picker>
+    <a full-screen-btn class="btn btn-primary btn-xs"></a>
+    <a class="drag btn btn-xs btn-default">Drag <i class="fa fa-arrows"></i></a>
+  </div>
+  <line-chart options="memoryUsage.options" chart-data="memoryUsage.data"></line-chart>
+</div>

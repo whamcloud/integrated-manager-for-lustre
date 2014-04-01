@@ -67,7 +67,11 @@ describe('read write heat map controller', function () {
     expect(readWriteHeatMapStream.type).toEqual('read');
   });
 
-  it('should setup the stream to the right path and params', function () {
+  it('should setup the stream to the right path', function () {
+    expect(ReadWriteHeatMapStream.setup).toHaveBeenCalledOnceWith('readWriteHeatMap.data', $scope, {});
+  });
+
+  it('should start streaming on setup', function () {
     var params = {
       qs: {
         unit: 'minutes',
@@ -75,11 +79,7 @@ describe('read write heat map controller', function () {
       }
     };
 
-    expect(ReadWriteHeatMapStream.setup).toHaveBeenCalledOnceWith('readWriteHeatMap.data', $scope, params);
-  });
-
-  it('should start streaming on setup', function () {
-    expect(readWriteHeatMapStream.startStreaming).toHaveBeenCalledOnce();
+    expect(readWriteHeatMapStream.startStreaming).toHaveBeenCalledOnceWith(params);
   });
 
   it('should restart with new params on update', function () {

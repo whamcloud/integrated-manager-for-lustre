@@ -51,7 +51,9 @@ function ReadWriteBandwidthCtrl($scope, ReadWriteBandwidthStream, DURATIONS, for
     size: 10
   };
 
-  var readWriteBandwidthStream = ReadWriteBandwidthStream.setup('readWriteBandwidth.data', $scope);
+  var params = $scope.readWriteBandwidthParams || $scope.params || {};
+
+  var readWriteBandwidthStream = ReadWriteBandwidthStream.setup('readWriteBandwidth.data', $scope, params);
 
   readWriteBandwidthStream.setDuration($scope.readWriteBandwidth.unit, $scope.readWriteBandwidth.size);
 }
