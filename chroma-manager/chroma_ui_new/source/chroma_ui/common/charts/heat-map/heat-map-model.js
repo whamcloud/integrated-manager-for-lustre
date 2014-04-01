@@ -168,6 +168,8 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
       return d[prop];
     });
 
+    chart.destroy = _.noop;
+
     return chart;
   };
 }

@@ -58,6 +58,10 @@ describe('heat map legend DOM testing', function () {
     expect($legendGroup.children().length).toBe(0);
   });
 
+  it('should have destroy as noop before selection has been passed', function () {
+    expect(heatMapLegend.destroy).toBe(_.noop);
+  });
+
   describe('multiple points', function () {
     beforeEach(function () {
       setup([

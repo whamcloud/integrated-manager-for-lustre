@@ -19,6 +19,10 @@ describe('heat map model', function () {
     expect($heatMapGroup.children().length).toBe(0);
   });
 
+  it('should have destroy as noop before selection has been passed', function () {
+    expect(heatMapModel.destroy).toBe(_.noop);
+  });
+
   describe('one data point', function () {
     beforeEach(function () {
       setup([

@@ -182,6 +182,8 @@ function heatMapChartFactory(d3, nv, chartParamMixins, chartUtils, heatMapLegend
 
     chart.options = nv.utils.optionsFunc.bind(chart);
 
+    chart.destroy = _.noop;
+
     return chart;
   };
 }
