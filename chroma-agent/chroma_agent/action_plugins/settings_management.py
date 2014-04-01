@@ -93,5 +93,9 @@ def convert_agent_config():
     # < 2.1.0.0
     _convert_agentstore_config()
 
+    # and make sure we have a profile
+    if 'profile' not in config.sections:
+        get_api_profile()
+
 
 ACTIONS = [set_server_url, set_agent_config, get_api_profile, get_agent_config, reset_agent_config, convert_agent_config]
