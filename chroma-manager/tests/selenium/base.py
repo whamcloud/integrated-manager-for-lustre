@@ -1,10 +1,8 @@
 import datetime
 import logging
 import os
-import shutil
 import sys
 import time
-import json
 
 
 from django.utils.unittest import TestCase
@@ -17,23 +15,38 @@ from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.patch_driver_execute import patch_driver_execute
 
 
-# Setup up the main log for test actions
-log = logging.getLogger('test')
-log.setLevel(logging.DEBUG)
-handler = logging.FileHandler('selenium_test.log')
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-log.addHandler(handler)
+LOG_NAME_TEMPLATE = "selenium_oldui_%s_%s.log" % (config['browser'], '%s')
+loggers = {}
 
-# Setup the log for Chrome console messages
-console_log = logging.getLogger('console')
-console_log.setLevel(logging.DEBUG)
-console_handler = logging.FileHandler('%s_console.log' % config['browser'])
-console_handler.setLevel(logging.DEBUG)
-console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(console_formatter)
-console_log.addHandler(console_handler)
+
+class LogType(object):
+    # The test log captures logging from our own test code
+    TEST = 'test'
+
+    # The browser log captures the browser console
+    BROWSER = 'browser'
+
+    # The driver log captures logging from the browser drivers (ex, Chromedriver, FirefoxDriver)
+    DRIVER = 'driver'
+
+    ALL = [TEST, BROWSER, DRIVER]
+
+
+def configure_selenium_log(log_name, use_timestamp=True):
+    log = logging.getLogger(log_name)
+    log.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(LOG_NAME_TEMPLATE % log_name)
+    handler.setLevel(logging.DEBUG)
+    if use_timestamp:
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+    log.addHandler(handler)
+    loggers[log_name] = log
+
+
+configure_selenium_log(LogType.TEST, use_timestamp = True)
+configure_selenium_log(LogType.BROWSER, use_timestamp = False)
+configure_selenium_log(LogType.DRIVER, use_timestamp = False)
 
 
 def quiesce_api(driver, timeout):
@@ -62,18 +75,20 @@ def wait_for_transition(driver, timeout):
 
 def take_debug_screenshot(driver, name):
     """Take a screenshot to use for debugging."""
-    debug_screen_shot_dir = "%s/debug-screen-shots" % os.getcwd()
+    debug_screen_shot_dir = os.path.join(os.getcwd(), 'debug-screen-shots')
 
     if not os.path.exists(debug_screen_shot_dir):
         os.makedirs(debug_screen_shot_dir)
 
-    filename = "%s/%s_%s.png" % (
+    filename = os.path.join(
         debug_screen_shot_dir,
-        name,
-        datetime.datetime.now().isoformat()
+        "%s_%s.png" % (
+            name,
+            datetime.datetime.now().isoformat()
+        )
     )
 
-    log.debug("Saving screen shot to %s", filename)
+    loggers[LogType.TEST].info("Saving screen shot to %s", filename)
     driver.get_screenshot_as_file(filename)
 
 
@@ -85,7 +100,7 @@ class SeleniumBaseTestCase(TestCase):
     """
     def __init__(self, *args, **kwargs):
         super(SeleniumBaseTestCase, self).__init__(*args, **kwargs)
-        self.log = log
+        self.log = loggers[LogType.TEST]
 
         self.driver = None
         self.standard_wait = wait_time['standard']
@@ -99,21 +114,26 @@ class SeleniumBaseTestCase(TestCase):
         the results when running multiple times with different browsers."""
         return "selenium_old_ui.%s.%s" % (self.browser, super(SeleniumBaseTestCase, self).id())
 
+    def shortDescription(self):
+        """Disable displaying the docstring instead of the test name in the test output"""
+        return None
+
     def setUp(self):
+        self.log_delimiter = "\nStarting test %s" % self.id()
+        for log_name in LogType.ALL:
+            loggers[log_name].info(self.log_delimiter)
+
         if not config['chroma_managers'][0]['server_http_url']:
             raise RuntimeError("Please set server_http_url in config file")
-
-        if config['headless']:
-            from pyvirtualdisplay import Display
-            display = Display(visible = 0, size = (1280, 1024))
-            display.start()
 
         if not self.driver:
             patch_driver_execute()
 
             if self.browser == 'Chrome':
-                self.addCleanup(self._capture_chromedriver_log_on_failure)
+                # Make sure we capture the chromedriver log for each test
+                self.addCleanup(self._capture_chromedriver_log)
 
+                # Set parameters to be passed to Chrome itself
                 options = webdriver.ChromeOptions()
                 options.add_argument('no-proxy-server')
 
@@ -123,9 +143,10 @@ class SeleniumBaseTestCase(TestCase):
                 options.add_argument('log-level=""')  # log-level interferes with v=1
                 options.add_argument('v=1000')  # Get all levels of vlogs
 
+                # Set parameters to be passed to ChromeDriver
                 chromedriver_service_args = [
                     "--verbose",
-                    "--log-path=chromedriver.log"
+                    "--log-path=%s" % os.path.join(os.path.sep, 'tmp', 'chromedriver.log')
                 ]
 
                 running_time = 0
@@ -142,21 +163,25 @@ class SeleniumBaseTestCase(TestCase):
                         # they fix it. So we simply loop until we get a driver.
                         # Once this bug is resolved, we can convert this whole loop
                         # back to the single webdriver.Chrome() call.
-                        log.error("Webdriver failed to start with the following exception: %s" % e)
+                        self.log.error("Webdriver failed to start with the following exception: %s" % e)
                         if running_time >= self.long_wait:
                             raise
                     time.sleep(1)
                     running_time += 1
 
             elif self.browser == 'Firefox':
-                self.driver = webdriver.Firefox()
+                # Enable the FirefoxDriver log
+                driver_log_path = os.path.join(os.getcwd(), LOG_NAME_TEMPLATE % LogType.DRIVER)
+                profile = webdriver.FirefoxProfile()
+                profile.set_preference('webdriver.log.file', driver_log_path)
+                self.driver = webdriver.Firefox(profile)
 
         self.driver.set_window_size(1024, 768)
 
         self.driver.get(config['chroma_managers'][0]['server_http_url'])
 
         self.addCleanup(self.stop_driver)
-        self.addCleanup(self._log_console)
+        self.addCleanup(self._capture_browser_log)
         self.addCleanup(self._take_screenshot_on_failure)
 
         self.driver.set_script_timeout(90)
@@ -294,47 +319,36 @@ class SeleniumBaseTestCase(TestCase):
         test_failed = False if sys.exc_info() == (None, None, None) else True
 
         if config['screenshots'] and test_failed:
-            failed_screen_shot_dir = "%s/failed-screen-shots" % os.getcwd()
+            failed_screen_shot_dir = os.path.join(os.getcwd(), 'failed-screen-shots')
 
             if not os.path.exists(failed_screen_shot_dir):
                 os.makedirs(failed_screen_shot_dir)
 
-            filename = "%s/%s_%s.png" % (
+            filename = os.path.join(
                 failed_screen_shot_dir,
-                self.id(),
-                datetime.datetime.now().isoformat()
-            )
-
-            self.log.debug("Saving screen shot to %s", filename)
-            self.driver.get_screenshot_as_file(filename)
-
-    def _capture_chromedriver_log_on_failure(self):
-        test_failed = False if sys.exc_info() == (None, None, None) else True
-
-        if test_failed and self.browser == 'Chrome':
-            failed_browser_log_dir = os.path.join(os.getcwd(), 'failed-browser-logs')
-
-            if not os.path.exists(failed_browser_log_dir):
-                os.makedirs(failed_browser_log_dir)
-
-            new_filename = os.path.join(
-                failed_browser_log_dir,
-                "%s_%s_chromedriver.log" % (
+                "%s_%s.png" % (
                     self.id(),
                     datetime.datetime.now().isoformat()
                 )
             )
 
-            self.log.debug("Saving log file to %s" % new_filename)
-            try:
-                shutil.copy(os.path.join(os.getcwd(), "chromedriver.log"), new_filename)
-            except:
-                self.log.error("Did not find chromedriver.log in the expected location. Skipping.")
+            self.log.info("Saving screen shot to %s", filename)
+            self.driver.get_screenshot_as_file(filename)
 
-    def _log_console(self):
-        console = self.driver.get_log('browser')
+    def _capture_chromedriver_log(self):
+        chromedriver_log = open(os.path.join(os.path.sep, 'tmp', 'chromedriver.log'), 'r')
+        logs = [line.decode('string-escape')[:-1] for line in chromedriver_log.readlines()]
+        self._capture_logs(LogType.DRIVER, logs)
 
-        if not isinstance(console, (list, dict)):
-            console = []
+    def _capture_browser_log(self):
+        logs = self.driver.get_log(LogType.BROWSER)
+        self._capture_logs(LogType.BROWSER, logs)
 
-        console_log.info("\n\nConsole for test %s:\n\n '%s'" % (self.id(), json.dumps(console)))
+    def _capture_logs(self, log_name, logs):
+        logger = loggers[log_name]
+
+        if not isinstance(logs, (list, dict)):
+            logs = []
+
+        for log in logs:
+            logger.info(log)

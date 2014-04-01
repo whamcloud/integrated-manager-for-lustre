@@ -1,19 +1,12 @@
-
-import logging
 import time
 from urlparse import urlparse
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
-from tests.selenium.base import wait_for_transition
+from tests.selenium.base import wait_for_transition, loggers, LogType
 from tests.selenium.utils.constants import wait_time
 from tests.selenium.utils.element import find_visible_element_by_css_selector, wait_for_element_by_css_selector
-
-
-log = logging.getLogger(__name__)
-log.addHandler(logging.StreamHandler())
-log.setLevel(logging.DEBUG)
 
 
 class BaseView(object):
@@ -22,7 +15,7 @@ class BaseView(object):
 
     def __init__(self, driver):
         self.driver = driver
-        self.log = log
+        self.log = loggers[LogType.TEST]
 
         self.long_wait = wait_time['long']
         self.medium_wait = wait_time['medium']
