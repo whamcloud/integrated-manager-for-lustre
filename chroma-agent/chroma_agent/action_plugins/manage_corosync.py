@@ -91,6 +91,11 @@ def get_cluster_size():
     return n
 
 
+def enable_pacemaker():
+    shell.try_run(['/sbin/chkconfig', '--add', 'pacemaker'])
+    shell.try_run(['/sbin/chkconfig', 'pacemaker', 'on'])
+
+
 def configure_pacemaker():
     # Corosync needs to be running for pacemaker -- if it's not, make
     # an attempt to get it going.
@@ -98,7 +103,7 @@ def configure_pacemaker():
         shell.try_run(['/sbin/service', 'corosync', 'restart'])
         shell.try_run(['/sbin/service', 'corosync', 'status'])
 
-    shell.try_run(['/sbin/chkconfig', 'pacemaker', 'on'])
+    enable_pacemaker()
     shell.try_run(['/sbin/service', 'pacemaker', 'restart'])
 
     pc = PacemakerConfig()
@@ -295,7 +300,7 @@ def host_corosync_config():
 
 
 ACTIONS = [configure_corosync, unconfigure_corosync,
-           configure_pacemaker, unconfigure_pacemaker,
+           enable_pacemaker, configure_pacemaker, unconfigure_pacemaker,
            configure_fencing, unconfigure_fencing,
            set_node_standby, set_node_online,
            host_corosync_config, delete_node]

@@ -140,7 +140,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                                        help_text="True if there are package updates available for this server")
 
     needs_fence_reconfiguration = models.BooleanField(default = False,
-            help_text = "Indicates that the host's fencing configuration should be updated")
+                                                      help_text = "Indicates that the host's fencing configuration should be updated")
 
     client_filesystems = models.ManyToManyField('ManagedFilesystem', related_name="workers", through="LustreClientMount", help_text="Filesystems for which this node is a non-server worker")
 
@@ -1378,13 +1378,12 @@ class RebootHostJob(AdvertisedJob):
 
         return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
                 not AlertState.filter_by_item(host).filter(
-                        active = True,
-                        alert_type__in = [
-                            HostOfflineAlert.__name__,
-                            HostContactAlert.__name__
-                        ]
-                    ).exists()
-                )
+                    active = True,
+                    alert_type__in = [
+                        HostOfflineAlert.__name__,
+                        HostContactAlert.__name__
+                    ]
+                ).exists())
 
     def description(self):
         return "Initiate a reboot on host %s" % self.host
@@ -1436,13 +1435,12 @@ class ShutdownHostJob(AdvertisedJob):
 
         return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
                 not AlertState.filter_by_item(host).filter(
-                        active = True,
-                        alert_type__in = [
-                            HostOfflineAlert.__name__,
-                            HostContactAlert.__name__
-                        ]
-                    ).exists()
-                )
+                    active = True,
+                    alert_type__in = [
+                        HostOfflineAlert.__name__,
+                        HostContactAlert.__name__
+                    ]
+                ).exists())
 
     def description(self):
         return "Initiate an orderly shutdown on host %s" % self.host
@@ -1508,6 +1506,17 @@ class UpdatePackagesStep(RebootIfNeededStep):
         if package_report:
             package.update(host, package_report)
 
+            # If we have installed any updates at all, then assume it is necessary to restart the agent, as
+            # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
+            old_session_id = AgentRpc.get_session_id(host.fqdn)
+            self.invoke_agent(host, 'restart_agent')
+            AgentRpc.await_restart(kwargs['host'].fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
+        else:
+            self.log("No updates installed on %s" % host)
+
+        # Upgrade of pacemaker packages could have left it disabled
+        self.invoke_agent(kwargs['host'], 'enable_pacemaker')
+
         # Check if we are running the required (lustre) kernel
         kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status')
         reboot_needed = (kernel_status['running'] != kernel_status['required']
@@ -1519,14 +1528,6 @@ class UpdatePackagesStep(RebootIfNeededStep):
             old_session_id = AgentRpc.get_session_id(host.fqdn)
             self.invoke_agent(kwargs['host'], 'reboot_server')
             AgentRpc.await_restart(kwargs['host'].fqdn, settings.INSTALLATION_REBOOT_TIMEOUT, old_session_id=old_session_id)
-        elif package_report is not None:
-            # If we have installed any updates at all, then assume it is necessary to restart the agent, as
-            # they could be things the agent uses/imports
-            old_session_id = AgentRpc.get_session_id(host.fqdn)
-            self.invoke_agent(host, 'restart_agent')
-            AgentRpc.await_restart(kwargs['host'].fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
-        else:
-            self.log("No updates installed on %s" % host)
 
 
 class UpdateJob(Job):
@@ -1797,7 +1798,7 @@ class LNetNidsChangedAlert(AlertState):
 
     def message(self):
         msg = "NIDs changed on server %s - see manual for details."
-        return  msg % self.alert_item
+        return msg % self.alert_item
 
     class Meta:
         app_label = 'chroma_core'

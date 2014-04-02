@@ -118,7 +118,8 @@ class FakeActionPlugins():
                 self._server.set_conf_param(kwargs['key'], kwargs.get('value', None))
             elif cmd in ['configure_corosync', 'unconfigure_corosync']:
                 return
-            elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker']:
+            elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
+                         'enable_pacemaker']:
                 return
             elif cmd in ['configure_target_store', 'unconfigure_target_store']:
                 return
