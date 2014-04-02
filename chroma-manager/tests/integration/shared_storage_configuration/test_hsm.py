@@ -126,7 +126,7 @@ class TestHsmCopytoolManagement(ManagedCopytoolTestCase):
         self.wait_until_true(lambda: len(self.get_list("/api/copytool/")) == 0)
 
     def test_copytool_force_remove(self):
-        action = self.wait_for_action(self.copytool, job_class = 'ForceRemoveCopytoolJob')
+        action = self.wait_for_action(self.copytool, class_name = 'ForceRemoveCopytoolJob')
         self.run_command([action],
                          "Test Force Remove (%s)" % self.copytool['label'])
 

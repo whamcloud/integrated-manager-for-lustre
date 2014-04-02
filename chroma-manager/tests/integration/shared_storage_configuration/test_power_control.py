@@ -24,6 +24,13 @@ class ChromaPowerControlTestCase(ChromaIntegrationTestCase):
                                 args = {'limit': 0})
         return all([True if o['has_power'] in [True, False] else False for o in outlets])
 
+    def wait_for_action(self, **kwargs):
+        return super(ChromaPowerControlTestCase, self).wait_for_action(self.server, **kwargs)
+
+    def run_command(self, job):
+        message = "Test {0} {1}".format(job['class_name'], self.server['address'])
+        return super(ChromaPowerControlTestCase, self).run_command([job], message)
+
 
 class TestPduSetup(ChromaPowerControlTestCase):
     @unittest.skipUnless(len(config.get('power_distribution_units', [])), "requires PDUs")
@@ -36,12 +43,7 @@ class TestPduSetup(ChromaPowerControlTestCase):
         server_outlets = [o['resource_uri'] for o in
                           self.get_list("/api/power_control_device_outlet/")
                           if o['host'] == self.server['resource_uri']]
-        command = self.chroma_manager.post("/api/command/", body = {
-            'jobs': [{'class_name': 'ForceRemoveHostJob',
-                      'args': {'host_id': self.server['id']}}],
-            'message': "Test forced remove of %s" % self.server['fqdn']
-        }).json
-        self.wait_for_command(self.chroma_manager, command['id'])
+        self.run_command({'class_name': 'ForceRemoveHostJob', 'args': {'host_id': self.server['id']}})
 
         for outlet_uri in server_outlets:
             self.assertIsNone(self.get_json_by_uri(outlet_uri)['host'])
@@ -120,25 +122,7 @@ class TestHostFencingConfig(ChromaPowerControlTestCase):
 
         start_count = _fencing_job_count()
 
-        def get_powercycle_job():
-            # Refresh the server so we get an accurate list of available jobs.
-            self.server = self.get_json_by_uri(self.server['resource_uri'])
-
-            for job in self.server['available_jobs']:
-                if job['class_name'] == 'PowercycleHostJob':
-                    return job
-
-            return None
-
-        self.wait_until_true(lambda: get_powercycle_job() != None)
-        powercycle_job = get_powercycle_job()
-
-        command = self.chroma_manager.post("/api/command/", body = {
-            'jobs': [powercycle_job],
-            'message': "Test PowercycleHostJob (%s)" % self.server['address']
-        }).json
-
-        self.wait_for_command(self.chroma_manager, command['id'])
+        self.run_command(self.wait_for_action(class_name='PowercycleHostJob'))
 
         end_count = _fencing_job_count()
 
@@ -158,42 +142,16 @@ class TestPduOperations(ChromaPowerControlTestCase):
 
         self.wait_until_true(self.all_outlets_known)
 
-        def get_power_job(job_class):
-            # Refresh the server so we get an accurate list of available jobs.
-            self.server = self.get_json_by_uri(self.server['resource_uri'])
-
-            for job in self.server['available_jobs']:
-                if job['class_name'] == job_class:
-                    return job
-
-            return None
-
-        self.wait_until_true(lambda: get_power_job('PoweroffHostJob') != None)
-
-        poweroff_job = get_power_job('PoweroffHostJob')
+        poweroff_job = self.wait_for_action(class_name='PoweroffHostJob')
 
         # FIXME: When HYD-2071 lands, this will be done implicitly by the API.
         self.remote_operations.set_node_standby(self.server)
 
-        command = self.chroma_manager.post("/api/command/", body = {
-            'jobs': [poweroff_job],
-            'message': "Test PoweroffHostJob (%s)" % self.server['address']
-        }).json
-
-        self.wait_for_command(self.chroma_manager, command['id'])
+        self.run_command(poweroff_job)
 
         self.wait_until_true(lambda: not self.remote_operations.host_contactable(self.server['address']))
 
-        self.wait_until_true(lambda: get_power_job('PoweronHostJob') != None)
-
-        poweron_job = get_power_job('PoweronHostJob')
-
-        command = self.chroma_manager.post("/api/command/", body = {
-            'jobs': [poweron_job],
-            'message': "Test PoweronHostJob (%s)" % self.server['address']
-        }).json
-
-        self.wait_for_command(self.chroma_manager, command['id'])
+        self.run_command(self.wait_for_action(class_name='PoweronHostJob'))
 
         self.wait_until_true(lambda: self.remote_operations.host_contactable(self.server['address']))
 
@@ -211,19 +169,7 @@ class TestPduOperations(ChromaPowerControlTestCase):
         self.server = self.get_json_by_uri(self.server['resource_uri'])
         pre_boot_time = self.server['boot_time']
 
-        powercycle_job = None
-        for job in self.server['available_jobs']:
-            if job['class_name'] == 'PowercycleHostJob':
-                powercycle_job = job
-                break
-
-        assert powercycle_job, "PowercycleHostJob was not advertised in %s" % [job['class_name'] for job in self.server['available_jobs']]
-        command = self.chroma_manager.post("/api/command/", body = {
-            'jobs': [powercycle_job],
-            'message': "Test PowercycleHostJob (%s)" % self.server['address']
-        }).json
-
-        self.wait_for_command(self.chroma_manager, command['id'])
+        self.run_command(self.wait_for_action(class_name='PowercycleHostJob', timeout=0))
 
         def boot_time_is_newer():
             server = self.get_json_by_uri(self.server['resource_uri'])

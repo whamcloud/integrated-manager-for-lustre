@@ -9,6 +9,7 @@ import time
 
 from testconfig import config
 from tests.utils.http_requests import AuthorizedHttpRequests
+from tests.utils import wait
 
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.utility_testcase import UtilityTestCase
@@ -312,15 +313,30 @@ class ApiTestCase(UtilityTestCase):
     def get_json_by_uri(self, uri, verify_successful=True):
         return self.get_by_uri(uri, verify_successful).json
 
+    def wait_for_action(self, victim, timeout=TEST_TIMEOUT, **filters):
+        """
+        Check victim's available_actions until the desired action is available
+        or the timeout is reached, filtering on action keys: class_name, state.
+        """
+        for index in wait(timeout):
+            actions = self.get_json_by_uri(victim['resource_uri'])['available_actions']
+            for action in actions:
+                if all(action.get(key) == filters[key] for key in filters):
+                    return action
+        actions = [dict((key, action.get(key)) for key in filters) for action in actions]
+        raise AssertionError('{0} not found in {1}'.format(filters, actions))
+
     def run_command(self, jobs, message = None, verify_successful = True):
         logger.debug("Running %s (%s)" % (jobs, message))
-        command = self.chroma_manager.post('/api/command/', body = dict(
+        response = self.chroma_manager.post('/api/command/', body = dict(
             jobs = jobs,
             message = message if message else "Test command"
-        )).json
+        ))
 
         if verify_successful:
-            self.wait_for_command(self.chroma_manager, command['id'])
+            self.assertTrue(response.successful, response.text)
+            self.wait_for_command(self.chroma_manager, response.json['id'])
+        return response
 
     def post_by_uri(self, uri, object, verify_successful=True):
         logger.debug("post_by_uri(%s, ...)" % uri)
