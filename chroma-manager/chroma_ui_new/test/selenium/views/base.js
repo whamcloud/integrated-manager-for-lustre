@@ -34,11 +34,13 @@
    * @throws {error} Throws an error if path was not set.
    */
   BaseView.prototype.navigate = function () {
-    if (this.path == null) throw new Error('Cannot navigate path is not defined!');
+    var path = this.path;
 
-    if (this.path !== '') this.path += '/';
+    if (path == null) throw new Error('Cannot navigate, path is not defined!');
 
-    this.ptor.get(this.path);
+    if (path !== '') path += '/';
+
+    this.ptor.get(path);
   };
 
   /**

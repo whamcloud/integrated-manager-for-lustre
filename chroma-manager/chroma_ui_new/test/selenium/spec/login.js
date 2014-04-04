@@ -1,22 +1,26 @@
+'use strict';
+
 var loginView = require('../views/login'),
   manager = require('../util/manager');
 
 describe('login', function () {
-  'use strict';
+  beforeEach(function () {
+    loginView.navigate();
+  });
 
   it('should show an error tooltip if username is blank', function () {
     loginView.login('', 'bar');
-    loginView.usernameErrorTooltip;
+    expect(loginView.usernameErrorTooltip.isDisplayed()).toBe(true);
   });
 
   it('should show an error tooltip if password is blank', function () {
     loginView.login('foo', '');
-    loginView.passwordErrorTooltip;
+    expect(loginView.passwordErrorTooltip.isDisplayed()).toBe(true);
   });
 
   it('should show an overall error if username and password are incorrect', function () {
     loginView.login('foo', 'bar');
-    loginView.authFailed;
+    expect(loginView.authFailed.isDisplayed()).toBe(true);
   });
 
   describe('with correct credentials', function () {
