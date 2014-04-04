@@ -198,16 +198,6 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             )
         """
 
-        # For debug just read the lnet state, this will cause it to be displayed.
-        response = self.chroma_manager.get(
-            '/api/host/',
-            params = {'limit': 0}
-        )
-        self.assertTrue(response.successful, response.text)
-
-        for host in response.json['objects']:
-            self._get_lnet_info(host)
-
         response = self.chroma_manager.post(
             '/api/filesystem/',
             body = filesystem
@@ -408,8 +398,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
     def _get_lnet_info(self, host):
         '''
-        :return: Returns a named tuple of network and lnet configuration
+        :return: Returns a named tuple of network and lnet configuration or None if lnet configuration is not provided
+                 by the version of the manager
         '''
+
+        # Check that the version of the manager running supports lnet_configuration.
+        if ("lnet_configuration" not in self.chroma_manager_api):
+            return None
 
         # We fetch the host again so that it's state is updated.
         hosts = self.get_list("/api/host/", args={'fqdn': host['fqdn']})

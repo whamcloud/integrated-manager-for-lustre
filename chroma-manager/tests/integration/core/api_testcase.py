@@ -43,6 +43,11 @@ class ApiTestCase(UtilityTestCase):
     # gain a slight decrease in running time.
     TEST_SERVERS = config['lustre_servers']
 
+    # Storage for details of the rest api provided by the manager. Presumes that the api does not change during
+    # execution of the whole test suite and so stores the result once in a class variable. A class variable
+    # because instances of this class come and go but the api today is constant.
+    _chroma_manager_api = None
+
     _chroma_manager = None
 
     def setUp(self):
@@ -457,3 +462,20 @@ class ApiTestCase(UtilityTestCase):
             return [f for f in filesystems if f['name'] == name][0]
         except IndexError:
             raise KeyError("No filesystem named %s" % name)
+
+    @property
+    def chroma_manager_api(self):
+        '''
+        Provides the details of the rest api provided by the manager. Presumes that the api does not change during
+        execution of the whole test suite and so stores the result once in a class variable. A class variable
+        because instances of this class come and go but the api today is constant.
+
+        The call to get_json_by_uri creates quite a lot of useful debug, but it is quite a lot of another advantage of
+        only fetching the data once is the we only see the debug once.
+
+        :return: hash of the api
+        '''
+        if ApiTestCase._chroma_manager_api == None:
+            ApiTestCase._chroma_manager_api = self.get_json_by_uri("/api/")
+
+        return ApiTestCase._chroma_manager_api
