@@ -214,7 +214,7 @@ class Benchmark(object):
 
     def get_registration_secret(self, credit_count, duration=None):
         return SimulatorCli()._acquire_token(self.url + "/", self.args.username, self.args.password, credit_count,
-                                             duration=duration)
+                                             duration=duration, preferred_profile='base_managed')
 
     def GET(self, path, *args, **kwargs):
         return self.api_session.get("%s%s" % (self.url, path), *args, **kwargs)
@@ -344,7 +344,7 @@ class FilesystemSizeLimit(Benchmark):
         SU_SIZE = 4
 
         log.debug("Connection count initially: %s" % self._connection_count())
-        n = 4
+        n = self.args.servers
         VOLUMES_PER_SERVER = 4
         while True:
             ost_count = (n * VOLUMES_PER_SERVER - 2)
@@ -411,7 +411,7 @@ class FilesystemSizeLimit(Benchmark):
             self._wait_for_commands([command_uri])
 
             log.info("Success for n = %s" % n)
-            n *= 2
+            n += self.args.servers
 
 
 class ConcurrentRegistrationLimit(Benchmark):
@@ -426,7 +426,7 @@ class ConcurrentRegistrationLimit(Benchmark):
         SU_SIZE = 4
 
         log.debug("Connection count initially: %s" % self._connection_count())
-        n = SU_SIZE
+        n = self.args.servers
         while True:
             log.info("n = %s" % n)
 
@@ -453,7 +453,7 @@ class ConcurrentRegistrationLimit(Benchmark):
                 log.debug("Connection count: %s" % self._connection_count())
                 self.reset()
                 log.debug("Connection count after flush: %s" % self._connection_count())
-                n *= 2
+                n += self.args.servers
 
 
 class ServerCountLimit(Benchmark):
@@ -503,7 +503,7 @@ class LogIngestRate(Benchmark):
         """Increase the rate of log messages from a fixed number of servers until the
         log RX queue starts to back up"""
         # Actual log messages per second is (log_rate / Session.POLL_INTERVAL) * server_count
-        server_count = 8
+        server_count = self.args.servers
 
         server_fqdns = []
         registration_command_uris = []
@@ -585,6 +585,7 @@ def main():
     parser.add_argument('--url', required=False, help="Chroma manager URL", default="https://localhost:8000")
     parser.add_argument('--username', required=False, help="REST API username", default='debug')
     parser.add_argument('--password', required=False, help="REST API password", default='chr0m4_d3bug')
+    parser.add_argument('--servers', help="server count", default=8, type=int)
     subparsers = parser.add_subparsers()
 
     log_ingest_parser = subparsers.add_parser("reset")
