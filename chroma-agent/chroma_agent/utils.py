@@ -27,6 +27,8 @@ from collections import defaultdict
 import os
 import re
 import glob
+import time
+import itertools
 
 
 def normalize_device(device):
@@ -160,3 +162,19 @@ def lsof(pid=None, file=None):
             pids[current_pid][file] = {'mode': mode}
 
     return pids
+
+
+# FIXME: This came from chroma-manager/tests/utils/__init__.py -- would probably
+# be a good candidate for a library shared between test, manager, and agent.
+def wait(timeout=float('inf'), count=None, minwait=0.1, maxwait=1.0):
+    "Generate an exponentially backing-off enumeration with optional timeout or count."
+    assert timeout > 0, "Timeout must be >= 1"
+
+    timeout += time.time()
+    for index in itertools.islice(itertools.count(), count):
+        yield index
+        remaining = timeout - time.time()
+        if remaining < 0:
+            break
+        time.sleep(min(minwait, maxwait, remaining))
+        minwait *= 2

@@ -24,16 +24,9 @@
 import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+from chroma_agent.cli import configure_logging
 from chroma_agent.action_plugins import manage_node
 from chroma_agent.lib.pacemaker import PacemakerConfig
-
-
-p_cfg = PacemakerConfig()
-
-
-def list_fenceable_nodes():
-    for node in p_cfg.fenceable_nodes:
-        print "%s," % node.name
 
 
 def stdin_to_args(stdin_lines=None):
@@ -54,6 +47,8 @@ def stdin_to_args(stdin_lines=None):
 
 
 def main(args=None):
+    configure_logging()
+
     VALID_ACTIONS = ["off", "on", "reboot", "metadata", "list", "monitor"]
 
     epilog = """
@@ -111,15 +106,20 @@ Arguments read from standard input take the form of:
 </resource-agent>
 """ % ", ".join(VALID_ACTIONS)
     elif ns.action in ["on", "off"]:
-        node = p_cfg.get_node(ns.port)
+        node = PacemakerConfig().get_node(ns.port)
         getattr(node, "fence_%s" % ns.action)()
     elif ns.action == "reboot":
         manage_node.stonith(ns.port)
+    elif ns.action == "list":
+        for node in PacemakerConfig().fenceable_nodes:
+            print "%s," % node.name
     elif ns.action == "monitor":
         # TODO: What does "monitor" mean for this agent? We have to have it
         # to keep pacemaker happy, but longer-term it might make sense to
         # make this a meta-monitor, in that it invokes the monitor action for
         # all sub-agents and aggregates the results.
         sys.exit(0)
-    elif ns.action == "list":
-        list_fenceable_nodes()
+    else:
+        # Supposedly impossible to get here with argparse, but one never
+        # knows...
+        raise RuntimeError("Invalid action: %s" % ns.action)

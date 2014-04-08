@@ -23,6 +23,7 @@
 import threading
 from chroma_agent import shell
 
+from chroma_agent.lib.pacemaker import PacemakerConfigurationError
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.log import log
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
@@ -132,6 +133,11 @@ class FakeActionPlugins():
                     'available': ['fake_kernel-0.1']
                 }
             elif cmd in ['configure_fencing', 'unconfigure_fencing']:
+                # This shouldn't happen if the fence reconfiguration logic
+                # is working. Good to simulate a failure here in case of
+                # regressions, though.
+                if self._server.is_worker:
+                    raise PacemakerConfigurationError()
                 return
             elif cmd == "host_corosync_config":
                 return {}

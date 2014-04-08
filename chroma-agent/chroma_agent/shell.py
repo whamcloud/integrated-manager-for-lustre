@@ -30,7 +30,15 @@ from chroma_agent.log import console_log
 
 
 class CommandExecutionError(Exception):
-    pass
+    def __init__(self, rc, command, stdout, stderr):
+        self.rc = rc
+        self.command = " ".join(command)
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __str__(self):
+        return "Error (%s) running '%s': '%s' '%s'" % (self.rc, self.command,
+                                                       self.stdout, self.stderr)
 
 
 class ThreadState(threading.local):
@@ -129,6 +137,6 @@ def try_run(arg_list):
 
     rc, stdout, stderr = run(arg_list)
     if rc != 0:
-        raise CommandExecutionError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
+        raise CommandExecutionError(rc, arg_list, stdout, stderr)
 
     return stdout

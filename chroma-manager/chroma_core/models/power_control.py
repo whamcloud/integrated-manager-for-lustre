@@ -343,6 +343,21 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
 
         super(PowerControlDeviceOutlet, self).clean()
 
+    def _hosts_for_fence_reconfiguration(self, current, previous):
+        hosts = []
+
+        job_log.debug("Fence reconfiguration plan for new: %s, old: %s" %
+                      (current, previous))
+        if current:
+            job_log.debug("* %s: add outlet %s" % (current, self.id))
+            hosts.append(current)
+
+        if previous and previous != current:
+            job_log.debug("* %s: remove outlet %s" % (previous, self.id))
+            hosts.append(previous)
+
+        return hosts
+
     def save(self, *args, **kwargs):
         self.full_clean()
 
@@ -362,18 +377,12 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
 
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
         reconfigure = {'needs_fence_reconfiguration': True}
-        if self.host is not None:
-            if old_self and old_self.host and old_self.host != self.host:
-                job_log.debug("Triggering reconfigure on %s due to host change" % old_self.host)
-                JobSchedulerClient.notify(old_self.host, tznow(), reconfigure)
-            elif not old_self:
-                job_log.debug("Triggering reconfigure on %s for new outlet" % self.host)
-            job_log.debug("Triggering reconfigure on %s" % self.host)
-            JobSchedulerClient.notify(self.host, tznow(), reconfigure)
-        elif self.host is None and old_self is not None:
-            if old_self.host is not None:
-                job_log.debug("Triggering reconfigure on %s due to disassociation" % old_self.host)
-                JobSchedulerClient.notify(old_self.host, tznow(), reconfigure)
+        previous = old_self.host if old_self and old_self.host else None
+        for host in self._hosts_for_fence_reconfiguration(self.host, previous):
+            if host.is_lustre_server:
+                JobSchedulerClient.notify(host, tznow(), reconfigure)
+            else:
+                job_log.debug("Skipping reconfiguration of non-server %s" % host)
 
     @property
     def power_state(self):

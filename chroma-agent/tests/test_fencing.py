@@ -14,8 +14,9 @@ class FencingTestCase(unittest.TestCase):
     def setUp(self):
         super(FencingTestCase, self).setUp()
         import chroma_agent.shell
-        patcher = mock.patch.object(chroma_agent.shell, 'try_run')
-        self.try_run = patcher.start()
+        patcher = mock.patch.object(chroma_agent.shell, '_run',
+                                    return_value=(0, '', ''))
+        self._run = patcher.start()
 
         def fake_hostname():
             return self.fake_node_hostname
@@ -62,7 +63,7 @@ class TestAgentConfiguration(FencingTestCase):
         configure_fencing(agents)
         for i, agent in enumerate(agents):
             for key, val in agent.items():
-                self.try_run.assert_any_call(['crm_attribute', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', '%d_fence_%s' % (i, key), '-v', val])
+                self._run.assert_any_call(['crm_attribute', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', '%d_fence_%s' % (i, key), '-v', val])
 
         # HYD-2104: Ensure that the N_fence_agent attribute was added
         # last.
@@ -71,7 +72,7 @@ class TestAgentConfiguration(FencingTestCase):
             attr_len = len(agents[0]) + 1
             # Gnarly, but it works...
             call_index = ((((len(agents) * attr_len) - (attr_len * i) - attr_len) + 1) * -1)
-            self.assertIn('%d_fence_agent' % i, self.try_run.mock_calls[call_index][1][0])
+            self.assertIn('%d_fence_agent' % i, self._run.mock_calls[call_index][1][0])
 
     def test_empty_agents_clears_fence_config(self):
         fake_attributes = {'0_fence_agent': 'fake_agent',
@@ -81,22 +82,22 @@ class TestAgentConfiguration(FencingTestCase):
 
         configure_fencing([])
         for key in fake_attributes:
-            self.try_run.assert_any_call(['crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key])
+            self._run.assert_any_call(['crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key])
 
         # HYD-2104: Ensure that the N_fence_agent attribute was removed
         # first.
         call_index = len(fake_attributes) * -1
-        self.assertIn('0_fence_agent', self.try_run.mock_calls[call_index][1][0])
+        self.assertIn('0_fence_agent', self._run.mock_calls[call_index][1][0])
 
     def test_node_standby(self):
         set_node_standby(self.fake_node_hostname)
 
-        self.try_run.assert_any_call(['crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'on', '--lifetime=forever'])
+        self._run.assert_any_call(['crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'on', '--lifetime=forever'])
 
     def test_node_online(self):
         set_node_online(self.fake_node_hostname)
 
-        self.try_run.assert_any_call(['crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'off', '--lifetime=forever'])
+        self._run.assert_any_call(['crm_attribute', '-N', self.fake_node_hostname, '-n', 'standby', '-v', 'off', '--lifetime=forever'])
 
 
 class TestFenceAgent(FencingTestCase):
@@ -105,6 +106,8 @@ class TestFenceAgent(FencingTestCase):
                            '0_fence_password': 'yourmom',
                            '0_fence_ipaddr': '1.2.3.4',
                            '0_fence_plug': '1'}
+    call_template = "%(0_fence_agent)s -a %(0_fence_ipaddr)s -u 23 -l %(0_fence_login)s -p %(0_fence_password)s -n %(0_fence_plug)s" % fake_attributes
+    call_base = call_template.split()
 
     def test_finding_fenceable_nodes(self):
         self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
@@ -125,13 +128,13 @@ class TestFenceAgent(FencingTestCase):
                             "action=reboot",
                             "port=%s" % self.fake_node_hostname]
         agent_main()
-        self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'off'])
-        self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'on'])
+        self._run.assert_any_call(self.call_base + ['-o', 'off'])
+        self._run.assert_any_call(self.call_base + ['-o', 'on'])
 
         # Command-line should work too
         agent_main(['-o', 'reboot', '-n', self.fake_node_hostname])
-        self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'off'])
-        self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'on'])
+        self._run.assert_any_call(self.call_base + ['-o', 'off'])
+        self._run.assert_any_call(self.call_base + ['-o', 'on'])
 
     def test_fence_agent_on_off(self):
         self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
@@ -141,10 +144,10 @@ class TestFenceAgent(FencingTestCase):
         # These options aren't likely to be used for STONITH, but they
         # should still work for manual invocation.
         agent_main(['-o', 'off', '-n', self.fake_node_hostname])
-        self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'off'])
+        self._run.assert_any_call(self.call_base + ['-o', 'off'])
 
         agent_main(['-o', 'on', '-n', self.fake_node_hostname])
-        self.try_run.assert_any_call(['fence_apc', '-a', '1.2.3.4', '-u', '23', '-l', 'admin', '-p', 'yourmom', '-n', '1', '-o', 'on'])
+        self._run.assert_any_call(self.call_base + ['-o', 'on'])
 
     def test_fence_agent_monitor(self):
         self.fake_node_kwargs[self.fake_node_hostname]['attributes'] = self.fake_attributes
@@ -178,5 +181,12 @@ class TestFenceAgent(FencingTestCase):
 
         from chroma_agent.fence_chroma import main as agent_main
 
-        agent_main(['-o', 'off', '-n', self.fake_node_hostname])
-        assert not self.try_run.called
+        agent_args = ['-o', 'off', '-n', self.fake_node_hostname]
+        agent_main(agent_args)
+
+        # Trim the -n hostname args off because they're not actually used
+        # in the production code -- we just need them due to the hokey
+        # fake_node_kwargs stuff.
+        mock_call = self.call_base + agent_args[:-2]
+        self.assertNotIn(mock.call(mock_call),
+                         self._run.mock_calls)

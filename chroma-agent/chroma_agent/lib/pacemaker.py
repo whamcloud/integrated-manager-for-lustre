@@ -24,9 +24,20 @@ import xml.etree.ElementTree as xml
 from xml.parsers.expat import ExpatError as ParseError
 
 from chroma_agent import shell
+from chroma_agent.shell import CommandExecutionError
 from chroma_agent.lib import fence_agents
-from time import sleep
+from chroma_agent.utils import wait
 import socket
+
+
+class PacemakerError(Exception):
+    pass
+
+
+class PacemakerConfigurationError(PacemakerError):
+    def __str__(self):
+        hostname = socket.gethostname()
+        return "Pacemaker is either unconfigured or not started on %s" % hostname
 
 
 class PacemakerObject(object):
@@ -81,7 +92,7 @@ class PacemakerNode(object):
             try:
                 agents.append(getattr(fence_agents, kwargs['agent'])(**kwargs))
             except AttributeError:
-                raise RuntimeError("No FenceAgent class for %s" % kwargs['agent'])
+                raise PacemakerError("No FenceAgent class for %s" % kwargs['agent'])
         return agents
 
     @property
@@ -140,13 +151,33 @@ class PacemakerNode(object):
 
 
 class PacemakerConfig(object):
+    def __init__(self):
+        if not self.cib_available:
+            raise PacemakerConfigurationError()
+
+    @property
+    def cib_available(self):
+        try:
+            # Use --local because we're just testing to see if the cib
+            # daemon is running at all.
+            cibadmin(["--query", "--local"], retry_connection_failure = False,
+                     timeout=1)
+            return True
+        except CommandExecutionError as e:
+            # Known exception caused by the service being unconfigured or
+            # not started.
+            if e.rc == 107:
+                return False
+            else:
+                raise e
+
     @property
     def root(self):
         rc, raw, stderr = cibadmin(["--query"])
         try:
             return xml.fromstring(raw)
         except ParseError:
-            raise RuntimeError("Unable to dump pacemaker config: is it running?")
+            raise PacemakerConfigurationError()
 
     @property
     def configuration(self):
@@ -189,18 +220,14 @@ class PacemakerConfig(object):
         try:
             return [n for n in self.nodes if n.name == node_name][0]
         except IndexError:
-            raise RuntimeError("%s does not exist in pacemaker" % node_name)
+            raise PacemakerError("%s does not exist in pacemaker" % node_name)
 
     @property
     def is_dc(self):
         return self.dc == self.get_node(socket.gethostname()).name
 
 
-def cibadmin(command_args):
-    from chroma_agent import shell
-
-    # try at most, 100 times
-    n = 100
+def cibadmin(command_args, timeout = 120, retry_connection_failure = True):
     rc = 10
 
     # I think these are "errno" values, but I'm not positive
@@ -209,18 +236,24 @@ def cibadmin(command_args):
     RETRY_CODES = {
         10: "something unknown",
         41: "something unknown",
-        62: "something unknown",
-        107: "something unknown"
+        62: "Timer expired"
     }
-    while rc in RETRY_CODES and n > 0:
-        rc, stdout, stderr = shell.run(['cibadmin'] + command_args)
+    if retry_connection_failure:
+        RETRY_CODES[107] = "Transport endpoint is not connected"
+
+    command_args.insert(0, 'cibadmin')
+    # NB: This isn't a "true" timeout, in that it won't forcibly stop the
+    # subprocess after a timeout. We'd need more invasive changes to
+    # shell._run() for that.
+    for index in wait(timeout):
+        rc, stdout, stderr = shell.run(command_args)
         if rc == 0:
+            return rc, stdout, stderr
+        elif rc not in RETRY_CODES:
             break
-        sleep(1)
-        n -= 1
 
-    if rc != 0:
-        raise RuntimeError("Error (%s) running 'cibadmin %s': '%s' '%s'" %
-                           (rc, " ".join(command_args), stdout, stderr))
-
-    return rc, stdout, stderr
+    if rc in RETRY_CODES:
+        raise PacemakerError("%s timed out after %d seconds: rc: %s, stderr: %s"
+                             % (" ".join(command_args), timeout, rc, stderr))
+    else:
+        raise CommandExecutionError(rc, command_args, stdout, stderr)

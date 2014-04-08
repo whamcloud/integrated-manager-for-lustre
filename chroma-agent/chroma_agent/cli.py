@@ -22,14 +22,22 @@
 
 import argparse
 import inspect
-import logging
 from chroma_agent import shell
 import simplejson as json
 import sys
 import traceback
 
-from chroma_agent.log import console_log, daemon_log
 from chroma_agent.plugin_manager import ActionPluginManager
+
+
+def configure_logging():
+    import logging
+    from chroma_agent.log import console_log, daemon_log
+
+    console_log.addHandler(logging.StreamHandler(sys.stderr))
+    console_log.setLevel(logging.INFO)
+    daemon_log.addHandler(logging.StreamHandler(sys.stderr))
+    daemon_log.setLevel(logging.WARNING)
 
 
 def raw_result(wrapped):
@@ -86,10 +94,7 @@ def _register_function(parser, name, fn):
 
 
 def main():
-    console_log.addHandler(logging.StreamHandler(sys.stderr))
-    console_log.setLevel(logging.INFO)
-    daemon_log.addHandler(logging.StreamHandler(sys.stderr))
-    daemon_log.setLevel(logging.WARNING)
+    configure_logging()
 
     parser = argparse.ArgumentParser(description="Intel Manager for Lustre Agent")
     subparsers = parser.add_subparsers()

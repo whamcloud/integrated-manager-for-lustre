@@ -688,7 +688,8 @@ class JobScheduler(object):
 
             if changed_item.needs_fence_reconfiguration:
                 job = ConfigureHostFencingJob(host = changed_item)
-                command = Command.objects.create(message = "Configuring fencing agent on %s" % changed_item)
+                message = "Configuring fencing agent on %s" % changed_item
+                command = Command.objects.create(message = message)
                 CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
 
         if isinstance(changed_item, ManagedTarget):

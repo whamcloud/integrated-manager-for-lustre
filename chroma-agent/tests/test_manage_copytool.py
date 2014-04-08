@@ -77,7 +77,8 @@ class TestCopytoolManagement(CommandCaptureTestCase):
 
         def fake_try_run(*args):
             if args[0][0] == '/sbin/start':
-                raise CommandExecutionError('Job is already running')
+                raise CommandExecutionError(1, args[0],
+                                            '', 'Job is already running')
             else:
                 real_try_run(*args)
 
@@ -94,7 +95,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         from chroma_agent.shell import CommandExecutionError
 
         def raise_error(obj):
-            raise CommandExecutionError('Unknown instance')
+            raise CommandExecutionError(1, [], '', 'Unknown instance')
 
         with patch('chroma_agent.shell.try_run', side_effect=raise_error):
             stop_monitored_copytool(self.ct_id)
