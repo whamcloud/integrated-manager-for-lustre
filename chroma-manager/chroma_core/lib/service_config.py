@@ -31,27 +31,29 @@ import time
 import os
 import json
 import tempfile
+from tempfile import mkstemp
+import shutil
+import errno
 
-from chroma_core.lib.util import chroma_settings, CommandLine, CommandError
-
-
-log = logging.getLogger('installation')
-log.addHandler(logging.StreamHandler())
-log.setLevel(logging.INFO)
+from chroma_core.lib.util import chroma_settings
 
 settings = chroma_settings()
 
+from supervisor.xmlrpc import SupervisorTransport
 from django.contrib.auth.models import User, Group
 from django.core.management import ManagementUtility
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
-from chroma_core.services.http_agent.crypto import Crypto
-
-from supervisor.xmlrpc import SupervisorTransport
-
 from chroma_core.models.bundle import Bundle
+from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.models.server_profile import ServerProfile, ServerProfilePackage
+from chroma_core.lib.util import CommandLine, CommandError
+
+
+log = logging.getLogger('installation')
+log.addHandler(logging.StreamHandler())
+log.setLevel(logging.INFO)
 
 
 class SupervisorStatus(object):
@@ -83,24 +85,25 @@ class SupervisorStatus(object):
 
 class NTPConfig:
     CONFIG_FILE = "/etc/ntp.conf"
+    PRE_CHROMA_CONFIG_FILE = "/etc/ntp.conf.pre-chroma"
     SENTINEL = "# Added by chroma-manager\n"
     COMMENTED = "# Commented out by chroma-manager: "
 
-    def __init__(self, config_file = None):
-        self.config_file = config_file or self.CONFIG_FILE
+    def __init__(self, config_file = CONFIG_FILE):
+        self.config_file = config_file
 
     def open_conf_for_edit(self):
         tmp_f, tmp_name = tempfile.mkstemp(dir = '/etc')
-        f = open('/etc/ntp.conf', 'r')
+        f = open(self.config_file, 'r')
         return tmp_f, tmp_name, f
 
     def close_conf(self, tmp_f, tmp_name, f):
         f.close()
         os.close(tmp_f)
-        if not os.path.exists("/etc/ntp.conf.pre-chroma"):
-            os.rename("/etc/ntp.conf", "/etc/ntp.conf.pre-chroma")
+        if not os.path.exists(self.PRE_CHROMA_CONFIG_FILE):
+            os.rename(self.config_file, self.PRE_CHROMA_CONFIG_FILE)
         os.chmod(tmp_name, 0644)
-        os.rename(tmp_name, "/etc/ntp.conf")
+        os.rename(tmp_name, self.config_file)
 
     def get_configured_server(self):
         """Return the currently IML set server found in the ntp conf file
@@ -314,6 +317,10 @@ num  target     prot opt source               destination
     # Note: the duplicate implementation of these functions in the
     # agent's lib.system library
     def _add_firewall_rule(self, port, proto, port_desc):
+        # Adding an existing rule will cause a duplicate, so if we delete any rule we are about to add
+        # the effect of adding is nil. _del_firewall_rule does not throw an error if the rule does not exist.
+        self._del_firewall_rule(port, proto, port_desc)
+
         log.info("Opening firewall for %s" % port_desc)
         # install a firewall rule for this port
         self.try_shell(['/usr/sbin/lokkit', '-n', '-p', '%s:%s' % (port, proto)])
@@ -328,10 +335,6 @@ num  target     prot opt source               destination
         # it really bites that lokkit has no "delete" functionality
         self.iptables("del", 'INPUT', ['-m', 'state', '--state', 'new', '-p',
                       proto, '--dport', str(port), '-j', 'ACCEPT'])
-        import os
-        from tempfile import mkstemp
-        import shutil
-        import errno
         try:
             tmp = mkstemp(dir = "/etc/sysconfig")
             with os.fdopen(tmp[0], "w") as tmpf:
@@ -357,28 +360,28 @@ num  target     prot opt source               destination
                 raise
 
     def _setup_ntp(self, server = None):
-        """Save ntp server to config (e.g. /etc/ntp.conf)
-
-        Prompt for server if one was not provided (would have come from cli)
         """
+        Change the ntp configuration file to use the server passed.
 
+        If no server is passed then use the existing setting and if there is no existing setting ask the user
+        which server they would like to use.
+        """
         ntp = NTPConfig()
         existing_server = ntp.get_configured_server()
 
         if not server:
             if existing_server:
+                server = existing_server
                 log.info("Using existing ntp server: %s" % existing_server)
-                return
             else:
                 # Only if you haven't already set it
                 server = self.get_input(msg = "NTP Server", default = 'localhost')
 
-        if server and server != existing_server:
-            log.info("Writing ntp configuration: %s " % server)
-            old_server = ntp.remove()
-            ntp.add(server)
-            self._add_firewall_rule(123, "udp", "ntp")
-            self._start_ntp(old_server != server)
+        log.info("Writing ntp configuration: %s " % server)
+        old_server = ntp.remove()
+        ntp.add(server)
+        self._add_firewall_rule(123, "udp", "ntp")
+        self._start_ntp(old_server != server)
 
     def _start_ntp(self, restart):
         self.try_shell(["chkconfig", "ntpd", "on"])
@@ -517,7 +520,6 @@ num  target     prot opt source               destination
         self.try_shell(["service", "postgresql", "restart"])
         self.try_shell(["chkconfig", "postgresql", "on"])
 
-        import time
         tries = 0
         while self.shell(["su", "postgres", "-c", "psql -c '\\d'"])[0] != 0:
             if tries >= 4:
