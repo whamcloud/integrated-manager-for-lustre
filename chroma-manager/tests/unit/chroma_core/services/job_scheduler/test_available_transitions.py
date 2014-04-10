@@ -62,7 +62,7 @@ class TestAvailableTransitions(TestCase):
 
         expected_transitions = ['registered', 'mounted',
                                 'formatted', 'unmounted', 'removed']
-        received_transitions = self._get_transition_states(mgs)
+        received_transitions = [t['state'] for t in self._get_transition_states(mgs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
         # An fs causes the MGS to be non-removeable.
@@ -70,7 +70,7 @@ class TestAvailableTransitions(TestCase):
 
         expected_transitions = ['registered', 'mounted',
                                 'formatted', 'unmounted']
-        received_transitions = self._get_transition_states(mgs)
+        received_transitions = [t['state'] for t in self._get_transition_states(mgs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_ost(self):
@@ -84,7 +84,7 @@ class TestAvailableTransitions(TestCase):
 
         expected_transitions = ['formatted', 'registered',
                                 'unmounted', 'mounted', 'removed']
-        received_transitions = self._get_transition_states(ost)
+        received_transitions = [t['state'] for t in self._get_transition_states(ost)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_mdt(self):
@@ -98,7 +98,7 @@ class TestAvailableTransitions(TestCase):
 
         expected_transitions = ['formatted', 'registered',
                                 'unmounted', 'mounted']
-        received_transitions = self._get_transition_states(mdt)
+        received_transitions = [t['state'] for t in self._get_transition_states(mdt)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_filesystem(self):
@@ -109,7 +109,7 @@ class TestAvailableTransitions(TestCase):
         fs = ManagedFilesystem.objects.create(name='mgsfs', mgs=mgs)
 
         expected_transitions = ['available', 'removed']
-        received_transitions = self._get_transition_states(fs)
+        received_transitions = [t['state'] for t in self._get_transition_states(fs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_managed_host(self):
@@ -118,9 +118,10 @@ class TestAvailableTransitions(TestCase):
         #  filesystem unformatted states
         host = synthetic_host()
 
-        expected_transitions = ['removed', 'lnet_unloaded',
-                                'lnet_up', 'lnet_down']
-        received_transitions = self._get_transition_states(host)
+        self.assertEqual(host.state, 'configured')
+
+        expected_transitions = ['removed', 'lnet_down', 'lnet_up']
+        received_transitions = [t['state'] for t in self._get_transition_states(host)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_no_locks_query_count(self):

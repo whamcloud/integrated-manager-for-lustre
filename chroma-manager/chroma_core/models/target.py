@@ -173,7 +173,7 @@ class ManagedTarget(StatefulObject):
         return self.name
 
     def __str__(self):
-        return self.name
+        return self.name or ''
 
     def best_available_host(self):
         """
