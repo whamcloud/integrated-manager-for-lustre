@@ -170,10 +170,9 @@ class LustreAudit(BaseAudit, FileSystemMixin):
     def devices(self):
         """Returns a list of Lustre devices local to this node."""
         try:
-            return [{'index': a, 'state': b, 'type': c, 'name': d,
-                    'uuid': e, 'refcount': f} for a, b, c, d, e, f in
-                [re.split('\s+', line)[1:] for line in
-                    self.read_lines('/proc/fs/lustre/devices')]]
+            return [dict(zip(['index', 'state', 'type', 'name',
+                              'uuid', 'refcount'], line.split()))
+                    for line in self.read_lines('/proc/fs/lustre/devices')]
         except IOError:
             return []
 

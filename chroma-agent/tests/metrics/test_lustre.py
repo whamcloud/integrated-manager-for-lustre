@@ -65,6 +65,7 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 524040)
         self.assertEqual(metrics['lnet']['recv_count'], 156747)
+        self.assertEqual(len(metrics['target']), 7)
 
 
 class TestPathologicalUseCases(PatchedContextTestCase):

@@ -88,10 +88,10 @@ class DetectScan(object):
             ost_count = ManagedOst.objects.filter(filesystem = fs).count()
             if not mdt_count:
                 self.log("Found no MDTs for filesystem %s" % fs.name)
-                ManagedFilesystem.delete(fs.id)
+                fs.mark_deleted()
             elif not ost_count:
                 self.log("Found no OSTs for filesystem %s" % fs.name)
-                ManagedFilesystem.delete(fs.id)
+                fs.mark_deleted()
             else:
                 self.log("Discovered filesystem %s with %s MDTs and %s OSTs" % (
                   fs.name, mdt_count, ost_count))
