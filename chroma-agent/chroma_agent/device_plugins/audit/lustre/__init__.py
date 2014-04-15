@@ -265,7 +265,6 @@ class MdtAudit(TargetAudit):
             'kbytesfree': 'osd-ldiskfs/%s/kbytesfree',
             'filestotal': 'osd-ldiskfs/%s/filestotal',
             'filesfree': 'osd-ldiskfs/%s/filesfree',
-            'client_count': 'mdt/%s/num_exports',
         })
 
     def _parse_hsm_agent_stats(self, stats_root):
@@ -328,31 +327,39 @@ class MdtAudit(TargetAudit):
             stats.update(self.stats_dict_from_file(path))
         return stats
 
-    def get_ost_count(self, target):
+    def get_client_count(self, rootdir, target):
         """The target is expected to be of the format $fs_name-MDTXXXX.  example
-           lustre-MDT0000.  The OST naming convention is $fs_name-OSTXXXX.  When
-           parsing I extract the $fs_name- and append to it the literal OST and
-           count all ACTIVE OSTs.  For more details on the formatting refer to
-           chroma-agent/tests/metrics/test_lustre.py -->lctl_output"""
+           lustre-MDT0000.  The directory passed is expected to have a set of
+           subdirs, one per remote nid and one for the local nid.  In each of
+           these subdirs there should be a uuid file.  This uuid can contain
+           2 types of entries for the different types of connections to the MDT:
+             1. for MDT or OST.  Ex:
+                lustre-MDT0000-lwp-MDT0000_UUID
+                lustre-MDT0003-mdtlov_UUID
+                lustre-MDT0000-lwp-OST0001_UUID
+             2. For actual clients connected.  Ex:
+                ef9b5ecf-b9c1-110c-199a-ea910b02d998
+          This function finds the second type of entries and counts those as
+          clients."""
         count = 0
         fs_name = target[:target.rfind("MDT")]
-        stdout = shell.try_run(["lctl", "get_param", "lov.%s*.target_obd" % fs_name])
-        for line in [l.strip() for l in stdout.strip().split("\n")]:
-            if (line.find(fs_name + "OST") >= 0) and (line.find(" ACTIVE") >= 0):
-                count = count + 1
+        for subdir, dirs, files in os.walk(rootdir):
+            for f in files:
+                if f == "uuid":
+                    stdout = shell.try_run(["cat", subdir + '/' + f])
+                    for line in [l.strip() for l in stdout.strip().split("\n")]:
+                        if line and line.find(fs_name + "MDT") < 0:
+                            count = count + 1
         return count
 
     def _gather_raw_metrics(self):
         for mdt in [dev for dev in self.devices() if dev['type'] == 'mdt']:
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
-            # update the client_count based on the num_exports read from proc/fs:
-            # client_count = num_exports - (2 + ost_count)
-            # enclose in try except incase the client_count is not part of the keys
-            # we'll just ignore and continue.  Happens in some unit-test cases
-            ost_count = self.get_ost_count(mdt['name'])
+            # calculate the client_count by walking /proc/fs/lustre/mdt/<target>/exports. for all directores
+            # look at the entries in the uuid file and add up the client count as described in the comment
+            # on get_client_count().
+            client_count = self.get_client_count("/proc/fs/lustre/mdt/%s/exports/" % mdt['name'], mdt['name'])
             try:
-                client_count = self.raw_metrics['lustre']['target'][mdt['name']]['client_count']
-                client_count = client_count - (2 + ost_count)
                 self.raw_metrics['lustre']['target'][mdt['name']]['client_count'] = client_count
             except KeyError:
                 pass

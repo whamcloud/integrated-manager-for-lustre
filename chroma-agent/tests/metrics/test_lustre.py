@@ -213,9 +213,15 @@ class TestMdtMetrics(PatchedContextTestCase):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         super(TestMdtMetrics, self).setUp()
-        audit = MdtAudit()
+        self.audit = MdtAudit()
         with patch_run(expected_args=CMD, stdout=lctl_output):
-            self.metrics = audit.metrics()['raw']['lustre']['target']
+            self.metrics = self.audit.metrics()['raw']['lustre']['target']
+
+    def test_get_client_count(self):
+        tests = os.path.join(os.path.dirname(__file__), '..')
+        test_root = os.path.join(tests, "data/lustre_versions/2.5.0/mdt/proc/fs/lustre/mdt/lustre-MDT0000/exports")
+        client_count = self.audit.get_client_count(test_root, "lustre-MDT0000-target")
+        self.assertEqual(client_count, 1)
 
     def test_mdt_stats_list(self):
         """Test that a representative sample of mdt stats is collected."""
