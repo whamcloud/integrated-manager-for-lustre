@@ -304,8 +304,9 @@ class CommandPlan(object):
 
         # Work out the eventual states (and which writelock'ing job to depend on to
         # ensure that state) from all non-'complete' jobs in the queue
+        # It is possible the some locks have no end state and so these should be excluded.
         item_to_lock = self._lock_cache.get_write_by_locked_item()
-        self.expected_states = dict([(k, v.end_state) for k, v in item_to_lock.items()])
+        self.expected_states = dict([(item, state_lock.end_state) for item, state_lock in item_to_lock.items() if state_lock.end_state])
 
         if new_state == self.get_expected_state(instance):
             log.info("set_state: already expected to be in state %s" % new_state)
