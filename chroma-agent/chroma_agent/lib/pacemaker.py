@@ -160,8 +160,7 @@ class PacemakerConfig(object):
         try:
             # Use --local because we're just testing to see if the cib
             # daemon is running at all.
-            cibadmin(["--query", "--local"], retry_connection_failure = False,
-                     timeout=1)
+            cibadmin(["--query", "--local"], timeout=10)
             return True
         except CommandExecutionError as e:
             # Known exception caused by the service being unconfigured or
@@ -227,7 +226,7 @@ class PacemakerConfig(object):
         return self.dc == self.get_node(socket.gethostname()).name
 
 
-def cibadmin(command_args, timeout = 120, retry_connection_failure = True):
+def cibadmin(command_args, timeout = 120):
     rc = 10
 
     # I think these are "errno" values, but I'm not positive
@@ -236,10 +235,9 @@ def cibadmin(command_args, timeout = 120, retry_connection_failure = True):
     RETRY_CODES = {
         10: "something unknown",
         41: "something unknown",
-        62: "Timer expired"
+        62: "Timer expired",
+        107: "Transport endpoint is not connected"
     }
-    if retry_connection_failure:
-        RETRY_CODES[107] = "Transport endpoint is not connected"
 
     command_args.insert(0, 'cibadmin')
     # NB: This isn't a "true" timeout, in that it won't forcibly stop the
