@@ -35,6 +35,9 @@ class TestYumUpdate(ChromaIntegrationTestCase):
         self.assertEqual(len(hosts), len(self.TEST_SERVERS))
 
         # get a list of hosts
+        command = {}
+
+        # With the list of hosts, start the upgrade
         for host in hosts:
             # wait for an upgrade available alert
             self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'],
@@ -53,17 +56,21 @@ class TestYumUpdate(ChromaIntegrationTestCase):
             self.assertRegexpMatches(alerts[0]['message'], "Updates are ready.*")
 
             # The needs_update flag should be set on the host
-            self.assertEqual(self.get_by_uri(host['resource_uri'])['needs_update'], True)
+            self.assertEqual(self.get_json_by_uri(host['resource_uri'])['needs_update'], True)
 
             # We send a command to update the storage servers with new packages
             # =================================================================
-            command = self.chroma_manager.post("/api/command/", body={
+            command[host['id']] = self.chroma_manager.post("/api/command/", body={
                 'jobs': [{'class_name': 'UpdateJob', 'args': {'host_id': host['id']}}],
                 'message': "Test update"
             }).json
+
+        # With the list of hosts, check the success of the upgrade, no need to actually check in parallel we will
+        # just sit waiting for the longest to completed.
+        for host in hosts:
             # doing updates can include a reboot of the storage server so
             # give it some extra time
-            self.wait_for_command(self.chroma_manager, command['id'], timeout=600)
+            self.wait_for_command(self.chroma_manager, command[host['id']]['id'], timeout=900)
             self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
                                                              of_type='UpdatesAvailableAlert'))
 
