@@ -51,14 +51,14 @@ PDU_SERVER_ADDRESS = '127.0.0.1'
 OUTLET_CYCLE_TIME = 3
 
 
-class SimulatorTcpHandler(SocketServer.BaseRequestHandler):
+class PDUSimulatorTcpHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         log.debug("Handling PDU request from %s:%s" % self.client_address)
         self.server.pdu_simulator.handle_client(self.request,
                                                 self.client_address)
 
 
-class SimulatorTcpServer(SocketServer.TCPServer):
+class PDUSimulatorTcpServer(SocketServer.TCPServer):
     def __init__(self, *args, **kwargs):
         self.pdu_simulator = kwargs.pop('pdu_simulator')
         # Allow the address to be re-used, otherwise we may get stuck in
@@ -70,22 +70,21 @@ class SimulatorTcpServer(SocketServer.TCPServer):
 
 class PDUSimulatorServer(ExceptionCatchingThread):
     def __init__(self, pdu):
-        super(PDUSimulatorServer, self).__init__()
+        log.info("Creating PDU server for %s on %s:%s" %
+                 (pdu.name, pdu.address, pdu.port))
 
-        self._pdu = pdu
+        self.server = PDUSimulatorTcpServer((pdu.address, pdu.port),
+                                            PDUSimulatorTcpHandler,
+                                            pdu_simulator = pdu)
+
+        super(PDUSimulatorServer, self).__init__()
 
     def stop(self):
         self.server.shutdown()
-        self.server.server_close()
 
     def _run(self):
-        log.info("Creating PDU server for %s on %s:%s" %
-                            (self._pdu.name, self._pdu.address, self._pdu.port))
-        self.server = SimulatorTcpServer((self._pdu.address, self._pdu.port),
-                                         SimulatorTcpHandler,
-                                         pdu_simulator = self._pdu)
-
         self.server.serve_forever()
+        self.server.server_close()
 
 
 class PDUSimulator(Persisted):
