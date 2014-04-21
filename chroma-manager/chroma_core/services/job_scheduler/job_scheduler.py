@@ -1456,7 +1456,7 @@ class JobScheduler(object):
         from_state = stateful_object.state
         transitions = []
         for to_state in raw_transitions:
-                # Fetch the last job in a a list of jobs that will tranisiont this object from from_state to to_state
+                # Fetch the last job in a list of jobs that will transition this object from from_state to to_state
                 job_class = stateful_object.get_job_class(from_state, to_state, last_job_in_route=True)
 
                 # NB: a None verb means its an internal
@@ -1466,7 +1466,7 @@ class JobScheduler(object):
                     transitions.append({
                         'state': to_state,
                         'verb': job_class.state_verb,
-                        'long_description': job_class.get_long_description(stateful_object),
+                        'long_description': job_class.long_description(stateful_object),
                         'display_group': job_class.display_group,
                         'display_order': job_class.display_order
                     })
@@ -1479,23 +1479,23 @@ class JobScheduler(object):
         from chroma_core.models import AdvertisedJob
 
         available_jobs = []
-        for aj in all_subclasses(AdvertisedJob):
-            if not aj.plural:
-                for class_name in aj.classes:
+        for job_class in all_subclasses(AdvertisedJob):
+            if not job_class.plural:
+                for class_name in job_class.classes:
                     ct = ContentType.objects.get_by_natural_key(
                         'chroma_core', class_name.lower())
                     klass = ct.model_class()
                     if isinstance(stateful_object, klass):
-                        if aj.can_run(stateful_object):
+                        if job_class.can_run(stateful_object):
                             available_jobs.append({
-                                'verb': aj.verb,
-                                'long_description': aj.get_long_description(stateful_object),
-                                'display_group': aj.display_group,
-                                'display_order': aj.display_order,
-                                'confirmation': aj.get_confirmation(
+                                'verb': job_class.verb,
+                                'long_description': job_class.long_description(stateful_object),
+                                'display_group': job_class.display_group,
+                                'display_order': job_class.display_order,
+                                'confirmation': job_class.get_confirmation(
                                     stateful_object),
-                                'class_name': aj.__name__,
-                                'args': aj.get_args(stateful_object)})
+                                'class_name': job_class.__name__,
+                                'args': job_class.get_args(stateful_object)})
         return available_jobs
 
     def available_jobs(self, object_list):

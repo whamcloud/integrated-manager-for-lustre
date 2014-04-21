@@ -391,7 +391,9 @@ class Job(models.Model):
     wait_for_json = models.TextField()
     locks_json = models.TextField()
 
-    long_description = None
+    @classmethod
+    def long_description(cls, stateful_object):
+        raise NotImplementedError("long_description needs to be implemented for each job.")
 
     # Job subclasses can provide one of these group values to assert the job group assignment
     JOB_GROUPS = namedtuple('GROUPS', 'COMMON, INFREQUENT, RARE, EMERGENCY, LAST_RESORT, DEFAULT')(1, 2, 3, 4, 5, 1000)
@@ -409,17 +411,6 @@ class Job(models.Model):
     # see in a list, and look at their order attributes.  Trying to fit any new jobs in.  There can be gaps in the
     # sequence of numbers.  The intent is that the Job will be sorted numerically ascending.
     display_order = DEFAULT_ORDER = 1000
-
-    # Human readable long description of the job.
-    @classmethod
-    def get_long_description(cls, stateful_object):
-        if type(cls.long_description) is list:
-            def match(class_to_compare):
-                return issubclass(stateful_object.downcast_class, class_to_compare)
-
-            return next((desc["value"] for desc in cls.long_description if match(desc["type"])), None)
-        else:
-            return cls.long_description
 
     # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)

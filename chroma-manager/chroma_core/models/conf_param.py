@@ -23,6 +23,7 @@
 from django.db import models
 from chroma_core.lib.job import DependOn, Step, DependAll
 from polymorphic.models import DowncastMetaclass
+from chroma_help.help import help_text
 
 from chroma_core.models.jobs import Job
 from chroma_core.models.target import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget
@@ -57,6 +58,10 @@ class ApplyConfParams(Job):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['update_conf_params']
 
     def description(self):
         return "Update conf_params on %s" % (self.mgs.primary_server())

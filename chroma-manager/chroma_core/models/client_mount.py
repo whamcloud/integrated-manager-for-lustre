@@ -136,10 +136,13 @@ class MountLustreClientJob(StateChangeJob):
     stateful_object = 'lustre_client_mount'
     lustre_client_mount = models.ForeignKey(LustreClientMount)
     state_verb = None
-    long_description = help_text['mount_lustre_filesystem']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['mount_lustre_filesystem']
 
     def get_confirmation_string(self):
-        return self.long_description
+        return MountLustreClientJob.long_description(None)
 
     def description(self):
         return "Mount %s" % self.lustre_client_mount
@@ -170,13 +173,16 @@ class UnmountLustreClientMountJob(StateChangeJob):
     stateful_object = 'lustre_client_mount'
     lustre_client_mount = models.ForeignKey(LustreClientMount)
     state_verb = None
-    long_description = help_text['unmount_lustre_filesystem']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['unmount_lustre_filesystem']
 
     def get_requires_confirmation(self):
         return True
 
     def get_confirmation_string(self):
-        return self.long_description
+        return UnmountLustreClientMountJob.long_description(None)
 
     def description(self):
         return "Unmount %s" % self.lustre_client_mount
@@ -204,13 +210,16 @@ class RemoveLustreClientJob(StateChangeJob):
     stateful_object = 'lustre_client_mount'
     lustre_client_mount = models.ForeignKey(LustreClientMount)
     state_verb = None
-    long_description = help_text['remove_lustre_client_mount']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['remove_lustre_client_mount']
 
     def get_requires_confirmation(self):
         return True
 
     def get_confirmation_string(self):
-        return self.long_description
+        return RemoveLustreClientJob.long_description(None)
 
     def description(self):
         return "Remove %s" % self.lustre_client_mount
@@ -236,7 +245,6 @@ class MountLustreFilesystemsJob(AdvertisedJob):
     host = models.ForeignKey(ManagedHost)
     classes = ['ManagedHost']
     verb = "Mount Filesystem(s)"
-    long_description = help_text['mount_lustre_filesystems']
 
     requires_confirmation = True
 
@@ -248,12 +256,16 @@ class MountLustreFilesystemsJob(AdvertisedJob):
         ordering = ['id']
 
     @classmethod
-    def get_args(cls, host):
-        return {'host_id': host.id}
+    def long_description(cls, stateful_object):
+        return help_text['mount_lustre_filesystems']
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return cls.long_description
+    def get_confirmation(cls, stateful_object):
+        return cls.long_description(stateful_object)
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host_id': host.id}
 
     @classmethod
     def can_run(cls, host):
@@ -297,7 +309,6 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
     host = models.ForeignKey(ManagedHost)
     classes = ['ManagedHost']
     verb = "Unmount Filesystem(s)"
-    long_description = help_text['unmount_lustre_filesystems']
 
     requires_confirmation = True
 
@@ -309,12 +320,16 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
         ordering = ['id']
 
     @classmethod
-    def get_args(cls, host):
-        return {'host_id': host.id}
+    def long_description(cls, stateful_object):
+        return help_text['unmount_lustre_filesystems']
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return cls.long_description
+    def get_confirmation(cls, stateful_object):
+        return cls.long_description(stateful_object)
+
+    @classmethod
+    def get_args(cls, host):
+        return {'host_id': host.id}
 
     @classmethod
     def can_run(cls, host):

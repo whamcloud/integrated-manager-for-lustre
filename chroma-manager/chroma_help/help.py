@@ -57,9 +57,16 @@ help_text = {
     'type': 'The type of storage device.',
     'managed_filesystem': 'This file system is managed by Intel® Manager for Lustre*',
     'monitored_filesystem': 'This file system is monitored and may not be modified within Intel® Manager for Lustre*',
-
+    'setup_host': 'Setup this host',
+    'reboot_host': 'Initiate a reboot on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has finished rebooting.',
+    'shutdown_host': 'Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.',
+    'poweron_host': 'Switch on power to this server.',
+    'poweroff_host': 'Switch off power to this server. Any HA-capable targets running on the server will be failed over to a peer. Non-HA-capable targets will be unavailable until the server is turned on again.',
+    'powercycle_host': 'Switch the power to this server off and then back on again. Any HA-capable targets running on the server will be failed over to a peer. Non-HA-capable targets will be unavailable until the server has finished booting.',
+    'configure_host_fencing': 'Configure fencing agent on this host.',
     'rescan_NIDs-dialog': 'Select all servers for which the server NID may have changed and click <b>Run</b> to re-read the NIDs. <i>Note:</i> After completing this operation, you must update any affected Lustre targets by clicking the <strong>Re-write Target Configuration</strong> button.',
     'remove_configured_server': 'Remove this server. Any file systems or targets that rely on this server will also be removed.',
+    'remove_monitored_configured_server': 'Remove this server.',
     'remove_unconfigured_server': 'Remove this unconfigured server.',
     'rescan_NIDs-tooltip': 'Query the network interfaces on the storage servers to update the record of NIDs.',
     'auth': 'Indicates if the manager server was able to connect, via SSH, to the storage server using the supplied authentication credentials.',
@@ -93,6 +100,8 @@ help_text = {
     'start_lnet': 'Load the LNet kernel module and start the LNet networking layer.',
     'stop_lnet': 'Shut down the LNet networking layer and stop any targets running on this server.',
     'unload_lnet': 'If LNet is running, stop LNET and unload the LNet kernel module to ensure that it will be reloaded before any targets are started again.',
+    'configure_lnet': 'Configure LNet on this host.',
+    'enable_lnet': 'Enable LNet on this host.',
 
     'start_mdt': 'Start the metadata target (MDT).',
     'stop_mdt': 'Stop the MDT. When an MDT is stopped, the file system becomes unavailable until the MDT is started again. If an object reference is known to a client, the client can continue to access the object in the file system after the MDT is shut down, but will not be able to obtain new object references.',
@@ -111,8 +120,29 @@ help_text = {
     'volume_status_configured-noha': 'This volume is ready to be used as a Lustre target, but is not configured for high availability.',
     'volume_status_unconfigured': 'This volume cannot be used as a Lustre target until a primary server is selected.',
 
-    'access_denied_eula': 'To proceed, a superuser must first login and accept the EULA.',
+    'no_dismiss_message_alert': 'This alert relates to an active problem. When the problem is fixed you may dismiss.',
+    'no_dismiss_message_command': 'This command is incomplete. When it has completed you may dismiss.',
+    'copyright_year': '2014',
+    'dashboard_filter_type': 'Choose to view servers or file systems.',
+    'dashboard_filter_fs': 'Choose a file system to view. To view a target for a file system, select a file system, and then a target.',
+    'dashboard_filter_server': 'Choose a server to view. To view a target for a server, select a server, and then a target.',
+    'dashboard_filter_target': 'Choose a target to view.',
+    'update_conf_params': 'Update Conf params.',
+    'make_file_system_unavailable': 'Make this file system unavailable.',
+    'deploy_agent': 'Deploy agent to host.',
+    'detect_targets': 'Scan for Lustre targets',
+    'update_devices': 'Update device info.',
+    'update_packages': 'Update packages.',
+    'update_nids': 'Update NIDs.',
+    'configure_target': 'Configure target mount points.',
+    'register_target': 'Register target.',
+    'format_target': 'Format target.',
+    'migrate_target': 'Migrate target.',
+    'failback_target': 'Migrate failed-over target back to primary host',
+    'failover_target': 'Migrate target to secondary host',
 
+    'access_denied_eula': 'To proceed, a superuser must first login and accept the EULA.',
+    'continue_as_anonymous': 'Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Intel&reg; Manager for Lustre* software.',
     'eula': """
         <h4>Intel&reg; Enterprise Edition for Lustre* software</h4>
         <br />
@@ -173,12 +203,4 @@ help_text = {
         <br />
         <div class="subtext">Intel and the Intel logo are trademarks or registered trademarks of Intel Corporation or its subsidiaries in the United States and other countries. *Other names and brands may be claimed as the property of others.</div>
     """,
-    "continue_as_anonymous": "Click this link to continue as an anonymous user. This user has restricted privileges on how they can use the Intel&reg; Manager for Lustre* software.",
-    "no_dismiss_message_alert": "This alert relates to an active problem. When the problem is fixed you may dismiss.",
-    "no_dismiss_message_command": "This command is incomplete. When it has completed you may dismiss.",
-    "copyright_year": "2014",
-    "dashboard_filter_type": "Choose to view servers or file systems.",
-    "dashboard_filter_fs": "Choose a file system to view. To view a target for a file system, select a file system, and then a target.",
-    "dashboard_filter_server": "Choose a server to view. To view a target for a server, select a server, and then a target.",
-    "dashboard_filter_target": "Choose a target to view.",
 }

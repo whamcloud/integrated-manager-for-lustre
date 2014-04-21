@@ -179,7 +179,6 @@ class RemoveFilesystemJob(StateChangeJob):
     stateful_object = 'filesystem'
     state_verb = "Remove"
     filesystem = models.ForeignKey('ManagedFilesystem')
-    long_description = help_text["remove_file_system"]
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 20
@@ -190,6 +189,10 @@ class RemoveFilesystemJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["remove_file_system"]
 
     def description(self):
         return "Remove file system %s from configuration" % self.filesystem.name
@@ -250,10 +253,13 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
     state_transition = (ManagedFilesystem, 'stopped', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
-    long_description = help_text["start_file_system"]
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 10
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["start_file_system"]
 
     def description(self):
         return "Start file system %s" % self.filesystem.name
@@ -272,10 +278,13 @@ class StartUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Start"
     state_transition = (ManagedFilesystem, 'unavailable', 'available')
     filesystem = models.ForeignKey('ManagedFilesystem')
-    long_description = help_text["start_file_system"]
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 20
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["start_file_system"]
 
     def description(self):
         return "Start filesystem %s" % self.filesystem.name
@@ -293,10 +302,13 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
     state_verb = "Stop"
     state_transition = (ManagedFilesystem, 'unavailable', 'stopped')
     filesystem = models.ForeignKey('ManagedFilesystem')
-    long_description = help_text["stop_file_system"]
 
     display_group = Job.JOB_GROUPS.INFREQUENT
     display_order = 30
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["stop_file_system"]
 
     def description(self):
         return "Stop file system %s" % self.filesystem.name
@@ -318,6 +330,10 @@ class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
     state_transition = (ManagedFilesystem, 'available', 'unavailable')
     filesystem = models.ForeignKey('ManagedFilesystem')
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['make_file_system_unavailable']
+
     def description(self):
         return "Make file system %s unavailable" % self.filesystem.name
 
@@ -335,7 +351,10 @@ class ForgetFilesystemJob(StateChangeJob):
     state_verb = "Forget"
     filesystem = models.ForeignKey(ManagedFilesystem)
     requires_confirmation = True
-    long_description = help_text["remove_file_system"]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["remove_file_system"]
 
     def description(self):
         return "Forget unmanaged file system %s" % self.filesystem.name

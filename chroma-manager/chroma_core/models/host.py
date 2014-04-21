@@ -609,6 +609,10 @@ class GetLNetStateJob(Job):
     def get_args(cls, host):
         return {'host': host}
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['lnet_state']
+
     def description(self):
         return "Get LNet state for %s" % self.host
 
@@ -702,6 +706,10 @@ class ConfigureLNetJob(Job):
     @classmethod
     def get_args(cls, host):
         return {'host': host}
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['configure_lnet']
 
     def description(self):
         return "Configure LNet for %s" % self.host
@@ -825,6 +833,10 @@ class DeployHostJob(StateChangeJob):
     def __init__(self, *args, **kwargs):
         super(DeployHostJob, self).__init__(*args, **kwargs)
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['deploy_agent']
+
     def description(self):
         return "Deploying agent to %s" % self.managed_host.address
 
@@ -910,6 +922,10 @@ class SetupHostJob(StateChangeJob):
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 20
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['setup_host']
+
     def description(self):
         return "Set up server %s" % self.managed_host
 
@@ -952,6 +968,10 @@ class EnableLNetJob(StateChangeJob):
     # anything (should go away with HYD-1215)
     state_verb = None
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['enable_lnet']
+
     def description(self):
         return "Enable LNet on %s" % self.managed_host
 
@@ -990,6 +1010,10 @@ class DetectTargetsJob(Job, HostListMixin):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['detect_targets']
 
     def description(self):
         return "Scan for Lustre targets"
@@ -1042,7 +1066,6 @@ class LoadLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Load LNet'
-    long_description = help_text["start_lnet"]
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 30
@@ -1050,6 +1073,10 @@ class LoadLNetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["start_lnet"]
 
     def description(self):
         return "Load LNet module on %s" % self.host
@@ -1060,6 +1087,10 @@ class LoadLNetJob(StateChangeJob):
 
 
 class UpdateDevicesJob(Job, HostListMixin):
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['update_devices']
+
     def description(self):
         return "Update the device info held for hosts %s" % ",".join([h.fqdn for h in self.hosts.all()])
 
@@ -1083,7 +1114,6 @@ class UnloadLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Unload LNet'
-    long_description = help_text["unload_lnet"]
 
     display_group = Job.JOB_GROUPS.RARE
     display_order = 110
@@ -1091,6 +1121,10 @@ class UnloadLNetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["unload_lnet"]
 
     def description(self):
         return "Unload LNet module on %s" % self.host
@@ -1105,7 +1139,6 @@ class StartLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Start LNet'
-    long_description = help_text["start_lnet"]
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 40
@@ -1113,6 +1146,10 @@ class StartLNetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["start_lnet"]
 
     def description(self):
         return "Start LNet on %s" % self.host
@@ -1127,7 +1164,6 @@ class StopLNetJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Stop LNet'
-    long_description = help_text["stop_lnet"]
 
     display_group = Job.JOB_GROUPS.RARE
     display_order = 100
@@ -1135,6 +1171,10 @@ class StopLNetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["stop_lnet"]
 
     def description(self):
         return "Stop LNet on %s" % self.host
@@ -1203,7 +1243,6 @@ class RemoveHostJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
-    long_description = help_text['remove_configured_server']
 
     requires_confirmation = True
 
@@ -1213,6 +1252,16 @@ class RemoveHostJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        if stateful_object.immutable_state:
+            return help_text['remove_monitored_configured_server']
+        else:
+            return help_text['remove_configured_server']
+
+    def get_confirmation_string(self):
+        return RemoveHostJob.long_description(self.host)
 
     def description(self):
         return "Remove host %s from configuration" % self.host
@@ -1234,9 +1283,6 @@ class RemoveHostJob(StateChangeJob):
         ])
 
         return steps
-
-    def get_confirmation_string(self):
-        return self.long_description
 
 
 def _get_host_dependents(host):
@@ -1292,14 +1338,16 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     verb = "Force Remove"
 
-    long_description = help_text['force_remove']
-
     display_group = Job.JOB_GROUPS.LAST_RESORT
     display_order = 140
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['force_remove']
 
     def create_locks(self):
         locks = super(ForceRemoveHostJob, self).create_locks()
@@ -1368,6 +1416,10 @@ class RebootHostJob(AdvertisedJob):
         ordering = ['id']
 
     @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['reboot_host']
+
+    @classmethod
     def get_args(cls, host):
         return {'host_id': host.id}
 
@@ -1394,8 +1446,8 @@ class RebootHostJob(AdvertisedJob):
         ]
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return """Initiate a reboot on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has finished rebooting."""
+    def get_confirmation(cls, stateful_object):
+        cls.long_description(stateful_object)
 
 
 class RebootHostStep(Step):
@@ -1425,6 +1477,10 @@ class ShutdownHostJob(AdvertisedJob):
         ordering = ['id']
 
     @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['shutdown_host']
+
+    @classmethod
     def get_args(cls, host):
         return {'host_id': host.id}
 
@@ -1449,8 +1505,8 @@ class ShutdownHostJob(AdvertisedJob):
         return [(ShutdownHostStep, {'host': self.host})]
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return """Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted."""
+    def get_confirmation(cls, stateful_object):
+        return cls.long_description(stateful_object)
 
 
 class ShutdownHostStep(Step):
@@ -1468,7 +1524,6 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
-    long_description = help_text['remove_unconfigured_server']
 
     requires_confirmation = True
 
@@ -1479,14 +1534,18 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
         app_label = 'chroma_core'
         ordering = ['id']
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['remove_unconfigured_server']
+
+    def get_confirmation_string(self):
+        return RemoveUnconfiguredHostJob.long_description(None)
+
     def description(self):
         return "Remove host %s from configuration" % self.host
 
     def get_steps(self):
         return [(DeleteHostStep, {'host': self.host, 'force': False})]
-
-    def get_confirmation_string(self):
-        return self.long_description
 
 
 class UpdatePackagesStep(RebootIfNeededStep):
@@ -1532,6 +1591,10 @@ class UpdatePackagesStep(RebootIfNeededStep):
 
 class UpdateJob(Job):
     host = models.ForeignKey(ManagedHost)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["update_packages"]
 
     def description(self):
         return "Update packages on server %s" % self.host
@@ -1586,11 +1649,15 @@ class ResetConfParamsStep(Step):
 
 
 class UpdateNidsJob(Job, HostListMixin):
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text["update_nids"]
+
     def description(self):
         if self.hosts.count() > 1:
             return "Update NIDs on %d hosts" % self.hosts.count()
         else:
-            return "Update NIDS on host %s" % self.hosts.all()[0]
+            return "Update NIDs on host %s" % self.hosts.all()[0]
 
     def _targets_on_hosts(self):
         from chroma_core.models.target import ManagedMgs, ManagedTarget, FilesystemMember

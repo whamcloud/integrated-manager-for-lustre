@@ -53,6 +53,31 @@ class FilesystemMember(models.Model):
         abstract = True
 
 
+# select_description
+#
+# This little nugget selects from a dict of class: description to
+# return the description that matches the that class or subclass in the
+# key
+#
+# Probably called like this
+#
+# select_description(stateful_object,
+#                    {ManagedOst: help_text["stop_ost"],
+#                     ManagedMgs: help_text["stop_mgt"],
+#                     ManagedMdt: help_text["stop_mdt"]})
+def select_description(stateful_object, descriptions):
+    def match(class_to_compare):
+        return issubclass(stateful_object.downcast_class, class_to_compare)
+
+    for class_to_compare, desc in descriptions.iteritems():
+        if match(class_to_compare):
+            return desc
+
+    match_class_names = ", ".join(class_to_compare.__name__ for class_to_compare in descriptions.keys())
+
+    raise RuntimeError("Could not find %s in %s" % (stateful_object.downcast_class.__name__, match_class_names))
+
+
 # How Lustre targets are reported by blkid: this assumes stock Lustre 2.x
 # whose ldiskfs filesystems appear as ext4.  Would require extension
 # to deal with ZFS builds of Lustre.
@@ -456,10 +481,11 @@ class RemoveConfiguredTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
-    long_description = [
-        {"type": ManagedOst, "value": help_text["remove_ost"]},
-        {"type": ManagedMgs, "value": help_text["remove_mgt"]}
-    ]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
+                                                    ManagedMgs: help_text["remove_mgt"]})
 
     def get_requires_confirmation(self):
         return True
@@ -515,10 +541,11 @@ class RemoveTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_verb = "Remove"
     target = models.ForeignKey(ManagedTarget)
-    long_description = [
-        {"type": ManagedOst, "value": help_text["remove_ost"]},
-        {"type": ManagedMgs, "value": help_text["remove_mgt"]}
-    ]
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
+                                                    ManagedMgs: help_text["remove_mgt"]})
 
     def description(self):
         return "Remove target %s from configuration" % (self.target)
@@ -546,6 +573,11 @@ class ForgetTargetJob(StateChangeJob):
         app_label = 'chroma_core'
         ordering = ['id']
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
+                                                    ManagedMgs: help_text["remove_mgt"]})
+
     def description(self):
         return "Forget unmanaged target %s" % self.target
 
@@ -561,10 +593,6 @@ class ForgetTargetJob(StateChangeJob):
     stateful_object = 'target'
     state_verb = "Forget"
     target = models.ForeignKey(ManagedTarget)
-    long_description = [
-        {"type": ManagedOst, "value": help_text["remove_ost"]},
-        {"type": ManagedMgs, "value": help_text["remove_mgt"]}
-    ]
 
 
 class RegisterTargetStep(Step):
@@ -668,6 +696,10 @@ class ConfigureTargetJob(StateChangeJob):
         app_label = 'chroma_core'
         ordering = ['id']
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['configure_target']
+
     def description(self):
         return "Configure %s mount points" % self.target
 
@@ -711,6 +743,10 @@ class RegisterTargetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['register_target']
 
     def description(self):
         return "Register %s" % self.target
@@ -784,15 +820,16 @@ class StartTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'unmounted', 'mounted')
     state_verb = "Start"
     target = models.ForeignKey(ManagedTarget)
-    long_description = [
-        {"type": ManagedOst, "value": help_text["start_ost"]},
-        {"type": ManagedMgs, "value": help_text["start_mgt"]},
-        {"type": ManagedMdt, "value": help_text["start_mdt"]}
-    ]
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return select_description(stateful_object, {ManagedOst: help_text["start_ost"],
+                                                    ManagedMgs: help_text["start_mgt"],
+                                                    ManagedMdt: help_text["start_mdt"]})
 
     def description(self):
         return "Start target %s" % self.target
@@ -825,11 +862,6 @@ class StopTargetJob(StateChangeJob):
     state_transition = (ManagedTarget, 'mounted', 'unmounted')
     state_verb = "Stop"
     target = models.ForeignKey(ManagedTarget)
-    long_description = [
-        {"type": ManagedOst, "value": help_text["stop_ost"]},
-        {"type": ManagedMgs, "value": help_text["stop_mgt"]},
-        {"type": ManagedMdt, "value": help_text["stop_mdt"]}
-    ]
 
     def get_requires_confirmation(self):
         return True
@@ -837,6 +869,12 @@ class StopTargetJob(StateChangeJob):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return select_description(stateful_object, {ManagedOst: help_text["stop_ost"],
+                                                    ManagedMgs: help_text["stop_mgt"],
+                                                    ManagedMdt: help_text["stop_mdt"]})
 
     def description(self):
         return "Stop target %s" % self.target
@@ -967,6 +1005,10 @@ class FormatTargetJob(StateChangeJob):
         app_label = 'chroma_core'
         ordering = ['id']
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['format_target']
+
     def description(self):
         return "Format %s" % self.target
 
@@ -1050,6 +1092,10 @@ class MigrateTargetJob(AdvertisedJob):
         app_label = 'chroma_core'
 
     @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['migrate_target']
+
+    @classmethod
     def get_args(cls, target):
         return {'target_id': target.id}
 
@@ -1099,8 +1145,12 @@ class FailbackTargetJob(MigrateTargetJob):
         # reinstate the condition
         #instance.primary_host.is_available() and \
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['failback_target']
+
     def description(self):
-        return "Migrate failed-over target back to primary host"
+        FailbackTargetJob.long_description(None)
 
     def get_deps(self):
         return DependAll(
@@ -1151,8 +1201,12 @@ class FailoverTargetJob(MigrateTargetJob):
     # reinstate the condition
 #                instance.failover_hosts[0].is_available() and \
 
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['failover_target']
+
     def description(self):
-        return "Migrate target to secondary host"
+        FailoverTargetJob.long_description(None)
 
     def get_deps(self):
         return DependAll(

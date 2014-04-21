@@ -254,7 +254,6 @@ class StartCopytoolJob(StateChangeJob):
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Start"
-    long_description = help_text['start_copytool']
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 10
@@ -266,6 +265,10 @@ class StartCopytoolJob(StateChangeJob):
     @classmethod
     def get_args(cls, copytool):
         return {'copytool_id': copytool.pk}
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['start_copytool']
 
     def description(self):
         return "Start copytool %s on worker %s" % (self.copytool,
@@ -292,7 +295,6 @@ class StopCopytoolJob(StateChangeJob):
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Stop"
-    long_description = help_text['stop_copytool']
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 10
@@ -306,8 +308,11 @@ class StopCopytoolJob(StateChangeJob):
         return {'copytool_id': copytool.pk}
 
     @classmethod
-    def get_confirmation_string(cls):
-        return cls.long_description
+    def long_description(cls, stateful_object):
+        return help_text['stop_copytool']
+
+    def get_confirmation_string(self):
+        return StopCopytoolJob.long_description(None)
 
     def get_requires_confirmation(self):
         return True
@@ -338,7 +343,6 @@ class ConfigureCopytoolJob(StateChangeJob):
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Configure"
-    long_description = help_text['configure_copytool']
 
     display_group = Job.JOB_GROUPS.INFREQUENT
     display_order = 10
@@ -350,6 +354,10 @@ class ConfigureCopytoolJob(StateChangeJob):
     @classmethod
     def get_args(cls, copytool):
         return {'copytool_id': copytool.pk}
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['configure_copytool']
 
     def description(self):
         return "Configure copytool %s on worker %s" % (self.copytool,
@@ -386,7 +394,6 @@ class RemoveCopytoolJob(StateChangeJob):
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Remove"
-    long_description = help_text['remove_copytool']
 
     display_group = Job.JOB_GROUPS.RARE
     display_order = 10
@@ -400,8 +407,11 @@ class RemoveCopytoolJob(StateChangeJob):
         return {'copytool_id': copytool.pk}
 
     @classmethod
-    def get_confirmation_string(cls):
-        return cls.long_description
+    def long_description(cls, stateful_object):
+        return help_text['remove_copytool']
+
+    def get_confirmation_string(self):
+        return RemoveCopytoolJob.long_description(None)
 
     def get_requires_confirmation(self):
         return True
@@ -455,7 +465,6 @@ class RemoveUnconfiguredCopytoolJob(StateChangeJob):
     copytool = models.ForeignKey(Copytool)
     stateful_object = 'copytool'
     state_verb = "Remove"
-    long_description = help_text['remove_copytool']
 
     display_group = Job.JOB_GROUPS.RARE
     display_order = 10
@@ -469,8 +478,11 @@ class RemoveUnconfiguredCopytoolJob(StateChangeJob):
         return {'copytool_id': copytool.pk}
 
     @classmethod
-    def get_confirmation_string(cls):
-        return cls.long_description
+    def long_description(cls, stateful_object):
+        return help_text['remove_copytool']
+
+    def get_confirmation_string(self):
+        return RemoveUnconfiguredCopytoolJob.long_description(None)
 
     def get_requires_confirmation(self):
         return True
@@ -508,7 +520,6 @@ class ForceRemoveCopytoolJob(AdvertisedJob):
     copytool = models.ForeignKey(Copytool)
     classes = ['Copytool']
     verb = "Force Remove"
-    long_description = help_text['force_remove_copytool']
 
     requires_confirmation = True
 
@@ -524,8 +535,12 @@ class ForceRemoveCopytoolJob(AdvertisedJob):
         return {'copytool_id': copytool.id}
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return cls.long_description
+    def long_description(cls, stateful_object):
+        return help_text['force_remove_copytool']
+
+    @classmethod
+    def get_confirmation(cls, stateful_object):
+        return cls.long_description(stateful_object)
 
     def description(self):
         return "Force remove copytool %s from configuration" % self.copytool

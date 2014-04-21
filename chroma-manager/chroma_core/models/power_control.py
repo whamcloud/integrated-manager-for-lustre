@@ -36,6 +36,7 @@ from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import Job, AdvertisedJob, job_log
 from chroma_core.models.utils import DeletableMetaclass
+from chroma_help.help import help_text
 
 from chroma_core.lib.job import Step, DependOn
 
@@ -431,8 +432,12 @@ class PoweronHostJob(AdvertisedJob):
                 and not any([o.has_power for o in host.outlets.all()]))
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return "Switch on power to this server."
+    def long_description(cls, stateful_object):
+        return help_text['poweron_host']
+
+    @classmethod
+    def get_confirmation(cls, stateful_object):
+        return cls.long_description(stateful_object)
 
     def description(self):
         return "Restore power for server %s" % self.host
@@ -473,8 +478,12 @@ class PoweroffHostJob(AdvertisedJob):
                 and any([o.has_power for o in host.outlets.all()]))
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return "Switch off power to this server. Any HA-capable targets running on the server will be failed over to a peer. Non-HA-capable targets will be unavailable until the server is turned on again."
+    def long_description(cls, stateful_object):
+        return help_text['poweroff_host']
+
+    @classmethod
+    def get_confirmation(cls, stateful_object):
+        return cls.long_description(stateful_object)
 
     def description(self):
         return "Kill power for server %s" % self.host
@@ -513,8 +522,12 @@ class PowercycleHostJob(AdvertisedJob):
         return host.outlets.count() > 0
 
     @classmethod
-    def get_confirmation(cls, instance):
-        return "Switch the power to this server off and then back on again. Any HA-capable targets running on the server will be failed over to a peer. Non-HA-capable targets will be unavailable until the server has finished booting."
+    def long_description(cls, stateful_object):
+        return help_text['powercycle_host']
+
+    @classmethod
+    def get_confirmation(cls, stateful_object):
+        return cls.long_description(stateful_object)
 
     def description(self):
         return "Cycle power for server %s" % self.host
@@ -551,6 +564,10 @@ class ConfigureHostFencingJob(Job):
     @classmethod
     def get_args(cls, host):
         return {'host_id': host.id}
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['configure_host_fencing']
 
     def description(self):
         return "Configure fencing agent on %s" % self.host
