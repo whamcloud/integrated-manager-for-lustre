@@ -467,6 +467,7 @@ class ServerCountLimit(Benchmark):
         add_group_size = 4
         volumes_per_server = 4
         i = 0
+        baseline = dict((queue['name'], queue['messages']) for queue in self.get_queues())
         while True:
             log.info("i = %s, adding %s servers" % (i, add_group_size))
             time.sleep(1)
@@ -482,7 +483,7 @@ class ServerCountLimit(Benchmark):
 
             backed_up_queues = []
             for queue in self.get_queues():
-                if queue['messages'] > max(queue['message_stats_ack_details_rate'] * 4, i):
+                if queue['messages'] - baseline.get(queue['name'], 0) > max(queue['message_stats_ack_details_rate'], i):
                     backed_up_queues.append(queue['name'])
                     log.info("Queue %s is backed up (%s in=%.2f out=%.2f)" % (
                         queue['name'],
