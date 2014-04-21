@@ -564,6 +564,9 @@ class JobScheduler(object):
             assert not job.id in self._run_threads
             self._run_threads[job.id] = thread
 
+            # Make sure the thread doesn't spawn a new DB connection by default
+            django.db.connection.close()
+
             thread.start()
             log.debug('_spawn_job: %s threads in flight' % len(self._run_threads))
         else:
@@ -658,11 +661,6 @@ class JobScheduler(object):
                     self._notify(ContentType.objects.get_for_model(filesystem).natural_key(), filesystem.id, now, {'state': 'unavailable'}, ['available'])
 
         if isinstance(changed_item, ManagedHost):
-            # Sometimes we have been removed and yet some stray messages are hanging about, I don't think this should be
-            # dealt with at this level, but for now to get 2.1 out the door I will do so.
-            if not self.not_deleted:
-                return command
-
             # This is temporary whilst the host strangely has the lnet state in it, rather than the lnet configuration.
             # If the host is in an 'lnet state' but not the right one.
             # It seems odd that one of the from states is 'configured' but I think this just highlights how lnet configuration
@@ -690,8 +688,8 @@ class JobScheduler(object):
 
             if changed_item.needs_fence_reconfiguration:
                 job = ConfigureHostFencingJob(host = changed_item)
-                if not command:
-                    command = Command.objects.create(message = "Configuring fencing agent on %s" % changed_item)
+                message = "Configuring fencing agent on %s" % changed_item
+                command = Command.objects.create(message = message)
                 CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
 
         if isinstance(changed_item, ManagedTarget):
