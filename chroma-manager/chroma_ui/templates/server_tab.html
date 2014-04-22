@@ -29,7 +29,6 @@
         $('#server_configuration').dataTable().fnDraw();
       }
       angular.element('html').injector().get('pageTitle').set('Configuration - Servers');
-
     }
 
     function init()
@@ -38,6 +37,31 @@
         generateCommandDropdown = injector.get('generateCommandDropdown'),
         $compile = injector.get('$compile'),
         $rootScope = injector.get('$rootScope');
+
+      /**
+       * Generates a compiled DOM fragment.
+       * @param {String} template
+       * @param {Function} [done]
+       */
+      function generateFragment(template, done) {
+        var $scope = $rootScope.$new();
+
+        $scope.safeApply(function safeApply() {
+          var fragment = $compile(template)($scope);
+
+          fragment.bind('$destroy', function onDestroy() {
+            fragment.unbind('$destroy');
+            fragment = null;
+            $scope.safeApply(function () {
+              $scope.$destroy();
+              $scope = null;
+            }, $scope);
+          });
+
+          if (typeof done === 'function')
+            done(fragment);
+        }, $scope);
+      }
 
       $('#server_configuration').dataTable( {
         bServerSide: true,
@@ -49,11 +73,16 @@
         fnServerData: function(url, data, callback, settings) {
           Api.get_datatables(url, data, function(data) {
             $.each(data.aaData, function(i, row) {
+              var template;
               var server = $.extend({}, row);
-              var template = ('<configure-lnet-button resource-uri="%s" host_id="%s" host_name="%s" state="%s">' +
-              '</configure-lnet-button>').sprintf(
-                 server.resource_uri, server.id, server.nodename, server.state
-                );
+
+              if (server.immutable_state)
+                template = '';
+              else
+                template = ('<configure-lnet-button resource-uri="%s" host_id="%s" host_name="%s" state="%s"> \
+</configure-lnet-button>').sprintf(
+                   server.resource_uri, server.id, server.nodename, server.state
+                  );
 
               row['state'] = LiveObject.state(server);
               row['configure'] = template;
@@ -74,22 +103,33 @@
         "oLanguage": {
             "sEmptyTable": "No Servers to display"
         },
-        fnRowCallback: function (row, data) {
-          var $scope = $rootScope.$new(),
-            template = row.querySelector('.configure-cell').children[0];
+        fnHeaderCallback: function (row, data) {
+          var iconClass = 'configure-lnet-help';
+          var notification = row.querySelector('.' + iconClass);
 
-          $scope.safeApply(function () {
-            var link = $compile(template),
-              fragment = link($scope);
+          var hasMonitoredServer = data.some(function findMonitoredServer(item) {
+            return item.immutable_state;
+          });
 
-            fragment.bind('$destroy', function () {
-              $scope.safeApply(function () { $scope.$destroy(); }, $scope);
+          if (!hasMonitoredServer && notification) {
+            $(notification).trigger('$destroy');
+          } else if (hasMonitoredServer && !notification) {
+            notification = ('<i context-tooltip="configure_lnet_not_allowed" tooltip-placement="top"\
+ class="icon-question-sign %s"></i>').sprintf(iconClass);
 
-              fragment.unbind('$destroy');
+            generateFragment(notification, function whenDone(fragment) {
+              var configureLnetTableHead = row.querySelector('.configure-lnet-table-head .DataTables_sort_wrapper');
+              configureLnetTableHead.appendChild(fragment[0]);
             });
-          }, $scope);
+          }
+        },
+        fnRowCallback: function (row, data) {
+          var template = row.querySelector('.configure-cell').children[0];
 
           generateCommandDropdown.dataTableCallback(4)(row, data);
+
+          if (template)
+            generateFragment(template);
 
           return row;
         },
@@ -253,7 +293,7 @@
     <tr>
       <th width="84%">Hostname</th>
       <th width="13%"><a class='help_hover' data-topic='lnet_state'>LNet State</a></th>
-      <th width="1%">Configure LNet</th>
+      <th width="1%" class="configure-lnet-table-head">Configure LNet</th>
       <th width="1%"></th>
       <th width="1%"></th>
     </tr>

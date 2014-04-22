@@ -102,6 +102,7 @@ help_text = {
     'unload_lnet': 'If LNet is running, stop LNET and unload the LNet kernel module to ensure that it will be reloaded before any targets are started again.',
     'configure_lnet': 'Configure LNet on this host.',
     'enable_lnet': 'Enable LNet on this host.',
+    'configure_lnet_not_allowed': 'LNet can only be configured in managed mode.',
 
     'start_mdt': 'Start the metadata target (MDT).',
     'stop_mdt': 'Stop the MDT. When an MDT is stopped, the file system becomes unavailable until the MDT is started again. If an object reference is known to a client, the client can continue to access the object in the file system after the MDT is shut down, but will not be able to obtain new object references.',
