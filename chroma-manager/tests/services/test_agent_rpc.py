@@ -13,7 +13,7 @@ from tests.services.agent_http_client import AgentHttpClient
 from tests.utils import wait
 from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
-from chroma_core.services.job_scheduler import agent_rpc
+from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedHost, HostContactAlert, Command, LNetConfiguration, ClientCertificate
 from chroma_core.models import ServerProfile
@@ -29,7 +29,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
     functionality in JobScheduler.
     """
     SERVICES = ['http_agent', 'job_scheduler']
-    PLUGIN = agent_rpc.ACTION_MANAGER_PLUGIN_NAME
+    PLUGIN = AgentRpcMessenger.PLUGIN_NAME
 
     def __init__(self, *args, **kwargs):
         SupervisorTestCase.__init__(self, *args, **kwargs)
@@ -239,7 +239,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         # Start a job which should generate an action
         request_action = self._request_action()
 
-        command = self._wait_for_command(request_action.command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
+        command = self._wait_for_command(request_action.command_id, AgentRpcMessenger.SESSION_WAIT_TIMEOUT * 2)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -251,12 +251,12 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
         # Start a job which should generate an action
         request_action = self._request_action()
 
-        time.sleep(agent_rpc.SESSION_WAIT_TIMEOUT / 2)
+        time.sleep(AgentRpcMessenger.SESSION_WAIT_TIMEOUT / 2)
 
         session_id = self._open_sessions()
         self._handle_action(session_id, request_action.actions)
 
-        command = self._wait_for_command(request_action.command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
+        command = self._wait_for_command(request_action.command_id, AgentRpcMessenger.SESSION_WAIT_TIMEOUT * 2)
         self.assertFalse(command.errored)
         self.assertFalse(command.cancelled)
 
@@ -379,7 +379,7 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
         # The job_scheduler should have been messaged a termination of the session, and
         # in response to that should have errored the commands
-        command = self._wait_for_command(request_action.command_id, agent_rpc.SESSION_WAIT_TIMEOUT * 2)
+        command = self._wait_for_command(request_action.command_id, AgentRpcMessenger.SESSION_WAIT_TIMEOUT * 2)
         self.assertTrue(command.errored)
         self.assertFalse(command.cancelled)
 

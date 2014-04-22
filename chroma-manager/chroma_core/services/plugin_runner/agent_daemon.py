@@ -43,6 +43,7 @@ class Session(object):
 
 
 class AgentPluginHandler(object):
+
     """Handle messages sent from the agent.
 
     Similar to ScanDaemon, the main difference is that ScanDaemon polls plugin callbacks,
@@ -67,10 +68,7 @@ class AgentPluginHandler(object):
         self._plugin_name = plugin_name
         self._plugin_klass = storage_plugin_manager.get_plugin_class(plugin_name)
 
-        class PluginQueue(AgentRxQueue):
-            plugin = plugin_name
-
-        self._queue = PluginQueue()
+        self._queue = AgentRxQueue(self._plugin_name)
         # Disregard any old messages
         self._queue.purge()
 

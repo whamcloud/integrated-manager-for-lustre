@@ -32,16 +32,11 @@ from django.db import transaction
 log = log_register(__name__)
 
 
-LUSTRE_DEVICE_PLUGIN = 'lustre'
-
-
-class LustreAgentRx(AgentRxQueue):
-    plugin = LUSTRE_DEVICE_PLUGIN
-
-
 class Service(ChromaService):
+    PLUGIN_NAME = 'lustre'
+
     def __init__(self):
-        self._queue = LustreAgentRx()
+        self._queue = AgentRxQueue(Service.PLUGIN_NAME)
         self._queue.purge()
 
     def run(self):

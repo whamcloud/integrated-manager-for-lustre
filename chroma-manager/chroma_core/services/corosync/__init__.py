@@ -32,12 +32,6 @@ from chroma_core.services.queue import AgentRxQueue
 
 log = log_register(__name__)
 
-COROSYNC_PLUGIN_NAME = 'corosync'
-
-
-class CorosyncRxQueue(AgentRxQueue):
-    plugin = COROSYNC_PLUGIN_NAME
-
 
 class Service(ChromaService):
     """Corosync host offline detection service
@@ -50,6 +44,8 @@ class Service(ChromaService):
     drop older reports that come in late, so correct timing is critical.
     """
 
+    PLUGIN_NAME = 'corosync'
+
     def __init__(self):
 
         super(Service, self).__init__()
@@ -61,7 +57,7 @@ class Service(ChromaService):
         #  Holds each host seen as a key with a HostStatus value last set
         self._host_status = defaultdict(self.HostStatus)
 
-        self._queue = CorosyncRxQueue()
+        self._queue = AgentRxQueue(Service.PLUGIN_NAME)
 
     # Using transaction decorator to ensure that subsequent calls
     # see fresh data when polling the ManagedHost model.

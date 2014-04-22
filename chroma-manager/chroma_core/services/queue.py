@@ -87,11 +87,6 @@ class ServiceQueue(object):
 
 
 class AgentRxQueue(ServiceQueue):
-    """Specialization of ServiceQueue for receiving messages from agents:
-        the callback invoked depends on the message_type.  Instead of
-        setting the queue name, set the plugin name."""
-    plugin = None
-
     def __route_message(self, message):
         if message['type'] == 'DATA' and self.__data_callback:
             self.__data_callback(message['fqdn'], message['body'])
@@ -101,9 +96,12 @@ class AgentRxQueue(ServiceQueue):
             # Not a data message, and no session callback, drop.
             pass
 
-    def __init__(self):
+    def __init__(self, plugin):
+        """Specialization of ServiceQueue for receiving messages from agents:
+            the callback invoked depends on the message_type.  Instead of
+            setting the queue name, set the plugin name."""
         super(AgentRxQueue, self).__init__()
-        self.name = "agent_%s_rx" % self.plugin
+        self.name = "agent_%s_rx" % plugin
 
     def serve(self, data_callback = None, session_callback = None):
         """Data callback will receive only DATA mesages, being passed the fqdn and the body (i.e.

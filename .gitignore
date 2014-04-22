@@ -12,3 +12,4 @@ database.db
 dist/
 *.egg-info/
 node_modules
+simulator_state_*

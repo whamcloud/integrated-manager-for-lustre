@@ -30,27 +30,22 @@ from chroma_core.services.queue import AgentRxQueue
 
 from django.db import transaction
 import settings
+import dse
 
 
 log = log_register('syslog')
 
 
-SYSLOG_PLUGIN_NAME = 'syslog'
-
-
-class SyslogRxQueue(AgentRxQueue):
-    plugin = SYSLOG_PLUGIN_NAME
-
-
 class Service(ChromaService):
+    PLUGIN_NAME = 'syslog'
+
     def __init__(self):
         super(Service, self).__init__()
-        self._queue = SyslogRxQueue()
+        self._queue = AgentRxQueue(Service.PLUGIN_NAME)
         self._queue.purge()
         self._table_size = LogMessage.objects.count()
         self._parser = LogMessageParser()
 
-        import dse
         dse.patch_models()
 
     def _check_size(self):

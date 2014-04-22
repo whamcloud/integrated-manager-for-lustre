@@ -38,18 +38,6 @@ import settings
 
 log = log_register(__name__)
 
-# The name of the device plugin on the agent with which
-# this module will communicate
-ACTION_MANAGER_PLUGIN_NAME = 'action_runner'
-
-# If no action_runner session is present when trying to run
-# an action, wait this long for one to show up
-SESSION_WAIT_TIMEOUT = 30
-
-
-class AgentRunnerPluginRxQueue(AgentRxQueue):
-    plugin = ACTION_MANAGER_PLUGIN_NAME
-
 
 class ActionInFlight(object):
     def __init__(self, session_id, fqdn, action, args):
@@ -69,7 +57,7 @@ class ActionInFlight(object):
         return {
             'fqdn': self.fqdn,
             'type': 'DATA',
-            'plugin': ACTION_MANAGER_PLUGIN_NAME,
+            'plugin': AgentRpcMessenger.PLUGIN_NAME,
             'session_id': self.session_id,
             'session_seq': None,
             'body': {
@@ -84,7 +72,7 @@ class ActionInFlight(object):
         return {
             'fqdn': self.fqdn,
             'type': 'DATA',
-            'plugin': ACTION_MANAGER_PLUGIN_NAME,
+            'plugin': AgentRpcMessenger.PLUGIN_NAME,
             'session_id': self.session_id,
             'session_seq': None,
             'body': {
@@ -103,6 +91,14 @@ class AgentRpcMessenger(object):
     actions in progress.
     """
 
+    # The name of the device plugin on the agent with which
+    # this module will communicate
+    PLUGIN_NAME = 'action_runner'
+
+    # If no action_runner session is present when trying to run
+    # an action, wait this long for one to show up
+    SESSION_WAIT_TIMEOUT = 30
+
     def __init__(self):
         super(AgentRpcMessenger, self).__init__()
 
@@ -112,19 +108,19 @@ class AgentRpcMessenger(object):
         # FQDN to session
         self._sessions = {}
 
-        self._action_runner_rx_queue = AgentRunnerPluginRxQueue()
+        self._action_runner_rx_queue = AgentRxQueue(AgentRpcMessenger.PLUGIN_NAME)
         self._action_runner_rx_queue.purge()
 
         self._lock = threading.Lock()
 
     def run(self):
         try:
-            HttpAgentRpc().reset_plugin_sessions(ACTION_MANAGER_PLUGIN_NAME)
+            HttpAgentRpc().reset_plugin_sessions(AgentRpcMessenger.PLUGIN_NAME)
         except RpcTimeout:
             # Assume this means that the http_agent service isn't running: this
             # is acceptable, as our goal of there not being any sessions is
             # already the case.
-            log.warning("Unable to reset %s sessions" % ACTION_MANAGER_PLUGIN_NAME)
+            log.warning("Unable to reset %s sessions" % AgentRpcMessenger.PLUGIN_NAME)
 
         self._action_runner_rx_queue.serve(session_callback = self.on_rx)
         log.info("AgentRpcMessenger.complete")
@@ -242,7 +238,7 @@ class AgentRpcMessenger(object):
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
                     log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
                     self._abort_session(fqdn, self._sessions[fqdn])
-                    HttpAgentRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
+                    HttpAgentRpc().reset_session(fqdn, AgentRpcMessenger.PLUGIN_NAME, session_id)
                 elif fqdn in self._sessions:
                     log.info("AgentRpcMessenger.on_rx: good session %s/%s" % (fqdn, session_id))
                     # Find this RPC and complete it
@@ -256,7 +252,7 @@ class AgentRpcMessenger(object):
                 else:
                     log.info("AgentRpcMessenger.on_rx: unknown session %s/%s" % (fqdn, session_id))
                     # A session I never heard of?
-                    HttpAgentRpc().reset_session(fqdn, ACTION_MANAGER_PLUGIN_NAME, session_id)
+                    HttpAgentRpc().reset_session(fqdn, AgentRpcMessenger.PLUGIN_NAME, session_id)
 
     def _resend(self, rpc):
         log.debug("AgentRpcMessenger._resend: rpc %s in session %s" % (rpc.id, rpc.session_id))
@@ -273,8 +269,8 @@ class AgentRpcMessenger(object):
             log.info("AgentRpcMessenger._send: no session yet for %s" % fqdn)
             wait_count += 1
             time.sleep(1)
-            if wait_count > SESSION_WAIT_TIMEOUT:
-                log.error("No %s session for %s" % (ACTION_MANAGER_PLUGIN_NAME, fqdn))
+            if wait_count > AgentRpcMessenger.SESSION_WAIT_TIMEOUT:
+                log.error("No %s session for %s" % (AgentRpcMessenger.PLUGIN_NAME, fqdn))
                 raise AgentException(fqdn, action, args, "Could not contact server %s" % fqdn)
 
         with self._lock:
