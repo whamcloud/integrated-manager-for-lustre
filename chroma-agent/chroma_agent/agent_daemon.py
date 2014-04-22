@@ -174,7 +174,7 @@ def main():
             # constructor. Well, we could, but it would only work some
             # of the time and that would be even more awful.
             import chroma_agent.plugin_manager
-            chroma_agent.plugin_manager.EXCLUDED_PLUGINS += ['linux', 'corosync']
+            chroma_agent.plugin_manager.EXCLUDED_PLUGINS += ['corosync']
 
         agent_client = AgentClient(
             conf['url'] + "message/",

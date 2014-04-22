@@ -24,6 +24,7 @@ from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import shell
 from chroma_agent.utils import BlkId
+from chroma_agent import config
 
 import os
 import glob
@@ -44,6 +45,12 @@ class LinuxDevicePlugin(DevicePlugin):
         return os.listdir("/sys/block/")
 
     def _full_scan(self):
+        # If we are a worker node then return nothing because our devices are not of interest. This is a short term
+        # solution for HYD-3140. This plugin should really be loaded if it is not needed but for now this sorts out
+        # and issue with PluginAgentResources being in the linux plugin.
+        if config.get('settings', 'profile')['worker']:
+            return {}
+
         # Map of block devices major:minors to /dev/ path.
         block_devices = BlockDevices()
 
