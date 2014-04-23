@@ -49,13 +49,32 @@ class PolymorphicMetaclass(ModelBase):
             return ContentType.objects.get_for_id(self.content_type_id).model_class()
 
         def downcast(self):
+            """Lookup the concrete subclass of a StatefulObject by leveraging Django caching
+
+            If you have calling code that lands here, and really wants a fresh object,
+            consider making a DB query to fetch the latest copy.  For example
+                    model._base_manager.get(id=self.id)
+
+            See chroma_core.services.job_scheduler.job_scheduler.JobScheduler#available_transitions for an example.
+
+            """
+
+            # TODO: reconsider usefulness of MTI: https://jira.hpdd.intel.com/browse/HYD-1367
+            # TODO: review cache usage: https://jira.hpdd.intel.com/browse/HYD-3155
+
             model = self.downcast_class
-            if (model == self.__class__):
+            if model == self.__class__:
                 return self
+
+            # This returns the value of another attribute named
+            #    "_%s_cache" % model.__name__.lower() on self
+            # from cache; it hits db to fill cache if necessary
+            # See also:  https://docs.djangoproject.com/en/dev/topics/db/models/#multi-table-inheritance
+            # See also: django.db.models.fields.related.SingleRelatedObjectDescriptor#__get__
+            # BEWARE of this cache going stale, which will happen, like any cache, when an object has
+            # been sitting in it too long, such that it may have diverged in state from the DB.
+            # And, certainly, do not call downcast, and expect the an object to be any fresher.  Look it up in the DB.
             return getattr(self, model.__name__.lower())
-            # NB Use _base_manager to get a 'plain' Manager which is guaranteed
-            # not to filter any records out
-            return model._base_manager.get(id=self.id)
 
         if issubclass(dct.get('__metaclass__', type), PolymorphicMetaclass):
             dct['content_type'] = models.ForeignKey(ContentType, editable=False, null=True)

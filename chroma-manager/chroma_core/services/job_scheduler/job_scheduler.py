@@ -1385,8 +1385,7 @@ class JobScheduler(object):
     def _retrieve_stateful_object(obj_content_type_natural_key, object_id):
         """Get the stateful object from cache or DB"""
 
-        model_klass = ContentType.objects.get_by_natural_key(
-            *obj_content_type_natural_key).model_class()
+        model_klass = ContentType.objects.get_by_natural_key(*obj_content_type_natural_key).model_class()
         if issubclass(model_klass, ManagedTarget):
             stateful_object = ObjectCache.get_by_id(ManagedTarget, object_id)
         else:
@@ -1413,7 +1412,14 @@ class JobScheduler(object):
             transitions = defaultdict(list)
             for obj_key, obj_id in object_list:
                 try:
-                    stateful_object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
+                    # Hit the DB for the statefulobject (ManagedMgs, ManagedMdt, etc., avoiding all caches
+                    # Localize fixed for HYD-2714.  May chance again as HYD-3155 is resolved.
+                    model_klass = ContentType.objects.get_by_natural_key(*obj_key).model_class()
+                    stateful_object = model_klass.objects.get(pk=obj_id)
+
+                    ## Used to leverage the ObjectCache, but this suspect now:  HYD-3155
+                    # stateful_object = JobScheduler._retrieve_stateful_object(obj_key, obj_id)
+
                     log.debug("available_transitions object: %s, state: %s" % (stateful_object, stateful_object.state))
                 except ObjectDoesNotExist:
                     # Do not advertise transitions for an object that does not exist
