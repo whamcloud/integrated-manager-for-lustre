@@ -115,25 +115,23 @@ fi
 if [ -z "$JENKINS_PULL" ]; then
     JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
-# first fetch and install chroma 2.0.0.0
-#if [ $JENKINS_URL = http://hydra-1vm1.lab.whamcloud.com:8080 -o \
-#     $JENKINS_URL = http://hydra-1vm1.lab.whamcloud.com:8080/ ]; then
-    curl -k -O -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
-#else
-#    curl -k -O -u "jenkins-pull:${JENKINS_PULL}" "https://build.whamcloudlabs.com/job/chroma-blessed/47/arch=x86_64,distro=el6.4/artifact/chroma-bundles/ieel-1.0.0.tar.gz"
-#fi
+# first fetch and install chroma 2.0.2.0
+BUILD_JOB=chroma-blessed
+BUILD_NUM=62
+IEEL_FROM_VERSION=$(curl -s -k -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-.*gz\)<.*/\1/')
+curl -k -O -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
 
 # Install and setup old chroma manager
-scp ieel-1.0.0.tar.gz $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+scp $IEEL_FROM_VERSION $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
 yum -y install expect
 # Install from the installation package
 cd /tmp
-tar xzvf ieel-1.0.0.tar.gz
-cd ieel-1.0.0
+tar xzvf $IEEL_FROM_VERSION
+cd ${IEEL_FROM_VERSION%%.tar.gz}
 if $RHEL; then
-# need to hack out the repo check since it fails on EL6 in 2.0.0.0
+# need to hack out the repo check since it fails on EL6 in 2.0.2.0
 ed << \"EOF\" install
 /= _test_yum/s/,.*/ = True/
 wq
