@@ -20,6 +20,9 @@
 # express and approved by Intel in writing.
 
 
+from time import sleep
+from threading import Thread
+
 from os.path import isfile, expanduser
 
 # TODO: Refactor out this hard-coded stuff in favor of using templates
@@ -63,6 +66,20 @@ class fence_virsh(FenceAgent):
         else:
             raise RuntimeError("Neither password nor identity_file were supplied")
         self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-x'] + auth
+
+    def on(self):
+        """Override super.on to wait 15 seconds then process as usual.
+
+        Real servers start slower then virtual ones do.  This simulates the production
+        environment more closely.  This was introduced to prevent HYD-2889 from occuring
+        in the testing.
+        """
+
+        def delay_on():
+            sleep(15)
+            super(fence_virsh, self).on()
+
+        Thread(target=delay_on).start()
 
 
 class fence_ipmilan(FenceAgent):
