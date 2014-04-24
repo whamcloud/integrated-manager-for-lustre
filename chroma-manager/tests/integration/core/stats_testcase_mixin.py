@@ -97,8 +97,6 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         # Make sure client cache is flushed and check client count while we are at it
         starting_client_count = filesystem['client_count']
         self.remote_operations.unmount_filesystem(client, filesystem)
-        self.assert_fs_stat(filesystem_id, 'client_count', starting_client_count - 1)
-
         self.remote_operations.mount_filesystem(client, filesystem)
         self.assert_fs_stat(filesystem_id, 'client_count', starting_client_count)
 
