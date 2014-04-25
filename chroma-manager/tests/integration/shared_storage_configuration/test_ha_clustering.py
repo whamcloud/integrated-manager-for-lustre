@@ -22,19 +22,11 @@ class ChromaHaTestCase(ChromaIntegrationTestCase):
         self.wait_until_true(all_servers_up)
 
         self.EXPECTED_CLUSTER_COUNT = len(self.config_servers) / self.SERVERS_PER_HA_CLUSTER
-
-    def wait_for_cluster_count(self, count):
-        def cluster_count_matches(count):
-            clusters = self.get_list("/api/ha_cluster/")
-            return len(clusters) == count
-
-        self.wait_until_true(lambda: cluster_count_matches(count))
+        self.wait_for_items_length(lambda: self.get_list("/api/ha_cluster/"), self.EXPECTED_CLUSTER_COUNT)
 
 
 class TestHaClusters(ChromaHaTestCase):
     def test_ha_cluster_count(self):
-        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
-
         clusters = self.get_list("/api/ha_cluster/")
         server_count = len(self.config_servers)
 
@@ -48,8 +40,6 @@ class TestHaClusters(ChromaHaTestCase):
             self.assertEqual(len(clusters), 1)
 
     def test_ha_clusters_are_distinct(self):
-        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
-
         # Verify that each host only appears in a single HA cluster.
         # Stupid brute-force test... Don't want to use a graph
         # analysis library to verify its own results.
@@ -71,7 +61,6 @@ class TestHaClusterVolumes(ChromaHaTestCase):
     #    pass
 
     def test_api_rejects_multi_cluster_failover(self):
-        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
         # Make sure that we can't accidentally or otherwise set up
         # a primary/failover relationship across two HA clusters.
         clusters = self.get_list("/api/ha_cluster/")
@@ -100,7 +89,6 @@ class TestHaClusterVolumes(ChromaHaTestCase):
         self.assertEqual(response.status_code, 400, response.text)
 
     def test_volumes_assigned_to_single_clusters(self):
-        self.wait_for_cluster_count(self.EXPECTED_CLUSTER_COUNT)
         # A given volume should only be usable with nodes in a single HA
         # cluster. Allowing fully-meshed volumes to be usable across
         # multiple HA clusters will lead to weird and broken behavior
