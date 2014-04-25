@@ -645,7 +645,8 @@ class FakeServer(Persisted):
 
     def format_target(self, device = None, target_types = None, mgsnode = None, fsname = None, failnode = None, reformat = None, mkfsoptions = None, index = None):
         def mgs_key(mgsnode):
-            return ":".join([",".join(sorted(mgsnids)) for mgsnids in sorted(mgsnode)])   # Create a consistent mgs_key by sorting the nids
+            # Create a consistent mgs_key by sorting the nids
+            return ":".join(sorted([",".join(sorted(mgsnids)) for mgsnids in mgsnode]))
 
         if 'mgs' in target_types:
             label = "MGS"
