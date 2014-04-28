@@ -27,6 +27,7 @@
     UI_ROOT: document.baseURI,
     HELP_TEXT: window.HELP_TEXT,
     IS_RELEASE: window.IS_RELEASE,
+    SERVER_TIME_DIFF: window.SERVER_TIME_DIFF,
     VERSION: window.VERSION,
     BUILD: window.BUILD,
     BASE: '%s//%s'.sprintf(window.location.protocol, window.location.hostname),

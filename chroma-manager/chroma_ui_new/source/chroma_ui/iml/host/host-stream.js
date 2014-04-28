@@ -20,11 +20,19 @@
 // express and approved by Intel in writing.
 
 
-angular.module('host', ['stream'])
-.factory('HostStream', ['stream', 'replaceTransformer', function (stream, replaceTransformer) {
+(function () {
   'use strict';
 
-  return stream('host', 'httpGetList', {
-    transformers: [replaceTransformer]
-  });
-}]);
+  angular.module('host', ['stream'])
+    .factory('HostStream', ['stream', 'replaceTransformer', 'beforeStreamingDuration', HostStreamFactory]);
+
+  function HostStreamFactory(stream, replaceTransformer, beforeStreamingDuration) {
+    var HostStream = stream('host', 'httpGetList', {
+      transformers: [replaceTransformer]
+    });
+
+    HostStream.prototype.beforeStreaming = beforeStreamingDuration;
+
+    return HostStream;
+  }
+}());

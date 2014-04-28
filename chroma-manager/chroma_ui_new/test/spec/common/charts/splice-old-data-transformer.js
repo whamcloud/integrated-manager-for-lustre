@@ -1,38 +1,29 @@
 describe('splice old data transformer', function () {
   'use strict';
 
-  var spliceOldDataTransformer, stream, data, date;
+  beforeEach(module('charts', function ($provide) {
+    $provide.value('getServerMoment', jasmine.createSpy('getServerMoment').andReturn({
+      subtract: jasmine.createSpy('subtract')
+    }));
+  }));
 
-  beforeEach(module('charts'));
+  var spliceOldDataTransformer, getServerMoment, moment, stream;
 
-  mock.beforeEach(function () {
-    var moment = jasmine.createSpy('moment').andReturn({
-      subtract: jasmine.createSpy('subtract').andCallFake(function () {
-        return date;
-      })
-    });
-
-    return {
-      name: 'moment',
-      value: moment
-    };
-  });
-
-  beforeEach(inject(function (_spliceOldDataTransformer_) {
+  beforeEach(inject(function (_spliceOldDataTransformer_, _getServerMoment_, _moment_) {
     spliceOldDataTransformer = _spliceOldDataTransformer_;
-
-    data = [];
+    getServerMoment = _getServerMoment_;
+    moment = _moment_;
 
     stream = {
       size: 5,
       unit: 'minutes',
-      getter: jasmine.createSpy('getter').andCallFake(function () {
-        return data;
-      })
+      getter: jasmine.createSpy('getter')
     };
   }));
 
   it('should throw if unit is not passed', function () {
+    stream.getter.andReturn([]);
+
     expect(shouldThrow).toThrow('Stream.unit is required for the spliceOldDataTransfomer!');
 
     function shouldThrow () {
@@ -43,6 +34,8 @@ describe('splice old data transformer', function () {
   });
 
   it('should throw if size is not passed', function () {
+    stream.getter.andReturn([]);
+
     expect(shouldThrow).toThrow('Stream.size is required for the spliceOldDataTransfomer!');
 
     function shouldThrow () {
@@ -56,22 +49,24 @@ describe('splice old data transformer', function () {
     expect(shouldThrow).toThrow('Data not in expected format for spliceOldDataTransformer!');
 
     function shouldThrow () {
-      data = {};
+      stream.getter.andReturn({});
 
       spliceOldDataTransformer.call(stream);
     }
   });
 
   it('should remove old data values', function () {
-    data = [
+    var data = [
       {
         values: [
-          {x: new Date('12/10/2013')}
+          { x: new Date('12/10/2013') }
         ]
       }
     ];
 
-    date = new Date('12/11/2013');
+    stream.getter.andReturn(data);
+
+    getServerMoment.plan().subtract.andReturn(moment('12/11/2013'));
 
     spliceOldDataTransformer.call(stream, {});
 
@@ -79,36 +74,40 @@ describe('splice old data transformer', function () {
   });
 
   it('should keep newer data values', function () {
-    data = [
+    var data = [
       {
         values: [
-          {x: new Date('12/11/2013')}
+          { x: new Date('12/11/2013') }
         ]
       }
     ];
 
-    date = new Date('12/10/2013');
+    stream.getter.andReturn(data);
+
+    getServerMoment.plan().subtract.andReturn(moment('12/10/2013'));
 
     spliceOldDataTransformer.call(stream, {});
 
-    expect(data[0].values).toEqual([{x: new Date('12/11/2013')}]);
+    expect(data[0].values).toEqual([{ x: new Date('12/11/2013') }]);
   });
 
   it('should remove all old values', function () {
-    data = [
+    var data = [
       {
         values: [
-          {x: new Date('12/10/2013')},
-          {x: new Date('12/10/2013 23:59:59')},
-          {x: new Date('12/11/2013')}
+          { x: new Date('12/10/2013') },
+          { x: new Date('12/10/2013 23:59:59') },
+          { x: new Date('12/11/2013') }
         ]
       }
     ];
 
-    date = new Date('12/11/2013');
+    stream.getter.andReturn(data);
+
+    getServerMoment.plan().subtract.andReturn(moment('12/11/2013'));
 
     spliceOldDataTransformer.call(stream, {});
 
-    expect(data[0].values).toEqual([{x: new Date('12/11/2013')}]);
+    expect(data[0].values).toEqual([{ x: new Date('12/11/2013') }]);
   });
 });

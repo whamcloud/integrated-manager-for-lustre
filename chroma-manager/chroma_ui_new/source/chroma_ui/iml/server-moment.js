@@ -20,40 +20,29 @@
 // express and approved by Intel in writing.
 
 
-angular.module('readWriteBandwidth', ['charts', 'stream'])
-  .controller('ReadWriteBandwidthCtrl',
-    ['$scope', 'ReadWriteBandwidthStream', 'DURATIONS', 'formatBytes', ReadWriteBandwidthCtrl]);
-
-function ReadWriteBandwidthCtrl($scope, ReadWriteBandwidthStream, DURATIONS, formatBytes) {
+(function () {
   'use strict';
 
-  $scope.readWriteBandwidth = {
-    data: [],
-    onUpdate: function onUpdate(unit, size) {
-      readWriteBandwidthStream.setDuration(unit, size);
-    },
-    options: {
-      setup: function setup(chart) {
-        chart.useInteractiveGuideline(true);
+  angular.module('serverMoment', [])
+    .factory('getServerMoment', ['moment', 'SERVER_TIME_DIFF', getServerMomentFactory]);
 
-        chart.yAxis.tickFormat(function (number) {
-          if (number === 0) return number;
-
-          return formatBytes(Math.abs(number), 3) + '/s';
-        });
-
-        chart.isArea(true);
-
-        chart.xAxis.showMaxMin(false);
-      }
-    },
-    unit: DURATIONS.MINUTES,
-    size: 10
-  };
-
-  var params = $scope.readWriteBandwidthParams || $scope.params || {};
-
-  var readWriteBandwidthStream = ReadWriteBandwidthStream.setup('readWriteBandwidth.data', $scope, params);
-
-  readWriteBandwidthStream.setDuration($scope.readWriteBandwidth.unit, $scope.readWriteBandwidth.size);
-}
+  /**
+   * Returns a getServerMoment function.
+   * @param {Object} moment
+   * @param {String} SERVER_TIME_DIFF
+   * @returns {Function}
+   */
+  function getServerMomentFactory(moment, SERVER_TIME_DIFF) {
+    /**
+     * Creates a new moment with forwarded arguments.
+     * The moment is then updated with SERVER_TIME_DIFF
+     * and returned.
+     * @returns {Object}
+     */
+    return function getServerMoment() {
+      return moment
+        .apply(moment, arguments)
+        .add(SERVER_TIME_DIFF);
+    };
+  }
+}());

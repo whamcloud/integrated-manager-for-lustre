@@ -2,35 +2,24 @@ describe('read write bandwidth stream', function () {
   'use strict';
 
   var ReadWriteBandwidthStream, stream, spliceOldDataTransformer, appendOrReplaceDataTransformer,
-    readWriteBandwidthTransformer, streamDurationMixin;
+    readWriteBandwidthTransformer;
 
-  beforeEach(module('readWriteBandwidth'));
-
-  mock.beforeEach(
-    function createStreamMock() {
-      stream = jasmine.createSpy('stream').andCallFake(function () {
-        return function streamInstance() {};
-      });
-
-      return {
-        name: 'stream',
-        value: stream
-      };
+  beforeEach(module('readWriteBandwidth', function ($provide) {
+    $provide.value('stream', jasmine.createSpy('stream').andCallFake(function () {
+      return function ReadWriteBandwidthStream () {};
+    }));
+  }, {
+    streamDurationMixin: {
+      fakeMethod: function fakeMethod() {}
     },
-    function createStreamDurationMixinMock() {
-      streamDurationMixin = {
-        fakeMethod: function () {}
-      };
+    spliceOldDataTransformer: jasmine.createSpy('spliceOldDataTransformer'),
+    appendOrReplaceDataTransformer: jasmine.createSpy('appendOrReplaceDataTransformer'),
+    mdoTransformer: jasmine.createSpy('mdoTransformer')
+  }));
 
-      return {
-        name: 'streamDurationMixin',
-        value: streamDurationMixin
-      };
-    }
-  );
-
-  beforeEach(inject(function (_ReadWriteBandwidthStream_, _spliceOldDataTransformer_,
+  beforeEach(inject(function (_stream_, _ReadWriteBandwidthStream_, _spliceOldDataTransformer_,
                               _readWriteBandwidthTransformer_, _appendOrReplaceDataTransformer_) {
+    stream = _stream_;
     ReadWriteBandwidthStream = _ReadWriteBandwidthStream_;
     spliceOldDataTransformer = _spliceOldDataTransformer_;
     readWriteBandwidthTransformer = _readWriteBandwidthTransformer_;

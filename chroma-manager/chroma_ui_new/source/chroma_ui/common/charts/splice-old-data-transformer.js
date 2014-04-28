@@ -20,58 +20,58 @@
 // express and approved by Intel in writing.
 
 
-angular.module('charts').factory('spliceOldDataTransformer', ['moment', spliceOldDataTransformerFactory]);
-
-/**
- * This transformer splices out data older than the current duration.
- */
-function spliceOldDataTransformerFactory (moment) {
+(function () {
   'use strict';
 
-  return function spliceOldDataTransformer (resp) {
-    var data = this.getter(),
-      errorString = '%s is required for the spliceOldDataTransfomer!';
+  angular.module('charts').factory('spliceOldDataTransformer', ['getServerMoment', spliceOldDataTransformerFactory]);
 
-    if (!Array.isArray(data))
-      throw new Error('Data not in expected format for spliceOldDataTransformer!');
+  /**
+   * This transformer splices out data older than the current duration.
+   */
+  function spliceOldDataTransformerFactory (getServerMoment) {
+    return function spliceOldDataTransformer (resp) {
+      var data = this.getter();
+      var errorString = '%s is required for the spliceOldDataTransfomer!';
 
-    if(this.unit == null)
-      throw new Error(errorString.sprintf('Stream.unit'));
+      if (!Array.isArray(data))
+        throw new Error('Data not in expected format for spliceOldDataTransformer!');
 
-    if (this.size == null)
-      throw new Error(errorString.sprintf('Stream.size'));
+      if(this.unit == null)
+        throw new Error(errorString.sprintf('Stream.unit'));
 
-    var start = moment().subtract(this.unit, this.size).valueOf();
+      if (this.size == null)
+        throw new Error(errorString.sprintf('Stream.size'));
 
-    var deleteSeries = [];
+      var start = getServerMoment().subtract(this.unit, this.size).valueOf();
 
-    data.forEach(function (item, index) {
-      var deleteCount = 0;
+      var deleteSeries = [];
 
-      item.values.some(function (value) {
-        if (value.x.valueOf() < start) {
-          deleteCount += 1;
+      data.forEach(function (item, index) {
+        var deleteCount = 0;
 
-          return false;
-        }
+        item.values.some(function (value) {
+          if (value.x.valueOf() < start) {
+            deleteCount += 1;
 
-        return true;
+            return false;
+          }
+
+          return true;
+        });
+
+        if (deleteCount > 0)
+          item.values.splice(0, deleteCount);
+
+        // If values is empty, mark series for deletion
+        if (item.values.length === 0)
+          deleteSeries.push(index);
       });
 
-      if (deleteCount > 0)
-        item.values.splice(0, deleteCount);
+      deleteSeries.forEach(function spliceSeries(index) {
+        data.splice(index, 1);
+      });
 
-      // If values is empty, mark series for deletion
-      if (item.values.length === 0)
-        deleteSeries.push(index);
-    });
-
-    deleteSeries.forEach(function spliceSeries(index) {
-      data.splice(index, 1);
-    });
-
-    return resp;
-  };
-}
-
-
+      return resp;
+    };
+  }
+}());

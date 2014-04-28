@@ -25,8 +25,6 @@
 
 var url = require('url'),
   uriTemplate = require('uritemplate'),
-  moment = require('moment'),
-  dotty = require('dotty'),
   _ = require('lodash'),
   jsonMask = require('json-mask');
 
@@ -98,23 +96,12 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
 
   /**
    * The default implementation for GETting metrics
-   * Converts a sliding window duration in qs.unit, qs.size to qs.begin, qs.end
    * This could probably be mixed in instead.
    * @param {Object} params
    * @returns {Q.promise}
    */
   Resource.prototype.__httpGetMetrics = function __httpGetMetrics (params) {
-    var unit = dotty.get(params, 'qs.unit');
-    var size = dotty.get(params, 'qs.size');
-
     params = _.cloneDeep(params || {});
-
-    if (size != null && unit != null) {
-      var end = moment().utc();
-
-      dotty.put(params, 'qs.end', end.toISOString());
-      dotty.put(params, 'qs.begin', end.subtract(unit, size).toISOString());
-    }
 
     var requestParams = {
       extraPath: 'metric'

@@ -19,6 +19,13 @@
     window.IS_RELEASE = {{IS_RELEASE|yesno:"true,false"}};
     window.VERSION = '{{VERSION}}';
     window.BUILD = '{{BUILD}}';
+    // How far ahead (or behind) the browser is from the server in milliseconds.
+    // Note: this is not completely accurate as server and client rendering times will push the diff to at least
+    // a second. However, if we consistently use this diff when performing operations that rely on
+    // server time, it should be close enough.
+    // Why are we doing this?: In customer installs, the ntp server is optional, meaning server time can be
+    // arbitrary.
+    window.SERVER_TIME_DIFF = new Date('{{server_time|safe}}' + ' +00:00') - new Date();
   </script>
 </head>
 <body ng-app="iml">

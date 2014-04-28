@@ -1,11 +1,10 @@
 'use strict';
 
-var sinon = require('sinon');
 var Q = require('q');
 var resourceFactory = require('../../../resources/resource');
 
 describe('resource', function () {
-  var Resource, conf, request, requestInstance, logger, log, clock;
+  var Resource, conf, request, requestInstance, logger, log;
 
   beforeEach(function () {
     spyOn(Q, 'ninvoke').andCallThrough();
@@ -111,19 +110,11 @@ describe('resource', function () {
       });
 
       describe('metrics', function () {
-        beforeEach(function () {
-          clock = sinon.useFakeTimers(1330688329321);
-        });
-
-        afterEach(function () {
-          clock.restore();
-        });
-
         it('should provide a httpGetMetrics method', function () {
           var params = {
             qs: {
-              size: 10,
-              unit: 'minutes'
+              end: '2012-03-02T11:38:49.321Z',
+              begin: '2012-03-02T11:28:49.321Z'
             }
           };
 
@@ -132,9 +123,7 @@ describe('resource', function () {
           expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, 'get', {
             qs: {
               end: '2012-03-02T11:38:49.321Z',
-              begin: '2012-03-02T11:28:49.321Z',
-              size: 10,
-              unit: 'minutes'
+              begin: '2012-03-02T11:28:49.321Z'
             }
           });
         });
@@ -143,8 +132,8 @@ describe('resource', function () {
           var params = {
             id: 5,
             qs: {
-              size: 10,
-              unit: 'minutes'
+              end: '2012-03-02T11:38:49.321Z',
+              begin: '2012-03-02T11:28:49.321Z'
             }
           };
 

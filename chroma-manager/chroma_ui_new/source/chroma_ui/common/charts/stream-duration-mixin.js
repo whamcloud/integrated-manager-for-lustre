@@ -20,7 +20,7 @@
 // express and approved by Intel in writing.
 
 
-angular.module('charts').factory('streamDurationMixin', ['d3', function (d3) {
+angular.module('charts').factory('streamDurationMixin', ['getServerMoment', 'd3', function (getServerMoment, d3) {
   'use strict';
 
   return {
@@ -32,15 +32,8 @@ angular.module('charts').factory('streamDurationMixin', ['d3', function (d3) {
     setDuration: function setDuration (unit, size) {
       this.unit = unit;
       this.size = size;
-
-      var params = {
-        qs: {
-          unit: unit,
-          size: size
-        }
-      };
-
-      this.updateParams(params);
+      this.updatedDuration = true;
+      this.restart();
     },
     /**
      * Mutates params for a full refresh or an update.
@@ -51,21 +44,23 @@ angular.module('charts').factory('streamDurationMixin', ['d3', function (d3) {
     beforeStreaming: function beforeStreaming(method, params, cb) {
       var data = this.getter();
 
-      // If we changed the duration or we don't have any data
-      if ((params.qs.unit && params.qs.size) || data.length === 0) {
+      var usableValues = _(data).pluck('values').find(function (values) {
+        return Array.isArray(values) && values.length > 1;
+      });
+
+      // If we updated the duration or we don't have usable values
+      if (this.updatedDuration || !usableValues) {
         delete params.qs.update;
-        delete params.qs.begin;
-        delete params.qs.end;
+        this.updatedDuration = false;
 
-        params.qs.size = this.size;
-        params.qs.unit = this.unit;
+        var end = getServerMoment().milliseconds(0);
 
-        cb(method, _.cloneDeep(params));
+        params.qs.end = end.toISOString();
+        params.qs.begin = end.subtract(this.size, this.unit).toISOString();
 
-        delete params.qs.size;
-        delete params.qs.unit;
+        cb(method, params);
       } else {
-        var extent = d3.extent(data[0].values, function (d) { return d.x; });
+        var extent = d3.extent(usableValues, function (d) { return d.x; });
 
         params.qs.update = true;
         params.qs.begin = extent[0].toISOString();

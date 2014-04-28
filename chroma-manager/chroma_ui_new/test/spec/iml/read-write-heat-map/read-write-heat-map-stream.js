@@ -1,17 +1,27 @@
 describe('read write heat map stream', function () {
   'use strict';
 
-  var ReadWriteHeatMapStream, stream, readWriteHeatMapTransformer, replaceTransformer;
+  beforeEach(module('readWriteHeatMap', function ($provide) {
+    $provide.value('stream', jasmine.createSpy('stream').andCallFake(function () {
+      return function ReadWriteHeatMapStream () {
+        this.getter = jasmine.createSpy('getter');
+      };
+    }));
+  }, {
+    replaceTransformer: jasmine.createSpy('replaceTransformer'),
+    readWriteHeatMapTransformer: jasmine.createSpy('readWriteHeatMapTransformer'),
+    beforeStreamingDuration: jasmine.createSpy('beforeStreamingDuration')
+  }));
 
-  beforeEach(module('readWriteHeatMap'));
+  var ReadWriteHeatMapStream, stream, readWriteHeatMapTransformer, replaceTransformer, beforeStreamingDuration;
 
-  mock.beforeEach('stream');
-
-  beforeEach(inject(function (_ReadWriteHeatMapStream_, _stream_, _readWriteHeatMapTransformer_, _replaceTransformer_) {
+  beforeEach(inject(function (_ReadWriteHeatMapStream_, _stream_, _readWriteHeatMapTransformer_, _replaceTransformer_,
+                              _beforeStreamingDuration_) {
     ReadWriteHeatMapStream = _ReadWriteHeatMapStream_;
     stream = _stream_;
     readWriteHeatMapTransformer = _readWriteHeatMapTransformer_;
     replaceTransformer = _replaceTransformer_;
+    beforeStreamingDuration = _beforeStreamingDuration_;
   }));
 
   it('should create a stream to retrieve ost read write metrics and process them', function () {
@@ -27,6 +37,10 @@ describe('read write heat map stream', function () {
     };
 
     expect(stream).toHaveBeenCalledWith('targetostmetrics', 'httpGetOstMetrics', config);
+  });
+
+  it('should setup before streaming for duration', function () {
+    expect(ReadWriteHeatMapStream.prototype.beforeStreaming).toBe(beforeStreamingDuration);
   });
 
   describe('use', function () {

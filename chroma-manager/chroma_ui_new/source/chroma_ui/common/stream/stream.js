@@ -239,6 +239,20 @@
     }
   }
 
+  angular.module('stream').factory('beforeStreamingDuration', ['getServerMoment', function (getServerMoment) {
+    return function beforeStreaming(method, params, makeRequest) {
+      if (!params.qs || !params.qs.unit)
+        return makeRequest(method, params);
+
+      var end = getServerMoment().milliseconds(0);
+
+      params.qs.end = end.toISOString();
+      params.qs.begin = end.subtract(params.qs.size, params.qs.unit).toISOString();
+
+      makeRequest(method, params);
+    };
+  }]);
+
   angular.module('immutableStream', []).factory('immutableStream', [immutableStreamFactory]);
 
   /**

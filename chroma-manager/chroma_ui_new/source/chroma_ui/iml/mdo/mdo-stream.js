@@ -20,26 +20,28 @@
 // express and approved by Intel in writing.
 
 
-angular.module('mdo').factory('MdoStream', ['stream', 'mdoTransformer',
-  'spliceOldDataTransformer', 'appendOrReplaceDataTransformer', 'streamDurationMixin', mdoStreamFactory]);
-
-function mdoStreamFactory(stream, mdoTransformer,
-                          spliceOldDataTransformer, appendOrReplaceDataTransformer, streamDurationMixin) {
+(function () {
   'use strict';
 
-  var MdoStream = stream('target', 'httpGetMetrics', {
-    params: {
-      qs: {
-        reduce_fn: 'sum',
-        kind: 'MDT',
-        metrics: 'stats_close,stats_getattr,stats_getxattr,stats_link,stats_mkdir,stats_mknod,stats_open,\
+  angular.module('mdo').factory('MdoStream', ['stream', 'mdoTransformer',
+    'spliceOldDataTransformer', 'appendOrReplaceDataTransformer', 'streamDurationMixin', mdoStreamFactory]);
+
+  function mdoStreamFactory(stream, mdoTransformer,
+                            spliceOldDataTransformer, appendOrReplaceDataTransformer, streamDurationMixin) {
+    var MdoStream = stream('target', 'httpGetMetrics', {
+      params: {
+        qs: {
+          reduce_fn: 'sum',
+          kind: 'MDT',
+          metrics: 'stats_close,stats_getattr,stats_getxattr,stats_link,stats_mkdir,stats_mknod,stats_open,\
 stats_rename,stats_rmdir,stats_setattr,stats_statfs,stats_unlink'
-      }
-    },
-    transformers: [spliceOldDataTransformer, mdoTransformer, appendOrReplaceDataTransformer]
-  });
+        }
+      },
+      transformers: [spliceOldDataTransformer, mdoTransformer, appendOrReplaceDataTransformer]
+    });
 
-  _.extend(MdoStream.prototype, streamDurationMixin);
+    _.extend(MdoStream.prototype, streamDurationMixin);
 
-  return MdoStream;
-}
+    return MdoStream;
+  }
+}());

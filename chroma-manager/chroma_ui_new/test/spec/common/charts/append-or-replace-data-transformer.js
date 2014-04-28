@@ -1,39 +1,23 @@
 describe('append or replace data transformer', function () {
   'use strict';
 
-  var appendOrReplaceDataTransformer, stream, resp, replaceTransformer, appendDataTransformer;
+  var appendOrReplaceDataTransformer, resp, replaceTransformer, appendDataTransformer;
 
-  beforeEach(module('charts'));
+  beforeEach(module('charts', {
+    replaceTransformer: jasmine.createSpy('replaceTransformer'),
+    appendDataTransformer: jasmine.createSpy('appendDataTransformer')
+  }));
 
-  mock.beforeEach(
-    function createReplaceTransformerMock() {
-      replaceTransformer = jasmine.createSpy('replaceTransformer');
-
-      return {
-        name: 'replaceTransformer',
-        value: replaceTransformer
-      };
-    },
-    function createAppendDataTransformerMock() {
-      appendDataTransformer = jasmine.createSpy('appendDataTransformer');
-
-      return {
-        name: 'appendDataTransformer',
-        value: appendDataTransformer
-      };
-    }
-  );
-
-  beforeEach(inject(function (_appendOrReplaceDataTransformer_) {
+  beforeEach(inject(function (_appendOrReplaceDataTransformer_, _appendDataTransformer_, _replaceTransformer_) {
     appendOrReplaceDataTransformer = _appendOrReplaceDataTransformer_;
+    appendDataTransformer = _appendDataTransformer_;
+    replaceTransformer = _replaceTransformer_;
 
     resp = {
       params: {
         qs: {}
       }
     };
-
-    stream = {};
   }));
 
   it('should throw if resp.params.qs is not an object', function () {
@@ -42,20 +26,19 @@ describe('append or replace data transformer', function () {
     function shouldThrow () {
       resp.params.qs = [];
 
-      appendOrReplaceDataTransformer.call(stream, resp);
+      appendOrReplaceDataTransformer.call({}, resp);
     }
   });
 
-  it('should call the replace transformer if unit and size are set', function () {
-    resp.params.qs.unit = 'minutes';
-    resp.params.qs.size = '25';
-
+  it('should call the replace transformer if update is falsly', function () {
     appendOrReplaceDataTransformer(resp);
 
     expect(replaceTransformer).toHaveBeenCalledOnceWith(resp);
   });
 
-  it('should call the append transformer if unit and size are not set', function () {
+  it('should call the append transformer if update is true', function () {
+    resp.params.qs.update = true;
+
     appendOrReplaceDataTransformer(resp);
 
     expect(appendDataTransformer).toHaveBeenCalledOnceWith(resp);

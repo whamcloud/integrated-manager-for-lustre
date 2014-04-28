@@ -27,7 +27,7 @@
 
   function lineChart (moment, dateTicks, baseChart) {
     return baseChart({
-      generateChart: function (nv) {
+      generateChart: function generateChart(nv) {
         return nv.models.lineChart();
       },
       onUpdate: function onUpdate(chart, data) {

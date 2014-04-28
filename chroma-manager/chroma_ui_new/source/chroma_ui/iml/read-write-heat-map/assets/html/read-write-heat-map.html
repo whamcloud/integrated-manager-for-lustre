@@ -3,7 +3,7 @@
   <div class="controls">
     <duration-picker start-unit="{{ readWriteHeatMap.unit }}" start-size="{{ readWriteHeatMap.size }}" on-update="readWriteHeatMap.onUpdate(unit, size)"></duration-picker>
     <a full-screen-btn class="btn btn-primary btn-xs"></a>
-    <div class="btn-group">
+    <div class="btn-group read-write-toggle">
       <button type="button" ng-click="readWriteHeatMap.toggle(readWriteHeatMap.TYPES.READ)" class="btn btn-default btn-xs" ng-model="readWriteHeatMap.type" btn-radio="'stats_read_bytes'">Read</button>
       <button type="button" ng-click="readWriteHeatMap.toggle(readWriteHeatMap.TYPES.WRITE)" class="btn btn-default btn-xs" ng-model="readWriteHeatMap.type" btn-radio="'stats_write_bytes'">Write</button>
     </div>

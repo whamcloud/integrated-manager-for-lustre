@@ -23,5 +23,6 @@
 (function () {
   'use strict';
 
-  angular.module('charts', ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame']);
+  angular.module('charts',
+    ['d3', 'nv', 'moment', 'iml-popover', 'pasvaz.bindonce', 'stream', 'requestAnimationFrame', 'serverMoment']);
 }());

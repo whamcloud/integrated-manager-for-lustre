@@ -20,25 +20,26 @@
 // express and approved by Intel in writing.
 
 
-angular.module('charts').factory('appendOrReplaceDataTransformer',
-  ['replaceTransformer', 'appendDataTransformer',  appendOrReplaceDataTransformerFactory]);
-
-/**
- * This transformer will replace or append data points depending on the resp query.
- */
-function appendOrReplaceDataTransformerFactory(replaceTransformer, appendDataTransformer) {
+(function () {
   'use strict';
 
-  return function appendOrReplaceDataTransformer(resp) {
-    if (!_.isPlainObject(resp.params.qs))
-      throw new Error('resp.params.qs not in expected format for appendOrReplaceDataTransformer!');
+  angular.module('charts').factory('appendOrReplaceDataTransformer',
+    ['replaceTransformer', 'appendDataTransformer',  appendOrReplaceDataTransformerFactory]);
 
-    if (resp.params.qs.unit && resp.params.qs.size) {
-      replaceTransformer.call(this, resp);
-    } else {
-      appendDataTransformer.call(this, resp);
-    }
-  };
-}
+  /**
+   * This transformer will replace or append data points depending on the resp query.
+   * @param {Function} replaceTransformer
+   * @param {Function} appendDataTransformer
+   */
+  function appendOrReplaceDataTransformerFactory(replaceTransformer, appendDataTransformer) {
+    return function appendOrReplaceDataTransformer(resp) {
+      if (!_.isPlainObject(resp.params.qs))
+        throw new Error('resp.params.qs not in expected format for appendOrReplaceDataTransformer!');
 
-
+      if (resp.params.qs.update)
+        appendDataTransformer.call(this, resp);
+      else
+        replaceTransformer.call(this, resp);
+    };
+  }
+}());

@@ -1,36 +1,24 @@
 describe('mds stream', function () {
   'use strict';
 
-  var MdsStream, stream, spliceOldDataTransformer, appendOrReplaceDataTransformer, mdsTransformer,
-    streamDurationMixin;
+  var MdsStream, stream, spliceOldDataTransformer, appendOrReplaceDataTransformer, mdsTransformer;
 
-  beforeEach(module('mds'));
-
-  mock.beforeEach(
-    function createStreamMock() {
-      stream = jasmine.createSpy('stream').andCallFake(function () {
-        return function streamInstance() {};
-      });
-
-      return {
-        name: 'stream',
-        value: stream
-      };
+  beforeEach(module('mds', function ($provide) {
+    $provide.value('stream', jasmine.createSpy('stream').andCallFake(function () {
+      return function MdsStream () {};
+    }));
+  }, {
+    streamDurationMixin: {
+      fakeMethod: function fakeMethod() {}
     },
-    function createStreamDurationMixinMock() {
-      streamDurationMixin = {
-        fakeMethod: function () {}
-      };
+    spliceOldDataTransformer: jasmine.createSpy('spliceOldDataTransformer'),
+    appendOrReplaceDataTransformer: jasmine.createSpy('appendOrReplaceDataTransformer'),
+    mdoTransformer: jasmine.createSpy('mdoTransformer')
+  }));
 
-      return {
-        name: 'streamDurationMixin',
-        value: streamDurationMixin
-      };
-    }
-  );
-
-  beforeEach(inject(function (_MdsStream_, _spliceOldDataTransformer_,
+  beforeEach(inject(function (_stream_, _MdsStream_, _spliceOldDataTransformer_,
                               _mdsTransformer_, _appendOrReplaceDataTransformer_) {
+    stream = _stream_;
     MdsStream = _MdsStream_;
     spliceOldDataTransformer = _spliceOldDataTransformer_;
     mdsTransformer = _mdsTransformer_;

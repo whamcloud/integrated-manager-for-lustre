@@ -29,10 +29,10 @@
   });
 
   angular.module('readWriteHeatMap').factory('ReadWriteHeatMapStream', ['stream', 'readWriteHeatMapTransformer',
-    'replaceTransformer', 'readWriteHeatMapTypes', readWriteHeatMapFactory]);
+    'replaceTransformer', 'readWriteHeatMapTypes', 'beforeStreamingDuration', readWriteHeatMapFactory]);
 
   function readWriteHeatMapFactory(stream, readWriteHeatMapTransformer,
-                                   replaceTransformer, readWriteHeatMapTypes) {
+                                   replaceTransformer, readWriteHeatMapTypes, beforeStreamingDuration) {
     var ReadWriteHeatMapStream = stream('targetostmetrics', 'httpGetOstMetrics', {
       params: {
         qs: {
@@ -73,6 +73,8 @@
           }, this);
         }, this);
     };
+
+    ReadWriteHeatMapStream.prototype.beforeStreaming = beforeStreamingDuration;
 
     ReadWriteHeatMapStream.TYPES = readWriteHeatMapTypes;
 

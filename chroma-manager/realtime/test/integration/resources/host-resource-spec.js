@@ -55,8 +55,8 @@ describe('host channel', function () {
   it('should provide a httpGetMetrics method', function (done) {
     var params = {
       qs: {
-        unit: 'minutes',
-        size: 10,
+        end: '2012-03-02T11:38:49.321Z',
+        begin: '2012-03-02T11:28:49.321Z',
         metrics: 'stats_close'
       }
     };

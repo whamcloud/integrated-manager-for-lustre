@@ -326,6 +326,81 @@ describe('immutable stream', function () {
   });
 });
 
+describe('beforeStreamingDuration', function () {
+  'use strict';
+
+  beforeEach(module('stream', 'mockServerMoment'));
+
+  var getServerMoment, beforeStreamingDuration, makeRequest;
+
+  beforeEach(inject(function (_getServerMoment_, _beforeStreamingDuration_) {
+    getServerMoment = _getServerMoment_;
+    beforeStreamingDuration = _beforeStreamingDuration_;
+    makeRequest = jasmine.createSpy('makeRequest');
+  }));
+
+  it('should not add begin and end if there is no querystring', function () {
+    var makeRequest = jasmine.createSpy('makeRequest');
+
+    beforeStreamingDuration('foo', {}, makeRequest);
+
+    expect(makeRequest).toHaveBeenCalledOnceWith('foo', {});
+  });
+
+  it('should set the server moment milliseconds to zero', function () {
+    beforeStreamingDuration('foo', {
+      qs: {
+        size: 10,
+        unit: 'minutes'
+      }
+    }, makeRequest);
+
+    expect(getServerMoment.plan().milliseconds).toHaveBeenCalledOnceWith(0);
+  });
+
+  it('should subtract size and unit', function () {
+    beforeStreamingDuration('foo', {
+      qs: {
+        size: 10,
+        unit: 'minutes'
+      }
+    }, makeRequest);
+
+    expect(getServerMoment.plan().subtract).toHaveBeenCalledOnceWith(10, 'minutes');
+  });
+
+  it('should add begin and end to querystring', function () {
+    var end = '2014-04-29T05:33:38.533Z';
+    var begin = '2014-04-29T05:23:38.533Z';
+
+    getServerMoment.plan().toISOString.andCallFake(function () {
+      /*jshint validthis: true */
+      switch (this.toISOString.callCount) {
+        case 1:
+          return end;
+        case 2:
+          return begin;
+      }
+    });
+
+    beforeStreamingDuration('foo', {
+      qs: {
+        size: 10,
+        unit: 'minutes'
+      }
+    }, makeRequest);
+
+    expect(makeRequest).toHaveBeenCalledOnceWith('foo', {
+      qs: {
+        size: 10,
+        unit: 'minutes',
+        begin: begin,
+        end: end
+      }
+    });
+  });
+});
+
 describe('streams', function () {
   'use strict';
 
