@@ -28,6 +28,9 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 TESTS=${TESTS:-"tests/integration/installation_and_upgrade/"}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
+
+trap "set +e; echo 'Collecting reports...'; scp root@$TEST_RUNNER:~/test_report*.xml \"$PWD/test_reports/\"" EXIT
+
 echo "Beginning installation and setup..."
 
 # put some keys on the nodes for easy access by developers
@@ -256,10 +259,5 @@ if [ -d /var/lib/chroma ]; then
     ls -l /var/lib/chroma
     exit 1
 fi"
-
-echo "Collecting reports..."
-set +e
-
-scp root@$TEST_RUNNER:~/test_report*.xml $PWD/test_reports/
 
 exit 0
