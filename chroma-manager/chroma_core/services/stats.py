@@ -21,6 +21,7 @@
 
 
 import traceback
+from django import db
 from django.utils import dateparse
 from chroma_core.models import Stats
 from chroma_core.services import ChromaService, log_register, queue
@@ -45,6 +46,9 @@ class Service(ChromaService):
     def insert(self, samples):
         try:
             outdated = Stats.insert((id, dateparse.parse_datetime(dt), value) for id, dt, value in samples)
+        except db.IntegrityError:
+            log.error("Duplicate stats insert: " + db.connection.queries[-1]['sql'])
+            db.transaction.rollback()  # allow future stats to still work
         except:
             log.error("Error handling stats insert: " + traceback.format_exc())
         else:

@@ -224,8 +224,6 @@ class Stats(list):
                     points = list(model.reduce(points))
                     if points:
                         stats[id] = points
-                    else:  # ensure query isn't repeated on cache miss
-                        model.cache[id].append(Point(stop - step, 0.0, 0))
             previous.expire(stats)
             model.insert(stats)
         model.expire(stats)
