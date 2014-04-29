@@ -25,10 +25,10 @@ angular.module('charts').factory('spliceOldDataTransformer', ['moment', spliceOl
 /**
  * This transformer splices out data older than the current duration.
  */
-function spliceOldDataTransformerFactory(moment) {
+function spliceOldDataTransformerFactory (moment) {
   'use strict';
 
-  return function spliceOldDataTransformer(resp) {
+  return function spliceOldDataTransformer (resp) {
     var data = this.getter(),
       errorString = '%s is required for the spliceOldDataTransfomer!';
 
@@ -43,7 +43,9 @@ function spliceOldDataTransformerFactory(moment) {
 
     var start = moment().subtract(this.unit, this.size).valueOf();
 
-    data.forEach(function (item) {
+    var deleteSeries = [];
+
+    data.forEach(function (item, index) {
       var deleteCount = 0;
 
       item.values.some(function (value) {
@@ -58,6 +60,14 @@ function spliceOldDataTransformerFactory(moment) {
 
       if (deleteCount > 0)
         item.values.splice(0, deleteCount);
+
+      // If values is empty, mark series for deletion
+      if (item.values.length === 0)
+        deleteSeries.push(index);
+    });
+
+    deleteSeries.forEach(function spliceSeries(index) {
+      data.splice(index, 1);
     });
 
     return resp;

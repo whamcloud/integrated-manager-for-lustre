@@ -75,7 +75,7 @@ describe('splice old data transformer', function () {
 
     spliceOldDataTransformer.call(stream, {});
 
-    expect(data[0].values.length).toBe(0);
+    expect(data).toEqual([]);
   });
 
   it('should keep newer data values', function () {
