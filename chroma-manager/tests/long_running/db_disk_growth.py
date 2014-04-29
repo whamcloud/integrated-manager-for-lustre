@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013 Intel Corporation All Rights Reserved.
+# Copyright 2013-2014 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -20,8 +20,9 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+
 # chroma-sampling is a commandline command.  Use it to periodically sample
-# logs and disk usage for long peroids of time.
+# logs and disk usage for long periods of time.
 
 # Install by copying to the server you want to sample, then doing
 # chmod u+x db_disk_growth.py

@@ -3,7 +3,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013 Intel Corporation All Rights Reserved.
+# Copyright 2013-2014 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -30,6 +30,7 @@ import requests
 
 REGISTRY_BASE_URI = 'http://registry.npmjs.org/'
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
 
 class SemanticVersion(object):
     def __init__(self, version_string):
@@ -95,7 +96,7 @@ class SemanticVersion(object):
 
         major = self._cmp_attr(other, 'major') * 100
         minor = self._cmp_attr(other, 'minor') * 10
-        patch = self._cmp_attr(other, 'patch') 
+        patch = self._cmp_attr(other, 'patch')
 
         return major + minor + patch
 
