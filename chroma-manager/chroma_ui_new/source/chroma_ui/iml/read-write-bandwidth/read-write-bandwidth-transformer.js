@@ -41,11 +41,11 @@ function readWriteBandwidthTransformerFactory() {
 
     var dataPoints = [
       {
-        key: 'write',
+        key: 'read',
         values: []
       },
       {
-        key: 'read',
+        key: 'write',
         values: []
       }
     ];
@@ -53,8 +53,8 @@ function readWriteBandwidthTransformerFactory() {
     resp.body = newVal.reduce(function (arr, curr) {
       var date = new Date(curr.ts);
 
-      arr[0].values.push({y: -curr.data.stats_write_bytes, x: date});
-      arr[1].values.push({y: curr.data.stats_read_bytes, x: date});
+      arr[0].values.push({y: curr.data.stats_read_bytes, x: date});
+      arr[1].values.push({y: -curr.data.stats_write_bytes, x: date});
 
       return arr;
 

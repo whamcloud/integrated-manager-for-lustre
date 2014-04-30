@@ -9,19 +9,21 @@ describe('file usage controller', function () {
         start: jasmine.createSpy('start')
       })
     });
-  }, {fileUsageTransformer: fileUsageTransformer}));
+  }));
 
-  var DURATIONS, $scope, streams;
+  var DURATIONS, $scope, streams, getFileUsageTransformer;
 
   beforeEach(inject(function (_DURATIONS_, $controller, $rootScope, _streams_) {
     DURATIONS = _DURATIONS_;
     streams = _streams_;
     $scope = $rootScope.$new();
 
+    getFileUsageTransformer = jasmine.createSpy('getFileUsageTransformer').andReturn(fileUsageTransformer);
+
     $controller('FileUsageCtrl', {
       $scope: $scope,
       streams: streams,
-      fileUsageTransformer: fileUsageTransformer
+      fileUsageTransformer: getFileUsageTransformer
     });
   }));
 
@@ -34,6 +36,10 @@ describe('file usage controller', function () {
       unit: DURATIONS.MINUTES,
       size: 10
     });
+  });
+
+  it('should configure the fileUsageStream', function () {
+    expect(getFileUsageTransformer).toHaveBeenCalledOnceWith('Files Used');
   });
 
   it('should create a target stream', function () {
@@ -78,7 +84,7 @@ describe('file usage transformer', function () {
 
   it('should transform data as expected', function () {
     fileUsageDataFixtures.forEach(function (item) {
-      var resp = fileUsageTransformer({body: item.in});
+      var resp = fileUsageTransformer('Files Used')({body: item.in});
 
       resp.body.forEach(function (item) {
         item.values.forEach(function (value) {

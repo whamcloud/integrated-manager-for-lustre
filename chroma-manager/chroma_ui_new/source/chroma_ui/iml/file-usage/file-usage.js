@@ -36,7 +36,7 @@
        * @param {String} unit
        * @param {Number} size
        */
-      onUpdate: function (unit, size) {
+      onUpdate: function onUpdate(unit, size) {
         targetMetricStream.start(getParams(unit, size));
       },
       options: {
@@ -45,7 +45,7 @@
          * @param {Object} chart The chart object to setup.
          * @param {Object} d3 A d3 instance.
          */
-        setup: function(chart, d3) {
+        setup: function setup(chart, d3) {
           chart.useInteractiveGuideline(true);
 
           chart.forceY([0, 1]);
@@ -58,10 +58,12 @@
 
           chart.isArea(true);
         }
-      }
+      },
+      title: $scope.fileUsageTitle || 'File Usage'
     };
 
-    var targetMetricStream = streams.targetStream('fileUsage.data', $scope, 'httpGetMetrics', fileUsageTransformer);
+    var transformer = fileUsageTransformer($scope.fileUsageKey || 'Files Used');
+    var targetMetricStream = streams.targetStream('fileUsage.data', $scope, 'httpGetMetrics', transformer);
     targetMetricStream.start(getParams($scope.fileUsage.unit, $scope.fileUsage.size));
 
     /**
@@ -82,32 +84,34 @@
   }
 
   angular.module('file-usage').factory('fileUsageTransformer', function () {
-    return function transformer(resp) {
-      if (resp.body.length === 0)
+    return function getTransformer(keyName) {
+      return function transformer (resp) {
+        if (resp.body.length === 0)
+          return resp;
+
+        var dataPoints = [
+          {
+            key: keyName,
+            values: []
+          }
+        ];
+
+        resp.body = resp.body.reduce(function mungeValues (arr, curr) {
+          var date = new Date(curr.ts);
+
+          var value = (curr.data.filestotal - curr.data.filesfree) / curr.data.filestotal;
+
+          dataPoints[0].values.push({
+            x: date,
+            y: value
+          });
+
+          return arr;
+
+        }, dataPoints);
+
         return resp;
-
-      var dataPoints = [
-        {
-          key: 'Files Used',
-          values: []
-        }
-      ];
-
-      resp.body = resp.body.reduce(function mungeValues(arr, curr) {
-        var date = new Date(curr.ts);
-
-        var value = (curr.data.filestotal - curr.data.filesfree) / curr.data.filestotal;
-
-        dataPoints[0].values.push({
-          x: date,
-          y: value
-        });
-
-        return arr;
-
-      }, dataPoints);
-
-      return resp;
+      };
     };
   });
 }());

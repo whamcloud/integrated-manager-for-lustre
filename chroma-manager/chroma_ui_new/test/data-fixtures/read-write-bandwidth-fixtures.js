@@ -18,19 +18,6 @@ angular.module('dataFixtures').value('readWriteBandwidthDataFixtures', [
     ],
     out: [
       {
-        key: 'write',
-        values: [
-          {
-            y: -104418696882.20003,
-            x: '2013-12-11T13:15:00.000Z'
-          },
-          {
-            y: -101051194417.40001,
-            x: '2013-12-11T13:15:10.000Z'
-          }
-        ]
-      },
-      {
         key: 'read',
         values: [
           {
@@ -39,6 +26,19 @@ angular.module('dataFixtures').value('readWriteBandwidthDataFixtures', [
           },
           {
             y: 104677667433.3,
+            x: '2013-12-11T13:15:10.000Z'
+          }
+        ]
+      },
+      {
+        key: 'write',
+        values: [
+          {
+            y: -104418696882.20003,
+            x: '2013-12-11T13:15:00.000Z'
+          },
+          {
+            y: -101051194417.40001,
             x: '2013-12-11T13:15:10.000Z'
           }
         ]

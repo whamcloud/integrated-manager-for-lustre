@@ -40,6 +40,9 @@
       id: dashboardPath.getTargetId()
     };
 
+    $scope.fileUsageTitle = 'Object Usage';
+    $scope.fileUsageKey = 'Objects Used';
+
     var targetStream = streams.targetStream('dashboard.ost', $scope);
 
     targetStream.start({
