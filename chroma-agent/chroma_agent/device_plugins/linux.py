@@ -292,7 +292,7 @@ class BlockDevices(DeviceHelper):
                     return
 
             # Resolve a major:minor to a /dev/foo
-            path = self.normalized_device_path(get_path(major_minor, device_name))
+            path = get_path(major_minor, device_name)
             if path:
                 block_device_nodes[major_minor] = self._device_node(device_name, major_minor, path, size, parent)
                 node_block_devices[path] = major_minor
