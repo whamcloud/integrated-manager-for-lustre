@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013 Intel Corporation All Rights Reserved.
+# Copyright 2013-2014 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -83,6 +83,29 @@ class LinuxDevicePlugin(DevicePlugin):
         if devices != self._devices:
             self._devices = devices
             return self._full_scan()
+
+
+###
+# This routine is here to minimize the changes just before the rc, I don't believe it even needs to be
+# called below. But to be safe I'm going for a half way house which will then be a complete house straight
+# after rc.
+def old_normalize_device(device):
+    _d = old_normalize_device._devices = getattr(old_normalize_device, '_devices', {})
+
+    d_majmin = DeviceHelper()._dev_major_minor(device)
+    u_device = os.path.realpath(device)
+    if not _d or u_device not in _d or d_majmin != DeviceHelper()._dev_major_minor(_d[u_device]):
+        lookup_paths = ["/dev/disk/by-id/*", "/dev/mapper/*"]
+
+        for p in lookup_paths:
+            for f in glob.glob(p):
+                _d[os.path.realpath(f)] = f
+
+        root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
+        if '/dev/root' not in _d and os.path.exists(root):
+            _d['/dev/root'] = root
+
+    return _d.get(u_device, u_device)
 
 
 class DeviceHelper(object):
@@ -292,7 +315,8 @@ class BlockDevices(DeviceHelper):
                     return
 
             # Resolve a major:minor to a /dev/foo
-            path = self.normalized_device_path(get_path(major_minor, device_name))
+            path = old_normalize_device(get_path(major_minor, device_name))
+
             if path:
                 block_device_nodes[major_minor] = self._device_node(device_name, major_minor, path, size, parent)
                 node_block_devices[path] = major_minor
