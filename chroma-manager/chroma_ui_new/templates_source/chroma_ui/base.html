@@ -25,7 +25,7 @@
     // server time, it should be close enough.
     // Why are we doing this?: In customer installs, the ntp server is optional, meaning server time can be
     // arbitrary.
-    window.SERVER_TIME_DIFF = new Date('{{server_time|safe}}' + ' +00:00') - new Date();
+    window.SERVER_TIME_DIFF = new Date(('{{server_time|safe}}' + '+00:00').split(' ').join('T')) - new Date();
   </script>
 </head>
 <body ng-app="iml">
