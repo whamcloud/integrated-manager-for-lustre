@@ -172,6 +172,15 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     def is_monitor_only(self):
         return not self.server_profile.managed
 
+    @property
+    def member_of_active_filesystem(self):
+        from chroma_core.models.filesystem import ManagedFilesystem
+        for filesystem in ManagedFilesystem.objects.filter(state = 'available'):
+            if self in filesystem.get_servers():
+                return True
+
+        return False
+
     def get_label(self):
         """Return the FQDN if it is known, else the address"""
         name = self.fqdn

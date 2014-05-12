@@ -161,6 +161,7 @@ class HostResource(MetricResource, StatefulModelResource):
     POSTs to this resource must have the ``address`` attribute set.
     """
     nids = fields.ListField(null = True)
+    member_of_active_filesystem = fields.BooleanField()
     client_mounts = fields.ListField(null = True)
     root_pw = fields.CharField(help_text = "ssh root password to new server.")
     private_key = fields.CharField(help_text = "ssh private key matching a "
@@ -174,6 +175,9 @@ class HostResource(MetricResource, StatefulModelResource):
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(
             lnet_configuration = bundle.obj.lnetconfiguration)]
+
+    def dehydrate_member_of_active_filesystem(self, bundle):
+        return bundle.obj.member_of_active_filesystem
 
     def dehydrate_client_mounts(self, bundle):
         from chroma_core.lib.cache import ObjectCache
@@ -194,7 +198,7 @@ class HostResource(MetricResource, StatefulModelResource):
         ordering = ['fqdn']
         list_allowed_methods = ['get', 'post']
         detail_allowed_methods = ['get', 'put', 'delete']
-        readonly = ['nodename', 'fqdn', 'nids',
+        readonly = ['nodename', 'fqdn', 'nids', 'member_of_active_filesystem',
                     'needs_fence_reconfiguration', 'needs_update', 'boot_time',
                     'corosync_reported_up', 'client_mounts']
         # HYD-2256: remove these fields when other auth schemes work

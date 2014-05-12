@@ -35,7 +35,7 @@
       }
     });
 
-    $scope.disabled = $scope.state !== 'lnet_up';
+    $scope.disabled = $scope.member_of_active_filesystem;
 
     $scope.configure = function configure() {
       dialog.open(
