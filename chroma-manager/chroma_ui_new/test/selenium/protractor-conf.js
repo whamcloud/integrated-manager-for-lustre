@@ -6,14 +6,11 @@ var manager = require('./util/manager');
 var format = require('util').format;
 
 exports.config = {
-  seleniumServerJar: '/usr/local/opt/selenium-server-standalone/libexec/selenium-server-standalone-2.40.0.jar',
+  seleniumServerJar: '/usr/local/opt/selenium-server-standalone/libexec/selenium-server-standalone-2.41.0.jar',
   seleniumArgs: ['-log', 'selenium_server.log'],
   chromeDriver: '/usr/local/bin/chromedriver',
 
-  specs: [
-    'spec/global.js',
-    'spec/**/*.js'
-  ],
+  specs: ['spec/**/*.js'],
 
   capabilities: {
     browserName: 'chrome',

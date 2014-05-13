@@ -1,10 +1,11 @@
 (function () {
   'use strict';
 
-  var util = require('util'),
-    _ = require('lodash-contrib'),
-    argv = require('optimist').argv,
-    file = argv.config || './sample-config';
+  var util = require('util');
+  var _ = require('lodash-contrib');
+  var argv = require('optimist').argv;
+  var file = argv.config || './sample-config';
+  var uiPath = argv.uiPath || 'ui/';
 
   var config = require(file);
 
@@ -24,6 +25,8 @@
       return this.get(function (item, index) { return index === 0; });
     };
   });
+
+  config.uiPath = uiPath;
 
   module.exports = config;
 }());

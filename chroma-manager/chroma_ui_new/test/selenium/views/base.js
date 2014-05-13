@@ -2,6 +2,7 @@
   'use strict';
 
   var inherits = require('util').inherits;
+  var manager = require('../util/manager');
 
   /**
    * The base view that subclass views inherit from.
@@ -33,14 +34,14 @@
    * Navigates to the path specified by a subclass
    * @throws {error} Throws an error if path was not set.
    */
-  BaseView.prototype.navigate = function () {
+  BaseView.prototype.navigate = function navigate() {
     var path = this.path;
 
     if (path == null) throw new Error('Cannot navigate, path is not defined!');
 
     if (path !== '') path += '/';
 
-    this.ptor.get(path);
+    this.ptor.get(manager.uiPath + path);
   };
 
   /**
