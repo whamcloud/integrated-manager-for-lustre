@@ -22,6 +22,7 @@
 
 from chroma_agent import shell
 from chroma_agent.log import console_log
+from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin
 import simplejson as json
 import os
 
@@ -30,6 +31,7 @@ import os
 RMMOD_EXTRA_DEPS = {"lquota": set(["lov", "osc", "mgc", "mds", "mdc", "lmv"])}
 
 IML_CONFIGURATION_FILE = '/etc/modprobe.d/iml_lnet_module_parameters.conf'
+IML_CONFIGURE_FILE_JSON_HEADER = '##  '
 
 
 class Module:
@@ -119,9 +121,7 @@ def configure_lnet(lnet_configuration):
 
     :return: None
     '''
-    modprobe_fname = IML_CONFIGURATION_FILE
-
-    with open(modprobe_fname, 'w') as file:
+    with open(IML_CONFIGURATION_FILE, 'w') as file:
         file.write('# This file is auto-generated for Lustre NID configuration by IML\n' +
                    '# Do not overwrite this file or edit its contents directly\n')
 
@@ -133,7 +133,12 @@ def configure_lnet(lnet_configuration):
         file.write('\n### LNet Configuration Data\n')
 
         for line in json.dumps(lnet_configuration, indent = 2).split("\n"):
-            file.write('### %s\n' % line)
+            file.write('%s%s\n' % (IML_CONFIGURE_FILE_JSON_HEADER, line))
+
+        # Our preference of course is that we read the results back from lnet, but if lnet is not up we can't
+        # so we have to cache the results to use where lnet is not loaded or not up. As soon as it is up the
+        # cache will be overwritten by the actual (making it I believe a cache)
+        LinuxNetworkDevicePlugin.cache_results(lnet_configuration = lnet_configuration)
 
 
 def unconfigure_lnet():

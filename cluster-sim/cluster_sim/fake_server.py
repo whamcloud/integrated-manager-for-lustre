@@ -606,25 +606,9 @@ class FakeServer(Persisted):
         for inet4_address in self.network_interfaces:
             self.network_interfaces[inet4_address]['lnd_network'] = None
 
-        # If we have some configuration use it, if not then set 1 interface to 0 because lnet will pick
-        # an interface by default if nothing is available.
-        if (lnet_configuration['network_interfaces'] == []):
-            # It's a simulator presume it has 1 interface, and make that the lnet interface on network zero.
-            self.network_interfaces[self.network_interfaces.keys()[0]]['lnd_network'] = 0
-        else:
-            for nid in lnet_configuration['network_interfaces']:
-                inet4_address = nid[0]
-                self.network_interfaces[inet4_address]['lnd_network'] = nid[2]
-
-            if (lnet_configuration['state'] == 'lnet_up'):
-                self.stop_lnet()
-
-            if (lnet_configuration['state'] != 'lnet_unloaded'):
-                self.unload_lnet()
-                self.load_lnet()
-
-            if (lnet_configuration['state'] == 'lnet_up'):
-                self.start_lnet()
+        for nid in lnet_configuration['network_interfaces']:
+            inet4_address = nid[0]
+            self.network_interfaces[inet4_address]['lnd_network'] = nid[2]
 
         self.state['network_interfaces'] = self.network_interfaces
         self.save()
