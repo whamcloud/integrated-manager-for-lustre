@@ -20,14 +20,13 @@
 # express and approved by Intel in writing.
 
 
+import re
+import os
+
+from collections import defaultdict
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import shell
-
-import re
-import os
-from collections import defaultdict
-
 
 EXCLUDE_INTERFACES = ['lo']
 
@@ -66,45 +65,141 @@ class NetworkInterface():
 
     @property
     def interface(self):
+        '''
+        :return: str: The name of the device, for example eth0 or ib2, or '' if not present.
+        '''
         return self._values["interface"]
 
     @property
     def mac_address(self):
+        '''
+        :return: str: Containing the mac address of the device, or '' if not present.
+        '''
         return self._values["mac_address"]
 
     @property
     def type(self):
+        '''
+        :return: str: Containing the type of the interface, ethernet for example, or '' if not present.
+        '''
         return self._values["type"]
 
     @property
     def inet4_addr(self):
+        '''
+        :return: str: Containing the type of the inet4 address of interface, or '' if not present.
+        '''
         return self._values["inet4_addr"]
 
     @property
     def inet6_addr(self):
+        '''
+        :return: str: Containing the type of the inet6 address of interface, or '' if not present.
+        '''
         return self._values["inet6_addr"]
 
     @property
     def rx_bytes(self):
+        '''
+        :return: str: Containing the type of the number of received bytes for the interface, or '' if not present.
+        '''
         return self._values["rx_bytes"]
 
     @property
     def tx_bytes(self):
+        '''
+        :return: str: Containing the type of the number of transmitted bytes for the interface, or '' if not present.
+        '''
         return self._values["tx_bytes"]
 
     @property
     def up(self):
+        '''
+        :return: bool: True if the device described as being by ifconfig as being in the up state
+        '''
         return self._values["up"].upper() == 'UP'
 
     @property
     def slave(self):
+        '''
+        :return: bool: True if the device described by ifconfig as a slave device
+        '''
         return self._values["slave"].upper() == 'SLAVE'
 
 
-class LNetNid():
-    class NidNoInterface(Exception):
+class NetworkInterfaces(dict):
+    network_translation = {'ethernet': 'tcp',
+                           'infiniband': 'o2ib'}
+
+    class InterfaceNotFound(LookupError):
         pass
 
+    def __init__(self):
+        '''
+        :return: A dist of dicts that describe all of the network interfaces on the node with
+        the exception of the the lo interface which is excluded from the list.
+        '''
+        def interface_to_lnet_type(if_type):
+            '''
+            To keep everything consistant we report networks types as the lnd name not the linux name we
+            have to translate somewhere so do it at source, if the user ever needs to see it as Linux types
+            we can translate back.
+            There is a train of thought that says it if is unknown we should cause an exception which means
+            the app will not work, I prefer to try an approach that says returning just the unknown might
+            well work, and if not it causes an exception somewhere else.
+            '''
+            return self.network_translation.get(if_type.lower(), if_type.lower())
+
+        try:
+            out = shell.try_run(['ifconfig', '-a'])
+        except IOError:
+            daemon_log.warning("ifconfig: failed to run")
+            return []
+
+        lines = out.split("\n")
+
+        lines.append("")                # This empty line on the end just causes interfaces to get flushed in the loop below
+
+        device_lines = []
+
+        for line in lines:
+
+            if (line == "") and (len(device_lines) > 0):             # Blank line end of device
+                interface = NetworkInterface(device_lines)
+
+                if (interface.interface not in EXCLUDE_INTERFACES) and (interface.slave == False):
+                    self[interface.interface] = {'mac_address': interface.mac_address,
+                                                 'inet4_address': interface.inet4_addr,
+                                                 'inet6_address': interface.inet6_addr,
+                                                 'type': interface_to_lnet_type(interface.type),
+                                                 'rx_bytes': interface.rx_bytes,
+                                                 'tx_bytes': interface.tx_bytes,
+                                                 'up': interface.up,
+                                                 'slave': interface.slave}
+
+                device_lines = []
+
+            if (line != ""):
+                device_lines.append(line)
+
+    def name(self, inet4_address):
+        result = None
+
+        if inet4_address == '0':
+            result = 'lo'
+        else:
+            for name, interface in self.iteritems():
+                if (interface['inet4_address'] == inet4_address):
+                    result = name
+                    break
+
+        if result == None:
+            raise self.InterfaceNotFound("Unable to find a name for the network address %s" % inet4_address)
+
+        return result
+
+
+class LNetNid():
     ''' Created with a single line that is the output of /proc/sys/lnet/nis, this class will
     parse those lines and end up with a set of properties corresponding to the parsed data
 
@@ -140,89 +235,20 @@ class LNetNid():
         # Nasty, interfaces will not have an entry for lo which is at address '0' in lnet land so just fix
         # that exception up.
         # By default make the name the address, we need something in-case there is no match, and this makes it debuggable.
-        self.name = None
-
-        if self.nid_address == '0':
-            self.name = 'lo'
-        else:
-            for name, interface in interfaces.iteritems():
-                if (interface['inet4_address'] == self.nid_address):
-                    self.name = name
-                    break
-
-        if self.name == None:
-            raise self.NidNoInterface("Unable to find a match for the nid of address %s" % self.nid_address)
+        self.name = interfaces.name(self.nid_address)
 
 
 class LinuxNetworkDevicePlugin(DevicePlugin):
-    network_translation = {'ethernet': 'tcp',
-                           'infiniband': 'o2ib'}
-
     # This need to be instance variables, for reasons that are really difficult to expliain.
     # Generally changes are sent but sometimes we want to poll them. However when we poll we create a new object
     # and so if these are instance variables we don't get the diff back, and so don't see the deletes!
     # last_return is updated in the session_update so a poll sees any deletes but does not stop them being sent in
     # the updates. Ask Chris about this for more info.
     last_return = {}
-    last_nid = {}
+    cached_results = {}
 
     def __init__(self, session):
         super(LinuxNetworkDevicePlugin, self).__init__(session)
-
-    def _ifconfig(self):
-        '''
-        :return: A dist of dicts that describe all of the network interfaces on the node with
-        the exception of the the lo interface which is excluded from the list.
-        '''
-
-        def interface_to_lnet_type(if_type):
-            '''
-            To keep everything consistant we report networks types as the lnd name not the linux name we
-            have to translate somewhere so do it at source, if the user ever needs to see it as Linux types
-            we can translate back.
-            There is a train of thought that says it if is unknown we should cause an exception which means
-            the app will not work, I prefer to try an approach that says returning just the unknown might
-            well work, and if not it causes an exception somewhere else.
-            '''
-            try:
-                return self.network_translation[if_type.lower()]
-            except KeyError:
-                return if_type.lower()
-
-        try:
-            out = shell.try_run(['ifconfig', '-a'])
-        except IOError:
-            daemon_log.warning("ifconfig: failed to run")
-            return []
-
-        lines = out.split("\n")
-
-        lines.append("")                # This empty line on the end just causes interfaces to get flushed in the loop below
-
-        device_lines = []
-        interfaces = {}
-
-        for line in lines:
-
-            if (line == "") and (len(device_lines) > 0):             # Blank line end of device
-                interface = NetworkInterface(device_lines)
-
-                if interface.interface not in EXCLUDE_INTERFACES and interface.slave == False:
-                    interfaces[interface.interface] = {'mac_address': interface.mac_address,
-                                                       'inet4_address': interface.inet4_addr,
-                                                       'inet6_address': interface.inet6_addr,
-                                                       'type': interface_to_lnet_type(interface.type),
-                                                       'rx_bytes': interface.rx_bytes,
-                                                       'tx_bytes': interface.tx_bytes,
-                                                       'up': interface.up,
-                                                       'slave': interface.slave}
-
-                device_lines = []
-
-            if (line != ""):
-                device_lines.append(line)
-
-        return interfaces
 
     def _lnet_devices(self, interfaces):
         '''
@@ -234,7 +260,7 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
             lines = open("/proc/sys/lnet/nis").readlines()
         except IOError:
             daemon_log.warning("get_nids: failed to open")
-            return LinuxNetworkDevicePlugin.last_nid
+            return LinuxNetworkDevicePlugin.cached_results
 
         # Skip header line
         lines = lines[1:]
@@ -244,7 +270,7 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
         for line in lines:
             try:
                 lnet_nids.append(LNetNid(line, interfaces))
-            except LNetNid.NidNoInterface as e:
+            except NetworkInterfaces.InterfaceNotFound as e:
                 daemon_log.warning(e)
 
         result = {}
@@ -253,19 +279,27 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
             if lnet_nid.lnd_type not in EXCLUDE_INTERFACES:
                 result[lnet_nid.name] = {'nid_address': lnet_nid.nid_address,
                                          'lnd_type': lnet_nid.lnd_type,
-                                         'lnd_network': lnet_nid.lnd_network,
-                                         'status': lnet_nid.status,
-                                         'alive': lnet_nid.alive,
-                                         'refs': lnet_nid.refs,
-                                         'peer': lnet_nid.peer,
-                                         'rtr': lnet_nid.rtr,
-                                         'max': lnet_nid.max,
-                                         'tx': lnet_nid.tx,
-                                         'min': lnet_nid.min}
+                                         'lnd_network': lnet_nid.lnd_network}
 
-        LinuxNetworkDevicePlugin.last_nid = result
+            LinuxNetworkDevicePlugin.cache_results(raw_result = result)
 
-        return self.last_nid
+        return result
+
+    @classmethod
+    def cache_results(cls, raw_result = None, lnet_configuration = None):
+        assert (raw_result == None) or (lnet_configuration == None)
+
+        if lnet_configuration:
+            raw_result = {}
+
+            interfaces = NetworkInterfaces()
+
+            for network_interface in lnet_configuration['network_interfaces']:
+                raw_result[interfaces.name(network_interface[0])] = {'nid_address': network_interface[0],
+                                                                     'lnd_type': network_interface[1],
+                                                                     'lnd_network': network_interface[2]}
+
+        cls.cached_results = raw_result
 
     def _lnet_state(self):
         '''
@@ -286,7 +320,7 @@ class LinuxNetworkDevicePlugin(DevicePlugin):
                  (True, True): "lnet_up"}[(lnet_loaded, lnet_up)]
 
     def start_session(self):
-        interfaces = self._ifconfig()
+        interfaces = NetworkInterfaces()
         nids = self._lnet_devices(interfaces)
 
         result = {'interfaces': {'active': interfaces},

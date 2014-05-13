@@ -724,10 +724,19 @@ class ConfigureLNetJob(Job):
         return "Configure LNet for %s" % self.host
 
     def get_steps(self):
-        return [(ConfigureLNetStep, {'host': self.host, 'config_changes': json.loads(self.config_changes)}),
-                (LoadLNetStep, {'host': self.host}),
-                (StartLNetStep, {'host': self.host}),
-                (UpdateDevicesStep, {'host': self.host})]
+        # The get_deps means the lnet is always placed into the unloaded state in preparation for the change in
+        # configure the next two steps cause lnet to return to the state it was in
+        steps = [(ConfigureLNetStep, {'host': self.host, 'config_changes': json.loads(self.config_changes)})]
+
+        if (self.host.state != 'lnet_unloaded'):
+            steps.append((LoadLNetStep, {'host': self.host}))
+
+        if (self.host.state == 'lnet_up'):
+            steps.append((StartLNetStep, {'host': self.host}))
+
+        steps.append((UpdateDevicesStep, {'host': self.host}))
+
+        return steps
 
     def get_deps(self):
         return DependOn(self.host, 'lnet_unloaded')

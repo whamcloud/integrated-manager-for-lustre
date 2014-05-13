@@ -1,7 +1,7 @@
 from collections import namedtuple
 from django.utils import unittest
 import mock
-from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin
+from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin, NetworkInterfaces
 
 
 class TestLinuxNetwork(unittest.TestCase):
@@ -70,8 +70,7 @@ ib0     Link encap:InfiniBand  HWaddr 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:
         RX bytes:3286081 (3.1 MiB)  TX bytes:4753096 (4.5 MiB)"""
 
         with mock.patch('chroma_agent.shell.try_run', mock_try_run_ifconfig):
-            device_plugin = LinuxNetworkDevicePlugin(None)
-            interfaces = device_plugin._ifconfig()
+            interfaces = NetworkInterfaces()
 
         ResultCheck = namedtuple("ResultCheck",
                                  ["interface", "mac_address", "type", "inet4_addr", "inet6_addr",
@@ -145,37 +144,3 @@ ib0     Link encap:InfiniBand  HWaddr 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:
             self.assertEqual(nid['nid_address'], result_check.lnd_address)
             self.assertEqual(nid['lnd_network'], result_check.lnd_network)
             self.assertEqual(nid['lnd_type'], result_check.lnd_type)
-            self.assertEqual(nid['status'], result_check.status)
-            self.assertEqual(nid['alive'], result_check.alive)
-            self.assertEqual(nid['refs'], result_check.refs)
-            self.assertEqual(nid['peer'], result_check.peer)
-            self.assertEqual(nid['rtr'], result_check.rtr)
-            self.assertEqual(nid['max'], result_check.max)
-            self.assertEqual(nid['tx'], result_check.tx)
-            self.assertEqual(nid['min'], result_check.min)
-
-
-
-#ResultCheck = namedtuple("ResultCheck",
-#                         ["interface", "mac_address", "type", "inet4_addr", "inet6_addr",
-#                         "rx_bytes", "tx_bytes", "up", "slave"])
-#
-#self.assertEqual(len(interfaces), 3)
-#
-#for result_check in [ResultCheck("bond0", "4C:00:10:AC:61:E0", "tcp", "192.168.10.79", "fe80::4e00:10ff:feac:61e0/64", "314203", "129834", True, False),
-#                     ResultCheck("eth2", "00:02:c9:0e:38:2c", "tcp", '', '', "0", "0", False, False),
-#                     ResultCheck("ib0", "80:00:00:48:FE:80:00:00:00:00:00:00:00:00:00:00:00:00:00:00",
-#                                 "o2ib", "192.168.4.23", "fe80::225:90ff:ff1c:a229/64", "3286081", "4753096", True, False)]:
-#
-#    interface = interfaces[result_check.interface]
-#
-#    self.assertEqual(interface['mac_address'], result_check.mac_address)
-#    self.assertEqual(interface['type'], result_check.type)
-#    self.assertEqual(interface['inet4_address'], result_check.inet4_addr)
-#    self.assertEqual(interface['inet6_address'], result_check.inet6_addr)
-#    self.assertEqual(interface['rx_bytes'], result_check.rx_bytes)
-#    self.assertEqual(interface['tx_bytes'], result_check.tx_bytes)
-#    self.assertEqual(interface['up'], result_check.up)
-#    self.assertEqual(interface['slave'], result_check.slave)
-#
-#return interfaces

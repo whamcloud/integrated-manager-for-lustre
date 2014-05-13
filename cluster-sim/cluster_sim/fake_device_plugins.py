@@ -47,22 +47,11 @@ class BaseFakeLinuxPlugin(DevicePlugin):
 class BaseFakeLinuxNetworkPlugin(DevicePlugin):
     _server = None
 
-    def __init__(self, session):
-        super(BaseFakeLinuxNetworkPlugin, self).__init__(session)
-
-        # This is a bit crappy, but these plugins are not persistant at all, even within a session
-        # so create somewhere to store this information
-        try:
-            if self._server.nid_last_result:
-                pass
-        except AttributeError:
-            self._server.nid_last_result = None
-
     def _lnet_state(self):
         return {(False, False): 'lnet_unloaded',
-                 (False, True): 'lnet_unloaded',
-                 (True, False): 'lnet_down',
-                 (True, True): 'lnet_up'}[(self._server.state['lnet_loaded'], self._server.state['lnet_up'])]
+                (False, True): 'lnet_unloaded',
+                (True, False): 'lnet_down',
+                (True, True): 'lnet_up'}[(self._server.state['lnet_loaded'], self._server.state['lnet_up'])]
 
     def start_session(self):
         return self.update_session()
@@ -74,12 +63,11 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
         result['interfaces']['deleted'] = []
         result['lnet']['nids']['deleted'] = []
 
-        if result['lnet']['state'] == 'lnet_up':
-            if self._server.nid_last_result is not None:
-                result['interfaces']['deleted'] = [item for item in self._server.nid_last_result['interfaces']['active'] if item not in result['interfaces']['active']]
-                result['lnet']['nids']['deleted'] = [item for item in self._server.nid_last_result['lnet']['nids']['active'] if item not in result['lnet']['nids']['active']]
+        if hasattr(self._server, 'nid_last_result'):
+            result['interfaces']['deleted'] = [item for item in self._server.nid_last_result['interfaces']['active'] if item not in result['interfaces']['active']]
+            result['lnet']['nids']['deleted'] = [item for item in self._server.nid_last_result['lnet']['nids']['active'] if item not in result['lnet']['nids']['active']]
 
-            self._server.nid_last_result = result
+        self._server.nid_last_result = result
 
         return result
 
@@ -100,17 +88,15 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
                                 'tx_bytes': '1789870413',
                                 'up': True}
 
-            if (self._server.state['lnet_up']) and (interface['lnd_network'] is not None):
+            if interface['lnd_network'] is not None:
                 nids[name] = {'nid_address': inet4_address,
                               'type': interface['type'],
-                              'lnd_network': interface['lnd_network'],
-                              'status': '?',
-                              'refs': '?',
-                              'peer': '?',
-                              'rtr': '?',
-                              'max': '?',
-                              'tx': '?',
-                              'min': '?'}
+                              'lnd_network': interface['lnd_network']}
+
+        # If lnet is up but no nids are configured then create 1 because lnet always returns 1 nid
+        if (self._server.state['lnet_up'] == True) and (nids == {}):
+            self._server.network_interfaces[self._server.network_interfaces.keys()[0]]['lnd_network'] = 0
+            return self._get_results()
 
         return {'interfaces': {'active': interfaces},
                 'lnet': {'state': self._lnet_state(),
