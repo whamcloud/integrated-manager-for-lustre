@@ -1,12 +1,12 @@
 REPO        := $(patsubst %/,%,$(REPO))
-RPMS        := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
+BUNDLE_RPMS := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
 VERSION     ?= 0.0.0
 NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
 
 all: $(BUNDLE_NAME).tar.gz install
 
-$(BUNDLE_NAME).tar.gz: $(patsubst %,stamps/%.rpm,$(RPMS))
+$(BUNDLE_NAME).tar.gz: $(patsubst %,stamps/%.rpm,$(BUNDLE_RPMS))
 	cd repo && createrepo --pretty .
 	echo "{\"name\": \"$(NAME)\", \"version\": \"$(VERSION)\", \"description\": \"$(DESC)\"}" > repo/meta
 	rm -f *.tar.gz
@@ -17,8 +17,8 @@ stamps/%.rpm: $(REPO)/%.rpm Makefile
 	# of date, so just nuke it and recreate it
 	rm -rf repo stamps
 	mkdir repo stamps
-	ln $(patsubst %,$(REPO)/%.rpm,$(RPMS)) repo
-	touch $(patsubst %,stamps/%.rpm,$(RPMS))
+	ln $(patsubst %,$(REPO)/%.rpm,$(BUNDLE_RPMS)) repo
+	touch $(patsubst %,stamps/%.rpm,$(BUNDLE_RPMS))
 
 $(TOP)/../artifacts/$(BUNDLE_NAME).tar.gz: $(BUNDLE_NAME).tar.gz
 	mkdir -p $(TOP)/../artifacts
@@ -31,7 +31,7 @@ clean:
 	rm -rf repo stamps $(BUNDLE_NAME).tar.gz
 
 list:
-	@echo "$(RPMS)" | tr ' ' '\n'
+	@echo "$(BUNDLE_RPMS)" | tr ' ' '\n'
 
 name:
 	@echo "$(NAME)"

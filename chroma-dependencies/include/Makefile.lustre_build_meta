@@ -1,0 +1,9 @@
+# Convoluted way of getting the directory this Makefile is in
+include $(CURDIR)/$(dir $(lastword $(MAKEFILE_LIST)))/Makefile.jenkins_meta
+
+# Define the job/build that should be used for Lustre packages
+JENKINS_JOB_NAME		:= lustre-b_ieel2_0
+JENKINS_BUILD_NUMBER	:= 26
+
+# This must match the version in the specified job/build
+LUSTRE_RELEASE			:= 2.5.14
