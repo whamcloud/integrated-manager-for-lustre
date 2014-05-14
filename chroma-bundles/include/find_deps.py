@@ -57,26 +57,24 @@ class YumDepFinder(object):
         self.__req2pkgs[req] = providers
         return providers
 
-    def _find_deps(self, pkgs, excludes):
-
-        for pkg in pkgs:
-            # not interested in installed packages, just what's in the repo
-            if pkg.__class__.__name__ == "RPMInstalledPackage":
-                return
-            if pkg in self.all_deps:
-                return
-            self.all_deps.append(pkg)
-            for tup in pkg.returnPrco('requires'):
-                name = yum.misc.prco_tuple_to_string(tup)
-                if name.startswith("rpmlib("):
-                    continue
-                pkgs = self.req2pkgs(name)
-                if pkgs:
-                    for npkg in pkgs:
-                        if npkg.name in excludes:
-                            continue
-                        if npkg.name in self.all_pkg_names:
-                            self._find_deps([npkg], excludes)
+    def _find_deps(self, pkg, excludes):
+        # not interested in installed packages, just what's in the repo
+        if pkg.__class__.__name__ == "RPMInstalledPackage":
+            return
+        if pkg in self.all_deps:
+            return
+        self.all_deps.append(pkg)
+        for tup in pkg.returnPrco('requires'):
+            name = yum.misc.prco_tuple_to_string(tup)
+            if name.startswith("rpmlib("):
+                continue
+            pkgs = self.req2pkgs(name)
+            if pkgs:
+                for npkg in pkgs:
+                    if npkg.name in excludes:
+                        continue
+                    if npkg.name in self.all_pkg_names:
+                        self._find_deps(npkg, excludes)
 
         return self.all_deps
 
@@ -107,9 +105,8 @@ class YumDepFinder(object):
         self.add_repo(search_repo)
         self.set_archlist(None)
 
-        exact = self.get_matching_pkgs(pkg_list)
-
-        self._find_deps(exact, excludes)
+        for pkg in self.get_matching_pkgs(pkg_list):
+            self._find_deps(pkg, excludes)
 
         return '\n'.join(["%s-%s-%s.%s" % (p.name, p.version, p.release, p.arch)
                for p in self.all_deps])
