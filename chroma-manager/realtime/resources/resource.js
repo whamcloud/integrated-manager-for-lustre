@@ -131,7 +131,6 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
       .replace(/\/*$/, '/');
 
     var defaultRequest = request.defaults({
-      jar: true,
       json: true,
       ca: conf.caFile,
       url: expanded,

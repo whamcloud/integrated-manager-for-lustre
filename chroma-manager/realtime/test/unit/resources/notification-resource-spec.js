@@ -190,6 +190,25 @@ describe('Notifications resource', function () {
       });
     });
   });
+
+  it('should pass any params to the notification calls', function () {
+    var authHeaders = {
+      headers: {
+        Cookie: 'csrftoken=F0bJQGBt7BmzAicFJiBnmTqbuywPjXUs; sessionid=6c6764465d25bdabd2f0f51cc832374b'
+      }
+    };
+
+    notificationsResource.httpGetHealth(authHeaders);
+
+    [
+      AlertResource.prototype.httpGetList.calls[0].args[0],
+      AlertResource.prototype.httpGetList.calls[1].args[0],
+      EventResource.prototype.httpGetList.mostRecentCall.args[0],
+      CommandResource.prototype.httpGetList.mostRecentCall.args[0]
+    ].forEach(function (args) {
+      expect(args).toContainObject(authHeaders);
+    });
+  });
 });
 
 

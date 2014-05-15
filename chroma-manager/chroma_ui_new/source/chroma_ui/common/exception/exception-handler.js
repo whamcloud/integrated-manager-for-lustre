@@ -24,15 +24,23 @@
   'use strict';
 
   angular.module('exception').config(['$provide', function ($provide) {
-    $provide.decorator('$exceptionHandler', ['$injector', '$delegate', function ($injector, $delegate) {
-      var triggered,
-        cache = {};
+    $provide.decorator('$exceptionHandler', ['$injector', 'windowUnload', '$delegate',
+    function ($injector, windowUnload, $delegate) {
+      var triggered;
+      var cache = {};
 
-      return function(exception, cause) {
+      /**
+       * Log the exception in the console.
+       * Display a modal of the exception.
+       * Save the exception to the backend.
+       * @param {Object} exception
+       * @param {String} cause
+       */
+      return function handleException(exception, cause) {
         //Always hit the delegate.
         $delegate(exception, cause);
 
-        if (triggered) return;
+        if (triggered || windowUnload.unloading) return;
 
         triggered = true;
 

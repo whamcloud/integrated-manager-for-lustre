@@ -1,4 +1,4 @@
-mock.register('primus', function () {
+angular.module('mockPrimus', []).factory('primus', function primusFactory() {
   'use strict';
 
   var channelInstance = {
@@ -10,23 +10,11 @@ mock.register('primus', function () {
     })
   };
 
-  var channel = jasmine.createSpy('channel').andCallFake(function () {
-    return channelInstance;
-  });
-
   var primusInstance = {
     removeListener: jasmine.createSpy('removeListener'),
     on: jasmine.createSpy('on'),
-    channel: channel
+    channel: jasmine.createSpy('channel').andReturn(channelInstance)
   };
 
-  var primus = jasmine.createSpy('primus').andCallFake(function () {
-    return primusInstance;
-  });
-
-  primus._channel_ = channel;
-  primus._primusInstance_ = primusInstance;
-  primus._channelInstance_ = channelInstance;
-
-  return primus;
+  return jasmine.createSpy('primus').andReturn(primusInstance);
 });

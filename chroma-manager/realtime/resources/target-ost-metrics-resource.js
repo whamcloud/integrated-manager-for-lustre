@@ -48,7 +48,8 @@ module.exports = function targetOstMetricsResourceFactory(TargetResource, Q) {
       qs: {
         kind: 'OST',
         limit: 0
-      }
+      },
+      headers: params.headers
     };
 
     return Q.all([

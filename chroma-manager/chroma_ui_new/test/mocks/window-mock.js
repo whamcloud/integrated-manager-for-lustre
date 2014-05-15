@@ -1,4 +1,4 @@
-mock.register('$window', function () {
+angular.module('$windowMock', []).factory('$window', function $windowFactory () {
   'use strict';
 
   var hrefSpy = jasmine.createSpy('hrefSpy');
@@ -9,10 +9,10 @@ mock.register('$window', function () {
         value: hrefSpy
       },
       href: {
-        set: function (newLocation) {
+        set: function setter(newLocation) {
           hrefSpy(newLocation);
         },
-        get: function () {
+        get: function getter() {
           return hrefSpy.mostRecentCall.args[0];
         }
       }
