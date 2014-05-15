@@ -28,6 +28,7 @@
     UI_ROOT: document.baseURI,
     HELP_TEXT: window.HELP_TEXT,
     IS_RELEASE: window.IS_RELEASE,
+    ALLOW_ANONYMOUS_READ: window.ALLOW_ANONYMOUS_READ,
     SERVER_TIME_DIFF: window.SERVER_TIME_DIFF,
     VERSION: window.VERSION,
     BUILD: window.BUILD,

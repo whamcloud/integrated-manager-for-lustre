@@ -24,6 +24,7 @@
     "jasmine-node": "1.13.0",
     "proxyquire": "0.5.2",
     "jasmine-n-matchers": "0.0.3",
+    "jasmine-object-containing": "0.0.2",
     "jasmine-stealth": "0.0.15"
   }
 }

@@ -122,7 +122,11 @@ describe('Target ost metrics resource', function () {
     var params;
 
     beforeEach(function () {
-      params = {};
+      params = {
+        headers: {
+          Cookie: 'csrftoken=F0bJQGBt7BmzAicFJiBnmTqbuywPjXUs; sessionid=6c6764465d25bdabd2f0f51cc832374b'
+        }
+      };
 
       targetOstMetricsResource.httpGetOstMetrics(params);
     });
@@ -133,6 +137,9 @@ describe('Target ost metrics resource', function () {
 
     it('should get the target list', function () {
       var listParams = {
+        headers : {
+          Cookie : 'csrftoken=F0bJQGBt7BmzAicFJiBnmTqbuywPjXUs; sessionid=6c6764465d25bdabd2f0f51cc832374b'
+        },
         qs: {
           kind: 'OST',
           limit: 0

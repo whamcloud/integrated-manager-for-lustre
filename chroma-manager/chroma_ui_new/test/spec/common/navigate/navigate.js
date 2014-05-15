@@ -3,9 +3,7 @@ describe('navigate', function () {
 
   var $window, navigate, UI_ROOT;
 
-  beforeEach(module('navigate', {UI_ROOT: '/root/of/app/'}));
-
-  mock.beforeEach('$window');
+  beforeEach(module('navigate', '$windowMock', {UI_ROOT: '/root/of/app/'}));
 
   beforeEach(inject(function (_navigate_, _$window_, _UI_ROOT_) {
     $window = _$window_;

@@ -41,7 +41,7 @@
       <button type="submit" class="btn btn-success" ng-disabled="loginForm.$pristine || login.inProgress" ng-click="login.submitLogin()">
         <i class="fa fa-unlock"></i> Login
       </button>
-      <div class="skip-login-row">
+      <div class="skip-login-row" ng-if="login.ALLOW_ANONYMOUS_READ">
         <div class="skip-login">
           <small>
             <a ng-click="login.goToIndex()">Or Continue As Anonymous</a>

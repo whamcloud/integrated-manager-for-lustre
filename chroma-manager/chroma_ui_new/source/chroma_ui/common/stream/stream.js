@@ -24,9 +24,9 @@
   'use strict';
 
   angular.module('stream').factory('stream',
-    ['$parse', '$q', 'primus', 'pageVisibility', '$exceptionHandler', streamFactory]);
+    ['$parse', '$q', '$document', '$exceptionHandler', 'primus', 'pageVisibility', streamFactory]);
 
-  function streamFactory($parse, $q, primus, pageVisibility, $exceptionHandler) {
+  function streamFactory($parse, $q, $document, $exceptionHandler, primus, pageVisibility) {
     return function getStream(channelName, defaultStreamMethod, defaults) {
       defaults = _.merge({
         params: {},
@@ -101,10 +101,25 @@
           });
         });
 
-        this.channel.on('beforeStreaming', function (cb) {
+        this.channel.on('beforeStreaming', function (callback) {
           localApply(scope, function handleBeforeStreaming() {
-            self.beforeStreaming(streamMethod || defaultStreamMethod, merged, cb);
+            self.beforeStreaming(streamMethod || defaultStreamMethod, merged, callbackWithAuth);
           });
+
+          /**
+           * Adds auth to the params.
+           * @param {String} method The remote method to invoke.
+           * @param {Object} params The params to pass to the remote method.
+           */
+          function callbackWithAuth (method, params) {
+            params = _.merge({}, params, {
+              headers: {
+                Cookie: $document[0].cookie
+              }
+            });
+
+            callback(method, params);
+          }
         });
 
         function start () {

@@ -24,10 +24,10 @@
   'use strict';
 
   angular.module('login').controller('LoginCtrl',
-    ['$modal', '$q', 'SessionModel', 'help', 'navigate', LoginCtrl]
+    ['$modal', '$q', 'SessionModel', 'help', 'navigate', 'ALLOW_ANONYMOUS_READ', LoginCtrl]
   );
 
-  function LoginCtrl($modal, $q, SessionModel, help, navigate) {
+  function LoginCtrl($modal, $q, SessionModel, help, navigate, ALLOW_ANONYMOUS_READ) {
     /**
      * Initializes the eula modal and opens it.
      * @param {UserModel} user
@@ -83,6 +83,8 @@
         this.inProgress = false;
       }.bind(this));
     };
+
+    this.ALLOW_ANONYMOUS_READ = ALLOW_ANONYMOUS_READ;
 
     this.goToIndex = goToIndex;
 

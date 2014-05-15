@@ -20,4 +20,18 @@
 // express and approved by Intel in writing.
 
 
-angular.module('exception', ['ui.bootstrap', 'modelFactory', 'filters', 'windowUnload']);
+/**
+ * Monitors window for the beforeunload event.
+ * @returns {Object} An object that is updated to indicate if the page is unloading.
+ */
+angular.module('windowUnload', []).factory('windowUnload', ['$window', function windowUnloadFactory ($window) {
+  'use strict';
+
+  var state = { unloading: false };
+
+  $window.addEventListener('beforeunload', function beforeUnload () {
+    state.unloading = true;
+  });
+
+  return state;
+}]);

@@ -304,6 +304,10 @@ AGENT_CLOCK_TOLERANCE = 20
 # to chroma_api
 ALLOW_ANONYMOUS_READ = True
 
+# Allow Cookie to be read from JavaScript and passed to
+# Realtime service
+SESSION_COOKIE_HTTPONLY = False
+
 # The value at which log entries in the database will be aged out to a
 # flat text file in /var/log/chroma/db_log
 DBLOG_HW = 1200000

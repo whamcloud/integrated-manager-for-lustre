@@ -1,8 +1,6 @@
 describe('Login Controller', function () {
   'use strict';
 
-  var loginController, $httpBackend, $modal, sessionFixture, sessionFixtures, $rootScope, navigate;
-
   var userEulaStates = {
     EULA: 'eula',
     PASS: 'pass',
@@ -13,6 +11,8 @@ describe('Login Controller', function () {
 
   mock.beforeEach('$modal', 'navigate', 'help');
 
+  var loginController, $httpBackend, $modal, sessionFixture, sessionFixtures, $rootScope, navigate;
+
   beforeEach(inject(function ($controller, _$httpBackend_, _$modal_, _$rootScope_, _navigate_, fixtures) {
     $httpBackend = _$httpBackend_;
     $rootScope = _$rootScope_;
@@ -21,7 +21,8 @@ describe('Login Controller', function () {
     sessionFixtures = fixtures.asName('session');
 
     loginController = $controller('LoginCtrl', {
-      user_EULA_STATES: userEulaStates
+      user_EULA_STATES: userEulaStates,
+      ALLOW_ANONYMOUS_READ: true
     });
 
     sessionFixture = sessionFixtures.getFixture(function (fixture) {
@@ -35,6 +36,10 @@ describe('Login Controller', function () {
   afterEach(function() {
     $httpBackend.verifyNoOutstandingExpectation();
     $httpBackend.verifyNoOutstandingRequest();
+  });
+
+  it('should have an ALLOW_ANONYMOUS_READ property', function () {
+    expect(loginController.ALLOW_ANONYMOUS_READ).toBe(true);
   });
 
   it('should have a method to go to index', function () {

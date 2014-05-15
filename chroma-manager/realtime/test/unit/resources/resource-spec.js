@@ -176,7 +176,6 @@ describe('resource', function () {
           var config = request.defaults.mostRecentCall.args[0];
 
           expect(config).toEqual({
-            jar: true,
             json: true,
             ca: conf.caFile,
             url: conf.apiUrl + path + '/',

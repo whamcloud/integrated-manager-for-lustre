@@ -58,14 +58,27 @@ function notificationResourceFactory (Resource, AlertResource, CommandResource, 
 
   /**
    * Gets alerts, events and commands and joins them.
+   * @param {Object} params
    */
-  NotificationResource.prototype.httpGetHealth = function httpGetHealth() {
+  NotificationResource.prototype.httpGetHealth = function httpGetHealth (params) {
     return Q.all([
-      alertResource.httpGetList({qs: {active: true, severity__in: [STATES.WARN, STATES.ERROR], limit: 0}}),
-      alertResource.httpGetList({qs: {active: false, dismissed: false, severity__in: STATES.WARN, limit: 1}}),
-      eventResource.httpGetList({qs: {dismissed: false, severity__in: [STATES.WARN, STATES.ERROR], limit: 1}}),
-      commandResource.httpGetList({qs: {errored: true, dismissed: false, limit: 1}})
+      alertResource.httpGetList(
+        mergeParams({qs: {active: true, severity__in: [STATES.WARN, STATES.ERROR], limit: 0}})
+      ),
+      alertResource.httpGetList(
+        mergeParams({qs: {active: false, dismissed: false, severity__in: STATES.WARN, limit: 1}})
+      ),
+      eventResource.httpGetList(
+        mergeParams({qs: {dismissed: false, severity__in: [STATES.WARN, STATES.ERROR], limit: 1}})
+      ),
+      commandResource.httpGetList(
+        mergeParams({qs: {errored: true, dismissed: false, limit: 1}})
+      )
     ]).spread(allDone);
+
+    function mergeParams(getParams) {
+      return _.merge({}, params, getParams);
+    }
 
     function allDone(activeAlertResp, inactiveAlertResp, eventResp, commandResp) {
       var alerts = activeAlertResp.body.objects,

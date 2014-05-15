@@ -1,9 +1,7 @@
 describe('stream module', function () {
   'use strict';
 
-  var stream, $scope, primus, expression, pageVisibility;
-
-  beforeEach(module('stream', function ($provide) {
+  beforeEach(module('stream', 'mockPrimus', function ($provide) {
     $provide.factory('pageVisibility', function () {
       return {
         onChange: jasmine.createSpy('pageVisibility.onChange').andReturn(
@@ -11,19 +9,22 @@ describe('stream module', function () {
         )
       };
     });
+  }, {
+    $document: [{cookie: 'csrftoken=F0bJQGBt7BmzAicFJiBnmTqbuywPjXUs; sessionid=42e56defe7d851d28b7175a3e17cc419'}],
+    BASE: 'https://a.b.com'
   }));
 
-  mock.beforeEach('BASE', 'primus');
+  var $document, $scope, stream, primus, pageVisibility, expression;
 
-  beforeEach(inject(function (_stream_, _primus_, _pageVisibility_, $rootScope) {
+  beforeEach(inject(function (_$document_, $rootScope, _stream_, _primus_, _pageVisibility_) {
     primus = _primus_;
     stream = _stream_;
     pageVisibility = _pageVisibility_;
+    $document = _$document_;
     $scope = $rootScope.$new();
 
     $scope.data = [];
     expression = 'data';
-
   }));
 
   describe('create', function () {
@@ -48,11 +49,11 @@ describe('stream module', function () {
     });
 
     it('should setup a channel when the stream is created', function () {
-      expect(primus._channel_).toHaveBeenCalledOnceWith('foo');
+      expect(primus.plan().channel).toHaveBeenCalledOnceWith('foo');
     });
 
     it('should expose the channel as a property', function () {
-      expect(streamInstance.channel).toBe(primus._channelInstance_);
+      expect(streamInstance.channel).toBe(primus.plan().channel.plan());
     });
 
     it('should expose the scope as a property', function () {
@@ -79,7 +80,27 @@ describe('stream module', function () {
 
       $scope.$destroy();
 
-      expect(primus._primusInstance_.removeListener).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
+      expect(primus.plan().removeListener).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
+    });
+
+    it('should merge params with authHeaders', function () {
+      streamInstance.startStreaming({
+        headers: { 'X-Foo': 'bar' },
+        qs: { param: 'value' }
+      }, 'fakeStreamMethod');
+
+      var beforeStreamingFunc = getChannelListener(primus, 'beforeStreaming');
+      var cb = jasmine.createSpy('cb');
+
+      beforeStreamingFunc(cb);
+
+      expect(cb).toHaveBeenCalledOnceWith('fakeStreamMethod', {
+        headers: {
+          'X-Foo': 'bar',
+          Cookie: $document[0].cookie
+        },
+        qs: {  param : 'value' }
+      });
     });
 
     describe('startStreaming', function () {
@@ -88,19 +109,19 @@ describe('stream module', function () {
       });
 
       it('should register a stream handler to the channel', function () {
-        expect(primus._channelInstance_.on).toHaveBeenCalledWith('stream', jasmine.any(Function));
+        expect(primus.plan().channel.plan().on).toHaveBeenCalledWith('stream', jasmine.any(Function));
       });
 
       it('should register a beforeStreaming handler to the channel', function () {
-        expect(primus._channelInstance_.on).toHaveBeenCalledWith('beforeStreaming', jasmine.any(Function));
+        expect(primus.plan().channel.plan().on).toHaveBeenCalledWith('beforeStreaming', jasmine.any(Function));
       });
 
       it('should send a startStreaming messge', function () {
-        expect(primus._channelInstance_.send).toHaveBeenCalledOnceWith('startStreaming');
+        expect(primus.plan().channel.plan().send).toHaveBeenCalledOnceWith('startStreaming');
       });
 
       it('should add a listener that restarts the stream on open', function () {
-        expect(primus._primusInstance_.on).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
+        expect(primus.plan().on).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
       });
 
       it('should add a listener that toggles the stream when page visibility changes', function () {
@@ -112,7 +133,7 @@ describe('stream module', function () {
 
         cb(true);
 
-        expect(primus._channelInstance_.send).toHaveBeenCalledOnceWith('stopStreaming');
+        expect(primus.plan().channel.plan().send).toHaveBeenCalledOnceWith('stopStreaming');
       });
 
       it('should start the stream if the page is not hidden', function () {
@@ -120,33 +141,29 @@ describe('stream module', function () {
 
         cb(false);
 
-        expect(primus._channelInstance_.send).toHaveBeenCalledTwiceWith('startStreaming');
+        expect(primus.plan().channel.plan().send).toHaveBeenCalledTwiceWith('startStreaming');
       });
 
       it('should call the callback with method and params beforeStreaming', function () {
-        var beforeStreamingCall = primus._channelInstance_.on.mostRecentCallThat(function(call) {
-          return call.args[0] === 'beforeStreaming';
-        }),
-          beforeStreamingFunc = beforeStreamingCall.args[1],
-          cb = jasmine.createSpy('cb');
+        var beforeStreamingFunc = getChannelListener(primus, 'beforeStreaming');
+        var cb = jasmine.createSpy('cb');
 
         beforeStreamingFunc(cb);
 
-        expect(cb).toHaveBeenCalledOnceWith('fakeStreamMethod', {});
+        expect(cb).toHaveBeenCalledOnceWith('fakeStreamMethod', {
+          headers: {
+            Cookie: $document[0].cookie
+          }
+        });
       });
 
       it('should run the transformers when new stream data comes in', function () {
-        var streamCall = primus._channelInstance_.on.mostRecentCallThat(function (call) {
-          return call.args[0] === 'stream';
-        }),
-          streamFunc = streamCall.args[1],
-          resp = {
-            body: []
-          };
+        var streamFunc = getChannelListener(primus, 'stream');
+        var resp = { body: [] };
 
         streamFunc(resp);
 
-        expect(resp.body).toBe('Duck');
+        expect(resp).toEqual({ body: 'Duck' });
       });
 
       describe('stop streaming', function () {
@@ -159,19 +176,19 @@ describe('stream module', function () {
         });
 
         it('should send stopStreaming', function () {
-          expect(primus._channelInstance_.send).toHaveBeenCalledWith('stopStreaming', cb);
+          expect(primus.plan().channel.plan().send).toHaveBeenCalledWith('stopStreaming', cb);
         });
 
         it('should remove the stream listener from the channel', function () {
-          expect(primus._channelInstance_.removeAllListeners).toHaveBeenCalledWith('stream');
+          expect(primus.plan().channel.plan().removeAllListeners).toHaveBeenCalledWith('stream');
         });
 
         it('should remove the beforeStreaming listener from the channel', function () {
-          expect(primus._channelInstance_.removeAllListeners).toHaveBeenCalledWith('beforeStreaming');
+          expect(primus.plan().channel.plan().removeAllListeners).toHaveBeenCalledWith('beforeStreaming');
         });
 
         it('should remove the open listener from primus', function () {
-          expect(primus._primusInstance_.removeListener).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
+          expect(primus.plan().removeListener).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
         });
 
         it('should remove the page visibility listener from the page visibility service', function () {
@@ -183,53 +200,44 @@ describe('stream module', function () {
 
 
       describe('restart', function () {
-        var stopStreamingCall;
-
         beforeEach(function () {
           streamInstance.restart();
-
-          stopStreamingCall = primus._channelInstance_.send.mostRecentCallThat(function (call) {
-            return call.args[0] === 'stopStreaming';
-          });
         });
 
         it('should stop the stream', function () {
-          expect(primus._channelInstance_.send).toHaveBeenCalledOnceWith('stopStreaming', jasmine.any(Function));
+          expect(primus.plan().channel.plan().send).toHaveBeenCalledOnceWith('stopStreaming', jasmine.any(Function));
         });
 
         it('should not start the stream until stop calls back', function () {
-          expect(primus._channelInstance_.send).toHaveBeenCalledOnceWith('startStreaming');
+          expect(primus.plan().channel.plan().send).toHaveBeenCalledOnceWith('startStreaming');
         });
 
         it('should start the stream', function () {
-          stopStreamingCall.args[1]();
+          var stopStreamingFunc = getChannelListener(primus, 'stopStreaming', 'send');
+          stopStreamingFunc();
 
-          expect(primus._channelInstance_.send).toHaveBeenCalledTwiceWith('startStreaming');
+          expect(primus.plan().channel.plan().send).toHaveBeenCalledTwiceWith('startStreaming');
         });
       });
     });
 
     describe('prependTransformers', function () {
-      var transformer = jasmine.createSpy('transformer').andCallFake(_.identity);
+      var response;
 
       beforeEach(function () {
-        streamInstance.startStreaming({}, 'fakeStreamMethod', transformer);
+        streamInstance.startStreaming({}, 'fakeStreamMethod', function (resp) {
+          response = _.clone(resp);
+
+          return resp;
+        });
       });
 
       it('should call the prepend transformer', function () {
-        var streamCall = primus._channelInstance_.on.mostRecentCallThat(function (call) {
-            return call.args[0] === 'stream';
-          }),
-          streamFunc = streamCall.args[1],
-          resp = {
-            body: []
-          };
+        var streamFunc = getChannelListener(primus, 'stream');
+        streamFunc({ body: [] });
 
-        streamFunc(resp);
-
-        expect(transformer).toHaveBeenCalledOnceWith(resp);
+        expect(response).toEqual({ body: [] });
       });
-
     });
 
     describe('destroy', function () {
@@ -238,7 +246,7 @@ describe('stream module', function () {
       });
 
       it('should end the channel', function () {
-        expect(primus._channelInstance_.end).toHaveBeenCalledOnce();
+        expect(primus.plan().channel.plan().end).toHaveBeenCalledOnce();
       });
 
       it('should null the channel', function () {
@@ -429,3 +437,23 @@ describe('streams', function () {
     expect(immutableStream).toHaveBeenCalledOnceWith(HostStream, 'foo.bar', {});
   });
 });
+
+/**
+ * Given a primus mock, returns the event listener registered to it's channel
+ * @param {Object} primus
+ * @param {String} eventName
+ * @param {String} [type]
+ * @returns {Function}
+ */
+function getChannelListener (primus, eventName, type) {
+  'use strict';
+
+  if (type == null)
+    type = 'on';
+
+  var match = primus.plan().channel.plan()[type].mostRecentCallThat(function findMatch(call) {
+    return call.args[0] === eventName;
+  });
+
+  return match.args[1];
+}
