@@ -15,6 +15,7 @@ from django.utils.unittest import TestCase
 import settings
 
 from chroma_core.lib.util import site_dir
+from tests.utils import wait
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class SupervisorTestCase(TestCase):
         'http_agent': [settings.HTTP_AGENT_PORT],
         'httpd': [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT],
     }
+    TIMEOUT = 5  # default timeout to wait for services to start
     CONF = os.path.join(site_dir(), "supervisord.conf")
     TEST_USERNAME = 'test'
     TEST_PASSWORD = 'asiyud97sdyuias'
@@ -51,22 +53,14 @@ class SupervisorTestCase(TestCase):
             else:
                 raise
 
-    def _wait_for_port(self, port, timeout = 10):
+    def _wait_for_port(self, port):
         log.info("Waiting for port %s..." % port)
-        i = 0
-        while True:
-            s = socket.socket()
+        for index in wait(self.TIMEOUT):
             try:
-                s.connect(("localhost", port))
+                return socket.socket().connect(('localhost', port))
             except socket.error:
-                if i > timeout:
-                    raise AssertionError("Timed out after %s seconds waiting for port %s" % (timeout, port))
-                i += 1
-                time.sleep(1)
-            else:
-                s.close()
-                log.info("Port %s ready after %s seconds" % (port, i))
-                break
+                pass
+        raise
 
     def setUp(self):
         cfg_stringio = StringIO(open(self.CONF).read())
@@ -106,7 +100,7 @@ class SupervisorTestCase(TestCase):
                 log.info("Starting service '%s'" % service)
                 self.start(service)
             for service in set(self.SERVICES) - set(self.PORTS):
-                self.assertRunning(service, uptime=3)
+                self.assertRunning(service, uptime=self.TIMEOUT)
         except:
             # Ensure we don't leave a supervisor process behind
             self.tearDown()
