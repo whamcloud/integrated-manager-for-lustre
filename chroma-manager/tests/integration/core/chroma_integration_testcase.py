@@ -114,11 +114,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             try:
                 self.wait_for_command(self.chroma_manager, command_id, timeout=900)
             except AssertionError:
+                # Debugging added for HYD-2849, must not impact normal exception handling
                 if not hasattr(self, 'simulator'):
                     for cmd in ('rpm -qa', 'rpm -Va'):
-                        print cmd
-                        result = self.remote_command(host_address, cmd)
-                        print result.stdout.read()
+                        print 'run:', cmd
+                        result = self.remote_command(host_address, cmd, expected_return_code=None)
+                        print 'exit_status:', result.exit_status
+                        print 'stdout', result.stdout.read()
                 raise
 
         # Verify there are now n hosts in the database.
