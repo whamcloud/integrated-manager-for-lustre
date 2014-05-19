@@ -193,7 +193,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 <!--ZOOMRESTART-->
 <p class="p_BodyText"><span class="f_BodyText">This section includes examples of common operations executed using the CLI.</span></p>
-<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: Operations that modify the file system configuration can only be executed by a superuser. For a convenient way to access login information in a configuration file, see <a href="creating_a_configuration_file_.htm" class="topiclink">Creating a configuration file containing login information</a>. If a configuration file containing the administrator’s login information does not exist, include the </span><span class="f_BodyText" style="font-family: 'Courier New';">--username</span><span class="f_BodyText"> and </span><span class="f_BodyText" style="font-family: 'Courier New';">--password</span><span class="f_BodyText"> parameters in the CLI command.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: Operations that modify the file system configuration can only be executed by a file system administrator. For a convenient way to access login information in a configuration file, see <a href="creating_a_configuration_file_.htm" class="topiclink">Creating a configuration file containing login information</a>. If a configuration file containing the administrator’s login information does not exist, include the </span><span class="f_BodyText" style="font-family: 'Courier New';">--username</span><span class="f_BodyText"> and </span><span class="f_BodyText" style="font-family: 'Courier New';">--password</span><span class="f_BodyText"> parameters in the CLI command.</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To add the file system jovian to Intel® Manager for Lustre* , enter:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"># chroma fs-add jovian --mgt autonoe:/dev/mapper/LustreVG-mgs --mdt autonoe:/dev/mapper/</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">LustreVG-mdt --ost thyone:/dev/mapper/LustreVG-ost0 --ost thyone:/dev/mapper/LustreVG-ost1 --ost thyone:/dev/mapper/</span></p>
@@ -209,13 +209,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To list known servers:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText"># chroma server-list</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | &nbsp; &nbsp; fqdn &nbsp; &nbsp; | state | &nbsp; &nbsp;nids &nbsp; &nbsp;| last_contact |</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 4 | autonoe.jovian.private | lnet_up | 10.141.255.2@tcp0 | &nbsp;20:10:46 &nbsp;|</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 5 | thyone.jovian.private | lnet_up | 10.141.255.3@tcp0 | &nbsp;20:10:46 &nbsp;|</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | &nbsp;fqdn &nbsp;| state | nids | last_contact |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 4 | autonoe.jovian.private | lnet_up | 10.141.255.2@tcp0 | 20:10:46 |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 5 | thyone.jovian.private | lnet_up | 10.141.255.3@tcp0 | 20:10:46 |</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To list known OSTs:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"># chroma ost-list</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | &nbsp; name &nbsp; | state | &nbsp;primary_path &nbsp; &nbsp; &nbsp; &nbsp; |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | name | state | primary_path &nbsp; |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 3 | jovian-OST0002 | mounted | thyone.jovian.private:/dev/mapper/LustreVG-ost0 |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 4 | jovian-OST0001 | mounted | thyone.jovian.private:/dev/mapper/LustreVG-ost1 |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 5 | jovian-OST0000 | mounted | thyone.jovian.private:/dev/mapper/LustreVG-ost2 |</span></p>
@@ -223,8 +223,8 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To list targets on a given server, limiting to primary targets:</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';"># chroma server autonoe target-list --primary</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | &nbsp; name &nbsp; | state | &nbsp;primary_path &nbsp; &nbsp; &nbsp; &nbsp; |</span></p>
-<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 1 | &nbsp; MGS &nbsp; &nbsp;| mounted | autonoe.jovian.private:/dev/mapper/LustreVG-mgs |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| id | name | state | primary_path &nbsp; |</span></p>
+<p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 1 | MGS | mounted | autonoe.jovian.private:/dev/mapper/LustreVG-mgs |</span></p>
 <p class="p_BodyText" style="margin: 0px 0px 8px 24px;"><span class="f_BodyText" style="font-family: 'Courier New';">| 2 | jovian-MDT0000 | mounted | autonoe.jovian.private:/dev/mapper/LustreVG-mdt |</span></p>
 <p class="p_BodyText"><span class="f_BodyText">&nbsp;</span></p>
 <p class="p_BodyText"><span class="f_BodyText">To obtain client mount information:</span></p>

@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Creating a new Lustre file system</title>
+   <title>Creating a new Lustre* file system</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="configure a new Lustre file system,file system,file system monitor" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="This chapter describes how to create a new high-availability Lustre file system, to be managed from the Intel® Manager for Lustre*, and how to mount file system clients.&nbsp;" />
+   <meta name="description" content="This chapter describes how to create a new Lustre* file system, to be managed from the Intel® Manager for Lustre*, and how to mount file system clients.&nbsp;" />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -51,12 +51,12 @@ var tVars = {
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Creating a new Lustre file system",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Creating a new Lustre file system",
-   sharesubject: "Intel® Manager for Lustre* - Creating a new Lustre file system",
+   titleP: "Creating a new Lustre* file system",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Creating a new Lustre* file system",
+   sharesubject: "Intel® Manager for Lustre* - Creating a new Lustre* file system",
    simplesubject: "Documentation%20Feedback",
    mailid: "Creating_a_File_System2",
-   mailpath: "Creating a new Lustre file system /",
+   mailpath: "Creating a new Lustre* file system /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,7 +113,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Creating a new Lustre file system").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Creating a new Lustre* file system").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
 } catch(err) {}
 });
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Creating a new Lustre file system</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Creating a new Lustre* file system</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Creating a new Lustre file system</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Creating a new Lustre* file system</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -192,10 +192,9 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">This chapter describes how to create a new high-availability Lustre file system, to be managed from the Intel® Manager for Lustre*, and how to mount file system clients. </span></p>
-<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: An HA Lustre file system managed by Intel® Manager for Lustre* software requires that your entire storage system configuration and all interfaces be compliant with a pre-defined configuration. See the High Availability Configuration Specification in the Intel® Enterprise Edition of Lustre, Partner Installation Guide for detailed information. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">This chapter describes how to create a new Lustre* file system, to be managed from the Intel® Manager for Lustre*, and how to mount file system clients. </span></p>
 <p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: All references herein to the</span><span class="f_BodyText" style="font-style: italic;"> manager</span><span class="f_BodyText"> refer to the Intel® Manager for Lustre* software.</span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText"><a href="ha_and_failover_support_provid.htm" class="topiclink">High-availability file system support</a> (overview).</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText"><a href="configure_storage_servers.htm" class="topiclink">Add storage servers</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText"><a href="configure_the_lnet_nid_for_eac.htm" class="topiclink">Configure LNet for each server</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText"><a href="configure_the_volumes.htm" class="topiclink">Configure primary and failover servers</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">5.</span><span class="f_BodyText"><a href="configure_power_distribution_u.htm" class="topiclink">Add power distribution units</a> (alternate to BMC configuration).</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">6.</span><span class="f_BodyText"><a href="assign_pdu_outlets_to_servers.htm" class="topiclink">Assign PDU outlets to servers</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">7.</span><span class="f_BodyText"><a href="configure_ipmi_and_add_bmcs.htm" class="topiclink">Assign BMCs to servers</a> (alternate to power distribution units and outlets).</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">8.</span><span class="f_BodyText"><a href="create_the_file_system.htm" class="topiclink">Create the new Lustre file system</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">9.</span><span class="f_BodyText"><a href="view_the_file_system.htm" class="topiclink">View the file system</a>.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">10.</span><span class="f_BodyText"><a href="mounting_file_system_clients.htm" class="topiclink">Mount file system clients</a>.</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText"><a href="ha_and_failover_support_provid_2.htm" class="topiclink">High-availability file system support</a> (overview)</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText"><a href="configure_storage_servers.htm" class="topiclink">Add storage servers</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText"><a href="configure_the_volumes.htm" class="topiclink">Configure primary and failover servers</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText"><a href="configure_power_distribution_u.htm" class="topiclink">Add power distribution units</a> (alternate to BMC configuration)</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">5.</span><span class="f_BodyText"><a href="assign_pdu_outlets_to_servers.htm" class="topiclink">Assign PDU outlets to servers</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">6.</span><span class="f_BodyText"><a href="configure_ipmi_and_add_bmcs.htm" class="topiclink">Assign BMCs to servers</a> (alternate to power distribution units and outlets)</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">7.</span><span class="f_BodyText"><a href="create_the_file_system.htm" class="topiclink">Create the new Lustre file system</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">8.</span><span class="f_BodyText"><a href="view_the_file_system.htm" class="topiclink">View the file system</a></span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">9.</span><span class="f_BodyText"><a href="mounting_file_system_clients.htm" class="topiclink">Mount file system clients</a></span></p>
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->

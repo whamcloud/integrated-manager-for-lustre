@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Mount file system clients</title>
+   <title>Mount the Lustre file system</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="client mount information,Lustre client,mounting a client" />
@@ -51,12 +51,12 @@ var tVars = {
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Mount file system clients",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Mount file system clients",
-   sharesubject: "Intel® Manager for Lustre* - Mount file system clients",
+   titleP: "Mount the Lustre file system",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Mount the Lustre file system",
+   sharesubject: "Intel® Manager for Lustre* - Mount the Lustre file system",
    simplesubject: "Documentation%20Feedback",
    mailid: "mounting_file_system_clients",
-   mailpath: "Creating a new Lustre file system &gt; Mount file system clients /",
+   mailpath: "Creating a new Lustre* file system &gt; Mount the Lustre file system /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,7 +113,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Mount file system clients").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Mount the Lustre file system").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
 } catch(err) {}
 });
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Mount file system clients</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Mount the Lustre file system</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Mount file system clients</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Mount the Lustre file system</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -192,9 +192,10 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">A compute client must mount the Lustre* file system to be able to access data in the file system. Before attempting to mount the file system on your Lustre clients, make sure the Intel® Enterprise Edition for Lustre* client software has been installed on each client. For instructions, see the documentation provided by your storage solution provider.</span></p>
-<p class="p_BodyText"><span class="f_BodyText">To obtain the command to use to mount your file system: </span></p>
-<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">At the menu bar, click the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> drop-down menu and click </span><span class="f_BodyText" style="font-weight: bold;">File Systems</span><span class="f_BodyText">. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Each file system is listed. Click the name of the file system to be mounted. A page opens showing information for that file system. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">On the file system page, click</span><span class="f_BodyText" style="font-weight: bold;"> View Client Mount Information</span><span class="f_BodyText">. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">The command used to mount the file system on a client is displayed. On the client server, enter this command.</span></p>
+<p class="p_BodyText"><span class="f_BodyText">A compute client must mount the Lustre* file system to be able to access data in the file system. Before attempting to mount the file system on your Lustre clients, make sure the Intel® Enterprise Edition for Lustre* client software has been installed on each client. For instructions, see the documentation provided by your storage solution provider. </span></p>
+<p class="p_BodyText"><span class="f_BodyText">To obtain the command to use to mount your file system:</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">At the manager Dashboard menu bar, click the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> drop-down menu and click </span><span class="f_BodyText" style="font-weight: bold;">File Systems</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">Each Lustre file system created using Intel® Manager for Lustre is listed. Select the file system to be mounted. A page opens showing information for that file system.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">On the file system page, click </span><span class="f_BodyText" style="font-weight: bold;">View Client Mount Information</span><span class="f_BodyText">. The mount command to be used to mount the file system is displayed. Following is an example only:</span><br />
+<span class="f_BodyText">mount -t lustre 10.214.13.245@tcp0:/test /mnt/test</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">On the client server, enter the actual command.</span></p>
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->
