@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Add a copytool to the Agent node</title>
+   <title>Add a Copytool to an HSM Agent node</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="" />
@@ -45,18 +45,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "using_hsm.htm",
+   nextP: "start_the_copytool.htm",
    prevP: "configure_an_hsm_agent_server.htm",
    currP: "add_a_copytool_to_the_agent_se.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Add a copytool to the Agent node",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Add a copytool to the Agent node",
-   sharesubject: "Intel® Manager for Lustre* - Add a copytool to the Agent node",
+   titleP: "Add a Copytool to an HSM Agent node",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Add a Copytool to an HSM Agent node",
+   sharesubject: "Intel® Manager for Lustre* - Add a Copytool to an HSM Agent node",
    simplesubject: "Documentation%20Feedback",
    mailid: "Add_a_copytool_to_the_Agent_se",
-   mailpath: "Configuring and Using Hierarchical Storage Management &gt; Add a copytool to the Agent node /",
+   mailpath: "Configuring and using Hierarchical Storage Management &gt; Add a Copytool to an HSM Agent node /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,7 +113,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Add a copytool to the Agent node").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Add a Copytool to an HSM Agent node").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
 } catch(err) {}
 });
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Add a copytool to the Agent node</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Add a Copytool to an HSM Agent node</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Add a copytool to the Agent node</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Add a Copytool to an HSM Agent node</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -192,7 +192,10 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">At the menu bar, click the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> drop-down menu and click </span><span class="f_BodyText" style="font-weight: bold;">HSM.</span></p><p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">At the bottom of the page, click </span><span class="f_BodyText" style="font-weight: bold;">Add Copytool</span><span class="f_BodyText">.</span></p><p style="text-align: left; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">At the Add Copytool form, set the following fields:</span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">a.</span><span class="f_BodyText">File system: Specify filesystem for which this copytool will perform HSM actions.</span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">b.</span><span class="f_BodyText">Worker: This is the POSIX HSM Agent node that you configured in <a href="configure_an_hsm_agent_server.htm" class="topiclink">Configure an HSM Agent node</a>. &nbsp;Each copytool instance has its own Agent node, so there may be several. </span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">c.</span><span class="f_BodyText">Path to the HSM agent binary: </span><span class="f_BodyText">The filesystem path to the copytool binary on the worker (e.g. /usr/sbin/lhsmtool_posix). This was installed on the agent when you configured the HSM Agent node.</span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">d.</span><span class="f_BodyText">HSM agent arguments (optional): This is a vendor-specific list of copytool arguments. Consult your HSM vendor documentation for the applicable arguments.</span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">e.</span><span class="f_BodyText">File system mount point: The filesystem mount point on the worker node. Copytool instances require client access to their associated filesystem.</span></p><p style="text-align: left; padding: 0px 0px 0px 22px; margin: 0px 0px 8px 14px;"><span style="font-weight:bold; font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">f.</span><span class="f_BodyText">Archive number: The storage back-end number. Change this number only if your site policies require multiple storage back-ends. For more information, consult the &quot;Lustre Operations Manual&quot;, Section 22.3.1: Archive ID, multiple back-ends.</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">At the menu bar, click the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> drop-down menu and click </span><span class="f_BodyText" style="font-weight: bold;">HSM</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">At the bottom of the page, click </span><span class="f_BodyText" style="font-weight: bold;">+ Add Copytool</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">At the Add Copytool form, set the following fields:</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 36px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">a.</span><span class="f_BodyText" style="font-weight: bold;">File system</span><span class="f_BodyText">: Specify filesystem for which this copytool will perform HSM actions.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 36px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">b.</span><span class="f_BodyText" style="font-weight: bold;">Worker</span><span class="f_BodyText">: This is the POSIX HSM Agent node that you configured in <a href="configure_an_hsm_agent_server.htm" class="topiclink">Add an HSM Agent node</a>. Each copytool instance has its own Agent node, so there may be several. Note that copytool is multi-threaded, so it is able to support multiple simultaneous HSM operations.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 36px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">c.</span><span class="f_BodyText" style="font-weight: bold;">Path to the HSM agent binary</span><span class="f_BodyText">: The filesystem path to the copytool binary on the worker. For the POSIX copytool provided with Intel® EE for Lustre* software, the path is /usr/sbin/lhsmtool_posix). This was installed on the agent when you configured the HSM Agent node. &nbsp;If another copytool has been installed, it likely resides at another location. </span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 36px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">d.</span><span class="f_BodyText" style="font-weight: bold;">HSM agent arguments (optional)</span><span class="f_BodyText">: This is a vendor-specific list of copytool arguments. Consult your HSM vendor documentation for the applicable arguments.</span><br />
+<span class="f_BodyText">&nbsp;</span><br />
+<span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: Do not provide any flags that will cause the copytool process to be run in the background (e.g. --daemon); this interferes with the ability of Intel® Manager for Lustre software to control and monitor the copytool process.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 36px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">e.</span><span class="f_BodyText" style="font-weight: bold;">File system mount point</span><span class="f_BodyText">: The filesystem mount point on the worker node. Copytool instances require client access to their associated filesystem.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 36px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">f.</span><span class="f_BodyText" style="font-weight: bold;">Archive number</span><span class="f_BodyText">: The storage back-end number. Change this number only if your site policies require multiple storage back-ends. If there is only one archive available for the file system, set the archive number to &quot;1&quot; (the default). For more information, consult the &quot;Lustre Operations Manual&quot;, Section 22.3.1: Archive ID, multiple back-ends.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">To commit this configuration, click </span><span class="f_BodyText" style="font-weight: bold;">Save</span><span class="f_BodyText">.</span></p><p class="p_BodyText"><span class="f_BodyText">See Start the Copytool.</span></p>
+
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->

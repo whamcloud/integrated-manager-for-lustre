@@ -1,0 +1,220 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+   <title>Key Features</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <meta name="generator" content="Help &amp; Manual" />
+   <meta name="keywords" content="corosync,failover,IMPI,object storage target (OST),object storage target (OST) striping,pacemaker,STONITH" />
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+   <meta http-equiv="content-language" content="en-us" />
+   <meta name="description" content="Following are key features afforded by Intel® Manger for Lustre* software (as a component of Intel® Enterprise Edition for Lustre* software)" />
+   <meta http-equiv="Content-Style-Type" content="text/css" />
+   <link type="text/css" href="default.css" rel="stylesheet" />
+   <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
+<style type="text/css">
+/* No header topics */
+
+/* Breadcrumb trail */
+p#breadcrumbs {
+font-family: Verdana, Tahoma, Helvetica, Sans-Serif;   padding: 2px 0 1px 2px;
+   margin: 0;
+   font-size: 8pt; 
+   color: #999;
+   }   
+p#breadcrumbs a { color: #999; text-decoration: none;}
+p#breadcrumbs a:visited {color: #999;}
+p#breadcrumbs a:hover { color: #333; border-bottom: 1px dotted #333; }
+
+/* Search hightlight color */
+span.highlight {background-color: #ffff40;}
+  div#hmsocialmedia {
+  min-width: 606px;
+  }
+</style>
+<script type="text/javascript">
+var hmHeaderTopic = true;
+
+</script> 
+<!--[if IE 9]>
+<link id="iesvgcss" rel="stylesheet" type="text/css" href="hm_webhelp_svg.css" />
+<![endif]-->	
+<script src="jquery.js"></script>
+<script type="text/javascript" src="jquery.tools.min.js"></script>
+<script type="text/javascript" src="jquery.scrollTo-min.js"></script>
+<script type="text/javascript"> 
+// General topic variables
+var tVars = {
+   hmHelpPage: "index.html",
+   nextP: "monitor-only_mode_versus_manag.htm",
+   prevP: "enterprise_lustre_overview2_2.htm",
+   currP: "new_features_in_this_release_2.htm",
+   defP: "intel_manager_for_lustre.htm",
+   mailUrl: "",
+   mailUrlQuery: "",
+   titleP: "Key Features",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* - Key Features",
+   sharesubject: "Intel® Manager for Lustre* - Key Features",
+   simplesubject: "Documentation%20Feedback",
+   mailid: "New_Features_in_this_Release_2",
+   mailpath: "Introducing Intel® Manager for Lustre* &gt; Key Features /",
+   mailbody: "Dear Support Staff,",
+   fbtype: false,
+   header: true,
+   background: "bg.png",
+   tablesReady: false,
+   togglesReady: false,
+   webRedirect: true,
+   topicTitleBar: true,
+   printFooter: true,
+   zoomTip: "Click to view full size image",
+   autoPrint: true,
+   printButton: "Print",
+   printButtonTip: "Print the current topic"
+   }
+// Popup configuration
+ var hmpBShadow = true;
+ var hmPopSmallDim = 500;
+ var hmPopKillVideo = true;
+ // AutoTOC variables
+ var hmatocvars = {
+   atoc_show: true,
+   atoc_title: "Contents",
+   atoc_tip: "Jump to:&nbsp;",
+   atoc_minHeaders: 3,
+   atoc_btntip_off: "No contents entries on this page",
+   atoc_btntip_on: "Display/hide topic directory",
+   atoc_toptip: "Jump to top of page",
+   atoc_top: "Scroll to Top of Page",
+   atoc_bg: "#f6f6f6",
+   atoc_border: "silver",
+   atoc_linkcolor: "#444",
+   atoc_linklimit: 45,
+   atoc_hovercolor: "#000",
+   atoc_hoverbgcolor: "#e0e0e0"
+}
+// Sortable tables
+var sortVars = {
+   europeandate: false,
+   germanNumbers: false,
+   imagePath: "",
+   image_up: "arrow-up.gif",
+   image_down: "arrow-down.gif",
+   image_empty: "arrow-empty.gif",
+   image_none: "arrow-none.gif",
+   sort_tip: "Click to sort on this column",
+   umlauts: "false"
+   }
+
+</script>
+
+<script type="text/javascript">
+if (tVars.topicTitleBar) { 
+$(document).ready(function() {
+var doc = document;  
+try {
+if (parent.hmWebHelp.navWidth != null) doc = parent.document;
+doc.title = $("<div/>").html("Intel® Manager for Lustre* - Key Features").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+} catch(err) {}
+});
+}
+</script>
+
+<script type="text/javascript" src="//platform.linkedin.com/in.js"></script>
+<script type="text/javascript" src="helpman_settings.js"></script>
+<script type="text/javascript" src="helpman_topicinit.js"></script>
+<script type="text/javascript" src="hmtopic.js"></script>
+
+   <script type="text/javascript">
+     HMSyncTOC("index.html", "new_features_in_this_release_2.htm");
+   </script>
+   <script type="text/javascript" src="highlight.js"></script>
+   <script type="text/javascript">
+     $(document).ready(function(){highlight();});
+   </script>
+</head>
+<body>
+<!--ZOOMSTOP-->
+<div id="hmsocialmedia">
+	<ul class="social-buttons">
+	<li>
+		<div class="fb-button">
+		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?new_features_in_this_release_2.htm"
+        scrolling="no" frameborder="0"
+        style="border:none; width:300px; height:26px"></iframe>
+		</div>
+	</li>
+	<li>
+	<div class="twitter-button">
+		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?new_features_in_this_release_2.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
+		<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}})(document,"script","twitter-wjs");</script>
+	</div>
+	</li>
+	<li>
+		<div class="googleplusone-button">
+                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?new_features_in_this_release_2.htm"></g:plusone>
+                </div>
+		<script type="text/javascript">
+		window.___gcfg = {lang: 'en-US'};
+      (function(){var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = 'https://apis.google.com/js/plusone.js';var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);})();
+    </script>
+                
+	</li> 
+	<li>
+		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?new_features_in_this_release_2.htm"></script></div>
+	</li>
+	<li>
+		<div id="mailthisbutton"><a href="mailto:?body=http://www.ec-software.com/help/index.html%3F<%HREF_CURRENT_PAGE%" class="sbutton">
+		<span id="sbuttontext">Mail This</span>
+		</a></div>
+	</li> 
+	</ul>
+	</div>
+
+
+<ul id="topictabs" class="tabs">
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Key Features</span></a></li>
+</ul>
+<div id="hmbox">
+<div id="hmheader">
+<div id="hmheadercontents">
+ 
+<h1 class="p_Heading1"><span class="f_Heading1">Key Features</span></h1>
+
+</div>
+<div id="atocIcon" class="navdivs">
+<img class="navicon" id="hmAtocLink" src="contents_off.png" alt="No contents entries on this page" title="No contents entries on this page" />
+<br /><span>Contents</span>
+</div>
+</div>
+<div id="autoTocWrapper" class="topicmenu"></div>
+<div id="idcontent">
+<div id="unclicker"></div>
+
+<!--ZOOMRESTART-->
+<p class="p_BodyText"><span class="f_BodyText">Following are key features afforded by Intel® Manger for Lustre* software (as a component of Intel® Enterprise Edition for Lustre* software)</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">GUI-based creation and management of Lustre* file systems</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The Intel® Manager for Lustre* software provides a powerful, yet easy-to-use GUI that enables rapid creation of Lustre file systems. The GUI supports easy configuration for high availability and expansion, and enables performance monitoring and management of multiple Lustre file systems.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Graphical charts display real-time performance metrics</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Fully-configurable color charts display a variety of real-time performance metrics for single or multiple file systems, down to individual servers and targets, and reveal metrics such as read/write heat maps, OST balance, file system capacity, metadata operations, read/write operations, job statistics, and various resource usage parameters, among others.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Auto-configured high-availability clustering for server pairs</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Pacemaker and Corosync are configured automatically when the system design follows configuration guidance. This removes the need for manually installing HA configuration files on storage servers, and simplifies high-availability configuration.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">PDU configuration and server outlet assignments support automatic failover</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The PDU page lets you configure and manager power distribution units. At this page you can add a detected PDU and assign specific PDU outlets to specific servers. When you associate PDU failover outlets with servers using this tool, STONITH is automatically configured. </span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">IPMI and BMC Configuration</span></p>
+<p class="p_BodyText"><span class="f_BodyText">An alternative to PDU configuration, support for Intelligent Platform Management Interface and baseboard management controllers support server monitoring, high-availability configuration, and failover. </span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Hierarchical Storage Management</span></p>
+<p class="p_BodyText"><span class="f_BodyText">Intel® EE for Lustre* software version 2.0, which builds on version 2.5 of the open source distribution of Lustre, introduces support for hierarchical storage management. HSM provides a way to free up file system storage capacity by archiving the less-frequently accessed files into secondary, archival storage. You can configure the HSM framework directly from the Intel® Manager for Lustre* GUI.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Robinhood Policy Engine</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The Robinhood policy engine has been incorporated into Lustre as of version 2.5 and is included with Intel® EE for Lustre*. Intel® Manager for Lustre* software performs the provisioning of the Robinhood agent server, which is performed via the manager GUI. Robinhood can be used with the HSM capabilities described above to automate HSM archiving and report generation. </span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Automated Provisioning of Custom Lustre Service Nodes</span></p>
+<p class="p_BodyText"><span class="f_BodyText">This feature allows users to create custom profiles for new Lustre client types and, based on a given profile, deploy and install custom code to provide new services. HSM copytool (above) is deployed in this way. Other services might include Samba file services, etc.</span></p>
+<p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Simplified ISO-less installation and automated deployment mechanism streamlines overall installation</span></p>
+<p class="p_BodyText"><span class="f_BodyText">The installation strategy removes the need to manually install the software on each server. Intel® Manager for Lustre* software is quickly installed on the manager server, and from there, required packages are automatically deployed to all storage servers. Storage servers and the manager server can run the same standard operating system as the rest of your estate. Additional software built for CentOS or Red Hat will also work on servers managed by Intel® Manager for Lustre* software.</span></p>
+
+<!--ZOOMSTOP-->
+
+</div> <!-- idcontent -->
+</div><!-- hmbox --> 
+</body>
+</html>
