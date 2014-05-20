@@ -39,11 +39,11 @@ class ServerProfile(models.Model):
     ui_description = models.TextField(help_text = "Description of the server profile")
     managed = models.BooleanField(
         default=True,
-        help_text = "Boolean, if the server will be managed"
+        help_text = "Boolean, if the host will be managed"
     )
     worker = models.BooleanField(
         default = False,
-        help_text = "Boolean, if the server is available to be used as a Lustre worker node"
+        help_text = "Boolean, if the host is available to be used as a Lustre worker node"
     )
     bundles = models.ManyToManyField(
         Bundle,

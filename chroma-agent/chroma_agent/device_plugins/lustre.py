@@ -40,13 +40,14 @@ from chroma_agent.device_plugins.audit.local import LocalAudit
 
 VersionInfo = namedtuple('VersionInfo', ['epoch', 'version', 'release', 'arch'])
 
+REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Agent.repo"
+
 
 def scan_packages():
     """
     Interrogate the packages available from configured repositories, and the installation
     status of those packages.
     """
-    from chroma_agent.action_plugins.manage_updates import REPO_PATH
 
     # Local import so that this module can be imported in pure python
     # environments as well as on Linux.

@@ -54,7 +54,7 @@ class Command(BaseCommand):
         base_profile_path = os.path.join(site_dir(), "../chroma-bundles/base_managed.profile")
 
         if options['no_bundles']:
-            for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs']:
+            for bundle in ['lustre', 'lustre-client', 'iml-agent', 'e2fsprogs', 'robinhood']:
                 Bundle.objects.get_or_create(bundle_name=bundle, location="/tmp/", description="Dummy bundle")
         else:
             # override the default path if we have unpacked a real archive
@@ -109,7 +109,7 @@ that work.
     """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
                 sys.exit(1)
 
-        for name in ('base_managed', 'base_monitored', 'posix_copytool_worker'):
+        for name in ('base_managed', 'base_monitored', 'posix_copytool_worker', 'robinhood_server'):
             base_profile_path = os.path.join(os.path.dirname(base_profile_path), name + '.profile')
             if not ServerProfile.objects.filter(name=name).exists():
                 chroma_core.lib.service_config.register_profile(open(base_profile_path))

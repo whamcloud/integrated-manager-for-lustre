@@ -791,6 +791,16 @@ def bundle(operation, path=None):
 
 
 def register_profile(profile_file):
+    default_profile = {
+        "ui_name": "Default Profile",
+        "managed": False,
+        "worker": False,
+        "name": "default",
+        "bundles": [],
+        "ui_description": "This is the hard coded default profile.",
+        "packages": {}
+    }
+
     # create new profile record
     try:
         data = json.load(profile_file)
@@ -806,13 +816,16 @@ def register_profile(profile_file):
         if not Bundle.objects.filter(bundle_name=bundle_name).exists():
             missing_bundles.append(bundle_name)
 
+    # Make sure new keys have a default value set.
+    for key in data.keys():
+        assert key in default_profile
+
+    # Take the default and replace the values that are in the data
+    data = dict(default_profile.items() + data.items())
+
     if missing_bundles:
         log.error("Bundles not found for profile '%s': %s" % (data['name'], ", ".join(missing_bundles)))
         sys.exit(-1)
-
-    # Backwards-compatiblity with older profile definitions
-    if not 'worker' in data:
-        data['worker'] = False
 
     profile_fields = ['ui_name', 'ui_description', 'managed', 'worker']
     try:

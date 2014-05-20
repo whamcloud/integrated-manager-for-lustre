@@ -810,9 +810,11 @@ class DeployStep(Step):
         # the decision to clear it out/reset it should be something explicit maybe
         # even requiring user permission
 
-        rc, stdout, stderr = AgentSsh(kwargs['address']).ssh('curl -k %s/agent/setup/%s/ | python' %
-                                                             (settings.SERVER_HTTP_URL, kwargs['token'].secret),
-                                                             auth_args=kwargs['__auth_args'])
+        rc, stdout, stderr = AgentSsh(kwargs['address']).ssh('curl -k %s/agent/setup/%s/%s | python' %
+                                                             (settings.SERVER_HTTP_URL,
+                                                              kwargs['token'].secret,
+                                                              '?profile_name=%s' % kwargs['profile_name']),
+                                                              auth_args=kwargs['__auth_args'])
 
         if rc == 0:
             try:
@@ -869,6 +871,7 @@ class DeployHostJob(StateChangeJob):
             (DeployStep, {
                 'token': token,
                 'address': self.managed_host.address,
+                'profile_name': self.managed_host.server_profile.name,
                 '__auth_args': self.auth_args},)
         ]
 
