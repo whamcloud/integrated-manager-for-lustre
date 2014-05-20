@@ -86,7 +86,9 @@ class RegistrationTokenResource(CustomModelResource):
     register_command = CharField(help_text="Command line to run on a storage server to register it using this token")
 
     def dehydrate_register_command(self, bundle):
-        return 'curl -k %sagent/setup/%s/ | python' % (settings.SERVER_HTTP_URL, bundle.obj.secret)
+        server_profile = ServerProfileResource().get_via_uri(bundle.data['profile'])
+
+        return 'curl -k %sagent/setup/%s/%s | python' % (settings.SERVER_HTTP_URL, bundle.obj.secret, '?profile_name=%s' % server_profile.name)
 
     class Meta:
         object_class = RegistrationToken

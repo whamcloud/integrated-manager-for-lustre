@@ -37,7 +37,7 @@ import settings
 import os
 from tastypie.http import HttpForbidden
 
-from chroma_core.models import ManagedHost, ClientCertificate, RegistrationToken
+from chroma_core.models import ManagedHost, ClientCertificate, RegistrationToken, ServerProfile
 from chroma_core.models.copytool import Copytool, CopytoolEvent, CopytoolOperation, log as copytool_log, UNKNOWN_UUID
 from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
@@ -369,6 +369,7 @@ base_url = "{base_url}"
 reg_url = "{reg_url}"
 cert_str = '''{cert_str}'''
 repo_url = "{repo_url}"
+repo_packages = "{repo_packages}"
 
 REPO_CONTENT = \"\"\"{repos}\"\"\"
 
@@ -449,7 +450,7 @@ def create_repo():
 
 
 def install_agent():
-    return launch_command('yum install -y chroma-agent-management')
+    return launch_command('yum install -y %s' % repo_packages)
 
 
 def configure_server():
@@ -560,11 +561,26 @@ proxy=_none_
     repo_url = os.path.join(base_url, 'repo/')
     crypto = Crypto()
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
+
+    repo_packages = 'chroma-agent chroma-diagnostics'
+
+    try:
+        if ServerProfile.objects.get(name = request.REQUEST['profile_name']).managed:
+            repo_packages += ' chroma-agent-management'
+    except (ServerProfile.DoesNotExist, KeyError) as e:
+        if type(e) is KeyError:
+            err = "Profile name not specified"
+        else:
+            err = "Profile %s not a valid profile" % request.REQUEST['profile_name']
+        log.error(err)
+        return HttpResponse(status = 400, content = err)
+
     server_epoch_seconds = time.time()
     script_formatted = setup_script_template.format(reg_url = reg_url, cert_str = cert_str,
         repo_url= repo_url, base_url = base_url,
         repos = repos,
-        server_epoch_seconds = server_epoch_seconds)
+        server_epoch_seconds = server_epoch_seconds,
+        repo_packages = repo_packages)
 
     return HttpResponse(status = 201, content = script_formatted)
 

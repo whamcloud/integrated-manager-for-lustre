@@ -1,6 +1,7 @@
 {
   "ui_name": "Monitored storage server",
   "managed": false,
+  "worker": false,
   "name": "base_monitored",
   "bundles": [
     "iml-agent"

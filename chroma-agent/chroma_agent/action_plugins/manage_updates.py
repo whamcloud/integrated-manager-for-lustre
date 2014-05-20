@@ -43,7 +43,7 @@ sslclientkey = {2}
 sslclientcert = {3}
 """
 
-REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Agent.repo"
+from chroma_agent.device_plugins.lustre import REPO_PATH
 
 
 def configure_repo(remote_url, repo_path=REPO_PATH):
