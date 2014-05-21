@@ -1,11 +1,13 @@
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}css/server_configuration.css"/>
 
 <script type="text/template" id="server_command_template">
-    <div class='help_loader' data-topic='<%= help_topic %>' />
+    <div class='help_loader' data-topic='<%= help_topic %>'></div>
     <div class='host_selection_list'>
         <ul class='host_selection_list'>
             <% _.each(hosts, function(host) { %>
-                <li><input type='checkbox' data-host_id="<%= host.id %>" data-host_uri="<%= host.resource_uri %>"></input><%= host.label %></li>
+                <li class="<%= get_disabled_text(host) %>">
+                  <input type='checkbox' data-host_id="<%= host.id %>" data-host_uri="<%= host.resource_uri %>" <%= get_disabled_text(host) %> /><%= host.label %>
+                </li>
             <% }); %>
         </ul>
     </div>
@@ -163,6 +165,7 @@
                       {text: "Cancel", class: "host_selection_cancel", click: function() {}},
                       {text: "Run", class: 'host_selection_run', click: function() {}}
                   ],
+                  title: options.message,
                   autoOpen: false,
                   modal: true
               });
@@ -172,7 +175,9 @@
                   job_class: options.job_class,
                   multi_job: options.multi_job,
                   hosts: hosts,
-                  el: mydiv.parent()});
+                  el: mydiv.parent(),
+                  is_disabled: options.is_disabled
+              });
               cd.render();
           });
       }
@@ -188,7 +193,7 @@
 
         $('div#server_list button.writeconf_button').click(function() {
             ServerCommandPrompt({
-            help_topic: 'rewrite_target_configuration-dialog',
+                help_topic: 'rewrite_target_configuration-dialog',
                 message: "Updating filesystem NIDs",
                 job_class: 'UpdateNidsJob',
                 multi_job: false
@@ -197,9 +202,13 @@
 
         $('div#server_list button.updates_button').click(function() {
             ServerCommandPrompt({
-                message: "Install updates",
+                help_topic: 'install_updates_dialog',
+                message: 'Install updates',
                 job_class: 'UpdateJob',
-                multi_job: true
+                multi_job: true,
+                is_disabled : function is_disabled (host) {
+                  return host.member_of_active_filesystem;
+                }
             });
         });
     }
@@ -219,25 +228,40 @@
      },
      render: function() {
         var $el = $(this.el);
-         $el.find('.ui-dialog-content').html(this.template({help_topic: this.options.help_topic, hosts: this.options.hosts}));
+        var serverCommandView = this;
+
+         $el.find('.ui-dialog-content').html(this.template({
+           help_topic: this.options.help_topic,
+           hosts: this.options.hosts,
+           get_disabled_text: function get_disabled_text (host) {
+               if (typeof serverCommandView.options.is_disabled !== 'function')
+                   return '';
+
+                   return (serverCommandView.options.is_disabled(host) ? 'disabled': '');
+           }
+         }));
          ContextualHelp.load_snippets($el);
          $el.find('.server-command-selection').dialog('open');
          this.select_all();
      },
      select_all: function() {
-       $(this.el).find("input[type=checkbox]").prop('checked', true);
+       $(this.el).find("input[type=checkbox]").not(':disabled').prop('checked', true);
        this.changed();
+
+       return false;
      },
      select_none: function() {
-       $(this.el).find("input[type=checkbox]").prop('checked', false);
+       $(this.el).find("input[type=checkbox]").not(':disabled').prop('checked', false);
        this.changed();
+
+       return false;
      },
-     changed: function(e) {
+     changed: function() {
         var selected_count = $(this.el).find(":checked").length;
-        $(this.el).find(".host_selection_run").attr('disabled', selected_count == 0);
+        $(this.el).find(".host_selection_run").attr('disabled', selected_count === 0);
      },
      run: function() {
-         var dialog = $(this.el);
+         var serverCommandView = this;
          var options = this.options;
          var jobs;
 
@@ -266,15 +290,15 @@
                  'message': options.message,
                  'jobs': jobs
              },
-             function(command){
-                 dialog.remove();
+             function (command) {
+                 serverCommandView.cancel();
                  CommandNotification.begin(command);
                  Backbone.history.navigate("command/" + command.id + "/", {trigger: true});
              }
          );
      },
      cancel: function() {
-       $(this.el).remove();
+       this.$el.find('.server-command-selection').dialog('destroy').remove();
      }
   });
 
