@@ -25,30 +25,59 @@
 
   angular.module('configureLnet')
     .controller('ConfigureLnetCtrl',
-      ['$scope', 'dialog', 'hostId', 'hostName', 'NetworkInterface', 'LNET_OPTIONS', ConfigureLnetCtrl]);
+      ['$scope', '$q', 'dialog', 'hostInfo', 'pollHost', 'NetworkInterface',
+        'waitForCommand', 'LNET_OPTIONS', ConfigureLnetCtrl]);
 
-  function ConfigureLnetCtrl($scope, dialog, hostId, hostName, NetworkInterface, LNET_OPTIONS) {
-    var query = NetworkInterface.query({host__id: hostId});
-
+  function ConfigureLnetCtrl ($scope, $q, dialog, hostInfo, pollHost, NetworkInterface, waitForCommand, LNET_OPTIONS) {
+    var firstPoll = $q.defer();
     var close = dialog.close.bind(dialog);
+    var query = NetworkInterface.query({ host__id: hostInfo.hostId });
+    var poller = pollHost({ hostId: hostInfo.hostId });
+
+    dialog.deferred.promise.finally(function stopPolling () {
+      poller.cancel();
+    });
 
     $scope.configureLnetCtrl = {
       close: close,
-      resolved: false,
-      hostName: hostName,
-      saving: false,
-      save: function () {
-        this.saving = true;
+      hostName: hostInfo.hostName,
+      save: function save () {
+        this.message = 'Saving';
 
         NetworkInterface
           .updateInterfaces(query)
+          .then(function updateMessage(command) {
+            $scope.configureLnetCtrl.message = command.command.message;
+
+            // @FIXME: Remove when command is not wrapped in API layer.
+            return command.command;
+          })
+          .then(waitForCommand)
           .then(close);
       },
       options: LNET_OPTIONS
     };
 
-    query.$promise.then(function (resp) {
+    var networkInterfaces;
+
+    query.$promise.then(function populateInterfaces (resp) {
+      networkInterfaces = angular.copy(resp);
       $scope.configureLnetCtrl.networkInterfaces = resp;
+    });
+
+    poller.promise.then(null, null, function notifier (host) {
+      firstPoll.resolve();
+
+      angular.extend($scope.configureLnetCtrl, {
+        hostName: host.nodename,
+        memberOfActiveFilesystem: host.member_of_active_filesystem
+      });
+
+      if (host.member_of_active_filesystem === true)
+        $scope.configureLnetCtrl.networkInterfaces = angular.copy(networkInterfaces);
+    });
+
+    $q.all([query.$promise, firstPoll.promise]).then(function dataLoaded() {
       $scope.configureLnetCtrl.resolved = true;
     });
   }

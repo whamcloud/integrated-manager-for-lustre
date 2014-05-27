@@ -23,39 +23,29 @@
 (function () {
   'use strict';
 
-  angular.module('configureLnet')
-    .controller('ConfigureLnetButtonCtrl', ['$scope', '$dialog', 'STATIC_URL', ConfigureLnetButtonCtrl])
-    .directive('configureLnetButton', ['STATIC_URL', configureLnetButton]);
+  angular.module('configureLnet').factory('waitForCommand', ['commandModel', waitForCommandFactory]);
 
-  function ConfigureLnetButtonCtrl ($scope, $dialog, STATIC_URL) {
-    var dialog = $dialog.dialog({
-      keyboard: false,
-      backdropClick: false,
-      resolve: {
-        hostInfo: function getHostInfo () {
-          return {
-            hostId: $scope.hostId,
-            hostName: $scope.hostName
-          };
-        }
-      }
-    });
+  /**
+   * Waits for the provided command
+   * to be "complete" in some fashion.
+   * At that point the promise will resolve.
+   * @param commandModel
+   * @returns {$q.promise}
+   */
+  function waitForCommandFactory (commandModel) {
+    return function waitForCommand (command) {
+      if (command.complete || command.cancelled || command.errored)
+        return command;
 
-    $scope.configure = function configure() {
-      dialog.open(
-        STATIC_URL + 'js/modules/configure-lnet/assets/html/configure-lnet.html', 'ConfigureLnetCtrl');
-    };
-  }
-
-  function configureLnetButton (STATIC_URL) {
-    return {
-      restrict: 'E',
-      scope: {
-        hostId: '@',
-        hostName: '@'
-      },
-      templateUrl: STATIC_URL + 'js/modules/configure-lnet/assets/html/configure-lnet-button.html',
-      controller: 'ConfigureLnetButtonCtrl'
+      /**
+       * Calls the command recursively
+       * until it completes.
+       * @param {Object} command The returned command
+       */
+      return commandModel
+        .get({ commandId: command.id })
+        .$promise
+        .then(waitForCommand);
     };
   }
 }());
