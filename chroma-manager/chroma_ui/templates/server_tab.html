@@ -81,9 +81,10 @@
               if (server.immutable_state)
                 template = '';
               else
-                template = ('<configure-lnet-button resource-uri="%s" host_id="%s" host_name="%s" state="%s"> \
-</configure-lnet-button>').sprintf(
-                   server.resource_uri, server.id, server.nodename, server.state
+                template = ('<configure-lnet-button host-id="%s" host-name="%s"></configure-lnet-button>')
+                  .sprintf(
+                    server.id,
+                    server.nodename
                   );
 
               row['state'] = LiveObject.state(server);

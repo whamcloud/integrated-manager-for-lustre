@@ -11,5 +11,52 @@
     "karma-junit-reporter": "0.2.1",
     "karma-script-launcher": "0.1.0",
     "karma-ng-html2js-preprocessor": "0.1.0"
+  },
+  "jshintConfig": {
+    "predef": [
+      "angular",
+      "_",
+      "module",
+      "inject",
+      "jasmine",
+      "spyOn",
+      "it",
+      "console",
+      "describe",
+      "expect",
+      "beforeEach",
+      "afterEach",
+      "mock",
+      "Mock",
+      "Timecop",
+      "waits",
+      "waitsFor",
+      "runs"
+    ],
+
+    "bitwise": true,
+    "curly": false,
+    "eqeqeq": true,
+    "forin": true,
+    "immed": true,
+    "indent": 2,
+    "newcap": true,
+    "noarg": true,
+    "noempty": true,
+    "nonew": true,
+    "plusplus": true,
+    "quotmark": "single",
+    "undef": true,
+    "unused": true,
+    "strict": true,
+    "trailing": true,
+    "maxcomplexity": 6,
+    "maxlen": 120,
+
+    "eqnull": true,
+    "multistr": true,
+
+    "browser": true,
+    "jquery": true
   }
 }

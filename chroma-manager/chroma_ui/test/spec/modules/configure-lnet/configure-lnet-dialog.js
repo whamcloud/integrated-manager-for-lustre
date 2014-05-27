@@ -1,50 +1,95 @@
 describe('configure lnet dialog', function () {
   'use strict';
 
-  var lnetScope, dialog, NetworkInterface, hostId, queryThen, save, LNET_OPTIONS;
-
   beforeEach(module('configureLnet'));
 
-  mock.beforeEach('$dialog');
+  var $scope, deferreds, lnetScope, dialog, hostInfo, NetworkInterface, LNET_OPTIONS, pollHost, poller;
 
-  beforeEach(inject(function ($controller, $dialog, $rootScope) {
-    var $scope = $rootScope.$new();
+  beforeEach(inject(function ($controller, $rootScope, $q) {
+    $scope = $rootScope.$new();
 
-    queryThen = jasmine.createSpy('promise.then');
-    save = jasmine.createSpy('save').andReturn({
-      then: jasmine.createSpy('then')
-    });
+    deferreds = {};
 
     NetworkInterface = {
-      query: jasmine.createSpy('NetworkInterface.get').andReturn({
-        $promise: {
-          then: queryThen
-        }
+      query: jasmine.createSpy('query').andCallFake(function () {
+        var deferred = $q.defer();
+
+        deferreds.query = deferred;
+
+        return { $promise: deferred.promise };
       }),
-      updateInterfaces: save
+      updateInterfaces: jasmine.createSpy('updateInterfaces').andCallFake(function () {
+        var deferred = $q.defer();
+
+        deferreds.updateInterfaces = deferred;
+
+        return deferred.promise;
+      })
     };
+
+    var waitForCommand = jasmine.createSpy('waitForCommand').andCallFake(function () {
+      var deferred = $q.defer();
+
+      deferreds.waitForCommand = deferred;
+
+      return deferred.promise;
+    });
 
     LNET_OPTIONS = {};
 
-    hostId = 3;
+    pollHost = jasmine.createSpy('pollHost').andCallFake(function () {
+      var deferred = $q.defer();
+
+      deferreds.pollHost = deferred;
+
+      poller = {
+        promise: deferred.promise,
+        cancel: jasmine.createSpy('cancel')
+      };
+
+      return poller;
+    });
+
+    dialog = {
+      close: jasmine.createSpy('close'),
+      deferred: $q.defer()
+    };
+
+    hostInfo = {
+      memberOfActiveFilesystem: false,
+      hostId: 3,
+      hostName: 'foo'
+    };
 
     $controller('ConfigureLnetCtrl', {
       $scope: $scope,
-      dialog: $dialog.dialog({}),
+      dialog: dialog,
       NetworkInterface: NetworkInterface,
-      hostId: hostId,
-      hostName: 'foo',
-      LNET_OPTIONS: LNET_OPTIONS
+      waitForCommand: waitForCommand,
+      pollHost: pollHost,
+      LNET_OPTIONS: LNET_OPTIONS,
+      hostInfo: hostInfo
     });
 
-    dialog = $dialog.dialog;
     lnetScope = $scope.configureLnetCtrl;
   }));
 
   it('should close the dialog', function () {
     lnetScope.close();
 
-    expect(dialog.spy.close).toHaveBeenCalledOnce();
+    expect(dialog.close).toHaveBeenCalledOnce();
+  });
+
+  it('should cancel polling when the dialog closes', function () {
+    dialog.deferred.resolve();
+
+    $scope.$apply();
+
+    expect(poller.cancel).toHaveBeenCalledOnce();
+  });
+
+  it('should poll the host', function () {
+    expect(pollHost).toHaveBeenCalledOnceWith({ hostId: hostInfo.hostId });
   });
 
   describe('when saving', function () {
@@ -53,21 +98,25 @@ describe('configure lnet dialog', function () {
     });
 
     it('should save the nids', function () {
-      expect(save).toHaveBeenCalledOnce();
+      expect(NetworkInterface.updateInterfaces).toHaveBeenCalledOnce();
     });
 
     it('should close the dialog on success', function () {
-      var close = save.plan().then.mostRecentCall.args[0];
+      deferreds.updateInterfaces.resolve({
+        command: {}
+      });
 
-      close();
+      $scope.$apply();
 
-      expect(dialog.spy.close).toHaveBeenCalledOnce();
+      deferreds.waitForCommand.resolve();
+
+      $scope.$apply();
+
+      expect(dialog.close).toHaveBeenCalledOnce();
     });
 
-    it('should set the saving flag to true', function () {
-      lnetScope.save();
-
-      expect(lnetScope.saving).toBe(true);
+    it('should set the message to Saving', function () {
+      expect(lnetScope.message).toBe('Saving');
     });
   });
 
@@ -75,36 +124,28 @@ describe('configure lnet dialog', function () {
     var resp;
 
     beforeEach(function () {
-      var thenCallback = queryThen.mostRecentCall.args[0];
+      resp = { resp: 'my resp' };
 
-      resp = {
-        resp: 'my resp'
-      };
+      deferreds.query.resolve(resp);
 
-      thenCallback(resp);
+      $scope.$apply();
     });
 
     it('should set the resp on the scope', function () {
       expect(lnetScope.networkInterfaces).toEqual(resp);
     });
 
-    it('should set resolved to true', function () {
+    it('should set resolved to true when data has resolved and host has notified', function () {
+      deferreds.pollHost.notify({});
+
+      $scope.$apply();
+
       expect(lnetScope.resolved).toBe(true);
     });
   });
 
-  it('should have a saving flag', function () {
-    expect(lnetScope.saving).toBe(false);
-  });
-
-  it('should have a resolved flag', function () {
-    expect(lnetScope.resolved).toBe(false);
-  });
-
   it('should fetch for a host', function () {
-    expect(NetworkInterface.query).toHaveBeenCalledOnceWith({
-      host__id: hostId
-    });
+    expect(NetworkInterface.query).toHaveBeenCalledOnceWith({ host__id: hostInfo.hostId });
   });
 
   it('should assign LNET_OPTIONS to the scope', function () {

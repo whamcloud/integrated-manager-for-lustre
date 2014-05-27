@@ -177,13 +177,6 @@ var LiveObject = function()
 
     // host status is the Lnet Status which we convert into an icon
     if ( resourceType(obj) === 'host' ) {
-      var enabled = obj.member_of_active_filesystem === false;
-      var $scope = angular.element('html').scope().$root;
-
-      $scope.safeApply(function broadcaster () {
-        $scope.$broadcast('toggleLnetConfig', obj.resource_uri, enabled);
-      });
-
       return UIHelper.help_hover(
         "server_status_" + host_state,
         UIHelper.fugue_icon(

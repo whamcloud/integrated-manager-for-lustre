@@ -16,9 +16,10 @@ describe('configure LNet button', function () {
 
   it('should create the dialog on init', function () {
     expect($dialog.dialog).toHaveBeenCalledOnceWith({
+      keyboard : false,
+      backdropClick : false,
       resolve: {
-        hostId: jasmine.any(Function),
-        hostName: jasmine.any(Function)
+        hostInfo: jasmine.any(Function)
       }
     });
   });
