@@ -51,8 +51,8 @@ class TestBlkId(unittest.TestCase):
                            {'path': '/dev/mapper/LustreVG-var', 'uuid': 'f9093f90-534c-4c61-a49e-b7cadd32fb90', 'type': 'ext3'}]
 
         with patch_shell(command_to_result):
-            result = BlkId().all()
-            self.assertListEqual(expected_result, result)
+            result = BlkId().values()
+            self.assertListEqual(sorted(expected_result), sorted(result))
 
     def test_HYD_1958(self):
         """Reproducer for HYD-1958.  Feed BlkId the result from that bug and check it processes it correctly.
@@ -90,7 +90,7 @@ class TestBlkId(unittest.TestCase):
         ]
 
         with patch_shell(command_to_result):
-            result = BlkId().all()
+            result = BlkId().values()
             self.assertListEqual(expected_result, result)
 
     def test_parse_intolerance(self):
@@ -112,7 +112,7 @@ class TestBlkId(unittest.TestCase):
 
         with patch_shell(command_to_result):
             with self.assertRaises(RuntimeError):
-                BlkId().all()
+                BlkId()
 
 
 class TestFstab(unittest.TestCase):
