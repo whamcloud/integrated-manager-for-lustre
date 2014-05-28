@@ -73,12 +73,11 @@ class Fstab(object):
         return self.fstab
 
 
-class BlkId(object):
+class BlkId(dict):
     def __init__(self):
         blkid_lines = shell.try_run(['blkid', '-s', 'UUID', '-s', 'TYPE']).split("\n")
 
         # Record filesystem type and UUID for each block devices reported by blkid
-        devices = []
         for line in [l.strip() for l in blkid_lines if len(l)]:
             match = re.match("(.*): UUID=\"([^\"]*)\" TYPE=\"([^\"]*)\"$", line)
             if match is None:
@@ -97,15 +96,9 @@ class BlkId(object):
             else:
                 path, uuid, type = match.groups()
 
-            devices.append({
-                'path': path,
-                'uuid': uuid,
-                'type': type
-            })
-        self.devices = devices
-
-    def all(self):
-        return self.devices
+            self[path] = {'path': path,
+                          'uuid': uuid,
+                          'type': type}
 
 
 def lsof(pid=None, file=None):

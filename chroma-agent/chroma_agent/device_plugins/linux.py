@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013 Intel Corporation All Rights Reserved.
+# Copyright 2013-2014 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -37,6 +37,7 @@ MAPPERPATH = os.path.join('/dev', 'mapper')
 DISKBYIDPATH = os.path.join('/dev', 'disk', 'by-id')
 DISKBYPATHPATH = os.path.join('/dev', 'disk', 'by-path')
 MDRAIDPATH = os.path.join('/dev', 'md')
+DEVPATH = '/dev'
 
 
 class LinuxDevicePlugin(DevicePlugin):
@@ -134,22 +135,22 @@ class DeviceHelper(object):
 
         return devices
 
-    normalize_device_cache = {}
+    normalize_device_table = {}
 
     def normalized_device_path(self, device_path):
         normalized_path = os.path.realpath(device_path)
 
-        if normalized_path not in DeviceHelper.normalize_device_cache:
+        if normalized_path not in DeviceHelper.normalize_device_table:
             lookup_paths = ["%s/*" % DISKBYIDPATH, "%s/*" % MAPPERPATH]
 
             for path in lookup_paths:
                 for f in glob.glob(path):
-                    DeviceHelper.normalize_device_cache[os.path.realpath(f)] = f
+                    self.add_normalized_device(os.path.realpath(f), f)
 
             root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
 
             if os.path.exists(root):
-                DeviceHelper.normalize_device_cache['/dev/root'] = root
+                self.add_normalized_device('/dev/root', root)
 
         # This checks we have a completely normalized path, perhaps the stack means our current
         # normal path can actually be normalized further. So if the root to normalization takes multiple
@@ -158,14 +159,14 @@ class DeviceHelper(object):
         # but /dev/mmapper/special-device normalizes to /dev/md/mdraid1
         # /dev/sdx will normalize to /dev/md/mdraid1
 
-        # As an additional measure  a counter to detect circular
-        # references such as A->B->C->A in this case we don't know which is the
-        # normalized value so just drop out after circular_reference_limit redirections.
+        # As an additional measure to detect circular references such as A->B->C->A in
+        # this case we don't know which is the normalized value so just drop out once
+        # it repeats.
         visited = set()
 
-        while (normalized_path not in visited) and (normalized_path in DeviceHelper.normalize_device_cache):
+        while (normalized_path not in visited) and (normalized_path in DeviceHelper.normalize_device_table):
             visited.add(normalized_path)
-            normalized_path = DeviceHelper.normalize_device_cache[normalized_path]
+            normalized_path = DeviceHelper.normalize_device_table[normalized_path]
 
         return normalized_path
 
@@ -183,7 +184,12 @@ class DeviceHelper(object):
         '''
 
         if (path != normalized_path):                           # Normalizing to itself makes no sense
-            DeviceHelper.normalize_device_cache[path] = normalized_path
+            DeviceHelper.normalize_device_table[path] = normalized_path
+
+    def add_normalized_list(self, raw_list, normalized_list):
+        for key, path in raw_list.items():
+            if key in normalized_list:
+                self.add_normalized_device(path, normalized_list[key])
 
 
 class BlockDevices(DeviceHelper):
@@ -195,7 +201,7 @@ class BlockDevices(DeviceHelper):
 
         # Build this map to retrieve fstype in _device_node
         self._major_minor_to_fstype = {}
-        for blkid_dev in BlkId().all():
+        for blkid_dev in BlkId().itervalues():
             major_minor = self._dev_major_minor(blkid_dev['path'])
             self._major_minor_to_fstype[major_minor] = blkid_dev['type']
 
@@ -245,6 +251,7 @@ class BlockDevices(DeviceHelper):
         mapper_devs = self._find_block_devs(MAPPERPATH)
         by_id_nodes = self._find_block_devs(DISKBYIDPATH)
         by_path_nodes = self._find_block_devs(DISKBYPATHPATH)
+        dev_nodes = self._find_block_devs(DEVPATH)
 
         def get_path(major_minor, device_name):
             # Try to find device nodes for these:
@@ -305,6 +312,13 @@ class BlockDevices(DeviceHelper):
             partitions = glob.glob(os.path.join(dev_dir, "*/dev"))
             for p in partitions:
                 parse_block_dir(os.path.split(p)[0], parent = major_minor)
+
+        # Finally create the normalized maps for /dev to /dev/disk/by-path & /dev/disk/by-id
+        # and then /dev/disk/by-path & /dev/disk/by-id to /dev/mapper
+        self.add_normalized_list(dev_nodes, by_path_nodes)
+        self.add_normalized_list(dev_nodes, by_id_nodes)
+        self.add_normalized_list(by_path_nodes, mapper_devs)
+        self.add_normalized_list(by_id_nodes, mapper_devs)
 
         return block_device_nodes, node_block_devices
 

@@ -49,8 +49,17 @@ class LocalTargets(DeviceHelper):
         # when we see a combined MGS+MDT
         uuid_name_to_target = {}
 
-        for blkid_device in BlkId().all():
+        blkid_devices = BlkId()
+
+        for blkid_device in blkid_devices.itervalues():
             dev = self.normalized_device_path(blkid_device['path'])
+
+            # If a more normalized block device exists, then use that. Sometimes the normalized path
+            # isn't a block device in which case we can't use it.
+            try:
+                blkid_device = blkid_devices[dev]
+            except KeyError:
+                pass
 
             rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", dev])
             if rc != 0:
@@ -77,7 +86,7 @@ class LocalTargets(DeviceHelper):
                 # Do not report unregistered lustre targets
                 continue
 
-            mounted = dev in set([self.normalized_device_path(m[0]) for m in Mounts().all()])
+            mounted = self.normalized_device_path(blkid_device['path']) in set([self.normalized_device_path(path) for path, _, _ in Mounts().all()])
 
             if flags & 0x0005 == 0x0005:
                 # For combined MGS/MDT volumes, synthesise an 'MGS'
