@@ -27,7 +27,10 @@
               <td>((networkInterface.inet4_address))</td>
               <td ng-if="configureLnetCtrl.memberOfActiveFilesystem">((networkInterface.nid.lnd_network))</td>
               <td ng-if="!configureLnetCtrl.memberOfActiveFilesystem">
-                <select ng-model="networkInterface.nid.lnd_network" ng-options="option.value as option.name for option in configureLnetCtrl.options"></select>
+                <select
+                  ng-model="networkInterface.nid.lnd_network"
+                  ng-options="option.value as option.name for option in (configureLnetCtrl.options | removeUsedLnetOptions:configureLnetCtrl.networkInterfaces:networkInterface)"
+                ></select>
               </td>
             </tr>
           </tbody>

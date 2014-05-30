@@ -81,4 +81,33 @@
       $scope.configureLnetCtrl.resolved = true;
     });
   }
+
+  angular.module('configureLnet').filter('removeUsedLnetOptions', function () {
+
+    /**
+     * This filter picks out currently selected lnd_network options
+     * minus the current networkInterface and returns the altered list.
+     * @param {Array} options The list of Lustre Network options.
+     * @param {Array} networkInterfaces The list of network interfaces.
+     * @param {Array} networkInterface The network interface bound to the current select.
+     * @returns {Array} The filtered list of options.
+     */
+    return function (options, networkInterfaces, networkInterface) {
+      var nids = _.chain(networkInterfaces)
+        .without(networkInterface)
+        .pluck('nid')
+        .value();
+
+      return options.filter(function (option) {
+        // Not Lustre Network is a special case.
+        // It should always be included.
+        if (option.value === -1)
+          return true;
+
+        return nids.every(function (nid) {
+          return nid.lnd_network !== option.value;
+        });
+      });
+    };
+  });
 }());
