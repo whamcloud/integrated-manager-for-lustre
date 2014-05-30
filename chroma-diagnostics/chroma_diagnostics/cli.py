@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # INTEL CONFIDENTIAL
 #
@@ -27,6 +28,7 @@ import subprocess
 from datetime import datetime, timedelta
 import time
 import argparse
+from argparse import RawTextHelpFormatter
 import os
 
 log = logging.getLogger(__name__)
@@ -171,7 +173,6 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
 
     return len(collected_files)
 
-
 DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
 
 PACKAGES = ['chroma-agent',
@@ -183,12 +184,12 @@ PACKAGES = ['chroma-agent',
 
 def main():
 
-    desc = ("Run this save a tar gzipped collection of "
-            "logs and diagnostic output.  "
-            "Output:  %sdiagnostics_<date>_<fqdn>.tar.gz"
+    desc = ("Run this to save a tar-file collection of logs and diagnostic output.\n"
+            "The tar-file created is compressed with lzma.\n"
+            "Sample output:  %sdiagnostics_<date>_<fqdn>.tar.lzma"
             % DEFAULT_OUTPUT_DIRECTORY)
 
-    parser = argparse.ArgumentParser(description=desc)
+    parser = argparse.ArgumentParser(description=desc, formatter_class=RawTextHelpFormatter)
     parser.add_argument('--verbose', '-v', action='count', required=False,
                         help="More output for troubleshooting.")
 
@@ -256,14 +257,14 @@ def main():
 
     if dump('chroma-config-validate', ['chroma-config',
                                        'validate'], output_directory):
-        log.info("Validated chroma installation")
+        log.info("Validated Intel Manager for Lustre® installation")
     elif args.verbose > 0:
-        log.info("Failed to run chroma installation validation")
+        log.info("Failed to run Intel Manager for Lustre® installation validation")
 
     if dump('finger-print', ['rpm', '-V', ] + PACKAGES, output_directory):
-        log.info("Finger printed chroma installation")
+        log.info("Finger printed Intel Manager for Lustre® installation")
     elif args.verbose > 0:
-        log.info("Failed to finger print chroma installation")
+        log.info("Failed to finger print Intel Manager for Lustre® installation")
 
     if dump('ps', ['ps', '-ef', '--forest'], output_directory):
         log.info("Listed running processes")
@@ -297,17 +298,17 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to copy logs")
 
-    tgz_path = '%s.tar.lzma' % output_directory
+    archive_path = '%s.tar.lzma' % output_directory
     #  Using -C to change to parent of dump dir,
-    # then tgz'ing just the output dir
-    execute(['tar', '--lzma', '-cf', tgz_path, '-C',
+    # then tar.lzma'ing just the output dir
+    execute(['tar', '--lzma', '-cf', archive_path, '-C',
              DEFAULT_OUTPUT_DIRECTORY, output_fn])
 
     log.info("\nDiagnostic collection is completed.")
-    log.info(tgz_path)
+    log.info(archive_path)
 
-    log.info("\nThe diagnostic report tgz file can be "
-             "emailed to Chroma support for analysis.")
+    log.info(u"\nThe diagnostic report tar.lzma file can be "
+             u"sent to Intel Manager for Lustre® Support for analysis.")
 
 
 if __name__ == "__main__":
