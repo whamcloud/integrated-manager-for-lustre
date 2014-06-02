@@ -24,7 +24,6 @@ import os
 import glob
 import traceback
 from chroma_agent.log import daemon_log
-
 EXCLUDED_PLUGINS = []
 
 
