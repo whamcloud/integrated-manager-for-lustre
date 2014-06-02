@@ -43,14 +43,6 @@
     "afterConsequent": true,
     "beforeAlternate": true
   },
-  "disallowSpaceAfterPrefixUnaryOperators": [
-    "++",
-    "--",
-    "+",
-    "-",
-    "~",
-    "!"
-  ],
   "requireSpaceAfterBinaryOperators": [
     "?",
     "+",
@@ -81,32 +73,6 @@
     "-",
     "~",
     "!"
-  ],
-  "disallowSpaceBeforePostfixUnaryOperators": [
-    "++",
-    "--"
-  ],
-  "requireSpaceBeforeBinaryOperators": [
-    "+",
-    "-",
-    "/",
-    "*",
-    "=",
-    "==",
-    "===",
-    "!=",
-    "!=="
-  ],
-  "requireSpaceAfterBinaryOperators": [
-    "+",
-    "-",
-    "/",
-    "*",
-    "=",
-    "==",
-    "===",
-    "!=",
-    "!=="
   ],
   "disallowKeywords": [
     "with"

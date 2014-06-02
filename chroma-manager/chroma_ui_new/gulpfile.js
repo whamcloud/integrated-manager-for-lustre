@@ -8,8 +8,6 @@ var jshint = require('gulp-jshint');
 var jscs = require('gulp-jscs');
 var stylish = require('jshint-stylish');
 var files = require('./gulp-src-globs.json');
-var uglify = require('gulp-uglify');
-var concat = require('gulp-concat');
 var rev = require('gulp-rev');
 var replace = require('gulp-replace');
 var minifyHtml = require('gulp-minify-html');
@@ -18,9 +16,10 @@ var injector = require('gulp-inject');
 var less = require('gulp-less');
 var csso = require('gulp-csso');
 var cache = require('gulp-cached');
-var streamqueue = require('streamqueue');
 var del = require('del');
 var gutil = require('gulp-util');
+var streamqueue = require('streamqueue');
+var compress = require('./srcmap-create/createSourceMap');
 
 var qualityFiles = files.js.source.concat(
   'test/spec/**/*.js',
@@ -65,24 +64,46 @@ gulp.task('quality', ['jscs', 'jshint']);
  * Injects JS and CSS files for loading in base.html.
  */
 gulp.task('inject:dev', ['static:dev', 'clean-static', 'copy-templates'], function injectDev () {
-  var staticJSGlobs = files.js.source.map(function rewritePrefix (file) {
-    return file.replace(/^source/, 'static');
-  });
-  var jsStream = gulp.src(staticJSGlobs, {
-    read: false
-  });
+
+  var staticJSGlobs = files.js.source.map(rewritePrefix);
+
   var cssStream = compileLess()
     .pipe(gulp.dest('static/chroma_ui/styles'));
 
-  var stream = streamqueue({ objectMode: true })
-    .queue(cssStream)
-    .queue(generatePrimusClientLib)
-    .queue(jsStream)
-    .done();
+  var jsStream = gulp.src(staticJSGlobs, {
+    read: false
+  });
+
+  var queuedStream = enqueueStreams(
+    cssStream,
+    getPrimusStream,
+    jsStream
+  );
 
   return gulp.src('templates_source/chroma_ui/base.html')
-    .pipe(injector(stream))
+    .pipe(injector(queuedStream))
     .pipe(gulp.dest('templates/chroma_ui'));
+
+  /**
+   * Looks for 'source' at the beginning of a string and
+   * replaces it with 'static'.
+   * @param {String} file
+   * @returns {String}
+   */
+  function rewritePrefix (file) {
+    return file.replace(/^source/, 'static');
+  }
+
+  /**
+   * Workaround for streams not being implemented as we'd like it to be.
+   * Without this function, the inject:dev task won't finish.
+   * @returns {Stream}
+   */
+  function getPrimusStream () {
+    return generatePrimusClientLib()
+      .pipe(gulp.dest('static/chroma_ui/vendor/primus-client'));
+  }
+
 });
 
 /*
@@ -114,7 +135,7 @@ gulp.task('static:dev', ['clean-static'], function staticDev () {
 /*
  * Move static resources for distributable
  */
-gulp.task('static:build', ['clean-static'], function staticDev () {
+gulp.task('static:build', ['clean-static'], function staticBuild () {
   return gulp.src('source/chroma_ui/**/*.{png,woff,ttf,svg,ico}')
     .pipe(gulp.dest('static/chroma_ui'));
 });
@@ -133,19 +154,26 @@ gulp.task('clean-static', function cleanStatic (cb) {
  * - rewrite the base tag to point at the built ui.
  */
 gulp.task('build', ['copy-templates', 'static:build'], function builder () {
-  var jsStream = compressor();
+  var jsStream = compress(
+    enqueueStreams,
+    compileTemplates,
+    generatePrimusClientLib,
+    files.js.source,
+    'static/chroma_ui'
+  );
+
   var cssStream = compileLess()
     .pipe(csso())
     .pipe(rev())
     .pipe(gulp.dest('static/chroma_ui/styles'));
 
-  var stream = streamqueue({ objectMode: true })
-    .queue(cssStream)
-    .queue(jsStream)
-    .done();
+  var queuedStream = enqueueStreams(
+    cssStream,
+    jsStream
+  );
 
   return gulp.src('templates_source/chroma_ui/base.html')
-    .pipe(injector(stream))
+    .pipe(injector(queuedStream))
     .pipe(replace(/(<base href=").+(" \/>)/, '$1/ui/$2'))
     .pipe(gulp.dest('templates/new', {
       cwd: '../chroma_ui'
@@ -179,32 +207,6 @@ gulp.task('watch', function watcher () {
  * - Watches files for changes and reruns tasks.
  */
 gulp.task('default', ['watch', 'quality', 'inject:dev']);
-
-/**
- * Concats and uglifies JS / Templates.
- * @return {Object} A stream.
- */
-function compressor () {
-  var templateFiles = compileTemplates();
-  var primusClientLib = generatePrimusClientLib();
-
-  return streamqueue({
-      objectMode: true
-    },
-    primusClientLib,
-    gulp.src(files.js.source),
-    templateFiles
-  )
-    .pipe(concat('built.js'))
-    .pipe(uglify({
-      compress: {
-        drop_debugger: true,
-        drop_console: true
-      }
-    }))
-    .pipe(rev())
-    .pipe(gulp.dest('static/chroma_ui'));
-}
 
 /**
  * Compiles LESS file to CSS.
@@ -244,6 +246,19 @@ function compileTemplates () {
  * @returns {Object} Returns a stream.
  */
 function generatePrimusClientLib () {
-  return gulpPrimus('../../realtime/generate-lib')
-    .pipe(gulp.dest('static/chroma_ui/vendor/primus-client'));
+  return gulpPrimus('../../realtime/generate-lib');
+}
+
+/**
+ * Variadic function that creates an ordered queue of streams.
+ * @returns {Stream}
+ */
+function enqueueStreams () {
+  var args = [
+    { objectMode: true }
+  ];
+
+  args = args.concat([].slice.call(arguments, 0));
+
+  return streamqueue.apply(null, args);
 }

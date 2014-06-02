@@ -27,6 +27,11 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
 mv test-results.xml \$HOME/test_reports/karma-test-results-new-ui.xml
 
+# Run Sourcemap Generation Integration Test(s)
+cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
+npm i
+./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=srcmap-generation-results
+
 # Run Stub Daddy Mock API Service unit tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new/stub-daddy
 npm i
@@ -65,7 +70,7 @@ CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env no
 CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=\$HOME/test_reports/selenium-test-results-firefox.xml --tc-format=json --tc-file=\$HOME/cluster_config.json --tc=browser:Firefox tests/selenium/ || true
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=24
+NUM_EXPECTED_TEST_REPORTS=25
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."
