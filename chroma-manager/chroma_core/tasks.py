@@ -37,7 +37,7 @@ class EphemeralScheduler(Scheduler):
         self.install_default_entries(self.schedule)
 
 
-@periodic_task(run_every=timedelta(seconds=settings.EMAIL_ALERTS_PERIOD))
+@periodic_task(run_every=timedelta(seconds=settings.EMAIL_ALERTS_PERIOD), serializer='json')
 def mail_alerts():
     from chroma_core.models.alert import AlertState, AlertEmail
 

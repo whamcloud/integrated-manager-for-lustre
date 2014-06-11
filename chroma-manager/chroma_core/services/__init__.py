@@ -102,12 +102,7 @@ class ServiceThread(threading.Thread):
 
 
 def _amqp_connection():
-    return BrokerConnection("amqp://%s:%s@%s:%s/%s" % (
-        settings.BROKER_USER,
-        settings.BROKER_PASSWORD,
-        settings.BROKER_HOST,
-        settings.BROKER_PORT,
-        settings.BROKER_VHOST))
+    return BrokerConnection(settings.BROKER_URL)
 
 
 def _amqp_exchange():

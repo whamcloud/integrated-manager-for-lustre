@@ -38,7 +38,9 @@ Requires: python-kombu >= 2.4.7
 Requires: python-daemon
 Requires: python-requests >= 1.0.0
 Requires: python-celery >= 3.0.11
-Requires: python-amqplib
+Requires: python-amqp
+Requires: python-pytz
+Requires: python-billiard
 Requires: python-networkx
 Requires: python-httpagentparser
 Requires: pygobject2

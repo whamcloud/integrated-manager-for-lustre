@@ -3,9 +3,9 @@
 BuildRequires:  python-devel
 BuildRequires:  python-setuptools
 Requires:       python-anyjson
-Requires:       python-billiard >= 2.7.3.17
+Requires:       python-billiard >= 3.3.0.17
 Requires:       python-dateutil >= 1.5
-Requires:       python-kombu >= 2.4.7
+Requires:       python-kombu >= 3.0.19
 Requires:       pyparsing
 Requires:       python-ordereddict
 %if ! (0%{?fedora} > 13 || 0%{?rhel} > 6)
@@ -14,14 +14,10 @@ Requires:       python-importlib
 %if ! (0%{?fedora} > 13 || 0%{?rhel} > 5)
 Requires:       python-multiprocessing
 Requires:       python-uuid
+Requires:       python-amqp
+Requires:       python-pytz
 %endif
 .
 /%setup/a
-for script in celery/bin/camqadm.py celery/bin/celerybeat.py celery/bin/celeryd.py; do
-  %{__sed} -i.orig -e 1d ${script}
-  touch -r ${script}.orig ${script}
-  %{__rm} ${script}.orig
-  chmod a-x ${script} 
-done
 rm -f docs/.static/.keep
 .

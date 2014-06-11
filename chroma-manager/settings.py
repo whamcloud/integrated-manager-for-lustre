@@ -129,15 +129,16 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
 )
 
+AMQP_BROKER_USER = "chroma"
+AMQP_BROKER_PASSWORD = "chroma123"
+AMQP_BROKER_VHOST = "chromavhost"
+
 import djcelery
 djcelery.setup_loader()
 
-BROKER_HOST = "localhost"
-BROKER_PORT = 5672
-BROKER_USER = "chroma"
-BROKER_PASSWORD = "chroma123"
-BROKER_VHOST = "chromavhost"
+BROKER_URL = "amqp://%s:%s@localhost:5672/%s" % (AMQP_BROKER_USER, AMQP_BROKER_PASSWORD, AMQP_BROKER_VHOST)
 
+CELERY_ACCEPT_CONTENT = ['json']
 CELERY_RESULT_BACKEND = "database"
 
 INSTALLED_APPS = (
