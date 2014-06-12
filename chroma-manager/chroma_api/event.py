@@ -20,8 +20,10 @@
 # express and approved by Intel in writing.
 
 
+from tastypie.utils import trailing_slash
+from tastypie.api import url
 from tastypie.constants import ALL_WITH_RELATIONS
-from tastypie import fields
+from tastypie import fields, http
 
 from chroma_core.models.event import Event
 from chroma_core.services.dbutils import advisory_lock
@@ -67,6 +69,19 @@ class EventResource(SeverityResource):
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'patch']
         always_return_data = True
+
+    def override_urls(self):
+        return [
+            url(r'^(?P<resource_name>%s)/dismiss_all%s$' % (self._meta.resource_name, trailing_slash()), self.wrap_view('dismiss_all'), name='api_event_dismiss_all'),
+        ]
+
+    def dismiss_all(self, request, **kwargs):
+        if (request.method != 'PUT') or (not request.user.is_authenticated()):
+            return http.HttpUnauthorized()
+
+        Event.objects.filter(dismissed = False).update(dismissed = True)
+
+        return http.HttpNoContent()
 
     def get_object_list(self, request):
         return Event.objects.all()

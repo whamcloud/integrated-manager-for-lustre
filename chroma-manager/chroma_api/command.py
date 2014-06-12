@@ -29,6 +29,8 @@ from chroma_api.utils import custom_response
 from chroma_api.host import HostResource
 
 from chroma_core.models import Command
+from tastypie.utils import trailing_slash
+from tastypie.api import url
 from tastypie.resources import ModelResource
 from tastypie import fields, http
 from chroma_core.models.jobs import SchedulingError, StepResult
@@ -94,11 +96,24 @@ class CommandResource(ModelResource):
                      'id': ['exact', 'in'],
                      'dismissed': ['exact'],
                      'errored': ['exact'],
-                     'created_at': ['gte']}
+                     'created_at': ['gte', 'lte', 'gt', 'lt']}
         authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()
         validation = CommandValidation()
         always_return_data = True
+
+    def override_urls(self):
+        return [
+            url(r'^(?P<resource_name>%s)/dismiss_all%s$' % (self._meta.resource_name, trailing_slash()), self.wrap_view('dismiss_all'), name='api_command_dismiss_all'),
+        ]
+
+    def dismiss_all(self, request, **kwargs):
+        if (request.method != 'PUT') or (not request.user.is_authenticated()):
+            return http.HttpUnauthorized()
+
+        Command.objects.filter(dismissed = False, complete = True).update(dismissed = True)
+
+        return http.HttpNoContent()
 
     def obj_create(self, bundle, request = None, **kwargs):
         for job in bundle.data['jobs']:

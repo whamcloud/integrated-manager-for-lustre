@@ -26,8 +26,11 @@ from chroma_api.utils import SeverityResource
 from django.contrib.contenttypes.models import ContentType
 from chroma_core.models.alert import AlertState, AlertSubscription
 
+from tastypie.utils import trailing_slash
 from tastypie.resources import Resource, ModelResource
 from tastypie import fields
+from tastypie.api import url
+from tastypie import http
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, \
@@ -177,6 +180,23 @@ class AlertResource(SeverityResource):
         help_text = ("A human readable noun describing the object "
                      "that is the subject of the alert"))
 
+    # This addition is because when we are querying notifications it is useful to be able query by created_at
+    # begin is clearly the best analogy
+    created_at = fields.DateTimeField(readonly = True, attribute = 'begin')
+
+    def override_urls(self):
+        return [
+            url(r'^(?P<resource_name>%s)/dismiss_all%s$' % (self._meta.resource_name, trailing_slash()), self.wrap_view('dismiss_all'), name='api_alert_dismiss_all'),
+        ]
+
+    def dismiss_all(self, request, **kwargs):
+        if (request.method != 'PUT') or (not request.user.is_authenticated()):
+            return http.HttpUnauthorized()
+
+        AlertState.objects.filter(dismissed = False).exclude(active = True, severity__in = [40, 30]).update(dismissed = True)
+
+        return http.HttpNoContent()
+
     def dehydrate_alert_item(self, bundle):
         from chroma_api.urls import api
         return api.get_resource_uri(bundle.obj.alert_item)
@@ -260,14 +280,15 @@ class AlertResource(SeverityResource):
         resource_name = 'alert'
         fields = ['begin', 'end', 'message', 'active', 'dismissed',
                   'alert_item_id', 'alert_item_content_type_id', 'id',
-                  'severity', 'alert_type']
+                  'severity', 'alert_type', 'created_at']
         filtering = {'active': ['exact'],
                      'dismissed': ['exact'],
                      'severity': ['in', 'exact'],
                      'begin': ['gte'],
                      'alert_type': ['exact', 'in'],
                      'alert_item_id': ['exact', 'in'],
-                     'alert_item_content_type_id': ['exact', 'in']}
+                     'alert_item_content_type_id': ['exact', 'in'],
+                     'created_at': ['gte', 'lte', 'gt', 'lt']}
         ordering = ['begin', 'end', 'active']
         authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()
