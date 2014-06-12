@@ -72,6 +72,11 @@ class MetricStore(object):
             series.delete()
             Stats.delete(series.id)
 
+    @property
+    def names(self):
+        "names of all available data series"
+        return set(Series.filter(self.measured_object, type__in=Series.DATA_TYPES).values_list('name', flat=True))
+
     def fetch(self, fetch_metrics, begin, end, max_points=float('inf'), num_points=0):
         "Return datetimes with dicts of field names and values."
         result = collections.defaultdict(dict)

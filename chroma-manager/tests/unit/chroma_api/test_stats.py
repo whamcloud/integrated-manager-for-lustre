@@ -109,9 +109,21 @@ class TestStats(ChromaApiTestCase):
         data, = content.values()
         self.assertEqual(map(operator.itemgetter('ts'), data), ['2013-04-19T20:33:00+00:00', '2013-04-19T20:33:30+00:00'])
 
-        # invalid request
+        # invalid requests
         response = self.api_client.get('/api/target/metric/', data={'num_points': '', 'job': 'id', 'latest': 'true', 'metrics': 'read_bytes,write_bytes'})
-        self.assertEqual(response.status_code, 400)
+        self.assertHttpBadRequest(response)
         content = json.loads(response.content)
         self.assertEqual(len(content['job']), 2)
         self.assertEqual(len(content['num_points']), 2)
+        response = self.api_client.get('/api/target/metric/', data={'job': 'id', 'begin': '2013-04-19T20:33:00Z'})
+        self.assertHttpBadRequest(response)
+
+        # discover available metrics
+        content, = self.fetch('target/{0}/metric/'.format(self.osts[0].id), latest='true')
+        prefixes = set(name.split('_')[0] for name in content['data'])
+        self.assertIn('stats', prefixes)
+        self.assertNotIn('job', prefixes)
+        content = self.fetch('host/metric/', latest='true')
+        for data, in content.values():
+            prefixes = set(name.split('_')[0] for name in data['data'])
+            self.assertEqual(prefixes, set(['mem', 'cpu']))

@@ -387,12 +387,10 @@ class MetricResource:
         if update and latest:
             errors['update'].append("update and latest are mutually exclusive")
 
-        metrics = request.GET.get('metrics', '').split(',')
-        if metrics == ['']:
-            errors['metrics'].append("Metrics must be a comma separated list of 1 or more strings")
+        metrics = filter(None, request.GET.get('metrics', '').split(','))
         job = request.GET.get('job', '')
         if job:
-            if len(metrics) > 1:
+            if len(metrics) != 1:
                 errors['job'].append("Job metrics must be a single string")
             if latest:
                 errors['job'].append("Job metrics and latest are incompatible")
@@ -449,6 +447,7 @@ class MetricResource:
 
     def get_metric_detail(self, request, metrics, begin, end, job, max_points, num_points, **kwargs):
         obj = self.cached_obj_get(request=request, **self.remove_api_resource_names(kwargs))
+        metrics = metrics or MetricStore(obj).names
         if isinstance(obj, StorageResourceRecord):
             # FIXME: there is a level of indirection here to go from a StorageResourceRecord to individual time series.
             # Although no longer necessary, time series are still stored in separate resources.
@@ -494,6 +493,7 @@ class MetricResource:
             objs = self.obj_get_list(request=request, **self.remove_api_resource_names(kwargs))
         except Http404 as exc:
             raise custom_response(self, request, http.HttpNotFound, {'metrics': exc})
+        metrics = metrics or set(itertools.chain.from_iterable(MetricStore(obj).names for obj in objs))
 
         result = dict((obj.id, self._fetch(MetricStore(obj), metrics, begin, end, job, max_points, num_points)) for obj in objs)
         if not reduce_fn:
