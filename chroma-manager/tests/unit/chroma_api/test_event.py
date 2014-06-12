@@ -16,7 +16,7 @@ class TestTargetResource(ChromaApiTestCase):
                 handler(log_example['message'], None)
                 log_count += 1
 
-        response = self.api_client.get("/api/event/", params = {'limit': 0})
+        response = self.api_client.get("/api/event/", data = {'limit': 0})
         self.assertHttpOK(response)
         objects = self.deserialize(response)['objects']
         self.assertEqual(Event.objects.count(), len(objects))

@@ -20,6 +20,7 @@ class NotificationTestCase(ChromaApiTestCase):
                                severity=INFO,
                                date=None,
                                failed=None,
+                               complete=False,
                                message='test'):
         """Create one of 3 types of objects that can be dismissed by a user"""
 
@@ -38,6 +39,7 @@ class NotificationTestCase(ChromaApiTestCase):
             return self.make_command(dismissed=dismissed,
                                      created_at=date,
                                      failed=failed,
+                                     complete=complete,
                                      message=message)
 
     def make_event(self, host=None, dismissed=False,
@@ -59,10 +61,11 @@ class NotificationTestCase(ChromaApiTestCase):
 
         return event
 
-    def make_command(self, dismissed=False, created_at=None, failed=True, message='test'):
+    def make_command(self, dismissed=False, complete=False, created_at=None, failed=True, message='test'):
 
         command = Command.objects.create(dismissed=dismissed,
             message=message,
+            complete=complete,
             errored=failed)
 
         #  Command.created_at is auto_add_now - so have to update it

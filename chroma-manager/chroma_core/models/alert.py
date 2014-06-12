@@ -82,9 +82,6 @@ class AlertState(models.Model):
     def to_dict(self):
         from chroma_core.lib.util import time_str
         return {
-         # FIXME: retire misnamed 'alert_created_at'
-         'alert_created_at': self.begin,
-         'alert_created_at_short': self.begin,
          'begin': self.begin,
          'end': self.end,
          'alert_severity': 'alert',  # FIXME: Still need to figure out wheather to pass enum or display string.
@@ -107,6 +104,12 @@ class AlertState(models.Model):
 
     def message(self):
         raise NotImplementedError()
+
+    # This addition is because when we are querying notifications it is useful to be able
+    # query by created_at begin is clearly the best analogy
+    @property
+    def created_at(self):
+        return self.begin
 
     class Meta:
         unique_together = ('alert_item_type', 'alert_item_id', 'alert_type', 'active')

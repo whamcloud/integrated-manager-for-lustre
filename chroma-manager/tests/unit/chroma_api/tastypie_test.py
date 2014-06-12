@@ -33,9 +33,12 @@
 
 import time
 from urlparse import urlparse
+import contextlib
+import itertools
 from django.conf import settings
 from django.test import TestCase
 from django.test.client import FakePayload, Client
+from django.db import connection
 from tastypie.serializers import Serializer
 
 
@@ -543,3 +546,21 @@ class ResourceTestCase(TestCase):
         testing the full structure, which can be prone to data changes.
         """
         self.assertEqual(sorted(data.keys()), sorted(expected))
+
+    @contextlib.contextmanager
+    def assertQueries(self, *prefixes):
+        "Assert the correct queries are efficiently executed for a block."
+
+        debug = connection.use_debug_cursor
+        connection.use_debug_cursor = True
+
+        count = len(connection.queries)
+        yield
+
+        if type(prefixes[0]) == int:
+            assert prefixes[0] == len(connection.queries[count:])
+        else:
+            for prefix, query in itertools.izip_longest(prefixes, connection.queries[count:]):
+                assert prefix and query and query['sql'].startswith(prefix), (prefix, query)
+
+        connection.use_debug_cursor = debug
