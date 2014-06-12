@@ -10,10 +10,7 @@ describe('Health model', function () {
   var interval;
 
   var urls = {
-    event: '/api/event/?dismissed=false&limit=1&severity__in=WARNING&severity__in=ERROR',
-    alert: '/api/alert/?active=true&limit=0&severity__in=WARNING&severity__in=ERROR',
-    inactiveAlert: '/api/alert/?active=false&dismissed=false&limit=1&severity__in=WARNING',
-    command: '/api/command/?dismissed=false&errored=true&limit=1'
+    alert: '/api/alert/?active=true&limit=0&severity__in=WARNING&severity__in=ERROR'
   };
 
   /**
@@ -33,13 +30,6 @@ describe('Health model', function () {
   beforeEach(module('constants', 'models', 'ngResource', 'services', 'interceptors', function ($provide) {
     // Mock out this dep.
     $provide.value('paging', jasmine.createSpy('paging'));
-
-    // Spy on $q.all to make sure all expected api calls are being waited on.
-    $provide.decorator('$q', function ($delegate) {
-      spyOn($delegate, 'all').andCallThrough();
-
-      return $delegate;
-    });
   }));
 
   beforeEach(inject(function (_$httpBackend_, _STATES_, _healthModel_, _interval_, $rootScope) {
@@ -118,76 +108,21 @@ describe('Health model', function () {
       expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
     });
 
-    it('should be in warn when 1 or more WARN alerts are inactive but have not been dismissed', function () {
+    it('should obey all the rules: highest error state wins.', function () {
       expectReqRes({
-        inactiveAlert: [{}]
-      });
-
-      healthModel();
-      $httpBackend.flush();
-      expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
-    });
-
-    it('should be in warn when there are 1 or more unacknowledged WARN or higher events', function () {
-      expectReqRes({
-        event: [
-          {
-            severity: WARN
-          },
+        alert: [
           {
             severity: ERROR
+          },
+          {
+            severity: WARN
           }
         ]
       });
 
       healthModel();
       $httpBackend.flush();
-      expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
-    });
-
-    it('should be in warn when there are 1 or more unacknowledged failed commands: amber', function () {
-      expectReqRes({
-        command: [{}]
-      });
-
-      healthModel();
-      $httpBackend.flush();
-      expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
-    });
-
-    it('should obey all the rules: highest error state wins.', function () {
-      expectReqRes({
-        alert: [
-          {
-            severity: ERROR
-          }
-        ],
-        inactiveAlert: [{}],
-        event: [
-          {
-            severity: WARN
-          },
-          {
-            severity: ERROR
-          }
-        ],
-        command: [{}]
-      });
-
-      healthModel();
-      $httpBackend.flush();
       expect(healthSpy.mostRecentCall.args[1]).toBe(ERROR);
     });
-  });
-
-  describe('promise resolution', function () {
-    it('should wait for all calls to resolve', inject(function ($q) {
-      expectReqRes();
-      healthModel();
-      $httpBackend.flush();
-
-      expect($q.all.callCount).toBe(1);
-      expect($q.all.mostRecentCall.args[0].length).toEqual(Object.keys(urls).length);
-    }));
   });
 });
