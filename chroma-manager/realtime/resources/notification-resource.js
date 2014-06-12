@@ -22,10 +22,10 @@
 
 'use strict';
 
-var inherits = require('util').inherits,
-  STATES,
-  _ = require('lodash');
+var inherits = require('util').inherits;
+var _ = require('lodash');
 
+var STATES;
 exports.STATES = STATES = {
   ERROR: 'ERROR',
   WARN: 'WARNING',
@@ -38,79 +38,61 @@ exports.STATES = STATES = {
 
 exports.notificationResourceFactory = notificationResourceFactory;
 
-function notificationResourceFactory (Resource, AlertResource, CommandResource, EventResource, Q) {
-  var commandResource = new CommandResource();
+function notificationResourceFactory (Resource, AlertResource) {
   var alertResource = new AlertResource();
-  var eventResource = new EventResource();
 
   /**
-   * Extension of the Resource.
-   * Used for joining alerts, commands and events to create a status.
+   * Extension of Resource.
    * @constructor
+   * @extends Resource
    */
-
-  function NotificationResource() {
+  function NotificationResource () {
     Resource.call(this, 'notification');
   }
 
   inherits(NotificationResource, Resource);
 
-
   /**
-   * Gets alerts, events and commands and joins them.
+   * Returns a promise representing the current system health.
+   * The rules to determine health are:
+   *
+   * 1 or more active ERROR alerts: red
+   * else: 1 or more active WARN alerts: amber
+   * else: green
+   *
    * @param {Object} params
+   * @returns {Q.promise}
    */
   NotificationResource.prototype.httpGetHealth = function httpGetHealth (params) {
-    return Q.all([
-      alertResource.httpGetList(
-        mergeParams({qs: {active: true, severity__in: [STATES.WARN, STATES.ERROR], limit: 0}})
-      ),
-      alertResource.httpGetList(
-        mergeParams({qs: {active: false, dismissed: false, severity__in: STATES.WARN, limit: 1}})
-      ),
-      eventResource.httpGetList(
-        mergeParams({qs: {dismissed: false, severity__in: [STATES.WARN, STATES.ERROR], limit: 1}})
-      ),
-      commandResource.httpGetList(
-        mergeParams({qs: {errored: true, dismissed: false, limit: 1}})
-      )
-    ]).spread(allDone);
+    return alertResource.httpGetList(_.merge({}, params, {
+      qs: {
+        active: true,
+        severity__in: [STATES.WARN, STATES.ERROR],
+        limit: 0
+      }
+    }))
+      .then(allDone);
 
-    function mergeParams(getParams) {
-      return _.merge({}, params, getParams);
-    }
-
-    function allDone(activeAlertResp, inactiveAlertResp, eventResp, commandResp) {
-      var alerts = activeAlertResp.body.objects,
-        inactiveAlerts = inactiveAlertResp.body.objects,
-        events = eventResp.body.objects,
-        commands = commandResp.body.objects;
+    /**
+     * Takes the response and uses it to determine system health.
+     * @param {Object} alertResponse
+     * @returns {Object}
+     */
+    function allDone (alertResponse) {
+      var alerts = alertResponse.body.objects;
 
       var states = [STATES.GOOD, STATES.WARN, STATES.ERROR];
       var health = [states.indexOf(STATES.GOOD)];
 
-      //1 or more unacknowledged WARN or higher events: amber
-      events.forEach(function () {
-        health.push(states.indexOf(STATES.WARN));
-      });
-
-      //1 or more ERROR alerts are active: red else: 1 or more WARN alerts are active: amber
+      // 1 or more active ERROR alerts: red else: 1 or more active WARN alerts: amber
       alerts.some(function (alert) {
         health.push(states.indexOf(alert.severity));
 
         return alert.severity === STATES.ERROR;
       });
 
-      // 1 or more WARN alerts are inactive but have not been dismissed: amber
-      // 1 or more unacknowledged failed commands: amber
-      [inactiveAlerts, commands].forEach(function (group) {
-        if (group.length)
-          health.push(states.indexOf(STATES.WARN));
-      });
-
-      health = _.unique(health);
-      commandResp.body = states[Math.max.apply(null, health)];
-      return commandResp;
+      alertResponse.body = states[Math.max.apply(null, health)];
+      return alertResponse;
     }
   };
 

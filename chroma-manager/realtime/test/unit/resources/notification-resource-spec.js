@@ -1,20 +1,18 @@
 'use strict';
 
-var notificationsResourceModule = require('../../../resources/notification-resource'),
-  notificationsResourceFactory = notificationsResourceModule.notificationResourceFactory,
-  STATES = notificationsResourceModule.STATES,
-  Q = require('q');
+var Q = require('q');
+var notificationsResourceModule = require('../../../resources/notification-resource');
+var notificationsResourceFactory = notificationsResourceModule.notificationResourceFactory;
+var STATES = notificationsResourceModule.STATES;
 
 describe('Notifications resource', function () {
-  var NotificationsResource, notificationsResource, Resource, AlertResource, EventResource, CommandResource;
+  var NotificationsResource, notificationsResource, Resource, AlertResource;
 
   beforeEach(function () {
     Resource = createResource('resource');
     AlertResource = createResource('alert');
-    EventResource = createResource('event');
-    CommandResource = createResource('command');
 
-    NotificationsResource = notificationsResourceFactory(Resource, AlertResource, CommandResource, EventResource, Q);
+    NotificationsResource = notificationsResourceFactory(Resource, AlertResource);
     notificationsResource = new NotificationsResource();
   });
 
@@ -23,7 +21,7 @@ describe('Notifications resource', function () {
   });
 
   describe('get health', function () {
-    describe('finding alerts', function () {
+    describe('finding notifications', function () {
       beforeEach(function () {
         notificationsResource.httpGetHealth();
       });
@@ -34,37 +32,6 @@ describe('Notifications resource', function () {
             active: true,
             severity__in: [STATES.WARN, STATES.ERROR],
             limit: 0
-          }
-        });
-      });
-
-      it('should look for inactive alerts', function () {
-        expect(AlertResource.prototype.httpGetList).toHaveBeenCalledOnceWith({
-          qs: {
-            active: false,
-            dismissed: false,
-            severity__in: STATES.WARN,
-            limit: 1
-          }
-        });
-      });
-
-      it('should look for events', function () {
-        expect(EventResource.prototype.httpGetList).toHaveBeenCalledOnceWith({
-          qs: {
-            dismissed: false,
-            severity__in: [STATES.WARN, STATES.ERROR],
-            limit: 1
-          }
-        });
-      });
-
-      it('should look for commands', function () {
-        expect(CommandResource.prototype.httpGetList).toHaveBeenCalledOnceWith({
-          qs: {
-            errored: true,
-            dismissed: false,
-            limit: 1
           }
         });
       });
@@ -85,7 +52,9 @@ describe('Notifications resource', function () {
       });
 
       notificationsResource.httpGetHealth().then(function then (state) {
-        expect(state).toEqual({ body : STATES.ERROR });
+        expect(state).toEqual({
+          body: STATES.ERROR
+        });
 
         done();
       });
@@ -102,52 +71,9 @@ describe('Notifications resource', function () {
       });
 
       notificationsResource.httpGetHealth().then(function then (state) {
-        expect(state).toEqual({ body : STATES.WARN });
-
-        done();
-      });
-    });
-
-    it('should be in warn when 1 or more WARN alerts are inactive but have not been dismissed', function (done) {
-      AlertResource._configureSpy([{}],
-      {
-        active: false,
-        dismissed: false,
-        severity__in: STATES.WARN,
-        limit: 1
-      });
-
-      notificationsResource.httpGetHealth().then(function then (state) {
-        expect(state).toEqual({ body : STATES.WARN });
-
-        done();
-      });
-    });
-
-    it('should be in warn when there are 1 or more unacknowledged WARN or higher events', function (done) {
-      EventResource._configureSpy([
-        [
-          {
-            severity: STATES.WARN
-          },
-          {
-            severity: STATES.ERROR
-          }
-        ]
-      ]);
-
-      notificationsResource.httpGetHealth().then(function then (state) {
-        expect(state).toEqual({ body : STATES.WARN });
-
-        done();
-      });
-    });
-
-    it('should be in warn when 1 or more WARN alerts are inactive but have not been dismissed', function (done) {
-      CommandResource._configureSpy([{}]);
-
-      notificationsResource.httpGetHealth().then(function then (state) {
-        expect(state).toEqual({ body : STATES.WARN });
+        expect(state).toEqual({
+          body : STATES.WARN
+        });
 
         done();
       });
@@ -157,31 +83,15 @@ describe('Notifications resource', function () {
       AlertResource._configureSpy([
         {
           severity: STATES.ERROR
+        },
+        {
+          severity: STATES.WARN
         }
       ], {
         active: true,
         severity__in: [STATES.WARN, STATES.ERROR],
         limit: 0
       });
-
-      AlertResource._configureSpy([{}],
-        {
-          active: false,
-          dismissed: false,
-          severity__in: [STATES.WARN],
-          limit: 1
-        });
-
-      EventResource._configureSpy([
-        {
-          severity: STATES.WARN
-        },
-        {
-          severity: STATES.ERROR
-        }
-      ]);
-
-      CommandResource._configureSpy([{}]);
 
       notificationsResource.httpGetHealth().then(function then (state) {
         expect(state).toEqual({ body : STATES.ERROR });
@@ -200,14 +110,7 @@ describe('Notifications resource', function () {
 
     notificationsResource.httpGetHealth(authHeaders);
 
-    [
-      AlertResource.prototype.httpGetList.calls[0].args[0],
-      AlertResource.prototype.httpGetList.calls[1].args[0],
-      EventResource.prototype.httpGetList.mostRecentCall.args[0],
-      CommandResource.prototype.httpGetList.mostRecentCall.args[0]
-    ].forEach(function (args) {
-      expect(args).toContainObject(authHeaders);
-    });
+    expect(AlertResource.prototype.httpGetList.calls[0].args[0]).toContainObject(authHeaders);
   });
 });
 
