@@ -55,7 +55,10 @@
      * @description Returns params that can be merged in before an api call.
      * @returns {{limit: number, offset: number}}
      */
-    Pager.prototype.getParams = function () {
+    Pager.prototype.getParams = function getParams(newPage) {
+      if (newPage != null)
+        this.currentPage = newPage;
+
       return {
         limit: this.limit,
         offset: (this.currentPage - 1) * this.limit

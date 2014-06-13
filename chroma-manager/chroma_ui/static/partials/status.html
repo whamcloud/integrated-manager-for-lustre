@@ -1,6 +1,6 @@
 <div ng-controller="StatusCtrl">
     <div class="btn-group" data-toggle="buttons-radio" ng-click="status.updateViewState()">
-        <a class="btn" ng-model="status.state" btn-radio="status.types.collection">All</a>
+        <a class="btn" ng-model="status.state" btn-radio="status.types.notification">All</a>
         <a class="btn" ng-model="status.state" btn-radio="status.types.alert">Alerts</a>
         <a class="btn" ng-model="status.state" btn-radio="status.types.command">Commands</a>
         <a class="btn" ng-model="status.state" btn-radio="status.types.event">Events</a>
@@ -13,8 +13,8 @@
         <a class="btn" ng-model="status.view" btn-radio="'history'">History</a>
     </div>
     <ul class="messages well well-large">
-        <li class="none" ng-show="status.getViewState().models.paging.noOfPages == 0">No messages here.</li>
-        <li ng-repeat="model in status.getViewState().models" ng-show="status.getViewState().models.paging.noOfPages > 0">
+        <li class="none" ng-if="status.getViewState().models.paging.noOfPages === 0">No messages here.</li>
+        <li ng-repeat="model in status.getViewState().models track by model.resource_uri" ng-show="status.getViewState().models.paging.noOfPages > 0">
             <div class="message" ng-class="model.getState()">
                 <div class="status">
                     <i class="icon-"></i>

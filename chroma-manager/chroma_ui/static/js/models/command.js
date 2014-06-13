@@ -20,10 +20,10 @@
 // express and approved by Intel in writing.
 
 
-angular.module('models').factory('commandModel', ['baseModel', 'STATES', function (baseModel, STATES) {
+angular.module('models').factory('commandModel', ['baseModel', 'STATES', '$q', function (baseModel, STATES, $q) {
   'use strict';
 
-  return baseModel({
+  var CommandModel = baseModel({
     url: '/api/command/:commandId',
     params: {commandId: '@id'},
     methods: {
@@ -54,7 +54,26 @@ angular.module('models').factory('commandModel', ['baseModel', 'STATES', functio
       },
       noDismissMessage: function () {
         return 'no_dismiss_message_command';
+      },
+      /**
+       * Dismisses this command.
+       * @returns {Object} A promise
+       */
+      dismiss: function dismiss () {
+        if (this.notDismissable())
+          return $q.when(false);
+
+        return CommandModel.patch({
+          id: this.id,
+          dismissed: true
+        })
+          .$promise
+          .then(function then () {
+            return true;
+          });
       }
     }
   });
+
+  return CommandModel;
 }]);

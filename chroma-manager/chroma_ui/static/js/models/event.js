@@ -23,7 +23,7 @@
 angular.module('models').factory('eventModel', ['baseModel', function (baseModel) {
   'use strict';
 
-  return baseModel({
+  var EventModel = baseModel({
     url: '/api/event/:eventId',
     params: {eventId: '@id'},
     methods: {
@@ -36,7 +36,19 @@ angular.module('models').factory('eventModel', ['baseModel', function (baseModel
       },
       getName: function () {
         return 'event';
+      },
+      dismiss: function dismiss () {
+        return EventModel.patch({
+          id: this.id,
+          dismissed: true
+        })
+          .$promise
+          .then(function then () {
+            return true;
+          });
       }
     }
   });
+
+  return EventModel;
 }]);

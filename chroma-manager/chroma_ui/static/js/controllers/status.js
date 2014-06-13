@@ -23,37 +23,33 @@
 (function (_) {
   'use strict';
 
-  function StatusCtrl($scope, $q, $element, alertModel, eventModel, commandModel, collectionModel,
-                      confirmDialog) {
-    var params = _.extend.bind(_, {}, {order_by: '-created_at', limit: 30, dismissed: false});
+  angular.module('controllers').controller('StatusCtrl',
+    ['$scope', '$element', 'alertModel', 'eventModel', 'commandModel', 'notificationModel', 'confirmDialog',
+      StatusCtrl]);
 
-    var types = {};
+  function StatusCtrl ($scope, $element, alertModel, eventModel, commandModel, notificationModel, confirmDialog) {
     var dialog;
 
-    this.alertModel = alertModel.bind(params({order_by: '-begin'}));
+    var params = _.extend.bind(_, {}, {
+      order_by: '-created_at',
+      limit: 30,
+      dismissed: false
+    });
+    var types = {};
+
+    this.alertModel = alertModel.bind(params({
+      order_by: '-begin'
+    }));
     this.eventModel = eventModel.bind(params());
     this.commandModel = commandModel.bind(params());
-    this.collectionModel = collectionModel({
-      models: [
-        {
-          name: 'alertModel',
-          model: this.alertModel.bind({limit: 10})
-        },
-        {
-          name: 'eventModel',
-          model: this.eventModel.bind({limit: 10})
-        },
-        {
-          name: 'commandModel',
-          model: this.commandModel.bind({limit: 10})
-        }
-      ]
-    });
+    this.notificationModel = notificationModel.bind(params());
 
     // Flesh out types.
-    ['alert', 'event', 'command', 'collection'].forEach(function populate(type) {
+    ['alert', 'event', 'command', 'notification'].forEach(function populate (type) {
       var model = this['%sModel'.sprintf(type)];
-      var historyModel = model.bind({dismissed: true});
+      var historyModel = model.bind({
+        dismissed: true
+      });
 
       types[type] = {
         current: {
@@ -65,166 +61,133 @@
           model: historyModel
         }
       };
-    }.bind(this));
+    }, this);
 
     $scope.status = {
       /**
-       * @description An object literal of types that are available.
+       * An object literal of types that are available.
        * @name types
        * @type object
        */
       types: types,
       /**
-       * @description An object literal reference to the current type state.
+       * An object literal reference to the current type state.
        * @name state
        * @type object
        */
-      state: types.collection,
+      state: types.notification,
       /**
-       * @description The current message view, can be current || history
+       * The current message view, can be current || history
        * @name view
        * @type string
        */
       view: 'current',
       /**
-       * @description Returns the current states view.
+       * Returns the current states view.
        * @name getViewState
        * @returns {object}
        */
-      getViewState: function () {
+      getViewState: function getViewState () {
         return this.state[this.view];
       },
       /**
        * A simple wrapper around getPage that scrolls the message container to the top.
        * @name updateViewState
        * @param {number} [page] If page is null || undefined then this method acts as a refresh for the current type.
-       * @param {boolean} noBlock Should this method block the page?
        */
-      updateViewState: function (page, noBlock) {
-        function scrollTop() {
-          $element.find('ul.messages').scrollTop(0);
-        }
-
-        this.getPage(page, noBlock).finally(scrollTop);
+      updateViewState: function updateViewState (page) {
+        this.getPage(page, true)
+          .finally(function scrollTop() {
+            $element.find('ul.messages').scrollTop(0);
+          });
       },
       /**
        * @description Moves the current state to the specified page.
        * @name getPage
        * @param {number} [page] If page is null || undefined then this method acts as a refresh for the current type.
-       * @param {boolean} noBlock Should this method block the page?
+       * @param {boolean} shouldBlock Should this method block the page?
        * @returns {object} A promise.
        */
-      getPage: function (page, noBlock) {
-        if (!noBlock) {
-          $scope.$emit('blockUi', {message: null});
-        }
+      getPage: function getPage (page, shouldBlock) {
+        if (shouldBlock)
+          block();
 
         var viewState = this.getViewState();
-        var func;
 
-        if (viewState.models && viewState.models.$models) {
-          viewState.models.paging.setPage(page);
-          func = angular.noop;
-        } else if (viewState.models) {
-          //@TODO Leaky abstraction here, shouldn't have to set this directly.
-          if (page != null) {
-            viewState.models.paging.currentPage = page;
-          }
+        var newPageParams;
+        if (viewState.models)
+          newPageParams = viewState.models.paging.getParams(page);
+        else
+          newPageParams = {};
 
-          func = viewState.models.paging.getParams();
-        }
-
-        function callback(res) {
-          viewState.models = res;
-          unblock();
-        }
-
-        function unblock() {
-          if (!noBlock) {
-            $scope.$emit('unblockUi');
-          }
-        }
-
-        return viewState.model.query(func).$promise.then(callback, unblock);
+        return viewState.model.query(newPageParams).$promise
+          .then(function callback (res) {
+            viewState.models = res;
+          })
+          .finally(function done() {
+            if (shouldBlock)
+              unblock();
+          });
       },
       /**
-       * @description Dismisses the passed in message, then refreshes the page.
-       * @name dismiss
+       * Dismisses the passed in message, then refreshes the page.
        * @param {object} message The message to update and patch.
        * @param {boolean} noUpdate Whether an update should be triggered after this call.
        */
-      dismiss: function (message, noUpdate) {
+      dismiss: function dismiss (message, noUpdate) {
+        message.dismiss()
+          .then(function then (result) {
+            if (result === true && !noUpdate)
+              checkHealth();
+          });
+      },
+      dismissAllConfirm: function dismissAllConfirm () {
+        dialog = confirmDialog.setup({
+          content: {
+            title: 'Dismiss All',
+            message: 'Do you wish to dismiss all status messages?',
+            confirmText: 'Dismiss All'
+          }
+        });
 
-        if (message.notDismissable && message.notDismissable()) {
-          // If we can't dismiss return early with success.
-          return $q.defer().resolve();
-        }
+        dialog
+          .open()
+          .then(function startRequest() {
+            block();
 
-        message.dismissed = true;
-
-        function success() { $scope.$emit('checkHealth'); }
-
-        delete message.active;
-
-        return message.$patch().then(noUpdate ? angular.noop: success);
+            return notificationModel.dismissAll().$promise;
+          })
+          .finally(function done () {
+            checkHealth();
+            unblock();
+          });
       }
     };
 
+    $scope.$root.$on('health', $scope.status.getPage.bind($scope.status, null, false));
+
     /**
-     * @description Patch all the messages.
-     * @name dismissAll
+     * Places a blocking modal on the screen.
      */
-    $scope.status.dismissAll = function () {
-      //@TODO: This is really bad, will not scale.
-      var model = collectionModel({
-        models: [
-          {
-            name: 'alertModel',
-            model: this.alertModel.bind({limit: 0})
-          },
-          {
-            name: 'eventModel',
-            model: this.eventModel.bind({limit: 0})
-          },
-          {
-            name: 'commandModel',
-            model: this.commandModel.bind({limit: 0})
-          }
-        ]
+    function block () {
+      $scope.$emit('blockUi', {
+        fadeIn: true,
+        message: null
       });
+    }
 
-      $scope.$emit('blockUi', {fadeIn: true, message: null});
+    /**
+     * Removes the blocking modal from the screen
+     */
+    function unblock () {
+      $scope.$emit('unblockUi');
+    }
 
-      model.query(function success(res) {
-        var promises = res.map(function (model) {
-          return $scope.status.dismiss(model, true);
-        });
-
-        function callback() {
-          $scope.$emit('checkHealth');
-          $scope.$emit('unblockUi');
-        }
-
-        $q.all(promises).finally(callback);
-      });
-    }.bind(this);
-
-    $scope.status.dismissAllConfirm = function() {
-      dialog = confirmDialog.setup({
-        content: {
-          title: 'Dismiss All',
-          message: 'Do you wish to dismiss all status messages?',
-          confirmText: 'Dismiss All',
-        }
-      });
-      dialog.open().then($scope.status.dismissAll);
-    };
-
-    $scope.$root.$on('health', $scope.status.getPage.bind($scope.status, null, true));
+    /**
+     * Emits an event to check system health.
+     */
+    function checkHealth () {
+      $scope.$emit('checkHealth');
+    }
   }
-
-  angular.module('controllers').controller('StatusCtrl',
-    ['$scope', '$q', '$element', 'alertModel', 'eventModel', 'commandModel', 'collectionModel',
-     'confirmDialog', StatusCtrl]
-  );
 }(window.lodash));
