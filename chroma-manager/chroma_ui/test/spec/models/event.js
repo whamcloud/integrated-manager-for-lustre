@@ -33,4 +33,38 @@ describe('Events model', function () {
       expect(model.getState()).toEqual(state);
     });
   }));
+
+  describe('dismiss', function () {
+    var $httpBackend, eventModel;
+
+    beforeEach(inject(function (_$httpBackend_, _eventModel_) {
+      $httpBackend = _$httpBackend_;
+      eventModel = _eventModel_;
+    }));
+
+    it('should have a dismiss method', function () {
+      $httpBackend.expectGET('/api/event/').respond({id: 3});
+
+      var model = eventModel.get();
+
+      $httpBackend.flush();
+
+      expect(model.dismiss).toEqual(jasmine.any(Function));
+    });
+
+    it('should dismiss the command', function () {
+      $httpBackend.expectGET('/api/event/').respond({id: 3});
+
+      var model = eventModel.get();
+
+      $httpBackend.flush(1);
+      $httpBackend.expectPATCH('/api/event/3/').respond();
+
+      model.dismiss().then(function then (result) {
+        expect(result).toBe(true);
+      });
+
+      $httpBackend.flush();
+    });
+  });
 });

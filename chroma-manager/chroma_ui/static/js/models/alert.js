@@ -23,12 +23,14 @@
 /**
  * A Factory for accessing alerts.
  */
-angular.module('models').factory('alertModel', ['baseModel', 'STATES', function (baseModel, STATES) {
+angular.module('models').factory('alertModel', ['$q', 'baseModel', 'STATES', function ($q, baseModel, STATES) {
   'use strict';
 
-  return baseModel({
+  var AlertModel = baseModel({
     url: '/api/alert/:alertId',
-    params: {alertId: '@id'},
+    params: {
+      alertId: '@id'
+    },
     methods: {
       /**
        * @description Returns the severity of the alert as it's state.
@@ -49,7 +51,22 @@ angular.module('models').factory('alertModel', ['baseModel', 'STATES', function 
       },
       noDismissMessage: function () {
         return 'no_dismiss_message_alert';
+      },
+      dismiss: function dismiss () {
+        if (this.notDismissable())
+          return $q.when(false);
+
+        return AlertModel.patch({
+          id: this.id,
+          dismissed: true
+        })
+          .$promise
+          .then(function then () {
+            return true;
+          });
       }
     }
   });
+
+  return AlertModel;
 }]);

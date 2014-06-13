@@ -8,7 +8,7 @@ describe('Paging service', function () {
   beforeEach(function () {
     meta = {
       limit: 10,
-      next: "/api/alert/?limit=10&dismissed=false&offset=10",
+      next: '/api/alert/?limit=10&dismissed=false&offset=10',
       offset: 0,
       previous: null,
       total_count: 67329
@@ -33,7 +33,7 @@ describe('Paging service', function () {
   it('should have a previous offset if available', inject(function (paging) {
     expect(paging(meta).previous).toBeUndefined();
 
-    meta.previous = "/api/alert/?limit=10&dismissed=false&offset=20";
+    meta.previous = '/api/alert/?limit=10&dismissed=false&offset=20';
     expect(paging(meta).previous).toBe(20);
   }));
 
@@ -58,6 +58,7 @@ describe('Paging service', function () {
   it('should have a method to get params', inject(function (paging) {
     expect(paging(meta).getParams).toEqual(jasmine.any(Function));
     expect(paging(meta).getParams()).toEqual({limit: 10, offset: 0});
+    expect(paging(meta).getParams(11)).toEqual({limit: 10, offset: 100});
   }));
 
   it('should take limit 0 into account', inject(function (paging) {

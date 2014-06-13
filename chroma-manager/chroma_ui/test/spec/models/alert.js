@@ -97,4 +97,59 @@ describe('Alerts model', function () {
 
     expect(model.noDismissMessage()).toEqual('no_dismiss_message_alert');
   }));
+
+  describe('dismiss', function () {
+    var $httpBackend, alertModel, STATES;
+
+    beforeEach(inject(function (_$httpBackend_, _alertModel_, _STATES_) {
+      $httpBackend = _$httpBackend_;
+      alertModel = _alertModel_;
+      STATES = _STATES_;
+    }));
+
+    it('should have a dismiss method', function () {
+      $httpBackend.expectGET(apiName).respond(fixture);
+
+      var model = alertModel.get();
+
+      $httpBackend.flush();
+
+      expect(model.dismiss).toEqual(jasmine.any(Function));
+    });
+
+    it('should return false if not dismissable', function () {
+      $httpBackend.expectGET(apiName).respond({
+        severity: STATES.WARN,
+        active: true,
+        id: 3
+      });
+
+      var model = alertModel.get();
+
+      $httpBackend.flush();
+
+      model.dismiss().then(function then (result) {
+        expect(result).toBe(false);
+      });
+    });
+
+    it('should dismiss the alert', function () {
+      $httpBackend.expectGET(apiName).respond({
+        severity: STATES.WARN,
+        active: false,
+        id: 3
+      });
+
+      var model = alertModel.get();
+
+      $httpBackend.flush(1);
+      $httpBackend.expectPATCH(apiName + '3/').respond({});
+
+      model.dismiss().then(function then (result) {
+        expect(result).toBe(true);
+      });
+
+      $httpBackend.flush();
+    });
+  });
 });

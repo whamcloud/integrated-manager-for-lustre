@@ -61,4 +61,50 @@ describe('Commands model', function () {
 
     expect(model.noDismissMessage()).toEqual('no_dismiss_message_command');
   }));
+
+  describe('dismiss', function () {
+    var $httpBackend, commandModel;
+
+    beforeEach(inject(function (_$httpBackend_, _commandModel_) {
+      $httpBackend = _$httpBackend_;
+      commandModel = _commandModel_;
+    }));
+
+    it('should have a dismiss method', function () {
+      $httpBackend.expectGET('/api/command/').respond({complete: false, id: 3});
+
+      var model = commandModel.get();
+
+      $httpBackend.flush();
+
+      expect(model.dismiss).toEqual(jasmine.any(Function));
+    });
+
+    it('should return false if not dismissable', function () {
+      $httpBackend.expectGET('/api/command/').respond({complete: false, id: 3});
+
+      var model = commandModel.get();
+
+      $httpBackend.flush();
+
+      model.dismiss().then(function then (result) {
+        expect(result).toBe(false);
+      });
+    });
+
+    it('should dismiss the command', function () {
+      $httpBackend.expectGET('/api/command/').respond({complete: true, id: 3});
+
+      var model = commandModel.get();
+
+      $httpBackend.flush(1);
+      $httpBackend.expectPATCH('/api/command/3/').respond();
+
+      model.dismiss().then(function then (result) {
+        expect(result).toBe(true);
+      });
+
+      $httpBackend.flush();
+    });
+  });
 });

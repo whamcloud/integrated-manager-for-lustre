@@ -3,9 +3,10 @@ describe('status controller', function () {
 
   beforeEach(module('controllers', 'models', 'ngResource', 'services', 'constants', 'interceptors', 'ui.bootstrap',
     function ($provide) {
-      // Mock out this dep.
       var $elementMock = {
-        find: jasmine.createSpy('find').andCallFake(function () { return $elementMock; }),
+        find: jasmine.createSpy('find').andCallFake(function () {
+          return $elementMock;
+        }),
         scrollTop: jasmine.createSpy('scrollTop')
       };
 
@@ -13,28 +14,48 @@ describe('status controller', function () {
     }
   ));
 
-  var $httpBackend;
-  var scope;
+  var $httpBackend, $scope, $element, notificationResponse, createController;
 
-  var urls = {
-    alertCollection: '/api/alert/?dismissed=false&limit=10&order_by=-begin',
-    eventCollection: '/api/event/?dismissed=false&limit=10&order_by=-created_at',
-    commandCollection: '/api/command/?dismissed=false&limit=10&order_by=-created_at'
-  };
-
-  function expectReqRes(config) {
-    config = config || {};
-
-    Object.keys(urls).forEach(function (url) {
-      $httpBackend
-        .expectGET(urls[url])
-        .respond(config[url] || {meta: {}, objects: []});
-    });
-  }
-
-  beforeEach(inject(function ($injector, $rootScope) {
+  beforeEach(inject(function ($injector, $rootScope, $controller, _$element_) {
     $httpBackend = $injector.get('$httpBackend');
-    scope = $rootScope.$new();
+    $scope = $rootScope.$new();
+    $element = _$element_;
+
+    createController = function () {
+      $controller('StatusCtrl', {
+        $scope: $scope
+      });
+    };
+
+    notificationResponse = {
+      'meta': {
+        'limit': 30,
+        'next': null,
+        'offset': 0,
+        'previous': null,
+        'total_count': 3
+      },
+      'objects': [
+        {
+          'id': 1,
+          'message': 'Creating OST',
+          complete: true,
+          type: 'Command'
+        },
+        {
+          'id': 2,
+          'message': 'Start file system testfs',
+          complete: true,
+          type: 'Command'
+        },
+        {
+          'id': 3,
+          'message': 'Stop file system testfs',
+          complete: true,
+          type: 'Command'
+        }
+      ]
+    };
   }));
 
   afterEach(function () {
@@ -42,31 +63,35 @@ describe('status controller', function () {
     $httpBackend.verifyNoOutstandingRequest();
   });
 
-  it('should return a status object', inject(function ($controller) {
-    expectReqRes();
+  it('should return a status object', function () {
+    $httpBackend
+      .expectGET('/api/notification/?dismissed=false&limit=30&order_by=-created_at')
+      .respond(notificationResponse);
 
-    $controller('StatusCtrl', {$scope: scope});
-    scope.$root.$broadcast('health');
+    createController();
+
+    $scope.$root.$broadcast('health');
     $httpBackend.flush();
 
-    var collectionKeys = Object.keys(scope.status.types.collection);
-    var currentCollectionKeys = Object.keys(scope.status.types.collection.current);
+    var notificationKeys = Object.keys($scope.status.types.notification);
+    var currentNotificationKeys = Object.keys($scope.status.types.notification.current);
 
-    expect(scope.status).toEqual(jasmine.any(Object));
-    expect(scope.status.types).toEqual(jasmine.any(Object));
-    expect(scope.status.types.alert).toEqual(jasmine.any(Object));
-    expect(collectionKeys).toContain('current');
-    expect(collectionKeys).toContain('history');
-    expect(currentCollectionKeys).toContain('name');
-    expect(currentCollectionKeys).toContain('model');
-    expect(currentCollectionKeys).toContain('models');
-    expect(scope.status.types.event).toEqual(jasmine.any(Object));
-    expect(scope.status.types.command).toEqual(jasmine.any(Object));
-    expect(scope.status.getPage).toEqual(jasmine.any(Function));
-    expect(scope.status.dismiss).toEqual(jasmine.any(Function));
-  }));
+    expect($scope.status).toEqual(jasmine.any(Object));
+    expect($scope.status.types).toEqual(jasmine.any(Object));
+    expect($scope.status.types.alert).toEqual(jasmine.any(Object));
+    expect($scope.status.types.event).toEqual(jasmine.any(Object));
+    expect($scope.status.types.command).toEqual(jasmine.any(Object));
 
-  it('should dismiss a message', inject(function ($controller) {
+    expect(notificationKeys).toContain('current');
+    expect(notificationKeys).toContain('history');
+    expect(currentNotificationKeys).toContain('name');
+    expect(currentNotificationKeys).toContain('model');
+    expect(currentNotificationKeys).toContain('models');
+    expect($scope.status.getPage).toEqual(jasmine.any(Function));
+    expect($scope.status.dismiss).toEqual(jasmine.any(Function));
+  });
+
+  it('should dismiss a message', function () {
     var commands = {
       'meta': {
         'limit': 30,
@@ -94,39 +119,41 @@ describe('status controller', function () {
       ]
     };
 
-    $controller('StatusCtrl', {$scope: scope});
+    createController();
 
-    scope.status.state = scope.status.types.command;
+    $scope.status.state = $scope.status.types.command;
 
-    expect(scope.status.types.command.current.models).toBeUndefined();
+    expect($scope.status.types.command.current.models).toBeUndefined();
 
     $httpBackend.expectGET('/api/command/?dismissed=false&limit=30&order_by=-created_at').respond(commands);
 
-    scope.$root.$broadcast('health');
+    $scope.$root.$broadcast('health');
 
     $httpBackend.flush();
 
     $httpBackend
-      .expectPATCH('/api/command/1/?dismissed=false&limit=30&order_by=-created_at')
+      .expectPATCH('/api/command/1/')
       .respond({});
 
-    expect(scope.status.types.command.current.models.length).toBe(3);
+    expect($scope.status.types.command.current.models.length).toBe(3);
 
-    scope.status.dismiss(scope.status.types.command.current.models[0]);
+    $scope.status.dismiss($scope.status.types.command.current.models[0]);
 
     $httpBackend.flush();
-  }));
+  });
 
-  it('should scroll the message container', inject(function ($controller, $element) {
-    $controller('StatusCtrl', {$scope: scope});
+  it('should scroll the message container', function () {
+    createController();
 
-    expectReqRes();
+    $httpBackend
+      .expectGET('/api/notification/?dismissed=false&limit=30&order_by=-created_at')
+      .respond(notificationResponse);
 
-    scope.status.updateViewState();
+    $scope.status.updateViewState();
 
     $httpBackend.flush();
 
     expect($element.find).toHaveBeenCalledWith('ul.messages');
     expect($element.scrollTop).toHaveBeenCalledWith(0);
-  }));
+  });
 });
