@@ -16,6 +16,7 @@ describe('stateful resource mixin', function () {
     }));
 
     it('should add its methods to the extended resource', function () {
+      /* jshint forin:false */
       for (var method in statefulResourceMixin) {
         expect(StatefulResource.prototype[method])
           .toBe(statefulResourceMixin[method]);

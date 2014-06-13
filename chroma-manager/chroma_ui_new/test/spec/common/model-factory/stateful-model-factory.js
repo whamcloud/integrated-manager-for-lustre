@@ -14,6 +14,7 @@ describe('stateful model factory', function () {
 
   it('should create a resource model with stateful methods', function () {
     for (var method in statefulResourceMixin) {
+      /* jshint forin:false */
       expect(StatefulResource.prototype[method])
         .toBe(statefulResourceMixin[method]);
     }

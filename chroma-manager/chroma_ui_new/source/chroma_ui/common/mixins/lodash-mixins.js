@@ -19,6 +19,8 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
+(function() {
+'use strict';
 
 _.mixin({
   /**
@@ -55,3 +57,4 @@ _.mixin({
     return obj;
   }
 });
+})();

@@ -135,12 +135,41 @@ JS_HINT_CHECK = {
         'print_filename': True,
     }
 
+JS_CS_CHECK = {
+        'output': 'Running JSCS...',
+        'command': 'jscs -c chroma-manager/chroma_ui_new/.jscsrc %s -r inline',
+        'match_files': [
+            '.*/chroma_ui_new/.*\.js$',
+            '.*/chroma_ui/static/js/.+/[^/]+\.js$',
+            '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
+            '.*/chroma_ui/static/js/app.js$',
+            '.*/chroma_ui/static/js/constants.js$'
+        ],
+        'ignore_files': [
+            '.*/chroma_ui/static/js/lib/.*',
+            '.*/chroma_ui_new/source/chroma_ui/bower_components/.*',
+            '.*/chroma_ui_new/source/chroma_ui/vendor/.*',
+            '.*/chroma_ui_new/karma.*\.conf\.js',
+            '.*/chroma_ui_new/Gruntfile.js',
+            '.*/chroma_ui_new/test/matchers/matchers\.js',
+            '.*/chroma-manager/chroma_ui_new/node_modules/.*'
+        ],
+        'print_filename': True,
+    }
+
 has_js_hint = spawn.find_executable('jshint')
+
+has_js_cs = spawn.find_executable('jscs')
 
 (CHECKS if has_js_hint else DISABLED_CHECKS).append(JS_HINT_CHECK)
 
+(CHECKS if has_js_cs else DISABLED_CHECKS).append(JS_CS_CHECK)
+
 if not has_js_hint:
     print "WARNING: skipping JSHint check"
+
+if not has_js_cs:
+    print "WARNING: skipping JSCS check"
 
 def matches_file(file_name, match_files):
     return any(re.compile(match_file).match(file_name) for match_file in match_files)
