@@ -28,6 +28,30 @@ describe('notification', function () {
     it('should start the stream', function () {
       expect(NotificationStream.setup.plan().startStreaming).toHaveBeenCalledOnce();
     });
+
+    it('should expose a count property', function () {
+      $scope.notification.status.count = 5;
+
+      expect($scope.notification.count).toBe(5);
+    });
+
+    it('should return the limit from count when it is > 99', function () {
+      $scope.notification.status.count = 100;
+
+      expect($scope.notification.count).toBe(99);
+    });
+
+    it('should expose an aboveLimit property', function () {
+      $scope.notification.status.count = 5;
+
+      expect($scope.notification.aboveLimit).toBe(false);
+    });
+
+    it('should be above the limit when count > 99', function () {
+      $scope.notification.status.count = 300;
+
+      expect($scope.notification.aboveLimit).toBe(true);
+    });
   });
 
   describe('notification stream', function () {

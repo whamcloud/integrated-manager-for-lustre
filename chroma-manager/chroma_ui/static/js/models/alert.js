@@ -53,4 +53,3 @@ angular.module('models').factory('alertModel', ['baseModel', 'STATES', function 
     }
   });
 }]);
-

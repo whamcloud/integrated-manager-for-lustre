@@ -1,25 +1,25 @@
 span[ng-controller="NotificationCtrl"] {
-  height: 12px;
-  width: 12px;
-  display: inline-block;
-  border-radius: 12px;
+  .transition(all .1s ease-in-out);
+
   cursor: pointer;
 
-  .transition(all .2s ease-in-out);
+  background-color: transparent;
+  border: 1px solid transparent;
+  font-weight: normal;
 
   &.GOOD {
-    background-color: #2C9600;
-    box-shadow: 0 0 6px 0 #55C624;
+    background-color: @brand-success;
+    border: 1px solid darken(@brand-success, 10%);
   }
 
   &.WARNING {
-    background-color: #FFBF00;
-    box-shadow: 0 0 6px 0 #FFDF80;
+    background-color: @brand-warning;
+    border: 1px solid darken(@brand-warning, 10%);
   }
 
   &.ERROR {
-    background-color: #FF362B;
-    box-shadow: 0 0 6px 0 #F44847;
+    background-color: @brand-danger;
+    border: 1px solid darken(@brand-danger, 10%);
   }
 }
 
@@ -27,15 +27,18 @@ span[ng-controller="NotificationCtrl"] {
 .status-nav:hover {
   span[ng-controller="NotificationCtrl"] {
     &.GOOD {
-      background-color: #30A300;
+      background-color: lighten(@brand-success, 10%);
+      border: 1px solid @brand-success;
     }
 
     &.WARNING {
-      background-color: #FFD866;
+      background-color: lighten(@brand-warning, 10%);
+      border: 1px solid @brand-warning;
     }
 
     &.ERROR {
-      background-color: #F44847;
+      background-color: lighten(@brand-danger, 10%);
+      border: 1px solid @brand-danger;
     }
   }
 }
