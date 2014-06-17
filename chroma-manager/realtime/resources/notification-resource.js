@@ -91,7 +91,11 @@ function notificationResourceFactory (Resource, AlertResource) {
         return alert.severity === STATES.ERROR;
       });
 
-      alertResponse.body = states[Math.max.apply(null, health)];
+      alertResponse.body = {
+        health: states[Math.max.apply(null, health)],
+        count: alerts.length
+      };
+
       return alertResponse;
     }
   };

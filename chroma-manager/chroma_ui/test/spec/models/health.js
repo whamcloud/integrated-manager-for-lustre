@@ -56,7 +56,7 @@ describe('Health model', function () {
       expectReqRes();
       healthModel();
       $httpBackend.flush();
-      expect(healthSpy).toHaveBeenCalledWith(jasmine.any(Object), GOOD);
+      expect(healthSpy).toHaveBeenCalledWith(jasmine.any(Object), { health: GOOD, count: 0 });
     });
 
     it('should it should emit a health event after calling', function () {
@@ -93,7 +93,7 @@ describe('Health model', function () {
       healthModel();
       $httpBackend.flush();
 
-      expect(healthSpy.mostRecentCall.args[1]).toBe(ERROR);
+      expect(healthSpy.mostRecentCall.args[1]).toEqual({health: ERROR, count: 2 } );
     });
 
     it('should be in warn when 1 or more warn alerts are active', function () {
@@ -105,7 +105,7 @@ describe('Health model', function () {
 
       healthModel();
       $httpBackend.flush();
-      expect(healthSpy.mostRecentCall.args[1]).toBe(WARN);
+      expect(healthSpy.mostRecentCall.args[1]).toEqual({ health: WARN, count: 1 });
     });
 
     it('should obey all the rules: highest error state wins.', function () {
@@ -122,7 +122,7 @@ describe('Health model', function () {
 
       healthModel();
       $httpBackend.flush();
-      expect(healthSpy.mostRecentCall.args[1]).toBe(ERROR);
+      expect(healthSpy.mostRecentCall.args[1]).toEqual({ health: ERROR, count: 2 });
     });
   });
 });

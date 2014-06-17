@@ -70,7 +70,10 @@
 
       var currentHealth = Math.max.apply(null, health);
 
-      $rootScope.$broadcast('health', states[currentHealth]);
+      $rootScope.$broadcast('health', {
+        health: states[currentHealth],
+        count: alerts.length
+      });
     }
 
     return function start () {

@@ -39,9 +39,11 @@
           <li class='fsadmin_only'>
             <a id="help-menu" class="navigation skip_router" href="{{STATIC_URL}}webhelp/help_wrapper.html" target="_blank"><i class="icon-question-sign"></i> Help</a>
           </li>
-          <li>
+          <li class="status-menu-container">
             <a id="status-menu" class="navigation status-nav" href="/ui/status/" context-tooltip="status_light" tooltip-placement="bottom">
-              <span ng-controller="BigGreenButtonCtrl" ng-class="state" class="ng-cloak" ></span>
+              <span ng-controller="BigGreenButtonCtrl" ng-class="bigGreen.status.health" class="ng-cloak badge">
+                ((bigGreen.count))<sup ng-if="bigGreen.aboveLimit">+</sup>
+              </span>
               <span class="status-text">Status</span>
             </a>
           </li>

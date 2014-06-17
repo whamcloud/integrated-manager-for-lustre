@@ -1,65 +1,69 @@
-.status-nav {
+.status-menu-container {
   position: relative;
 }
 
-.status-nav .status-text {
-  margin-left: 16px;
+.status-menu-container .tooltip {
+  width: 200px;
 }
 
 span[ng-controller="BigGreenButtonCtrl"] {
-    position: absolute;
-    top: 18px;
-    width: 12px;
-    height: 12px;
-    display: inline-block;
-    border-radius: 12px;
-    cursor: pointer;
+  transition: all .1s ease-in-out;
 
-    -webkit-transition: all .2s ease-in-out;
-    -moz-transition: all .2s ease-in-out;
-    -o-transition: all .2s ease-in-out;
-    -ms-transition: all .2s ease-in-out;
-    transition: all .2s ease-in-out;
+  background-color: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: normal;
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 10px;
+  line-height: 1;
+  box-sizing: border-box;
+  text-shadow: none;
+}
+
+span[ng-controller="BigGreenButtonCtrl"] sup {
+  top: -.5em;
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
 }
 
 @media screen and (max-width: 900px) {
-    span[ng-controller="BigGreenButtonCtrl"] {
-        margin-left: 0;
-    }
-}
-
-span[ng-controller="BigGreenButtonCtrl"] a {
-    height: 20px;
-    width: 20px;
-    display: inline-block;
+  span[ng-controller="BigGreenButtonCtrl"] {
+    margin-left: 0;
+  }
 }
 
 span[ng-controller="BigGreenButtonCtrl"].GOOD {
-    background-color: #2C9600;
-    box-shadow: 0 0 6px 0 #55C624;
+  background-color: #5cb85c;
+  border: 1px solid #449d44;
 }
 
 .status-nav.active span[ng-controller="BigGreenButtonCtrl"].GOOD,
 .status-nav:hover span[ng-controller="BigGreenButtonCtrl"].GOOD {
-    background-color: #30A300;
+  background-color: #80c780;
+  border: 1px solid #5cb85c;
 }
 
 span[ng-controller="BigGreenButtonCtrl"].WARNING {
-    background-color: #FFBF00;
-    box-shadow: 0 0 6px 0 #FFDF80;
+  background-color: #f0ad4e;
+  border: 1px solid #ec971f;
 }
 
 .status-nav.active span[ng-controller="BigGreenButtonCtrl"].WARNING,
 .status-nav:hover span[ng-controller="BigGreenButtonCtrl"].WARNING {
-    background-color: #FFD866;
+  background-color: #f4c37d;
+  border: 1px solid #f0ad4e;
 }
 
 span[ng-controller="BigGreenButtonCtrl"].ERROR {
-    background-color: #FF362B;
-    box-shadow: 0 0 6px 0 #F44847;
+  background-color: #d9534f;
+  border: 1px solid #c9302c;
 }
 
 .status-nav.active span[ng-controller="BigGreenButtonCtrl"].ERROR,
 .status-nav:hover span[ng-controller="BigGreenButtonCtrl"].ERROR {
-    background-color: #F44847;
+  background-color: #e27c79;
+  border: 1px solid #d9534f;
 }

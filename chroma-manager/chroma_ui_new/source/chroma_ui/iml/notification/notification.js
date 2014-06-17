@@ -25,16 +25,35 @@
 
   angular.module('notification', [])
     .controller('NotificationCtrl', ['$scope', 'NotificationStream',
-      function NotificationCtrl($scope, NotificationStream) {
+      function NotificationCtrl ($scope, NotificationStream) {
+        var LIMIT = 99;
+
         $scope.notification = {
-          status : ''
+          status : {},
+          /**
+           * Returns the count or the limit if count > limit
+           * @returns {Number}
+           */
+          get count () {
+            if (this.aboveLimit)
+              return LIMIT;
+
+            return this.status.count;
+          },
+          /**
+           * Is the count above the limit
+           * @returns {boolean}
+           */
+          get aboveLimit () {
+            return this.status.count > LIMIT;
+          }
         };
 
         var notificationStream = NotificationStream.setup('notification.status', $scope);
         notificationStream.startStreaming();
       }
     ])
-    .factory('NotificationStream', ['stream', function notificationStreamFactory(stream) {
+    .factory('NotificationStream', ['stream', function notificationStreamFactory (stream) {
       return stream('notification', 'httpGetHealth', {
         params: {},
         transformers: function setStatus(resp) {

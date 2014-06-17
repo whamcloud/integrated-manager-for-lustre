@@ -34,7 +34,7 @@ describe('notifications channel', function () {
     notificationsChannel.on('stream', function (data) {
       expect(data).toEqual({
         statusCode: 200,
-        body: jasmine.any(String),
+        body: jasmine.any(Object),
         params: {}
       });
 
@@ -48,7 +48,7 @@ describe('notifications channel', function () {
     notificationsChannel.send('httpGetHealth', {}, function (data) {
       expect(data).toEqual({
         statusCode: 200,
-        body: jasmine.any(String),
+        body: jasmine.any(Object),
         params: jasmine.any(Object)
       });
 

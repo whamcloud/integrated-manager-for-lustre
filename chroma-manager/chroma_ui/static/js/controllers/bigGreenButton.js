@@ -24,9 +24,32 @@ angular.module('controllers').controller('BigGreenButtonCtrl', ['$scope', 'healt
   function ($scope, healthModel) {
     'use strict';
 
-    $scope.$root.$on('health', function (ev, health) {
-      $scope.state = health;
+    var LIMIT = 99;
+
+    $scope.$root.$on('health', function (ev, status) {
+      $scope.bigGreen.status = status;
     });
+
+    $scope.bigGreen = {
+      status : {},
+      /**
+       * Returns the count or the limit if count > limit
+       * @returns {Number}
+       */
+      get count () {
+        if (this.aboveLimit)
+          return LIMIT;
+
+        return this.status.count;
+      },
+      /**
+       * Is the count above the limit
+       * @returns {boolean}
+       */
+      get aboveLimit () {
+        return this.status.count > LIMIT;
+      }
+    };
 
     healthModel();
   }]

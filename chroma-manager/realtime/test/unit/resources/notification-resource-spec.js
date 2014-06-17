@@ -53,7 +53,10 @@ describe('Notifications resource', function () {
 
       notificationsResource.httpGetHealth().then(function then (state) {
         expect(state).toEqual({
-          body: STATES.ERROR
+          body: {
+            health: STATES.ERROR,
+            count: 2
+          }
         });
 
         done();
@@ -72,7 +75,10 @@ describe('Notifications resource', function () {
 
       notificationsResource.httpGetHealth().then(function then (state) {
         expect(state).toEqual({
-          body : STATES.WARN
+          body: {
+            health: STATES.WARN,
+            count: 1
+          }
         });
 
         done();
@@ -94,7 +100,12 @@ describe('Notifications resource', function () {
       });
 
       notificationsResource.httpGetHealth().then(function then (state) {
-        expect(state).toEqual({ body : STATES.ERROR });
+        expect(state).toEqual({
+          body: {
+            health: STATES.ERROR,
+            count : 2
+          }
+        });
 
         done();
       });
