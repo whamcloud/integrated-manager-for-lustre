@@ -21,7 +21,7 @@
 
 
 from django.db import transaction
-from chroma_core.lib.util import normalize_nids
+from chroma_core.lib.util import normalize_nid
 from chroma_core.services import log_register
 from chroma_core.models import NoNidsPresent
 from chroma_core.models.event import LearnEvent
@@ -38,6 +38,7 @@ log = log_register(__name__)
 class DetectScan(object):
     def __init__(self, step):
         self.created_filesystems = []
+        self.discovered_filesystems = []
         self.created_mgts = []
         self.step = step
 
@@ -69,13 +70,19 @@ class DetectScan(object):
         log.debug(">>learn_target_mounts")
         self.learn_target_mounts()
 
-        # Clean up:
-        #  Remove any targets which don't have a primary mount point
-        for klass in [ManagedMdt, ManagedOst]:
-            for t in klass.objects.all():
-                if not t.managedtargetmount_set.filter(primary = True).count():
-                    self.log("Found no primary mount point for target %s" % t)
-                    ManagedTarget.delete(t.id)
+        # Assign a valid primary mount point
+        # And remove any targets which don't have a primary mount point
+        for fs in self.discovered_filesystems:
+            for t in ManagedMgs.objects.filter(managedfilesystem = fs).all():
+                if not self.learn_primary_target(t):
+                    self.log("Found no primary mount point for MGS target %s" % t)
+                    t.mark_deleted()
+
+            for klass in [ManagedMdt, ManagedOst]:
+                for t in klass.objects.filter(filesystem = fs).all():
+                    if not self.learn_primary_target(t):
+                        self.log("Found no primary mount point for target %s" % t)
+                        t.mark_deleted()
 
         for mgt in self.created_mgts:
             self.log("Discovered MGT on server %s" % (mgt.primary_server()))
@@ -135,26 +142,42 @@ class DetectScan(object):
 
         return mgs
 
-    def is_primary(self, host, local_target_info):
-        local_nids = set(host.lnetconfiguration.get_nids())
+    def learn_primary_target(self, managed_target):
 
-        if not 'failover.node' in local_target_info['params']:
-            # If the target has no failover nodes, then it is accessed by only
-            # one (primary) host, i.e. this one
-            primary = True
-        elif len(local_nids) > 0:
-            # We know this hosts's nids, and which nids are secondaries for this target,
-            # so we can work out whether we're primary by a process of elimination
-            failover_nids = []
-            for failover_str in local_target_info['params']['failover.node']:
-                failover_nids.extend(failover_str.split(","))
-            failover_nids = set(normalize_nids(failover_nids))
+        primary_target = None
+        managed_target.managedtargetmount_set.update(primary=False)
+        for tm in managed_target.managedtargetmount_set.all():
 
-            primary = not (local_nids & failover_nids)
-        else:
-            raise NoNidsPresent("Host %s has no NIDS!" % host)
+            target_info = next(dev for dev in self.all_hosts_data[tm.host]['local_targets'] if dev['uuid'] == managed_target.uuid)
+            local_nids = set(tm.host.lnetconfiguration.get_nids())
 
-        return primary
+            if not local_nids:
+                raise NoNidsPresent("Host %s has no NIDS!" % tm.host)
+
+            if 'failover.node' in target_info['params']:
+                failover_nids = set(normalize_nid(n) for nids in target_info['params']['failover.node'] for n in nids.split(','))
+
+                if not bool(local_nids & failover_nids):
+                    # In the case the current nids is not shown in the failover nids
+                    # This target is considered primary and has been created with mkfs.lustre --failnode
+                    # There isn't any other possibilities to have another primary defined
+                    primary_target = tm
+                    break
+                elif target_info['mounted']:
+                    # In the case the target has been created with 'mkfs.lustre --servicenodes'
+                    # If it is mounted, we use the current target as primary until we found a better candidate
+                    primary_target = tm
+            else:
+                # If there are no failover nids then this must be the primary.
+                primary_target = tm
+                break
+
+        if primary_target != None:
+            log.info("Target %s has been set to primary" % (primary_target))
+            primary_target.primary = True
+            primary_target.save()
+
+        return primary_target
 
     def is_valid(self):
         for host, host_data in self.all_hosts_data.items():
@@ -192,7 +215,7 @@ class DetectScan(object):
             primary_nid = mgs_target_info['nid']
             target_nids.append(primary_nid)
 
-        target_nids = set(normalize_nids(target_nids))
+        target_nids = set(normalize_nid(nid) for nid in target_nids)
         if set(host.lnetconfiguration.get_nids()) & target_nids:
             return True
         else:
@@ -211,7 +234,7 @@ class DetectScan(object):
             # 'mgsnode' doesn't have to be present
             pass
 
-        tgt_mgs_nids = set(normalize_nids(tgt_mgs_nids))
+        tgt_mgs_nids = set(normalize_nid(nid) for nid in tgt_mgs_nids)
         return self._nids_to_mgs(host, tgt_mgs_nids)
 
     def learn_target_mounts(self):
@@ -239,12 +262,10 @@ class DetectScan(object):
                         continue
 
                     try:
-                        primary = self.is_primary(host, local_info)
-                        log.info("Target %s seen on %s: primary=%s" % (target, host, primary))
+                        log.info("Target %s seen on %s" % (target, host))
                         volumenode = self._get_volume_node(host, local_info['devices'])
                         (tm, created) = ManagedTargetMount.objects.get_or_create(target = target,
-                            host = host, primary = primary,
-                            volume_node = volumenode)
+                            host = host, volume_node = volumenode)
                         if created:
                             tm.immutable_state = True
                             tm.save()
@@ -356,6 +377,7 @@ class DetectScan(object):
             # Create Filesystem objects from the MGS config logs
             for fs_name, targets in host_data['mgs_targets'].items():
                 (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
+                self.discovered_filesystems.append(fs)
                 if created:
                     self.created_filesystems.append(fs)
                     fs.immutable_state = True
