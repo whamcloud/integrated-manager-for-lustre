@@ -28,7 +28,8 @@
   },
   "less": {
     "source": [
-      "source/chroma_ui/styles/imports.less"
-    ]
+      "source/chroma_ui/**/*.less"
+    ],
+    "imports": "source/chroma_ui/styles/imports.less"
   }
 }

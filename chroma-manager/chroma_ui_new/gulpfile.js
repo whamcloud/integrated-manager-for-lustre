@@ -32,8 +32,7 @@ var qualityFiles = files.js.source.concat(
 /**
  * Lint and report on files.
  */
-gulp.task('jshint', function jsHint() {
-
+gulp.task('jshint', function jsHint () {
   return gulp.src(qualityFiles)
     .pipe(cache('linting'))
     .pipe(jshint('.jshintrc'))
@@ -47,7 +46,7 @@ gulp.task('jshint', function jsHint() {
  * https://github.com/mdevils/node-jscs/pull/336
  *  "disallowSpaceAfterObjectKeys": true,
  */
-gulp.task('jscs', function() {
+gulp.task('jscs', function jsCs () {
   return gulp.src(qualityFiles)
     .pipe(cache('codestylechecking'))
     .pipe(jscs('.jscsrc'));
@@ -61,20 +60,20 @@ gulp.task('quality', ['jscs', 'jshint']);
 /*
  * Injects JS and CSS files for loading in base.html.
  */
-gulp.task('inject:dev', function injectDev() {
-  var staticJSGlobs = files.js.source.map(function rewritePrefix(file) {
+gulp.task('inject:dev', ['static:dev', 'clean-static', 'copy-templates'], function injectDev () {
+  var staticJSGlobs = files.js.source.map(function rewritePrefix (file) {
     return file.replace(/^source/, 'static');
   });
   var jsStream = gulp.src(staticJSGlobs, {
     read: false
   });
-  var cssStream = compileLess().pipe(gulp.dest('static/chroma_ui/styles'));
-  var primusClientLib = generatePrimusClientLib();
+  var cssStream = compileLess()
+    .pipe(gulp.dest('static/chroma_ui/styles'));
 
   var stream = streamqueue({
       objectMode: true
     },
-    primusClientLib,
+    generatePrimusClientLib,
     jsStream,
     cssStream);
 
@@ -86,7 +85,7 @@ gulp.task('inject:dev', function injectDev() {
 /*
  * Copy templates over.
  */
-gulp.task('copy-templates', ['clean-templates'], function copyTemplates() {
+gulp.task('copy-templates', ['clean-templates'], function copyTemplates () {
   return gulp.src([
     'templates_source/chroma_ui/**/*.html',
     '!templates_source/chroma_ui/base.html'
@@ -97,7 +96,7 @@ gulp.task('copy-templates', ['clean-templates'], function copyTemplates() {
 /*
  * Clean out templates directory
  */
-gulp.task('clean-templates', function cleanTemplates() {
+gulp.task('clean-templates', function cleanTemplates () {
   return gulp.src('templates/**', {
     read: false
   })
@@ -107,7 +106,7 @@ gulp.task('clean-templates', function cleanTemplates() {
 /*
  * Move static resources for development
  */
-gulp.task('static:dev', ['clean-static'], function staticDev() {
+gulp.task('static:dev', ['clean-static'], function staticDev () {
   return gulp.src('source/chroma_ui/**/*.{html,js,png,woff,ttf,svg,ico}')
     .pipe(gulp.dest('static/chroma_ui'));
 });
@@ -115,7 +114,7 @@ gulp.task('static:dev', ['clean-static'], function staticDev() {
 /*
  * Move static resources for distributable
  */
-gulp.task('static:build', ['clean-static'], function staticDev() {
+gulp.task('static:build', ['clean-static'], function staticDev () {
   return gulp.src('source/chroma_ui/**/*.{png,woff,ttf,svg,ico}')
     .pipe(gulp.dest('static/chroma_ui'));
 });
@@ -123,7 +122,7 @@ gulp.task('static:build', ['clean-static'], function staticDev() {
 /*
  * Clean out static dir.
  */
-gulp.task('clean-static', function() {
+gulp.task('clean-static', function cleanStatic () {
   return gulp.src('static/chroma_ui/**/*', {
     read: false
   })
@@ -136,7 +135,7 @@ gulp.task('clean-static', function() {
  * - Rev files so they can be perma-cached.
  * - rewrite the base tag to point at the built ui.
  */
-gulp.task('build', ['copy-templates', 'static:build'], function builder() {
+gulp.task('build', ['copy-templates', 'static:build'], function builder () {
   var jsStream = compressor();
   var cssStream = compileLess()
     .pipe(csso())
@@ -162,17 +161,11 @@ gulp.task('build', ['copy-templates', 'static:build'], function builder() {
  * - Injects CSS and JS files into base.html
  * - Watches files for changes and reruns tasks.
  */
-gulp.task('default', ['copy-templates', 'static:dev', 'inject:dev'], function defaultTask() {
+gulp.task('default', ['inject:dev'], function defaultTask () {
   var sourceFiles = files.js.source.concat(files.less.source);
   gulp.watch(sourceFiles, ['inject:dev']);
 
-  gulp.watch(files.js.source.concat(
-    'test/spec/**/*.js',
-    'test/mock/**/*.js',
-    'test/*.js',
-    '!source/chroma_ui/bower_components/**/*.js',
-    '!source/chroma_ui/vend or/**/*.js'
-  ), ['jshint']);
+  gulp.watch(qualityFiles, ['quality']);
 
   gulp.watch([
     'source/chroma_ui/**/*.{html,js,png,woff,ttf,svg,ico}',
@@ -186,7 +179,7 @@ gulp.task('default', ['copy-templates', 'static:dev', 'inject:dev'], function de
  * Concats and uglifies JS / Templates.
  * @return {Object} A stream.
  */
-function compressor() {
+function compressor () {
   var templateFiles = compileTemplates();
   var primusClientLib = generatePrimusClientLib();
 
@@ -212,8 +205,8 @@ function compressor() {
  * Compiles LESS file to CSS.
  * @returns {Object} Returns a stream.
  */
-function compileLess() {
-  return gulp.src(files.less.source)
+function compileLess () {
+  return gulp.src(files.less.imports)
     .pipe(less({
       relativeUrls: false,
       rootpath: '',
@@ -225,7 +218,7 @@ function compileLess() {
  * Compiles Angular templates to JS.
  * @returns {Object} Returns a stream.
  */
-function compileTemplates() {
+function compileTemplates () {
   return gulp.src([
     'source/chroma_ui/**/*.html',
     '!source/chroma_ui/bower_components/**/*.html'
@@ -245,7 +238,7 @@ function compileTemplates() {
  * Writes the generated primus client lib.
  * @returns {Object} Returns a stream.
  */
-function generatePrimusClientLib() {
+function generatePrimusClientLib () {
   return gulpPrimus('../../realtime/generate-lib')
     .pipe(gulp.dest('static/chroma_ui/vendor/primus-client'));
 }
