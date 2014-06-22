@@ -98,9 +98,11 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
             self._server.network_interfaces[self._server.network_interfaces.keys()[0]]['lnd_network'] = 0
             return self._get_results()
 
-        return {'interfaces': {'active': interfaces},
+        return {'interfaces': {'active': interfaces,
+                               'deleted': []},
                 'lnet': {'state': self._lnet_state(),
-                         'nids': {'active': nids}}}
+                         'nids': {'active': nids,
+                                  'deleted': []}}}
 
 
 class BaseFakeSyslogPlugin(DevicePlugin):

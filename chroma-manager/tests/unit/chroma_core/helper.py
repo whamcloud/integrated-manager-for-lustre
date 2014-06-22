@@ -189,7 +189,7 @@ def create_synthetic_device_info(host, mock_server, plugin):
                 interfaces[name] = {'mac_address': '12:34:56:78:90:%s' % interface_no,
                                     'inet4_address': nid.nid_address,
                                     'inet6_address': 'Need An inet6 Simulated Address',
-                                    'type': 'Ethernet' if nid.lnd_type == 'tcp' else 'InfiniBand',
+                                    'type': nid.lnd_type,
                                     'rx_bytes': '24400222349',
                                     'tx_bytes': '1789870413',
                                     'up': True}
@@ -207,9 +207,11 @@ def create_synthetic_device_info(host, mock_server, plugin):
 
                 interface_no += 1
 
-        result = {'interfaces': {'active': interfaces},
+        result = {'interfaces': {'active': interfaces,
+                                 'deleted': []},
                   'lnet': {'state': lnet_state,
-                           'nids': {'active': nids}}}
+                           'nids': {'active': nids,
+                                    'deleted': []}}}
 
     return {plugin: result}
 

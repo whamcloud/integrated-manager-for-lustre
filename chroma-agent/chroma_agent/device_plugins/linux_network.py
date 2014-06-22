@@ -103,14 +103,14 @@ class NetworkInterface():
         '''
         :return: str: Containing the type of the number of received bytes for the interface, or '' if not present.
         '''
-        return self._values["rx_bytes"]
+        return self._values["rx_bytes"] if self._values["rx_bytes"] else "0"
 
     @property
     def tx_bytes(self):
         '''
         :return: str: Containing the type of the number of transmitted bytes for the interface, or '' if not present.
         '''
-        return self._values["tx_bytes"]
+        return self._values["tx_bytes"] if self._values["tx_bytes"] else "0"
 
     @property
     def up(self):
