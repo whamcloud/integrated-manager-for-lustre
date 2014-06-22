@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 from mock import patch
 from django.utils.unittest.case import TestCase
 
-from chroma_agent.action_plugins import manage_updates
+from chroma_agent.action_plugins import agent_updates
 from chroma_agent.device_plugins import lustre
 
 
@@ -38,11 +38,11 @@ sslclientcert = /var/lib/chroma/self.crt
 """
         with patch('__builtin__.open', spec=file, create=True) as mock_open:
             with patch.object(chroma_agent.config, 'path', "/var/lib/chroma/", create=True):
-                manage_updates.configure_repo('http://www.test.com/test.repo')
+                agent_updates.configure_repo('http://www.test.com/test.repo')
                 mock_open.return_value.write.assert_called_once_with(expected_content)
 
     def test_unconfigure_repo(self):
-        manage_updates.unconfigure_repo(self.tmpRepo.name)
+        agent_updates.unconfigure_repo(self.tmpRepo.name)
         self.assertFalse(os.path.exists(self.tmpRepo.name))
 
     def test_update_packages(self):
@@ -55,7 +55,7 @@ chroma-agent-management-99.01-3061.noarch
                 return ""
 
         with patch('chroma_agent.shell.try_run', side_effect=try_run) as mock_try_run:
-            manage_updates.update_packages(['myrepo'], ['mypackage'])
+            agent_updates.update_packages(['myrepo'], ['mypackage'])
             self.assertListEqual(list(mock_try_run.call_args_list[0][0][0]), ['yum', 'clean', 'all'])
             self.assertListEqual(list(mock_try_run.call_args_list[1][0][0]), ['repoquery', '--disablerepo=*', "--enablerepo=myrepo", "--pkgnarrow=updates", "-a"])
             self.assertListEqual(list(mock_try_run.call_args_list[2][0][0]), ['repoquery', '--requires', 'mypackage'])
@@ -63,7 +63,7 @@ chroma-agent-management-99.01-3061.noarch
 
     def test_install_packages(self):
         with patch('chroma_agent.shell.try_run') as mock_run:
-            manage_updates.install_packages(['foo', 'bar'])
+            agent_updates.install_packages(['foo', 'bar'])
             mock_run.assert_called_once_with(['yum', 'install', '-y', 'foo', 'bar'])
 
     def test_kernel_status(self):
@@ -86,7 +86,7 @@ kernel-2.6.32-358.18.1.el6.x86_64
 """
 
         with patch('chroma_agent.shell.try_run', side_effect=try_run):
-            result = manage_updates.kernel_status()
+            result = agent_updates.kernel_status()
             self.assertDictEqual(result, {
                 'required': 'kernel-2.6.32-358.18.1.el6.x86_64',
                 'running': 'kernel-2.6.32-358.2.1.el6.x86_64',
@@ -110,7 +110,7 @@ lustre-backend-fs
 """
 
         with patch('chroma_agent.shell.try_run', side_effect=try_run) as mock_run:
-            manage_updates.install_packages(['foo'], force_dependencies=True)
+            agent_updates.install_packages(['foo'], force_dependencies=True)
             self.assertListEqual(
                 mock_run.call_args_list,
                 [
