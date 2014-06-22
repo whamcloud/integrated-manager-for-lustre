@@ -28,17 +28,16 @@ from collections import defaultdict
 
 from chroma_agent.utils import Mounts, BlkId
 from chroma_agent import shell
-from chroma_agent.device_plugins.linux import DeviceHelper
+import chroma_agent.lib.normalize_device_path as ndp
 
 
-class LocalTargets(DeviceHelper):
+class LocalTargets():
     '''
     Allows local targets to be examined. Not the targets are only examined once with the results cached. Detecting change
     therefore requires a new instance to be created and queried.
     '''
 
     def __init__(self):
-        super(LocalTargets, self).__init__()
         self.targets = self._get_targets()
 
     def _get_targets(self):
@@ -52,7 +51,7 @@ class LocalTargets(DeviceHelper):
         blkid_devices = BlkId()
 
         for blkid_device in blkid_devices.itervalues():
-            dev = self.normalized_device_path(blkid_device['path'])
+            dev = ndp.normalized_device_path(blkid_device['path'])
 
             # If a more normalized block device exists, then use that. Sometimes the normalized path
             # isn't a block device in which case we can't use it.
@@ -86,7 +85,7 @@ class LocalTargets(DeviceHelper):
                 # Do not report unregistered lustre targets
                 continue
 
-            mounted = self.normalized_device_path(blkid_device['path']) in set([self.normalized_device_path(path) for path, _, _ in Mounts().all()])
+            mounted = ndp.normalized_device_path(blkid_device['path']) in set([ndp.normalized_device_path(path) for path, _, _ in Mounts().all()])
 
             if flags & 0x0005 == 0x0005:
                 # For combined MGS/MDT volumes, synthesise an 'MGS'

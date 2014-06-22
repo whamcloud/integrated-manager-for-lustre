@@ -2,8 +2,9 @@ import json
 import mock
 import os
 from django.utils import unittest
-from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems, MdRaid, EMCPower, DeviceHelper
+from chroma_agent.device_plugins.linux import DmsetupTable, LocalFilesystems, MdRaid, EMCPower
 from tests.test_utils import patch_open, patch_run
+import chroma_agent.lib.normalize_device_path as ndp
 
 
 class MockDmsetupTable(DmsetupTable):
@@ -27,11 +28,9 @@ class LinuxAgentTests(unittest.TestCase):
                 return "root=/not/a/real/path"
 
         with mock.patch('__builtin__.open', mock_open):
-            device_helper = DeviceHelper()
-
             for path, normalized_path in normalized_values.items():
-                self.assertEqual(normalized_path, device_helper.normalized_device_path(path),
-                                 "Normalized path failure %s != %s" % (normalized_path, device_helper.normalized_device_path(path)))
+                self.assertEqual(normalized_path, ndp.normalized_device_path(path),
+                                 "Normalized path failure %s != %s" % (normalized_path, ndp.normalized_device_path(path)))
 
 
 class DummyDataTestCase(LinuxAgentTests):
@@ -327,7 +326,10 @@ class TestEMCPower(LinuxAgentTests):
         return self.emcpower_value["powermt"][arg_list[2]]
 
     def mock_glob(self, path):
-        return self.emcpower_value["glob"][path]
+        try:
+            return self.emcpower_value["glob"][path]
+        except KeyError:
+            return []
 
     def mock_dev_major_minor(self, path):
         if path in self.devices_data['node_block_devices']:

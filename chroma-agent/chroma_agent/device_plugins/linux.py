@@ -25,6 +25,7 @@ from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent import shell
 from chroma_agent.utils import BlkId
 from chroma_agent import config
+import chroma_agent.lib.normalize_device_path as ndp
 
 import os
 import glob
@@ -148,71 +149,15 @@ class DeviceHelper(object):
             # Check that none of the drives in the list are None (i.e. not found) if we found them all
             # then we create the entry.
             if drives.count(None) == 0:
-                devices[device['uuid']] = {'path': device["path"],
+                devices[device['uuid']] = {'path': ndp.normalized_device_path(device["path"]),
                                            'block_device': device['mm'],
                                            'drives': drives}
 
                 # Finally add these devices to the canonical path list.
                 for device_path in device['device_paths']:
-                    self.add_normalized_device(device_path, device['path'])
+                    ndp.add_normalized_device(device_path, device['path'])
 
         return devices
-
-    normalize_device_table = {}
-
-    def normalized_device_path(self, device_path):
-        normalized_path = os.path.realpath(device_path)
-
-        if normalized_path not in DeviceHelper.normalize_device_table:
-            lookup_paths = ["%s/*" % DISKBYIDPATH, "%s/*" % MAPPERPATH]
-
-            for path in lookup_paths:
-                for f in glob.glob(path):
-                    self.add_normalized_device(os.path.realpath(f), f)
-
-            root = re.search('root=([^ $\n]+)', open('/proc/cmdline').read()).group(1)
-
-            if os.path.exists(root):
-                self.add_normalized_device('/dev/root', root)
-
-        # This checks we have a completely normalized path, perhaps the stack means our current
-        # normal path can actually be normalized further. So if the root to normalization takes multiple
-        # steps this will deal with it
-        # So if /dev/sdx normalizes to /dev/mmapper/special-device
-        # but /dev/mmapper/special-device normalizes to /dev/md/mdraid1
-        # /dev/sdx will normalize to /dev/md/mdraid1
-
-        # As an additional measure to detect circular references such as A->B->C->A in
-        # this case we don't know which is the normalized value so just drop out once
-        # it repeats.
-        visited = set()
-
-        while (normalized_path not in visited) and (normalized_path in DeviceHelper.normalize_device_table):
-            visited.add(normalized_path)
-            normalized_path = DeviceHelper.normalize_device_table[normalized_path]
-
-        return normalized_path
-
-    def add_normalized_device(self, path, normalized_path):
-        '''
-        Add an entry to the normalized path list, adding to often does no harm and adding something that
-        is not completely canonical does no harm either, because the search routine is recursive so if
-        A=>B and B=>C then A,B and C will all evaluate to the canonical value of C.
-
-        This routine does not add circular references, it is better to detect them in here than in the caller
-
-        :param path: device path
-        :param normalized_path: canonical path
-        :return: No return value
-        '''
-
-        if (path != normalized_path):                           # Normalizing to itself makes no sense
-            DeviceHelper.normalize_device_table[path] = normalized_path
-
-    def add_normalized_list(self, raw_list, normalized_list):
-        for key, path in raw_list.items():
-            if key in normalized_list:
-                self.add_normalized_device(path, normalized_list[key])
 
 
 class BlockDevices(DeviceHelper):
@@ -339,10 +284,10 @@ class BlockDevices(DeviceHelper):
 
         # Finally create the normalized maps for /dev to /dev/disk/by-path & /dev/disk/by-id
         # and then /dev/disk/by-path & /dev/disk/by-id to /dev/mapper
-        self.add_normalized_list(dev_nodes, by_path_nodes)
-        self.add_normalized_list(dev_nodes, by_id_nodes)
-        self.add_normalized_list(by_path_nodes, mapper_devs)
-        self.add_normalized_list(by_id_nodes, mapper_devs)
+        ndp.add_normalized_list(dev_nodes, by_path_nodes)
+        ndp.add_normalized_list(dev_nodes, by_id_nodes)
+        ndp.add_normalized_list(by_path_nodes, mapper_devs)
+        ndp.add_normalized_list(by_id_nodes, mapper_devs)
 
         return block_device_nodes, node_block_devices
 
@@ -703,7 +648,7 @@ class DmsetupTable(DeviceHelper):
 
                 # Add this devices to the canonical path list.
                 for device in devices:
-                    self.add_normalized_device(device['path'], "%s/%s" % (MAPPERPATH, name))
+                    ndp.add_normalized_device(device['path'], "%s/%s" % (MAPPERPATH, name))
 
                 self.mpaths[name] = {
                     "name": name,

@@ -29,10 +29,10 @@ import datetime
 import ConfigParser
 
 from chroma_agent.utils import Mounts
-from chroma_agent.device_plugins.linux import DeviceHelper
 from chroma_agent import shell
 from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
+import chroma_agent.lib.normalize_device_path as ndp
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from chroma_agent.device_plugins.audit.local import LocalAudit
@@ -101,7 +101,7 @@ def scan_packages():
     return repo_packages
 
 
-class LustrePlugin(DevicePlugin, DeviceHelper):
+class LustrePlugin(DevicePlugin):
     def _scan_mounts(self):
         mounts = {}
 
@@ -121,7 +121,7 @@ class LustrePlugin(DevicePlugin, DeviceHelper):
                 self._mount_cache[device]['fs_uuid'] = fs_uuid = shell.try_run(["blkid", "-o", "value", "-s", "UUID", device]).strip()
                 self._mount_cache[device]['fs_label'] = fs_label = shell.try_run(["blkid", "-o", "value", "-s", "LABEL", device]).strip()
 
-            dev_normalized = self.normalized_device_path(device)
+            dev_normalized = ndp.normalized_device_path(device)
 
             recovery_status = {}
             try:
