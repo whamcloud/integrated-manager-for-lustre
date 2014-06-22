@@ -1594,20 +1594,22 @@ class UpdatePackagesStep(RebootIfNeededStep):
         else:
             self.log("No updates installed on %s" % host)
 
-        # Upgrade of pacemaker packages could have left it disabled
-        self.invoke_agent(kwargs['host'], 'enable_pacemaker')
+        # Now do some managed things
+        if host.is_managed:
+            # Upgrade of pacemaker packages could have left it disabled
+            self.invoke_agent(kwargs['host'], 'enable_pacemaker')
 
-        # Check if we are running the required (lustre) kernel
-        kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status')
-        reboot_needed = (kernel_status['running'] != kernel_status['required']
-                         and kernel_status['required']
-                         and kernel_status['required'] in kernel_status['available'])
+            # Check if we are running the required (lustre) kernel
+            kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status')
+            reboot_needed = (kernel_status['running'] != kernel_status['required']
+                             and kernel_status['required']
+                             and kernel_status['required'] in kernel_status['available'])
 
-        if reboot_needed:
-            # If the required kernel has been upgraded, then we must reboot the server
-            old_session_id = AgentRpc.get_session_id(host.fqdn)
-            self.invoke_agent(kwargs['host'], 'reboot_server')
-            AgentRpc.await_restart(kwargs['host'].fqdn, settings.INSTALLATION_REBOOT_TIMEOUT, old_session_id=old_session_id)
+            if reboot_needed:
+                # If the required kernel has been upgraded, then we must reboot the server
+                old_session_id = AgentRpc.get_session_id(host.fqdn)
+                self.invoke_agent(kwargs['host'], 'reboot_server')
+                AgentRpc.await_restart(kwargs['host'].fqdn, settings.INSTALLATION_REBOOT_TIMEOUT, old_session_id=old_session_id)
 
 
 class UpdateJob(Job):
