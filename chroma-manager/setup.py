@@ -45,6 +45,8 @@ setup(
         '': [".chroma-manager.wsgi", ".production_supervisord.conf"],
         'chroma_core': ["fixtures/default_power_types.json"],
         'chroma_ui': ["static/js/lib/*.js", "static/js/lib/angular/*.js",
+                      "static/js/lib/select-box-it/select-box-it.js",
+                      "static/js/lib/select-box-it/select-box-it.css",
                       "static/js/lib/sprintf/*.js", "static/js/*.js",
                       "static/js/app/*.js",
                       "static/js/controllers/*.js", "static/js/controllers/dialogs/*.js",
