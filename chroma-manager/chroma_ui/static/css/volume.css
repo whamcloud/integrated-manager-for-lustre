@@ -11,3 +11,55 @@
   float: right;
   margin-top: 25px;
 }
+
+#volume-tab #volume_configuration_content .icon-remove-sign {
+  display: none;
+  float: right;
+  margin: 14px 4px 4px 0;
+  cursor: pointer;
+  color: #FFFFFF;
+  font-size: 14px;
+}
+
+#volume-tab #volume_configuration_content td {
+  border: none;
+}
+
+#volume-tab #volume_configuration_content .dirty {
+  background-color: #FFA500;
+  border: 1px solid #EA9800;
+}
+
+#volume-tab #volume_configuration_content .dirty .icon-remove-sign {
+  display: block;
+}
+
+#volume-tab #volume_configuration_content .selectboxit-container {
+  margin: 10px 0;
+}
+
+#volume-tab #volume_configuration_content .selectboxit {
+  height: 20px;
+  border-radius: 3px;
+}
+
+#volume-tab #volume_configuration_content .selectboxit-option-icon-container,
+#volume-tab #volume_configuration_content .selectboxit-text,
+#volume-tab #volume_configuration_content .selectboxit-arrow-container {
+  line-height: 20px;
+  height: 20px;
+}
+
+#volume-tab #volume_configuration_content .selectboxit-text,
+#volume-tab #volume_configuration_content .selectboxit-option-anchor {
+  font-size: 11px;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+}
+
+#volume-tab #volume_configuration_content .selectboxit-option-anchor {
+  text-decoration: none;
+}
+
+#volume-tab #volume_configuration_content .selectboxit-arrow {
+  top: 42%;
+}
