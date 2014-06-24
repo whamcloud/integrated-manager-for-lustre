@@ -44,6 +44,7 @@
     "optimist": "0.6.0",
     "promise": "5.0.0",
     "protractor": "0.20.1",
+    "semver-check": "0.0.2",
     "streamqueue": "0.1.1",
     "gulp-concat": "2.3.3",
     "gulp-sourcemaps": "0.3.1",

@@ -165,19 +165,37 @@ JS_CS_CHECK = {
         'print_filename': True,
     }
 
-has_js_hint = spawn.find_executable('jshint', path=jshintBinDir)
+SEMVER_CHECK = {
+        'output': 'Running SEMVER CHECK...',
+        'command': 'chroma-manager/chroma_ui_new/node_modules/.bin/semver-check %s',
+        'match_files': [
+            '.*/chroma_ui_new/package.json',
+            '.*/chroma_ui_new/stub-daddy/package.json'
+        ],
+        'single': True,
+        'print_filename': True
+    }
 
-(CHECKS if has_js_hint else DISABLED_CHECKS).append(JS_HINT_CHECK)
+has_js_hint = spawn.find_executable('jshint', path=jshintBinDir)
 
 has_js_cs = spawn.find_executable('jscs', path=jscsBinDir)
 
+has_node_js = spawn.find_executable('node')
+
+(CHECKS if has_js_hint else DISABLED_CHECKS).append(JS_HINT_CHECK)
+
 (CHECKS if has_js_cs else DISABLED_CHECKS).append(JS_CS_CHECK)
+
+(CHECKS if has_node_js else DISABLED_CHECKS).append(SEMVER_CHECK)
 
 if not has_js_hint:
     print "WARNING: skipping JSHint check"
 
 if not has_js_cs:
     print "WARNING: skipping JSCS check"
+
+if not has_node_js:
+    print "WARNING: skipping SEMVER check"
 
 def matches_file(file_name, match_files):
     return any(re.compile(match_file).match(file_name) for match_file in match_files)
@@ -196,7 +214,9 @@ def check_files(files, check):
                     else:
                         prefix = '\t'
                     output_lines = ['%s%s' % (prefix, line) for line in out.splitlines()]
+
                     print '\n'.join(output_lines)
+
                     if err:
                         print err
                     result = 1
