@@ -61,11 +61,11 @@ class HostValidation(Validation):
             errors['address'].append(self.mandatory_message)
         else:
             # TODO: validate URI
-            try:
-                ManagedHost.objects.get(address = address)
-                errors['address'].append("This address is already in use")
-            except ManagedHost.DoesNotExist:
-                pass
+
+            host_must_exist = bundle.data.get("host_must_exist", None)
+
+            if (host_must_exist != None) and (host_must_exist != ManagedHost.objects.filter(address=address).exists()):
+                errors['address'].append["Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already")]
 
         return errors
 
@@ -100,9 +100,9 @@ class HostTestValidation(HostValidation):
         return errors
 
 
-def _host_params(bundle):
+def _host_params(bundle, address = None):
 #  See the UI (e.g. server_configuration.js)
-    return {'address': bundle.data.get('address'),
+    return {'address': bundle.data.get('address', address),
             'root_pw': bundle.data.get('root_password'),
             'pkey': bundle.data.get('private_key'),
             'pkey_pw': bundle.data.get('private_key_passphrase')}
@@ -210,20 +210,36 @@ class HostResource(MetricResource, StatefulModelResource):
                      'fqdn': ['exact', 'startswith'],
                      'role': ['exact']}
 
+    def obj_update(self, bundle, request, **kwargs):
+        # If the host that is being updated is in the undeployed state then this is a special case and the normal
+        # state change doesn't work because we need to provide some parameters to the allow the ssh connection to
+        # bootstrap the agent into existance.
+        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+
+        assert isinstance(bundle.obj, ManagedHost)
+
+        if bundle.obj.state == 'undeployed':
+            self._create_host(bundle.obj.address, bundle, request)
+
+        return super(HostResource, self).obj_update(bundle, request, **kwargs)
+
     def obj_create(self, bundle, request = None, **kwargs):
         # FIXME HYD-1657: we get errors back just fine when something goes wrong
         # during registration, but the UI tries to format backtraces into
         # a 'validation errors' dialog which is pretty ugly.
 
-        # Resolve a server profile URI to a record
-        profile = self.fields['server_profile'].hydrate(bundle).obj
-
         if bundle.data.get('failed_validations'):
             log.warning("Attempting to create host %s after failed validations: %s" % (bundle.data.get('address'), bundle.data.get('failed_validations')))
 
+        self._create_host(None, bundle, request)
+
+    def _create_host(self, address, bundle, request):
+        # Resolve a server profile URI to a record
+        profile = self.fields['server_profile'].hydrate(bundle).obj
+
         try:
             host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name,
-                                                                                    **_host_params(bundle))
+                                                               **_host_params(bundle, address))
         except RpcError, e:
             # Return 400, a failure here could mean the address was already occupied, or that
             # we couldn't reach that address using SSH (network or auth problem)

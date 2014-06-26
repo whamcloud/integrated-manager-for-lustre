@@ -1293,7 +1293,7 @@ class JobScheduler(object):
         """
         Create a ManagedHost object and deploy the agent to its address using SSH.
 
-        :param address: the resolveable address of the host option user@ in front
+        :param address: the resolvable address of the host option user@ in front
 
         :param root_pw: is either the root password, or the password that goes with
         the user if address is user@address, or, pw is it is the password of
@@ -1304,26 +1304,41 @@ class JobScheduler(object):
         """
         from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
 
-        fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
-        agent_ssh = AgentSsh(address, timeout = 5)
-        auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
-        rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
-        log.info("Getting FQDN for '%s': %s" % (address, stdout))
-        nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
-
         with self._lock:
-            with transaction.commit_on_success():
-                server_profile = ServerProfile.objects.get(name=profile)
-                host = ManagedHost.objects.create(
-                    state='undeployed',
-                    address=address,
-                    nodename=nodename,
-                    fqdn=fqdn,
-                    immutable_state=not server_profile.managed,
-                    server_profile=server_profile)
-                lnet_configuration = LNetConfiguration.objects.create(host=host)
-            ObjectCache.add(LNetConfiguration, lnet_configuration)
-            ObjectCache.add(ManagedHost, host)
+            # See if the host exists, then this is a failed deploy being retried
+            try:
+                host = ObjectCache.get_one(ManagedHost, lambda host: host.address == address)
+
+                assert host.state == 'undeployed'               # assert the fact this is undeployed being setup
+            except ManagedHost.DoesNotExist:
+                fqdn_nodename_command = "python -c \"import os; print os.uname()[1] ; import socket ; print socket.getfqdn();\""
+                agent_ssh = AgentSsh(address, timeout = 5)
+                auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
+                rc, stdout, stderr = agent_ssh.ssh(fqdn_nodename_command, auth_args=auth_args)
+                log.info("Getting FQDN for '%s': %s" % (address, stdout))
+                nodename, fqdn = tuple([l.strip() for l in stdout.strip().split("\n")])
+
+                if root_pw:
+                    install_method = ManagedHost.INSTALL_SSHPSW
+                elif pkey:
+                    install_method = ManagedHost.INSTALL_SSHPKY
+                else:
+                    install_method = ManagedHost.INSTALL_SSHSKY
+
+                with transaction.commit_on_success():
+                    server_profile = ServerProfile.objects.get(name = profile)
+                    host = ManagedHost.objects.create(state = 'undeployed',
+                                                      address = address,
+                                                      nodename = nodename,
+                                                      fqdn = fqdn,
+                                                      immutable_state = not server_profile.managed,
+                                                      server_profile = server_profile,
+                                                      install_method = install_method)
+
+                    lnet_configuration = LNetConfiguration.objects.create(host=host)
+
+                ObjectCache.add(LNetConfiguration, lnet_configuration)
+                ObjectCache.add(ManagedHost, host)
 
             with transaction.commit_on_success():
                 command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
@@ -1334,7 +1349,9 @@ class JobScheduler(object):
             for job_id in self._job_collection._command_to_jobs[command.id]:
                 job = self._job_collection.get(job_id)
                 if isinstance(job, DeployHostJob):
-                    job.auth_args = AgentSsh(address).construct_ssh_auth_args(root_pw, pkey, pkey_pw)
+                    job.auth_args = {"root_pw": root_pw,
+                                     "pkey": pkey,
+                                     "pkey_pw": pkey_pw}
                     break
 
         self.progress.advance()
@@ -1366,7 +1383,8 @@ class JobScheduler(object):
                         nodename=nodename,
                         immutable_state=not server_profile.managed,
                         address=address,
-                        server_profile=server_profile)
+                        server_profile=server_profile,
+                        install_method = ManagedHost.INSTALL_MANUAL)
                     lnet_configuration = LNetConfiguration.objects.create(host = host)
 
                     ObjectCache.add(LNetConfiguration, lnet_configuration)
@@ -1508,7 +1526,7 @@ class JobScheduler(object):
         """Compute the available jobs for the stateful object
 
         Return a dict of jobs that are available for each object in object_list.
-        The key in the dict is the object id, and the valuie is the list of
+        The key in the dict is the object id, and the value is the list of
         job classes.
 
         If an object in the list is locked, it will be included in the return

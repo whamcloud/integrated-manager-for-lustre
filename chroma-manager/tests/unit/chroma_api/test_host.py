@@ -89,6 +89,7 @@ class TestCreateHostAPI(ChromaApiTestCase):
                            "server_profile": api.get_resource_uri(ServerProfile.objects.get()),
                            "root_password": 'secret_pw',
                            "private_key": sample_private_key,
+                           "host_must_exist": False,
                            "private_key_passphrase": 'secret_key_pw'}
 
     def tearDown(self):
@@ -97,13 +98,27 @@ class TestCreateHostAPI(ChromaApiTestCase):
     def test_host_contact_ssh_auth(self):
         """Test POST to /api/test_host/ results in jobschedulerclient call."""
 
-        with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact", mock.Mock()) as thc:
-            api_resp = self.api_client.post("/api/test_host/", data=self.input_data)
-            self.assertHttpAccepted(api_resp)
-            thc.assert_called_once_with(**{"address": 'myaddress',
-                                           "root_pw": 'secret_pw',
-                                           "pkey": sample_private_key,
-                                           "pkey_pw": 'secret_key_pw'})
+        for host_must_exist in [None, False, True, None]:
+            with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact", mock.Mock()) as thc:
+                if host_must_exist != None:
+                    self.input_data["host_must_exist"] = host_must_exist
+                else:
+                    del self.input_data["host_must_exist"]
+                api_resp = self.api_client.post("/api/test_host/", data=self.input_data)
+                self.assertHttpAccepted(api_resp)
+                thc.assert_called_once_with(**{"address": 'myaddress',
+                                               "root_pw": 'secret_pw',
+                                               "pkey": sample_private_key,
+                                               "pkey_pw": 'secret_key_pw'})
+
+            # Create object so that on the second time round we check the false case.
+            if (host_must_exist == False):
+                ManagedHost.objects.create(state = 'undeployed',
+                                           address = 'myaddress',
+                                           nodename = 'myaddress',
+                                           fqdn = 'myaddress',
+                                           immutable_state = False,
+                                           install_method = ManagedHost.INSTALL_MANUAL)
 
     def test_create_host_api_ssh_auth(self):
         """Test POST to /api/host/ results in jobschedulerclient call."""

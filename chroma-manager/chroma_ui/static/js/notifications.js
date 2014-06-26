@@ -169,8 +169,7 @@ var LiveObject = function()
       lnet_unloaded : { icon: 'plug-disconnect',    label: 'LNet unloaded' },
       configured    : { icon: 'plug--arrow',        label: 'Configured' },
       unconfigured  : { icon: 'plug--exclamation',  label: 'Unconfigured' },
-      undeployed    : { icon: 'plug-disconnect-prohibition', label: 'Undeployed' },
-      deploy_failed : { icon: 'plug-disconnect-prohibition', label: 'Deployment Failed' }
+      undeployed    : { icon: 'plug-disconnect-prohibition', label: 'Deployment Failed' },
     };
 
     var host_state = obj.state;
