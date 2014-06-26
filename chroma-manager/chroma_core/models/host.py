@@ -144,8 +144,17 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     client_filesystems = models.ManyToManyField('ManagedFilesystem', related_name="workers", through="LustreClientMount", help_text="Filesystems for which this node is a non-server worker")
 
+    # The fields below are how the agent was installed or how it was attempted to install in the case of a failed install
+    INSTALL_MANUAL = 'manual'                          # The agent was installed manually by the user logging into the server and running a command
+    INSTALL_SSHPSW = 'id_password_root'                # The user provided a password for the server so that ssh could be used for agent install
+    INSTALL_SSHPKY = 'private_key_choice'              # The user provided a private key with password the agent install
+    INSTALL_SSHSKY = 'existing_keys_choice'            # The server can be contacted via a shared key for the agent install
+
+    # The method used to install the host
+    install_method = models.CharField(max_length = 32, help_text = "The method used to install the agent on the server")
+
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['undeployed', 'unconfigured', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed', 'deploy_failed']
+    states = ['unconfigured', 'undeployed', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'
 
     class Meta:
@@ -200,8 +209,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         super(ManagedHost, self).save(*args, **kwargs)
 
     def get_available_states(self, begin_state):
-        if begin_state == 'deploy_failed':
-            return []
+        if begin_state == 'undeployed':
+            return ['configured'] if self.install_method != ManagedHost.INSTALL_MANUAL else []
 
         if self.immutable_state:
             if begin_state in ['undeployed', 'unconfigured']:
@@ -809,12 +818,16 @@ class DeployStep(Step):
         # TODO: before kicking this off, check if an existing agent install is present:
         # the decision to clear it out/reset it should be something explicit maybe
         # even requiring user permission
+        agent_ssh = AgentSsh(kwargs['address'])
+        auth_args = agent_ssh.construct_ssh_auth_args(kwargs['__auth_args']['root_pw'],
+                                                      kwargs['__auth_args']['pkey'],
+                                                      kwargs['__auth_args']['pkey_pw'])
 
-        rc, stdout, stderr = AgentSsh(kwargs['address']).ssh('curl -k %s/agent/setup/%s/%s | python' %
+        rc, stdout, stderr = agent_ssh.ssh('curl -k %s/agent/setup/%s/%s | python' %
                                                              (settings.SERVER_HTTP_URL,
                                                               kwargs['token'].secret,
                                                               '?profile_name=%s' % kwargs['profile_name']),
-                                                              auth_args=kwargs['__auth_args'])
+                                                              auth_args=auth_args)
 
         if rc == 0:
             try:
@@ -875,13 +888,6 @@ class DeployHostJob(StateChangeJob):
                 '__auth_args': self.auth_args},)
         ]
 
-    def on_error(self):
-        """When the job fails, make sure it is in the deploy_failed state, which will disallow any future new states"""
-
-        # There are no known exceptions from this code that have recovery paths.
-        self.managed_host.set_state('deploy_failed')
-        self.managed_host.save()
-
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
@@ -938,7 +944,7 @@ class SetupHostJob(StateChangeJob):
     state_transition = (ManagedHost, 'unconfigured', 'configured')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
-    state_verb = 'Set up server'
+    state_verb = 'Setup server'
 
     display_group = Job.JOB_GROUPS.COMMON
     display_order = 20
@@ -948,7 +954,7 @@ class SetupHostJob(StateChangeJob):
         return help_text['setup_host']
 
     def description(self):
-        return "Set up server %s" % self.managed_host
+        return "Setup server %s" % self.managed_host
 
     def get_steps(self):
         steps = [(ConfigureNTPStep, {'host': self.managed_host}),
