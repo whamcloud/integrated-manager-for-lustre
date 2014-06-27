@@ -1,0 +1,71 @@
+{
+  "name": "stub-daddy",
+  "author": "Will Johnson",
+  "description": "Stub API service used for integration testing.",
+  "version": "0.1.0",
+  "dependencies": {
+    "bunyan": "0.23.1",
+    "configulator": "1.0.0",
+    "jsonschema": "0.4.0",
+    "wiretree": "0.2.5",
+    "yargs": "1.2.6",
+    "promise": "5.0.0"
+  },
+  "devDependencies": {
+    "dotty": "0.0.2",
+    "glob": "4.0.2",
+    "lodash.assign": "2.4.1",
+    "lodash.merge": "2.4.1",
+    "minijasminenodewrap": "1.0.1",
+    "request-then": "0.0.1"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "mjnw",
+    "integration": "mjnw test/integration/*-spec.js",
+    "unit": "mjnw test/unit/*-spec.js",
+    "cover": "cover",
+    "jenkins": "mjnw --reportType=junit --JUnitReportSavePath=./ --JUnitReportFilePrefix=stub-daddy-results"
+  },
+  "preferGlobal": true,
+  "bin": {
+    "stub-daddy": "index.js"
+  },
+  "bugs": {
+    "url": "https://jira.hpdd.intel.com/secure/CreateIssue!default.jspa"
+  },
+  "contributors": [
+    {
+      "name": "Will Johnson",
+      "email": "william.c.johnson@intel.com",
+      "web": ""
+    },
+    {
+      "name": "Joe Grund",
+      "email": "joe.grund@intel.com",
+      "web": "http://joegrund.com"
+    },
+    {
+      "name": "Wayne Seymour",
+      "email": "wayne.k.seymour.iii@intel.com",
+      "web": "blog.wayneseymour.com"
+    }
+  ],
+  "maintainers": [
+    {
+      "name": "Will Johnson",
+      "email": "william.c.johnson@intel.com",
+      "web": ""
+    },
+    {
+      "name": "Joe Grund",
+      "email": "joe.grund@intel.com",
+      "web": "http://joegrund.com"
+    },
+    {
+      "name": "Wayne Seymour",
+      "email": "wayne.k.seymour.iii@intel.com",
+      "web": "blog.wayneseymour.com"
+    }
+  ]
+}

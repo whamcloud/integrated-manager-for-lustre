@@ -1,0 +1,7 @@
+stubdaddy.log
+coverage
+test_reports
+http
+npm-debug.log
+junit-results.xml
+results.xml
