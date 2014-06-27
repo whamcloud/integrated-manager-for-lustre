@@ -176,15 +176,14 @@ class SeleniumBaseTestCase(TestCase):
                 profile.set_preference('webdriver.log.file', driver_log_path)
                 self.driver = webdriver.Firefox(profile)
 
-        self.driver.set_window_size(1024, 768)
-
-        self.driver.get(config['chroma_managers'][0]['server_http_url'])
-
         self.addCleanup(self.stop_driver)
         self.addCleanup(self._capture_browser_log)
         self.addCleanup(self._take_screenshot_on_failure)
 
+        self.driver.set_window_size(1024, 768)
         self.driver.set_script_timeout(90)
+
+        self.driver.get(config['chroma_managers'][0]['server_http_url'])
 
         from tests.selenium.utils.navigation import Navigation
         self.navigation = Navigation(self.driver, False)
