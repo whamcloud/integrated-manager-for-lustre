@@ -23,7 +23,7 @@
   },
   "disallowEmptyBlocks": true,
   "requireCommaBeforeLineBreak": true,
-  "disallowLeftStickedOperators": [
+  "requireSpaceBeforeBinaryOperators": [
     "?",
     "/",
     "*",
@@ -37,10 +37,21 @@
     "<",
     "<="
   ],
-  "requireRightStickedOperators": [
+  "requireSpacesInConditionalExpression": {
+    "afterTest": true,
+    "beforeConsequent": true,
+    "afterConsequent": true,
+    "beforeAlternate": true
+  },
+  "disallowSpaceAfterPrefixUnaryOperators": [
+    "++",
+    "--",
+    "+",
+    "-",
+    "~",
     "!"
   ],
-  "disallowRightStickedOperators": [
+  "requireSpaceAfterBinaryOperators": [
     "?",
     "+",
     "/",
@@ -56,7 +67,11 @@
     "<",
     "<="
   ],
-  "requireLeftStickedOperators": [
+  "disallowSpaceBeforePostfixUnaryOperators": [
+    "++",
+    "--"
+  ],
+  "disallowSpaceBeforeBinaryOperators": [
     ","
   ],
   "disallowSpaceAfterPrefixUnaryOperators": [
