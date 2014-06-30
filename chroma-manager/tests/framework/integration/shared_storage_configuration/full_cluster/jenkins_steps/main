@@ -1,8 +1,12 @@
-#!/bin/bash
+#!/bin/bash -e
 
-set -e
-
+# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+# printing it into the console in plaintext calling this script.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
 . $HOME/auth.sh
+set -x
+
+[ -r localenv ] && . localenv
 
 spacelist_to_commalist() {
     echo $@ | tr ' ' ','
@@ -16,24 +20,26 @@ while [ ! -f $d/include/Makefile.version ]; do
     d=${d%/*}
 done
 IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
-
-# For autotest:
-#PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
 PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 
-export UPSTREAM_DISTRO=el6.4
-JOB_URL="${JENKINS_URL}job/${BUILD_JOB_NAME}/arch=x86_64,distro=$UPSTREAM_DISTRO/${BUILD_JOB_BUILD_NUMBER}/artifact"
-cd $WORKSPACE
-
+# Variables that we expect to be set upstream, no "default"
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -O -u jenkins-pull:"$JENKINS_PULL" "$JOB_URL/build_info.txt"
+JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
+set -x
+BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
+BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
+JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
+WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
+cd $WORKSPACE
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
 curl -f -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration_tests/full_cluster/shared_storage_configuration_cluster_cfg.json
+sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json
 
-python chroma/chroma-manager/tests/framework/integration_tests/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration_tests/full_cluster/shared_storage_configuration_cluster_cfg.json provisioner_input.json
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json provisioner_input.json
 
 cat provisioner_input.json
 echo
@@ -90,14 +96,16 @@ if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' p
     exit 1
 fi
 
-python chroma/chroma-manager/tests/framework/integration_tests/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json
 cat shared_storage_configuration_cluster_cfg.json
 
 # see if this cures the 401 errors from jenkins
 eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py shared_storage_configuration_cluster_cfg.json)
 pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
 if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    set +x
     sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
+    set -x
 fi
 cd /etc/yum.repos.d/
 for f in *.repo; do
@@ -110,13 +118,10 @@ fi
 set +e
 
 echo "Beginning automated test run..."
-MEASURE_COVERAGE=$MEASURE_COVERAGE \
-chroma/chroma-manager/tests/framework/integration_tests/full_cluster/automated_test_run_shared_storage_configuration_with_provisioning.sh
+export MEASURE_COVERAGE=$MEASURE_COVERAGE
+chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup
+chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/run_tests
 echo "Automated test run complete."
-
-# Gather logs from nodes
-# done in the EXIT trap now
-# python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs shared_storage_configuration_cluster_cfg.json
 
 # Combine coverage reports from the different nodes.
 if $MEASURE_COVERAGE; then

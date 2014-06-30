@@ -1,0 +1,130 @@
+#!/bin/bash -e
+
+# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+# printing it into the console in plaintext calling this script.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+. $HOME/auth.sh
+set -x
+
+[ -r localenv ] && . localenv
+
+PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
+IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/null) || true
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+
+# Variables that we expect to be set upstream, no "default"
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
+set -x
+BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
+BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
+JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
+WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+
+#--------------------------------------------------------------------------
+# Fetch the IEEL installation package from the upstream job
+#--------------------------------------------------------------------------
+cd $WORKSPACE
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+curl -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+set -x
+ls ieel-*.tar.gz
+
+#-----------------------------------------------
+# Installing dependencies via pip
+#-----------------------------------------------
+cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
+make requirements
+python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
+
+#-------------------------------------------------------------
+# Release the provisioned cluster (at the exit of this script)
+#-------------------------------------------------------------
+trap "set +e
+cd $WORKSPACE/chroma_test_env/
+WORKSPACE=$WORKSPACE \
+CLUSTER_CONFIG=selenium_cluster_config.json \
+MEASURE_COVERAGE=$MEASURE_COVERAGE \
+chroma/chroma-manager/tests/framework/gui/collect_logs.sh
+
+cd $WORKSPACE/chroma_test_env
+sed -i 's/provision\":true/provision\":false/g' provisioner_output.json
+cat provisioner_output.json | $PROVISIONER
+cat provisioner_output.json
+" EXIT
+
+#--------------------------------
+# Provision a node
+#--------------------------------
+cd $WORKSPACE/chroma_test_env/
+sed -i "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json
+sed -i "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/gui/selenium_cluster_config.json provisioner_input.json
+cat provisioner_input.json | $PROVISIONER > provisioner_output.json
+cat provisioner_input.json
+
+if ! grep '"success":true' provisioner_output.json; then
+    echo "Cluster provisioner failed"
+    cat provisioner_output.json
+    exit 1
+fi
+echo
+
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json selenium_cluster_config.json
+cat selenium_cluster_config.json
+
+# --------------------------------------------------------------------
+# Fix up the chroma repo URL (distro=el6.3 should just be "distro=el6)
+# --------------------------------------------------------------------
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py selenium_cluster_config.json)
+ssh root@$CHROMA_MANAGER "set -xe
+sed -i -e 's/\(distro=el6\).3\//\1\//' -e \"s/Aitahd9u/$JENKINS_PULL/g\"  -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' /etc/yum.repos.d/autotest.repo
+cd /etc/yum.repos.d/
+for f in *.repo; do
+  sed -i -e 's/distro=rhel6.5/distro=el6.4/' -e 's/distro=el6.5/distro=el6.4/' \$f
+done
+yum --disablerepo=\* --enablerepo=chroma makecache
+# Disable EPEL
+yum-config-manager --disable EPEL-6-x86_64"
+
+#---------------------------
+# Install Chroma on the node
+#---------------------------
+CLUSTER_CONFIG=selenium_cluster_config.json \
+MEASURE_COVERAGE=$MEASURE_COVERAGE \
+GOOGLE_REPO="http://cobbler/cobbler/repo_mirror/google_chrome-stable-x86_64" \
+chroma/chroma-manager/tests/framework/gui/cluster_setup
+
+#-----------------------
+# Run the selenium tests
+#-----------------------
+WORKSPACE=$WORKSPACE \
+CLUSTER_CONFIG=selenium_cluster_config.json \
+MEASURE_COVERAGE=$MEASURE_COVERAGE \
+chroma/chroma-manager/tests/framework/gui/run_tests
+
+#-------------------------
+# Process coverage reports
+#-------------------------
+if $MEASURE_COVERAGE; then
+  cd $WORKSPACE
+  ls .coverage*
+echo "
+[paths]
+source =
+    $WORKSPACE/chroma_test_env/chroma/chroma-manager/
+    /usr/share/chroma-manager/
+
+[report]
+include =
+    $WORKSPACE/chroma_test_env/chroma/*
+    /usr/share/chroma-manager/*
+omit =
+    *junk.py
+    */tests/*
+" > .coveragerc
+
+  coverage combine
+  coverage report -m
+  coverage xml --ignore-errors
+fi

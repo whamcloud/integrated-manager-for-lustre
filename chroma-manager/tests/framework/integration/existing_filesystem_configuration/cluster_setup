@@ -22,14 +22,13 @@ mkdir -p $PWD/test_reports
 mkdir -p $PWD/coverage_reports
 
 ARCHIVE_NAME=ieel-$IEEL_VERSION.tar.gz
-CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)"}
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 USE_FENCE_XVM=false
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
-TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
 echo "Beginning installation and setup..."
@@ -44,11 +43,7 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
 fi
 
 # need to remove the chroma repositories configured by the provisioner
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
-# Clean out any yum info, if this is a manual system not automated the underlying repos might have changed.
-yum clean all
-
-$PROXY yum install -y omping
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER) "exec 2>&1; set -xe
 if $MEASURE_COVERAGE && [ -f /etc/yum.repos.d/autotest.repo ]; then
     cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
 retries=50
@@ -64,18 +59,13 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-# Install and setup chroma manager on integration test runner, use rsync incase the connection is slow
-ssh root@$TEST_RUNNER yum install -y rsync
-rsync -avz $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
+# Install and setup chroma manager
+scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
-# install cman here to test that the fence-agents-iml package is being a
-# "duck-like" replacement for fence -agents since cman depends on
-# fence-agents
-yum -y install expect cman
+yum -y install expect
 # Install from the installation package
 cd /tmp
-rm -rf $(basename $ARCHIVE_NAME .tar.gz)
 tar xzvf $ARCHIVE_NAME
 cd $(basename $ARCHIVE_NAME .tar.gz)
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
@@ -87,7 +77,6 @@ fi
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
 LOG_LEVEL = logging.DEBUG
-$LOCAL_SETTINGS
 EOF1
 
 if $MEASURE_COVERAGE; then
@@ -109,9 +98,36 @@ else
     rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
 fi"
 
-
 # Install and setup chroma software storage appliances
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    cat << \"EOF\" >> /etc/yum.repos.d/autotest.repo
+retries=50
+timeout=180
+
+[lustre]
+name=lustre
+baseurl=${JENKINS_URL/\/\//\/\/jenkins-pull:$JENKINS_PULL@}/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
+enabled=1
+priority=1
+gpgcheck=0
+sslverify=0
+retries=50
+timeout=180
+EOF
+    $PROXY yum install -y python-setuptools
+    $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
+    $PROXY yumdownloader --disablerepo=* --enablerepo=lustre kernel kernel-firmware
+    if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
+        rpm -Uvh --oldpackage kernel-firmware-*.rpm
+    fi
+    rm kernel-firmware-*.rpm
+    if ! rpm -q \$(rpm -qp kernel-*.rpm); then
+        rpm -ivh --oldpackage kernel*.rpm
+    fi
+    yum -y install lustre-modules lustre
+    rm -f /etc/yum.repos.d/autotest.repo
+fi
 if $MEASURE_COVERAGE; then
     cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
 [run]
@@ -135,21 +151,25 @@ if $USE_FENCE_XVM; then
     # fence_xvm support
     mkdir -p /etc/cluster
     echo \"not secure\" > /etc/cluster/fence_xvm.key
-fi" | dshbak -c
+fi
+
+# Removed and installed a kernel, so need a reboot
+sync
+sync
+init 6" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-source $CHROMA_DIR/chroma-manager/tests/framework/integration_tests/full_cluster/install_client.sh
+source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 # Install and setup integration tests on integration test runner
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
 $PROXY yum --disablerepo=\* --enablerepo=chroma makecache
-$PROXY yum -y install chroma-manager-integration-tests python-mock
+$PROXY yum -y install chroma-manager-integration-tests
 
-# Set up fencing on the vm host
 if $USE_FENCE_XVM; then
     # make sure the host has fence_virtd installed and configured
     ssh root@$HOST_IP "exec 2>&1; set -xe
@@ -191,7 +211,7 @@ EOF
 
 # wait for rebooted nodes
 sleep 5
-nodes="$CLIENT_1"
+nodes="${STORAGE_APPLIANCES[@]} $CLIENT_1"
 RUNNING_TIME=0
 while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
     for node in $nodes; do
@@ -203,54 +223,12 @@ while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
     sleep 1
 done
 
-echo "End installation and setup."
-
-echo "Begin running tests..."
-
-ssh root@$TEST_RUNNER "exec 2>&1; set -xe
+# Create a lustre filesystem outside of Chroma
+ssh root@$TEST_RUNNER <<EOF
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS || true"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json tests/integration/existing_filesystem_configuration/utils/create_lustre_filesystem.py
+EOF
 
-echo "End running tests."
 
-# test that removing the chroma-manager RPM removes /var/lib/chroma
-ssh root@$CHROMA_MANAGER "set -xe
-exec 2>&1
-ls -l /var/lib/chroma
-rpm -e chroma-manager-cli chroma-manager chroma-manager-libs
-if [ -d /var/lib/chroma ]; then
-    echo \"Removing RPMs failed to clean up /var/lib/chroma\"
-    ls -l /var/lib/chroma
-    exit 1
-fi"
-
-echo "Collecting reports..."
-set +e
-
-scp root@$TEST_RUNNER:~/test_report*.xml $PWD/test_reports/
-
-if $MEASURE_COVERAGE; then
-    ssh root@$CHROMA_MANAGER chroma-config stop
-
-    pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "set -x
-      rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-      cd /var/tmp/
-      coverage combine
-# when putting the pdcp below back, might need to install pdsh first
-#      yum -y install pdsh
-" | dshbak -c
-    if [ ${PIPESTATUS[0]} != 0 ]; then
-        exit 1
-    fi
-
-    # TODO: should use something like this for better efficiency:
-    # rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) /var/tmp/.coverage $PWD
-    for SERVER in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
-        scp root@$SERVER:/var/tmp/.coverage .coverage.$SERVER
-    done
-
-    ssh root@$CHROMA_MANAGER chroma-config start
-fi
-
-exit 0
+echo "End installation and setup."

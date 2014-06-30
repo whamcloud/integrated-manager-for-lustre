@@ -64,7 +64,7 @@
     },
     "test_runners": [
         {
-            "distro": "fc18"
+            "distro": "fc19"
         }
     ],
     "provision": true

@@ -13,7 +13,7 @@ IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
 
 ARCHIVE_NAME=ieel-$IEEL_VERSION.tar.gz
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
-CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/selenium/cluster_config.json"}
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/gui/selenium_cluster_config.json"}
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
@@ -140,9 +140,9 @@ import logging
 LOG_LEVEL = logging.DEBUG
 EOF1
 
-mkdir -p /usr/share/chroma-manager/tests/framework/selenium/"
+mkdir -p /usr/share/chroma-manager/tests/framework/gui/"
 
-scp -r chroma/chroma-manager/tests/framework/selenium/mock_agent root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/framework/selenium/mock_agent
+scp -r chroma/chroma-manager/tests/framework/gui/mock_agent root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/framework/gui/mock_agent
 scp -r chroma/chroma-manager/tests/unit/ root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/unit
 scp chroma/chroma-manager/tests/__init__.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/__init__.py
 
@@ -152,10 +152,10 @@ scp chroma/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py roo
 
 ssh root@$CHROMA_MANAGER "exec 2>&1; set -ex
 # patch the agent
-cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
+cat /usr/share/chroma-manager/tests/framework/gui/mock_agent/agent_rpc_addon.py >> /usr/share/chroma-manager/chroma_core/services/job_scheduler/agent_rpc.py
 
 # patch the plugin manager
-cat /usr/share/chroma-manager/tests/framework/selenium/mock_agent/agent_daemon_addon.py >> /usr/share/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py
+cat /usr/share/chroma-manager/tests/framework/gui/mock_agent/agent_daemon_addon.py >> /usr/share/chroma-manager/chroma_core/services/plugin_runner/agent_daemon.py
 
 if $MEASURE_COVERAGE; then
   cat <<\"EOF1\" > /usr/share/chroma-manager/.coveragerc

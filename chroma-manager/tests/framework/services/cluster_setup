@@ -5,12 +5,11 @@ set -ex
 [ -r localenv ] && . localenv
 
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
-CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/simulator.json"}
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/services/services_cluster_config.json"}
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
-TESTS=${TESTS:-"tests/integration/shared_storage_configuration/"}
 EPEL_SOURCE=${EPEL_SOURCE:-"baseurl=http://cobbler/cobbler/repo_mirror/EPEL-6-x86_64/"}  # For a dev env, use mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=epel-6&arch=$basearch
 
 echo "Beginning installation and setup..."
@@ -19,7 +18,6 @@ echo "Beginning installation and setup..."
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies
-
 cat <<EOC > /etc/yum.repos.d/epel.repo
 [epel]
 name=epel
@@ -30,7 +28,7 @@ gpgcheck=0
 sslverify=0
 EOC
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel mod_wsgi mod_ssl telnet python-ethtool rabbitmq-server erlang-inets npm patch httpd-devel
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm patch httpd-devel
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
@@ -91,6 +89,8 @@ echo "counter: \$COUNTER, trials: \$MAX_TRIALS"
 chkconfig postgresql on
 service postgresql initdb
 service postgresql start
+# TODO: sleeping is racy.  should check for up-ness, not just assume it
+#       will happen within 5 seconds
 sleep 5  # Unfortunately postgresql start seems to return before its truly up and ready for business
 su postgres -c 'createuser -R -S -d chroma'
 su postgres -c 'createdb -O chroma chroma'
@@ -137,40 +137,4 @@ LOG_LEVEL = logging.DEBUG
 EOF1
 
 make develop
-python manage.py supervisor  &> /dev/null &
-supervisor_pid=\$!
-
-set +e
-echo "Begin running tests..."
-nosetests --verbosity=2 --tc-file=tests/simulator.json --tc-format=json --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
-
-kill \$supervisor_pid
 EOF
-integration_test_status=$?
-
-echo "End running tests."
-
-set +e
-cd $CHROMA_DIR/../..
-mkdir -p test_reports
-scp chromatest@$CHROMA_MANAGER:test_report.xml ./test_reports/
-mkdir -p test_logs
-scp chromatest@$CHROMA_MANAGER:chroma_test_env/chroma/chroma-manager/*[._]log ./test_logs/
-scp root@$CHROMA_MANAGER:/var/log/messages ./test_logs/
-if $MEASURE_COVERAGE; then
-  mkdir -p coverage_reports
-  ssh chromatest@$CHROMA_MANAGER <<EOF
-    set -x
-    source chroma_test_env/bin/activate
-    cd /var/tmp/
-    coverage combine
-EOF
-  scp chromatest@$CHROMA_MANAGER:/var/tmp/.coverage ./.coverage.raw
-fi
-set -e
-
-if [ $integration_test_status -ne 0 ]; then
-    echo "AUTOMATED TEST RUN FAILED"
-fi
-
-exit $integration_test_status
