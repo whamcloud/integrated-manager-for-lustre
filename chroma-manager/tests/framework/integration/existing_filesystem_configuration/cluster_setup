@@ -20,7 +20,6 @@ USE_FENCE_XVM=false
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
 
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
-TESTS=${TESTS:-"tests/integration/existing_filesystem_configuration/"}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
 echo "Beginning installation and setup..."
@@ -153,7 +152,7 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-source $CHROMA_DIR/chroma-manager/tests/framework/integration_tests/full_cluster/install_client.sh
+source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 # Install and setup integration tests on integration test runner
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
@@ -224,43 +223,3 @@ EOF
 
 
 echo "End installation and setup."
-
-set +e
-set -x
-
-echo "Begin running tests..."
-
-ssh root@$TEST_RUNNER "exec 2>&1; set -xe
-cd /usr/share/chroma-manager/
-unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS"
-
-echo "End running tests."
-echo "Collecting reports..."
-
-scp root@$TEST_RUNNER:~/test_report*.xml $PWD/test_reports/
-
-if $MEASURE_COVERAGE; then
-    ssh root@$CHROMA_MANAGER chroma-config stop
-
-    pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "set -x
-      rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
-      cd /var/tmp/
-      coverage combine
-# when putting the pdcp below back, might need to install pdsh first
-#      yum -y install pdsh
-" | dshbak -c
-    if [ ${PIPESTATUS[0]} != 0 ]; then
-        exit 1
-    fi
-
-    # TODO: should use something like this for better efficiency:
-    # rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) /var/tmp/.coverage $PWD
-    for SERVER in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
-        scp root@$SERVER:/var/tmp/.coverage .coverage.$SERVER
-    done
-
-    ssh root@$CHROMA_MANAGER chroma-config start
-fi
-
-exit 0

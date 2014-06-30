@@ -1,0 +1,99 @@
+#!/bin/bash -e
+
+# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+# printing it into the console in plaintext calling this script.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+. $HOME/auth.sh
+set -x
+
+[ -r localenv ] && . localenv
+
+PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+
+# Variables that we expect to be set upstream, no "default"
+BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
+BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
+WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+
+cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
+make requirements
+python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
+
+# Release the provisioned cluster (at the exit of this script)
+trap "sed -i 's/provision\":true/provision\":false/g' provisioner_output.json
+cat provisioner_output.json | $PROVISIONER" EXIT
+
+cd $WORKSPACE/chroma_test_env
+sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/services/services_cluster_config.json
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/services/services_cluster_config.json provisioner_input.json
+cat provisioner_input.json
+cat provisioner_input.json | $PROVISIONER > provisioner_output.json
+
+if ! grep '"success":true' provisioner_output.json; then
+    echo "Cluster provisioner failed"
+    cat provisioner_output.json
+    exit 1
+fi
+
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json services_cluster_config.json
+cat services_cluster_config.json
+
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py services_cluster_config.json)
+
+pdsh -R ssh -l root -S -w $CHROMA_MANAGER $TEST_RUNNER "exec 2>&1; set -xe
+cd /etc/yum.repos.d/
+for f in *.repo; do
+  sed -i -e 's/distro=rhel6.5/distro=el6.4/' -e 's/distro=el6.5/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
+done" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# we should get the cluster fully configured from the provisioner, but we don't
+ssh root@$CHROMA_MANAGER <<EOF
+set -ex
+# Install non-python/pipable dependencies
+cat <<EOC > /etc/yum.repos.d/internal_epel.repo
+[addon-epel6-x86_64]
+name=addon-epel6-x86_64
+baseurl=http://cobbler/cobbler/repo_mirror/EPEL-6-x86_64
+enabled=1
+gpgcheck=0
+priority=99
+EOC
+yum install -y python-virtualenv
+yum-config-manager --disable addon-epel6-x86_64
+# Disable EPEL
+yum-config-manager --disable EPEL-6-x86_64
+EOF
+
+set +e
+
+echo "Beginning automated test run..."
+export CLUSTER_CONFIG=services_cluster_config.json
+export MEASURE_COVERAGE=$MEASURE_COVERAGE
+chroma/chroma-manager/tests/framework/services/cluster_setup
+chroma/chroma-manager/tests/framework/services/run_tests
+echo "Automated test run complete."
+
+# Combine coverage reports from the different nodes.
+if $MEASURE_COVERAGE; then
+  echo "
+[paths]
+source1 =
+    $WORKSPACE/chroma/
+    /home/chromatest/chroma_test_env/chroma/
+
+[report]
+include =
+    $WORKSPACE/chroma/*
+omit =
+    *junk.py
+    */tests/*
+" > .coveragerc
+
+  coverage combine
+  coverage report -m
+  coverage xml --ignore-errors
+fi

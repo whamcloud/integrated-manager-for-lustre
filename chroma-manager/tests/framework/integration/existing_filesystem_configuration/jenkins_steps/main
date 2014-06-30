@@ -1,0 +1,120 @@
+#!/bin/bash -e
+
+# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+# printing it into the console in plaintext calling this script.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+. $HOME/auth.sh
+set -x
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+[ -r localenv ] && . localenv
+
+PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
+IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/null)
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+
+# Variables that we expect to be set upstream, no "default"
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
+export JENKINS_PULL
+set -x
+BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
+BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
+JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
+WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+
+cd $WORKSPACE
+# Copy a fingerprinted file so we can link together the projects in jenkins.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+curl -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+set -x
+
+sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json
+
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/existing_filesystem_configuration_cluster_cfg.json provisioner_input.json
+
+cat provisioner_input.json
+echo
+
+# Release the provisioned cluster (at exit of this script)
+trap "set +e
+# Gather logs from nodes
+python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs existing_filesystem_configuration_cluster_cfg.json
+
+sed -i 's/provision\":true/provision\":false/g' provisioner_output.json
+cat provisioner_output.json | $PROVISIONER
+" EXIT
+
+# Provision cluster to run tests on
+PROVISION_START_TIME=$(date '+%s')
+cat provisioner_input.json | $PROVISIONER > provisioner_output.json
+PROVISION_END_TIME=$(date '+%s')
+PROVISION_DURATION=$(( $PROVISION_END_TIME-$PROVISION_START_TIME ))
+echo "$PROVISION_DURATION" > $WORKSPACE/provision_duration.txt
+echo "Provision took $(( $PROVISION_DURATION/60 )) minutes."
+
+cat provisioner_output.json
+echo
+
+if ! grep '"success":true' provisioner_output.json; then
+    echo "Cluster provisioner failed"
+    cat provisioner_output.json
+    exit 1
+fi
+
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json existing_filesystem_configuration_cluster_cfg.json
+cat existing_filesystem_configuration_cluster_cfg.json
+
+# see if this cures the 401 errors from jenkins
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py existing_filesystem_configuration_cluster_cfg.json)
+pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    set +x
+    sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
+    set -x
+fi
+# Disable EPEL
+yum-config-manager --disable EPEL-6-x86_64
+cd /etc/yum.repos.d/
+for f in *.repo; do
+  sed -i -e 's/distro=rhel6.5/distro=el6.4/' -e 's/distro=el6.5/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
+done" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+set +e
+
+echo "Beginning automated test run..."
+export MEASURE_COVERAGE=$MEASURE_COVERAGE
+chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
+chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests
+echo "Automated test run complete."
+
+# Combine coverage reports from the different nodes.
+if $MEASURE_COVERAGE; then
+  ls .coverage*
+  echo "
+[paths]
+source1 =
+    $WORKSPACE/chroma/chroma-manager/
+    /usr/share/chroma-manager/
+source2 =
+    $WORKSPACE/chroma/chroma-agent/chroma_agent/
+    /usr/lib/python2.6/site-packages/chroma_agent/
+
+[report]
+include =
+    $WORKSPACE/chroma/*
+omit =
+    *junk.py
+    */tests/*
+" > .coveragerc
+
+  coverage combine
+  coverage report -m
+  coverage xml --ignore-errors
+fi

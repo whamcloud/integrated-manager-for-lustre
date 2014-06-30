@@ -1,0 +1,88 @@
+#!/bin/bash -e
+
+# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+# printing it into the console in plaintext calling this script.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+. $HOME/auth.sh
+set -x
+
+[ -r localenv ] && . localenv
+
+PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
+CURRENT_IEEL_VERSION=$(make -f include/Makefile.version .ieel_version 2>/dev/null) || true
+
+# Variables that we expect to be set upstream, no "default"
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
+set -x
+BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
+BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
+JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
+WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+SLAVE=${slave:?"Need to set slave"}
+
+cd $WORKSPACE
+
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+curl -f -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$CURRENT_IEEL_VERSION.tar.gz"
+set -x
+
+sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json
+
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json provisioner_input.json
+
+if [ "$SLAVE" = "rhel6&&ssi" ]; then
+    sed -i -e 's/el6\.4/rhel6.4/g' provisioner_input.json
+fi
+cat provisioner_input.json
+echo
+
+# Gather logs from nodes and release the cluster at exit
+trap "set +e
+python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py \"$WORKSPACE/test_logs\" shared_storage_configuration_cluster_cfg.json
+sed -i 's/provision\": *true/provision\":false/g' provisioner_output.json
+cat provisioner_output.json | $PROVISIONER" EXIT
+
+rc=0
+cat provisioner_input.json | $PROVISIONER > provisioner_output.json || rc=$?
+
+cat provisioner_output.json
+echo
+
+if [ $rc != 0 ] || [ ! -s provisioner_output.json ] || grep '"success": false' provisioner_output.json; then
+    echo "Cluster provisioner failed"
+    cat provisioner_output.json
+    echo
+    exit 1
+fi
+
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json
+cat shared_storage_configuration_cluster_cfg.json
+echo
+
+# see if this cures the 401 errors from jenkins
+eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py shared_storage_configuration_cluster_cfg.json)
+ssh root@$TEST_RUNNER "exec 2>&1; set -e; set +x
+sed -i -e 's/Aitahd9u/"$JENKINS_PULL"/g' /etc/yum.repos.d/autotest.repo"
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+# see if this mitigates the near constant failure to complete a yum upgrade from the RH CDN
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+cat <<\"EOF\" >> /etc/yum.conf
+retries=100
+timeout=300
+EOF" | dshbak -c
+
+set +e
+
+echo "Beginning automated test run..."
+set +x
+export JENKINS_PULL
+set -x
+PROXY="http_proxy=\"http://proxy.dp.intel.com:911\" https_proxy=\"http://proxy.dp.intel.com:911\" no_proxy=\"cobbler,.iml.intel.com,.intel.com,172.24.111.129\"" \
+chroma/chroma-manager/tests/framework/integration/installation_and_upgrade/cluster_setup
+chroma/chroma-manager/tests/framework/integration/installation_and_upgrade/run_tests
+echo "Automated test run complete."

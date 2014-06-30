@@ -1,0 +1,69 @@
+#!/bin/bash -e
+
+# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+# printing it into the console in plaintext calling this script.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+. $HOME/auth.sh
+set -x
+
+[ -r localenv ] && . localenv
+
+PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+
+# Variables that we expect to be set upstream, no "default"
+WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+
+cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
+make requirements
+python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
+
+# Release the provisioned cluster (at the exit of this script)
+trap "sed -i 's/provision\":true/provision\":false/g' provisioner_output.json
+cat provisioner_output.json | $PROVISIONER" EXIT
+
+# Provision cluster to run tests on
+cd $WORKSPACE/chroma_test_env/
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/simulator.json provisioner_input.json
+cat provisioner_input.json
+cat provisioner_input.json | $PROVISIONER > provisioner_output.json
+
+if ! grep '"success":true' provisioner_output.json; then
+    echo "Cluster provisioner failed"
+    cat provisioner_output.json
+    exit 1
+fi
+
+python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json
+cat shared_storage_configuration_cluster_cfg.json
+
+set +e
+
+echo "Beginning automated test run..."
+export CLUSTER_CONFIG=shared_storage_configuration_cluster_cfg.json
+export MEASURE_COVERAGE=$MEASURE_COVERAGE
+chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/cluster_setup
+chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/run_tests
+find ./test_reports/ -type f -size 0 -exec rm {} \;
+echo "Automated test run complete."
+
+# Combine coverage reports from the different nodes.
+if $MEASURE_COVERAGE; then
+  echo "
+[paths]
+source1 =
+    $WORKSPACE/chroma/
+    /home/chromatest/chroma_test_env/chroma/
+
+[report]
+include =
+    $WORKSPACE/chroma/*
+omit =
+    *junk.py
+    */tests/*
+" > .coveragerc
+
+  coverage combine
+  coverage report -m
+  coverage xml --ignore-errors
+fi

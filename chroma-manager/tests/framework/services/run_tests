@@ -1,0 +1,41 @@
+#!/bin/sh
+
+set -ex
+
+[ -r localenv ] && . localenv
+
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$CHROMA_DIR/chroma-manager/tests/framework/services/services_cluster_config.json"}
+
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+TESTS=${TESTS:-"tests/services/"}
+
+trap "set +e
+set +e
+cd $CHROMA_DIR/../..
+mkdir -p test_reports
+scp chromatest@$CHROMA_MANAGER:test_report.xml ./test_reports/
+mkdir -p test_logs
+scp chromatest@$CHROMA_MANAGER:chroma_test_env/chroma/chroma-manager/*.log ./test_logs/
+scp root@$CHROMA_MANAGER:/var/log/messages ./test_logs/
+if $MEASURE_COVERAGE; then
+  mkdir -p coverage_reports
+  ssh chromatest@$CHROMA_MANAGER <<EOF
+    set -x
+    source chroma_test_env/bin/activate
+    cd /var/tmp/
+    coverage combine
+EOF
+  scp chromatest@$CHROMA_MANAGER:/var/tmp/.coverage ./.coverage.raw
+fi
+" EXIT
+
+echo "Begin running tests..."
+ssh chromatest@$CHROMA_MANAGER <<EOF
+source chroma_test_env/bin/activate
+cd chroma_test_env/chroma/chroma-manager
+PYTHONPATH=. nosetests --verbosity=2 --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
+EOF
+echo "End running tests."

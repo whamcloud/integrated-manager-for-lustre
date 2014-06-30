@@ -1,0 +1,92 @@
+#!/bin/bash -e
+
+# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
+# printing it into the console in plaintext calling this script.
+set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
+. $HOME/auth.sh
+set -x
+
+[ -r localenv ] && . localenv
+
+MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+
+# Variables that we expect to be set upstream, no "default"
+WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+
+# Pip install requirements
+cd $WORKSPACE/chroma_unit_test_env/chroma/chroma-manager
+make requirements
+python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
+
+# patch behave for https://github.com/behave/behave/issues/63 with https://github.com/jenisys/behave/commit/6fa47d414bf25a53121edeb7caebac4d9d1b5fb4.diff
+pushd $WORKSPACE/chroma_unit_test_env/lib/python2.6/site-packages
+patch -R -p1 <<"EOF" || true
+diff --git a/behave/model.py b/behave/model.py
+index 1183e1b..371c8dd 100644
+--- a/behave/model.py
++++ b/behave/model.py
+@@ -372,6 +372,8 @@ class Scenario(TagStatement, Replayable)
+         self.steps = steps or []
+ 
+         self.background = None
++        self.stderr = None
++        self.stderr = None
+ 
+     def __repr__(self):
+         return '<Scenario "%s">' % self.name
+EOF
+patch -p1 <<"EOF" || true
+diff --git a/behave/model.py b/behave/model.py
+index 1183e1b..371c8dd 100644
+--- a/behave/model.py
++++ b/behave/model.py
+@@ -372,6 +372,8 @@ class Scenario(TagStatement, Replayable)
+         self.steps = steps or []
+ 
+         self.background = None
++        self.stderr = None
++        self.stdout = None
+ 
+     def __repr__(self):
+         return '<Scenario "%s">' % self.name
+EOF
+
+popd
+
+set +e
+
+if $MEASURE_COVERAGE; then
+  python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml --with-coverage tests/unit/ <<EOC
+yes
+EOC
+  mv .coverage $WORKSPACE/.coverage.chroma_manager_unit_tests
+
+  coverage run --source=. --omit=tests/* -m behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
+  mv .coverage $WORKSPACE/.coverage.chroma_manager_behave_unit_tests
+
+  cd ../chroma-agent
+  nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml --with-coverage
+  mv .coverage $WORKSPACE/.coverage.chroma_agent_unit_tests
+
+  cd $WORKSPACE
+  coverage combine
+  coverage xml --include="$WORKSPACE/chroma_unit_test_env/chroma/*" --omit="*junk.py,*/tests/*" --ignore-errors
+else
+  python manage.py test --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-manager-unit-test-results.xml tests/unit/ <<EOC
+yes
+EOC
+
+  behave --junit --junit-directory $WORKSPACE/test_reports --format plain tests/feature/cli/features
+
+  cd ../chroma-agent
+  nosetests --with-xunit --xunit-file=$WORKSPACE/test_reports/chroma-agent-unit-test-results.xml
+fi
+
+set -e
+
+# Check that all of the expected xml reports are present. (should be 8 when all these tests are working)
+if [ $(ls -1 $WORKSPACE/test_reports | wc -l) -lt 8 ]; then
+  exit 1
+else
+  exit 0
+fi

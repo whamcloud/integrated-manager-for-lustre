@@ -1,0 +1,97 @@
+#!/bin/bash -ex
+
+if [ "$slave" = "rhel6&&ssi" ]; then
+    RHEL=true
+else
+    RHEL=false
+fi
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+[ -r localenv ] && . localenv
+
+# Remove test results and coverage reports from previous run
+rm -rfv $PWD/test_reports/*
+rm -rfv $PWD/coverage_reports/.coverage*
+mkdir -p $PWD/test_reports
+mkdir -p $PWD/coverage_reports
+
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
+USE_FENCE_XVM=false
+
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+
+PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
+
+echo "Beginning installation and setup..."
+
+# put some keys on the nodes for easy access by developers
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
+cat <<\"EOF\" >> /root/.ssh/authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrcI6x6Fv2nzJwXP5mtItOcIDVsiD0Y//LgzclhRPOT9PQ/jwhQJgrggPhYr5uIMgJ7szKTLDCNtPIXiBEkFiCf9jtGP9I6wat83r8g7tRCk7NVcMm0e0lWbidqpdqKdur9cTGSOSRMp7x4z8XB8tqs0lk3hWefQROkpojzSZE7fo/IT3WFQteMOj2yxiVZYFKJ5DvvjdN8M2Iw8UrFBUJuXv5CQ3xV66ZvIcYkth3keFk5ZjfsnDLS3N1lh1Noj8XbZFdSRC++nbWl1HfNitMRm/EBkRGVP3miWgVNfgyyaT9lzHbR8XA7td/fdE5XrTpc7Mu38PE7uuXyLcR4F7l brian@brian-laptop
+EOF" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# need to remove the chroma repositories configured by the provisioner
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+if $RHEL; then
+yum-config-manager --enable  rhel-6-server-optional-rpms
+fi
+if [ -f /etc/yum.repos.d/autotest.repo ]; then
+    rm -f /etc/yum.repos.d/autotest.repo
+fi
+$PROXY yum install -y omping" | dshbak -c
+if [ ${PIPESTATUS[0]} != 0 ]; then
+    exit 1
+fi
+
+# Install and setup integration tests on integration test runner
+scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+ssh root@$TEST_RUNNER <<EOF
+exec 2>&1; set -xe
+$PROXY yum --disablerepo=\* --enablerepo=chroma makecache
+$PROXY yum -y install chroma-manager-integration-tests
+
+if $USE_FENCE_XVM; then
+    # make sure the host has fence_virtd installed and configured
+    ssh root@$HOST_IP "exec 2>&1; set -xe
+    uname -a
+    $PROXY yum install -y fence-virt fence-virtd fence-virtd-libvirt fence-virtd-multicast
+    mkdir -p /etc/cluster
+    echo \"not secure\" > /etc/cluster/fence_xvm.key
+    restorecon -Rv /etc/cluster/
+    cat <<\"EOF1\" > /etc/fence_virt.conf
+backends {
+	libvirt {
+		uri = \"qemu:///system\";
+	}
+
+}
+
+listeners {
+	multicast {
+		port = \"1229\";
+		family = \"ipv4\";
+		address = \"225.0.0.12\";
+		key_file = \"/etc/cluster/fence_xvm.key\";
+		interface = \"virbr0\";
+	}
+
+}
+
+fence_virtd {
+	module_path = \"/usr/lib64/fence-virt\";
+	backend = \"libvirt\";
+	listener = \"multicast\";
+}
+EOF1
+    chkconfig --add fence_virtd
+    chkconfig fence_virtd on
+    service fence_virtd restart"
+fi
+EOF
