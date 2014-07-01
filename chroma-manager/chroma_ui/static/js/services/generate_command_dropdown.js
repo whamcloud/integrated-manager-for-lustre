@@ -32,9 +32,10 @@
        * @param {number} index
        * @param {function} [transformFunc]
        * @param {function} [abortFunc]
+       * @param {function} [commandClick]
        * @returns {function}
        */
-      dataTableCallback: function (index, transformFunc, abortFunc) {
+      dataTableCallback: function (index, transformFunc, abortFunc, commandClick) {
         transformFunc = transformFunc || angular.identity;
         abortFunc = abortFunc || function () { return false; };
 
@@ -54,7 +55,7 @@
           // NOTE: This is only being done because of the Angular in Backbone paradigm.
           var $actionCell = angular.element(row).find('td:nth-child(%d)'.sprintf(index));
 
-          this.generateDropdown($actionCell, data);
+          this.generateDropdown($actionCell, data, null, commandClick);
 
           return row;
         }.bind(this);
@@ -64,17 +65,23 @@
        * @param {object} parentOrElement The parent to insert into or the element itself
        * @param {object} data The data to attach to scope.
        * @param {string} [placement] What direction? 'top'|'bottom'|'left'|'right'
+       * @param {Function} [commandClick] Passes the commandClick to the directive.
        * @returns {object} The command-dropdown element
        */
-      generateDropdown: function (parentOrElement, data, placement) {
+      generateDropdown: function (parentOrElement, data, placement, commandClick) {
         placement = placement || 'left';
 
         var isElement = (parentOrElement.attr('command-dropdown') !== undefined &&
           parentOrElement.attr('command-dropdown') !== false);
 
+        var hasCommandClick =  (typeof commandClick === 'function');
+
         var template = (isElement ?
           parentOrElement:
-          '<div command-dropdown command-placement="%s" command-data="data"></div>'.sprintf(placement));
+          '<div command-dropdown command-placement="%s" command-data="data"%s></div>'.sprintf(
+            placement,
+            hasCommandClick ? ' command-click="commandClick($event, data, done)"': ''
+          ));
 
         var insertfunc = (isElement ? angular.noop: function (fragment) { parentOrElement.html(fragment); });
 
@@ -82,6 +89,9 @@
         var $scope = $rootScope.$new();
 
         $scope.data = data;
+
+        if (hasCommandClick)
+          $scope.commandClick = commandClick;
 
         return $scope.safeApply(function () {
           var link = $compile(template);

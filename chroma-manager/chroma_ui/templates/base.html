@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="{{STATIC_URL}}js/modules/exception/assets/css/exception-dialog.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}js/modules/exception/assets/css/disconnect-dialog.css" type="text/css" />
     <link rel="stylesheet" href="{{STATIC_URL}}js/modules/configure-lnet/assets/css/configure-lnet.css" type="text/css" />
+    <link rel="stylesheet" href="{{STATIC_URL}}css/server_configuration.css" type="text/css" />
 
     <link rel="stylesheet" href="{{STATIC_URL}}js/lib/select-box-it/select-box-it.css" />
 
@@ -158,6 +159,7 @@
     <script type="text/javascript" src="{{STATIC_URL}}js/text_updater.js"></script>
 
     <!-- Application (individual panes) -->
+    <script type="text/javascript" src="{{STATIC_URL}}js/server_configuration.js"></script>
     <script type='text/javascript' src="{{STATIC_URL}}js/server_detail.js"></script>
     <script type='text/javascript' src="{{STATIC_URL}}js/user_detail.js"></script>
     <script type='text/javascript' src="{{STATIC_URL}}js/target_detail.js"></script>
@@ -167,6 +169,7 @@
 
     <!-- Templates -->
     {% include 'system_status.html' %}
+    {% include 'server_configuration.html' %}
 
     {% block scripts %}{% endblock %}
     <title>Intel&reg; Manager for Lustre* software</title>

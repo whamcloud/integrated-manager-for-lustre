@@ -20,10 +20,54 @@
 // express and approved by Intel in writing.
 
 
-function add_host_dialog(serverProfile) {
+/**
+ * A higher order function, to generate a server action override click handler.
+ * @param {Function} serverProfile used to memorize the last serverProfile.
+ * @returns {Function}
+ */
+function overrideServerActionClickFactory (serverProfile) {
+  'use strict';
+
+  return function overrideServerActionClick ($event, data, done) {
+    var buttonState = $($event.target).data('state');
+    var buttonStateIsGood = buttonState && buttonState !== 'removed';
+    var dataIsGood = data.state === 'undeployed' && data.install_method !== 'existing_keys_choice';
+
+    if (buttonStateIsGood && dataIsGood)
+      add_host_dialog(serverProfile, data, buttonState);
+    else
+      done();
+  }
+}
+
+/**
+ * A higher order function, to generate a serverProfile function.
+ * @returns {Function}
+ */
+function serverProfileFactory () {
+  'use strict';
+
+  var stickyServerProfile;
+
+  return function serverProfile(profile) {
+    if (_.isString(profile)) stickyServerProfile = profile;
+    return stickyServerProfile;
+  };
+}
+
+/**
+ * Responsible for adding / re-adding a new host.
+ * If host is provided, this dialog is used to re-add the host.
+ * @param {Function} serverProfile used to memorize the last serverProfile.
+ * @param {Object|undefined} [host] The server object.
+ * @param {String|undefined} newState The state to move into for a re-add.
+ */
+function add_host_dialog(serverProfile, host, newState) {
+
   /* Dialog setup */
   var template = _.template($('#add_host_dialog_template').html());
   var element;
+  var hasHost = _.isObject(host) && !Array.isArray(host);
 
   // slider settings
   var credits = {
@@ -60,7 +104,16 @@ function add_host_dialog(serverProfile) {
 
   $(window).resize(center_dialog);
 
-  element = $(template({ credits: credits, expiry: expiry }));
+  if (hasHost && _.isObject(host.server_profile))
+    serverProfile(host.server_profile.resource_uri);
+
+  var address = (hasHost && typeof host.address === 'string' ? host.address: '');
+
+  element = $(template({
+    credits: credits,
+    expiry: expiry,
+    address: address
+  }));
   element.dialog({title: 'Add server',
                   resizable: false,
                   modal: true,
@@ -166,10 +219,16 @@ function add_host_dialog(serverProfile) {
   function gatherParams() {
       var $form = element.find('form');
       var auth_group = $($form.find('div.choice_ssh_auth input[type="radio"]').filter(':checked')[0]).val();
+      var host_address = $('#id_add_host_address');
+      var host_disabled = host_address.attr('disabled') != null;
+
+      if (host_disabled)
+        host_address.removeAttr('disabled');
       var form_params = $form
           .find('div#' + auth_group)
           .find('input, textarea, select')
-          .add('#id_add_host_address, select.add_server_profile, #id_failed_validations')
+          .add(host_address)
+          .add('select.add_server_profile, #id_failed_validations')
           .serializeArray()
           .reduce(function (hash, pair) {
             if (pair.value.trim().length > 0)
@@ -177,10 +236,15 @@ function add_host_dialog(serverProfile) {
 
             return hash;
           }, {commit: true, auth_type: auth_group});
+      if (host_disabled)
+        host_address.attr('disabled', 'disabled');
       return form_params;
   }
   element.find('.add_host_submit_button').click(function(ev) {
       var form_params = gatherParams();
+
+      form_params.host_must_exist = hasHost;
+
       test_xhr = ValidatedForm.save(element.find('.add_host_prompt'), Api.post, "/api/test_host/", {},
           function(data) {
               if (!test_skipped) {
@@ -258,9 +322,19 @@ function add_host_dialog(serverProfile) {
 
     //  Build params from add host dialog form elements based on checked radio
     var post_params = gatherParams();
+    var path = 'host/';
+
+    var method;
+    if (hasHost) {
+      method = 'put';
+      post_params.state = newState;
+      path += host.id + '/';
+    } else {
+      method = 'post';
+    }
 
     serverProfile(post_params.server_profile);
-    Api.post('host/', post_params,
+    Api[method](path, post_params,
                 success_callback = function(data)
                 {
                   select_page('.add_host_complete', ssh_pages);
@@ -343,4 +417,23 @@ function add_host_dialog(serverProfile) {
       select_page('.add_host_prompt', ssh_pages);
       ev.preventDefault();
   });
+
+  if (hasHost && typeof host.install_method === 'string') {
+
+    var installTypes = {
+      id_password_root: function idPasswordRootHandler () {
+        $('#id_password_choice').prop('checked', true).click();
+        $('.choice_ssh_auth').buttonset('refresh');
+      },
+      private_key_choice: function privateKeyHandler () {
+        $('#id_other_keys_choice').prop('checked', true).click();
+        $('.choice_ssh_auth').buttonset('refresh');
+      },
+      manual: function manualHandler () {
+        element.find('.add_host_wizard').tabs('option', 'active', 1);
+      }
+    };
+
+    installTypes[host.install_method]();
+  }
 }

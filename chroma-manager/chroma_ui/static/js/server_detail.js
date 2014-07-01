@@ -36,7 +36,12 @@ var ServerDetail = Backbone.View.extend({
     }
 
     var generateCommandDropdown = angular.element('html').injector().get('generateCommandDropdown');
-    generateCommandDropdown.generateDropdown($(this.el).find('div[command-dropdown]'), cleanModel);
+    generateCommandDropdown.generateDropdown(
+      $(this.el).find('div[command-dropdown]'),
+      cleanModel,
+      null,
+      overrideServerActionClickFactory(serverProfileFactory())
+    );
     return this;
   }
 });
