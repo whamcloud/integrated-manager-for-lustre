@@ -3,7 +3,7 @@
 
   describe('Command Dropdown', function () {
 
-    var data;
+    var data, el;
 
     beforeEach(module('services', 'constants', function () {
       data = {
@@ -57,6 +57,7 @@
         ]
       };
 
+      el = angular.element('<div />');
     }));
 
     beforeEach(inject(function ($injector, safeApply) {
@@ -87,7 +88,7 @@
 
       $scope.data = data;
 
-      commandDropdownService.link($scope);
+      commandDropdownService.link($scope, el, {});
       $scope.data.available_transitions.forEach(function (transition) {
         var match = _.where($scope.list, {
           verb: transition.verb,
@@ -112,10 +113,8 @@
       var $scope = $rootScope.$new();
       $scope.data = data;
 
-      var el = angular.element('<div />');
-
       expect(el.hasClass('hide')).toBeFalsy();
-      commandDropdownService.link($scope, el);
+      commandDropdownService.link($scope, el, {});
       expect(el.hasClass('hide')).toBeFalsy();
 
       $scope.$broadcast('disableCommandDropdown', 'foo');
@@ -139,14 +138,28 @@
       $scope.data = _.cloneDeep(data);
       $scope.data.resource_uri = 'bar';
 
-      var el = angular.element('<div />');
-
       expect(el.hasClass('hide')).toBeFalsy();
 
-      commandDropdownService.link($scope, el);
+      commandDropdownService.link($scope, el, {});
 
       expect(el.hasClass('hide')).toBeTruthy();
       expect($window.CommandNotification.uriIsWriteLocked).toHaveBeenCalledWith('bar');
+    }));
+
+    it('should delegate to a click handler if one is provided', inject(function (commandDropdownService, $rootScope) {
+      var $scope = $rootScope.$new();
+      $scope.data = data;
+      $scope.commandClick = jasmine.createSpy('commandClick');
+      commandDropdownService.link($scope, el, {commandClick: ''});
+
+      var $event = {};
+      $scope.transitionClicked($event);
+
+      expect($scope.commandClick).toHaveBeenCalledOnceWith({
+        $event: $event,
+        data: data,
+        done: jasmine.any(Function)
+      });
     }));
   });
 })(window.lodash);

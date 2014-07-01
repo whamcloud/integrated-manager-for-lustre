@@ -28,10 +28,12 @@
       restrict: 'A',
       scope: {
         placement: '@commandPlacement',
-        data: '=commandData'
+        data: '=commandData',
+        commandClick: '&'
       },
       templateUrl: '%spartials/directives/command_dropdown.html'.sprintf(STATIC_URL),
-      link: function postLink(scope, el) {
+      link: function postLink(scope, el, attrs) {
+        var hasCommandClicked = 'commandClick' in attrs;
 
         /**
          * @description builds the list of actions that can be performed.
@@ -62,9 +64,29 @@
          */
         function generateHandler(type) {
           var handlerName = '%sClicked'.sprintf(type);
-          scope[handlerName] = function ($event) {
+
+          scope[handlerName] = (hasCommandClicked ? commandClickedHandler : originalHandler);
+
+          /**
+           * Invokes the corresponding LiveObject
+           * handler call.
+           * @param {Object} $event
+           */
+          function originalHandler ($event) {
             $window.LiveObject[handlerName].apply($event.target);
-          };
+          }
+
+          /**
+           * Invokes the command clicked handler.
+           * @param {Object} $event
+           */
+          function commandClickedHandler ($event) {
+            scope.commandClick({
+              $event: $event,
+              data: scope.data,
+              done: originalHandler.bind(null, $event)
+            });
+          }
         }
 
         scope.toJson = angular.toJson;
