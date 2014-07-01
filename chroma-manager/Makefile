@@ -229,7 +229,14 @@ docs: requirements version
 	if [ -z $(VIRTUAL_ENV) ] ; then \
 		virtualenv --system-site-packages myenv ; \
 		. myenv/bin/activate; \
-		pip install -r ./requirements.txt; \
+		if [ -n "$(CACHE)" ]; then \
+		  echo "# Using pip cache at $(CACHE)/pip_cache"; \
+		  mkdir -p $(CACHE)/pip_cache; \
+		  python tests/utils/pip_install_requirements.py $(CACHE)/pip_cache; \
+		else \
+		  echo "# No value found for CACHE. Installing pip requirements without a cache."; \
+		  pip install -r ./requirements.txt; \
+		fi ; \
 	fi ; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 

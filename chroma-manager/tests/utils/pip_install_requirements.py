@@ -88,7 +88,7 @@ class PipInstallRequirements(object):
             print "Downloading the following packages: %s" % ' '.join(dependency_changes)
             start_time = datetime.datetime.now()
             while datetime.datetime.now() - start_time < self.PIP_TIMEOUT:
-                download_command = ['pip', 'install', '--no-install',
+                download_command = ['pip', 'install', '--exists-action', 'i', '--no-install',
                     '--build', build_dir, '--download', self.pip_packages_dir]
                 download_command.extend(dependency_changes)
                 exit_status = subprocess.call(download_command)
