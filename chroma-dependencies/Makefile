@@ -17,7 +17,7 @@ requirements: TARGET=requirements
 
 requirements::
 	# these are the ones provided by EL
-	echo "netaddr==0.7.5"
+	echo "https://dl.dropboxusercontent.com/s/0hk2e06aeujotx0/netaddr-0.7.5.zip"
 	echo "paramiko==1.7.5"
 	echo "pycrypto==2.0.1"
 	echo "psycopg2==2.0.14"
