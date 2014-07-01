@@ -10,7 +10,6 @@ var stylish = require('jshint-stylish');
 var files = require('./gulp-src-globs.json');
 var uglify = require('gulp-uglify');
 var concat = require('gulp-concat');
-var rimraf = require('gulp-rimraf');
 var rev = require('gulp-rev');
 var replace = require('gulp-replace');
 var minifyHtml = require('gulp-minify-html');
@@ -20,6 +19,7 @@ var less = require('gulp-less');
 var csso = require('gulp-csso');
 var cache = require('gulp-cached');
 var streamqueue = require('streamqueue');
+var del = require('del');
 
 var qualityFiles = files.js.source.concat(
   'test/spec/**/*.js',
@@ -96,11 +96,8 @@ gulp.task('copy-templates', ['clean-templates'], function copyTemplates () {
 /*
  * Clean out templates directory
  */
-gulp.task('clean-templates', function cleanTemplates () {
-  return gulp.src('templates/**', {
-    read: false
-  })
-    .pipe(rimraf());
+gulp.task('clean-templates', function cleanTemplates (cb) {
+  del(['templates/**'], cb);
 });
 
 /*
@@ -122,11 +119,8 @@ gulp.task('static:build', ['clean-static'], function staticDev () {
 /*
  * Clean out static dir.
  */
-gulp.task('clean-static', function cleanStatic () {
-  return gulp.src('static/chroma_ui/**/*', {
-    read: false
-  })
-    .pipe(rimraf());
+gulp.task('clean-static', function cleanStatic (cb) {
+  del(['static/chroma_ui/**/*'], cb);
 });
 
 /*
