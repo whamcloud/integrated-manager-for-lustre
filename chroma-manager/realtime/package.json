@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "socket.io-client": "0.9.16",
-    "jasmine-node": "1.13.0",
+    "jasmine-node-chum": "1.14.3",
     "proxyquire": "0.5.2",
     "jasmine-n-matchers": "0.0.3",
     "jasmine-object-containing": "0.0.2",
