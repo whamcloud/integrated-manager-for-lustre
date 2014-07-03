@@ -77,7 +77,7 @@ gulp.task('inject:dev', ['static:dev', 'clean-static', 'copy-templates'], functi
     jsStream,
     cssStream);
 
-  gulp.src('templates_source/chroma_ui/base.html')
+  return gulp.src('templates_source/chroma_ui/base.html')
     .pipe(injector(stream))
     .pipe(gulp.dest('templates/chroma_ui'));
 });
@@ -136,13 +136,13 @@ gulp.task('build', ['copy-templates', 'static:build'], function builder () {
     .pipe(rev())
     .pipe(gulp.dest('static/chroma_ui/styles'));
 
-  gulp.src('templates_source/chroma_ui/base.html')
-    .pipe(injector(streamqueue({
-        objectMode: true
-      },
-      jsStream,
-      cssStream
-    )))
+  var stream = streamqueue({ objectMode: true })
+    .queue(cssStream)
+    .queue(jsStream)
+    .done();
+
+  return gulp.src('templates_source/chroma_ui/base.html')
+    .pipe(injector(stream))
     .pipe(replace(/(<base href=").+(" \/>)/, '$1/ui/$2'))
     .pipe(gulp.dest('templates/new', {
       cwd: '../chroma_ui'
