@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Start or stop an MGT, MDT, or OST",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Start or stop an MGT, MDT, or OST",
-   sharesubject: "Intel® Manager for Lustre* - Start or stop an MGT, MDT, or OST",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Start or stop an MGT, MDT, or OST",
+   sharesubject: "Intel® Manager for Lustre* software - Start or stop an MGT, MDT, or OST",
    simplesubject: "Documentation%20Feedback",
    mailid: "Start_or_stop_a_server_for_a_M",
    mailpath: "File system maintenance &gt; Start or stop an MGT, MDT, or OST /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Start or stop an MGT, MDT, or OST").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Start or stop an MGT, MDT, or OST").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

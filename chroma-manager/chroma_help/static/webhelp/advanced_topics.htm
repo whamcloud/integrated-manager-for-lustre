@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Advanced topics",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Advanced topics",
-   sharesubject: "Intel® Manager for Lustre* - Advanced topics",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Advanced topics",
+   sharesubject: "Intel® Manager for Lustre* software - Advanced topics",
    simplesubject: "Documentation%20Feedback",
    mailid: "Advanced_Topics",
    mailpath: "Advanced topics /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Advanced topics").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Advanced topics").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

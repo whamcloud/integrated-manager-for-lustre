@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Start, stop, or remove a file system",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Start, stop, or remove a file system",
-   sharesubject: "Intel® Manager for Lustre* - Start, stop, or remove a file system",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Start, stop, or remove a file system",
+   sharesubject: "Intel® Manager for Lustre* software - Start, stop, or remove a file system",
    simplesubject: "Documentation%20Feedback",
    mailid: "Starting_or_stopping_a_file_sy",
    mailpath: "File system maintenance &gt; Start, stop, or remove a file system /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Start, stop, or remove a file system").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Start, stop, or remove a file system").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

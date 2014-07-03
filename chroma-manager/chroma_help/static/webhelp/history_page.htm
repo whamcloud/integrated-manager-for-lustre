@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "History window",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - History window",
-   sharesubject: "Intel® Manager for Lustre* - History window",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - History window",
+   sharesubject: "Intel® Manager for Lustre* software - History window",
    simplesubject: "Documentation%20Feedback",
    mailid: "History_Page",
    mailpath: "Graphical User Interface - windows and pages &gt; History window /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - History window").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - History window").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

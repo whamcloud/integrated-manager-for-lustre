@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Configuration menu",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Configuration menu",
-   sharesubject: "Intel® Manager for Lustre* - Configuration menu",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Configuration menu",
+   sharesubject: "Intel® Manager for Lustre* software - Configuration menu",
    simplesubject: "Documentation%20Feedback",
    mailid: "Configuration_Page",
    mailpath: "Graphical User Interface - windows and pages &gt; Configuration menu /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Configuration menu").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Configuration menu").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

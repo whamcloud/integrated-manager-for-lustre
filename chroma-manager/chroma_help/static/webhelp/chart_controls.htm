@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Chart controls",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Chart controls",
-   sharesubject: "Intel® Manager for Lustre* - Chart controls",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Chart controls",
+   sharesubject: "Intel® Manager for Lustre* software - Chart controls",
    simplesubject: "Documentation%20Feedback",
    mailid: "Chart_controls",
    mailpath: "Monitoring Lustre* file systems &gt; View charts on the Dashboard &gt; Chart controls /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Chart controls").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Chart controls").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

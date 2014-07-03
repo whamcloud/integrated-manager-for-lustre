@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Storage page",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Storage page",
-   sharesubject: "Intel® Manager for Lustre* - Storage page",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Storage page",
+   sharesubject: "Intel® Manager for Lustre* software - Storage page",
    simplesubject: "Documentation%20Feedback",
    mailid: "Storage_Tab",
    mailpath: "Graphical User Interface - windows and pages &gt; Configuration menu &gt; Storage page /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Storage page").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Storage page").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

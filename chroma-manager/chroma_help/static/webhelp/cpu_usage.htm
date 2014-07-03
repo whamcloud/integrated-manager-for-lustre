@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "CPU Usage chart",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - CPU Usage chart",
-   sharesubject: "Intel® Manager for Lustre* - CPU Usage chart",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - CPU Usage chart",
+   sharesubject: "Intel® Manager for Lustre* software - CPU Usage chart",
    simplesubject: "Documentation%20Feedback",
    mailid: "CPU_Usage",
    mailpath: "Graphical User Interface - windows and pages &gt; Dashboard charts &gt; CPU Usage chart /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - CPU Usage chart").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - CPU Usage chart").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Important Information about reconfiguring your file system",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Important Information about reconfiguring your file system",
-   sharesubject: "Intel® Manager for Lustre* - Important Information about reconfiguring your file system",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Important Information about reconfiguring your file system",
+   sharesubject: "Intel® Manager for Lustre* software - Important Information about reconfiguring your file system",
    simplesubject: "Documentation%20Feedback",
    mailid: "A_caution_about_reconfiguring_",
    mailpath: "Creating a new Lustre* file system &gt; Important Information about reconfiguring your file system /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Important Information about reconfiguring your file system").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Important Information about reconfiguring your file system").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

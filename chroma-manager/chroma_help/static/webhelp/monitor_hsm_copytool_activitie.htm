@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "View HSM Copytool activities",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - View HSM Copytool activities",
-   sharesubject: "Intel® Manager for Lustre* - View HSM Copytool activities",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View HSM Copytool activities",
+   sharesubject: "Intel® Manager for Lustre* software - View HSM Copytool activities",
    simplesubject: "Documentation%20Feedback",
    mailid: "Monitor_HSM_Copytool_Activitie",
    mailpath: "Monitoring Lustre* file systems &gt; View HSM Copytool activities /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - View HSM Copytool activities").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View HSM Copytool activities").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

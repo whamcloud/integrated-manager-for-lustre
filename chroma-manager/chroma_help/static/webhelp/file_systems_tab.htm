@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "File Systems page",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - File Systems page",
-   sharesubject: "Intel® Manager for Lustre* - File Systems page",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - File Systems page",
+   sharesubject: "Intel® Manager for Lustre* software - File Systems page",
    simplesubject: "Documentation%20Feedback",
    mailid: "File_Systems_Tab",
    mailpath: "Graphical User Interface - windows and pages &gt; Configuration menu &gt; File Systems page /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - File Systems page").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - File Systems page").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

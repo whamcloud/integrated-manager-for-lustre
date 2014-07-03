@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Introducing Intel® Manager for Lustre*",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Introducing Intel® Manager for Lustre*",
-   sharesubject: "Intel® Manager for Lustre* - Introducing Intel® Manager for Lustre*",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Introducing Intel® Manager for Lustre*",
+   sharesubject: "Intel® Manager for Lustre* software - Introducing Intel® Manager for Lustre*",
    simplesubject: "Documentation%20Feedback",
    mailid: "introducing_intel_manager_for_lustre",
    mailpath: "Introducing Intel® Manager for Lustre* /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Introducing Intel® Manager for Lustre*").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Introducing Intel® Manager for Lustre*").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }
