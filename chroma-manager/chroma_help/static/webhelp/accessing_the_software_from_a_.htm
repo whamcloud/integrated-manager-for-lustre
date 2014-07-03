@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Access the Dashboard from a smart phone or tablet",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Access the Dashboard from a smart phone or tablet",
-   sharesubject: "Intel® Manager for Lustre* - Access the Dashboard from a smart phone or tablet",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Access the Dashboard from a smart phone or tablet",
+   sharesubject: "Intel® Manager for Lustre* software - Access the Dashboard from a smart phone or tablet",
    simplesubject: "Documentation%20Feedback",
    mailid: "Accessing_the_software_from_a_",
    mailpath: "Introducing Intel® Manager for Lustre* &gt; Access the Dashboard from a smart phone or tablet /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Access the Dashboard from a smart phone or tablet").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Access the Dashboard from a smart phone or tablet").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

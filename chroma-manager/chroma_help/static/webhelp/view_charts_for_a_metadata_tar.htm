@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "View charts for an MDT",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - View charts for an MDT",
-   sharesubject: "Intel® Manager for Lustre* - View charts for an MDT",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View charts for an MDT",
+   sharesubject: "Intel® Manager for Lustre* software - View charts for an MDT",
    simplesubject: "Documentation%20Feedback",
    mailid: "View_charts_for_a_metadata_tar",
    mailpath: "Monitoring Lustre* file systems &gt; View charts on the Dashboard &gt; View charts for an MDT /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - View charts for an MDT").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View charts for an MDT").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

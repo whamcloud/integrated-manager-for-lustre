@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Accessing the command line interface",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Accessing the command line interface",
-   sharesubject: "Intel® Manager for Lustre* - Accessing the command line interface",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Accessing the command line interface",
+   sharesubject: "Intel® Manager for Lustre* software - Accessing the command line interface",
    simplesubject: "Documentation%20Feedback",
    mailid: "Accessing_the_Command_Line_Int",
    mailpath: "Using the Intel® Manager for Lustre* command line interface &gt; Accessing the command line interface /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Accessing the command line interface").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Accessing the command line interface").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

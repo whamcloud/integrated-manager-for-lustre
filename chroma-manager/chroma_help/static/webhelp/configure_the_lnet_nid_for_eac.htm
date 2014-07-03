@@ -46,14 +46,14 @@ var hmHeaderTopic = true;
 var tVars = {
    hmHelpPage: "index.html",
    nextP: "configure_the_volumes.htm",
-   prevP: "configure_storage_servers.htm",
+   prevP: "if_adding_a_server_fails.htm",
    currP: "configure_the_lnet_nid_for_eac.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Configure LNet for each server",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Configure LNet for each server",
-   sharesubject: "Intel® Manager for Lustre* - Configure LNet for each server",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Configure LNet for each server",
+   sharesubject: "Intel® Manager for Lustre* software - Configure LNet for each server",
    simplesubject: "Documentation%20Feedback",
    mailid: "Configure_the_LNet_NID_for_eac",
    mailpath: "Creating a new Lustre* file system &gt; Configure LNet for each server /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Configure LNet for each server").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Configure LNet for each server").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

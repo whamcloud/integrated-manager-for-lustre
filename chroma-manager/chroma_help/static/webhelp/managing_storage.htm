@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "File system maintenance",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - File system maintenance",
-   sharesubject: "Intel® Manager for Lustre* - File system maintenance",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - File system maintenance",
+   sharesubject: "Intel® Manager for Lustre* software - File system maintenance",
    simplesubject: "Documentation%20Feedback",
    mailid: "managing_storage",
    mailpath: "File system maintenance /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - File system maintenance").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - File system maintenance").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

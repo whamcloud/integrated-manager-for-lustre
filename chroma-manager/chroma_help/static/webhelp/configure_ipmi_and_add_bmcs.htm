@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Assign BMCs to servers",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Assign BMCs to servers",
-   sharesubject: "Intel® Manager for Lustre* - Assign BMCs to servers",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Assign BMCs to servers",
+   sharesubject: "Intel® Manager for Lustre* software - Assign BMCs to servers",
    simplesubject: "Documentation%20Feedback",
    mailid: "Configure_IPMI_and_add_BMCs",
    mailpath: "Creating a new Lustre* file system &gt; Assign BMCs to servers /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Assign BMCs to servers").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Assign BMCs to servers").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

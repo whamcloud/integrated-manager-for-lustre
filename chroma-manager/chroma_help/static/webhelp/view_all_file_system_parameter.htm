@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "View and change file system parameters",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - View and change file system parameters",
-   sharesubject: "Intel® Manager for Lustre* - View and change file system parameters",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View and change file system parameters",
+   sharesubject: "Intel® Manager for Lustre* software - View and change file system parameters",
    simplesubject: "Documentation%20Feedback",
    mailid: "View_All_File_System_Parameter",
    mailpath: "Monitoring Lustre* file systems &gt; View and change file system parameters /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - View and change file system parameters").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View and change file system parameters").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

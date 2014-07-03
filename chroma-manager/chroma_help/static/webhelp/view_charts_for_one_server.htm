@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "View charts for one server",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - View charts for one server",
-   sharesubject: "Intel® Manager for Lustre* - View charts for one server",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View charts for one server",
+   sharesubject: "Intel® Manager for Lustre* software - View charts for one server",
    simplesubject: "Documentation%20Feedback",
    mailid: "View_charts_for_one_server",
    mailpath: "Monitoring Lustre* file systems &gt; View charts on the Dashboard &gt; View charts for one server /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - View charts for one server").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View charts for one server").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

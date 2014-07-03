@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "View job statistics",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - View job statistics",
-   sharesubject: "Intel® Manager for Lustre* - View job statistics",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View job statistics",
+   sharesubject: "Intel® Manager for Lustre* software - View job statistics",
    simplesubject: "Documentation%20Feedback",
    mailid: "View_Job_Statistics",
    mailpath: "Monitoring Lustre* file systems &gt; View job statistics /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - View job statistics").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View job statistics").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

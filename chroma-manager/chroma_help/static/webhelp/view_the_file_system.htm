@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "View the new file system",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - View the new file system",
-   sharesubject: "Intel® Manager for Lustre* - View the new file system",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - View the new file system",
+   sharesubject: "Intel® Manager for Lustre* software - View the new file system",
    simplesubject: "Documentation%20Feedback",
    mailid: "View_the_File_System",
    mailpath: "Creating a new Lustre* file system &gt; View the new file system /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - View the new file system").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - View the new file system").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

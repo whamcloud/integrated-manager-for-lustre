@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Perform a manual server failback",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Perform a manual server failback",
-   sharesubject: "Intel® Manager for Lustre* - Perform a manual server failback",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Perform a manual server failback",
+   sharesubject: "Intel® Manager for Lustre* software - Perform a manual server failback",
    simplesubject: "Documentation%20Feedback",
    mailid: "Perform_a_manual_failback",
    mailpath: "File system maintenance &gt; Perform a manual server failback /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Perform a manual server failback").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Perform a manual server failback").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

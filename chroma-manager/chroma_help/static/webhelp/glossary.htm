@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Glossary",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Glossary",
-   sharesubject: "Intel® Manager for Lustre* - Glossary",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Glossary",
+   sharesubject: "Intel® Manager for Lustre* software - Glossary",
    simplesubject: "Documentation%20Feedback",
    mailid: "glossary",
    mailpath: "Glossary /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Glossary").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Glossary").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

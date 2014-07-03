@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Graphical User Interface - windows and pages",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Graphical User Interface - windows and pages",
-   sharesubject: "Intel® Manager for Lustre* - Graphical User Interface - windows and pages",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Graphical User Interface - windows and pages",
+   sharesubject: "Intel® Manager for Lustre* software - Graphical User Interface - windows and pages",
    simplesubject: "Documentation%20Feedback",
    mailid: "GUI_Pages_and_Tabs",
    mailpath: "Graphical User Interface - windows and pages /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Graphical User Interface - windows and pages").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Graphical User Interface - windows and pages").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }

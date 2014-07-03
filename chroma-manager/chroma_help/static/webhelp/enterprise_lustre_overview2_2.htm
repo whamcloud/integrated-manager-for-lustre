@@ -52,8 +52,8 @@ var tVars = {
    mailUrl: "",
    mailUrlQuery: "",
    titleP: "Overview of Intel® Enterprise Edition for Lustre* software",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Overview of Intel® Enterprise Edition for Lustre* software",
-   sharesubject: "Intel® Manager for Lustre* - Overview of Intel® Enterprise Edition for Lustre* software",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Overview of Intel® Enterprise Edition for Lustre* software",
+   sharesubject: "Intel® Manager for Lustre* software - Overview of Intel® Enterprise Edition for Lustre* software",
    simplesubject: "Documentation%20Feedback",
    mailid: "enterprise_lustre_overview2_2",
    mailpath: "Introducing Intel® Manager for Lustre* &gt; Overview of Intel® Enterprise Edition for Lustre* software /",
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Overview of Intel® Enterprise Edition for Lustre* software").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Overview of Intel® Enterprise Edition for Lustre* software").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }
