@@ -19,7 +19,7 @@ cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
 curl -k -O -u jenkins-pull:"$JENKINS_PULL" "$JOB_URL/build_info.txt"
 
-curl -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-2.0.0.tar.gz"
+curl -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-2.0.1.tar.gz"
 set -x
 
 sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration_tests/full_cluster/shared_storage_configuration_cluster_cfg.json
