@@ -36,7 +36,7 @@ cat << EOF > ./realtime/conf.json
 }
 EOF
 cd \$HOME/chroma_test_env/chroma/chroma-manager/realtime
-./node_modules/jasmine-node/bin/jasmine-node --verbose --captureExceptions --junitreport --output \$HOME/test_reports/ ./test/ || true
+./node_modules/.bin/jasmine-node-chum --verbose --captureExceptions --junitreport --output \$HOME/test_reports/ ./test/ || true
 
 # Run protractor selenium tests in Chrome and Firefox (new ui)
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
