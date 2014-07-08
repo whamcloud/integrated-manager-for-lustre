@@ -65,24 +65,28 @@ describe('Exception interceptor', function () {
   });
 
   describe('response error', function ( ) {
-    it('should reject 400 errors', function () {
-      response.status = 400;
+    var passThroughs = [400, 403];
 
-      var out = exceptionInterceptor.responseError(response);
+    passThroughs.forEach(function testStatus (status) {
+      it('should reject ' + status + ' errors', function () {
+        response.status = status;
 
-      out.then(null, errbackSpy);
+        var out = exceptionInterceptor.responseError(response);
 
-      $rootScope.$digest();
+        out.then(null, errbackSpy);
 
-      expect(errbackSpy).toHaveBeenCalled();
-    });
+        $rootScope.$digest();
 
-    it('should not call the $exceptionHandler with an error on 400s', function () {
-      response.status = 400;
+        expect(errbackSpy).toHaveBeenCalled();
+      });
 
-      exceptionInterceptor.responseError(response);
+      it('should not call the $exceptionHandler with an error on ' + status + 's', function () {
+        response.status = status;
 
-      expect(exceptionHandler.callCount).toBe(0);
+        exceptionInterceptor.responseError(response);
+
+        expect(exceptionHandler.callCount).toBe(0);
+      });
     });
 
     it('should call the $exceptionHandler with an error on 0s', function () {

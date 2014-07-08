@@ -56,9 +56,10 @@
       responseError: function responseError(response) {
         var rejected = $q.reject(response);
 
-        //400s do not trigger the dialog. It is the responsibility of the base model to handle them.
+        //400s and 403s do not trigger the dialog. It is the responsibility of the base model to handle them.
         //Pass through replays if they failed for the same reason.
-        if (response.status === 400 || (response.status === 0 && response.config.UI_REPLAY)) return rejected;
+        if (response.status === 400 || response.status === 403 || (response.status === 0 && response.config.UI_REPLAY))
+          return rejected;
 
         //Currently Angular does not have a nice way to determine whether a request was aborted on purpose.
         //@Fixme: Look at this again when https://github.com/angular/angular.js/issues/4491 is resolved.

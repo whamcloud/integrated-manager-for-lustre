@@ -53,8 +53,8 @@
       responseError: function responseError(response) {
         var rejected = $q.reject(response);
 
-        //400s do not trigger the modal. It is the responsibility of the base model to handle them.
-        if (response.status === 400) return rejected;
+        //400s and 403s do not trigger the modal. It is the responsibility of the base model to handle them.
+        if (response.status === 400 || response.status === 403) return rejected;
 
         var error = new Error('Response Error!');
 
