@@ -58,7 +58,7 @@ Requires: chroma-manager-libs = %{version}-%{release}
 Requires: chroma-manager-cli = %{version}-%{release}
 Requires: chroma-diagnostics >= %{version}-%{release}
 Requires: policycoreutils-python
-Requires: python-gevent >= 0.13
+Requires: python-gevent >= 1.0.1
 Requires: fence-agents-iml > 3.1.5-25.wc1.el6.2
 Requires: system-config-firewall-base
 %if %([ -z %{?realtime_dependencies} ]; echo $?)
