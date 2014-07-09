@@ -20,6 +20,7 @@ var csso = require('gulp-csso');
 var cache = require('gulp-cached');
 var streamqueue = require('streamqueue');
 var del = require('del');
+var gutil = require('gulp-util');
 
 var qualityFiles = files.js.source.concat(
   'test/spec/**/*.js',
@@ -49,7 +50,10 @@ gulp.task('jshint', function jsHint () {
 gulp.task('jscs', function jsCs () {
   return gulp.src(qualityFiles)
     .pipe(cache('codestylechecking'))
-    .pipe(jscs('.jscsrc'));
+    .pipe(jscs('.jscsrc').on('error', function handleError (err) {
+      this.emit('end');
+      gutil.log(err.message);
+    }));
 });
 
 /*
@@ -70,12 +74,11 @@ gulp.task('inject:dev', ['static:dev', 'clean-static', 'copy-templates'], functi
   var cssStream = compileLess()
     .pipe(gulp.dest('static/chroma_ui/styles'));
 
-  var stream = streamqueue({
-      objectMode: true
-    },
-    generatePrimusClientLib,
-    jsStream,
-    cssStream);
+  var stream = streamqueue({ objectMode: true })
+    .queue(cssStream)
+    .queue(generatePrimusClientLib)
+    .queue(jsStream)
+    .done();
 
   return gulp.src('templates_source/chroma_ui/base.html')
     .pipe(injector(stream))
@@ -149,13 +152,13 @@ gulp.task('build', ['copy-templates', 'static:build'], function builder () {
     }));
 });
 
-/*
- * The default task.
- * - Compiles less
- * - Injects CSS and JS files into base.html
- * - Watches files for changes and reruns tasks.
+/**
+ * Watch files for changes.
+ * - Watches .less files and compiles.
+ * - Watches other static files and moves to the correct dir.
+ * - Runs quality checks on changed files.
  */
-gulp.task('default', ['inject:dev'], function defaultTask () {
+gulp.task('watch', function watcher () {
   var sourceFiles = files.js.source.concat(files.less.source);
   gulp.watch(sourceFiles, ['inject:dev']);
 
@@ -168,6 +171,14 @@ gulp.task('default', ['inject:dev'], function defaultTask () {
 
   gulp.watch('templates_source/**/*.html', ['copy-templates']);
 });
+
+/*
+ * The default task.
+ * - Compiles less
+ * - Injects CSS and JS files into base.html
+ * - Watches files for changes and reruns tasks.
+ */
+gulp.task('default', ['watch', 'quality', 'inject:dev']);
 
 /**
  * Concats and uglifies JS / Templates.
