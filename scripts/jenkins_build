@@ -15,6 +15,7 @@ run_repo_maintenance()
     # This shouldn't cost much to run every time, but if it winds up being
     # a burden, we could try to randomize it or make it go every N runs.
     git gc
+    npm cache clear
 }
 
 clean_uncommitted_artifacts()
