@@ -450,7 +450,7 @@ def create_repo():
 
 
 def install_agent():
-    return launch_command('yum install -y %s' % repo_packages)
+    return launch_command('yum install -y --enablerepo=%s %s' % ('{repo_names}', repo_packages))
 
 
 def configure_server():
@@ -542,11 +542,13 @@ def setup(request, key):
         return token_error
 
     repos = ""
+    repo_names = []
     for bundle in token.profile.bundles.all():
+        repo_names.append(bundle.bundle_name)
         repos += """[%s]
 name=%s
 baseurl={0}/%s
-enabled=1
+enabled=0
 gpgcheck=0
 sslverify = 1
 sslcacert = {1}
@@ -578,7 +580,7 @@ proxy=_none_
     server_epoch_seconds = time.time()
     script_formatted = setup_script_template.format(reg_url = reg_url, cert_str = cert_str,
         repo_url= repo_url, base_url = base_url,
-        repos = repos,
+        repos = repos, repo_names = ",".join(repo_names),
         server_epoch_seconds = server_epoch_seconds,
         repo_packages = repo_packages)
 

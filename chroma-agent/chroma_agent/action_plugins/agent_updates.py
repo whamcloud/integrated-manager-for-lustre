@@ -56,6 +56,33 @@ def unconfigure_repo(repo_path=REPO_PATH):
         os.remove(repo_path)
 
 
+def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates=False):
+
+    if fromrepo and enablerepo:
+        raise ValueError("Cannot provide fromrepo and enablerepo simultaneously")
+
+    repo_arg = []
+    if fromrepo:
+        repo_arg = ['--disablerepo=*', '--enablerepo=%s' % ','.join(fromrepo)]
+    elif enablerepo:
+        repo_arg = ['--enablerepo=%s' % ','.join(enablerepo)]
+    if narrow_updates and action == 'query':
+        repo_arg.extend(['--pkgnarrow=updates', '-a'])
+
+    if action == 'clean':
+        cmd = ['yum', 'clean', 'all']
+    elif action == 'install':
+        cmd = ['yum', 'install', '-y'] + repo_arg + list(packages)
+    elif action == 'update':
+        cmd = ['yum', 'update', '-y'] + repo_arg + list(packages)
+    elif action == 'requires':
+        cmd = ['repoquery', '--requires'] + repo_arg + list(packages)
+    elif action == 'query':
+        cmd = ['repoquery'] + repo_arg + list(packages)
+
+    return shell.try_run(cmd)
+
+
 def update_packages(repos, packages):
     """
 
@@ -71,14 +98,14 @@ def update_packages(repos, packages):
 
     shell.try_run(['yum', 'clean', 'all'])
 
-    updates_stdout = shell.try_run(['repoquery', '--disablerepo=*', "--enablerepo=%s" % ",".join(repos), "--pkgnarrow=updates", "-a"])
+    updates_stdout = yum_util('query', fromrepo=repos, narrow_updates=True)
     update_packages = updates_stdout.strip().split("\n")
 
     if not update_packages:
         return None
 
     if packages:
-        out = shell.try_run(['repoquery', '--requires'] + list(packages))
+        out = yum_util('requires', packages=packages)
         force_installs = []
         for requirement in [l.strip() for l in out.strip().split("\n")]:
             match = re.match("([^\)/]*) = (.*)", requirement)
@@ -87,17 +114,18 @@ def update_packages(repos, packages):
                 force_installs.append("%s-%s" % (require_package, require_version))
 
         if force_installs:
-            shell.try_run(['yum', 'install', '-y'] + force_installs)
+            yum_util('install', enablerepo=repos, packages=force_installs)
 
     # We are only updating named packages from our repoquery of the specified repos, but
     # this invokation of yum does not disable any repos, so we may pull in dependencies
     # from other repos such as the main CentOS one.
-    shell.try_run(["yum", "-y", "update"] + update_packages)
+
+    yum_util('update', packages=update_packages, enablerepo=repos)
 
     return lustre.scan_packages()
 
 
-def install_packages(packages, force_dependencies=False):
+def install_packages(repos, packages, force_dependencies=False):
     """
     force_dependencies causes explicit evaluation of dependencies, and installation
     of any specific-version dependencies are satisfied even if
@@ -111,7 +139,7 @@ def install_packages(packages, force_dependencies=False):
     :return: A package report of the format given by the lustre device plugin
     """
     if force_dependencies:
-        out = shell.try_run(['repoquery', '--requires'] + list(packages))
+        out = yum_util('requires', enablerepo=repos, packages=packages)
         force_installs = []
         for requirement in [l.strip() for l in out.strip().split("\n")]:
             match = re.match("([^\)/]*) = (.*)", requirement)
@@ -119,9 +147,9 @@ def install_packages(packages, force_dependencies=False):
                 require_package, require_version = match.groups()
                 force_installs.append("%s-%s" % (require_package, require_version))
 
-        shell.try_run(['yum', 'install', '-y'] + force_installs)
+        yum_util('install', packages=force_installs, enablerepo=repos)
 
-    shell.try_run(['yum', 'install', '-y'] + list(packages))
+    yum_util('install', enablerepo=repos, packages=packages)
 
     return lustre.scan_packages()
 

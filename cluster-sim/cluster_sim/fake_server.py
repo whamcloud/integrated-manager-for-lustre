@@ -179,7 +179,7 @@ class FakeServer(Persisted):
 
         return packages
 
-    def install_packages(self, packages, force_dependencies=False):
+    def install_packages(self, repos, packages, force_dependencies=False):
         for package in packages:
             try:
                 self.state['packages'][package] = self._simulator.available_packages(self.node_type)[package]
@@ -194,7 +194,7 @@ class FakeServer(Persisted):
         return self.state['packages'][package]
 
     def update_packages(self, repos, packages):
-        return self.install_packages(packages)
+        return self.install_packages(repos, packages)
 
     def inject_log_message(self, message):
         log.debug("Injecting log message %s/%s" % (self.fqdn, message))

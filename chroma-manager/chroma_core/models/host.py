@@ -941,8 +941,10 @@ class InstallPackagesStep(Step):
 
         host = kwargs['host']
         packages = kwargs['packages']
+        repos = kwargs['repos']
 
         package_report = self.invoke_agent(host, 'install_packages', {
+            'repos': repos,
             'packages': packages,
             'force_dependencies': True
         })
@@ -977,6 +979,7 @@ class SetupHostJob(StateChangeJob):
 
         if not self.managed_host.is_monitor_only:
             steps.append((InstallPackagesStep, {
+                'repos': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
                 'host': self.managed_host,
                 'packages': list(self.managed_host.server_profile.packages)
             }))

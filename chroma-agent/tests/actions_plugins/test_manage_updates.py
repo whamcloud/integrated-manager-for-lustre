@@ -59,12 +59,12 @@ chroma-agent-management-99.01-3061.noarch
             self.assertListEqual(list(mock_try_run.call_args_list[0][0][0]), ['yum', 'clean', 'all'])
             self.assertListEqual(list(mock_try_run.call_args_list[1][0][0]), ['repoquery', '--disablerepo=*', "--enablerepo=myrepo", "--pkgnarrow=updates", "-a"])
             self.assertListEqual(list(mock_try_run.call_args_list[2][0][0]), ['repoquery', '--requires', 'mypackage'])
-            self.assertListEqual(list(mock_try_run.call_args_list[3][0][0]), ['yum', '-y', 'update', "chroma-agent-99.01-3061.noarch", "chroma-agent-management-99.01-3061.noarch"])
+            self.assertListEqual(list(mock_try_run.call_args_list[3][0][0]), ['yum', 'update', '-y', "--enablerepo=myrepo", "chroma-agent-99.01-3061.noarch", "chroma-agent-management-99.01-3061.noarch"])
 
     def test_install_packages(self):
         with patch('chroma_agent.shell.try_run') as mock_run:
-            agent_updates.install_packages(['foo', 'bar'])
-            mock_run.assert_called_once_with(['yum', 'install', '-y', 'foo', 'bar'])
+            agent_updates.install_packages(['myrepo'], ['foo', 'bar'])
+            mock_run.assert_called_once_with(['yum', 'install', '-y', "--enablerepo=myrepo", 'foo', 'bar'])
 
     def test_kernel_status(self):
         def try_run(args):
@@ -98,7 +98,7 @@ kernel-2.6.32-358.18.1.el6.x86_64
 
     def test_install_packages_force(self):
         def try_run(args):
-            if args == ['repoquery', '--requires', 'foo']:
+            if args == ['repoquery', '--requires', "--enablerepo=myrepo", 'foo']:
                 return """/usr/bin/python
 python >= 2.4
 python(abi) = 2.6
@@ -110,12 +110,12 @@ lustre-backend-fs
 """
 
         with patch('chroma_agent.shell.try_run', side_effect=try_run) as mock_run:
-            agent_updates.install_packages(['foo'], force_dependencies=True)
+            agent_updates.install_packages(['myrepo'], ['foo'], force_dependencies=True)
             self.assertListEqual(
                 mock_run.call_args_list,
                 [
-                    mock.call(['repoquery', '--requires', 'foo']),
-                    mock.call(['yum', 'install', '-y', 'kernel-2.6.32-279.14.1.el6_lustre']),
-                    mock.call(['yum', 'install', '-y', 'foo'])
+                    mock.call(['repoquery', '--requires', '--enablerepo=myrepo', 'foo']),
+                    mock.call(['yum', 'install', '-y', '--enablerepo=myrepo', 'kernel-2.6.32-279.14.1.el6_lustre']),
+                    mock.call(['yum', 'install', '-y', '--enablerepo=myrepo', 'foo'])
                 ]
             )
