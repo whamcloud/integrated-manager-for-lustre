@@ -65,7 +65,7 @@ class HostValidation(Validation):
             host_must_exist = bundle.data.get("host_must_exist", None)
 
             if (host_must_exist != None) and (host_must_exist != ManagedHost.objects.filter(address=address).exists()):
-                errors['address'].append["Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already")]
+                errors['address'].append("Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already"))
 
         return errors
 
