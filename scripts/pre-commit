@@ -10,6 +10,10 @@ import sys
 
 modified = re.compile('^(?:M|A)(\s+)(?P<name>.*)')
 
+localNodeModulesDir = 'chroma-manager/chroma_ui_new/node_modules'
+
+jscsBinDir = localNodeModulesDir + '/gulp-jscs/node_modules/.bin'
+
 DISABLED_CHECKS = [
     {
         'output': 'Checking for pdbs...',
@@ -137,7 +141,7 @@ JS_HINT_CHECK = {
 
 JS_CS_CHECK = {
         'output': 'Running JSCS...',
-        'command': 'jscs -c chroma-manager/chroma_ui_new/.jscsrc %s -r inline',
+        'command': jscsBinDir + '/jscs -c chroma-manager/chroma_ui_new/.jscsrc %s -r inline',
         'match_files': [
             '.*/chroma_ui_new/.*\.js$',
             '.*/chroma_ui/static/js/.+/[^/]+\.js$',
@@ -159,9 +163,9 @@ JS_CS_CHECK = {
 
 has_js_hint = spawn.find_executable('jshint')
 
-has_js_cs = spawn.find_executable('jscs')
-
 (CHECKS if has_js_hint else DISABLED_CHECKS).append(JS_HINT_CHECK)
+
+has_js_cs = spawn.find_executable('jscs', path=jscsBinDir)
 
 (CHECKS if has_js_cs else DISABLED_CHECKS).append(JS_CS_CHECK)
 
@@ -173,7 +177,6 @@ if not has_js_cs:
 
 def matches_file(file_name, match_files):
     return any(re.compile(match_file).match(file_name) for match_file in match_files)
-
 
 def check_files(files, check):
     result = 0
