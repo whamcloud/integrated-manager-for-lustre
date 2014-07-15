@@ -132,10 +132,6 @@ class Service(ChromaService):
                 if len(attrs):
                     JobSchedulerClient.notify(host, now(), attrs)
 
-                #  Corosync has just noticed this node go down, lnet must be down
-                if host.corosync_reported_up and not incoming_status:
-                    JobSchedulerClient.notify(host, now(), {'state': 'lnet_down'})
-
                 #  Keep internal track of the hosts state.
                 curr_status = self.HostStatus(status=incoming_status,
                                               datetime=dt)

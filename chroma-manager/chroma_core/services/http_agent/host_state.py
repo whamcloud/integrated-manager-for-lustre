@@ -51,15 +51,8 @@ class HostState(object):
         self._client_start_time = client_start_time
 
     def update_health(self, healthy):
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-
         HostContactAlert.notify(self._host, not healthy)
         self._healthy = healthy
-
-        #  The manager has just lost connection to server, and this is monitor only
-        #  corosync is not around to help, so marking lnet down
-        if not healthy and self._host.immutable_state:
-            JobSchedulerClient.notify(self._host, self.last_contact, {'state': 'lnet_down'})
 
     def update(self, boot_time, client_start_time):
         """
