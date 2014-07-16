@@ -176,11 +176,11 @@ class TestHostAddRemove(JobTestCase):
             ManagedHost.objects.get(address = 'myaddress')
 
         self.assertEqual(ManagedMgs.objects.count(), 0)
-        self.assertEqual(ManagedFilesystem.objects.count(), 0)
         self.assertEqual(ManagedOst.objects.count(), 0)
         self.assertEqual(ManagedMdt.objects.count(), 0)
         self.assertEqual(Volume.objects.count(), 0)
         self.assertEqual(VolumeNode.objects.count(), 0)
+        self.assertEqual(ManagedFilesystem.objects.count(), 0)
 
 
 class TestHostAddValidations(JobTestCase):

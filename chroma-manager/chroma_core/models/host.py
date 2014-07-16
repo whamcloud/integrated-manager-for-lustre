@@ -24,7 +24,6 @@
 import json
 import re
 import logging
-import itertools
 
 from django.db import models
 from django.db import transaction
@@ -1325,45 +1324,17 @@ class RemoveHostJob(StateChangeJob):
         return steps
 
 
-def _get_host_dependents(host):
-    from chroma_core.models.target import ManagedTarget, ManagedMgs, FilesystemMember
-
-    targets = set(list(ManagedTarget.objects.filter(managedtargetmount__host = host).distinct()))
-    filesystems = set()
-    for t in targets:
-        if not t.__class__ == ManagedTarget:
-            job_log.debug("objects=%s %s" % (ManagedTarget.objects, ManagedTarget.objects.__class__))
-            raise RuntimeError("Seems to have given DowncastMetaClass behaviour")
-        if issubclass(t.downcast_class, FilesystemMember):
-            filesystems.add(t.downcast().filesystem)
-        elif issubclass(t.downcast_class, ManagedMgs):
-            for f in t.downcast().managedfilesystem_set.all():
-                filesystems.add(f)
-    for f in filesystems:
-        targets |= set(list(f.get_targets()))
-    mounts = set(list(host.client_mounts.distinct()))
-    copytools = set(list(host.copytools.distinct()))
-
-    return targets, filesystems, mounts, copytools
-
-
 class DeleteHostDependents(Step):
     idempotent = True
     database = True
 
     def run(self, kwargs):
         host = kwargs['host']
-        targets, filesystems, mounts, copytools = _get_host_dependents(host)
 
-        job_log.info("DeleteHostDependents(%s): targets: %s, filesystems: %s, client_mounts: %s, copytools: %s" % (host, targets, filesystems, mounts, copytools))
-
-        # This keeps the UI sane... Faster than waiting around for an
-        # expiration.
-        for copytool in copytools:
-            copytool.cancel_current_operations()
-
-        for object in itertools.chain(targets, filesystems, mounts, copytools):
+        for object in host.get_dependent_objects(inclusive=True):
             # We are allowed to modify state directly because we have locked these objects
+            job_log.info("DeleteHostDependents for host %s: %s" % (host, object))
+            object.cancel_current_operations()
             object.set_state('removed')
             object.mark_deleted()
             object.save()
@@ -1400,9 +1371,8 @@ class ForceRemoveHostJob(AdvertisedJob):
             write = True
         ))
 
-        targets, filesystems, mounts, copytools = _get_host_dependents(self.host)
         # Take a write lock on get_stateful_object if this is a StateChangeJob
-        for object in itertools.chain(targets, filesystems, mounts, copytools):
+        for object in self.host.get_dependent_objects(inclusive=True):
             job_log.debug("Creating StateLock on %s/%s" % (object.__class__, object.id))
             locks.append(StateLock(
                 job = self,
@@ -1649,6 +1619,23 @@ class UpdateJob(Job):
                 'packages': list(self.host.server_profile.packages)
             })
         ]
+
+    def create_locks(self):
+        locks = [StateLock(
+            job = self,
+            locked_item = self.host,
+            write = True
+        )]
+
+        # Take a write lock on get_stateful_object if this is a StateChangeJob
+        for object in self.host.get_dependent_objects():
+            job_log.debug("Creating StateLock on %s/%s" % (object.__class__, object.id))
+            locks.append(StateLock(
+                job = self,
+                locked_item = object,
+                write = True))
+
+        return locks
 
     def on_success(self):
         from chroma_core.models.host import UpdatesAvailableAlert

@@ -140,8 +140,11 @@ class ObjectCache(object):
     def client_mount_copytools(cls, cm_id):
         from chroma_core.models.client_mount import LustreClientMount
         from chroma_core.models.copytool import Copytool
-        client_mount = cls.get_one(LustreClientMount, lambda ccm: ccm.id == cm_id)
-        return cls.get(Copytool, lambda ct: (client_mount.host_id == ct.host_id and client_mount.mountpoint == ct.mountpoint))
+        try:
+            client_mount = cls.get_one(LustreClientMount, lambda ccm: ccm.id == cm_id)
+            return cls.get(Copytool, lambda ct: (client_mount.host_id == ct.host_id and client_mount.mountpoint == ct.mountpoint))
+        except LustreClientMount.DoesNotExist:
+            return []
 
     @classmethod
     def host_targets(cls, host_id):

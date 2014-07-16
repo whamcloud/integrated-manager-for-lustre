@@ -274,7 +274,8 @@ class ManagedTarget(StatefulObject):
     reverse_deps = {
         'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
         'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
-        'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id)
+        'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id),
+        'Copytool': lambda ct: ObjectCache.client_mount_copytools(ct.id)
     }
 
     @classmethod

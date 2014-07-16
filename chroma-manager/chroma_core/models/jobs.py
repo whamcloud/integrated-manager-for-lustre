@@ -305,7 +305,7 @@ class StatefulObject(models.Model):
         else:
             return self.job_class_map[(begin_state, end_state)]
 
-    def get_dependent_objects(self):
+    def get_dependent_objects(self, inclusive=False):
         """Get all objects which MAY be depending on the state of this object"""
 
         # Cache mapping a class to a list of functions for getting
@@ -325,8 +325,15 @@ class StatefulObject(models.Model):
 
         from itertools import chain
         lookup_fns = StatefulObject.reverse_deps_map[klass]
-        querysets = [fn(self) for fn in lookup_fns]
-        return chain(*querysets)
+        querysets = set(chain(*[fn(self) for fn in lookup_fns]))
+
+        if inclusive:
+            querysets |= set(chain(*[x.get_dependent_objects() for x in querysets]))
+
+        return querysets
+
+    def cancel_current_operations(self):
+        pass
 
 
 class StateLock(object):
