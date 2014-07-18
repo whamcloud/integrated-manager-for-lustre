@@ -8,6 +8,7 @@ from behave import *
 from nose.tools import *
 
 from chroma_cli.main import standard_cli
+from helpers import fail
 
 
 @when('I run chroma {args}')

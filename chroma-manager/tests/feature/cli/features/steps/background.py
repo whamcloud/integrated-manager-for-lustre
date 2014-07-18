@@ -16,6 +16,7 @@ def load_filesystem_from_json(data):
 
     from chroma_core.lib.cache import ObjectCache
     from chroma_core.models import ManagedHost, ManagedTarget, ManagedTargetMount
+    from chroma_core.models.host import Nid
     from tests.unit.chroma_core.helper import synthetic_host
 
     lookup = defaultdict(dict)
@@ -24,7 +25,8 @@ def load_filesystem_from_json(data):
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
         mock_host_info = AgentRpc.mock_servers[host_info['address']]
         #host, command = JobSchedulerClient.create_host(mock_host_info['fqdn'], mock_host_info['nodename'], ['manage_targets'], address = host_info['address'])
-        host = synthetic_host(mock_host_info['address'], nids=mock_host_info['nids'], fqdn=mock_host_info['fqdn'], nodename=mock_host_info['nodename'])
+        nids = [Nid.split_nid_string(n) for n in mock_host_info['nids']]
+        host = synthetic_host(mock_host_info['address'], nids=nids, fqdn=mock_host_info['fqdn'], nodename=mock_host_info['nodename'])
         ObjectCache.add(ManagedHost, host)
         host.state = 'lnet_up'
         host.save()
@@ -100,6 +102,7 @@ def step(context, sample_name):
 def step(context, name):
     import os
     import json
+    from chroma_core.models.host import Nid
     from tests.unit.chroma_core.helper import MockAgentRpc
 
     # Skip setup if it was already done in a previous scenario.
@@ -110,7 +113,9 @@ def step(context, name):
     with open(path) as fh:
         data = json.load(fh)
 
-    MockAgentRpc.mock_servers = dict([[h['address'], h] for h in data['hosts']])
+    for host in data['hosts']:
+        host['nids'] = [Nid.split_nid_string(n) for n in host['nids']]
+        MockAgentRpc.mock_servers[host['address']] = host
 
 
 @given('the mock servers are set up')
