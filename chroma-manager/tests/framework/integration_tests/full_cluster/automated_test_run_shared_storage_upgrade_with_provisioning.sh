@@ -18,7 +18,7 @@ rm -rfv $PWD/coverage_reports/.coverage*
 mkdir -p $PWD/test_reports
 mkdir -p $PWD/coverage_reports
 
-ARCHIVE_NAME=ieel-2.0.1.tar.gz
+ARCHIVE_NAME=ieel-2.0.1.1.tar.gz
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 USE_FENCE_XVM=false
