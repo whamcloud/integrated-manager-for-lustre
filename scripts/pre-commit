@@ -12,6 +12,10 @@ modified = re.compile('^(?:M|A)(\s+)(?P<name>.*)')
 
 localNodeModulesDir = 'chroma-manager/chroma_ui_new/node_modules'
 
+jshintBinDir = localNodeModulesDir + '/gulp-jshint/node_modules/jshint/bin'
+
+localNodeModulesDir = 'chroma-manager/chroma_ui_new/node_modules'
+
 jscsBinDir = localNodeModulesDir + '/gulp-jscs/node_modules/.bin'
 
 DISABLED_CHECKS = [
@@ -119,7 +123,7 @@ DJANGO_PROJECTS = ['chroma-manager']
 
 JS_HINT_CHECK = {
         'output': 'Running JSHint...',
-        'command': 'jshint %s',
+        'command': jshintBinDir + '/jshint -c chroma-manager/chroma_ui_new/.jshintrc %s',
         'match_files': [
             '.*/chroma_ui_new/.*\.js$',
             '.*/chroma_ui/static/js/.+/[^/]+\.js$',
@@ -161,7 +165,7 @@ JS_CS_CHECK = {
         'print_filename': True,
     }
 
-has_js_hint = spawn.find_executable('jshint')
+has_js_hint = spawn.find_executable('jshint', path=jshintBinDir)
 
 (CHECKS if has_js_hint else DISABLED_CHECKS).append(JS_HINT_CHECK)
 
