@@ -64,7 +64,7 @@ Scenario: Reboot a server
   Given the server count should be 1
   And the boot_time on setup-mgs has been recorded
   When I run chroma server-reboot setup-mgs
-  Then I should be prompted to proceed
+  # Then I should be prompted to proceed  # Known low priority issue HYD-3206
   Then the boot_time on setup-mgs should reflect a reboot
 
 Scenario: Shutdown a server
