@@ -105,6 +105,27 @@ class EMCPower(resources.LogicalDrive):
     uuid = attributes.String()
 
 
+class ZfsPool(resources.LogicalDrive):
+    class Meta:
+        identifier = GlobalId('uuid')
+    uuid = attributes.String()
+
+    """ This has to be a class method today because at the point we call it we only has the type not the object"""
+    @classmethod
+    def device_type(cls):
+        return "zfs"
+
+
+class ZfsDataset(ZfsPool):
+    class Meta:
+        identifier = GlobalId('uuid')
+
+
+class ZfsVol(ZfsPool):
+    class Meta:
+        identifier = GlobalId('uuid')
+
+
 class LocalMount(resources.LogicalDriveOccupier):
     """Used for marking devices which are already in use, so that
     we don't offer them for use as Lustre targets."""
@@ -163,7 +184,7 @@ class Linux(Plugin):
     def agent_session_start(self, host_id, data):
         devices = data
 
-        for expected_item in ['vgs', 'lvs', 'emcpower', 'mpath', 'devs', 'local_fs', 'mds']:
+        for expected_item in ['vgs', 'lvs', 'emcpower', 'zfspools', 'zfsdatasets', 'zfsvols', 'mpath', 'devs', 'local_fs', 'mds']:
             if expected_item not in devices:
                 devices[expected_item] = {}
 
@@ -187,6 +208,15 @@ class Linux(Plugin):
 
         for uuid, emcpower_info in devices['emcpower'].items():
             special_block_devices.add(emcpower_info['block_device'])
+
+        for uuid, zfs_pool_info in devices['zfspools'].items():
+            special_block_devices.add(zfs_pool_info['block_device'])
+
+        for uuid, zfs_dataset_info in devices['zfsdatasets'].items():
+            special_block_devices.add(zfs_dataset_info['block_device'])
+
+        for uuid, zfs_vol_info in devices['zfsvols'].items():
+            special_block_devices.add(zfs_vol_info['block_device'])
 
         def preferred_serial(bdev):
             for attr in SERIAL_PREFERENCE:
@@ -352,6 +382,12 @@ class Linux(Plugin):
         _map_drives_to_device_to_node('mds', MdRaid)
 
         _map_drives_to_device_to_node('emcpower', EMCPower)
+
+        _map_drives_to_device_to_node('zfspools', ZfsPool)
+
+        _map_drives_to_device_to_node('zfsdatasets', ZfsDataset)
+
+        _map_drives_to_device_to_node('zfsvols', ZfsVol)
 
         for bdev, (mntpnt, fstype) in devices['local_fs'].items():
             bdev_resource = major_minor_to_node_resource[bdev]

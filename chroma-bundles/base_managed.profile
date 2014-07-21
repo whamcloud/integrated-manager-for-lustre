@@ -12,6 +12,7 @@
   "packages": {
     "lustre": [
       "lustre-modules",
+      "lustre-osd-ldiskfs",
       "lustre"
     ]
   }

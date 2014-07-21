@@ -56,7 +56,11 @@ class LocalTargets(object):
             # If the target_device has no uuid then it doesn't have a filesystem and is of no use to use, but
             # for now let's fill it in an see what happens.
             if device['uuid'] == None:
-                device['uuid'] = BlockDevice(device['type'], device['path']).uuid
+                try:
+                    device['uuid'] = BlockDevice(device['type'], device['path']).uuid
+                except shell.CommandExecutionError:
+                    # Not even got a GUID so not going to have a lustre filesystem.
+                    continue
 
             # OK, so we really don't have a uuid for this, so we won't find a lustre filesystem on it.
             if device['uuid'] == None:

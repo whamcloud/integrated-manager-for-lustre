@@ -116,7 +116,7 @@ EOF
     if ! rpm -q \$(rpm -qp kernel-*.rpm); then
         rpm -ivh --oldpackage kernel*.rpm
     fi
-    yum -y install lustre-modules lustre
+    yum -y install lustre-modules lustre lustre-osd-ldiskfs
     rm -f /etc/yum.repos.d/autotest.repo
 fi
 if $MEASURE_COVERAGE; then

@@ -30,6 +30,7 @@ from chroma_agent.utils import BlkId
 from chroma_agent import config
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
+from chroma_agent.device_plugins.linux_components.zfs import ZfsDevices
 from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTable
 from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
 from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
@@ -41,7 +42,10 @@ errno.NO_MEDIA_ERRNO = 123
 class LinuxDevicePlugin(DevicePlugin):
     def _quick_scan(self):
         """Lightweight enumeration of available block devices"""
-        return os.listdir("/sys/block/")
+        zfs = ZfsDevices().quick_scan()
+        blocks = os.listdir("/sys/block/")
+
+        return zfs + blocks
 
     def _full_scan(self):
         # If we are a worker node then return nothing because our devices are not of interest. This is a short term
@@ -59,6 +63,10 @@ class LinuxDevicePlugin(DevicePlugin):
         # Software RAID
         mds = MdRaid(block_devices).all()
 
+        # _zpools
+        zfs_devices = ZfsDevices()
+        zfs_devices.full_scan(block_devices)
+
         # EMCPower Devices
         emcpowers = EMCPower(block_devices).all()
 
@@ -67,6 +75,9 @@ class LinuxDevicePlugin(DevicePlugin):
 
         return {"vgs": dmsetup.vgs,
                 "lvs": dmsetup.lvs,
+                "zfspools": zfs_devices.zpools,
+                "zfsdatasets": zfs_devices.datasets,
+                "zfsvols": zfs_devices.zvols,
                 "mpath": dmsetup.mpaths,
                 "devs": block_devices.block_device_nodes,
                 "local_fs": local_fs,

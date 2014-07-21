@@ -243,7 +243,8 @@ class ClusterSimulator(Persisted):
         self.state['packages'] = {
             'server': {
                 'lustre': (0, "2.1.4", "1", "x86_64"),
-                'lustre-modules': (0, "2.1.4", "1", "x86_64")
+                'lustre-modules': (0, "2.1.4", "1", "x86_64"),
+                'lustre-osd-ldiskfs': (0, "2.1.4", "1", "x86_64")
             },
             'worker': {
                 'lustre-client': (0, "2.5.0", "1", "x86_64"),

@@ -20,5 +20,32 @@
 # express and approved by Intel in writing.
 
 
-import blockdevice_linux
-import blockdevice_zfs
+from ..lib import shell
+from filesystem import FileSystem
+
+
+class FileSystemZfs(FileSystem):
+    _supported_filesystems = ['zfs']
+
+    @property
+    def label(self):
+        return self._target_name
+
+    @property
+    def inode_size(self):
+        return 0
+
+    @property
+    def inode_count(self):
+        return 0
+
+    def mount(self, target_name, mount_point):
+        self._target_name = target_name
+
+        return shell.try_run(["mount", "-t", "lustre", "%s" % self.mount_path(target_name), mount_point])
+
+    def mount_path(self, target_name):
+        return "%s/%s" % (self._device_path, target_name)
+
+    def mkfs(self, target_name, options):
+        shell.try_run(["mkfs.lustre"] + options + [self.mount_path(target_name)])

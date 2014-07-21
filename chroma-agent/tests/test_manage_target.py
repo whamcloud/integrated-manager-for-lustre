@@ -59,181 +59,181 @@ class TestFormatTarget(CommandCaptureTestCase):
     results = {
         ("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"): "123456\n",
         ("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"): "ext4\n",
-        ("dumpe2fs", "-h", "/dev/foo"): "        Inode count: 1\n        Inode size: 2\n"}
+        ("dumpe2fs", "-h", "/dev/foo"): "        Inode count: 1\n        Inode size: 2\n",
+        ('zfs', 'list', '-o', 'name,guid'): "lustre1     123456789ABCDEF\n"}
+
+    block_device_list = [BlockDevice('linux', '/dev/foo'),
+                         BlockDevice('zfs', 'lustre1')]
+
+    def _mkfs_path(self, block_device, target_name):
+        if (block_device.device_type == 'linux'):
+            return block_device.device_path
+        elif (block_device.device_type == 'zfs'):
+            return "%s/%s" % (block_device.device_path, target_name)
+
+        assert "Unknown device type %s" % block_device.device_type
 
     def test_mdt_mkfs(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MDT0000",
-                      backfstype = block_device.preferred_fstype,
-                      target_types=['mdt'])
-        self.assertRan(["mkfs.lustre",
-                        "--mdt",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MDT0000",
+                          backfstype = block_device.preferred_fstype,
+                          target_types=['mdt'])
+            self.assertRan(["mkfs.lustre",
+                            "--mdt",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "MDT0000")])
 
     def test_mgs_mkfs(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MGS0000",
-                      backfstype = block_device.preferred_fstype,
-                      target_types=['mgs'])
-        self.assertRan(["mkfs.lustre",
-                        "--mgs",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MGS0000",
+                          backfstype = block_device.preferred_fstype,
+                          target_types=['mgs'])
+            self.assertRan(["mkfs.lustre",
+                            "--mgs",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "MGS0000")])
 
     def test_ost_mkfs(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MDT0000",
-                      backfstype = block_device.preferred_fstype,
-                      target_types=['ost'])
-        self.assertRan(["mkfs.lustre",
-                        "--ost",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MDT0000",
+                          backfstype = block_device.preferred_fstype,
+                          target_types=['ost'])
+            self.assertRan(["mkfs.lustre",
+                            "--ost",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "MDT0000")])
 
     def test_single_mgs_one_nid(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "OST0000",
-                      backfstype = block_device.preferred_fstype,
-                      target_types=['ost'],
-                      mgsnode=[['1.2.3.4@tcp']])
-        self.assertRan(["mkfs.lustre",
-                        "--ost",
-                        "--mgsnode=1.2.3.4@tcp",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "OST0000",
+                          backfstype = block_device.preferred_fstype,
+                          target_types=['ost'],
+                          mgsnode=[['1.2.3.4@tcp']])
+            self.assertRan(["mkfs.lustre",
+                            "--ost",
+                            "--mgsnode=1.2.3.4@tcp",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "OST0000")])
 
     def test_mgs_pair_one_nid(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      target_types=['ost'],
-                      target_name = "OST0000",
-                      backfstype = block_device.preferred_fstype,
-                      device_type = block_device.device_type,
-                      mgsnode=[['1.2.3.4@tcp'], ['1.2.3.5@tcp']])
-        self.assertRan(["mkfs.lustre", "--ost",
-                        "--mgsnode=1.2.3.4@tcp",
-                        "--mgsnode=1.2.3.5@tcp",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          target_types=['ost'],
+                          target_name = "OST0000",
+                          backfstype = block_device.preferred_fstype,
+                          device_type = block_device.device_type,
+                          mgsnode=[['1.2.3.4@tcp'], ['1.2.3.5@tcp']])
+            self.assertRan(["mkfs.lustre", "--ost",
+                            "--mgsnode=1.2.3.4@tcp",
+                            "--mgsnode=1.2.3.5@tcp",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "OST0000")])
 
     def test_single_mgs_multiple_nids(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      target_types=['ost'],
-                      target_name = "OST0000",
-                      backfstype = block_device.preferred_fstype,
-                      device_type = block_device.device_type,
-                      mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1']])
-        self.assertRan(["mkfs.lustre",
-                        "--ost",
-                        "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          target_types=['ost'],
+                          target_name = "OST0000",
+                          backfstype = block_device.preferred_fstype,
+                          device_type = block_device.device_type,
+                          mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1']])
+            self.assertRan(["mkfs.lustre",
+                            "--ost",
+                            "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "OST0000")])
 
     def test_mgs_pair_multiple_nids(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      target_name = "OST0000",
-                      backfstype = block_device.preferred_fstype,
-                      target_types =['ost'],
-                      device_type = block_device.device_type,
-                      mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
-        self.assertRan(["mkfs.lustre",
-                        "--ost",
-                        "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
-                        "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          target_name = "OST0000",
+                          backfstype = block_device.preferred_fstype,
+                          target_types =['ost'],
+                          device_type = block_device.device_type,
+                          mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
+            self.assertRan(["mkfs.lustre",
+                            "--ost",
+                            "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
+                            "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "OST0000")])
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case
     def test_tuple_opts(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MGS0000",
-                      backfstype = block_device.preferred_fstype,
-                      target_types=['mgs', 'mdt'])
-        self.assertRan(["mkfs.lustre",
-                        "--mgs",
-                        "--mdt", "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MGS0000",
+                          backfstype = block_device.preferred_fstype,
+                          target_types=['mgs', 'mdt'])
+            self.assertRan(["mkfs.lustre",
+                            "--mgs",
+                            "--mdt", "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "MGS0000")])
 
     def test_dict_opts(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MGS0000",
-                      backfstype = block_device.preferred_fstype,
-                      param={'foo': 'bar', 'baz': 'qux thud'})
-        self.assertRan(["mkfs.lustre",
-                        "--param",
-                        "foo=bar",
-                        "--param",
-                        "baz=qux thud",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                       block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MGS0000",
+                          backfstype = block_device.preferred_fstype,
+                          param={'foo': 'bar', 'baz': 'qux thud'})
+            self.assertRan(["mkfs.lustre",
+                            "--param",
+                            "foo=bar",
+                            "--param",
+                            "baz=qux thud",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                           self._mkfs_path(block_device, "MGS0000")])
 
     def test_flag_opts(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MGS0000",
-                      backfstype = block_device.preferred_fstype,
-                      dryrun=True)
-        self.assertRan(["mkfs.lustre",
-                        "--dryrun",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                        block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MGS0000",
+                          backfstype = block_device.preferred_fstype,
+                          dryrun=True)
+            self.assertRan(["mkfs.lustre",
+                            "--dryrun",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "MGS0000")])
 
     def test_zero_opt(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MGS0000",
-                      backfstype = block_device.preferred_fstype,
-                      index=0,
-                      mkfsoptions='-x 30 --y --z=83')
-        self.assertRan(["mkfs.lustre",
-                        "--index=0",
-                        "--mkfsoptions=-x 30 --y --z=83",
-                        "--backfstype=%s" % block_device.preferred_fstype,
-                       block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MGS0000",
+                          backfstype = block_device.preferred_fstype,
+                          index=0,
+                          mkfsoptions='-x 30 --y --z=83')
+            self.assertRan(["mkfs.lustre",
+                            "--index=0",
+                            "--mkfsoptions=-x 30 --y --z=83",
+                            "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "MGS0000")])
 
     def test_other_opts(self):
-        block_device = BlockDevice('linux', '/dev/foo')
-
-        format_target(device = block_device.device_path,
-                      device_type = block_device.device_type,
-                      target_name = "MGS0000",
-                      backfstype = block_device.preferred_fstype,
-                      index=42,
-                      mkfsoptions='-x 30 --y --z=83')
-        self.assertRan(["mkfs.lustre",
-                        "--index=42",
-                        "--mkfsoptions=-x 30 --y --z=83",
-                         "--backfstype=%s" % block_device.preferred_fstype,
-                       block_device.device_path])
+        for block_device in self.block_device_list:
+            format_target(device = block_device.device_path,
+                          device_type = block_device.device_type,
+                          target_name = "MGS0000",
+                          backfstype = block_device.preferred_fstype,
+                          index=42,
+                          mkfsoptions='-x 30 --y --z=83')
+            self.assertRan(["mkfs.lustre",
+                            "--index=42",
+                            "--mkfsoptions=-x 30 --y --z=83",
+                             "--backfstype=%s" % block_device.preferred_fstype,
+                            self._mkfs_path(block_device, "MGS0000")])
 
     def test_unknown_opt(self):
         self.assertRaises(TypeError, format_target, unknown='whatever')

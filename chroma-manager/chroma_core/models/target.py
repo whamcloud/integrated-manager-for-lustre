@@ -1122,7 +1122,7 @@ class FormatTargetJob(StateChangeJob):
             'device_type': device_type,
             'backfstype': block_device.preferred_fstype,
             'mkfsoptions': mkfsoptions
-       }))
+        }))
 
         return steps
 

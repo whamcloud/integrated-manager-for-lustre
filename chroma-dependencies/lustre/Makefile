@@ -8,10 +8,11 @@ SRC_REPO               = $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_B
 ALL_RPMS               = lustre-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
 			 lustre-modules-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
 			 lustre-osd-ldiskfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
+			 lustre-osd-zfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
 			 kernel-$(KERNEL_RELEASE).rpm \
 			 kernel-firmware-$(KERNEL_RELEASE).rpm \
 			 kernel-headers-$(KERNEL_RELEASE).rpm \
 			 kernel-devel-$(KERNEL_RELEASE).rpm
-NO_REQUIREMENT         = lustre lustre-modules lustre-osd-ldiskfs kernel kernel-firmware kernel-devel kernel-headers
+NO_REQUIREMENT         = lustre lustre-modules lustre-osd-ldiskfs lustre-osd-zfs kernel kernel-firmware kernel-devel kernel-headers
 
 include ../include/Makefile.fetch-from-repo

@@ -19,6 +19,31 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+import re
 
-import blockdevice_linux
-import blockdevice_zfs
+from ..lib import shell
+from blockdevice import BlockDevice
+
+
+class BlockDeviceZfs(BlockDevice):
+    _supported_device_types = ['zfs']
+
+    @property
+    def filesystem_type(self):
+        # We should verify the value, but for now lets just presume.
+        return 'zfs'
+
+    @property
+    def uuid(self):
+        out = shell.try_run(['zfs', 'list', '-o', 'name,guid'])
+        lines = [l for l in out.split("\n") if len(l) > 0]
+        for line in lines:
+            result = re.search("^%s\s+(.+)" % self._device_path, line)
+            if (result):
+                return result.group(1)
+
+        raise RuntimeError("Unabled to find UUID for device %s" % self._device_path)
+
+    @property
+    def preferred_fstype(self):
+        return 'zfs'
