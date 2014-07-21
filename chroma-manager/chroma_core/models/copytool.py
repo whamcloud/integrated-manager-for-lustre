@@ -157,13 +157,17 @@ class CopytoolEvent(object):
 class Copytool(StatefulObject, MeasuredEntity):
     __metaclass__ = DeletableDowncastableMetaclass
 
+    # Fixed, minimum size (RH6.5) for HYD-3244, so that no matter what
+    # ulimit -s size, and hence os.sysconf('SC_ARG_MAX') is always viable.
+    HSM_ARGUMENT_MAX_SIZE_FOR_COPYTOOL = 131072  # characters
+
     host = models.ForeignKey('ManagedHost', related_name="copytools")
     index = models.IntegerField(default = 0, help_text = "Instance index, used to uniquely identify per-host path-filesystem-archive instances")
     bin_path = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), help_text = "Path to copytool binary on HSM worker node")
     archive = models.IntegerField(default = 1, help_text = "HSM archive number")
     filesystem = models.ForeignKey('ManagedFilesystem')
     mountpoint = models.CharField(max_length = os.pathconf('.', 'PC_PATH_MAX'), help_text = "Lustre mountpoint on HSM worker node", default = "/mnt/lustre")
-    hsm_arguments = models.CharField(max_length = os.sysconf('SC_ARG_MAX'), help_text = "Copytool arguments that are specific to the HSM implementation")
+    hsm_arguments = models.CharField(max_length = HSM_ARGUMENT_MAX_SIZE_FOR_COPYTOOL, help_text = "Copytool arguments that are specific to the HSM implementation")
     uuid = models.CharField(max_length = len("%s" % uuid.uuid4()), null = True, blank = True, help_text = "UUID as assigned by cdt")
     pid = models.IntegerField(null = True, blank = True, help_text = "Current PID, if known")
     client_mount = models.ForeignKey('LustreClientMount', null = True, blank = True, related_name = 'copytools')
