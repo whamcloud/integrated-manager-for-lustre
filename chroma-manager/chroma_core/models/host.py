@@ -1043,9 +1043,23 @@ class DetectTargetsStep(Step):
         # FIXME: HYD-1120: should do this part in parallel
         host_data = {}
         for host in ManagedHost.objects.filter(id__in = kwargs['host_ids']):
+            volume_nodes = VolumeNode.objects.filter(host = host)
+            target_devices = []
+
+            for volume_node in volume_nodes:
+                resource = volume_node.volume.storage_resource.to_resource()
+                try:
+                    uuid = resource.uuid
+                except AttributeError:
+                    uuid = None
+
+                target_devices.append({"path": volume_node.path,
+                                       "type": resource.device_type(),
+                                       "uuid": uuid})
+
             with transaction.commit_on_success():
                 self.log("Scanning server %s..." % host)
-            data = self.invoke_agent(host, 'detect_scan')
+            data = self.invoke_agent(host, 'detect_scan', {"target_devices": target_devices})
             host_data[host] = data
 
         with transaction.commit_on_success():

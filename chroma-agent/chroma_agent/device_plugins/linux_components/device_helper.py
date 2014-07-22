@@ -70,7 +70,7 @@ class DeviceHelper(object):
             # Check that none of the drives in the list are None (i.e. not found) if we found them all
             # then we create the entry.
             if drives.count(None) == 0:
-                devices[device['uuid']] = {'path': ndp.normalized_device_path(device["path"]),
+                devices[device['uuid']] = {'path': device["path"],
                                            'block_device': device['mm'],
                                            'drives': drives}
 

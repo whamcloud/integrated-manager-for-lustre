@@ -58,7 +58,7 @@
           ]
         }, 
         "name": "test18fs-OST0001", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_00070001", 
           "/dev/disk/by-id/scsi-1IET_00070001"
         ], 
@@ -72,7 +72,7 @@
           ]
         }, 
         "name": "test18fs-OST0002", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_00080001"
         ], 
         "uuid": "b94cdd68-6e73-4245-81c8-324ff89b5814"
@@ -85,7 +85,7 @@
           ]
         }, 
         "name": "test18fs-MDT0000", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_00050001"
         ], 
         "uuid": "d5ae6da1-453d-454f-9379-5cbe93b3a74b"
@@ -98,7 +98,7 @@
           ]
         }, 
         "name": "test18fs-OST0006", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_000c0001"
         ], 
         "uuid": "77f83278-2cdd-41d8-9387-7c21f19378ff"
@@ -111,7 +111,7 @@
           ]
         }, 
         "name": "MGS", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_00050001"
         ], 
         "uuid": "d5ae6da1-453d-454f-9379-5cbe93b3a74b"
@@ -124,7 +124,7 @@
           ]
         }, 
         "name": "test18fs-OST0005", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_000b0001"
         ], 
         "uuid": "00641933-bb6f-43a9-98dd-4934b6604276"
@@ -137,7 +137,7 @@
           ]
         }, 
         "name": "test18fs-OST0000", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_00060001", 
           "/dev/disk/by-id/scsi-1IET_00060001"
         ], 
@@ -151,7 +151,7 @@
           ]
         }, 
         "name": "test18fs-OST0007", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_000d0001"
         ], 
         "uuid": "d6b837ca-d063-49ff-8436-9032d197f877"
@@ -164,7 +164,7 @@
           ]
         }, 
         "name": "test18fs-OST0004", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_000a0001"
         ], 
         "uuid": "2ee89016-af5a-442b-9b4f-7d255a3e300a"
@@ -177,7 +177,7 @@
           ]
         }, 
         "name": "test18fs-OST0003", 
-        "devices": [
+        "device_paths": [
           "/dev/disk/by-id/scsi-1IET_00090001"
         ], 
         "uuid": "b150b5c5-a69d-4247-b283-08c52bf6dce1"

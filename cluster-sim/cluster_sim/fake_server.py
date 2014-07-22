@@ -28,6 +28,7 @@ import random
 import uuid
 import os
 import threading
+from collections import defaultdict
 
 from chroma_agent.crypto import Crypto
 from chroma_agent.agent_client import AgentClient
@@ -303,7 +304,7 @@ class FakeServer(Persisted):
 
         raise NotImplementedError("Simulator cannot resolve '%s' to conf param name" % path)
 
-    def detect_scan(self):
+    def detect_scan(self, target_devices):
         local_targets = []
         mgs_target = None
         for serial, target in self._devices.state['targets'].items():
@@ -311,7 +312,15 @@ class FakeServer(Persisted):
         for ha_label, resource in self._cluster.state['resources'].items():
             log.info("cluster: %s %s %s" % (ha_label, resource['uuid'], resource['device_path']))
 
-        for (target, path) in self._devices.get_targets_by_server(self.fqdn):
+        for target_device in target_devices:
+            path = target_device['path']
+
+            try:
+                target = self._devices.get_target_by_path(self.fqdn, path)
+            except KeyError:
+                # Key error means this is not a target
+                continue
+
             try:
                 ha_resource = self._cluster.get_by_uuid(target['uuid'])
             except KeyError:
@@ -322,18 +331,17 @@ class FakeServer(Persisted):
             local_targets.append({"name": target['label'],
                                   "uuid": target['uuid'],
                                   "params": {},
-                                  "devices": [path],
+                                  "device_paths": [path],
                                   "mounted": mounted})
 
             if target['label'] == 'MGS':
                 mgs_target = target
 
-        mgs_targets = {}
+        mgs_targets = defaultdict(lambda: [])
         if mgs_target is not None:
             for target_label in self._devices.mgt_get_target_labels(mgs_target['mgsnode']):
                 target = self._devices.get_target_by_label(target_label)
-                if not target['fsname'] in mgs_targets:
-                    mgs_targets[target['fsname']] = []
+
                 mgs_targets[target['fsname']].append({
                     'uuid': target['uuid'],
                     'name': target['label'],

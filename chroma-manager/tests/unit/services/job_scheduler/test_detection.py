@@ -38,7 +38,7 @@ class TestDetection(TestCase):
         devpaths = set()
         for host, data in host_data.items():
             for lt in data['local_targets']:
-                for d in lt['devices']:
+                for d in lt['device_paths']:
                     if not d in devpaths:
                         devpaths.add(d)
                         volume = Volume.objects.create()
@@ -52,7 +52,8 @@ class TestDetection(TestCase):
         job = DetectTargetsJob.objects.create()
 
         with mock.patch("chroma_core.lib.job.Step.invoke_agent", new = mock.Mock(side_effect = _detect_scan)):
-            synchronous_run_job(job)
+            with mock.patch("chroma_core.models.Volume.storage_resource"):
+                synchronous_run_job(job)
 
         self.assertEqual(ManagedFilesystem.objects.count(), 1)
         self.assertEqual(ManagedFilesystem.objects.get().name, "test18fs")

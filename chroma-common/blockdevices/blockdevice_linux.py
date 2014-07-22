@@ -29,26 +29,29 @@ class BlockDeviceLinux(BlockDevice):
 
     @property
     def filesystem_type(self):
-        rc, blkid_output, blkid_err = shell.run(["blkid", "-p", "-o", "value", "-s", "TYPE", self._device_path])
+        return self._blkid_value("TYPE")
+
+    @property
+    def uuid(self):
+        return self._blkid_value("UUID")
+
+    def _blkid_value(self, value):
+        rc, blkid_output, blkid_err = shell.run(["blkid", "-p", "-o", "value", "-s", value, self._device_path])
 
         if rc == 2:
             # blkid returns 2 if there is no filesystem on the device
             return None
         elif rc == 0:
-            filesystem_type = blkid_output.strip()
+            result = blkid_output.strip()
 
-            if filesystem_type:
-                return filesystem_type
+            if result:
+                return result
             else:
                 # Empty filesystem: blkid returns 0 but prints no FS if it seems something non-filesystem-like
                 # like an MBR
                 return None
         else:
             raise RuntimeError("Unexpected return code %s from blkid %s: '%s' '%s'" % (rc, self._device_path, blkid_output, blkid_err))
-
-    @property
-    def uuid(self):
-        return shell.try_run(["blkid", "-o", "value", "-s", "UUID", self._device_path]).strip()
 
     @property
     def preferred_fstype(self):

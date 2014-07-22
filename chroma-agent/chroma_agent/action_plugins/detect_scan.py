@@ -27,20 +27,22 @@ from tempfile import mktemp
 from collections import defaultdict
 
 from chroma_agent.chroma_common.lib import shell
-from chroma_agent.utils import Mounts, BlkId
+from chroma_agent.utils import Mounts
 import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_agent.log import daemon_log
 
 
-class LocalTargets():
+class LocalTargets(object):
     '''
     Allows local targets to be examined. Not the targets are only examined once with the results cached. Detecting change
     therefore requires a new instance to be created and queried.
     '''
 
-    def __init__(self):
-        self.targets = self._get_targets()
+    def __init__(self, target_devices):
+        self.targets = self._get_targets(target_devices)
 
-    def _get_targets(self):
+    def _get_targets(self, target_devices):
         # Working set: accumulate device paths for each (uuid, name).  This is
         # necessary because in multipathed environments we will see the same
         # lustre target on more than one block device.  The reason we use name
@@ -48,21 +50,22 @@ class LocalTargets():
         # when we see a combined MGS+MDT
         uuid_name_to_target = {}
 
-        blkid_devices = BlkId()
+        for device in target_devices:
+            daemon_log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
 
-        for blkid_device in blkid_devices.itervalues():
-            dev = ndp.normalized_device_path(blkid_device['path'])
+            # If the target_device has no uuid then it doesn't have a filesystem and is of no use to use, but
+            # for now let's fill it in an see what happens.
+            if device['uuid'] == None:
+                device['uuid'] = BlockDevice(device['type'], device['path']).uuid
 
-            # If a more normalized block device exists, then use that. Sometimes the normalized path
-            # isn't a block device in which case we can't use it.
-            try:
-                blkid_device = blkid_devices[dev]
-            except KeyError:
-                pass
+            # OK, so we really don't have a uuid for this, so we won't find a lustre filesystem on it.
+            if device['uuid'] == None:
+                daemon_log.info("Device %s had no UUID and so will not be examined for Lustre" % device['path'])
+                continue
 
-            rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", dev])
+            rc, tunefs_text, stderr = shell.run(["tunefs.lustre", "--dryrun", device['path']])
             if rc != 0:
-                # Not lustre
+                daemon_log.info("Device %s did not have a Lustre filesystem on it" % device['path'])
                 continue
 
             # For a Lustre block device, extract name and params
@@ -82,10 +85,10 @@ class LocalTargets():
                 params = {}
 
             if name.find("ffff") != -1:
-                # Do not report unregistered lustre targets
+                daemon_log.info("Device %s reported an unregistered lustre target and so will not be reported" % device['path'])
                 continue
 
-            mounted = ndp.normalized_device_path(blkid_device['path']) in set([ndp.normalized_device_path(path) for path, _, _ in Mounts().all()])
+            mounted = ndp.normalized_device_path(device['path']) in set([ndp.normalized_device_path(path) for path, _, _ in Mounts().all()])
 
             if flags & 0x0005 == 0x0005:
                 # For combined MGS/MDT volumes, synthesise an 'MGS'
@@ -94,16 +97,18 @@ class LocalTargets():
                 names = [name]
 
             for name in names:
+                daemon_log.info("Device %s contained name:%s and is %smounted" % (device['path'], name, "" if mounted else "un"))
+
                 try:
-                    target_dict = uuid_name_to_target[(blkid_device['uuid'], name)]
-                    target_dict['devices'].append(dev)
+                    target_dict = uuid_name_to_target[(device['uuid'], name)]
+                    target_dict['devices'].append(device)
                 except KeyError:
                     target_dict = {"name": name,
-                                   "uuid": blkid_device['uuid'],
+                                   "uuid": device['uuid'],
                                    "params": params,
-                                   "devices": [dev],
+                                   "device_paths": [device['path']],
                                    "mounted": mounted}
-                    uuid_name_to_target[(blkid_device['uuid'], name)] = target_dict
+                    uuid_name_to_target[(device['uuid'], name)] = target_dict
 
         return uuid_name_to_target.values()
 
@@ -131,9 +136,11 @@ class MgsTargets(object):
         if not mgs_target:
             return
 
-        dev = mgs_target["devices"][0]
+        device_path = mgs_target["device_paths"][0]
 
-        ls = shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", dev])
+        daemon_log.info("Searching Lustre logs for filesystems")
+
+        ls = shell.try_run(["debugfs", "-c", "-R", "ls -l CONFIGS/", device_path])
         filesystems = []
         targets = []
         for line in ls.split("\n"):
@@ -142,22 +149,24 @@ class MgsTargets(object):
 
                 match = re.search("([\w-]+)-client", name)
                 if match is not None:
+                    daemon_log.info("Found a filesystem of name %s" % match.group(1).__str__())
                     filesystems.append(match.group(1).__str__())
 
                 match = re.search(self.TARGET_NAME_REGEX, name)
                 if match is not None:
+                    daemon_log.info("Found a target of name %s" % match.group(0).__str__())
                     targets.append(match.group(0).__str__())
             except IndexError:
                 pass
 
         # Read config log "<fsname>-client" for each filesystem
         for fs in filesystems:
-            self._read_log("filesystem", fs, "%s-client" % fs, dev)
-            self._read_log("filesystem", fs, "%s-param" % fs, dev)
+            self._read_log("filesystem", fs, "%s-client" % fs, device_path)
+            self._read_log("filesystem", fs, "%s-param" % fs, device_path)
 
         # Read config logs "testfs-MDT0000" etc
         for target in targets:
-            self._read_log("target", target, target, dev)
+            self._read_log("target", target, target, device_path)
 
     def _read_log(self, conf_param_type, conf_param_name, log_name, dev):
         # NB: would use NamedTemporaryFile if we didn't support python 2.4
@@ -178,6 +187,8 @@ class MgsTargets(object):
         """
 
         tmpfile = mktemp()
+
+        daemon_log.info("Reading log for %s:%s from log %s" % (conf_param_type, conf_param_name, log_name))
 
         try:
             shell.try_run(["debugfs", "-c", "-R", "dump CONFIGS/%s %s" % (log_name, tmpfile), dev])
@@ -200,6 +211,8 @@ class MgsTargets(object):
                     fs_name = label.rsplit("-", 1)[0]
                     uuid = re.search("1:(.*)", tokens[3]).group(1)
                     nid = re.search("2:(.*)", tokens[4]).group(1)
+
+                    daemon_log.info("Found log entry for uuid %s, label %s, nid %s" % (uuid, label, nid))
 
                     self.filesystems[fs_name].append({
                         "uuid": uuid,
@@ -238,14 +251,16 @@ class MgsTargets(object):
                     if clear:
                         val = None
 
+                    daemon_log.info("Found conf param %s:%s:%s of %s" % (param_type, param_name, key, val))
+
                     self.conf_params[param_type][param_name][key] = val
         finally:
             if os.path.exists(tmpfile):
                 os.unlink(tmpfile)
 
 
-def detect_scan():
-    local_targets = LocalTargets()
+def detect_scan(target_devices):
+    local_targets = LocalTargets(target_devices)
     mgs_targets = MgsTargets(local_targets.targets)
 
     return {"local_targets": local_targets.targets,

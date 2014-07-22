@@ -210,7 +210,7 @@ class DetectScan(object):
                 if not mgs_target_info:
                     raise KeyError
             except KeyError:
-                log.warning("Saw target %s on %s:%s which is not known to mgs %s" % (local_info['name'], host, local_info['devices'], mgs_host))
+                log.warning("Saw target %s on %s:%s which is not known to mgs %s" % (local_info['name'], host, local_info['device_paths'], mgs_host))
                 return False
             primary_nid = mgs_target_info['nid']
             target_nids.append(primary_nid)
@@ -241,7 +241,7 @@ class DetectScan(object):
         for host, host_data in self.all_hosts_data.items():
             # We will compare any found target mounts to all known MGSs
             for local_info in host_data['local_targets']:
-                debug_id = (host, local_info['devices'][0], local_info['name'])
+                debug_id = (host, local_info['device_paths'][0], local_info['name'])
                 targets = ManagedTarget.objects.filter(uuid = local_info['uuid'])
                 if not targets.count():
                     log.warning("Ignoring %s:%s (%s), target unknown" % debug_id)
@@ -263,7 +263,7 @@ class DetectScan(object):
 
                     try:
                         log.info("Target %s seen on %s" % (target, host))
-                        volumenode = self._get_volume_node(host, local_info['devices'])
+                        volumenode = self._get_volume_node(host, local_info['device_paths'])
                         (tm, created) = ManagedTargetMount.objects.get_or_create(target = target,
                             host = host, volume_node = volumenode)
                         if created:
@@ -302,7 +302,7 @@ class DetectScan(object):
                     continue
 
                 name = local_info['name']
-                device_node_paths = local_info['devices']
+                device_node_paths = local_info['device_paths']
                 uuid = local_info['uuid']
 
                 if name.find("-MDT") != -1:
@@ -361,11 +361,11 @@ class DetectScan(object):
                 mgs = ManagedMgs.objects.get(uuid = mgs_local_info['uuid'])
             except ManagedMgs.DoesNotExist:
                 try:
-                    volumenode = self._get_volume_node(host, mgs_local_info['devices'])
+                    volumenode = self._get_volume_node(host, mgs_local_info['device_paths'])
                 except VolumeNode.DoesNotExist:
                     continue
 
-                log.info("Learned MGS %s (%s)" % (host, mgs_local_info['devices'][0]))
+                log.info("Learned MGS %s (%s)" % (host, mgs_local_info['device_paths'][0]))
                 # We didn't find an existing ManagedMgs referring to
                 # this LUN, create one
                 mgs = ManagedMgs(uuid = mgs_local_info['uuid'],

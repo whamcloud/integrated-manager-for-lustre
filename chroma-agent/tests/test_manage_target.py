@@ -57,7 +57,7 @@ class TestWriteconfTarget(CommandCaptureTestCase):
 
 class TestFormatTarget(CommandCaptureTestCase):
     results = {
-        ("blkid", "-o", "value", "-s", "UUID", "/dev/foo"): "123456\n",
+        ("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"): "123456\n",
         ("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"): "ext4\n",
         ("dumpe2fs", "-h", "/dev/foo"): "        Inode count: 1\n        Inode size: 2\n"}
 
