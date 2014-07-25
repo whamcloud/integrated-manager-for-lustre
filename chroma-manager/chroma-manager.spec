@@ -133,11 +133,11 @@ done
 preserve_patterns="settings.py manage.py chroma_core/migrations/*.py chroma_core/management/commands/*.py"
 
 # Stash .py files for -devel package
-find $RPM_BUILD_ROOT%{manager_root}/ -name "*.py" \
+find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py" \
     | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
 
 # only include compiled modules in the main package
-for manager_file in $(find $RPM_BUILD_ROOT%{manager_root}/ -name "*.pyc"); do
+for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.pyc"); do
     install_file=${manager_file/$RPM_BUILD_ROOT\///}
     echo "${install_file%.py*}.py[c,o]" >> manager.files
 done

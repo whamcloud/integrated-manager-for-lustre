@@ -70,7 +70,7 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/init
 cp %{SOURCE4} %{SOURCE5} %{SOURCE6} %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/init
 
 # Nuke source code (HYD-1849)
-find $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
+find -L $RPM_BUILD_ROOT%{python_sitelib}/chroma_agent -name "*.py" | sed -e "s,$RPM_BUILD_ROOT,," > devel.files
 
 touch management.files
 cat <<EndOfList>>management.files
@@ -83,7 +83,7 @@ cat <<EndOfList>>management.files
 EndOfList
 
 touch base.files
-for base_file in $(find $RPM_BUILD_ROOT -type f -name '*.pyc'); do
+for base_file in $(find -L $RPM_BUILD_ROOT -type f -name '*.pyc'); do
   install_file=${base_file/$RPM_BUILD_ROOT\///}
   for mgmt_pat in $(<management.files); do
     if [[ $install_file == $mgmt_pat ]]; then
