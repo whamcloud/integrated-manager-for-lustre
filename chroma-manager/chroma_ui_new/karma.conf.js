@@ -18,6 +18,7 @@ module.exports = function(config) {
   var imlDir = bound(sourceDir('iml/%s'));
   var commonDir = bound(sourceDir('common/%s'));
   var testDir = bound('test/%s');
+  var angularComponentsDir = bound('../ui-modules/angular/%s');
 
   config.set({
 
@@ -64,7 +65,9 @@ module.exports = function(config) {
       bowerDir('jasmine-object-containing/jasmine-object-containing.js'),
       bowerDir('jasmine-n-matchers/jasmine-n-matchers.js'),
       testDir('**/*.js'),
-      testDir('templates/**/*.html')
+      testDir('templates/**/*.html'),
+      angularComponentsDir('src/**/*.js'),
+      angularComponentsDir('test/**/*.js')
     ],
 
     // list of files to exclude
