@@ -1,7 +1,7 @@
-angular-route-segment
+angular-route-segment [![Build Status](https://secure.travis-ci.org/artch/angular-route-segment.png?branch=master)](https://travis-ci.org/artch/angular-route-segment)
 =====================
 
-An extension for [AngularJS](http://angularjs.org/) [$route](http://docs.angularjs.org/api/ngRoute.$route) service which supports tree-like nested views and routes hierarchy, and advanced loading flow handling.
+A lightweight extension for [AngularJS](http://angularjs.org/) [$route](http://docs.angularjs.org/api/ngRoute.$route) service which supports tree-like nested views and routes hierarchy, and advanced loading flow handling.
 
 Getting Started
 -------
@@ -16,13 +16,17 @@ You can install the library via [Bower](http://bower.io/):
 ```
 bower install angular-route-segment
 ```
+Or use this CDN link (thanks to [cdnjs.com](http://cdnjs.com)):
+```html
+<script src="//cdnjs.cloudflare.com/ajax/libs/angular-route-segment/1.2.3/angular-route-segment.min.js"></script>
+```
 
-Tested with AngularJS 1.1.5 and 1.2.0rc1 (you must include `ngRoute` module in 1.2.x!).
+Tested with AngularJS 1.1.5, 1.2.16 and 1.3.0-beta.7.
 
 Overview
 --------
 
-This library is intended to provide the lacking functionality of nested routing to AngularJS applications. It is widely known, there are no ways to keep the page state unchanged when only a part of it should be updated via routing mechanics - the `$route` service re-creates the whole scope after a route is changed, losing its state completely. **route-segment** gives you a way to handle this.
+This library is intended to provide the lacking functionality of nested routing to AngularJS applications. It is widely known, there are no ways to keep the parent state unchanged when children are updated via routing mechanics - the `$route` service re-creates the whole scope after a route is changed, losing its state completely. **route-segment** gives you a way to handle this.
 
 The library provides two pieces of code: `$routeSegment` service and `app-view-segment` directive. Both are placed in their own modules which you must include as dependencies in your app module:
 
@@ -38,9 +42,9 @@ app.config(function ($routeSegmentProvider) {
 
 $routeSegmentProvider.
 
-    when('/section1',          's1.home').
+    when('/section1',          's1').
     when('/section1/prefs',    's1.prefs').
-    when('/section1/:id',      's1.itemInfo.overview').
+    when('/section1/:id',      's1.itemInfo').
     when('/section1/:id/edit', 's1.itemInfo.edit').
     when('/section2',          's2').
 
@@ -51,6 +55,7 @@ $routeSegmentProvider.
     within().
 
         segment('home', {
+            default: true,
             templateUrl: 'templates/section1/home.html'}).
 
         segment('itemInfo', {
@@ -61,6 +66,7 @@ $routeSegmentProvider.
         within().
 	    
             segment('overview', {
+                default: true
                 templateUrl: 'templates/section1/item/overview.html'}).
 
             segment('edit', {
@@ -78,7 +84,7 @@ $routeSegmentProvider.
         controller: MainCtrl});
 ```
 
-Alternatively, you can use this syntax instead of traversing:
+Alternatively, you can use this syntax instead of traversing (useful if you want modules to have their own separately defined routes):
 
 ```javascript
 $routeSegmentProvider.segment('s1', {
@@ -173,8 +179,8 @@ Adds new segment at current pointer level.
 
     Segment's parameters hash. The following params are supported:
     
-    - `template` provides HTML for the given segment view;
-    - `templateUrl` is a template which should be fetched from the network via this URL;
+    - `template` provides HTML for the given segment view; if `template` is a function, it will be called with injectable arguments;
+    - `templateUrl` is a template which should be fetched from the network via this URL; if `templateUrl` is a function, it will be called with injectable arguments; if neither `template` nor `templateUrl` parameters are defined, the DOM element's transcluded content will be used;
     - `controller` is attached to the given segment view when compiled and linked, this can be any controller definition AngularJS supports;
     - `controllerAs` is a controller alias name, if present the controller will be published to scope under the
     controllerAs name;
@@ -182,7 +188,8 @@ Adds new segment at current pointer level.
     - `watcher` is a $watch-function for recreating the view when its returning value is changed;
     - `resolve` is a hash of functions or injectable names which should be resolved prior to instantiating the template and the controller;
     - `untilResolved` is the alternate set of params (e.g. `template` and `controller`) which should be used before resolving is completed; 
-    - `resolveFailed` is the alternate set of params which should be used if resolving failed.
+    - `resolveFailed` is the alternate set of params which should be used if resolving failed;
+    - `default` is a boolean value which can be set to true if this child segment should be loaded by default when no child is specified in the route.
     
 ##### within(childName)
 
@@ -228,6 +235,63 @@ Helper method for checking whether current route starts with the given string.
 
 Helper method for checking whether current route contains the given string.
 
+##### getSegmentUrl(segmentName, routeParams)
+
+A method for reverse routing which can return the route URL for the specified segment name.
+
+- *segmentName*
+
+    The name of a segment as defined in `when()`.
+
+- *routeParams*
+
+    Route params hash to be put into route URL template. Standard `$routeParams` object is used first;
+    it is extended (overrided) with this provided object then.
+
+```javascript
+$routeSegment.getSegmentUrl('s1');                              // -> '/section1'
+$routeSegment.getSegmentUrl('s1.prefs');                        // -> '/section1/prefs'
+$routeSegment.getSegmentUrl('s1.itemInfo', {id: 123});          // -> '/section1/123'
+$routeSegment.getSegmentUrl('s1.itemInfo.edit', {id: 123});     // -> '/section1/123/edit'
+```
+
+### Filters ###
+
+##### routeSegmentEqualsTo
+
+A wrapper for `$routeSegment.name == value`.
+```html
+<li ng-class="{active: ('s1' | routeSegmentEqualsTo)}">
+```
+
+##### routeSegmentStartsWith
+
+A wrapper for `$routeSegment.startsWith(value)`.
+```html
+<li ng-class="{active: ('s1' | routeSegmentStartsWith)}">
+```
+
+##### routeSegmentContains
+
+A wrapper for `$routeSegment.contains(value)`.
+```html
+<li ng-class="{active: ('s1' | routeSegmentContains)}">
+```
+
+##### routeSegmentParam
+
+A wrapper for `$routeSegment.$routeParams[value]`.
+```html
+<li ng-class="{active: ('s1.itemInfo' | routeSegmentEqualsTo) && ('id' | routeSegmentParam) == 123}">
+```
+
+##### routeSegmentUrl
+
+A wrapper for `$routeSegment.getSegmentUrl`.
+```html
+<a ng-href="{{ 's1.home' | routeSegmentUrl }}">
+<a ng-href="{{ 's1.itemInfo.edit' | routeSegmentUrl: {id: 123} }}">
+```
 
 License
 -------
