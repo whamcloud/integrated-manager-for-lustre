@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+
+'use strict';
+
+var tree = require('../');
+var install = tree.get('install');
+install.dev().done();

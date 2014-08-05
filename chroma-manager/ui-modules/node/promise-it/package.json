@@ -1,0 +1,13 @@
+{
+  "name": "promise-it",
+  "version": "1.0.0",
+  "description": "Adds a simple way to resolve promise jasmine tests.",
+  "main": "index.js",
+  "private": true,
+  "keywords": [
+    "jasmine",
+    "testing",
+    "promise"
+  ],
+  "license": "MIT"
+}

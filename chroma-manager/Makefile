@@ -80,7 +80,13 @@ chroma_ui_new/node_modules: chroma_ui_new/package.json $(NPM)
 	cd chroma_ui_new && \
 	npm install
 
-gulp_build: $(NPM) realtime/node_modules chroma_ui_new/node_modules
+ziplocker/node_modules: ui-modules/node/ziplocker/package.json
+	@echo "Setting up ziplocker module for development..."; \
+	cd ui-modules/node/ziplocker && \
+	cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./node_modules/ && \
+	./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
+
+gulp_build: $(NPM) ziplocker/node_modules realtime/node_modules chroma_ui_new/node_modules
 	@echo "Building New UI files for deployment..."; \
 	cd chroma_ui_new && \
 	./node_modules/.bin/gulp build

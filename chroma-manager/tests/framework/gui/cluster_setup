@@ -107,6 +107,9 @@ cd ../chroma_ui_new
 npm install
 cd ../realtime
 npm install
+cd ../ui-modules/node/ziplocker
+cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./node_modules/
+./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 
 # Configure VNC server
 cd ~

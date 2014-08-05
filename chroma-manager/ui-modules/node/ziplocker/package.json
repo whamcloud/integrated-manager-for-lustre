@@ -1,0 +1,44 @@
+{
+  "name": "ziplocker",
+  "version": "0.0.1",
+  "description": "Locks down dependencies, optional dependencies, and their dependencies to a specific version.",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "mjnw",
+    "cover": "cover"
+  },
+  "bin": {
+    "ziplocker": "./bin/ziplocker",
+    "zip-install": "./bin/zip-install",
+    "zip-install-dev": "./bin/zip-install-dev"
+  },
+  "keywords": [
+    "ziplocker",
+    "semver",
+    "ziplock",
+    "lockdown",
+    "seal",
+    "shrinkwrap"
+  ],
+  "author": "Joe Grund",
+  "license": "MIT",
+  "devDependencies": {
+    "minijasminenodewrap": "1.0.1",
+    "promise-it": "file://../promise-it"
+  },
+  "dependencies": {
+    "chalk": "0.5.1",
+    "configulator": "1.0.0",
+    "cpr": "0.3.2",
+    "del": "0.1.1",
+    "lodash.isequal": "2.4.1",
+    "promise": "5.0.0",
+    "request-then": "0.0.1",
+    "semver": "3.0.1",
+    "tar": "0.1.20",
+    "tree-climber": "1.2.0",
+    "unfunk-diff": "0.0.2",
+    "wiretree": "0.4.0"
+  }
+}
