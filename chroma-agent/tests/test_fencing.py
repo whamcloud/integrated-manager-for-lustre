@@ -13,8 +13,8 @@ class FencingTestCase(unittest.TestCase):
 
     def setUp(self):
         super(FencingTestCase, self).setUp()
-        import chroma_agent.shell
-        patcher = mock.patch.object(chroma_agent.shell, '_run',
+        import chroma_agent.chroma_common.lib.shell
+        patcher = mock.patch.object(chroma_agent.chroma_common.lib.shell, '_run',
                                     return_value=(0, '', ''))
         self._run = patcher.start()
 

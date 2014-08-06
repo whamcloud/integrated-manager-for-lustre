@@ -23,10 +23,11 @@
 import threading
 import traceback
 import sys
-from chroma_agent import shell
+
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
-from chroma_agent.shell import SubprocessAborted
+from chroma_agent.chroma_common.lib.shell import SubprocessAborted
 
 
 class CallbackAfterResponse(Exception):

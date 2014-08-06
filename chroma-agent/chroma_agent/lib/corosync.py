@@ -23,14 +23,15 @@
 import time
 import re
 import socket
+
 from netaddr import IPNetwork, IPAddress
 from netaddr.core import AddrFormatError
-
-from chroma_agent import shell, node_admin, config
+from chroma_agent import node_admin, config
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.lib.system import iptables
-
 from jinja2 import Environment, PackageLoader
+
 env = Environment(loader=PackageLoader('chroma_agent', 'templates'))
 
 

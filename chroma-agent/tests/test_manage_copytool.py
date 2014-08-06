@@ -1,7 +1,8 @@
 import tempfile
 import shutil
-from mock import patch
 
+from mock import patch
+from chroma_agent.chroma_common.lib import shell
 from tests.command_capture_testcase import CommandCaptureTestCase
 from chroma_agent.action_plugins.manage_copytool import start_monitored_copytool, stop_monitored_copytool, configure_copytool, unconfigure_copytool, update_copytool, list_copytools, copytool_vars, _copytool_vars
 
@@ -70,8 +71,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
                         'id=%s' % self.ct_id])
 
     def test_start_should_be_idempotent(self):
-        from chroma_agent import shell
-        from chroma_agent.shell import CommandExecutionError
+        from chroma_agent.chroma_common.lib.shell import CommandExecutionError
 
         real_try_run = shell.try_run
 
@@ -82,7 +82,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
             else:
                 real_try_run(*args)
 
-        with patch('chroma_agent.shell.try_run', fake_try_run):
+        with patch('chroma_agent.chroma_common.lib.shell.try_run', fake_try_run):
             start_monitored_copytool(self.ct_id)
             self.assertRan(['/sbin/restart', 'copytool-monitor',
                             'id=%s' % self.ct_id])
@@ -92,12 +92,12 @@ class TestCopytoolManagement(CommandCaptureTestCase):
                             'id=%s' % self.ct_id])
 
     def test_stop_should_be_idempotent(self):
-        from chroma_agent.shell import CommandExecutionError
+        from chroma_agent.chroma_common.lib.shell import CommandExecutionError
 
         def raise_error(obj):
             raise CommandExecutionError(1, [], '', 'Unknown instance')
 
-        with patch('chroma_agent.shell.try_run', side_effect=raise_error):
+        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=raise_error):
             stop_monitored_copytool(self.ct_id)
 
     def test_configure_should_be_idempotent(self):

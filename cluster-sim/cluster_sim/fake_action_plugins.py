@@ -21,8 +21,8 @@
 
 
 import threading
-from chroma_agent import shell
 
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.lib.pacemaker import PacemakerConfigurationError
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.log import log

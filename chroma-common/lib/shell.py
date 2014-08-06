@@ -26,7 +26,7 @@ import subprocess
 import threading
 import os
 
-from chroma_agent.log import console_log
+logger = None
 
 
 class CommandExecutionError(Exception):
@@ -77,6 +77,11 @@ class SubprocessAborted(Exception):
     pass
 
 
+def set_logger(_logger):
+    global logger
+    logger = _logger
+
+
 def _run(arg_list):
     """
     Separate the bare inner of running a command, so that tests can
@@ -99,7 +104,8 @@ def _run(arg_list):
         if rc is None:
             thread_state.abort.wait(timeout = wait)
             if thread_state.abort.is_set():
-                console_log.warning("Teardown: killing subprocess %s (%s)" % (p.pid, arg_list))
+                if logger:
+                    logger.warning("Teardown: killing subprocess %s (%s)" % (p.pid, arg_list))
                 p.kill()
                 raise SubprocessAborted()
             elif wait < max_wait:
@@ -119,8 +125,8 @@ def run(arg_list):
 
     # TODO: add a 'quiet' flag and use it from spammy/polling plugins to avoid
     # sending silly amounts of command output back to the manager.
-
-    console_log.debug("shell.run: %s" % repr(arg_list))
+    if logger:
+        logger.debug("shell.run: %s" % repr(arg_list))
 
     os.environ["TERM"] = ""
 

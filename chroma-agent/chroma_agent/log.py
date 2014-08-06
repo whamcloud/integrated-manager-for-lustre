@@ -24,6 +24,8 @@ import logging
 from logging.handlers import SysLogHandler
 import os
 
+from chroma_agent.chroma_common.lib import shell
+
 # This log is for messages about the internal machinations of our
 # daemon and messaging systems, the user would only be interested
 # in warnings and errors
@@ -37,6 +39,10 @@ copytool_log = logging.getLogger('copytool')
 # the user will be interested general breezy chat (INFO) about what we're
 # doing for them
 console_log = logging.getLogger('console')
+
+# Enable logging in the shell commands, can help this is ass backwards and the shell should fetch a logger
+# but for today this achieves what we want, and has no debt.
+shell.set_logger(console_log)
 
 if os.path.exists("/tmp/chroma-agent-debug"):
     daemon_log.setLevel(logging.DEBUG)

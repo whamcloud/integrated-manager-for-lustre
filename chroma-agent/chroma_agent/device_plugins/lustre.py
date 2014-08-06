@@ -21,18 +21,19 @@
 
 
 from collections import defaultdict, namedtuple
-from chroma_agent.log import daemon_log
-from chroma_agent.log import console_log
 import os
 import glob
 import datetime
 import ConfigParser
 
+from chroma_agent.chroma_common.lib import shell
+from chroma_agent.log import daemon_log
+from chroma_agent.log import console_log
 from chroma_agent.utils import Mounts
-from chroma_agent import shell
 from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
 import chroma_agent.lib.normalize_device_path as ndp
+
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from chroma_agent.device_plugins.audit.local import LocalAudit

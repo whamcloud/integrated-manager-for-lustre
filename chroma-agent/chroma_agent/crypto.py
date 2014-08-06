@@ -21,9 +21,10 @@
 
 
 import errno
-from chroma_agent import shell
-from chroma_agent.log import console_log
 import os
+
+from chroma_agent.chroma_common.lib import shell
+from chroma_agent.log import console_log
 
 
 class Crypto(object):

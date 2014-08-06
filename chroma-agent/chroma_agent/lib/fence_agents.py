@@ -21,10 +21,10 @@
 
 
 from os.path import isfile, expanduser
-from chroma_agent import shell
 
 # TODO: Refactor out this hard-coded stuff in favor of using templates
 # supplied by the manager.
+from chroma_agent.chroma_common.lib import shell
 
 
 class FenceAgent(object):

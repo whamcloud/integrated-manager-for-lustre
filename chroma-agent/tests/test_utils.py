@@ -8,7 +8,7 @@ def patch_shell(args_to_result):
     def fake_shell(args):
         return args_to_result[tuple(args)]
 
-    return mock.patch('chroma_agent.shell.try_run', fake_shell)
+    return mock.patch('chroma_agent.chroma_common.lib.shell.try_run', fake_shell)
 
 
 def patch_run(expected_args=None, rc=0, stdout='', stderr=''):
@@ -19,7 +19,7 @@ def patch_run(expected_args=None, rc=0, stdout='', stderr=''):
             raise RuntimeError("Unexpected args:  %s got %s " %
                                            (repr(expected_args), repr(args)))
 
-    return mock.patch('chroma_agent.shell.run', fake_shell)
+    return mock.patch('chroma_agent.chroma_common.lib.shell.run', fake_shell)
 
 
 def patch_open(path_to_result):

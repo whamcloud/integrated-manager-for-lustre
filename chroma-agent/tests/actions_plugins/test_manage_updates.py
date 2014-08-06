@@ -54,7 +54,7 @@ chroma-agent-management-99.01-3061.noarch
             else:
                 return ""
 
-        with patch('chroma_agent.shell.try_run', side_effect=try_run) as mock_try_run:
+        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=try_run) as mock_try_run:
             agent_updates.update_packages(['myrepo'], ['mypackage'])
             self.assertListEqual(list(mock_try_run.call_args_list[0][0][0]), ['yum', 'clean', 'all'])
             self.assertListEqual(list(mock_try_run.call_args_list[1][0][0]), ['repoquery', '--disablerepo=*', "--enablerepo=myrepo", "--pkgnarrow=updates", "-a"])
@@ -62,7 +62,7 @@ chroma-agent-management-99.01-3061.noarch
             self.assertListEqual(list(mock_try_run.call_args_list[3][0][0]), ['yum', 'update', '-y', "--enablerepo=myrepo", "chroma-agent-99.01-3061.noarch", "chroma-agent-management-99.01-3061.noarch"])
 
     def test_install_packages(self):
-        with patch('chroma_agent.shell.try_run') as mock_run:
+        with patch('chroma_agent.chroma_common.lib.shell.try_run') as mock_run:
             agent_updates.install_packages(['myrepo'], ['foo', 'bar'])
             mock_run.assert_called_once_with(['yum', 'install', '-y', "--enablerepo=myrepo", 'foo', 'bar'])
 
@@ -85,7 +85,7 @@ rpmlib(PayloadIsXz) <= 5.2-1
 kernel-2.6.32-358.18.1.el6.x86_64
 """
 
-        with patch('chroma_agent.shell.try_run', side_effect=try_run):
+        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=try_run):
             result = agent_updates.kernel_status()
             self.assertDictEqual(result, {
                 'required': 'kernel-2.6.32-358.18.1.el6.x86_64',
@@ -109,7 +109,7 @@ lustre-backend-fs
 
 """
 
-        with patch('chroma_agent.shell.try_run', side_effect=try_run) as mock_run:
+        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=try_run) as mock_run:
             agent_updates.install_packages(['myrepo'], ['foo'], force_dependencies=True)
             self.assertListEqual(
                 mock_run.call_args_list,

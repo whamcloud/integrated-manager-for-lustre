@@ -22,12 +22,12 @@
 
 import xml.etree.ElementTree as xml
 from xml.parsers.expat import ExpatError as ParseError
+import socket
 
-from chroma_agent import shell
-from chroma_agent.shell import CommandExecutionError
+from chroma_agent.chroma_common.lib.shell import CommandExecutionError
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.lib import fence_agents
 from chroma_agent.utils import wait
-import socket
 
 
 class PacemakerError(Exception):

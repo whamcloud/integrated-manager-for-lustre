@@ -21,15 +21,17 @@
 
 
 import subprocess
-from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
-from chroma_agent.device_plugins import lustre
-from chroma_agent.log import daemon_log
-
 import re
 import os
 import platform
-from chroma_agent import shell, config
+
+from chroma_agent.chroma_common.lib import shell
+from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
+from chroma_agent.device_plugins import lustre
+from chroma_agent.log import daemon_log
+from chroma_agent import config
 from chroma_agent.crypto import Crypto
+
 
 REPO_CONTENT = """
 [Intel Lustre Manager]

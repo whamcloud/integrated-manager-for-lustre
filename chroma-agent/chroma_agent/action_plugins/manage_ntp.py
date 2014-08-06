@@ -21,10 +21,10 @@
 
 
 import os
-
-from chroma_agent import shell
 from tempfile import mkstemp
 from time import sleep
+
+from chroma_agent.chroma_common.lib import shell
 
 
 def unconfigure_ntp():

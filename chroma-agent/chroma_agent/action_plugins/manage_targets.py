@@ -25,8 +25,9 @@ import os
 import re
 import tempfile
 
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import daemon_log, console_log
-from chroma_agent import shell, config
+from chroma_agent import config
 
 
 def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,

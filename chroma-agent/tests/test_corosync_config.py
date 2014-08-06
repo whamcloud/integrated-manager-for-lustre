@@ -1,7 +1,7 @@
 import sys
+
 import mock
 from django.utils import unittest
-
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
 
@@ -38,8 +38,8 @@ class TestConfigureCorosync(unittest.TestCase):
     def setUp(self):
         super(TestConfigureCorosync, self).setUp()
 
-        import chroma_agent.shell
-        patcher = mock.patch.object(chroma_agent.shell, 'run', return_value=(0, '', ''))
+        import chroma_agent.chroma_common.lib.shell
+        patcher = mock.patch.object(chroma_agent.chroma_common.lib.shell, 'run', return_value=(0, '', ''))
         self.run = patcher.start()
 
         from chroma_agent.lib.corosync import CorosyncRingInterface

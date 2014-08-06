@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent import shell
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 
 

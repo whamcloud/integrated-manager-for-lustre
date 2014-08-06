@@ -23,7 +23,7 @@
 import os
 import errno
 
-from chroma_agent import shell
+from chroma_agent.chroma_common.lib import shell
 
 
 FSTAB_ENTRY_TEMPLATE = "%s\t%s\t\tlustre\tdefaults,_netdev\t0 0\n"

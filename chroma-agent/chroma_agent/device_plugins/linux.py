@@ -18,11 +18,14 @@
 # of the Materials, either expressly, by implication, inducement, estoppel or
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
+import os
+import glob
+import re
+import errno
 
-
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePlugin
-from chroma_agent import shell
 from chroma_agent.utils import BlkId
 from chroma_agent import config
 import chroma_agent.lib.normalize_device_path as ndp
@@ -31,11 +34,6 @@ from chroma_agent.device_plugins.linux_components.device_mapper import DmsetupTa
 from chroma_agent.device_plugins.linux_components.emcpower import EMCPower
 from chroma_agent.device_plugins.linux_components.local_filesystems import LocalFilesystems
 from chroma_agent.device_plugins.linux_components.mdraid import MdRaid
-
-import os
-import glob
-import re
-import errno
 # Python errno doesn't include this code
 errno.NO_MEDIA_ERRNO = 123
 

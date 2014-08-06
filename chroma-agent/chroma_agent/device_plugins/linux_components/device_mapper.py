@@ -22,8 +22,8 @@
 import os
 import re
 
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
-from chroma_agent import shell
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 import chroma_agent.lib.normalize_device_path as ndp
 

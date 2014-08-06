@@ -21,7 +21,8 @@
 
 
 import os
-from chroma_agent import shell
+
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.lib.pacemaker import PacemakerConfig

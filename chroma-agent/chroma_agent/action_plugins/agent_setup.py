@@ -25,15 +25,16 @@ Actions for registration and deregistration of a server (adding and removing
 it from chroma manager)
 """
 
-from chroma_agent import shell, config
+import os
+
+from chroma_agent import config
 from chroma_agent.agent_client import AgentClient, HttpError
 from chroma_agent.agent_daemon import ServerProperties
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.crypto import Crypto
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from chroma_agent.log import console_log
-
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePluginManager
-import os
 
 
 def _service_is_running():

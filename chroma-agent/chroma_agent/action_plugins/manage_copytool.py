@@ -24,10 +24,10 @@ import time
 import copy
 
 from chroma_agent import config
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.config_store import ConfigKeyExistsError
 from chroma_agent.cli import raw_result
-from chroma_agent import shell
-from chroma_agent.shell import CommandExecutionError
+from chroma_agent.chroma_common.lib.shell import CommandExecutionError
 from chroma_agent.copytool_monitor import Copytool, COPYTOOL_PROGRESS_INTERVAL
 from chroma_agent.log import copytool_log
 

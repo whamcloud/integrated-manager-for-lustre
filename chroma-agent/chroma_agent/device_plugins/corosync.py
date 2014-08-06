@@ -21,10 +21,11 @@
 
 
 import xml.etree.ElementTree as xml
+
 from dateutil.tz import tzutc, tzlocal
 from dateutil.parser import parse
 
-from chroma_agent import shell
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
 

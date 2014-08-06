@@ -223,7 +223,7 @@ unused devices: <none>\n""",
         dm_setup_table = self._load_dmsetup(devices_filename, dmsetup_filename)
 
         with mock.patch('logging.Logger.debug', self.mock_debug):
-            with mock.patch('chroma_agent.shell.try_run', self.mock_try_run):
+            with mock.patch('chroma_agent.chroma_common.lib.shell.try_run', self.mock_try_run):
                 with mock.patch('__builtin__.open', self.mock_open):
                     with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor', self.mock_dev_major_minor):
                         with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._find_block_devs', self.mock_find_block_devs):
@@ -345,7 +345,7 @@ class TestEMCPower(LinuxAgentTests):
 
         with mock.patch('logging.Logger.debug', self.mock_debug):
             with mock.patch('glob.glob', self.mock_glob):
-                with mock.patch('chroma_agent.shell.try_run', self.mock_try_run):
+                with mock.patch('chroma_agent.chroma_common.lib.shell.try_run', self.mock_try_run):
                     with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor', self.mock_dev_major_minor):
                         with mock.patch('chroma_agent.device_plugins.linux.DeviceHelper._find_block_devs', self.mock_find_block_devs):
 

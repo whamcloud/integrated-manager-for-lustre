@@ -22,11 +22,11 @@
 
 import argparse
 import inspect
-from chroma_agent import shell
-import simplejson as json
 import sys
 import traceback
 
+import simplejson as json
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.plugin_manager import ActionPluginManager
 
 

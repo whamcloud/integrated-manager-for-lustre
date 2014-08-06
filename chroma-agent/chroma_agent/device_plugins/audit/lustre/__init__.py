@@ -23,12 +23,13 @@
 import re
 import os
 import heapq
-from tablib.packages import yaml
 
+from tablib.packages import yaml
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.utils import Mounts
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
-from chroma_agent import shell
+
 
 # HYD-2307 workaround
 DISABLE_BRW_STATS = True

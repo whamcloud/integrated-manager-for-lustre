@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent.shell import try_run
+from chroma_agent.chroma_common.lib.shell import try_run
 
 
 def fail_node(args):

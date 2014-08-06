@@ -20,11 +20,12 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent import shell
+import os
+
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin
 import simplejson as json
-import os
 
 
 # Extra deps not expressed in lsmod's list of dependent modules

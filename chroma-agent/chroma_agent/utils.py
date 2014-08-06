@@ -20,13 +20,13 @@
 # express and approved by Intel in writing.
 
 
-from chroma_agent import shell
-from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
-
 from collections import defaultdict
 import re
 import time
 import itertools
+
+from chroma_agent.chroma_common.lib import shell
+from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 
 class Mounts(FileSystemMixin):

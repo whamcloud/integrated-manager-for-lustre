@@ -26,7 +26,7 @@ Corosync verification
 
 from netaddr import IPNetwork
 
-from chroma_agent import shell
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
 from chroma_agent.log import daemon_log

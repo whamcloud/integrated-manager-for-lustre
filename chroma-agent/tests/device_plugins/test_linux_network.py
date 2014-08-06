@@ -69,7 +69,7 @@ ib0     Link encap:InfiniBand  HWaddr 80:00:00:48:FE:80:00:00:00:00:00:00:00:00:
         collisions:0 txqueuelen:256
         RX bytes:3286081 (3.1 MiB)  TX bytes:4753096 (4.5 MiB)"""
 
-        with mock.patch('chroma_agent.shell.try_run', mock_try_run_ifconfig):
+        with mock.patch('chroma_agent.chroma_common.lib.shell.try_run', mock_try_run_ifconfig):
             interfaces = NetworkInterfaces()
 
         ResultCheck = namedtuple("ResultCheck",

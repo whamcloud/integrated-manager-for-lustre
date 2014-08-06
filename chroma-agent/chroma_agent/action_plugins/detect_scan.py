@@ -26,8 +26,8 @@ import subprocess
 from tempfile import mktemp
 from collections import defaultdict
 
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.utils import Mounts, BlkId
-from chroma_agent import shell
 import chroma_agent.lib.normalize_device_path as ndp
 
 

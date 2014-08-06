@@ -1,9 +1,10 @@
-from chroma_agent import shell
+import time
+
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin, CallbackAfterResponse
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePlugin
 from django.utils import unittest
 import mock
-import time
 
 
 ACTION_ONE_RETVAL = 'action_one_return'
