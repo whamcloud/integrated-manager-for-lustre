@@ -1,8 +1,8 @@
 include ../include/Makefile.version
 
-# Get the list of nodejs modules needed by realtime
-REALTIME_DEPENDENCIES := $(shell python -c "import json; print ' '.join(json.load(open('realtime/package.json'))['dependencies'].keys())")
 NPM := $(shell if which npm 2>/dev/null; then true; else echo npm; fi)
+
+ARCH := $(shell echo $$(uname -m))
 
 # Fixup proxies if needed
 PREFIXED_PROXIES := if [ -n "$(HTTP_PROXY)" ] && [[ "$(HTTP_PROXY)" != "http://"* ]]; then \
@@ -73,6 +73,11 @@ realtime/node_modules: realtime/package.json ziplocker/node_modules
 	cd realtime && \
 	../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 
+realtime_prod/node_modules: realtime/package.json ziplocker/node_modules
+	@echo "Setting up realtime module for production..."; \
+	cd realtime && \
+	../ui-modules/node/ziplocker/bin/zip-install --overrides.ziplockDir='../../chroma-externals/'
+
 chroma_ui_new/node_modules: chroma_ui_new/package.json $(NPM)
 	@echo "Setting up the New Ui for development..."; \
 	$(PREFIXED_PROXIES) \
@@ -85,7 +90,7 @@ ziplocker/node_modules: ui-modules/node/ziplocker/package.json
 	cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./node_modules/ && \
 	./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 
-gulp_build: $(NPM) ziplocker/node_modules realtime/node_modules chroma_ui_new/node_modules
+gulp_build: $(NPM) ziplocker/node_modules realtime_prod/node_modules chroma_ui_new/node_modules
 	@echo "Building New UI files for deployment..."; \
 	cd chroma_ui_new && \
 	./node_modules/.bin/gulp build
@@ -204,16 +209,15 @@ tarball: version gulp_build
 
 rpms: cleandist tarball
 	rm -rf _topdir
-	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/noarch}
+	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/$(ARCH)}
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
 	cp chroma-supervisor-init.sh chroma-host-discover-init.sh chroma-manager.conf production_supervisord.conf logrotate.cfg _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(PACKAGE_VERSION)" \
 		--define "release $(PACKAGE_RELEASE)" \
-		--define "realtime_dependencies '$(REALTIME_DEPENDENCIES)'" \
 		-bb _topdir/SPECS/chroma-manager.spec
-	mv _topdir/RPMS/noarch/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).noarch.rpm dist/
+	mv _topdir/RPMS/$(ARCH)/chroma-manager-*$(PACKAGE_VERSION)-$(PACKAGE_RELEASE).$(ARCH).rpm dist/
 	rm -rf _topdir
 
 requirements:
@@ -229,8 +233,10 @@ requirements:
 		sed -i -e '/^make\[[0-9]\]: /d' requirements.txt; \
 	fi
 
-download: requirements
+download: requirements ziplocker/node_modules
 	pip-python install --download ../chroma-externals -r requirements.txt
+	cd realtime && \
+	../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../chroma-externals/'
 
 docs: requirements version
 	set -e ; \

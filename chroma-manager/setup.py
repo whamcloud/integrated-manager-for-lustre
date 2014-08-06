@@ -21,8 +21,9 @@
 # express and approved by Intel in writing.
 
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, findall
 from scm_version import PACKAGE_VERSION
+from re import sub
 
 excludes = ["*docs*"]
 
@@ -81,7 +82,7 @@ setup(
         'realtime': [
             "resources/*.js",
             "*.js"
-        ]
+        ] + [sub(r'^realtime/', '', x) for x in findall('realtime/node_modules')]
     },
     scripts = ["chroma-host-discover"],
     entry_points = {
