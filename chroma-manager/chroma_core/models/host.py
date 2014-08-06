@@ -182,12 +182,25 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         return not self.server_profile.managed
 
     @property
-    def member_of_active_filesystem(self):
+    def member_of_available_filesystem(self):
+        """Return True if any part of this host or its FK dependents are related to an available filesystem
+
+        See usage in chroma_apy/host.py:  used to determine if safe to configure LNet.
+        """
+
+        # To prevent circular imports
         from chroma_core.models.filesystem import ManagedFilesystem
+
+        # Host is part of an available filesystem.
         for filesystem in ManagedFilesystem.objects.filter(state = 'available'):
             if self in filesystem.get_servers():
                 return True
 
+        # Host has any associated copytools related to an available filesystem.
+        if self.copytools.filter(filesystem__state='available').exists():
+            return True
+
+        # This host is not related to any available filesystems.
         return False
 
     def get_label(self):

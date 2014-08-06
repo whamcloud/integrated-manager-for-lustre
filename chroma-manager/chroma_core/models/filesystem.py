@@ -326,6 +326,15 @@ class StopUnavailableFilesystemJob(FilesystemJob, StateChangeJob):
 
 
 class MakeAvailableFilesystemUnavailable(FilesystemJob, StateChangeJob):
+    """This Job has no steps, so does nothing other then change the state.
+
+    Although the get_available_job code will find this Job as an option when the FS
+    is in state 'available', because state_verb is None JobScheduler:_add_verbs will strip it out.
+
+    TODO:  RECOMMEND A REVIEW BEFORE RUNNING THIS JOB TO DETERMINE WHAT THE UNAVAILABLE STATE MEANS, OTHER THAN JUST THE
+    STARTING STATE.
+    """
+
     state_verb = None
     state_transition = (ManagedFilesystem, 'available', 'unavailable')
     filesystem = models.ForeignKey('ManagedFilesystem')

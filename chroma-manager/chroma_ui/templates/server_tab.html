@@ -204,7 +204,7 @@
                 job_class: 'UpdateJob',
                 multi_job: true,
                 is_disabled : function is_disabled (host) {
-                  return host.member_of_active_filesystem && !host.immutable_state;
+                  return host.member_of_available_filesystem && !host.immutable_state;
                 }
             });
         });
