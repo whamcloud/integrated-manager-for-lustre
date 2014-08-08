@@ -228,6 +228,7 @@ class TargetMetricStore(MetricStore):
                     # We don't want the current value, we want the rate.
                     update[ds_name] = {'value': stats[key]['sum'],
                                        'type': 'Counter'}
+                    update[ds_name.replace('_bytes', '_iops')] = {'value': stats[key]['count'], 'type': 'Counter'}
                 else:
                     update[ds_name] = {'value': stats[key]['sum'],
                                        'type': 'Gauge'}

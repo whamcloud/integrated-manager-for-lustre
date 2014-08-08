@@ -121,6 +121,8 @@ class TestStats(ChromaApiTestCase):
         # discover available metrics
         content, = self.fetch('target/{0}/metric/'.format(self.osts[0].id), latest='true')
         prefixes = set(name.split('_')[0] for name in content['data'])
+        for total, count in [('stats_read_bytes', 'stats_read_iops'), ('stats_write_bytes', 'stats_write_iops')]:
+            self.assertGreater(content['data'][total], content['data'][count])
         self.assertIn('stats', prefixes)
         self.assertNotIn('job', prefixes)
         content = self.fetch('host/metric/', latest='true')

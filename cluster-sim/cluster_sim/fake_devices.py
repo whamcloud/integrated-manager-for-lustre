@@ -224,8 +224,10 @@ class FakeDevices(Persisted):
             for md_op in ['rmdir', 'close', 'open', 'unlink', 'rmdir', 'getxattr', 'mkdir']:
                 target['stats']['stats'][md_op]['count'] += random.randint(0, 10000)
         elif 'OST' in target['label']:
-            target['stats']['stats']['write_bytes']['sum'] += random.randint(0, 10000000000)
-            target['stats']['stats']['read_bytes']['sum'] += random.randint(0, 10000000000)
+            for key in ('write_bytes', 'read_bytes'):
+                value = target['stats']['stats'][key]
+                value['sum'] += random.randint(0, 10 ** 10)
+                value['count'] += random.randint(0, 10 ** 5)
             target['stats']['kbytesfree'] = perturb(target['stats']['kbytesfree'], target['stats']['kbytestotal'] / 10, 0, target['stats']['kbytestotal'])
             target['stats']['filesfree'] = perturb(target['stats']['filesfree'], target['stats']['filestotal'] / 10, 0, target['stats']['filestotal'])
             for stat in target['stats']['job_stats']:
