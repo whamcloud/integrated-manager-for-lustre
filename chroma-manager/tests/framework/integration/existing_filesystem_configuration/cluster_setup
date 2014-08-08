@@ -22,7 +22,7 @@ eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CO
 MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 PROXY=${PROXY:-''} # Pass in a command that will set your proxy settings iff the cluster is behind a proxy. Ex: PROXY="http_proxy=foo https_proxy=foo"
 
-echo "Beginning installation and setup..."
+echo "Beginning cluster installation and setup..."
 
 # put some keys on the nodes for easy access by developers
 pdsh -l root -R ssh -S -w $(spacelist_to_commalist $ALL_NODES) "exec 2>&1; set -xe
@@ -117,7 +117,6 @@ EOF
         rpm -ivh --oldpackage kernel*.rpm
     fi
     yum -y install lustre-modules lustre lustre-osd-ldiskfs
-    rm -f /etc/yum.repos.d/autotest.repo
 fi
 if $MEASURE_COVERAGE; then
     cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
@@ -154,7 +153,7 @@ fi
 
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
-# Install and setup integration tests on integration test runner
+# Install and setup integration tests
 scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
 ssh root@$TEST_RUNNER <<EOF
 exec 2>&1; set -xe
@@ -214,12 +213,4 @@ while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
     sleep 1
 done
 
-# Create a lustre filesystem outside of Chroma
-ssh root@$TEST_RUNNER <<EOF
-cd /usr/share/chroma-manager/
-unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json tests/integration/existing_filesystem_configuration/utils/create_lustre_filesystem.py
-EOF
-
-
-echo "End installation and setup."
+echo "End cluster installation and setup."

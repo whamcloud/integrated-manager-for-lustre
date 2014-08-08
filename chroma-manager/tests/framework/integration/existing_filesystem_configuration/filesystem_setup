@@ -1,0 +1,31 @@
+#!/bin/bash -ex
+
+spacelist_to_commalist() {
+    echo $@ | tr ' ' ','
+}
+
+[ -r localenv ] && . localenv
+
+CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)"}
+CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
+
+eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
+
+echo "Beginning filesystem setup..."
+
+scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+
+# Create a lustre filesystem outside of Chroma
+ssh root@$TEST_RUNNER <<EOF
+cd /usr/share/chroma-manager/
+unset http_proxy; unset https_proxy
+
+# When create_lustre_filesystem.py runs it will save the modified config file to LUSTRE_FILESYSTEM_CONFIGFILE
+export LUSTRE_FILESYSTEM_CONFIGFILE=/root/cluster_cfg_result.json
+./tests/integration/run_tests -f -c /root/cluster_cfg.json tests/integration/existing_filesystem_configuration/utils/create_lustre_filesystem.py
+EOF
+
+# Fetch the modified config file back from the test runnner and overwrite the original.
+scp root@$TEST_RUNNER:/root/cluster_cfg_result.json $CLUSTER_CONFIG
+
+echo "End filesystem setup."

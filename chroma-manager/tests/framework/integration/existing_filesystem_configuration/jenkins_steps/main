@@ -67,8 +67,28 @@ set +e
 echo "Beginning automated test run..."
 export MEASURE_COVERAGE
 export JENKINS_PULL
+
+
+# We do this twice, once for ldiskfs, once for zfs, only the first time do we need to set the cluster up.
+
+echo "Beginning automated ldisk run..."
+export CLUSTER_CONFIG=$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)
+export XML_RESULTS_FILE="~/test_report_ldiskfs.xml"
 chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
+chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup
 chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests
+echo "Automated ldisk run complete."
+
+sed -e s/\"device_type\"\:\ \"linux\"/\"device_type\":\ \"zfs\"/g $CLUSTER_CONFIG > $PWD/existing_filesystem_configuration_cluster_cfg_zfs.json
+
+echo "Beginning automated zfs run..."
+export CLUSTER_CONFIG=$(ls $PWD/existing_filesystem_configuration_cluster_cfg_zfs.json)
+export XML_RESULTS_FILE="~/test_report_zfs.xml"
+chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup
+chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests
+echo "Automated zfs run complete."
+
+
 echo "Automated test run complete."
 
 # Combine coverage reports from the different nodes.

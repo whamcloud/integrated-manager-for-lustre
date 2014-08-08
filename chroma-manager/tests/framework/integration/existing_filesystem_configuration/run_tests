@@ -7,6 +7,7 @@ spacelist_to_commalist() {
 [ -r localenv ] && . localenv
 
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)"}
+XML_RESULTS_FILE=${XML_RESULTS_FILE:-"~/test_report.xml"}
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 
 eval $(python $CHROMA_DIR/chroma-manager/tests/utils/json_cfg2sh.py "$CLUSTER_CONFIG")
@@ -48,6 +49,6 @@ echo "Begin running tests..."
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
-./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS"
+./tests/integration/run_tests -f -c /root/cluster_cfg.json -x $XML_RESULTS_FILE $TESTS"
 
 echo "End running tests."

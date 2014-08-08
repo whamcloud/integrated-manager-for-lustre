@@ -118,7 +118,7 @@ class ApiTestCase(UtilityTestCase):
 
         if config.get('reset', True):
             self.reset_cluster()
-        else:
+        elif config.get('soft_reset', True):
             # Reset the manager via the API
             self.wait_until_true(self.api_contactable)
             self.remote_operations.unmount_clients()
@@ -128,7 +128,7 @@ class ApiTestCase(UtilityTestCase):
 
         if config.get('managed'):
             # Erase all volumes if the config does not indicate that there is already
-            # a pres-existing file system (in the case of the monitoring only tests).
+            # a pre-existing file system (in the case of the monitoring only tests).
             for server in self.TEST_SERVERS:
                 for path in server.get('device_paths', []):
                     self.remote_operations.erase_block_device(server['fqdn'], path)
