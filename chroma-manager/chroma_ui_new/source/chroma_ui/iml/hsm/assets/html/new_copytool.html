@@ -24,7 +24,9 @@
         <a><i class="fa fa-question-circle"></i></a>
         <help-tooltip topic="add_copytool_host" direction="right"></help-tooltip>
       </span>
-      <select class="form-control" name="host" id="host" ng-model="copytool.host" ng-options="w.label for w in workers.objects track by w.id" remote-validate-component></select>
+      <select class="form-control" name="host" id="host" ng-model="copytool.host" ng-options="w.label for w in workers.objects track by w.id" remote-validate-component>
+          <option value="">{{ 'add_copytool_default_menu_text' | insertHelp }}</option>
+      </select>
     </div>
 
     <div class="form-group" ng-class="{'has-error': form.archive.$invalid}">

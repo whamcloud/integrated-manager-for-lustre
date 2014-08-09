@@ -34,6 +34,7 @@ help_text = {
     'force_remove_copytool': 'Remove this copytool from the manager database without any attempt to deconfigure the copytool on the worker node.',
     'add_copytool_filesystem': 'The filesystem for which this copytool will perform HSM actions.',
     'add_copytool_host': 'The host upon which this copytool instance will be configured to run.',
+    'add_copytool_default_menu_text': 'Please choose a Copytool worker server',
     'add_copytool_bin_path': 'The filesystem path to the copytool binary on the worker (e.g. /usr/sbin/lhsmtool_posix).',
     'add_copytool_hsm_arguments': 'A vendor-specific list of copytool arguments. Consult your HSM vendor documentation for the correct arguments.',
     'add_copytool_mountpoint': 'The filesystem mountpoint on the worker node. Copytool instances require client access to their associated filesystem.',

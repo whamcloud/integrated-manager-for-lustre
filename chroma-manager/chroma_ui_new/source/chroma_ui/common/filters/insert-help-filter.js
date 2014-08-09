@@ -24,7 +24,11 @@
   'use strict';
 
   /**
-   * Services module definition.
-   */
-  angular.module('filters', ['help']);
+  * Given a key from help.py, return a sanitized replacement string
+  */
+  angular.module('filters').filter('insertHelp', ['help', function insertHelpFilterFilter (help) {
+    return function insertHelpFilter (key) {
+      return help.get(key);
+    };
+  }]);
 }());
