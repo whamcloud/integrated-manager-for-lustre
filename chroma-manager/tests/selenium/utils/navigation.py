@@ -66,6 +66,8 @@ class Navigation(BaseView):
     def go(self, *args):
         self.log.info("Navigation.go: %s" % (args,))
 
+        self.wait_for_removal("div.blockUI")
+
         if self.configure_dropdown.is_displayed():
             self.click(self.links['Configure'])
 
