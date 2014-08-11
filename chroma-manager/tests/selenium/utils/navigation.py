@@ -90,6 +90,7 @@ class Navigation(BaseView):
             if is_overlay or is_jGrowl_notification:
                 sleep(2)
             else:
+                self.wait_for_removal("div.blockUI")
                 link_handle = self.driver.find_element_by_css_selector(selector)
                 link_handle.click()
                 for wait_after_count in xrange(self.standard_wait):
