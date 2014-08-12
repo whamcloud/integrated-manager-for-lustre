@@ -16,7 +16,7 @@
     "gulp-cached": "0.0.3",
     "gulp-csso": "0.2.9",
     "gulp-inject": "0.4.1",
-    "gulp-jscs": "0.5.0",
+    "gulp-jscs": "1.1.2",
     "gulp-jshint": "1.7.0",
     "gulp-less": "1.3.1",
     "gulp-minify-html": "0.1.4",
@@ -37,19 +37,19 @@
     "karma-script-launcher": "0.1.0",
     "lodash": "2.4.1",
     "lodash-contrib": "241.3.1",
+    "map-stream": "0.1.0",
     "matchdep": "0.3.0",
     "mime": "1.2.11",
     "minijasminenodewrap": "1.0.1",
     "mkdirp": "0.5.0",
     "optimist": "0.6.0",
     "promise": "5.0.0",
+    "promised-file": "1.0.4",
     "protractor": "0.20.1",
     "semver-check": "0.0.2",
+    "source-map": "0.1.38",
     "streamqueue": "0.1.1",
-    "gulp-concat": "2.3.3",
-    "gulp-sourcemaps": "0.3.1",
-    "map-stream": "0.1.0",
-    "gulp-uglify": "0.3.1",
-    "source-map": "0.1.37"
+    "through": "2.3.4",
+    "uglify-js": "2.4.15"
   }
 }

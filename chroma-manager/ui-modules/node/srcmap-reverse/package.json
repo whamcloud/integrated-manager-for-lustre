@@ -1,0 +1,19 @@
+{
+  "name": "srcmap-reverse",
+  "version": "1.0.0",
+  "description": "Reverses a minified stack trace using a source map.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mjnw",
+    "cover": "cover"
+  },
+  "author": "Wayne Kenneth Seymour III",
+  "license": "MIT",
+  "dependencies": {
+    "source-map": "0.1.38"
+  },
+  "devDependencies": {
+    "minijasminenodewrap": "1.0.1",
+    "promised-file": "1.0.4"
+  }
+}
