@@ -22,21 +22,41 @@
 
 'use strict';
 
-/**
- * Given a server instance wires it into primus.
- * @param {Function} Primus The primus constructor
- * @param {Object} server
- * @param {Object} multiplex The multiplex plugin.
- * @param {Object} primusServerWrite The server write plugin.
- * @param {Function} Emitter
- * @returns {Object} The primus instance.
- */
-module.exports = function getPrimus (Primus, server, multiplex, primusServerWrite, Emitter) {
-  var primus = new Primus(server, { parser: 'JSON', transformer: 'socket.io' });
+var _ = require('lodash');
 
-  primus.use('serverWrite', primusServerWrite);
-  primus.use('multiplex', multiplex);
-  primus.use('emitter', Emitter);
+module.exports = function loopFactory (timers) {
+  var DEFAULT_INTERVAL = 1000;
 
-  return primus;
+  /**
+   * HOF. Given a function and an interval
+   * returns a loop object.
+   * The loop can be started and finished.
+   * Once finished, the loop cannot be restarted.
+   * @param {Function} func
+   * @param {Number} [interval]
+   * @returns {Function}
+   */
+  return function create (func, interval) {
+    var handles = {
+      start: function start () {
+        if (this.finished) return;
+
+        var next = start.bind(this);
+        var handler = _.partial(func, next);
+        this.timer = timers.setTimeout(handler, interval || DEFAULT_INTERVAL);
+      },
+      finish: function finish () {
+        if (this.timer != null)
+          timers.clearTimeout(this.timer);
+
+        this.timer = null;
+        this.finished = true;
+      }
+    };
+
+    func(handles.start.bind(handles));
+
+    return handles.finish.bind(handles);
+  };
 };
+

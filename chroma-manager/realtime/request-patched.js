@@ -22,21 +22,37 @@
 
 'use strict';
 
+var request = require('request');
+var querystring = require('querystring');
+var url = require('url');
+
 /**
- * Given a server instance wires it into primus.
- * @param {Function} Primus The primus constructor
- * @param {Object} server
- * @param {Object} multiplex The multiplex plugin.
- * @param {Object} primusServerWrite The server write plugin.
- * @param {Function} Emitter
- * @returns {Object} The primus instance.
+ * Override the default qs to use querystring instead.
+ * @param q
+ * @param clobber
+ * @returns {request.Request}
  */
-module.exports = function getPrimus (Primus, server, multiplex, primusServerWrite, Emitter) {
-  var primus = new Primus(server, { parser: 'JSON', transformer: 'socket.io' });
+request.Request.prototype.qs = function (q, clobber) {
+  //@Fixme: This is *brittle*, we are stuck until either:
+  // 1) Something happens on https://github.com/mikeal/request/issues/644
+  // 2) We upgrade to tastypie: 0.9.12: https://github.com/toastdriven/django-tastypie/pull/388
+  var base;
+  if (!clobber && this.uri.query)
+    base = querystring.parse(this.uri.query);
+  else base = {};
 
-  primus.use('serverWrite', primusServerWrite);
-  primus.use('multiplex', multiplex);
-  primus.use('emitter', Emitter);
+  for (var i in q) {
+    base[i] = q[i];
+  }
 
-  return primus;
+  if (querystring.stringify(base) === '')
+    return this;
+
+  this.uri = url.parse(this.uri.href.split('?')[0] + '?' + querystring.stringify(base));
+  this.url = this.uri;
+  this.path = this.uri.path;
+
+  return this;
 };
+
+module.exports = request;

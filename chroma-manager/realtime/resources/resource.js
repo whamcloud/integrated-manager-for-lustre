@@ -24,26 +24,21 @@
 
 'use strict';
 
-var url = require('url'),
-  uriTemplate = require('uritemplate'),
-  _ = require('lodash'),
-  jsonMask = require('json-mask');
-
-var pendCount = 0;
+var uriTemplate = require('uritemplate');
+var _ = require('lodash');
 
 /**
  * Creates a new Resource CLASS when called
- * @param {conf} conf
  * @param {request} request
  * @param {Object} logger
- * @param {Q} Q
  * @returns {Resource}
  */
-module.exports = function resourceFactory(conf, request, logger, Q) {
+module.exports = function resourceFactory(request, logger) {
   /*
    * The Base Resource
    * @name Resource
    * @constructor
+   * @param {String} path
    */
   function Resource (path) {
     if (!path)
@@ -59,7 +54,7 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
      * @methodOf Resource
      * @type {string}
      */
-    this.baseUrl = url.resolve(conf.apiUrl, path);
+    this.path = path;
 
     /**
      * @methodOf Resource
@@ -123,70 +118,13 @@ module.exports = function resourceFactory(conf, request, logger, Q) {
    * @returns {Object}
    */
   Resource.prototype.requestFor = function requestFor(templateParams) {
-    var self = this;
-
     var expanded = uriTemplate
-      .parse(this.baseUrl + '{/id}{/extraPath}')
-      .expand(templateParams || {})
-      .replace(/\/*$/, '/');
-
-    var defaultRequest = request.defaults({
-      json: true,
-      ca: conf.caFile,
-      url: expanded,
-      strictSSL: false,
-      maxSockets: 25,
-      forever: true,
-      timeout: 120000 // 2 minutes
-    });
+      .parse(this.path + '{/id}{/extraPath}')
+      .expand(templateParams || {});
 
     return {
-      get: function (params) {
-        var mask;
-        var time = process.hrtime();
-
-        pendCount += 1;
-
-        if (typeof params.jsonMask === 'string') {
-          mask = params.jsonMask;
-          delete params.jsonMask;
-        }
-
-        return Q.ninvoke(defaultRequest, 'get', params)
-          .spread(function (resp, body) {
-            var diff = process.hrtime(time);
-            var elapsed = parseInt(diff[1] / 1000000, 10); // divide by a million to get nano to milli
-
-            self.log.debug('%s: %s (%d.%d seconds)', resp.statusCode, resp.request.href, diff[0], elapsed);
-
-            if (resp.statusCode >= 400) {
-              var message;
-
-              try {
-                message = JSON.stringify(body);
-              } catch (e) {
-                message = body;
-              }
-
-              throw new Error('status: ' + resp.statusCode + ', message: ' + message);
-            }
-
-            return resp;
-          })
-          .then(function (resp) {
-            if (mask && resp.body)
-              resp.body = jsonMask(resp.body, mask);
-
-            if (resp.body)
-              self.log.trace(resp.body);
-
-            return resp;
-          })
-          .finally(function () {
-            pendCount -= 1;
-
-            self.log.trace('pend count is: %d', pendCount);
-          });
+      get: function (options) {
+        return request.get(expanded, options);
       }
     };
   };

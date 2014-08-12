@@ -22,15 +22,20 @@
 
 'use strict';
 
-var http = require('http'),
-  primus = require('./primus'),
-  Primus = require('primus'),
-  multiplex = require('primus-multiplex');
+var http = require('http');
+var primus = require('./primus');
+var Primus = require('primus');
+var multiplex = require('primus-multiplex');
+var errorSerializer = require('bunyan/lib/bunyan').stdSerializers.err;
+var MultiplexSpark = require('primus-multiplex/lib/server/spark');
+var primusServerWriteFactory = require('./primus-server-write');
+var primusServerWrite = primusServerWriteFactory(errorSerializer, MultiplexSpark);
+var Emitter = require('primus-emitter');
 
 module.exports = function () {
   var server = http.createServer();
 
-  var instance = primus(Primus, server, multiplex);
+  var instance = primus(Primus, server, multiplex, primusServerWrite, Emitter);
 
   return instance.library();
 };

@@ -4,7 +4,7 @@ var proxyquire = require('proxyquire');
 
 describe('generate lib', function () {
   var generateLib, httpStub, serverStub, PrimusStub,
-    primusStub, primusMultiplexStub, lib;
+    primusStub, primusMultiplexStub, EmitterStub, primusServerWriteStub, lib;
 
   beforeEach(function () {
     serverStub = jasmine.createSpy('serverStub');
@@ -24,11 +24,19 @@ describe('generate lib', function () {
 
     primusMultiplexStub = jasmine.createSpy('primusMultiplex');
 
+    primusServerWriteStub = jasmine.createSpy('primusServerWrite');
+
+    EmitterStub = jasmine.createSpy('Emitter');
+
     generateLib = proxyquire('../../generate-lib', {
       http: httpStub,
       primus: PrimusStub,
       './primus': primusStub,
-      'primus-multiplex': primusMultiplexStub
+      'primus-multiplex': primusMultiplexStub,
+      'primus-emitter': EmitterStub,
+      './primus-server-write': function primusServerWriteFactory () {
+        return primusServerWriteStub;
+      }
     });
 
     lib = generateLib();
@@ -39,7 +47,8 @@ describe('generate lib', function () {
   });
 
   it('should create Primus with the expected params', function () {
-    expect(primusStub).toHaveBeenCalledOnceWith(PrimusStub, serverStub, primusMultiplexStub);
+    expect(primusStub).toHaveBeenCalledOnceWith(
+      PrimusStub, serverStub, primusMultiplexStub, primusServerWriteStub, EmitterStub);
   });
 
   it('should return the client lib when called', function () {

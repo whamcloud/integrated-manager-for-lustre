@@ -22,80 +22,77 @@
 
 'use strict';
 
+process.on('SIGINT', cleanShutdown('SIGINT (Ctrl-C)'));
+process.on('SIGTERM', cleanShutdown('SIGTERM'));
+
 function cleanShutdown (signal) {
-  console.log('Caught ' + signal + ', shutting down cleanly.');
-  // TODO: Is there more that should be done to shut down cleanly?
-  process.exit(0);
+  return function cleanShutdownInner () {
+    console.log('Caught ' + signal + ', shutting down cleanly.');
+    // TODO: Is there more that should be done to shut down cleanly?
+    process.exit(0);
+  };
 }
 
-process.on('SIGINT', function () {
-  cleanShutdown('SIGINT (Ctrl-C)');
-});
+var di = require('di');
+var fs = require('fs');
+var router = require('socket-router');
+var resources = require('./resources');
+var path = require('path');
+var Validator = require('jsonschema').Validator;
 
-process.on('SIGTERM', function () {
-  cleanShutdown('SIGTERM');
-});
-
-var https = require('https'),
-  http = require('http'),
-  di = require('di'),
-  request = require('./request'),
-  Q = require('q'),
-  serverFactory = require('./server'),
-  loggerFactory = require('./logger'),
-  conf = require('./conf'),
-  primus = require('./primus'),
-  Primus = require('primus'),
-  streamFactory = require('./stream'),
-  multiplex = require('primus-multiplex'),
-  resourceFactory = require('./resources').resourceFactory,
-  channelFactory = require('./channel'),
-  fileSystemResourceFactory = require('./resources').fileSystemResourceFactory,
-  hostResourceFactory = require('./resources').hostResourceFactory,
-  alertResourceFactory = require('./resources').alertResourceFactory,
-  eventResourceFactory = require('./resources').eventResourceFactory,
-  commandResourceFactory = require('./resources').commandResourceFactory,
-  notificationResourceFactory = require('./resources').notificationResourceFactory,
-  targetResourceFactory = require('./resources').targetResourceFactory,
-  hsmCopytoolResourceFactory = require('./resources').hsmCopytoolResourceFactory,
-  hsmCopytoolOperationResourceFactory = require('./resources').hsmCopytoolOperationResourceFactory,
-  targetOstMetricsResourceFactory = require('./resources').targetOstMetricsResourceFactory,
-  timers = require('./timers');
 
 var modules = [{
-  conf: ['value', conf],
-  https: ['value', https],
-  http: ['value', http],
-  logger: ['factory', loggerFactory],
-  Primus: ['value', Primus],
-  multiplex: ['value', multiplex],
-  request: ['value', request],
-  Q: ['value', Q],
-  timers: ['value', timers],
-  channelFactory: ['factory', channelFactory],
-  Stream: ['factory', streamFactory],
-  FileSystemResource: ['factory', fileSystemResourceFactory],
-  HostResource: ['factory', hostResourceFactory],
-  primus: ['factory', primus],
-  Resource: ['factory', resourceFactory],
-  server: ['factory', serverFactory],
-  TargetResource: ['factory', targetResourceFactory],
-  HsmCopytoolResource: ['factory', hsmCopytoolResourceFactory],
-  HsmCopytoolOperationResource: ['factory', hsmCopytoolOperationResourceFactory],
-  TargetOstMetricsResource: ['factory', targetOstMetricsResourceFactory],
-  AlertResource: ['factory', alertResourceFactory],
-  EventResource: ['factory', eventResourceFactory],
-  CommandResource: ['factory', commandResourceFactory],
-  NotificationResource: ['factory', notificationResourceFactory]
+  conf: ['value', require('./conf')],
+  https: ['value', require('https')],
+  http: ['value', require('http')],
+  Primus: ['value', require('primus')],
+  jsonMask: ['value', require('json-mask')],
+  serverWrite: ['value', require('./primus-server-write')],
+  multiplex: ['value', require('primus-multiplex')],
+  Emitter: ['value', require('primus-emitter')],
+  VERBS: ['value', router.verbs],
+  errorSerializer: ['value', require('bunyan').stdSerializers.err],
+  MultiplexSpark: ['value', require('primus-multiplex/lib/server/spark')],
+  logger: ['factory', require('./logger')],
+  loop: ['factory', require('./loop-factory')],
+  primusServerWrite: ['factory', require('./primus-server-write')],
+  requestChannel: ['factory', require('./request-channel')],
+  patchedRequest: ['value', require('./request-patched')],
+  request: ['factory', require('./request')],
+  Q: ['value', require('q')],
+  timers: ['value', require('./timers')],
+  router: ['value', router],
+  channelFactory: ['factory', require('./channel')],
+  Stream: ['factory', require('./stream')],
+  FileSystemResource: ['factory', resources.fileSystemResourceFactory],
+  HostResource: ['factory', resources.hostResourceFactory],
+  primus: ['factory', require('./primus')],
+  Resource: ['factory', resources.resourceFactory],
+  server: ['factory', require('./server')],
+  TargetResource: ['factory', resources.targetResourceFactory],
+  HsmCopytoolResource: ['factory', resources.hsmCopytoolResourceFactory],
+  HsmCopytoolOperationResource: ['factory', resources.hsmCopytoolOperationResourceFactory],
+  TargetOstMetricsResource: ['factory', resources.targetOstMetricsResourceFactory],
+  AlertResource: ['factory', resources.alertResourceFactory],
+  EventResource: ['factory', resources.eventResourceFactory],
+  CommandResource: ['factory', resources.commandResourceFactory],
+  NotificationResource: ['factory', resources.notificationResourceFactory],
+  requestChannelValidator: ['factory', require('./req-channel-validator')],
+  validator: ['value', new Validator()]
 }];
+
+loadDir('./routes');
 
 var injector = new di.Injector(modules);
 
 injector.invoke(function (logger, channelFactory,
                           FileSystemResource, HostResource, TargetResource, TargetOstMetricsResource,
-                          HsmCopytoolResource, HsmCopytoolOperationResource, NotificationResource) {
+                          HsmCopytoolResource, HsmCopytoolOperationResource,
+                          NotificationResource, requestChannel) {
 
   logger.info('Realtime Module started.');
+
+  requestChannel();
 
   channelFactory('filesystem', FileSystemResource);
   channelFactory('host', HostResource);
@@ -105,3 +102,22 @@ injector.invoke(function (logger, channelFactory,
   channelFactory('targetostmetrics', TargetOstMetricsResource);
   channelFactory('notification', NotificationResource);
 });
+
+function loadDir (dir) {
+  var files = fs.readdirSync(path.normalize(__dirname + '/' + dir));
+
+  files.forEach(function (file) {
+    var withoutExtension = file.split('.').slice(0, -1).join('.');
+    var withoutExtensionParts = withoutExtension.split('-');
+    var type = withoutExtensionParts.pop().toLowerCase();
+    var name = withoutExtensionParts.join('-');
+
+    modules[0][camelCaseText(name)] = [type, require(dir + '/' + withoutExtension)];
+  });
+}
+
+function camelCaseText (text) {
+  return text.split('-').reduce(function convert (str, part) {
+    return (str += part.charAt(0).toUpperCase() + part.slice(1));
+  });
+}

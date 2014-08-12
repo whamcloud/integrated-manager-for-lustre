@@ -19,24 +19,11 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
 'use strict';
 
-/**
- * Given a server instance wires it into primus.
- * @param {Function} Primus The primus constructor
- * @param {Object} server
- * @param {Object} multiplex The multiplex plugin.
- * @param {Object} primusServerWrite The server write plugin.
- * @param {Function} Emitter
- * @returns {Object} The primus instance.
- */
-module.exports = function getPrimus (Primus, server, multiplex, primusServerWrite, Emitter) {
-  var primus = new Primus(server, { parser: 'JSON', transformer: 'socket.io' });
-
-  primus.use('serverWrite', primusServerWrite);
-  primus.use('multiplex', multiplex);
-  primus.use('emitter', Emitter);
-
-  return primus;
+module.exports = function routesFactory (wildcardRoutes) {
+  return function routes () {
+    //These should always be last.
+    wildcardRoutes();
+  };
 };

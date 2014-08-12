@@ -81,6 +81,7 @@ setup(
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
         'realtime': [
             "resources/*.js",
+            "routes/*.js",
             "*.js"
         ] + [sub(r'^realtime/', '', x) for x in findall('realtime/node_modules')]
     },

@@ -23,20 +23,34 @@
 'use strict';
 
 /**
- * Given a server instance wires it into primus.
- * @param {Function} Primus The primus constructor
- * @param {Object} server
- * @param {Object} multiplex The multiplex plugin.
- * @param {Object} primusServerWrite The server write plugin.
- * @param {Function} Emitter
- * @returns {Object} The primus instance.
+ * Validates calls to the request channel.
+ * @param {Object} validator
+ * @returns {Function}
  */
-module.exports = function getPrimus (Primus, server, multiplex, primusServerWrite, Emitter) {
-  var primus = new Primus(server, { parser: 'JSON', transformer: 'socket.io' });
+module.exports = function requestChannelValidatorFactory (validator) {
+  var schema = {
+    id: '/RequestData',
+    type: 'object',
+    required: true,
+    properties: {
+      path: {
+        type: 'string',
+        required: true
+      },
+      options: {
+        type: 'object',
+        properties: {
+          method: {
+            enum: [ 'get', 'post', 'put', 'patch', 'delete' ]
+          }
+        }
+      }
+    }
+  };
 
-  primus.use('serverWrite', primusServerWrite);
-  primus.use('multiplex', multiplex);
-  primus.use('emitter', Emitter);
-
-  return primus;
+  return function getErrorList (data) {
+    return validator.validate(data, schema).errors.reduce(function joinErrors (message, error) {
+      return (message + error.stack + '\n');
+    }, '');
+  };
 };
