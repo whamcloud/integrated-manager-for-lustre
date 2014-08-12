@@ -1,0 +1,3 @@
+[submodule "chroma-externals"]
+	path = chroma-externals
+	url = ../chroma-externals
