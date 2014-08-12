@@ -60,10 +60,13 @@ rpm_query()
     local filespresent=true
     if [ $n -eq 1 ]; then
       basename=${name##*/}
+      if ! egrep -q -e "^%files *(-f  *.*)?$" $specfile; then
+        filespresent=false
+      fi
     else
       subname=${name#*$basename-}
-      if ! grep -q -e "%files $subname" \
-                   -e "%files -n %{name}-$subname" $specfile; then
+      if ! grep -q -e "^%files $subname *$" \
+                   -e "^%files  *-n  *%{name}-$subname *$" $specfile; then
         filespresent=false
       fi
     fi
