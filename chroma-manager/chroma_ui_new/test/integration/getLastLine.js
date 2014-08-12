@@ -16,11 +16,11 @@ var readFileThen = Promise.denodeify(require('fs').readFile);
  * @param {String} builtFilePath Path to the compiled javascript file.
  * @returns {Promise} The result of running through the promise chain.
  */
-function getLastLine(builtFilePath) {
+function getLastLine (builtFilePath) {
 
   return globThen(builtFilePath)
     .then(isGlobResultValid)
-    .then(getGlobbedFilePath)
+    .then(getGlobbedFilePaths)
     .then(_.partialRight(readFileThen, 'utf8'))
     .then(getLast);
 
@@ -28,11 +28,11 @@ function getLastLine(builtFilePath) {
 
 /**
  * Get the last file in the collection.
- * @param {Array} globbedFiles Collection of files that match the glob pattern.
+ * @param {Array} globbedFilePaths Collection of files that match the glob pattern.
  * @returns {String} The path to the minified file, after globbing for it.
  */
-function getGlobbedFilePath(globbedFiles) {
-    return globbedFiles.pop();
+function getGlobbedFilePaths (globbedFilePaths) {
+  return globbedFilePaths.pop();
 }
 
 /**
@@ -51,7 +51,6 @@ function isGlobResultValid (result) {
 
 }
 
-
 /**
  * Checks if the globResult is valid.
  * If the result's length is not greater than zero, the glob has failed to find
@@ -59,7 +58,7 @@ function isGlobResultValid (result) {
  * @param {Array} globResult
  * @returns {boolean}
  */
-function isValid(globResult) {
+function isValid (globResult) {
   return globResult.length > 0;
 }
 
@@ -70,7 +69,7 @@ function isValid(globResult) {
  * @returns {String} The string that points to the minified file with '.map'
  * appended to the end.
  */
-function getLast(file) {
+function getLast (file) {
   return file.trim().split('\n').pop();
 }
 

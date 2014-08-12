@@ -8,7 +8,7 @@ module.exports = {
   // If true, include stack traces in failures.
   includeStackTrace: true,
   // Time to wait in milliseconds before a test automatically fails
-  defaultTimeoutInterval: 60000,
+  defaultTimeoutInterval: 660000,
   // The name of the JUnit report
   JUnitReportSuiteName: 'Srcmap Generation Reports',
   // The name of the junit package

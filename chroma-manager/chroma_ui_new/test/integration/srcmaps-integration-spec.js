@@ -2,34 +2,58 @@
 'use strict';
 
 var getLastLine = require('./getLastLine');
-var exec = require('child_process').exec;
+var execFile = require('child_process').execFile;
 var path = require('path');
 
-describe('Compiled Javascript File', function desc () {
+describe('Javascript Srcmaps', function desc () {
 
-  // Running the gulp file like '$ gulp build'.
-  // Note, the 'done' function in the callback allows for asynchronicity.
-  beforeEach(function asyncGulpBuild (done) {
+  describe('before being built', function () {
+    it('should error if the compiled javascript file does not exist.', function srcMapCheck (done) {
 
-    var buildCommand = path.resolve(__dirname + '/../../node_modules/.bin/gulp build');
+      getLastLine(__dirname + '/../../static/chroma_ui/doesntExist-*.js')
+        .catch(function handleErr (err) {
+          expect(err.message).toBe('Glob failed to find a match.');
+        })
+        .done(done);
 
-    exec(buildCommand, function handler (error) {
+    });
+  });
 
-      if (error) throw error;
+  describe('after being built', function () {
+    var gulpFile;
+    var gulpTask;
+    var gulpTimeout;
 
-      done();
+    // Running the gulp file like '$ gulp build'.
+    // Note, the 'done' function in the callback allows for asynchronicity.
+    beforeEach(function asyncGulpBuild (done) {
+
+      gulpFile = path.resolve(__dirname + '/../../node_modules/.bin/gulp');
+      gulpTask = 'build';
+      gulpTimeout = 600000;
+
+      execFile(gulpFile, [gulpTask], {timeout: gulpTimeout}, function handler (error, stdout) {
+
+        if (stdout) console.log('\n### stdout: \n', stdout);
+
+        if (error) throw error;
+
+        done();
+
+      });
 
     });
 
-  });
+    it('should have src map url at the bottom of the built file.', function srcMapCheck (done) {
+      var staticDir = __dirname + '/../../static/chroma_ui/';
 
-  it('should have src map url at the bottom.', function srcMapCheck (done) {
+      getLastLine(staticDir + 'built-*.js')
+        .then(function runExpectation (line) {
+          expect(line).toContain('//# sourceMappingURL');
+        })
+        .done(done);
 
-    getLastLine(__dirname + '/../../static/chroma_ui/built-*.js')
-      .then(function runExpectation (line) {
-        expect(line).toContain('//# sourceMappingURL');
-      })
-      .done(done);
+    });
 
   });
 
