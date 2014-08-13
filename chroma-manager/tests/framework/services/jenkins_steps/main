@@ -16,9 +16,12 @@ BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
 BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
 WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
+# Get the chroma-externals repo as pip is going to need it
+. scripts/update_chroma-externals.sh
+
 cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
 make requirements
-python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
+python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 
 # Release the provisioned cluster (at the exit of this script)
 trap "sed -i 's/provision\":true/provision\":false/g' provisioner_output.json

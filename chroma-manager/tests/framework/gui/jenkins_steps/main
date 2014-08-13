@@ -22,6 +22,11 @@ JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
 WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
 #--------------------------------------------------------------------------
+# Get the chroma-externals repo as pip is going to need it
+#--------------------------------------------------------------------------
+. scripts/update_chroma-externals.sh
+
+#--------------------------------------------------------------------------
 # Fetch the IEEL installation package from the upstream job
 #--------------------------------------------------------------------------
 cd $WORKSPACE
@@ -35,7 +40,7 @@ ls ieel-*.tar.gz
 #-----------------------------------------------
 cd $WORKSPACE/chroma_test_env/chroma/chroma-manager
 make requirements
-python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
+python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 
 #-------------------------------------------------------------
 # Release the provisioned cluster (at the exit of this script)

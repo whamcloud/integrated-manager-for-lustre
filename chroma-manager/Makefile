@@ -224,20 +224,18 @@ requirements:
 		sed -i -e '/^make\[[0-9]\]: /d' requirements.txt; \
 	fi
 
+download: requirements
+	pip-python install --download ../chroma-externals -r requirements.txt
+
 docs: requirements version
 	set -e ; \
 	if [ -z $(VIRTUAL_ENV) ] ; then \
-		virtualenv --system-site-packages myenv ; \
+		virtualenv myenv; \
 		. myenv/bin/activate; \
-		if [ -n "$(CACHE)" ]; then \
-		  echo "# Using pip cache at $(CACHE)/pip_cache"; \
-		  mkdir -p $(CACHE)/pip_cache; \
-		  python tests/utils/pip_install_requirements.py $(CACHE)/pip_cache; \
-		else \
-		  echo "# No value found for CACHE. Installing pip requirements without a cache."; \
-		  pip install -r ./requirements.txt; \
-		fi ; \
-	fi ; \
+		CACHE=$$(pwd)/../chroma-externals; \
+		echo "# Using pip cache at $$CACHE"; \
+		python tests/utils/pip_install_requirements.py $$CACHE; \
+	fi; \
 	$(MAKE) -C docs/ && cp docs/dist/*.tar.gz dist/
 
-.PHONY: docs
+.PHONY: docs download

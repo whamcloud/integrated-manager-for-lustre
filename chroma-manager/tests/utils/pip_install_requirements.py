@@ -8,7 +8,6 @@ import os
 import re
 import sys
 import subprocess
-import time
 
 
 class PipInstallRequirements(object):
@@ -34,30 +33,10 @@ class PipInstallRequirements(object):
         build_dir = os.path.join(virtual_env, 'build')
         print "BUILD_DIR=%s" % build_dir
 
-        if not os.path.exists(self.pip_packages_dir):
-            # We haven't created our dir to cache pip packages yet
-            # (ex, first run on a new builder). Create and seed.
-            os.makedirs(self.pip_packages_dir)
-            start_time = datetime.datetime.now()
-            while datetime.datetime.now() - start_time < self.PIP_TIMEOUT:
-                exit_status = subprocess.call(['pip', 'install', '--no-install',
-                    '--download', self.pip_packages_dir, '--build', build_dir,
-                    '-r', 'requirements.txt'])
-                if exit_status == 0:
-                    break
-                else:
-                    print "Error downloading packages. Will try again in 1 min."
-                    time.sleep(60)
-            if datetime.datetime.now() - start_time >= self.PIP_TIMEOUT:
-                print "Timed out trying to download packages."
-                sys.exit(1)
-
-        # Determine which requirements cannot be fulfilled from the packages dir
-        dependency_changes = []
         for line in requirements:
             line = line.strip()
             if line and not line[0] == '#':
-                if re.match("[a-zA-Z]*://", line):
+                if re.match("https?://", line):
                     # The url based requirements, such as those from GitHub,
                     # need slightly different handling. They will still try
                     # to reach out to their external dependency even if it is
@@ -71,48 +50,18 @@ class PipInstallRequirements(object):
                     )
                     if os.path.exists(expected_package_location):
                         subprocess.check_call(['pip', 'install',
-                            '--build', build_dir, '--no-index',
-                            expected_package_location])
+                                               '--build', build_dir, '--no-index', '--pre',
+                                               expected_package_location])
                     else:
-                        dependency_changes.append(line)
+                        print "Failed to install %s" % line.rsplit('/', 1)[-1]
+                        sys.exit(1)
                 else:
                     exit_status = subprocess.call(['pip', 'install',
-                        '--build', build_dir, '--no-index',
-                        '--find-links', self.pip_packages_dir, line])
+                                                   '--build', build_dir, '--no-index', '--pre',
+                                                   '--find-links', 'file://%s' % self.pip_packages_dir, line])
                     if not exit_status == 0:
-                        dependency_changes.append(line)
-
-        # If there are any requirements that cannot be fulilled from the packages
-        # dir, download them.
-        if dependency_changes:
-            print "Downloading the following packages: %s" % ' '.join(dependency_changes)
-            start_time = datetime.datetime.now()
-            while datetime.datetime.now() - start_time < self.PIP_TIMEOUT:
-                download_command = ['pip', 'install', '--exists-action', 'i', '--no-install',
-                    '--build', build_dir, '--download', self.pip_packages_dir]
-                download_command.extend(dependency_changes)
-                exit_status = subprocess.call(download_command)
-                if exit_status == 0:
-                    break
-                else:
-                    print "Error downloading packages. Will try again in 1 min."
-                    time.sleep(60)
-            if datetime.datetime.now() - start_time >= self.PIP_TIMEOUT:
-                print "Timed out trying to download packages."
-                sys.exit(1)
-            print "Downloading complete. Installing..."
-            # Install the newly downloaded requirements
-            install_command = ['pip', 'install', '--no-index',
-                '--build', build_dir, '--find-links', self.pip_packages_dir]
-            install_command.extend(dependency_changes)
-            subprocess.check_call(install_command)
-
-        # One last check to make sure we meet all of the requirements in the
-        # full requirements.txt now
-        subprocess.check_call(['pip', 'install', '--quiet', '--no-index',
-            '--build', build_dir, '--no-download',
-            '--find-links', self.pip_packages_dir, '-r', 'requirements.txt'])
-        print 'SUCCESS'
+                        print "Failed to install %s" % line
+                        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -13,10 +13,13 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 # Variables that we expect to be set upstream, no "default"
 WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
 
+# Get the chroma-externals repo as pip is going to need it
+. scripts/update_chroma-externals.sh
+
 # Pip install requirements
 cd $WORKSPACE/chroma_unit_test_env/chroma/chroma-manager
 make requirements
-python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
+python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals
 
 # patch behave for https://github.com/behave/behave/issues/63 with https://github.com/jenisys/behave/commit/6fa47d414bf25a53121edeb7caebac4d9d1b5fb4.diff
 pushd $WORKSPACE/chroma_unit_test_env/lib/python2.6/site-packages

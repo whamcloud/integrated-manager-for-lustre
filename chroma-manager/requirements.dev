@@ -10,10 +10,10 @@ django-nose
 django-supervisor==0.3.0
 fudge
 log4tailer
+pexpect # for fence_apc
 pep8==1.0.1
 pyflakes
 pygraphviz # For building diagrams in the docs
 selenium==2.40.0
 sphinx==1.1.3
 werkzeug
-pexpect # for fence_apc

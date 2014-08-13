@@ -19,7 +19,8 @@ install pkg_install: rpms
 	$(MAKE) -f ../include/Makefile.install INSTALL_PKGS="$(INSTALL_PKGS)" SPECFILE="$(SPECNAME)" $@
 
 requirements:
-	@echo ""
+	# nothing to really do here
+	true
 
 $(TARBALL): src/*.c src/*.h *.patch
 	tar --transform 's|src|$(TARBALL_NAME)-$(TARBALL_VERSION)|' \

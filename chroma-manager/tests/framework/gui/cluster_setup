@@ -93,7 +93,12 @@ for package in importlib greenlet gevent psycopg2 pygraphviz; do
 done
 
 # Install the remaining pip requirements
-python tests/utils/pip_install_requirements.py ~/pip_cache
+if ! python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals; then
+  rc=${PIPESTATUS[0]}
+  echo "failed to install Python requirements from $(pwd)/../chroma-externals:"
+  ls -l $(pwd)/../chroma-externals
+  exit $rc
+fi
 
 # Install npm-based requirements
 cd chroma_ui
