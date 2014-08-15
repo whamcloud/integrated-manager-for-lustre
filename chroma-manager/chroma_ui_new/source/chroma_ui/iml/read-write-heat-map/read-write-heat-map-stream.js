@@ -24,8 +24,10 @@
   'use strict';
 
   angular.module('readWriteHeatMap').constant('readWriteHeatMapTypes', {
-    READ: 'stats_read_bytes',
-    WRITE: 'stats_write_bytes'
+    READ_BYTES: 'stats_read_bytes',
+    WRITE_BYTES: 'stats_write_bytes',
+    READ_IOPS: 'stats_read_iops',
+    WRITE_IOPS: 'stats_write_iops'
   });
 
   angular.module('readWriteHeatMap').factory('ReadWriteHeatMapStream', ['stream', 'readWriteHeatMapTransformer',
@@ -33,11 +35,14 @@
 
   function readWriteHeatMapFactory(stream, readWriteHeatMapTransformer,
                                    replaceTransformer, readWriteHeatMapTypes, beforeStreamingDuration) {
+
+    var types = Object.keys(_.invert(readWriteHeatMapTypes)).join(',');
+
     var ReadWriteHeatMapStream = stream('targetostmetrics', 'httpGetOstMetrics', {
       params: {
         qs: {
           kind: 'OST',
-          metrics: 'stats_read_bytes,stats_write_bytes',
+          metrics: types,
           num_points: '20'
         }
       },
@@ -45,14 +50,14 @@
     });
 
     Object.defineProperty(ReadWriteHeatMapStream.prototype, 'type', {
-      set: function (value) {
+      set: function set (value) {
         if (value in _.invert(readWriteHeatMapTypes)) {
           this._value = value;
         } else {
           throw new Error('Type: %s is not a valid type!'.sprintf(value));
         }
       },
-      get: function () {
+      get: function get () {
         return this._value;
       }
     });

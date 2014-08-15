@@ -3,38 +3,37 @@ describe('read write heat map controller', function () {
 
   var $scope, $location, ReadWriteHeatMapStream, readWriteHeatMapStream, chart, d3;
 
-  mock.factory(function $location () {
-    return {
-      path: jasmine.createSpy('$location.path')
-    };
-  });
-
-  beforeEach(module('readWriteHeatMap'));
-
-  mock.beforeEach('$location');
+  beforeEach(module('readWriteHeatMap', function ($provide) {
+    $provide.value('$location', {
+      path: jasmine.createSpy('path')
+    });
+  }));
 
   beforeEach(inject(function ($controller, $rootScope, _$location_) {
     $scope = $rootScope.$new();
     $location = _$location_;
 
     readWriteHeatMapStream = {
-      restart: jasmine.createSpy('readWriteHeatMapStream.restart'),
-      startStreaming: jasmine.createSpy('readWriteHeatMapStream.startStreaming'),
-      switchType: jasmine.createSpy('readWriteHeatMapStream.switchType')
+      restart: jasmine.createSpy('restart'),
+      startStreaming: jasmine.createSpy('startStreaming'),
+      switchType: jasmine.createSpy('switchType')
     };
 
     d3 = {
       event: {
         offsetX: 0,
         offsetY: 0
-      }
+      },
+      format: jasmine.createSpy('format')
     };
 
     ReadWriteHeatMapStream = {
       setup: jasmine.createSpy('setup').andReturn(readWriteHeatMapStream),
       TYPES: {
-        READ: 'read',
-        WRITE: 'write'
+        READ_BYTES: 'stats_read_bytes',
+        WRITE_BYTES: 'stats_write_bytes',
+        READ_IOPS: 'stats_read_iops',
+        WRITE_IOPS: 'stats_write_iops'
       }
     };
 
@@ -64,7 +63,7 @@ describe('read write heat map controller', function () {
   });
 
   it('should start in read mode', function () {
-    expect(readWriteHeatMapStream.type).toEqual('read');
+    expect(readWriteHeatMapStream.type).toEqual('stats_read_bytes');
   });
 
   it('should setup the stream to the right path', function () {
@@ -133,6 +132,14 @@ describe('read write heat map controller', function () {
 
       it('should set the y coordinate', function () {
         expect($scope.readWriteHeatMap.y).toBe(50);
+      });
+
+      it('should set the bandwidth', function () {
+        expect($scope.readWriteHeatMap.bandwidth).toBe('1.91 MB/s');
+      });
+
+      it('should set the readable type', function () {
+        expect($scope.readWriteHeatMap.readableType).toBe('Read Byte/s');
       });
     });
 

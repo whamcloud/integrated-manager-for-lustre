@@ -23,14 +23,17 @@
 (function () {
   'use strict';
 
-  angular.module('readWriteHeatMap', ['charts', 'stream'])
+  angular.module('readWriteHeatMap', ['charts', 'stream', 'filters'])
     .controller('ReadWriteHeatMapCtrl',
-    ['$scope', '$location', 'd3', 'ReadWriteHeatMapStream', 'DURATIONS', 'formatBytes', ReadWriteHeatMapCtrl]);
+    ['$scope', '$location', '$filter', 'd3', 'ReadWriteHeatMapStream',
+      'DURATIONS', 'formatBytes', ReadWriteHeatMapCtrl]);
 
-  function ReadWriteHeatMapCtrl($scope, $location, d3, ReadWriteHeatMapStream, DURATIONS, formatBytes) {
+  function ReadWriteHeatMapCtrl ($scope, $location, $filter, d3, ReadWriteHeatMapStream, DURATIONS, formatBytes) {
+    var roundFilter = $filter('round');
+
     $scope.readWriteHeatMap = {
       data: [],
-      onUpdate: function (unit, size) {
+      onUpdate: function onUpdate (unit, size) {
         $scope.readWriteHeatMap.data.length = 0;
 
         var params = _.merge({
@@ -42,8 +45,9 @@
 
         readWriteHeatMapStream.restart(params);
       },
+      toReadableType: toReadableType,
       options: {
-        setup: function(chart) {
+        setup: function setup (chart) {
           chart.options({
             showYAxis: false,
             formatter: formatter,
@@ -55,7 +59,7 @@
               date: d.x,
               ostName: d.key,
               bandwidth: formatter(d.z),
-              readableType: readWriteHeatMapStream.type.split('_')[1]
+              readableType: toReadableType(readWriteHeatMapStream.type)
             };
           }));
 
@@ -87,9 +91,9 @@
           chart.xAxis().showMaxMin(false);
         }
       },
-      type: ReadWriteHeatMapStream.TYPES.READ,
-      TYPES: ReadWriteHeatMapStream.TYPES,
-      toggle: function (type) {
+      type: ReadWriteHeatMapStream.TYPES.READ_BYTES,
+      TYPES: Object.keys(_.invert(ReadWriteHeatMapStream.TYPES)),
+      toggle: function toggle (type) {
         readWriteHeatMapStream.switchType(type);
       },
       unit: DURATIONS.MINUTES,
@@ -98,7 +102,7 @@
 
     var readWriteHeatMapStream = ReadWriteHeatMapStream.setup('readWriteHeatMap.data', $scope, $scope.params || {});
 
-    readWriteHeatMapStream.type = ReadWriteHeatMapStream.TYPES.READ;
+    readWriteHeatMapStream.type = ReadWriteHeatMapStream.TYPES.READ_BYTES;
     readWriteHeatMapStream.startStreaming({
       qs: {
         unit: $scope.readWriteHeatMap.unit,
@@ -106,10 +110,39 @@
       }
     });
 
-    function formatter (z) {
-      return formatBytes(z, 3) + '/s';
+    /**
+     * Given a type, normalizes it to a human readable version.
+     * @param {String} type
+     * @returns {String}
+     */
+    function toReadableType (type) {
+      var readable = type
+        .split('_')
+        .splice(1)
+        .join(' ')
+        .replace('bytes', 'Byte/s')
+        .replace('iops', 'IOPS');
+
+      return (readable.charAt(0).toUpperCase() + readable.slice(1));
     }
 
+    var thousandsFormat = d3.format(',');
+
+    /**
+     * Formats the heat map value.
+     * @param {Number} z
+     * @returns {String}
+     */
+    function formatter (z) {
+      var dataType = readWriteHeatMapStream.type.split('_').pop();
+      return (dataType === 'bytes' ? formatBytes(z, 3) + '/s' : thousandsFormat(roundFilter(z, 2)) + ' IOPS');
+    }
+
+    /**
+     * Extends the scope right before mouse movement.
+     * @param {Function} [overrides]
+     * @returns {Function}
+     */
     function mouseHandler (overrides) {
       if (!_.isFunction(overrides))
         overrides = _.iterators.K({});

@@ -29,7 +29,7 @@ describe('read write heat map stream', function () {
       params: {
         qs: {
           kind: 'OST',
-          metrics: 'stats_read_bytes,stats_write_bytes',
+          metrics: 'stats_read_bytes,stats_write_bytes,stats_read_iops,stats_write_iops',
           num_points: '20'
         }
       },

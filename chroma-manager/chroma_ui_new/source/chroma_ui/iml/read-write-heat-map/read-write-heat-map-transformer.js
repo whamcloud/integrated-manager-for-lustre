@@ -21,41 +21,42 @@
 
 
 angular.module('readWriteHeatMap').factory('readWriteHeatMapTransformer',
-  [function readWriteHeatMapTransformerFactory() {
-  'use strict';
+  [function readWriteHeatMapTransformerFactory () {
+    'use strict';
 
-  /**
-   * Transforms incoming protocol data to display write as a negative value.
-   * @param {Object} resp The response.
-   */
-  return function transformer(resp) {
-    var newVal = resp.body;
+    /**
+     * Transforms incoming protocol data to display write as a negative value.
+     * @param {Object} resp The response.
+     */
+    return function transformer(resp) {
+      var newVal = resp.body;
 
-    if (!_.isPlainObject(newVal))
-      throw new Error('readWriteHeatMapTransformer expects resp.body to be an object!');
+      if (!_.isPlainObject(newVal))
+        throw new Error('readWriteHeatMapTransformer expects resp.body to be an object!');
 
-    /*jshint validthis: true */
-    var type = this.type;
+      /*jshint validthis: true */
+      var type = this.type;
 
-    resp.body = Object.keys(newVal).reduce(function (arr, key) {
-      var ost = {key: key, values: []};
+      resp.body = Object.keys(newVal).reduce(function (arr, key) {
+        var ost = { key: key, values: [] };
 
-      newVal[key].forEach(function (item) {
-        ost.values.push({
-          x: new Date(item.ts),
-          stats_read_bytes: item.data.stats_read_bytes || 0,
-          stats_write_bytes: item.data.stats_write_bytes || 0,
-          z: item.data[type] || 0,
-          id: item.id
+        newVal[key].forEach(function (item) {
+          ost.values.push({
+            x: new Date(item.ts),
+            stats_read_bytes: item.data.stats_read_bytes || 0,
+            stats_write_bytes: item.data.stats_write_bytes || 0,
+            stats_read_iops: item.data.stats_read_iops || 0,
+            stats_write_iops: item.data.stats_write_iops || 0,
+            z: item.data[type] || 0,
+            id: item.id
+          });
         });
-      });
 
-      arr.push(ost);
+        arr.push(ost);
 
-      return arr;
-    }, []);
+        return arr;
+      }, []);
 
-    return resp;
-  };
-}
-]);
+      return resp;
+    };
+  }]);
