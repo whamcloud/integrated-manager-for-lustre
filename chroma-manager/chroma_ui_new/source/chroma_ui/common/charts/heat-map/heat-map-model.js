@@ -31,17 +31,20 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
     CELL_SEL = 'cell';
 
   return function getModel() {
+    var colors = ['#8ebad9', '#d6e2f3', '#fbb4b4', '#fb8181', '#ff6262'];
+    var heatmapColor = d3.scale.linear()
+      .range(colors)
+      .domain(d3.range(0, 1, 1.0 / (colors.length - 1)).concat(1));
+
     var config = {
-      x: d3.scale.linear(),
+      x: d3.scale.ordinal(),
       y: d3.scale.ordinal(),
-      z: d3.scale.linear().interpolate(d3.interpolateRgb),
+      colorScale: heatmapColor,
       width: 960,
       height: 400,
       showXAxis: true,
       showYAxis: true,
       showLegend: true,
-      lowColor: '#fbecec',
-      highColor: '#d9534f',
       onMouseOver: _.noop,
       onMouseMove: _.noop,
       onMouseOut: _.noop,
@@ -53,11 +56,11 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
     chartParamMixins(config, chart);
 
     function chart (selection) {
-      var margin = chart.margin(),
-        x = chart.x(),
-        y = chart.y(),
-        z = chart.z(),
-        cl = chartUtils.cl;
+      var margin = chart.margin();
+      var x = chart.x();
+      var y = chart.y();
+      var colorScale = chart.colorScale();
+      var cl = chartUtils.cl;
 
       selection.each(function render (data) {
         var container = d3.select(this);
@@ -67,10 +70,9 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
         var values = _.cloneDeep(_.pluck(data, 'values')),
           keys = _.pluck(data, 'key'),
           mergedValues = d3.merge(values),
-          domain = d3.extent(mergedValues, getProp('z')),
-          dateExtent = d3.extent(mergedValues, getProp('x'));
+          domain = d3.extent(mergedValues, getProp('z'));
 
-        chart.destroy = function () {
+        chart.destroy = function destroy () {
           container.remove();
           container = selection = null;
         };
@@ -80,11 +82,11 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
           return;
         }
 
-        x.domain(dateExtent).range([0, availableWidth]);
+        x.domain(_.pluck(mergedValues, 'x')).rangeRoundBands([0, availableWidth, 1, 1]);
 
         y.domain(keys).rangePoints([0, availableHeight], 1.0);
 
-        z.domain(domain).range([chart.lowColor(), chart.highColor()]);
+        var z = d3.scale.linear().domain(domain).range([0,1]);
 
         // data join
         var heatMapModel = container.selectAll(cl(MODEL_SEL))
@@ -130,7 +132,6 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
             return cloned.map(function (value) {
               value.key = d.key;
               value.size = size;
-              value.size = size;
 
               return value;
             });
@@ -138,17 +139,25 @@ function heatMapModelFactory (d3, chartParamMixins, chartUtils) {
 
         cell.enter().append('rect')
           .attr('class', CELL_SEL)
-          .attr('stroke', '#EEE')
-          .attr('fill', function (d) { return z(d.z); });
+          .attr('fill', fillCell);
 
         cell.transition().duration(chart.transitionDuration())
           .attr('x', function (d) { return x(d.x); })
           .attr('stroke', '#EEE')
           .attr('width', getProp('size'))
           .attr('height', function() { return gridHeight; })
-          .attr('fill', function (d) { return z(d.z); });
+          .attr('fill', fillCell);
 
         cell.exit().transition().duration(chart.transitionDuration()).remove();
+
+        /**
+         * Fill the cell with the corresponding color
+         * @param {Object} d
+         * @returns {String}
+         */
+        function fillCell (d) {
+          return colorScale(z(d.z));
+        }
       });
     }
 

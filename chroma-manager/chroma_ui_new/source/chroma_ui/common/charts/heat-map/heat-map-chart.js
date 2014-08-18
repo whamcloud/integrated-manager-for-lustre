@@ -149,9 +149,19 @@ function heatMapChartFactory(d3, nv, chartParamMixins, chartUtils, heatMapLegend
         //------------------------------------------------------------
         // Setup Axes
 
+        var dates = heatMapModel.x().domain().reduce(function selectDates (arr, date, index) {
+          if (index % 5 === 0)
+            arr.push(date);
+
+          return arr;
+        }, []);
+
+        var x = d3.scale.ordinal();
+        x.domain(dates).rangeRoundBands([0, availableWidth], 0, 0);
+
         if (chart.showXAxis()) {
           chart.xAxis()
-            .scale(heatMapModel.x())
+            .scale(x)
             .ticks(availableWidth / 100)
             .tickSize(-availableHeight, 0);
 

@@ -34,12 +34,12 @@ angular.module('charts').factory('dateTicks', ['d3', 'moment', function (d3, mom
         range = moment(range[0]).twix(range[1]);
 
       if (!range.isSame('month'))
-        return function (d) { return d3.time.format('%b %d %I:%M %p')(moment(d).utc().toDate()); };
+        return function (d) { return d3.time.format('%b %d %H:%M')(moment(d).utc().toDate()); };
 
       if (!range.isSame('day'))
-        return function (d) { return d3.time.format('%d %I:%M:%S %p')(moment(d).utc().toDate()); };
+        return function (d) { return d3.time.format('%d %H:%M:%S')(moment(d).utc().toDate()); };
 
-      return function (d) { return d3.time.format('%I:%M:%S %p')(moment(d).utc().toDate()); };
+      return function (d) { return d3.time.format('%H:%M:%S')(moment(d).utc().toDate()); };
     }
   };
 }]);

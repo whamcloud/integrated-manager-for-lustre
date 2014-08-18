@@ -38,33 +38,36 @@
       chartParamMixins = chartUtils.chartParamMixins;
 
     return function getLegend() {
+      var colors = ['#8ebad9', '#d6e2f3', '#fbb4b4', '#fb8181', '#ff6262'];
+      var heatmapColor = d3.scale.linear()
+        .range(colors)
+        .domain(d3.range(0, 1, 1.0 / (colors.length - 1)).concat(1));
+
       var config = {
         margin: {top: 5, right: 0, bottom: 5, left: 0},
         width: 200,
         height: 30,
         formatter: _.identity,
-        lowColor: '#fbeCeC',
-        highColor: '#d9534f',
-        rightAlign: true,
-        legendScale: d3.scale.linear()
+        colorScale: heatmapColor,
+        rightAlign: true
       };
 
       chartParamMixins(config, chart);
 
       function chart (selection) {
-        var margin = chart.margin(),
-          width = chart.width(),
-          height = chart.height(),
-          formatter = chart.formatter(),
-          legendScale = chart.legendScale();
+        var margin = chart.margin();
+        var width = chart.width();
+        var height = chart.height();
+        var formatter = chart.formatter();
+        var colorScale = chart.colorScale();
 
-        selection.each(function(data) {
+        selection.each(function iterateSelections (data) {
           var elRefs = {};
 
           elRefs.container = d3.select(this);
 
           chart.destroy = function destroy () {
-            if(chart.requestID)
+            if (chart.requestID)
               raf.cancelAnimationFrame(chart.requestID);
 
             elRefs.container.remove();
@@ -82,7 +85,7 @@
           if (domain[0] === domain[1])
             return;
 
-          legendScale.domain([MIN, MAX]).range([chart.lowColor(), chart.highColor()]);
+          var legendScale = d3.scale.linear().domain([MIN, MAX]).range([0,1]);
 
           var availableWidth = width - margin.left - margin.right,
             availableHeight = height - margin.top - margin.bottom;
@@ -128,8 +131,8 @@
             .attr('x', function (d, i) {
               return i * (STEP_WIDTH);
             })
-            .attr('fill', function (d) {
-              return legendScale(d);
+            .attr('fill', function fill (d) {
+              return colorScale(legendScale(d));
             });
 
           elRefs.minText.text('Min: ' + formatter(domain[0]));

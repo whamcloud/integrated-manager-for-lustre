@@ -28,7 +28,7 @@ function heatMap (moment, dateTicks, heatMapChartFactory, baseChart) {
   return baseChart({
     generateChart: heatMapChartFactory,
     onUpdate: function onUpdate(chart, data) {
-      if(data.length === 0) return;
+      if (data.length === 0) return;
 
       var values = _.pluck(data, 'values')[0],
         start = values[0].x,
@@ -36,7 +36,7 @@ function heatMap (moment, dateTicks, heatMapChartFactory, baseChart) {
         range = moment(start).twix(end);
 
       chart.xAxis()
-        .axisLabel(range.format({implicitYear: false}))
+        .axisLabel(range.format({ implicitYear: false, twentyFourHour: true }))
         .tickFormat(dateTicks.getTickFormatFunc(range));
     }
   });

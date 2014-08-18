@@ -42,7 +42,7 @@
           range = moment(start).twix(end);
 
         chart.xAxis
-          .axisLabel(range.format({implicitYear: false}))
+          .axisLabel(range.format({implicitYear: false, twentyFourHour: true}))
           .ticks(5)
           .showMaxMin(false)
           .tickFormat(dateTicks.getTickFormatFunc(range));

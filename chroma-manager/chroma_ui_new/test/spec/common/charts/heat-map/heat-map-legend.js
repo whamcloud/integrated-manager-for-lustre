@@ -1,7 +1,7 @@
 describe('heat map legend', function () {
   'use strict';
 
-  var heatMapLegendFactory, d3, chartUtils, selection, eachSpy, linearScale, raf;
+  var heatMapLegendFactory, d3, chartUtils, selection, eachSpy, raf;
 
   beforeEach(module('charts'));
 
@@ -15,9 +15,15 @@ describe('heat map legend', function () {
 
     chartUtils.getBBox.andReturn(100);
 
-    linearScale = Mock.spyInstance(d3.scale.linear.originalValue());
+    d3.scale.linear = jasmine.createSpy('linear').andReturn({
+      domain: jasmine.createSpy('domain'),
+      range: jasmine.createSpy('range'),
+      ticks: jasmine.createSpy('ticks')
+    });
+    d3.scale.linear.plan().domain.andReturn(d3.scale.linear.plan());
+    d3.scale.linear.plan().range.andReturn(d3.scale.linear.plan());
 
-    d3.scale.linear.andReturn(linearScale);
+    d3.range = jasmine.createSpy('range').andReturn([]);
 
     eachSpy = jasmine.createSpy('each');
 
@@ -34,17 +40,13 @@ describe('heat map legend', function () {
     var chart, defaultConfig;
 
     beforeEach(function () {
-      linearScale.interpolate.andReturn(linearScale);
-
       defaultConfig = {
         margin : { top : 5, right : 0, bottom : 5, left : 0 },
         width : 200,
         height : 30,
         formatter: _.identity,
-        lowColor: '#fbeCeC',
-        highColor: '#d9534f',
-        rightAlign: true,
-        legendScale: linearScale
+        colorScale: d3.scale.linear.plan(),
+        rightAlign: true
       };
 
       chart = heatMapLegendFactory();
@@ -72,9 +74,6 @@ describe('heat map legend', function () {
 
       beforeEach(function () {
         context = {};
-
-        linearScale.domain.andReturn(linearScale);
-        linearScale.range.andReturn(linearScale);
 
         var chartSelection = d3.select.originalValue('svg'),
           enteringSelection = chartSelection.data([]);
@@ -116,11 +115,12 @@ describe('heat map legend', function () {
       });
 
       it('should set the domain to 0 and 100', function () {
-        expect(linearScale.domain).toHaveBeenCalledOnceWith([0, 100]);
+        expect(d3.scale.linear.plan().domain).toHaveBeenCalledOnceWith([0, 100]);
       });
 
       it('should set the range to the config colors', function () {
-        expect(linearScale.range).toHaveBeenCalledOnceWith([defaultConfig.lowColor, defaultConfig.highColor]);
+        expect(d3.scale.linear.plan().range)
+          .toHaveBeenCalledOnceWith(['#8ebad9', '#d6e2f3', '#fbb4b4', '#fb8181', '#ff6262']);
       });
 
       it('should set the min text', function () {

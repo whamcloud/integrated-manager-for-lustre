@@ -61,7 +61,7 @@ describe('heat map model', function () {
     });
 
     it('should fill the cell', function () {
-      expect(selection.select('.cell').attr('fill')).toEqual('#fbecec');
+      expect(selection.select('.cell').attr('fill')).toEqual('#8ebad9');
     });
 
     describe('exit', function () {
@@ -137,14 +137,14 @@ describe('heat map model', function () {
       var fill = selection.select('.row')
         .selectAll('.cell').filter(':first-child').attr('fill');
 
-      expect(fill).toEqual(heatMapModel.lowColor());
+      expect(fill).toEqual(heatMapModel.colorScale().range()[0]);
     });
 
     it('should have row b cell 1 darkest', function () {
       var fill = selection.selectAll('.row').filter(':last-child')
         .selectAll('.cell').filter(':first-child').attr('fill');
 
-      expect(fill).toEqual(heatMapModel.highColor());
+      expect(fill).toEqual(heatMapModel.colorScale().range().pop());
     });
   });
 
