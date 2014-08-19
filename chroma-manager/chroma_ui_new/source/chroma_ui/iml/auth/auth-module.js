@@ -20,4 +20,4 @@
 // express and approved by Intel in writing.
 
 
-angular.module('auth', ['modelFactory']);
+angular.module('auth', ['modelFactory', 'environment']);

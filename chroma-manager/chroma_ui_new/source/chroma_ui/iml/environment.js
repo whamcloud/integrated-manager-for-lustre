@@ -25,6 +25,7 @@
 
   var ENV = Object.freeze({
     STATIC_URL: window.STATIC_URL,
+    CACHE_INITIAL_DATA: window.CACHE_INITIAL_DATA,
     UI_ROOT: document.baseURI,
     HELP_TEXT: window.HELP_TEXT,
     IS_RELEASE: window.IS_RELEASE,
@@ -46,6 +47,7 @@
   var environmentModule = angular.module('environment', []);
 
   environmentModule.constant('ENV', ENV);
+  environmentModule.constant('CACHE_INITIAL_DATA', ENV.CACHE_INITIAL_DATA);
 
   Object.keys(ENV).forEach(function (key) {
     environmentModule.constant(key, ENV[key]);

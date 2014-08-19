@@ -23,29 +23,25 @@
 (function () {
   'use strict';
 
-  angular.module('auth').service('authorization', ['sessionModelSingleton', Authorization]);
+  angular.module('auth').service('authorization', ['CACHE_INITIAL_DATA', Authorization]);
 
-  function Authorization(sessionModelSingleton) {
-    this.readEnabled = function readEnabled() {
-      return sessionModelSingleton.$promise.then(function getSession(session) {
-        return session.read_enabled;
-      });
-    };
+  function Authorization(CACHE_INITIAL_DATA) {
+    var session = CACHE_INITIAL_DATA.session;
+
+    this.readEnabled = session.read_enabled;
 
     this.groupAllowed = function groupAllowed(groupName) {
-      return sessionModelSingleton.$promise.then(function getSession(session) {
-        var hasGroups = session.user && Array.isArray(session.user.groups);
+      var hasGroups = session.user && Array.isArray(session.user.groups);
 
-        return hasGroups && session.user.groups.some(function some(group) {
-          //Superusers can do everything.
-          if (group.name === GROUPS.SUPERUSERS) return true;
+      return hasGroups && session.user.groups.some(function some(group) {
+        //Superusers can do everything.
+        if (group.name === GROUPS.SUPERUSERS) return true;
 
-          //Filesystem administrators can do everything a filesystem user can do.
-          if (group.name === GROUPS.FS_ADMINS && groupName === GROUPS.FS_USERS) return true;
+        //Filesystem administrators can do everything a filesystem user can do.
+        if (group.name === GROUPS.FS_ADMINS && groupName === GROUPS.FS_USERS) return true;
 
-          // Fallback to matching on names.
-          return group.name === groupName;
-        });
+        // Fallback to matching on names.
+        return group.name === groupName;
       });
     };
   }
@@ -61,10 +57,8 @@
   angular.module('auth').directive('restrictTo', ['authorization', function (authorization) {
     return {
       link: function ($scope, el, attrs) {
-        authorization.groupAllowed(attrs.restrictTo).then(function then (allowed) {
-          if (!allowed)
-            el.addClass('invisible');
-        });
+        if (!authorization.groupAllowed(attrs.restrictTo))
+          el.addClass('invisible');
       }
     };
   }]);

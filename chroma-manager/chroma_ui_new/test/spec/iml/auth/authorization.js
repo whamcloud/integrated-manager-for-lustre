@@ -1,20 +1,24 @@
 describe('The authorization service', function () {
   'use strict';
 
-  var authorization, deferred, GROUPS, $rootScope;
+  var authorization, GROUPS, CACHE_INITIAL_DATA;
 
-  beforeEach(module('auth'));
-
-  mock.factory(function sessionModelSingleton ($q, _$rootScope_) {
-    deferred = $q.defer();
-    $rootScope = _$rootScope_;
-
-    return {
-      $promise: deferred.promise
+  beforeEach(module('auth', function ($provide) {
+    CACHE_INITIAL_DATA = {
+      session: {
+        read_enabled: true,
+        user: {
+          groups: [
+            {id: '1', name: 'superusers', resource_uri: '/api/group/1/'},
+            {id: '2', name: 'filesystem_administrators', resource_uri: '/api/group/1/'},
+            {id: '3', name: 'filesystem_users', resource_uri: '/api/group/1/'}
+          ]
+        }
+      }
     };
-  });
 
-  mock.beforeEach('sessionModelSingleton');
+    $provide.constant('CACHE_INITIAL_DATA', CACHE_INITIAL_DATA);
+  }));
 
   beforeEach(inject(function (_authorization_, _GROUPS_) {
     authorization = _authorization_;
@@ -22,110 +26,77 @@ describe('The authorization service', function () {
   }));
 
   it('should have a method telling if read is enabled', function () {
-    authorization.readEnabled().then(function (enabled) {
-      expect(enabled).toBe(true);
-    });
-
-    deferred.resolve({
-      read_enabled: true
-    });
-
-    $rootScope.$apply();
+    expect(authorization.readEnabled).toBe(true);
   });
 
   it('should tell if superusers are allowed', function () {
-    authorization.groupAllowed(GROUPS.SUPERUSERS).then(function (allowed) {
-      expect(allowed).toBe(true);
-    });
-
-    deferred.resolve({
-      user: {
-        groups: [{
+    CACHE_INITIAL_DATA.session.user = {
+      groups: [
+        {
           name: GROUPS.SUPERUSERS
-        }]
-      }
-    });
+        }
+      ]
+    };
 
-    $rootScope.$apply();
+    expect(authorization.groupAllowed(GROUPS.SUPERUSERS)).toBe(true);
   });
 
   it('should tell if superusers are not allowed', function () {
-    authorization.groupAllowed(GROUPS.SUPERUSERS).then(function (allowed) {
-      expect(allowed).toBe(false);
-    });
-
-    deferred.resolve({
-      user: {
-        groups: [{
+    CACHE_INITIAL_DATA.session.user = {
+      groups: [
+        {
           name: GROUPS.FS_ADMINS
-        }]
-      }
-    });
-
-    $rootScope.$apply();
+        }
+      ]
+    };
+    expect(authorization.groupAllowed(GROUPS.SUPERUSERS)).toBe(false);
   });
 
   it('should allow a superuser when fs admin is checked', function () {
-    authorization.groupAllowed(GROUPS.FS_ADMINS).then(function (allowed) {
-      expect(allowed).toBe(true);
-    });
-
-    deferred.resolve({
-      user: {
-        groups: [{
+    CACHE_INITIAL_DATA.session.user = {
+      groups: [
+        {
           name: GROUPS.SUPERUSERS
-        }]
-      }
-    });
+        }
+      ]
+    };
 
-    $rootScope.$apply();
+    expect(authorization.groupAllowed(GROUPS.FS_ADMINS)).toBe(true);
   });
 
   it('should allow a fs admin when fs user is checked', function () {
-    authorization.groupAllowed(GROUPS.FS_USERS).then(function (allowed) {
-      expect(allowed).toBe(true);
-    });
-
-    deferred.resolve({
-      user: {
-        groups: [{
+    CACHE_INITIAL_DATA.session.user = {
+      groups: [
+        {
           name: GROUPS.FS_ADMINS
-        }]
-      }
-    });
+        }
+      ]
+    };
 
-    $rootScope.$apply();
+    expect(authorization.groupAllowed(GROUPS.FS_USERS)).toBe(true);
   });
 
   it('should disallow a fs admin when superuser is checked', function () {
-    authorization.groupAllowed(GROUPS.SUPERUSERS).then(function (allowed) {
-      expect(allowed).toBe(false);
-    });
-
-    deferred.resolve({
-      user: {
-        groups: [{
+    CACHE_INITIAL_DATA.session.user = {
+      groups: [
+        {
           name: GROUPS.FS_ADMINS
-        }]
-      }
-    });
+        }
+      ]
+    };
 
-    $rootScope.$apply();
+    expect(authorization.groupAllowed(GROUPS.SUPERUSERS)).toBe(false);
   });
 
   it('should allow a fs user when fs user is checked', function () {
-    authorization.groupAllowed(GROUPS.FS_USERS).then(function (allowed) {
-      expect(allowed).toBe(true);
-    });
-
-    deferred.resolve({
-      user: {
-        groups: [{
+    CACHE_INITIAL_DATA.session.user = {
+      groups: [
+        {
           name: GROUPS.FS_USERS
-        }]
-      }
-    });
+        }
+      ]
+    };
 
-    $rootScope.$apply();
+    expect(authorization.groupAllowed(GROUPS.FS_USERS)).toBe(true);
   });
 });

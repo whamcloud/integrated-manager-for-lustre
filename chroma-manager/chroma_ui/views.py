@@ -37,6 +37,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.contrib import auth
+from django.http import HttpRequest
 
 from chroma_core.models import UserProfile
 from django.db.models import Q
@@ -44,11 +45,21 @@ from django.db.models import Q
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
 from chroma_api.target import TargetResource
+from chroma_api.session import SessionResource
 import settings
+import simplejson
 
 
 def _build_cache(request):
     cache = {}
+
+    http_request = HttpRequest()
+    http_request.META['HTTP_ACCEPT'] = 'application/json, text/plain, */*'
+    http_request.user = request.user
+    http_request.session = request.session
+
+    http_response = SessionResource().get_list(http_request)
+
     resources = [
         FilesystemResource,
         TargetResource,
@@ -70,6 +81,9 @@ def _build_cache(request):
     from tastypie.serializers import Serializer
 
     serializer = Serializer()
+
+    cache['session'] = simplejson.loads(http_response.content)
+
     return serializer.to_simple(cache, {})
 
 
@@ -151,7 +165,7 @@ def login(request):
     if problem:
         return problem
 
-    return render_to_response("new/login.html", RequestContext(request))
+    return _render_template_or_error("new/login.html", request)
 
 
 def index(request):

@@ -37,17 +37,27 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.contrib import auth
+from django.http import HttpRequest
 
 from chroma_core.models import UserProfile
 
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
 from chroma_api.target import TargetResource
+from chroma_api.session import SessionResource
 import settings
+import simplejson
 
 
 def _build_cache(request):
     cache = {}
+    http_request = HttpRequest()
+    http_request.META['HTTP_ACCEPT'] = 'application/json, text/plain, */*'
+    http_request.user = request.user
+    http_request.session = request.session
+
+    http_response = SessionResource().get_list(http_request)
+
     resources = [
         FilesystemResource,
         TargetResource,
@@ -69,7 +79,24 @@ def _build_cache(request):
     from tastypie.serializers import Serializer
 
     serializer = Serializer()
+
+    cache['session'] = simplejson.loads(http_response.content)
+
     return serializer.to_simple(cache, {})
+
+
+def _render_template_or_error(template_name, request):
+    try:
+        cache = json.dumps(_build_cache(request), cls=django_json.DjangoJSONEncoder)
+    except:
+        # An exception here indicates an internal error (bug or fatal config problem)
+        # in any of the chroma_api resource classes
+        return render_to_response("chroma_ui/backend_error.html", RequestContext(request, {
+            'description': "Exception rendering resources: %s" % traceback.format_exc(),
+            'debug_info': _debug_info(request)
+        }))
+
+    return render_to_response(template_name, RequestContext(request, {'cache': cache}))
 
 
 def _debug_info(request):
@@ -136,7 +163,7 @@ def login(request):
     if problem:
         return problem
 
-    return render_to_response("chroma_ui/login.html", RequestContext(request))
+    return _render_template_or_error("chroma_ui/login.html", request)
 
 
 def index(request):
@@ -157,14 +184,4 @@ def index(request):
     if problem:
         return problem
 
-    try:
-        cache = json.dumps(_build_cache(request), cls=django_json.DjangoJSONEncoder)
-    except:
-        # An exception here indicates an internal error (bug or fatal config problem)
-        # in any of the chroma_api resource classes
-        return render_to_response("chroma_ui/backend_error.html", RequestContext(request, {
-            'description': "Exception rendering resources: %s" % traceback.format_exc(),
-            'debug_info': _debug_info(request)
-        }))
-
-    return render_to_response("chroma_ui/index.html", RequestContext(request, {'cache': cache}))
+    return _render_template_or_error("chroma_ui/index.html", request)

@@ -20,39 +20,76 @@
 // express and approved by Intel in writing.
 
 
-angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment'])
-  .config(['$routeSegmentProvider', function ($routeSegmentProvider) {
-  'use strict';
+angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment', 'auth'])
+  .config(['$routeSegmentProvider', 'GROUPS', function ($routeSegmentProvider, GROUPS) {
+    'use strict';
 
-  $routeSegmentProvider.options.autoLoadTemplates = true;
-  $routeSegmentProvider.options.strictMode = true;
+    $routeSegmentProvider.segmentAuthenticated = segmentAuthenticated;
 
-  $routeSegmentProvider.when('/login/', 'login').segment('login', {
-    controller: 'LoginCtrl',
-    controllerAs: 'login',
-    templateUrl: 'common/login/assets/html/login.html'
-  });
+    /**
+     * Extends the params.resolve property with the hasAccess function so that it will be executed
+     * upon being resolved.
+     * @param {String} name
+     * @param {Object} params
+     * @returns {Object}
+     */
+    function segmentAuthenticated (name, params) {
+      params.resolve = params.resolve || {};
 
-  $routeSegmentProvider.segment('app', {
-    controller: 'AppCtrl',
-    controllerAs: 'app',
-    templateUrl: 'iml/app/assets/html/app.html'
-  });
+      params.resolve.hasAccess = ['hasAccess', function checkIfHasAccess (hasAccess) {
+        hasAccess(params);
+      }];
 
-  $routeSegmentProvider.when('/', 'app.dashboard.base')
-    .when('/dashboard', 'app.dashboard.base')
-    .when('/dashboard/fs/:fsId', 'app.dashboard.fs')
-    .when('/dashboard/fs/:fsId/OST/:ostId', 'app.dashboard.ost')
-    .when('/dashboard/fs/:fsId/MDT/:mdtId', 'app.dashboard.mdt')
-    .when('/dashboard/server/:serverId', 'app.dashboard.server')
-    .when('/dashboard/server/:serverId/OST/:ostId', 'app.dashboard.ost')
-    .when('/dashboard/server/:serverId/MDT/:mdtId', 'app.dashboard.mdt');
+      /* jshint validthis:true */
+      return this.segment(name, params);
+    }
 
-  $routeSegmentProvider.within('app')
-    .segment('dashboard', {
-      templateUrl: 'iml/dashboard/assets/html/dashboard.html'
-    })
-    .within()
+    var within = $routeSegmentProvider.within;
+
+    $routeSegmentProvider.within = newWithin;
+
+    /**
+     * Overrides the within method in the routeSegmentProvider such that it appends a segmentAuthenticated
+     * property onto the result.
+     * @param {String} childName
+     * @returns {Object}
+     */
+    function newWithin (childName) {
+      var result = within(childName);
+      result.segmentAuthenticated = segmentAuthenticated;
+
+      return result;
+    }
+
+    $routeSegmentProvider.options.autoLoadTemplates = true;
+    $routeSegmentProvider.options.strictMode = true;
+
+    $routeSegmentProvider.when('/login/', 'login').segment('login', {
+      controller: 'LoginCtrl',
+      controllerAs: 'login',
+      templateUrl: 'common/login/assets/html/login.html'
+    });
+
+    $routeSegmentProvider.segment('app', {
+      controller: 'AppCtrl',
+      controllerAs: 'app',
+      templateUrl: 'iml/app/assets/html/app.html'
+    });
+
+    $routeSegmentProvider.when('/', 'app.dashboard.base')
+      .when('/dashboard', 'app.dashboard.base')
+      .when('/dashboard/fs/:fsId', 'app.dashboard.fs')
+      .when('/dashboard/fs/:fsId/OST/:ostId', 'app.dashboard.ost')
+      .when('/dashboard/fs/:fsId/MDT/:mdtId', 'app.dashboard.mdt')
+      .when('/dashboard/server/:serverId', 'app.dashboard.server')
+      .when('/dashboard/server/:serverId/OST/:ostId', 'app.dashboard.ost')
+      .when('/dashboard/server/:serverId/MDT/:mdtId', 'app.dashboard.mdt');
+
+    $routeSegmentProvider.within('app')
+      .segment('dashboard', {
+        templateUrl: 'iml/dashboard/assets/html/dashboard.html'
+      })
+      .within()
       .segment('base', {
         controller: 'BaseDashboardCtrl',
         templateUrl: 'iml/dashboard/assets/html/base-dashboard.html'
@@ -78,48 +115,103 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment'])
         dependencies: ['fsId', 'serverId', 'mdtId']
       });
 
-  $routeSegmentProvider.when('/configure/hsm', 'app.hsm');
+    $routeSegmentProvider.when('/configure/hsm', 'app.hsm')
+      .when('/configure/server_new', 'app.server');
 
-  $routeSegmentProvider.within('app').segment('hsm', {
-    controller: 'HsmCtrl',
-    templateUrl: 'iml/hsm/assets/html/hsm.html'
-  });
+    $routeSegmentProvider.within('app')
+      .segmentAuthenticated('hsm', {
+        controller: 'HsmCtrl',
+        templateUrl: 'iml/hsm/assets/html/hsm.html',
+        access: GROUPS.FS_ADMINS,
+        untilResolved: {
+          templateUrl: 'common/loading/assets/html/loading.html'
+        }
+      }).segmentAuthenticated('server', {
+        controller: 'ServerCtrl',
+        templateUrl: 'iml/server/assets/html/server.html',
+        access: GROUPS.FS_ADMINS,
+        untilResolved: {
+          templateUrl: 'common/loading/assets/html/loading.html'
+        }
+      });
 
-  $routeSegmentProvider.when('/dashboard/jobstats/:id/:startDate/:endDate', 'app.jobstats');
+    $routeSegmentProvider.when('/dashboard/jobstats/:id/:startDate/:endDate', 'app.jobstats');
 
-  $routeSegmentProvider.within('app').segment('jobstats', {
-    controller: 'JobStatsCtrl',
-    controllerAs: 'jobStats',
-    templateUrl: 'iml/job-stats/assets/html/job-stats.html',
-    resolve: {
-      target: ['$route', 'TargetModel', function resolveTarget($route, TargetModel) {
-        return TargetModel.get({
-          id: $route.current.params.id
-        }).$promise;
-      }],
-      metrics: ['$q', '$route', 'TargetMetricModel', function resolveMetrics($q, $route, TargetMetricModel) {
-        var commonParams = {
-          begin: $route.current.params.startDate,
-          end: $route.current.params.endDate,
-          job: 'id',
-          id: $route.current.params.id
+    $routeSegmentProvider.within('app').segment('jobstats', {
+      controller: 'JobStatsCtrl',
+      controllerAs: 'jobStats',
+      templateUrl: 'iml/job-stats/assets/html/job-stats.html',
+      resolve: {
+        target: ['$route', 'TargetModel', function resolveTarget ($route, TargetModel) {
+          return TargetModel.get({
+            id: $route.current.params.id
+          }).$promise;
+        }],
+        metrics: ['$q', '$route', 'TargetMetricModel', function resolveMetrics ($q, $route, TargetMetricModel) {
+          var commonParams = {
+            begin: $route.current.params.startDate,
+            end: $route.current.params.endDate,
+            job: 'id',
+            id: $route.current.params.id
+          };
+          var metrics = ['read_bytes', 'write_bytes', 'read_iops', 'write_iops'];
+
+          var promises = metrics.reduce(function reducer (out, metric) {
+
+            var params = _.extend({}, commonParams, {metrics: metric});
+
+            out[metric] = TargetMetricModel.getJobAverage(params);
+
+            return out;
+          }, {});
+
+          return $q.all(promises);
+        }]
+      },
+      untilResolved: {
+        templateUrl: 'common/loading/assets/html/loading.html'
+      }
+    });
+  }]);
+
+angular.module('imlRoutes').factory('hasAccess', ['$route', 'authorization', '$location', '$rootScope', '$q',
+  function ($route, authorization, $location, $rootScope, $q) {
+    'use strict';
+
+    /**
+     * Determines if the user has access to the specified route given their access (on the params object). If they
+     * have access, it will resolve immediately. If, however, they do not have access, it will do one of two actions:
+     * 1. If readEnabled is true it will route to the dashboard
+     * 2. If readEnabled is false it will route to the login screen
+     * @param {Object} params The params associated with the route
+     * @returns {$q.promise}
+     */
+    return function hasAccess (params) {
+      var authenticated = authorization.groupAllowed(params.access);
+
+      if (authenticated)
+        return $q.when();
+
+      var targetLocation = {
+        controller: 'BaseDashboardCtrl',
+        templateUrl: 'iml/dashboard/assets/html/base-dashboard.html'
+      };
+
+      var targetPath = '/';
+
+      if (!authorization.readEnabled) {
+        targetLocation = {
+          controller: 'LoginCtrl',
+          controllerAs: 'login',
+          templateUrl: 'common/login/assets/html/login.html'
         };
-        var metrics = ['read_bytes', 'write_bytes', 'read_iops', 'write_iops'];
+        targetPath = '/login';
+      }
 
-        var promises = metrics.reduce(function reducer(out, metric) {
+      // Handle case where not authenticated
+      params.resolveFailed = targetLocation;
+      $location.path(targetPath);
 
-          var params = _.extend({}, commonParams, {metrics: metric});
-
-          out[metric] = TargetMetricModel.getJobAverage(params);
-
-          return out;
-        }, {});
-
-        return $q.all(promises);
-      }]
-    },
-    untilResolved: {
-      templateUrl: 'common/loading/assets/html/loading.html'
-    }
-  });
-}]);
+      return $q.reject();
+    };
+  }]);

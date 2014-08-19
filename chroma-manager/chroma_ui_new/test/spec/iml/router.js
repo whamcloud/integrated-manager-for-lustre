@@ -1,12 +1,12 @@
 describe('The router', function () {
   'use strict';
 
-  var $routeSegmentProvider;
+  var $routeSegmentProvider, GROUPS;
 
   beforeEach(function () {
     $routeSegmentProvider = {
       options: {},
-      $get : function() {},
+      $get: function () {},
       segment: jasmine.createSpy('$routeSegmentProvider.segment').andCallFake(routeSegementProvider),
       when: jasmine.createSpy('$routeSegmentProvider.when').andCallFake(routeSegementProvider),
       within: jasmine.createSpy('$routeSegmentProvider.within').andCallFake(routeSegementProvider)
@@ -21,9 +21,11 @@ describe('The router', function () {
     });
   });
 
-  beforeEach(module('imlRoutes'));
+  beforeEach(module('imlRoutes', 'auth'));
 
-  beforeEach(inject(function () {}));
+  beforeEach(inject(function (_GROUPS_) {
+    GROUPS = _GROUPS_;
+  }));
 
   describe('when setting up job stats', function () {
     var $q, TargetModel, TargetMetricModel, $route, deferred;
@@ -110,6 +112,131 @@ describe('The router', function () {
             id: 1,
             metrics: metric
           });
+        });
+      });
+    });
+  });
+
+  describe('authorization', function () {
+
+    it('should load pages that are access restricted using the hasAccess resolve', function () {
+      expect($routeSegmentProvider.segment)
+        .toHaveBeenCalledOnceWith('server', {
+          controller: 'ServerCtrl',
+          templateUrl: 'iml/server/assets/html/server.html',
+          access: GROUPS.FS_ADMINS,
+          resolve: {
+            hasAccess: ['hasAccess', jasmine.any(Function)]
+          },
+          untilResolved: {
+            templateUrl: 'common/loading/assets/html/loading.html'
+          }});
+    });
+
+    it('should add the segmentAuthenticated property to the result of within', function () {
+      expect($routeSegmentProvider.segmentAuthenticated).not.toBeNull();
+    });
+  });
+});
+
+describe('hasAccess service', function () {
+  'use strict';
+  var hasAccess, result, params, $rootScope, authorization, $location, $q;
+
+  beforeEach(module('imlRoutes', function setupDependencies ($provide) {
+    authorization = {
+      groupAllowed: jasmine.createSpy('groupAllowed').andReturn(true)
+    };
+
+    $provide.value('authorization', authorization);
+
+    $location = jasmine.createSpyObj('$location', ['path']);
+
+    $provide.value('$location', $location);
+
+    params = {
+      access: 'superusers'
+    };
+
+  }));
+
+  beforeEach(inject(function (_hasAccess_, _$q_, _$rootScope_) {
+    hasAccess = _hasAccess_;
+    $q = _$q_;
+    $rootScope = _$rootScope_;
+  }));
+
+  describe('hasAccess is true', function () {
+    beforeEach(function () {
+      result = hasAccess(params);
+    });
+
+    it('should call the groupAllowed method in the authorization service with the specified access',
+      function () {
+        expect(authorization.groupAllowed).toHaveBeenCalledWith(params.access);
+      });
+
+    it('should resolve', function () {
+      var resolve = jasmine.createSpy('resolve');
+      result.then(resolve);
+
+      $rootScope.$apply();
+
+      expect(resolve).toHaveBeenCalledOnce();
+    });
+
+    it('should not contain a resolveFailed property on the params', function () {
+      expect(params.resolveFailed).toBeUndefined();
+    });
+  });
+
+  describe('hasAccess is false', function () {
+    beforeEach(function () {
+      authorization.groupAllowed.andReturn(false);
+    });
+
+    var noAccessProviders = [
+      {
+        readEnabled: true,
+        resolveFailed: {
+          controller: 'BaseDashboardCtrl',
+          templateUrl: 'iml/dashboard/assets/html/base-dashboard.html'
+        },
+        targetLocation: '/'
+      },
+      {
+        readEnabled: false,
+        resolveFailed: {
+          controller: 'LoginCtrl',
+          controllerAs: 'login',
+          templateUrl: 'common/login/assets/html/login.html'
+        },
+        targetLocation: '/login'
+      }
+    ];
+
+    noAccessProviders.forEach(function testNoAccess (provider) {
+      describe('read enabled is ' + provider.readEnabled, function () {
+        beforeEach(function () {
+          authorization.readEnabled = provider.readEnabled;
+          result = hasAccess(params);
+        });
+
+        it('should have resolveFailed property on params', function () {
+          expect(params.resolveFailed).toEqual(provider.resolveFailed);
+        });
+
+        it('should call the location service with ' + provider.targetLocation, function () {
+          expect($location.path).toHaveBeenCalledWith(provider.targetLocation);
+        });
+
+        it('should reject', function () {
+          var reject = jasmine.createSpy('reject');
+          result.catch(reject);
+
+          $rootScope.$apply();
+
+          expect(reject).toHaveBeenCalledOnce();
         });
       });
     });

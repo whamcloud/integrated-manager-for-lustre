@@ -24,8 +24,9 @@ from django.conf.urls.defaults import patterns
 import chroma_ui.views as views
 
 urlpatterns = patterns('',
-    (r'^login/', views.login),
-    (r'^configure/hsm', views.index),
+    (r'^login/?', views.login),
+    (r'^configure/hsm/?', views.index),
+    (r'^configure/server_new/?', views.index),
     (r'^configure/.*', views.old_index_fs_admin),
     (r'^command/.*', views.old_index),
     (r'^target/.*', views.old_index_fs_admin),

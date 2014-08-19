@@ -16,6 +16,7 @@
 
   <script type="text/javascript">
     window.STATIC_URL = '{{STATIC_URL}}chroma_ui/';
+    window.CACHE_INITIAL_DATA = {{cache|safe}};
     window.HELP_TEXT = {{help_text|safe}};
     window.IS_RELEASE = {{IS_RELEASE|yesno:"true,false"}};
     window.ALLOW_ANONYMOUS_READ = {{ALLOW_ANONYMOUS_READ|yesno:"true,false"}};

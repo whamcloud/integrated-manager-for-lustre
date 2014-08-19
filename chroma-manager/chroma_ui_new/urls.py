@@ -25,6 +25,6 @@ import chroma_ui_new.views as views
 
 urlpatterns = patterns(
     '',
-    (r'^login/', views.login),
+    (r'^login/?', views.login),
     (r'^.*', views.index),
 )

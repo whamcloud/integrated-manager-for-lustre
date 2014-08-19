@@ -20,4 +20,8 @@
 // express and approved by Intel in writing.
 
 
-angular.module('app', ['auth', 'navigate', 'route-to', 'dashboard', 'jobStats', 'hsm', 'notification', 'server']);
+angular.module('server', [])
+  .controller('ServerCtrl', [function ServerCtrl() {
+      'use strict';
+
+    }]);
