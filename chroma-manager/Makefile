@@ -68,11 +68,10 @@ $(NPM):
 	@echo "You need to install $@ first... (brew install $@?)"
 	exit 1
 
-realtime/node_modules: realtime/package.json $(NPM)
+realtime/node_modules: realtime/package.json ziplocker/node_modules
 	@echo "Setting up realtime module for development..."; \
-	$(PREFIXED_PROXIES) \
 	cd realtime && \
-	npm install
+	../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 
 chroma_ui_new/node_modules: chroma_ui_new/package.json $(NPM)
 	@echo "Setting up the New Ui for development..."; \

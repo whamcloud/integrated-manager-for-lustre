@@ -80,6 +80,7 @@ CHECKS = [
             '.*/chroma-manager/docs/.*/conf.py$',
             '.*/features/steps/.*\.py',
             '.*/BUILD/.*',
+            '.*/chroma-externals/.*'
             ],
         'print_filename': False,
     },
@@ -92,7 +93,8 @@ CHECKS = [
             '.*manage.py',
             '.*/BUILD/.*',
             '.*/chroma-director/.*',
-            ],
+            '.*/chroma-externals/.*',
+        ],
         'print_filename': False
     },
     {
@@ -114,7 +116,9 @@ CHECKS = [
             '.*/manage.py',
             '.*/BUILD/.*',
             '.*/chroma-director/.*',
-            '.*chroma_ui/static/js/lib/.*\.js$'],
+            '.*chroma_ui/static/js/lib/.*\.js$',
+            '.*/chroma-externals/.*',
+        ],
         'print_filename': True
     }
 ]
