@@ -236,7 +236,7 @@ requirements:
 download: requirements ziplocker/node_modules
 	pip-python install --download ../chroma-externals -r requirements.txt
 	cd realtime && \
-	../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../chroma-externals/'
+	../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../chroma-externals/' --no-overrides.askQuestions
 
 docs: requirements version
 	set -e ; \
