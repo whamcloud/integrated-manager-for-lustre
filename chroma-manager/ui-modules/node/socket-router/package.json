@@ -1,0 +1,20 @@
+{
+  "name": "socket-router",
+  "version": "1.0.0",
+  "description": "A simple utility to route requests to actions.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mjnw",
+    "cover": "cover"
+  },
+  "author": "Joe Grund",
+  "license": "MIT",
+  "dependencies": {
+    "lodash.find": "2.4.1",
+    "path-to-regexp": "0.2.4"
+  },
+  "devDependencies": {
+    "jasmine-n-matchers": "2.0.2",
+    "minijasminenodewrap": "1.0.1"
+  }
+}

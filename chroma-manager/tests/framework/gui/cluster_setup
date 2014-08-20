@@ -108,6 +108,8 @@ npm install
 cd ../ui-modules/node/ziplocker
 cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./node_modules/
 ./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
+cd ../socket-router/
+../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../../../realtime/
 ../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 
