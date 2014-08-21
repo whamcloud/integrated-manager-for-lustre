@@ -1,19 +1,21 @@
 import mock
-from django.test import TestCase
 
 from chroma_core.models import VolumeNode
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
 from tests.unit.chroma_core.helpers import synthetic_host, synthetic_volume_full
 from tests.unit.chroma_core.helpers import load_default_profile
 
 
-class TestRebalancePassthrough(TestCase):
+class TestRebalancePassthrough(IMLUnitTestCase):
     """
     Validate that the rebalance_host_volumes member function correctly calls through
     to resource manager
     """
 
     def setUp(self):
+        super(TestRebalancePassthrough, self).setUp()
+
         load_default_profile()
 
         # Initialise storage plugin stuff for the benefit of synthetic_volume_full

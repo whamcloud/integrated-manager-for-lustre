@@ -592,7 +592,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         :param assert_test: test that if it occurs will fetch the help
         :param callback: optional but if present returning False will cause the routine to not fetch help.
         :param tell_who: list of email addresses to contact about the issue
-        :param message: message to deliver to those people
+        :param message: message to deliver to those people, can be a callable returning a string.
         :param timeout: How long to wait before continuing.
         :return: None
 
@@ -601,6 +601,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                          ['chris.gearing@intel.com'],
                          'Send the cavalry',
                          callback=lambda: check_if_significant(data))
+
+        self._fetch_help(lambda: self.assertEqual(commandResult, True),
+                         ['chris.gearing@intel.com'],
+                         lambda: 'Send the cavalry',
+                         callback=lambda: check_if_significant(data))
+
         '''
 
         try:
@@ -610,6 +616,9 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 raise
 
             key_file = '/tmp/waiting_help'
+
+            if hasattr(message, '__call__'):
+                message = message()
 
             # First create the file, errors in here do destroy the original, but will be reported by the test framework
             fd = os.open(key_file, os.O_RDWR | os.O_CREAT)

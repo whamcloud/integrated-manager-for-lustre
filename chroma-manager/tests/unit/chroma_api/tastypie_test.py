@@ -35,11 +35,13 @@ import time
 from urlparse import urlparse
 import contextlib
 import itertools
+
 from django.conf import settings
-from django.test import TestCase
 from django.test.client import FakePayload, Client
 from django.db import connection
 from tastypie.serializers import Serializer
+
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
 class TestApiClient(object):
@@ -247,7 +249,7 @@ class TestApiClient(object):
         return self.client.delete(uri, **kwargs)
 
 
-class ResourceTestCase(TestCase):
+class ResourceTestCase(IMLUnitTestCase):
     """
     A useful base class for the start of testing Tastypie APIs.
     """

@@ -319,28 +319,59 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         return command
 
     def wait_for_commands(self, chroma_manager, command_ids, timeout=TEST_TIMEOUT, verify_successful = True):
+        assert type(chroma_manager) is AuthorizedHttpRequests, "chroma_manager is not an AuthorizedHttpRequests: %s" % chroma_manager
+        assert type(command_ids) is list, "command_ids is not an int: %s" % type(command_ids)
+        assert type(timeout) is int, "timeout is not an int: %s" % type(timeout)
+        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+
         for command_id in command_ids:
             self.wait_for_command(chroma_manager, command_id, timeout, verify_successful)
 
     def wait_last_command_complete(self, timeout=TEST_TIMEOUT, verify_successful=True):
-        response = self.get_json_by_uri('/api/command/')
-        self.wait_for_command(self.chroma_manager, response['meta']['total_count'], timeout, verify_successful)
+        '''
+        This actually waits for all commands to be complete and then verifies that the last command completed successfully
+        :param timeout: Time to wait for commands to complete
+        :param verify_successful: True if we should verify the last command completed OK.
+        :return: No return value
+        '''
+        assert type(timeout) is int, "timeout is not an int: %s" % type(timeout)
+        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
 
-    def get_list(self, url, args = {}):
-        response = self.chroma_manager.get(url, params = args)
+        self.wait_for_assert(lambda: self.assertEqual(0,
+                                                      len(self.get_json_by_uri('/api/command/', args={'complete': False})['objects'])),
+                             timeout)
+
+        if verify_successful:
+            response = self.get_json_by_uri('/api/command/', args={'limit': 0})
+            last_command = max(response['objects'], key= lambda command: int(command['id']))
+            self.wait_for_command(self.chroma_manager, last_command['id'], timeout, True)
+
+    def get_list(self, url, args=None):
+        args = args if args else {}
+        assert type(args) is dict, "args is not a dictionary: %s" % type(args)
+
+        response = self.chroma_manager.get(url, params=args)
         self.assertEqual(response.status_code, 200, response.content)
         return response.json['objects']
 
-    def get_by_uri(self, uri, verify_successful=True):
-        response = self.chroma_manager.get(uri)
+    def get_by_uri(self, uri, args=None, verify_successful=True):
+        args = args if args else {}
+        assert type(args) is dict, "args is not a dictionary: %s" % type(args)
+        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+
+        response = self.chroma_manager.get(uri, params=args)
 
         if verify_successful:
             self.assertEqual(response.status_code, 200, response.content)
 
         return response
 
-    def get_json_by_uri(self, uri, verify_successful=True):
-        return self.get_by_uri(uri, verify_successful).json
+    def get_json_by_uri(self, uri, args=None, verify_successful=True):
+        args = args if args else {}
+        assert type(args) is dict, "args is not a dictionary: %s" % type(args)
+        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+
+        return self.get_by_uri(uri, args, verify_successful).json
 
     def wait_for_action(self, victim, timeout=TEST_TIMEOUT, **filters):
         """
@@ -356,10 +387,14 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         raise AssertionError('{0} not found in {1}'.format(filters, actions))
 
     def run_command(self, jobs, message = None, verify_successful = True):
+        message = message if message else "Test command"
+        assert type(message) in [str, unicode], "message is not a str/unicode: %s" % type(message)
+        assert type(verify_successful) is bool, "verify_successful is not a bool: %s" % type(verify_successful)
+
         logger.debug("Running %s (%s)" % (jobs, message))
         response = self.chroma_manager.post('/api/command/', body = dict(
             jobs = jobs,
-            message = message if message else "Test command"
+            message = message
         ))
 
         if verify_successful:

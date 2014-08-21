@@ -1,16 +1,15 @@
 import threading
+
 import mock
 
-from django.test import TestCase
-
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models.power_control import PowerControlType, PowerControlDevice, PowerControlDeviceOutlet
 from chroma_core.services.power_control.manager import PowerControlManager
 from chroma_core.services.power_control.monitor_daemon import PowerMonitorDaemon, PowerDeviceMonitor
-
 from tests.integration.core.constants import TEST_TIMEOUT
 
 
-class PowerControlTestCase(TestCase):
+class PowerControlTestCase(IMLUnitTestCase):
     def setUp(self):
         super(PowerControlTestCase, self).setUp()
 
@@ -109,7 +108,7 @@ class PowerMonitoringTests(PowerControlTestCase):
 
 
 @mock.patch('chroma_core.services.power_control.rpc.PowerControlRpc')
-class MonitorThreadTests(TestCase):
+class MonitorThreadCase(IMLUnitTestCase):
     device_checks_should_fail = False
 
     def _check_device_availability(self, device):
@@ -119,6 +118,8 @@ class MonitorThreadTests(TestCase):
         return dict([(o, self.device_checks_should_fail) for o in device.outlets.all()])
 
     def setUp(self):
+        super(MonitorThreadCase, self).setUp()
+
         patcher = mock.patch.object(PowerControlManager, 'check_device_availability', self._check_device_availability)
         patcher.start()
 

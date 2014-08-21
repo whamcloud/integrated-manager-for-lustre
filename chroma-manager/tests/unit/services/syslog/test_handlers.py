@@ -1,9 +1,8 @@
-from django.test import TestCase
-
 from chroma_core.services.syslog.parser import admin_client_eviction_handler, client_connection_handler, server_security_flavor_handler, client_eviction_handler
 from chroma_core.models.event import ClientConnectEvent
 from tests.unit.chroma_core.helpers import synthetic_host
 from tests.unit.chroma_core.helpers import load_default_profile
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
 examples = {
@@ -44,8 +43,9 @@ examples = {
 }
 
 
-class TestHandlers(TestCase):
+class TestHandlers(IMLUnitTestCase):
     def setUp(self):
+        super(TestHandlers, self).setUp()
         load_default_profile()
         self.host = synthetic_host('myaddress')
 

@@ -1,5 +1,5 @@
 
-from django.test import TestCase
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 from chroma_core.lib.storage_plugin.api import alert_conditions
 
@@ -9,7 +9,7 @@ class FakeResource:
         self.status = status
 
 
-class TestAlertConditions(TestCase):
+class TestAlertConditions(IMLUnitTestCase):
     def test_attrvalalertcondition_empty(self):
         avac = alert_conditions.ValueCondition('status', id = 'avac')
         self.assertListEqual(avac.alert_classes(), [])

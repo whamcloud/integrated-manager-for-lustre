@@ -1,14 +1,12 @@
-
-from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
-
-from django.test import TestCase
 from django.utils.html import conditional_escape
 
+from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.storage_plugin import base_resource_attribute
 from chroma_core.lib.storage_plugin.api import attributes
 
 
-class TestAttributes(TestCase):
+class TestAttributes(IMLUnitTestCase):
     def test_label(self):
         attr = base_resource_attribute.BaseResourceAttribute(label = 'foobar')
         self.assertEqual(attr.get_label('my_attribute'), 'foobar')
@@ -74,8 +72,10 @@ class TestAttributes(TestCase):
                 attr.validate(value)
 
 
-class TestReferenceAttribute(TestCase):
+class TestReferenceAttribute(IMLUnitTestCase):
     def setUp(self):
+        super(TestReferenceAttribute, self).setUp()
+
         import chroma_core.lib.storage_plugin.manager
         self.original_mgr = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
 

@@ -292,6 +292,9 @@ AGENT_CLOCK_TOLERANCE = 20
 # to chroma_api
 ALLOW_ANONYMOUS_READ = True
 
+# Long poll timeout Seconds
+LONG_POLL_TIMEOUT_SECONDS = (60 * 5)
+
 # Allow Cookie to be read from JavaScript and passed to
 # Realtime service
 SESSION_COOKIE_HTTPONLY = False

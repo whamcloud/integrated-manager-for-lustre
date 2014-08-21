@@ -55,7 +55,9 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'available_jobs',
                'get_locks',
                'update_corosync_configuration',
-               'get_transition_consequences'
+               'get_transition_consequences',
+               'table_change',
+               'wait_table_change'
                ]
 
 
@@ -181,6 +183,14 @@ class JobSchedulerClient(object):
     @classmethod
     def update_nids(cls, nid_data):
         return JobSchedulerRpc().update_nids(nid_data)
+
+    @classmethod
+    def table_change(cls, timestamp, table):
+        return JobSchedulerRpc().table_change(timestamp, table)
+
+    @classmethod
+    def wait_table_change(cls, last_timestamp, tables_list, timeout):
+        return JobSchedulerRpc().wait_table_change(last_timestamp, tables_list, timeout, rpc_timeout = timeout + 5)
 
     @classmethod
     def update_lnet_configuration(cls, lnet_configuration_list):

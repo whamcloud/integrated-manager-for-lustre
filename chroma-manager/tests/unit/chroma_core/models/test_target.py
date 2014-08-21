@@ -1,14 +1,16 @@
 from chroma_core.models import GenerateHaLabelStep
 from chroma_core.models.jobs import Job
-from django.test import TestCase
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 # Illegal chars for NCName
 ILLEGAL_CHARS = set(':@$%&/+,;()[]{} \r\n\t')
 ILLEGAL_LEADING_CHARS = set('0123456789.-')
 
 
-class TestHaLabel(TestCase):
+class TestHaLabel(IMLUnitTestCase):
     def setUp(self):
+        super(TestHaLabel, self).setUp()
+
         self.fake_halabel_step = GenerateHaLabelStep(Job(), None, None, None, None)
 
     def check_label(self, label_text):

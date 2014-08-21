@@ -1,9 +1,9 @@
-from django.test import TestCase
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 from chroma_core.chroma_common.lib.evaluator import safe_eval
 
 
-class TestEvaluator(TestCase):
+class TestEvaluator(IMLUnitTestCase):
     def test_good_evaluation(self):
         var1 = 101242123
         var_2 = 12124.242442

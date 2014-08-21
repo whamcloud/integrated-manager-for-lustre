@@ -1,8 +1,9 @@
 import imp
 import sys
 
-from django.test import TestCase
 from django.conf import settings
+
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
 def make_plugin_module(version=None, name="test_plugin_name", extra_body=None):
@@ -30,7 +31,7 @@ def make_plugin_module(version=None, name="test_plugin_name", extra_body=None):
     return name, plugin_module
 
 
-class TestValidateApiVersion(TestCase):
+class TestValidateApiVersion(IMLUnitTestCase):
     """Test StoragePluginManager._validate_api_version method"""
 
     def test_version_match(self):
@@ -94,7 +95,7 @@ class TestValidateApiVersion(TestCase):
             mgr._validate_api_version, mod)
 
 
-class TestValidatedModuleLoading(TestCase):
+class TestValidatedModuleLoading(IMLUnitTestCase):
     """Test that version checking integrates from nearly the starting load
 
     This test assumes the job of importing the plugin, which is something

@@ -1,11 +1,14 @@
 import random
 from datetime import datetime, timedelta
+
 from django.utils.timezone import utc
-from django.test import TestCase
 from django.contrib.auth.models import User
+
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from tests.utils import patch
 from chroma_core.lib import metrics
 from chroma_core.models.stats import Series, Stats, timestamp
+
 
 fields = ('size', 'Gauge', 0, 1000), ('bandwith', 'Counter', 0, 100), ('speed', 'Derive', -100, 100)
 epoch = datetime.fromtimestamp(0, utc)
@@ -17,10 +20,12 @@ def gen_series(sample, rows):
         yield (index * sample), dict((field[0], {'type': field[1], 'value': random.randint(*field[2:])}) for field in fields)
 
 
-class TestSeries(TestCase):
+class TestSeries(IMLUnitTestCase):
     "Test series updates and fetches at the MetricStore layer"
 
     def setUp(self):
+        super(TestSeries, self).setUp()
+
         self.obj = User.objects.create(username='test', email='test@test.test')
         self.store = metrics.MetricStore(self.obj)
 

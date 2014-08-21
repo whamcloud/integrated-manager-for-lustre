@@ -1,5 +1,4 @@
-from django.test import TestCase
-
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import DeployHostJob
 from chroma_core.models import ManagedHost
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
@@ -8,7 +7,7 @@ from tests.unit.chroma_core.helpers import freshen
 from tests.unit.chroma_core.helpers import load_default_profile
 
 
-class TestDeployHostJob(TestCase):
+class TestDeployHostJob(IMLUnitTestCase):
     """Test JobScheduler.create_host_ssh() """
 
     def test_host_available_states_undeployed(self):

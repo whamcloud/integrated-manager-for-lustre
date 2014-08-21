@@ -1,14 +1,14 @@
 import mock
-from django.test import TestCase
 
 from tests.unit.chroma_core.helpers import synthetic_host
 from tests.unit.chroma_core.helpers import load_default_profile
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
 from chroma_core.models import FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob, MountLustreFilesystemsJob, UnmountLustreFilesystemsJob
 from chroma_core.lib.cache import ObjectCache
 
 
-class TestAdvertisedCase(TestCase):
+class TestAdvertisedCase(IMLUnitTestCase):
     normal_host_state = 'managed'
 
     def set_managed(self, managed):
@@ -49,6 +49,8 @@ class TestAdvertisedJobCoverage(TestAdvertisedCase):
 
 class TestAdvertisedTargetJobs(TestAdvertisedCase):
     def setUp(self):
+        super(TestAdvertisedTargetJobs, self).setUp()
+
         load_default_profile()
 
         self.target = mock.Mock()
@@ -85,6 +87,8 @@ class TestAdvertisedTargetJobs(TestAdvertisedCase):
 
 class TestAdvertisedHostJobs(TestAdvertisedCase):
     def setUp(self):
+        super(TestAdvertisedHostJobs, self).setUp()
+
         load_default_profile()
 
         self.host = synthetic_host()
@@ -134,6 +138,8 @@ class TestAdvertisedHostJobs(TestAdvertisedCase):
 
 class TestAdvertisedPowerJobs(TestAdvertisedCase):
     def setUp(self):
+        super(TestAdvertisedPowerJobs, self).setUp()
+
         self.host = mock.Mock()
         self.set_managed(True)
 

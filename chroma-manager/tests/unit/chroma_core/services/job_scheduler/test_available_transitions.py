@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import reset_queries, connection
-from django.test import TestCase
 
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import (ManagedMgs, ManagedFilesystem, ManagedOst,
                                 ManagedMdt, RebootHostJob, ShutdownHostJob)
@@ -10,7 +10,7 @@ from tests.unit.chroma_core.helpers import synthetic_volume, synthetic_host
 from tests.unit.chroma_core.helpers import load_default_profile
 
 
-class TestAvailableTransitions(TestCase):
+class TestAvailableTransitions(IMLUnitTestCase):
     """Check that available transitions are reported correctly
 
     Testing the JobScheduler.available_tranistions method
@@ -31,6 +31,8 @@ class TestAvailableTransitions(TestCase):
     """
 
     def setUp(self):
+        super(TestAvailableTransitions, self).setUp()
+
         self.js = JobScheduler()
         self.volume = synthetic_volume(with_storage=False)
 

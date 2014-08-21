@@ -1,19 +1,19 @@
 import json
-
-from django.test import Client, TestCase
 import mock
+
+from django.test import Client
 
 from chroma_core.models import ManagedHost, ServerProfile, Nid
 from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.http_agent.crypto import Crypto
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_agent_comms.views import ValidatedClientView
-import settings
 from tests.unit.chroma_core.helpers import generate_csr, synthetic_host, load_default_profile
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from tests.utils import patch, timed
+import settings
 
-
-class TestRegistration(TestCase):
+class TestRegistration(IMLUnitTestCase):
     """API unit tests for functionality used only by the agent"""
     mock_servers = {'mynewhost': {
         'fqdn': 'mynewhost.mycompany.com',

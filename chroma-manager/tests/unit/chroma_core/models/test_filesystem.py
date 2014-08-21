@@ -1,13 +1,14 @@
-from django.test import TestCase
-
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst, Nid
 from tests.unit.chroma_core.helpers import synthetic_host, synthetic_volume_full
 from tests.unit.chroma_core.helpers import load_default_profile
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
-class TestNidStrings(TestCase):
+class TestNidStrings(IMLUnitTestCase):
     def setUp(self):
+        super(TestNidStrings, self).setUp()
+
         # If the test that just ran imported storage_plugin_manager, it will
         # have instantiated its singleton, and created some DB records.
         # Django TestCase rolls back the database, so make sure that we

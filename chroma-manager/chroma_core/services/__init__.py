@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -44,6 +44,9 @@ class ChromaService(object):
 
     def __init__(self):
         self.log = None
+        # Enable long polling.
+        from chroma_core.lib.long_polling import enable_long_polling
+        assert enable_long_polling    # Prevent pep8 warning
 
     @property
     def name(self):

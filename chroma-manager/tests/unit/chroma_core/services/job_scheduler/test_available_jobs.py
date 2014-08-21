@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection, reset_queries
-from django.test import TestCase
 
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import (ManagedMgs, ManagedFilesystem, ManagedOst,
                                 ManagedMdt, RebootHostJob, ShutdownHostJob)
@@ -9,7 +9,7 @@ from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_core.helpers import synthetic_volume, synthetic_host
 
 
-class TestAvailableJobs(TestCase):
+class TestAvailableJobs(IMLUnitTestCase):
     """Check that available jobs are reported correctly
 
     Testing the JobScheduler.available_jobs method

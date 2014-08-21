@@ -1,13 +1,14 @@
-from django.test import TestCase
-
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models.user_profile import UserProfile
 
 
-class TestUserProfile(TestCase):
+class TestUserProfile(IMLUnitTestCase):
     def setUp(self):
+        super(TestUserProfile, self).setUp()
+
         self.super_user = User.objects.create(username="su", is_superuser=True)
         self.normal_user = User.objects.create(username="normal")
 

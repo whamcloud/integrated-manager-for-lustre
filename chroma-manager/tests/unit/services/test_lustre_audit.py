@@ -1,18 +1,19 @@
 import datetime
-
-from django.test import TestCase
 import mock
 
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from tests.unit.chroma_core.helpers import synthetic_host
 from tests.unit.chroma_core.helpers import load_default_profile
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import Package, PackageVersion, PackageAvailability
 from chroma_core.services.lustre_audit import UpdateScan
 from chroma_core.models.package import PackageInstallation
 
 
-class TestAudit(TestCase):
+class TestAudit(IMLUnitTestCase):
     def setUp(self):
+        super(TestAudit, self).setUp()
+
         load_default_profile()
 
         mock.patch('chroma_core.services.job_scheduler.job_scheduler_notify.notify').start()

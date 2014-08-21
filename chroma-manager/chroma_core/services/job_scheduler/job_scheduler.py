@@ -68,6 +68,7 @@ from disabled_connection import DISABLED_CONNECTION
 from chroma_help.help import help_text
 
 import chroma_core.lib.conf_param
+from chroma_core.lib.long_polling import long_polling
 
 log = log_register(__name__.split('.')[-1])
 
@@ -1552,3 +1553,9 @@ class JobScheduler(object):
     @property
     def CommandPlan(self):
         return CommandPlan(self._lock_cache, self._job_collection)
+
+    def table_change(self, timestamp, table):
+        return long_polling.table_change(timestamp, table)
+
+    def wait_table_change(self, last_change_time, tables_list, timeout):
+        return long_polling.wait_table_change(last_change_time, tables_list, timeout)

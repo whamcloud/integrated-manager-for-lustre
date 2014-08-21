@@ -1,8 +1,9 @@
 import logging
 import mock
 
-from django.test import TestCase
 from django.utils.timezone import now
+
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import ManagedHost
 from chroma_core.models import HostOfflineAlert
 from chroma_core.models import CorosyncConfiguration
@@ -17,7 +18,7 @@ OFFLINE = 'false'
 MOCKED_NOW_VALUE = now()
 
 
-class CorosyncTestCase(TestCase):
+class CorosyncTestCase(IMLUnitTestCase):
 
     def setUp(self):
         super(CorosyncTestCase, self).setUp()

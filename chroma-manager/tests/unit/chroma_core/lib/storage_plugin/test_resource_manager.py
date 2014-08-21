@@ -3,7 +3,6 @@ import logging
 from django.db import connection
 from django.db.models.query_utils import Q
 import mock
-from django.test import TestCase
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.plugin_runner.resource_manager import ResourceManager
@@ -13,10 +12,11 @@ from chroma_core.models.lnet_configuration import LNetConfiguration, Nid
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
 from tests.unit.chroma_core.helpers import MockAgentRpc
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
 
 
-class ResourceManagerTestCase(TestCase):
+class ResourceManagerTestCase(IMLUnitTestCase):
     def setUp(self, plugin_name = 'linux'):
         plugins_to_load = ['example_plugin',
                            'linux',

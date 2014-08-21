@@ -1,9 +1,10 @@
-import mock
 import types
 import sys
 
+import mock
+
 from chroma_core.services.plugin_runner.resource_manager import PluginSession
-from django.test import TestCase
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId
 from chroma_core.lib.storage_plugin.api import resources
@@ -66,8 +67,10 @@ class TestPlugin(Plugin):
         self.teardown_called = True
 
 
-class TestCallbacks(TestCase):
+class TestCallbacks(IMLUnitTestCase):
     def setUp(self):
+        super(TestCallbacks, self).setUp()
+
         import chroma_core.lib.storage_plugin.manager
         self.orig_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()
@@ -113,8 +116,10 @@ class TestCallbacks(TestCase):
         self.plugin.teardown.assert_called_once()
 
 
-class TestAddRemove(TestCase):
+class TestAddRemove(IMLUnitTestCase):
     def setUp(self):
+        super(TestAddRemove, self).setUp()
+
         import chroma_core.lib.storage_plugin.manager
         self.orig_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
         chroma_core.lib.storage_plugin.manager.storage_plugin_manager = chroma_core.lib.storage_plugin.manager.StoragePluginManager()

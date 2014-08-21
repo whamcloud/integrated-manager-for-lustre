@@ -100,16 +100,20 @@ class UtilityTestCase(TestCase):
         timeout.
         """
         running_time = 0
+        assertion = None
         while running_time < timeout:
             try:
                 lambda_expression()
             except AssertionError, e:
+                assertion = e
                 logger.debug("%s tripped assertion: %s" % (inspect.getsource(lambda_expression), e))
             else:
                 break
             time.sleep(1)
             running_time += 1
-        self.assertLess(running_time, timeout, "Timed out waiting for %s." % inspect.getsource(lambda_expression))
+        self.assertLess(running_time,
+                        timeout,
+                        "Timed out waiting for %s\nAssertion %s" % (inspect.getsource(lambda_expression), assertion))
 
     def get_host_config(self, nodename):
         """

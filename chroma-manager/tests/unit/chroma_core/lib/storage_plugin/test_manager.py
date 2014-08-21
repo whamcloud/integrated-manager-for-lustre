@@ -1,13 +1,13 @@
-from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
-
 import os
-from django.test import TestCase
+
+from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.management.commands.validate_storage_plugin import Command as ValidateCommand
 import settings
 import shutil
 
 
-class TestCornerCases(TestCase):
+class TestCornerCases(IMLUnitTestCase):
     def test_0classes(self):
         manager = load_plugins(['unloadable_plugin_0classes'])
         self.assertEqual(manager.get_errored_plugins(), ['unloadable_plugin_0classes'])
@@ -28,22 +28,24 @@ class TestCornerCases(TestCase):
         mgr.get_plugin_class('loadable_submodule_plugin')
 
 
-class TestExample(TestCase):
+class TestExample(IMLUnitTestCase):
     def test_load(self):
         """Test that the example plugin used in documentation loads"""
         manager = load_plugins(['linux', 'example_plugin'])
         self.assertEquals(manager.get_errored_plugins(), [])
 
 
-class TestThousandDrives(TestCase):
+class TestThousandDrives(IMLUnitTestCase):
     def test_load(self):
         """Test that the thousand_drives plugin used for stats load testing loads"""
         manager = load_plugins(['thousand_drives'])
         self.assertEquals(manager.get_errored_plugins(), [])
 
 
-class TestLoad(TestCase):
+class TestLoad(IMLUnitTestCase):
     def setUp(self):
+        super(TestLoad, self).setUp()
+
         import loadable_plugin
         self.loadable_plugin = loadable_plugin
         self.manager = load_plugins(['loadable_plugin'])
@@ -108,8 +110,9 @@ class TestLoad(TestCase):
         self.assertEqual(self.manager.get_scannable_resource_ids('loadable_plugin'), [record.pk])
 
 
-class TestValidate(TestCase):
+class TestValidate(IMLUnitTestCase):
     def setUp(self):
+        super(TestValidate, self).setUp()
         import chroma_core.lib.storage_plugin.manager
         self.old_manager = chroma_core.lib.storage_plugin.manager.storage_plugin_manager
         self.old_INSTALLED_STORAGE_PLUGINS = settings.INSTALLED_STORAGE_PLUGINS

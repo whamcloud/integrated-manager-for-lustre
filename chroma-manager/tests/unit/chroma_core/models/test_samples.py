@@ -1,18 +1,19 @@
-import mock
 import itertools
 import time
 import contextlib
 import operator
 from datetime import datetime, timedelta
 
+import mock
 from django.utils.timezone import utc
-from django.test import TestCase
 from django.db import connection
 from django.utils.unittest import skipIf
 
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import Point, Stats
 from chroma_core.models.stats import total_seconds
 from chroma_core.lib.util import chroma_settings
+
 
 settings = chroma_settings()
 
@@ -48,10 +49,12 @@ def assertQueries(*prefixes):
         assert prefix == 'INSERT' or 'Index Scan' in plan, (plan, query)
 
 
-class TestModels(TestCase):
+class TestModels(IMLUnitTestCase):
     "Test Point and Sample interfaces."
 
     def setUp(self):
+        super(TestModels, self).setUp()
+
         Stats.delete_all()
         connection.use_debug_cursor = True
         connection.cursor().execute('SET enable_seqscan = off')
@@ -200,7 +203,7 @@ class TestModels(TestCase):
 
 
 @skipIf(True, "Monster Data Tests Not Normally Run")
-class TestMonsterData(TestCase):
+class TestMonsterData(IMLUnitTestCase):
     def setUp(self):
         Stats.delete_all()
         self.preserve_stats_wipe = settings.STATS_SIMPLE_WIPE

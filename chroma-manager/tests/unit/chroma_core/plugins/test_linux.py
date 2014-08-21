@@ -1,8 +1,6 @@
 import json
 import os
 
-from django.test import TestCase
-
 from chroma_core.services.plugin_runner import ResourceManager
 from chroma_core.models.host import Volume, VolumeNode
 from chroma_core.models.storage_plugin import StorageResourceRecord
@@ -10,10 +8,13 @@ from tests.unit.chroma_core.helpers import synthetic_host
 from tests.unit.chroma_core.helpers import load_default_profile
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
 from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
-class LinuxPluginTestCase(TestCase):
+class LinuxPluginTestCase(IMLUnitTestCase):
     def setUp(self):
+        super(LinuxPluginTestCase, self).setUp()
+
         self.manager = load_plugins(['linux', 'linux_network'])
 
         import chroma_core.lib.storage_plugin.manager

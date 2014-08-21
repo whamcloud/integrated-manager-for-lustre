@@ -1,9 +1,8 @@
-from django.test import TestCase
-
 from tests.unit.chroma_core.helpers import synthetic_host
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
-class TestFetchJobs(TestCase):
+class TestFetchJobs(IMLUnitTestCase):
     """Test that JobScheduler._fetch_jobs works.
 
     This method looks for jobs that match a given obj class, and return
@@ -13,6 +12,7 @@ class TestFetchJobs(TestCase):
     """
 
     def setUp(self):
+        super(TestFetchJobs, self).setUp()
 
         # Don't need to load all of JobScheduler's dependencies.
         from chroma_core.services.job_scheduler import job_scheduler

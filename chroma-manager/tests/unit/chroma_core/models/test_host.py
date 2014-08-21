@@ -1,13 +1,16 @@
-
 import json
-from django.test import TestCase
+
 from django.db import connection
+
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 from chroma_core.models.host import HostListMixin, ManagedHost
 
 
-class TestHostListMixin(TestCase):
+class TestHostListMixin(IMLUnitTestCase):
     def setUp(self):
+        super(TestHostListMixin, self).setUp()
+
         connection.use_debug_cursor = True
 
         self.hosts = []

@@ -33,9 +33,11 @@ from tastypie.api import url
 from tastypie import http
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
-from chroma_api.authentication import AnonymousAuthentication, \
-    PATCHSupportDjangoAuth
+from chroma_api.authentication import AnonymousAuthentication
+from chroma_api.authentication import PATCHSupportDjangoAuth
 from chroma_core.models.target import ManagedTargetMount
+from chroma_core.models.lnet_configuration import LNetOfflineAlert
+from long_polling_api import LongPollingAPI
 
 
 class AlertSubscriptionValidation(Validation):
@@ -141,7 +143,7 @@ class AlertTypeResource(Resource):
         detail_allowed_methods = ['get']
 
 
-class AlertResource(SeverityResource):
+class AlertResource(LongPollingAPI, SeverityResource):
     """
     Notification of a bad health state.  Alerts refer to particular objects (such as
     servers or targets), and can either be active (indicating this is a current
@@ -183,6 +185,12 @@ class AlertResource(SeverityResource):
     # This addition is because when we are querying notifications it is useful to be able query by created_at
     # begin is clearly the best analogy
     created_at = fields.DateTimeField(readonly = True, attribute = 'begin')
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [AlertState, LNetOfflineAlert]
+
+    def dispatch(self, request_type, request, **kwargs):
+        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
     def override_urls(self):
         return [

@@ -1,9 +1,7 @@
 import json
+import mock
 from contextlib import contextmanager
 from itertools import chain
-
-from django.test import TestCase
-import mock
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command, ManagedTarget, ManagedTargetMount, LNetConfiguration, Nid
@@ -12,9 +10,10 @@ from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 from tests.unit.chroma_core.helpers import MockAgentRpc, synthetic_volume_full, freshen
 from tests.unit.chroma_core.helpers import MockAgentSsh, log, load_default_profile, synthetic_host, parse_synthentic_device_info
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
-class JobTestCase(TestCase):
+class JobTestCase(IMLUnitTestCase):
     mock_servers = None
     hosts = None
 
@@ -77,6 +76,8 @@ class JobTestCase(TestCase):
             self.job_scheduler.progress._handle(msg)
 
     def setUp(self):
+        super(JobTestCase, self).setUp()
+
         from chroma_core.services.http_agent import HttpAgentRpc
         from chroma_core.services.http_agent import Service as HttpAgentService
         # FIXME: have to do self before every test because otherwise

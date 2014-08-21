@@ -26,12 +26,15 @@ from tastypie.authorization import DjangoAuthorization
 from tastypie.constants import ALL_WITH_RELATIONS
 
 from chroma_core.models import LNetConfiguration
+from chroma_core.models import ManagedHost
+from chroma_core.models import Nid
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services import log_register
 from chroma_api.utils import dehydrate_command
 from chroma_api.utils import custom_response, StatefulModelResource
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Command
+from long_polling_api import LongPollingAPI
 
 log = log_register(__name__)
 
@@ -48,7 +51,7 @@ log = log_register(__name__)
 # Put
 # https://localhost:8000/api/lnet_configuration/
 # https://localhost:8000/api/lnet_configuration/1/
-class LNetConfigurationResource(StatefulModelResource):
+class LNetConfigurationResource(StatefulModelResource, LongPollingAPI):
     """
     LNetConfiguration information.
     """
@@ -65,6 +68,12 @@ class LNetConfigurationResource(StatefulModelResource):
         filtering = {'host': ALL_WITH_RELATIONS,
                      'id': ['exact'],
                      'host__fqdn': ['exact', 'startswith']}
+
+    # Long polling should return when any of the tables below changes or has changed.
+    long_polling_tables = [LNetConfiguration, ManagedHost, Nid]
+
+    def dispatch(self, request_type, request, **kwargs):
+        return self.handle_long_polling_dispatch(request_type, request, **kwargs)
 
     def obj_update(self, bundle, request = None, **kwargs):
         if 'pk' in kwargs:

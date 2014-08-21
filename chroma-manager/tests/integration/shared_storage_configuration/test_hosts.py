@@ -1,5 +1,8 @@
+import time
+
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
+from tests.integration.core.long_polling_testing import LongPollingThread
 
 
 class TestHosts(ChromaIntegrationTestCase):
@@ -59,3 +62,47 @@ class TestHosts(ChromaIntegrationTestCase):
         self.assertState(filesystem_uri, 'available')
 
         self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects'][0]['osts']), 2)
+
+
+class TestHostLongPolling(ChromaIntegrationTestCase):
+    def test_alert_long_polling(self):
+        """Test long polling for alerts responds correctly."""
+
+        # Add one host
+        host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
+
+        # Now start monitoring the endpoint
+        long_polling_end_point = LongPollingThread("/api/host/", self)
+
+        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 1),
+                         ['chris.gearing@intel.com'],
+                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+
+        # Now wait 10 seconds and the the response count should not have changed.
+        time.sleep(10)
+
+        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 1),
+                         ['chris.gearing@intel.com'],
+                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+
+        # Stop LNet and the response should change.
+        self.remote_operations.stop_lnet(host['fqdn'])
+
+        # We get two writes to the table, should be optimized for 1 I guess but that is another story.
+        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 3),
+                         ['chris.gearing@intel.com'],
+                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+
+        # Now exit.
+        long_polling_end_point.exit = True
+
+        # Need to cause an alert of some sort, or wait for a timeout of long polling, so start Lnet again.
+        self.remote_operations.start_lnet(host['fqdn'])
+        self._fetch_help(lambda: self.wait_until_true(lambda: long_polling_end_point.response_count == 4),
+                         ['chris.gearing@intel.com'],
+                         lambda: "Long polling failed response count == %d" % long_polling_end_point.response_count)
+
+        long_polling_end_point.join()
+
+        if long_polling_end_point.error:
+            raise long_polling_end_point.error

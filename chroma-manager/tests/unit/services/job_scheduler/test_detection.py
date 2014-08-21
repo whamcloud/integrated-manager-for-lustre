@@ -1,9 +1,9 @@
 import glob
 import json
 import os
-
-from django.test import TestCase
 import mock
+
+from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.models import ManagedFilesystem
@@ -18,10 +18,12 @@ from chroma_core.models import ManagedTarget
 from tests.unit.chroma_core.helpers import synthetic_host, synchronous_run_job, load_default_profile
 
 
-class TestDetection(TestCase):
+class TestDetection(IMLUnitTestCase):
     mock_servers = {}
 
     def setUp(self):
+        super(TestDetection, self).setUp()
+
         load_default_profile()
 
     def test_combined_mgs_mdt(self):

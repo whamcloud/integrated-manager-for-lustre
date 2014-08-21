@@ -63,14 +63,14 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
             self.delete_by_uri(nid['resource_uri'])
 
             # Try fetching it and assert it is not found
-            self.wait_for_assert(lambda: self.assertEqual(self.get_by_uri(nid['resource_uri'], False).status_code, 404))
+            self.wait_for_assert(lambda: self.assertEqual(self.get_by_uri(nid['resource_uri'], verify_successful=False).status_code, 404))
 
             # We have a valid race condition here. Because the delete doesn't wait for the delete to complete and because we
             # may have seen the nid disappear before all the commands completed. This can occur if asynchronously the new nid
             # status is updated by the regular polling whilst the lnet state is still being manipulated we can request a change
             # of state below that will be cancelled because it is not needed (validly cancelled) so we will just wait for the
             # last command running to complete before we go further.
-            # The call below makes sure ththe last command has completed, without error.
+            # The call below makes sure the last command has completed, without error.
             self.wait_last_command_complete()
 
             # Move to another state

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -193,11 +193,11 @@ class RpcServer(ConsumerMixin):
 class ResponseWaitState(object):
     """State kept by for each outstanding RPC -- the response handler
     must first populate result, then set the `complete` event."""
-    def __init__(self):
+    def __init__(self, rpc_timeout):
         self.complete = threading.Event()
         self.timeout = False
         self.result = None
-        self.timeout_at = time.time() + RESPONSE_TIMEOUT
+        self.timeout_at = time.time() + rpc_timeout
 
 
 class RpcClientResponseHandler(threading.Thread):
@@ -220,9 +220,9 @@ class RpcClientResponseHandler(threading.Thread):
         """
         self._started.wait()
 
-    def start_wait(self, request_id):
+    def start_wait(self, request_id, rpc_timeout):
         log.debug("start_wait %s" % request_id)
-        self._response_states[request_id] = ResponseWaitState()
+        self._response_states[request_id] = ResponseWaitState(rpc_timeout)
 
     def complete_wait(self, request_id):
         log.debug("complete_wait %s" % request_id)
@@ -342,11 +342,11 @@ class RpcClient(object):
             maybe_declare(_amqp_exchange(), producer.channel)
             producer.publish(request, serializer="json", routing_key=self._request_routing_key, delivery_mode = 1)
 
-    def call(self, request):
+    def call(self, request, rpc_timeout = RESPONSE_TIMEOUT):
         request_id = request['request_id']
 
         if not self._lightweight:
-            self.response_thread.start_wait(request_id)
+            self.response_thread.start_wait(request_id, rpc_timeout)
             with tx_connections[_amqp_connection()].acquire(block = True) as connection:
                 self._send(connection, request)
             return self.response_thread.complete_wait(request_id)
@@ -377,7 +377,7 @@ class RpcClient(object):
 
                     self._send(connection, request)
 
-                    timeout_at = time.time() + RESPONSE_TIMEOUT
+                    timeout_at = time.time() + rpc_timeout
                     while not self._complete:
                         try:
                             connection.drain_events(timeout = 1)
@@ -543,6 +543,13 @@ class ServiceRpcInterface(object):
         with transaction.commit_manually():
             transaction.commit()
 
+        # If the caller specified rcp_timeout then fetch it from the args and remove.
+        if 'rpc_timeout' in kwargs:
+            rpc_timeout = kwargs['rpc_timeout']
+            del kwargs['rpc_timeout']
+        else:
+            rpc_timeout = RESPONSE_TIMEOUT
+
         request_id = uuid.uuid4().__str__()
         request = {
             'method': fn_name,
@@ -555,7 +562,7 @@ class ServiceRpcInterface(object):
 
         rpc_client = RpcClientFactory.get_client(self.__class__.__name__)
 
-        result = rpc_client.call(request)
+        result = rpc_client.call(request, rpc_timeout)
 
         if result['exception']:
             log.error("ServiceRpcInterface._call: exception %s: %s \ttraceback: %s" % (result['exception'], result['exception_type'], result.get('traceback')))

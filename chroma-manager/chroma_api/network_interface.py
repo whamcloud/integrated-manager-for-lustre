@@ -19,7 +19,6 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-
 from tastypie.resources import ModelResource
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
