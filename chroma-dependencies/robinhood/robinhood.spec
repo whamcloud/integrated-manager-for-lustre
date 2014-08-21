@@ -34,6 +34,7 @@ BuildRequires: %{lpackage} >= %{lversion}    \
 %if %{with mysql}                            \
 BuildRequires: /usr/include/mysql/mysql.h    \
 %endif \
+BuildRequires: mailx \
 %{nil}
 
 # target install dir for web gui
@@ -42,7 +43,7 @@ BuildRequires: /usr/include/mysql/mysql.h    \
 ###### end of macro definitions #####
 
 Name: robinhood
-Version: 2.5.0
+Version: 2.5.3
 
 Vendor: CEA, HPC department <http://www-hpc.cea.fr>
 Prefix: %{_prefix}
@@ -59,7 +60,7 @@ Prefix: %{_prefix}
 %define db_dependant .sqlite
 %endif
 
-Release: 0.beta1%{?config_dependant}%{?db_dependant}%{?dist}
+Release: 1%{?config_dependant}%{?db_dependant}%{?dist}
 
 
 Summary: Robinhood - Policy engine and accounting tool for large filesystems
@@ -80,7 +81,7 @@ Generated using options:  '--with-purpose=LUSTRE_HSM' '--with-lustre=/scratch/gi
 %package adm
 Summary: admin/config helper for Robinhood PolicyEngine
 Group: Applications/System
-Release: 0.beta1.noarch
+Release: 1.noarch
 
 %description adm
 This RPM provides admin/config helper for Robinhood PolicyEngine (command rbh-config)
@@ -89,7 +90,7 @@ which is common to all robinhood flavors.
 %package webgui
 Summary: Web interface to vizualize filesystems stats
 Group: Applications/System
-Release: 0.beta1.noarch
+Release: 1.noarch
 Requires: php, php-mysql, php-xml, php-gd, php-pdo
 
 %description webgui
@@ -111,15 +112,15 @@ Tools for MDS recovery.
 %define purpose_svc robinhood-lhsm
 %define purpose_bin rbh-lhsm
 
-%package lhsm
+%package %{purpose}
 Summary: PolicyEngine for Lustre-HSM binding
 Group: Applications/System
 %pkg_dependencies
-BuildRequires: mysql-devel libattr-devel mailx
+BuildRequires: libattr-devel
 Requires: %{name}-adm >= %{version}
 Requires: mysql-server
 
-%description lhsm
+%description %{purpose}
 Monitor Lustre usage and trigger file migration and purges.
 
 Generated using options:  '--with-purpose=LUSTRE_HSM' '--with-lustre=$GIT_ROOT/robinhood/lustre'
@@ -192,7 +193,7 @@ fi
 %defattr(750,root,apache)
 %{installdir_www}/robinhood
 
-%files lhsm
+%files %{purpose}
 %defattr(-,root,root,-)
 #%doc README
 #%doc COPYING
@@ -204,6 +205,8 @@ fi
 %{_sbindir}/*-diff
 %{_bindir}/*-du
 %{_bindir}/*-find
+
+%{_mandir}/man1/*
 
 %config(noreplace) %{_sysconfdir}/sysconfig/%{purpose_svc}
 
@@ -218,7 +221,51 @@ fi
 
 %changelog
 
-* Wed Nov 27 2013 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.0
+* Tue Jul 29 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.3
+- [bugfix] custom purge_command: fixed vulnerability to malicious file names.
+- [bugfix] changelog processing: fixed errors 'Entry has incomplete path in DB' in some case of rm/create patterns.
+- [bugfix] migration policy (fix): don't trigger copy of files that no longer exist.
+- [feature] rbh-config: new option 'reset_acct' to rebuild accounting info.
+- [feature] changelog reader: new parameter 'dump_file' to dump all incoming changelog records to a file.
+- [compat] port to Lustre 2.6.0.
+
+* Wed May 21 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.2
+- rbh-du: fixed major performance regression (since v2.5.0).
+- rbh-find: fixed occasional crash.
+- HSM and backup modes: fixed a risk of removing an existing entry from the backend (in some situations of hardlink/rename+unlink).
+- backup mode: optimized sendfile()-based copy (Linux kernel >= 2.6.33).
+- logs: avoid flood of log messages in case of DB connection error.
+- alerts: added host name to alert mail title.
+- rbh-config empty_db/repair_db: also manage/fix stored procedures.
+- cosmetic: fix wrong display of purged blocks for count-based triggers.
+- cosmetic: fix migration counter display.
+- init script: check that 'ulimit -s' is reasonable.
+- fixed build dependancies on Fedora19 and Fedora20.
+- code sanity: fixed many 'coverity' warnings + a couple of minor memleaks.
+- doc: details about RPM installation locations.
+- doc: detail of 'backend' paramaters for backup mode.
+
+* Wed Mar 19 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.1
+- entry processing (major fix): fixed deadlock when the pipeline is full
+  and an entry with an unknown parent is encountered.
+- purge (enhancement): start purging data from the most used OSTs.
+- rbh-find (features): new options: -pool, -exec, -print, -nouser, -nogroup, -lsost
+- rbh-find (optimization): automatically switch to bulk DB request mode when
+  command argument is filesystem root (+new option -nobulk to disable it).
+- logging (enhancement): new config parameters to control log header format
+- backup (feature): allow compressing data in archive.
+- backup (fix): wrong path in archive when robinhood root directory != mount point.
+- backup (fix): fix segfault when importing a single file with a FID-ending name.
+
+* Thu Feb 13 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.0-1
+Summary:
+- filesystem disaster recovery features
+- new namespace management (new DB schema to properly handle hardlinks, renames...)
+- scanning and changelog processing optimizations
+- database optimizations (requests batching)
+- many other changes, improvements and code cleaning...
+
+* Thu Feb 13 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.0-1
 Summary:
 - filesystem disaster recovery features
 - new namespace management (new DB schema to properly handle hardlinks, renames...)
@@ -256,6 +303,7 @@ Details:
     * better management of partial scans:
         - better detection of removed entries vs. entries moved from a directory to another.
         - partial scans can be used for initial DB population (even if the DB is initially empty).
+    * dealing with dead/deactivated OSTs: don't remove entries from DB if stat() returns ESHUTDOWN.
     * garbage collection of removed entries in DB is a long operation when terminating a scan (and even more
       when terminating a partial scan). Added --no-gc option to skip it (recommanded for partial scans).
     * automatically enabling --no-gc if the DB is initially empty (eg. for initial scan).
@@ -292,11 +340,15 @@ Details:
             the basic use case is after restoring an OST snapshot.
     * symlinks archiving to backend made optional (new parameter 'archive_symlinks')
       as they can now be restored using robinhood database information.
+    * new parameter: sync_archive_data: force sync'ing data to disk to
+      finalize the copy.
 - configuration:
     * can specify environment variables in config file (e.g. fs_path = $ROOT_DIR ;)
     * prevent from using a wrong config file (Cray contribution):
         - only check files in /etc/robinhood.d/<purpose>, no longer in the current directory
         - fails if to many config files are available.
+- documentation:
+    * added man pages for robinhood daemon, rbh-report, rbh-find.
 
 * Mon Jul 22 2013 Thomas Leibovici <thomas.leibovici@cea.fr> 2.4.3
 - [lustre] support of Lustre 2.4

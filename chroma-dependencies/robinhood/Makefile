@@ -1,4 +1,4 @@
-LOCATION := http://downloads.sourceforge.net/project/robinhood/robinhood/2.5.0-beta1/robinhood-2.5.0.tar.gz
+LOCATION := http://downloads.sourceforge.net/project/robinhood/robinhood/2.5.3/robinhood-2.5.3.tar.gz
 REQUIREMENT :=
 INSTALL_PKGS := robinhood-lhsm robinhood-adm robinhood-webgui
 TARBALL_NOT_PYTHON := TRUE
