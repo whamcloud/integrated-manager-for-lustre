@@ -229,6 +229,11 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to Detected devices")
 
+    if dump('monitored_devices', ['chroma-agent', 'detect_scan'], output_directory):
+        log.info("Devices monitored")
+    elif args.verbose > 0:
+        log.info("Failed to detect_scan")
+
     if dump('rabbit_queue_status', ['rabbitmqctl', 'list_queues', '-p',
                                     'chromavhost'], output_directory):
         log.info("Inspected rabbit queues")
