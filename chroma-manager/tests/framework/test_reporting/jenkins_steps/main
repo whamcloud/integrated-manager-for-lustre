@@ -60,21 +60,24 @@ coverage report -m
 coverage xml --ignore-errors
 fi
 
-gerrit_response=''
-if [ "$TEST_RESULTS" = "SUCCESS" ]; then
-    gerrit_response="$(ssh -p 29418 chroma-test@review.whamcloud.com gerrit review --project chroma --verified +1 --message \"Automated Tests Passed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/\" $GIT_COMMIT 2>&1)"
-else
-    if [ "$TEST_RESULTS" = "FAILED" ]; then
-        gerrit_response="$(ssh -p 29418 chroma-test@review.whamcloud.com gerrit review --project chroma --verified -1 --message \"Automated Tests Failed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/\" $GIT_COMMIT 2>&1)"
+# if this is a reviews job, update the review in Gerrit
+if [[ $JOB_NAME = *-reviews ]]; then
+    gerrit_response=''
+    if [ "$TEST_RESULTS" = "SUCCESS" ]; then
+        gerrit_response="$(ssh -p 29418 chroma-test@review.whamcloud.com gerrit review --project chroma --verified +1 --message \"Automated Tests Passed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/\" $GIT_COMMIT 2>&1)"
     else
-        gerrit_response="$(ssh -p 29418 chroma-test@review.whamcloud.com gerrit review --project chroma --verified -1 --message \"Automated Tests Failed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/ $TEST_RESULTS\" $GIT_COMMIT 2>&1)"
-        exit 1
+        if [ "$TEST_RESULTS" = "FAILED" ]; then
+            gerrit_response="$(ssh -p 29418 chroma-test@review.whamcloud.com gerrit review --project chroma --verified -1 --message \"Automated Tests Failed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/\" $GIT_COMMIT 2>&1)"
+        else
+            gerrit_response="$(ssh -p 29418 chroma-test@review.whamcloud.com gerrit review --project chroma --verified -1 --message \"Automated Tests Failed: $JENKINS_URL/job/${JOB_NAME}/${BUILD_NUMBER}/testReport/ $TEST_RESULTS\" $GIT_COMMIT 2>&1)"
+            exit 1
+        fi
     fi
-fi
 
-gerrit_exit_code=$?
-if [ -n "$(echo $gerrit_response | grep 'error: Change is closed')" ]; then
-  exit 0
-else
-  exit $gerrit_exit_code
+    gerrit_exit_code=${PIPESTATUS[0]}
+    if [[ $gerrit_response = *error:\ Change\ is\ closed* ]]; then
+      exit 0
+    else
+      exit $gerrit_exit_code
+    fi
 fi
