@@ -10,7 +10,6 @@ describe('pdsh parser', function () {
   }));
 
   var tests = [
-
     {
       expression: 'hostname1.iml.com',
       expanded: {
@@ -30,10 +29,28 @@ describe('pdsh parser', function () {
       }
     },
     {
-      expression: 'hostname[6,7].iml.com,hostname[10,11-12,2-3,5].iml.com, hostname[15-17].iml.com',
+      expression: 'hostname[6]',
       expanded: {
-        expansion: ['hostname6.iml.com', 'hostname7.iml.com', 'hostname10.iml.com', 'hostname11.iml.com',
-          'hostname12.iml.com', 'hostname2.iml.com', 'hostname3.iml.com', 'hostname5.iml.com', 'hostname15.iml.com',
+        expansion: ['hostname6']
+      }
+    },
+    {
+      expression: 'hostname[09-011]',
+      expanded: {
+        expansion: ['hostname09', 'hostname010', 'hostname011']
+      }
+    },
+    {
+      expression: 'hostname[009-0011]',
+      expanded: {
+        expansion: ['hostname009', 'hostname0010', 'hostname0011']
+      }
+    },
+    {
+      expression: 'hostname[2,6,7].iml.com,hostname[10,11-12,2-3,5].iml.com, hostname[15-17].iml.com',
+      expanded: {
+        expansion: ['hostname2.iml.com', 'hostname6.iml.com', 'hostname7.iml.com', 'hostname10.iml.com',
+          'hostname11.iml.com', 'hostname12.iml.com', 'hostname3.iml.com', 'hostname5.iml.com', 'hostname15.iml.com',
           'hostname16.iml.com', 'hostname17.iml.com']
       }
     },
@@ -92,6 +109,30 @@ describe('pdsh parser', function () {
       expression: 'hostname[1,-2].iml.com',
       expanded: {
         errors: ['Range is not in the proper format.']
+      }
+    },
+    {
+      expression: 'hostname[1',
+      expanded: {
+        errors: ['Expression is invalid']
+      }
+    },
+    {
+      expression: 'hostname[1],',
+      expanded: {
+        errors: ['Expression is invalid']
+      }
+    },
+    {
+      expression: 'hostname[06-10]',
+      expanded: {
+        errors: ['Beginning and ending prefixes don\'t match']
+      }
+    },
+    {
+      expression: 'hostname[01-009]',
+      expanded: {
+        errors: ['Beginning and ending prefixes don\'t match']
       }
     }
   ];

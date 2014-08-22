@@ -43,8 +43,10 @@
         CLOSING_BRACE: ']',
         RANGE_NOT_PROPER_FORMAT: 'Range is not in the proper format.',
         EXPRESSION_EMPTY: 'Expression cannot be empty.',
+        EXPRESSION_INVALID: 'Expression is invalid',
         INDEX_OF: 'indexOf',
-        LAST_INDEX_OF: 'lastIndexOf'
+        LAST_INDEX_OF: 'lastIndexOf',
+        PREFIXES_DONT_MATCH: 'Beginning and ending prefixes don\'t match'
       });
 
       /**
@@ -53,6 +55,7 @@
        * @return {Array}
        */
       return function pdshParser (expression) {
+        initialize();
         maybe(empty(expression), handleEmptyExpression, parseExpression)
         (expression, expansionCollection, errorCollection);
 
@@ -60,14 +63,43 @@
       };
 
       /**
+       * Initializes the service by clearning out any existing entries in the error and expansion
+       * collections.
+       */
+      function initialize() {
+        errorCollection = {errors: []};
+        expansionCollection = {expansion: []};
+      }
+
+      /**
        * Parses an expression
        * @param {String} expression
        * @param {Object} expansionCollection
+       * @param {Array} errorCollection
        */
-      function parseExpression (expression, expansionCollection) {
-        expansionCollection.expansion = splitExpressions(expression, isInsideBraces)
-          .map(expandExpressions)
-          .reduce(flattenArrayOfValues);
+      function parseExpression (expression, expansionCollection, errorCollection) {
+        if (isExpressionValid(expression)) {
+          expansionCollection.expansion = _.unique(splitExpressions(expression, isInsideBraces)
+            .map(expandExpressions)
+            .reduce(flattenArrayOfValues));
+        } else {
+          errorCollection.errors.push(constants.EXPRESSION_INVALID);
+        }
+      }
+
+      /**
+       * Verifies that the expression is valid
+       * @param {String} expression
+       * @returns {Boolean}
+       */
+      function isExpressionValid (expression) {
+        // The main thing we need to check for is that for every opening brace there
+        // is a closing brace.
+        var openingBraces = expression.match(/\[/g) || [];
+        var closingBraces = expression.match(/\]/g) || [];
+        var commaNotLastCharacter = expression.charAt(expression.length-1) !== ',';
+
+        return openingBraces.length === closingBraces.length && commaNotLastCharacter;
       }
 
       /**
@@ -218,21 +250,11 @@
         var componentToParse = rangeComponent.slice(1, -1);
         return componentToParse.split(',')
           .map(parseItem)
-          .reduce(flattenArrayOfValues)
-          .map(castToNumber);
+          .reduce(flattenArrayOfValues);
       }
 
       /**
-       * Casts a value to a number
-       * @param {String|Number} val
-       * @returns {Number}
-       */
-      function castToNumber (val) {
-        return +val;
-      }
-
-      /**
-       * Parses an intem
+       * Parses an item
        * @param {String} item
        * @returns {Array}
        */
@@ -240,8 +262,8 @@
         var isSanitized = isValidRange(item);
         var range = item.split('-');
 
-        var rangeValues = maybe(and(referenceEqualTo(range.length, 2), isTrue(isSanitized)), generateRange, memorizeVal(range))
-        (range);
+        var rangeValues = maybe(and(referenceEqualTo(range.length, 2), isTrue(isSanitized)), generateRange,
+          memorizeVal(range))(range);
         maybe(isFalse(isSanitized), _.partial(addErrorObject, constants.RANGE_NOT_PROPER_FORMAT))();
 
         return rangeValues;
@@ -253,7 +275,61 @@
        * @returns {Array}
        */
       function generateRange (range) {
-        return _.range(range[0], +range[1] + 1);
+        // is there a prefix in the range? We would only need to check the first value in the range array
+        var prefixBeginning = getPrefix(range[0]);
+        var prefixEnding = getPrefix(range[1]);
+
+        return maybe(referenceEqualTo(prefixBeginning, prefixEnding), generatePrefixedRanges,
+          _.partial(addPrefixNotEqualError, errorCollection.errors, constants))(range, prefixBeginning) || [];
+      }
+
+      /**
+       * Generates prefixed ranges
+       * @example
+       * [01,05] => [01,02,03,04,05]
+       * @param {Array} range
+       * @param {String} prefix
+       * @returns {Array}
+       */
+      function generatePrefixedRanges (range, prefix) {
+        return _.range(range[0], +range[1] + 1)
+          .map(prefixString(prefix));
+      }
+
+      /**
+       * Adds the "prefixes don't match" message to the error collection
+       * @param {Array} errors
+       * @param {Object} constants
+       */
+      function addPrefixNotEqualError (errors, constants) {
+        errors.push(constants.PREFIXES_DONT_MATCH);
+      }
+
+      /**
+       * Retrieves the prefix given an item
+       * @example
+       * Given item = 001, the value returned would be "00"
+       * @param item
+       * @returns {string}
+       */
+      function getPrefix(item) {
+        return item.substring(0, item.indexOf(+item.toString()));
+      }
+
+      /**
+       * HOF that prefixes a specified item with the prefix passed in.
+       * @param {String} prefix
+       * @returns {Function}
+       */
+      function prefixString (prefix) {
+        /**
+         * Prefixes the specified item with the prefix passed in above.
+         * @param {String} item
+         * @returns {String}
+         */
+        return function innerPrefixString (item) {
+          return prefix + item;
+        };
       }
 
       /**
@@ -381,10 +457,21 @@
        */
       function tokenize (expression) {
         var tokens = [];
-        maybe(and(not(empty(expression)),
-          not(isRange(expression))), processNonRanges, addTokenToList(constants.CLOSING_BRACE, 1))
-        (tokens, expression);
+        maybe(not(empty(expression)), proceedWithTokenize)(tokens, expression);
         return tokens;
+      }
+
+      /**
+       * Called by the tokenize method if the expression is not empty. This method checks
+       * to see if the expression contains a range. If it doesn't, it calls processNonRanges;
+       * otherwise, it calls addTokenToList.
+       * @param {Array} tokens
+       * @param {String} expression
+       */
+      function proceedWithTokenize (tokens, expression) {
+        maybe(not(isRange(expression)),
+          processNonRanges, addTokenToList(constants.CLOSING_BRACE, 1))
+        (tokens, expression);
       }
 
       /**

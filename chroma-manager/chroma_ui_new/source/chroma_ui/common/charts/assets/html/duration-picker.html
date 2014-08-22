@@ -17,7 +17,7 @@
 
       <div class="input-group form-group">
         <input class="form-control" type="number" ng-model="duration.size" name="size" min="1" max="{{ duration.getCount(duration.unit) }}" required />
-        <div class="input-group-btn">
+        <div class="input-group-btn dropdown">
           <button type="button" class="btn btn-default dropdown-toggle"> {{duration.unit | capitalize}} <span class="caret"></span> </button>
           <ul class="dropdown-menu pull-right" role="menu">
             <li bindonce ng-repeat="item in duration.units | filter: {unit: '!' + duration.unit}">

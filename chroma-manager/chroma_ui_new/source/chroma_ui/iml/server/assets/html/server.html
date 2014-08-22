@@ -1,2 +1,39 @@
-<h1>Server Configuration</h1>
+<div ng-controller="ServerCtrl">
+  <h1>Server Configuration</h1>
 
+  <ul class="list-inline">
+    <li>
+      <label>PDSH Filter: </label>
+      <input type="search" ng-model="server.pdsh" ng-change="server.pdshUpdate(server.pdsh)" placeholder="pdsh expression..." />
+      <input type="checkbox" ng-model="server.pdshFuzzy" /><span>Fuzzy Match</span>
+    </li>
+    <li>
+      <label>Entries Per Page: </label>
+      <select ng-model="server.itemsPerPage">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </li>
+  </ul>
+  <table class="table">
+    <thead>
+    <tr>
+      <th><a href="" ng-click="server.reverse = !server.reverse">Hostname <i class="fa" ng-class="{'fa-sort-asc': server.reverse, 'fa-sort-desc': !server.reverse}"></i></a></th>
+      <th>LNet State</th>
+      <th>Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr ng-repeat="item in server.servers.objects | pdsh:server.hostnames:server.getHostPath:server.pdshFuzzy | naturalSort:server.getHostPath:server.reverse | paginate:server.currentPage-1:server.getItemsPerPage() track by item.id">
+      <td>{{ item.host_name }}</td>
+      <td>{{ item.lNet }}</td>
+      <td><span class="fa fa-check"></span></td>
+    </tr>
+    </tbody>
+  </table>
+  <div class="text-center">
+    <pagination total-items="server.getTotalItems()" items-per-page="server.getItemsPerPage()" ng-model="server.currentPage" max-size="server.maxSize" class="pagination-sm" boundary-links="true" ng-show="server.getTotalItems() > server.getItemsPerPage()"></pagination>
+  </div>
+</div>

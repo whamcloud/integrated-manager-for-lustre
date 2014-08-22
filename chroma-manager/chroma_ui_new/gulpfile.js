@@ -20,7 +20,6 @@ var del = require('del');
 var gutil = require('gulp-util');
 var streamqueue = require('streamqueue');
 var compress = require('./srcmap-create/createSourceMap');
-
 var qualityFiles = files.js.source.concat(
   'test/spec/**/*.js',
   'test/mock/**/*.js',
@@ -91,7 +90,7 @@ gulp.task('inject:dev', ['static:dev', 'clean-static', 'copy-templates'], functi
    * @returns {String}
    */
   function rewritePrefix (file) {
-    return file.replace(/^source/, 'static');
+    return file.replace(/^source/, 'static').replace(/\.\.\/ui-modules/, 'static/chroma_ui');
   }
 
   /**
@@ -128,7 +127,7 @@ gulp.task('clean-templates', function cleanTemplates (cb) {
  * Move static resources for development
  */
 gulp.task('static:dev', ['clean-static'], function staticDev () {
-  return gulp.src('source/chroma_ui/**/*.{html,js,png,woff,ttf,svg,ico}')
+  return gulp.src(['source/chroma_ui/**/*.{html,js,png,woff,ttf,svg,ico}', '../ui-modules/**/*.js'])
     .pipe(gulp.dest('static/chroma_ui'));
 });
 

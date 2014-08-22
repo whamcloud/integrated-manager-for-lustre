@@ -23,7 +23,8 @@
       "source/chroma_ui/common/**/*-module.js",
       "source/chroma_ui/iml/**/*-module.js",
       "source/chroma_ui/common/**/*.js",
-      "source/chroma_ui/iml/**/*.js"
+      "source/chroma_ui/iml/**/*.js",
+      "../ui-modules/angular/src/**/*.js"
     ]
   },
   "less": {
