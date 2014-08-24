@@ -81,6 +81,7 @@ gulp.task('inject:dev', ['static:dev', 'clean-static', 'copy-templates'], functi
 
   return gulp.src('templates_source/chroma_ui/base.html')
     .pipe(injector(queuedStream))
+    .pipe(getModeInjector('modes/development.html'))
     .pipe(gulp.dest('templates/chroma_ui'));
 
   /**
@@ -173,6 +174,7 @@ gulp.task('build', ['copy-templates', 'static:build'], function builder () {
 
   return gulp.src('templates_source/chroma_ui/base.html')
     .pipe(injector(queuedStream))
+    .pipe(getModeInjector('modes/production.html'))
     .pipe(replace(/(<base href=").+(" \/>)/, '$1/ui/$2'))
     .pipe(gulp.dest('templates/new', {
       cwd: '../chroma_ui'
@@ -260,4 +262,19 @@ function enqueueStreams () {
   args = args.concat([].slice.call(arguments, 0));
 
   return streamqueue.apply(null, args);
+}
+
+/**
+ * Returns the result of the injector with the specified mode stream
+ * @param {String} modePath
+ * @returns {Stream}
+ */
+function getModeInjector(modePath) {
+  var modeStream = gulp.src(modePath);
+  return injector(modeStream, {
+    starttag: '<!-- inject:mode -->',
+    transform: function (filePath, file) {
+      return file.contents.toString('utf8');
+    }
+  });
 }

@@ -20,4 +20,5 @@
 // express and approved by Intel in writing.
 
 
-angular.module('exception', ['ui.bootstrap', 'modelFactory', 'filters', 'windowUnload']);
+angular.module('exception', ['ui.bootstrap', 'modelFactory', 'filters', 'windowUnload', 'socket-module',
+  'environment']);

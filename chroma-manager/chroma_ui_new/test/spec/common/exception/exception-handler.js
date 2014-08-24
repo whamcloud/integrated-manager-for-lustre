@@ -9,29 +9,18 @@ describe('exception handler', function () {
     oldExceptionHandler = $exceptionHandlerProvider.$get();
   }));
 
-  var clientErrorModel;
-
   beforeEach(module('exception', function ($provide) {
-    clientErrorModel = {
-      $save: jasmine.createSpy('$save')
-    };
-
-    $provide.value('ClientErrorModel', ClientErrorModel);
     $provide.value('exceptionModal', jasmine.createSpy('exceptionModal'));
-
-    function ClientErrorModel() { return clientErrorModel; }
   }, {
-    windowUnload: { unloading: false },
-    $document: [ { URL: '/foo' } ]
+    windowUnload: { unloading: false }
   }));
 
-  var $document, $exceptionHandler, exceptionModal, windowUnload, error, cause;
+  var $exceptionHandler, exceptionModal, windowUnload, error, cause;
 
-  beforeEach(inject(function (_$document_, _$exceptionHandler_, _exceptionModal_, _windowUnload_) {
+  beforeEach(inject(function (_$exceptionHandler_, _exceptionModal_, _windowUnload_) {
     error = new Error('uh oh!');
     cause = 'Something Happened!';
 
-    $document = _$document_;
     $exceptionHandler = _$exceptionHandler_;
     exceptionModal = _exceptionModal_;
     windowUnload = _windowUnload_;
@@ -59,7 +48,7 @@ describe('exception handler', function () {
     });
 
     it('should pass the cause to the modal', function () {
-      expect(exceptionModal.mostRecentCall.args[0].resolve.cause()).toBe(cause);
+      expect(exceptionModal.mostRecentCall.args[0].resolve.exception().cause).toBe(cause);
     });
 
     it('should open the modal when there is an error', function () {
@@ -74,20 +63,6 @@ describe('exception handler', function () {
 
     it('should delegate to the older $exceptionHandler', function () {
       expect(oldExceptionHandler.errors[0]).toEqual([error, cause]);
-    });
-
-    it('should call the client error model with the exception info', function () {
-      expect(clientErrorModel).toEqual({
-        stack: error.stack,
-        message: 'uh oh!',
-        cause: 'Something Happened!',
-        url: $document[0].URL,
-        $save: jasmine.any(Function)
-      });
-    });
-
-    it('should save the client error model', function () {
-      expect(clientErrorModel.$save).toHaveBeenCalledOnce();
     });
   });
 });

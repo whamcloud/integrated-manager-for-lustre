@@ -31,6 +31,7 @@
     IS_RELEASE: window.IS_RELEASE,
     ALLOW_ANONYMOUS_READ: window.ALLOW_ANONYMOUS_READ,
     SERVER_TIME_DIFF: window.SERVER_TIME_DIFF,
+    MODE: window.mode,
     VERSION: window.VERSION,
     BUILD: window.BUILD,
     BASE: '%s//%s'.sprintf(window.location.protocol, window.location.hostname),
@@ -47,7 +48,6 @@
   var environmentModule = angular.module('environment', []);
 
   environmentModule.constant('ENV', ENV);
-  environmentModule.constant('CACHE_INITIAL_DATA', ENV.CACHE_INITIAL_DATA);
 
   Object.keys(ENV).forEach(function (key) {
     environmentModule.constant(key, ENV[key]);

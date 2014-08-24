@@ -32,7 +32,6 @@
       /**
        * Log the exception in the console.
        * Display a modal of the exception.
-       * Save the exception to the backend.
        * @param {Object} exception
        * @param {String} cause
        */
@@ -46,30 +45,18 @@
 
         // Lazy Load to avoid a $rootScope circular dependency.
         var exceptionModal = get('exceptionModal'),
-          ClientErrorModel = get('ClientErrorModel'),
           $document = get('$document');
 
+        exception.cause = cause;
+        exception.url = $document[0].URL;
 
         exceptionModal({
           resolve: {
-            exception: function () { return exception; },
-            cause: function () { return cause; }
+            exception: function () {
+              return exception;
+            }
           }
         });
-
-        //We are not interested in saving server generated errors.
-        if (exceptionOrEmptyObj().response) return;
-
-        var err = new ClientErrorModel();
-
-        err.stack = exceptionOrEmptyObj().stack;
-        err.message = exceptionOrEmptyObj().message;
-        err.url = $document[0].URL;
-        err.cause = cause;
-
-        err.$save();
-
-        function exceptionOrEmptyObj () { return exception || {}; }
       };
 
       function get(serviceName) {

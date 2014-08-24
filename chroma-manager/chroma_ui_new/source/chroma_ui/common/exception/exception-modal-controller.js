@@ -23,15 +23,15 @@
 (function () {
   'use strict';
 
-  function ExceptionModalCtrl($scope, $document, $parse, exception, cause) {
+  function ExceptionModalCtrl ($scope, $document, $parse, exception, MODE, stackTraceContainsLineNumber,
+                               sendStackTraceToRealTime) {
+
     $scope.exceptionModal = {
       messages: [],
       reload: function () {
         $document[0].location.reload(true);
       }
     };
-
-    if(cause) exception.cause = cause;
 
     $scope.exceptionModal.messages = new PropLookup($parse, exception)
       .add('cause')
@@ -53,8 +53,20 @@
       .add({name: 'stack', alias: 'Client Stack Trace', transform: lookupAnd(multiLineTrim)})
       .get();
 
+    if (MODE === 'production' && stackTraceContainsLineNumber(exception)) {
+      $scope.exceptionModal.loadingStack = true;
+      sendStackTraceToRealTime(exception).then(function updateData (newException) {
+        $scope.exceptionModal.loadingStack = false;
+        _.find($scope.exceptionModal.messages, {name: 'Client Stack Trace'}).value = newException.stack;
+      });
+    }
 
-    function lookupAnd(func) {
+    /**
+     * HOF Lookup and do something
+     * @param {Function} func
+     * @returns {Function}
+     */
+    function lookupAnd (func) {
       return function (name, spot) {
         var value = spot[name];
 
@@ -68,11 +80,21 @@
       };
     }
 
-    function stringify(value) {
+    /**
+     * Stringify's a value
+     * @param {*} value
+     * @returns {String}
+     */
+    function stringify (value) {
       return JSON.stringify(value, null, 2);
     }
 
-    function multiLineTrim(value) {
+    /**
+     * Multi line trim
+     * @param {String} value
+     * @returns {String}
+     */
+    function multiLineTrim (value) {
       return value.split('\n').map(function (line) {
         return line.trim();
       }).join('\n');
@@ -80,8 +102,51 @@
   }
 
   angular.module('exception')
-    .controller('ExceptionModalCtrl', ['$scope', '$document', '$parse', 'exception', 'cause', ExceptionModalCtrl]);
+    .controller('ExceptionModalCtrl', ['$scope', '$document', '$parse', 'exception', 'MODE',
+      'stackTraceContainsLineNumber', 'sendStackTraceToRealTime', ExceptionModalCtrl])
+    .factory('stackTraceContainsLineNumber', [function stackTraceContainsLineNumbers () {
+      var regex = /^.+\:\d+\:\d+.*$/;
 
+      return function stackTraceContainsLineNumbers (stackTrace) {
+        return stackTrace.stack.split('\n')
+          .some(function verifyStackTraceContainsLineNumbers (val) {
+            var match = val.trim().match(regex);
+            return (match == null) ? false : match.length > 0;
+          });
+      };
+    }]).factory('sendStackTraceToRealTime', ['$rootScope', 'socket', '$q',
+      function sendStackTraceToRealTime ($rootScope, socket, $q) {
+
+      /**
+       * Sends the stack trace to the real time service
+       * @param {Object} exception
+       * @returns {$q.promise}
+       */
+      return function sendStackTraceToRealTime (exception) {
+        var deferred = $q.defer();
+        var spark = socket('request');
+
+        spark.send('req', {
+            path: '/srcmap-reverse',
+            options: {
+              method: 'post',
+              cause: exception.cause,
+              message: exception.message,
+              stack: exception.stack,
+              url: exception.url
+            }
+          },
+          function processResponse (response) {
+            // Keep the original stack trace if reformatting of the stack trace failed.
+            if (response.body)
+               exception.stack = response.body.data;
+
+            deferred.resolve(exception);
+          });
+
+        return deferred.promise;
+      };
+    }]);
 
   /**
    * Helper class that builds a message list from a given object
@@ -89,7 +154,7 @@
    * @param {object} obj
    * @constructor
    */
-  function PropLookup($parse, obj) {
+  function PropLookup ($parse, obj) {
     this._$parse = $parse;
     this._obj = obj;
     this.messages = [];
@@ -102,7 +167,7 @@
    * @param {string} expression
    * @returns {PropLookup} This instance for chaining.
    */
-  PropLookup.prototype.path = function path(expression) {
+  PropLookup.prototype.path = function path (expression) {
     this.spot = this._$parse(expression)(this._obj);
 
     return this;
@@ -112,7 +177,7 @@
    * Resets the spot to the top of the object.
    * @returns {PropLookup} This instance for chaining.
    */
-  PropLookup.prototype.reset = function path() {
+  PropLookup.prototype.reset = function path () {
     this.spot = this._obj;
 
     return this;
@@ -123,7 +188,7 @@
    * @param {string|object} item
    * @returns {PropLookup} This instance for chaining
    */
-  PropLookup.prototype.add = function add(item) {
+  PropLookup.prototype.add = function add (item) {
     if (!this.spot) return this;
 
     if (_.isString(item)) item = {name: item};
@@ -149,7 +214,7 @@
    * Returns the list of messages.
    * @returns {Array} The messages.
    */
-  PropLookup.prototype.get = function get() {
+  PropLookup.prototype.get = function get () {
     return this.messages;
   };
 

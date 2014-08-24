@@ -24,17 +24,18 @@
   'use strict';
 
   var socketModule = angular.module('socket-module', ['primus'])
-    .factory('socket', ['$applyFunc', '$document', 'primus', 'runPipeline', socketFactory]);
+    .factory('socket', ['$applyFunc', '$document', '$window', 'primus', 'runPipeline', socketFactory]);
 
   /**
    * Generates a new socket.
    * @param {Function} $applyFunc
    * @param {Object} $document
+   * @param {Object} $window
    * @param {Function} primus
    * @param {Function} runPipeline
    * @returns {Object}
    */
-  function socketFactory ($applyFunc, $document, primus, runPipeline) {
+  function socketFactory ($applyFunc, $document, $window, primus, runPipeline) {
     var CUSTOM_EVENTS = Object.freeze({
       PIPELINE: 'pipeline'
     });
@@ -146,7 +147,6 @@
        */
       extendedSpark.send = function send (ev, data, fn) {
         var cookie = $document[0].cookie;
-
         data = _.merge({}, data, {
           options: {
             headers: {
@@ -158,6 +158,7 @@
         var csrfTokenMatch = cookie.match(/csrftoken=(.+);/);
         if (csrfTokenMatch && csrfTokenMatch[1])
           data.options.headers['X-CSRFToken'] = csrfTokenMatch[1];
+        data.options.headers['User-Agent'] = $window.navigator.userAgent;
 
         if (typeof fn !== 'function')
           lastSend = arguments;
@@ -250,5 +251,3 @@
     };
   }
 }());
-
-

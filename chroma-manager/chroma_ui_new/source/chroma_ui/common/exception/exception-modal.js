@@ -33,7 +33,9 @@
       <ul> \
         <li ng-repeat="item in exceptionModal.messages"> \
           <h5>{{ item.name | capitalize:true }}:</h5> \
-          <pre>{{item.value}}</pre> \
+          <pre ng-if="exceptionModal.loadingStack && item.name === \'Client Stack Trace\'" \
+          class="loading">Processing... <i class="fa fa-spinner fa-spin fa-2x"></i></pre> \
+          <pre ng-if="!exceptionModal.loadingStack || item.name !== \'Client Stack Trace\'">{{item.value}}</pre> \
         </li> \
       </ul> \
     </div> \

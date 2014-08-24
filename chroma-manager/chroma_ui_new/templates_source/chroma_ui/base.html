@@ -30,6 +30,8 @@
     // arbitrary.
     window.SERVER_TIME_DIFF = new Date(('{{server_time|safe}}' + '+00:00').split(' ').join('T')) - new Date();
   </script>
+  <!-- inject:mode -->
+  <!-- endinject -->
 </head>
 <body ng-app="iml">
 {% block content %}{% endblock %}

@@ -4,15 +4,24 @@ describe('socket module', function () {
   beforeEach(module('socket-module'));
 
   describe('socket', function () {
-    var socket, $applyFunc, $document, primus, runPipeline, spark;
+    var socket, $applyFunc, $document, $window, primus, runPipeline, spark;
 
     beforeEach(module(function ($provide) {
       $applyFunc = jasmine.createSpy('$applyFunc').andCallFake(_.identity);
 
       $provide.value('$applyFunc', $applyFunc);
 
+      $window = {
+        navigator: {
+          userAgent: 'chrome'
+        }
+      };
+
+      $provide.value('$window', $window);
+
       $document = [
-        { cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e' }
+        { cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e; ' +
+          'HTTP_USER_AGENT: chrome;' }
       ];
 
       $provide.value('$document', $document);
@@ -269,8 +278,11 @@ describe('socket module', function () {
             path: '/host',
             options: {
               headers: {
-                Cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e',
-                'X-CSRFToken': 'yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT'
+                Cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e; \
+HTTP_USER_AGENT: chrome;',
+                'User-Agent': 'chrome',
+                'X-CSRFToken': 'yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e; \
+HTTP_USER_AGENT: chrome'
               }
             }
           }, ack);
@@ -383,4 +395,3 @@ describe('socket module', function () {
     });
   });
 });
-

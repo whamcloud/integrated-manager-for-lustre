@@ -1,16 +1,29 @@
 describe('Exception modal controller', function () {
   'use strict';
 
-  var $scope, createController, getMessage, plainError, responseError;
+  var $scope, createController, getMessage, plainError, responseError, MODE,
+    stackTraceContainsLineNumber, sendStackTraceToRealTime, deferred,
+    $rootScope, socket, spark;
 
-  beforeEach(module('exception'));
+  beforeEach(module('exception', function ($provide) {
+    spark = {
+      send: jasmine.createSpy('send')
+    };
 
-  beforeEach(inject(function ($rootScope, $controller) {
+    socket = jasmine.createSpy('socket').andReturn(spark);
+
+    $provide.value('socket', socket);
+  }));
+
+  beforeEach(inject(function (_$rootScope_, $controller, $q) {
+    $rootScope = _$rootScope_;
     $scope = $rootScope.$new();
 
     plainError = new Error('Error');
 
     responseError = new Error('Response Error');
+
+    MODE = 'production';
 
     responseError.response = {
       status: 500,
@@ -27,8 +40,17 @@ describe('Exception modal controller', function () {
       }
     };
 
+    deferred = $q.defer();
+    stackTraceContainsLineNumber = jasmine.createSpy('stackTraceContainsLineNumber').andReturn(true);
+    sendStackTraceToRealTime = jasmine.createSpy('sendStackTraceToRealTime').andReturn(deferred.promise);
+
     createController = function createController(deps) {
-      deps = _.extend({$scope: $scope}, deps);
+      deps = _.extend({
+        $scope: $scope,
+        MODE: MODE,
+        sendStackTraceToRealTime: sendStackTraceToRealTime,
+        stackTraceContainsLineNumber: stackTraceContainsLineNumber
+      }, deps);
 
       $controller('ExceptionModalCtrl', deps);
     };
@@ -41,8 +63,9 @@ describe('Exception modal controller', function () {
   }));
 
   it('should convert a string cause to a message', function () {
+    plainError.cause = 'fooz';
+
     createController({
-      cause: 'fooz',
       exception: plainError
     });
 
@@ -131,5 +154,174 @@ describe('Exception modal controller', function () {
 
       expect(getMessage('data')).toEqual({name: 'data', value: '[object Object]'});
     });
+  });
+
+  describe('stack trace format in development mode', function () {
+    beforeEach(function () {
+      MODE = 'development';
+
+      createController({
+        cause: 'fooz',
+        exception: plainError
+      });
+    });
+
+    it('should not call stackTraceContainsLineNumber', function () {
+      expect(stackTraceContainsLineNumber).not.toHaveBeenCalled();
+    });
+
+    it('should not call sendStackTraceToRealTime', function () {
+      expect(sendStackTraceToRealTime).not.toHaveBeenCalled();
+    });
+
+    it('should have a loadingStack value of undefined', function () {
+      expect($scope.exceptionModal.loadingStack).toEqual(undefined);
+    });
+  });
+
+  describe('stack trace format in production mode', function () {
+    beforeEach(function () {
+      MODE = 'production';
+
+      createController({
+        cause: 'fooz',
+        exception: plainError
+      });
+    });
+
+    describe('before resolving', function () {
+      it('should call stackTraceContainsLineNumber', function () {
+        expect(stackTraceContainsLineNumber).toHaveBeenCalled();
+      });
+
+      it('should call sendStackTraceToRealTime', function () {
+        expect(sendStackTraceToRealTime).toHaveBeenCalled();
+      });
+
+      it('should have a loadingStack value of true', function () {
+        expect($scope.exceptionModal.loadingStack).toEqual(true);
+      });
+    });
+
+    describe('after resolving', function () {
+      var formattedStackTrace = 'formattedStackTrace';
+
+      beforeEach(function () {
+        deferred.resolve({stack: formattedStackTrace});
+        $rootScope.$apply();
+      });
+
+      it('should have a loadingStack value of false', function () {
+        expect($scope.exceptionModal.loadingStack).toEqual(false);
+      });
+
+      it('should have the formatted stack trace', function () {
+        expect(_.find($scope.exceptionModal.messages, {name: 'Client Stack Trace'}).value)
+          .toEqual(formattedStackTrace);
+      });
+    });
+  });
+
+  describe('stack trace contains line number factory', function () {
+    var stackTraceContainsLineNumberFactory;
+    beforeEach(inject(function (_stackTraceContainsLineNumber_) {
+      stackTraceContainsLineNumberFactory = _stackTraceContainsLineNumber_;
+    }));
+
+    [
+      {stack: 'at some-file-location/file.js:85:13'},
+      {stack: 'some-file-location/file.js:85:13)'},
+      {stack: 'at some-file-location/file.js:85:13 '},
+      {stack: 'at some-file-location/file.js:85:13adsf'},
+      {stack: 'some-file-location/file.js:85:13 more text'},
+    ].forEach(function checkForLineAndColumnNumbers (stack) {
+        describe('contains line number', function () {
+          it('should indicate that ' + stack.stack + ' contains line numbers and columns', function () {
+            expect(stackTraceContainsLineNumberFactory(stack)).toEqual(true);
+          });
+        });
+      });
+
+    [
+      {stack: 'at some-file-location/file.js:85'},
+      {stack: 'at some-file-location/file.js:85:'},
+      {stack: 'at some-file-location/file.js:8513'}
+    ].forEach(function checkForLineAndColumnNumbers (stack) {
+        describe('does not contain line number', function () {
+          it('should indicate that ' + stack.stack + ' doesn\'t contain both line and column numbers', function () {
+            expect(stackTraceContainsLineNumberFactory(stack)).toEqual(false);
+          });
+        });
+      });
+  });
+
+  describe('send stack trace to real time factory', function () {
+    var exception, promise, processResponseCallback, sendStackTraceToRealTimeFactory;
+    beforeEach(inject(function (_sendStackTraceToRealTime_) {
+      sendStackTraceToRealTimeFactory = _sendStackTraceToRealTime_;
+
+      exception = {
+        cause: 'cause',
+        message: 'message',
+        stack: 'stack',
+        url: 'url'
+      };
+
+      promise = sendStackTraceToRealTimeFactory(exception);
+      processResponseCallback = spark.send.mostRecentCall.args[2];
+    }));
+
+    it('should send the request over spark', function () {
+      expect(spark.send).toHaveBeenCalledWith(
+        'req',
+        {
+          path: '/srcmap-reverse',
+          options: {
+            method: 'post',
+            cause: exception.cause,
+            message: exception.message,
+            stack: exception.stack,
+            url: exception.url
+          }
+        },
+        jasmine.any(Function)
+      );
+    });
+
+    it('should return a promise', function () {
+      expect(promise.then).toEqual(jasmine.any(Function));
+    });
+
+    [
+      {
+        message: 'should',
+        response: {
+          body: {
+            data: 'formatted exception'
+          }
+        },
+        expected: 'formatted exception'
+      },
+      {
+        message: 'should not',
+        response: {
+          error: {
+            stack: 'internal error'
+          }
+        },
+        expected: 'stack'
+      }
+    ].forEach(function testProcessResponse (data) {
+        describe('and process response', function () {
+          it(data.message + ' set the exception.stack to response.body.data', function () {
+            promise.then(function verifyResolvedStackTrace (updatedException) {
+              expect(updatedException.stack).toEqual(data.expected);
+            });
+
+            processResponseCallback(data.response);
+            $rootScope.$apply();
+          });
+        });
+      });
   });
 });
