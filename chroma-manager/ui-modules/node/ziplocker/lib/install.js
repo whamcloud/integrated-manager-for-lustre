@@ -2,7 +2,6 @@
 
 /**
  * Installs dependencies.
- * @param {Function} cprThen
  * @param {Object} config
  * @param {path} path
  * @param {Function} execThen
@@ -12,10 +11,12 @@
  * @param {Function} delThen
  * @param {Object} log
  * @param {Object} process
+ * @param {Function} rebuildDepsThen
+ * @param {Object} fsThen
  * @returns {{prod: Function, dev: Function}}
  */
-exports.wiretree = function installModule (cprThen, config, path, execThen, treeClimber,
-                                           ziplockJson, Promise, delThen, log, process) {
+exports.wiretree = function installModule (config, path, execThen, treeClimber,
+                                           ziplockJson, Promise, delThen, log, process, rebuildDepsThen, fsThen) {
 
   var NODE_MODULES = 'node_modules';
 
@@ -27,27 +28,49 @@ exports.wiretree = function installModule (cprThen, config, path, execThen, tree
   var zipDirDev = path.join(config.depPath, config.DEP_TYPES.DEV);
 
   return {
-    prod: createInstall(identity, filterFiles),
-    dev: createInstall(buildFunc(cprThen, zipDirDev, modulesDir), identity)
+    prod: createInstall(false),
+    dev: createInstall(true)
   };
 
   /**
    * HOF that installs deps.
    * Can be configured for installing devDependencies.
-   * @param {Function} moveDevFiles
-   * @param {Function} filterFiles
+   * @param {Boolean} devMode
    * @returns {Function}
    */
-  function createInstall (moveDevFiles, filterFiles) {
+  function createInstall (devMode) {
     return function install () {
-      return delThen(modulesDir)
-        .then(buildFunc(cprThen, zipDir, modulesDir))
-        .then(moveDevFiles)
-        .then(buildFunc(execThen, 'npm rebuild')).then(logExec)
-        .then(gatherOptionalDeps)
-        .then(filterFiles)
-        .then(buildOptionalDeps)
-        .then(buildFunc(log.write, log.green('installed depedencies'), 'to', process.cwd()));
+      var zipDirPromise = fsThen.exists(zipDir);
+      var zipDirDevPromise = (devMode ? fsThen.exists(zipDirDev) : true);
+
+      return Promise.all([zipDirPromise, zipDirDevPromise])
+        .then(function checkForDirs (values) {
+          var dirsNotFound = values.every(function areDirsMissing (value) {
+            return value === false;
+          });
+
+          if (dirsNotFound)
+            return log.write('Nothing to do.');
+
+          var pipeline = delThen(modulesDir);
+
+          if (values[0])
+            pipeline = pipeline
+              .then(buildFunc(fsThen.copy, zipDir, modulesDir))
+              .then(buildFunc(log.write, log.green('copied dependencies')));
+
+          if (values[1] && devMode)
+            pipeline = pipeline
+              .then(buildFunc(fsThen.copy, zipDirDev, modulesDir))
+              .then(buildFunc(log.write, log.green('copied devDependencies')));
+
+          return pipeline
+            .then(rebuildDepsThen)
+            .then(gatherOptionalDeps)
+            .then(!devMode ? filterFiles : identity)
+            .then(buildOptionalDeps)
+            .then(buildFunc(log.write, log.green('installed depedencies'), 'to', process.cwd()));
+        });
     };
   }
 
@@ -63,8 +86,12 @@ exports.wiretree = function installModule (cprThen, config, path, execThen, tree
         var optionalDeps = [];
 
         treeClimber.climb(json, function visitor (key, value, fullPath) {
-          if (fullPath.match(optionalDepsRegexp))
+          if (fullPath.match(optionalDepsRegexp)) {
+            var last = fullPath.lastIndexOf(config.DEP_TYPES.OPTIONAL);
+            var butLast = fullPath.substring(0, last).replace(/optionalDependencies/g, 'node_modules');
+            fullPath = butLast + fullPath.substring(last);
             optionalDeps.push(path.dirname(fullPath));
+          }
         }, '/');
 
         return optionalDeps;
@@ -81,10 +108,11 @@ exports.wiretree = function installModule (cprThen, config, path, execThen, tree
     return optionalDeps.reduce(function buildPromiseChain (promise, optionalDep) {
       return promise.then(function tryBuild () {
         var fullPath = path.join(process.cwd(), optionalDep.replace(replaceRegexp, NODE_MODULES));
+        var newPath = fullPath.replace(config.DEP_TYPES.OPTIONAL, NODE_MODULES);
 
         return execThen('npm build ' + fullPath).then(logExec)
           .then(buildFunc(log.write, 'built', log.yellow('optional dependency'), 'at', fullPath))
-          .then(buildFunc(cprThen, fullPath, fullPath.replace(config.DEP_TYPES.OPTIONAL, NODE_MODULES)))
+          .then(buildFunc(fsThen.copy, fullPath, newPath))
           .catch(function recover (err) {
             log.write('did not build', log.yellow('optional dependency'), 'at', fullPath);
             log.write(err.message);

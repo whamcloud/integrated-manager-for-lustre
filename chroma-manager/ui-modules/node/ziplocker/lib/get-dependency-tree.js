@@ -5,13 +5,15 @@
  * @param {Object} packageJson
  * @param {Promise} Promise
  * @param {Object} log
+ * @param {Object} semver
  * @param {Object} config
  * @param {Function} resolveFromFs
  * @param {Function} resolveFromRegistry
+ * @param {Function} resolveFromGithub
  * @returns {Function}
  */
-exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log,
-                                                     config, resolveFromFs, resolveFromRegistry) {
+exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, semver,
+                                                     config, resolveFromFs, resolveFromRegistry, resolveFromGithub) {
   /**
    * Responsible for building out the tree recursively using promises.
    * @returns {Promise}
@@ -66,8 +68,14 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log,
     var dependencyPromises = Object.keys(packageJson[type])
       .map(function getDependencies (dependency) {
         var dependencyValue = packageJson[type][dependency];
-        var resolveModule = (dependencyValue.indexOf(config.FILE_TOKEN) === -1 ?
-          resolveFromRegistry(dependency, dependencyValue) : resolveFromFs(dependencyValue));
+
+        var resolveModule;
+        if (dependencyValue.indexOf(config.FILE_TOKEN) !== -1)
+          resolveModule = resolveFromFs(dependencyValue);
+        else if (semver.validRange(dependencyValue))
+          resolveModule = resolveFromRegistry(dependency, dependencyValue);
+        else
+          resolveModule = resolveFromGithub(dependencyValue);
 
         return resolveModule.then(function buildTreeComponent (obj) {
           if (!tree[type])

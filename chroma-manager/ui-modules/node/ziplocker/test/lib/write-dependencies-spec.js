@@ -4,16 +4,18 @@ var writeDependenciesModule = require('../../lib/write-dependencies').wiretree;
 var treeClimber = require('tree-climber');
 var path = require('path');
 var Promise = require('promise');
+var semver = require('semver');
 var config = require('../../index').get('config');
 
 describe('write dependencies', function () {
-  var writeDependencies, saveTgzThen, log, promise, cprThen, process;
+  var writeDependencies, saveTgzThen, saveRepoThen,
+    log, promise, fsThen, process;
 
   beforeEach(function () {
     config.ziplockDir = '/projects/chroma/chroma-externals';
 
     saveTgzThen = jasmine.createSpy('saveTgzThen').and.returnValue(Promise.resolve(''));
-    cprThen = jasmine.createSpy('cprThen').and.returnValue(Promise.resolve(''));
+    saveRepoThen = jasmine.createSpy('saveRepoThen').and.returnValue(Promise.resolve(''));
 
     process = {
       cwd: jasmine.createSpy('cwd').and.returnValue('/projects/chroma/chroma-manager/ui-modules/node/stuff/')
@@ -24,9 +26,14 @@ describe('write dependencies', function () {
       green: jasmine.createSpy('green')
     };
 
+    fsThen = {
+      copy: jasmine.createSpy('copy').and.returnValue(Promise.resolve())
+    };
+
     spyOn(treeClimber, 'climbAsync').and.callThrough();
 
-    writeDependencies = writeDependenciesModule(config, treeClimber, path, saveTgzThen, log, cprThen, process);
+    writeDependencies = writeDependenciesModule(config, treeClimber, path, saveTgzThen,
+      saveRepoThen, log, fsThen, process, semver);
   });
 
   describe('climbing a tree', function () {
@@ -40,6 +47,10 @@ describe('write dependencies', function () {
           },
           dotty: {
             version: '0.0.2'
+          },
+          'coffee-script-redux': {
+            version: 'git+https://github.com/michaelficarra/\
+CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
           }
         },
         devDependencies: {
@@ -91,10 +102,19 @@ describe('write dependencies', function () {
       });
     });
 
-    pit('should invoke cprThen for files', function () {
+    pit('should copy files', function () {
       return promise.then(function assertCall () {
-        expect(cprThen).toHaveBeenCalledWith('/projects/chroma/chroma-manager/ui-modules/node/promise-it',
+        expect(fsThen.copy).toHaveBeenCalledWith('/projects/chroma/chroma-manager/ui-modules/node/promise-it',
           '/projects/chroma/chroma-externals/ziplocker/devDependencies/promise-it');
+      });
+    });
+
+    pit('should save repos', function () {
+      return promise.then(function assertCall () {
+        expect(saveRepoThen).toHaveBeenCalledWith(
+          'git+https://github.com/michaelficarra/CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3',
+          '/projects/chroma/chroma-externals/ziplocker/node_modules/coffee-script-redux'
+        );
       });
     });
   });

@@ -17,9 +17,8 @@ function createWiretree () {
 
   var deps = {
     path: 'path',
-    fs: 'fs',
+    'fs-extra': 'fs',
     'child_process': 'childProcess',
-    cpr: 'cpr',
     del: 'del',
     readline: 'readline',
     zlib: 'zlib',

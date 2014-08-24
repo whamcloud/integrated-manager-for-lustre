@@ -2,17 +2,20 @@
 
 var getDependencyTree = require('../../lib/get-dependency-tree').wiretree;
 var Promise = require('promise');
+var semver = require('semver');
 var config = require('../../index').get('config');
 
 describe('dependency tree', function () {
-  var packageJson, promise, log, resolveFromFs, resolveFromRegistry;
+  var packageJson, promise, log, resolveFromFs, resolveFromRegistry, resolveFromGithub;
 
   beforeEach(function () {
     packageJson = {
       dependencies: {
         foo: '^0.0.1',
         bar: '~1.2.3',
-        bim: 'file://../bim/'
+        bim: 'file://../bim/',
+        'coffee-script-redux': 'git+https://github.com/michaelficarra/\
+CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
       },
       optionalDependencies: {
         baz: '~3.4.7'
@@ -25,6 +28,15 @@ describe('dependency tree', function () {
     resolveFromFs = jasmine.createSpy('resolveFromFs').and.returnValue(Promise.resolve({
       response: {},
       value: 'file://../bim/'
+    }));
+
+    resolveFromGithub = jasmine.createSpy('resolveFromGithub').and.returnValue(Promise.resolve({
+      response: {
+        dependencies: {
+          foo: '^0.0.1'
+        }
+      },
+      value: 'git+https://github.com/michaelficarra/CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
     }));
 
     resolveFromRegistry = jasmine.createSpy('resolveFromRegistry').and.callFake(function (dependency, dependencyValue) {
@@ -70,7 +82,8 @@ describe('dependency tree', function () {
       green: jasmine.createSpy('green')
     };
 
-    var dependencyTree = getDependencyTree(packageJson, Promise, log, config, resolveFromFs, resolveFromRegistry);
+    var dependencyTree = getDependencyTree(packageJson, Promise, log, semver, config,
+      resolveFromFs, resolveFromRegistry, resolveFromGithub);
     promise = dependencyTree();
   });
 
@@ -84,6 +97,12 @@ describe('dependency tree', function () {
 
   it('should lookup bar', function () {
     expect(resolveFromRegistry).toHaveBeenCalledWith('bar', '~1.2.3');
+  });
+
+  it('should lookup coffeescript redux', function () {
+    expect(resolveFromGithub).toHaveBeenCalledWith(
+      'git+https://github.com/michaelficarra/CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
+    );
   });
 
   pit('should return a ziplock object', function () {
@@ -103,6 +122,15 @@ describe('dependency tree', function () {
           },
           bim: {
             version: 'file://../bim/'
+          },
+          'coffee-script-redux': {
+            version: 'git+https://github.com/michaelficarra/\
+CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3',
+            dependencies: {
+              foo: {
+                version: '0.0.1'
+              }
+            }
           }
         },
         optionalDependencies: {

@@ -9,7 +9,7 @@ var Promise = require('promise');
 var format = require('util').format;
 
 describe('install module', function () {
-  var install, cprThen, execThen, ziplockJson, delThen, log, process, json, cwdModulesFormat;
+  var install, execThen, ziplockJson, delThen, log, process, rebuildDepsThen, fsThen, json, cwdModulesFormat;
 
   beforeEach(function () {
     json = {
@@ -45,7 +45,6 @@ describe('install module', function () {
 
     config.ziplockDir = '/projects/chroma/chroma-externals';
 
-    cprThen = jasmine.createSpy('createSpy').and.returnValue(Promise.resolve(''));
     execThen = jasmine.createSpy('execThen');
 
     ziplockJson = {
@@ -66,6 +65,16 @@ describe('install module', function () {
     process = {
       cwd: jasmine.createSpy('cwd').and.returnValue(cwd)
     };
+
+    rebuildDepsThen = jasmine.createSpy('rebuildDepsThen').and.returnValue(Promise.resolve());
+
+    fsThen = {
+      exists: jasmine.createSpy('exists')
+        .and.returnValue(Promise.resolve(true)),
+      copy: jasmine.createSpy('copy')
+        .and.returnValue(Promise.resolve(true))
+    };
+
     /**
      * Formatting helper to add a path to cwd.
      * @param {String} path
@@ -75,7 +84,8 @@ describe('install module', function () {
       return format('%snode_modules%s', cwd, path || '');
     };
 
-    install = installModule(cprThen, config, path, execThen, treeClimber, ziplockJson, Promise, delThen, log, process);
+    install = installModule(config, path, execThen, treeClimber,
+      ziplockJson, Promise, delThen, log, process, rebuildDepsThen, fsThen);
   });
 
   it('should return an object', function () {
@@ -104,14 +114,14 @@ describe('install module', function () {
 
       pit('should copy files from the zip dir to the modules dir', function () {
         return promise.then(function assertResults () {
-          expect(cprThen).toHaveBeenCalledWith('/projects/chroma/chroma-externals/ziplocker/node_modules',
+          expect(fsThen.copy).toHaveBeenCalledWith('/projects/chroma/chroma-externals/ziplocker/node_modules',
             cwdModulesFormat());
         });
       });
 
       pit('should rebuild files', function () {
         return promise.then(function assertResults () {
-          expect(execThen).toHaveBeenCalledWith('npm rebuild');
+          expect(rebuildDepsThen).toHaveBeenCalled();
         });
       });
 
@@ -147,7 +157,7 @@ describe('install module', function () {
 
       pit('should move the optional dependency to node modules', function () {
         return promise.then(function assertResults () {
-          expect(cprThen).toHaveBeenCalledWith(
+          expect(fsThen.copy).toHaveBeenCalledWith(
             cwdModulesFormat('/foo/optionalDependencies/bar'),
             cwdModulesFormat('/foo/node_modules/bar')
           );

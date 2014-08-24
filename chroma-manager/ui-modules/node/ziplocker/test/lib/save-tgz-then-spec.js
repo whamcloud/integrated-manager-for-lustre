@@ -6,7 +6,7 @@ var stream = require('stream');
 var util = require('util');
 
 describe('save TGZ module', function () {
-  var saveTgzThen, requests, zlib, tar, streams, promise;
+  var saveTgzThen, requests, zlib, tar, streams, promise, config;
 
   beforeEach(function () {
     streams = {};
@@ -30,7 +30,11 @@ describe('save TGZ module', function () {
       Extract: jasmine.createSpy('Extract').and.returnValue(streams.extractStream)
     };
 
-    saveTgzThen = saveTgzThenModule(Promise, requests, zlib, tar, util);
+    config = {
+      registryUrl: 'https://registry.npmjs.org/'
+    };
+
+    saveTgzThen = saveTgzThenModule(Promise, requests, zlib, tar, util, config);
     promise = saveTgzThen('foo', '1.0.0', {});
   });
 
@@ -39,7 +43,7 @@ describe('save TGZ module', function () {
   });
 
   it('should request the tgz path', function () {
-    expect(requests.requestPipe).toHaveBeenCalledWith('foo/-/foo-1.0.0.tgz');
+    expect(requests.requestPipe).toHaveBeenCalledWith(config.registryUrl + 'foo/-/foo-1.0.0.tgz');
   });
 
   it('should create a gunzip stream', function () {

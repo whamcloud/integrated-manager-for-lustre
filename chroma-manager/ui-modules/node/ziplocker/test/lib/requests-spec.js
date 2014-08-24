@@ -7,9 +7,7 @@ describe('request', function () {
   var config, types, requests;
 
   beforeEach(function () {
-    config = {
-      registryUrl: 'https://registry.npmjs.org/'
-    };
+    config = {};
 
     types = {
       requestThen: jasmine.createSpy('requestThen').and.returnValue(Promise.resolve({
@@ -23,7 +21,7 @@ describe('request', function () {
     requests = requestsModule(config, types.requestThen, types.requestPipe);
   });
 
-  ['requestThen', 'requestPipe'].forEach(function (type) {
+  ['requestThen', 'requestPipe'].forEach(function checkType (type) {
     describe(type, function () {
       it('should be a function', function () {
         expect(requests[type]).toEqual(jasmine.any(Function));
@@ -33,7 +31,7 @@ describe('request', function () {
         requests[type]('foo');
 
         expect(types[type]).toHaveBeenCalledWith({
-          uri: config.registryUrl + 'foo',
+          uri: 'foo',
           json: true
         });
       });
@@ -46,7 +44,7 @@ describe('request', function () {
         requests[type]('foo');
 
         expect(types[type]).toHaveBeenCalledWith({
-          uri: config.registryUrl + 'foo',
+          uri: 'foo',
           json: true,
           proxy: config.proxyUrl
         });

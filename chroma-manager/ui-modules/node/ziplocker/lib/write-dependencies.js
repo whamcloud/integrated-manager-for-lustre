@@ -6,12 +6,15 @@
  * @param {Object} treeClimber
  * @param {path} path
  * @param {Function} saveTgzThen
+ * @param {Function} saveRepoThen
  * @param {Object} log
- * @param {Function} cprThen
+ * @param {Object} fsThen
  * @param {process} process
+ * @param {Object} semver
  * @returns {Function}
  */
-exports.wiretree = function writeDependenciesModule (config, treeClimber, path, saveTgzThen, log, cprThen, process) {
+exports.wiretree = function writeDependenciesModule (config, treeClimber, path, saveTgzThen,
+                                                     saveRepoThen, log, fsThen, process, semver) {
   var replaceRegexp = new RegExp(config.DEP_TYPES.DEPS, 'g');
 
   /**
@@ -31,21 +34,30 @@ exports.wiretree = function writeDependenciesModule (config, treeClimber, path, 
 
       var dependencyName = parts.pop();
 
-      if (value.indexOf(config.FILE_TOKEN) === -1) {
+      if (value.indexOf(config.FILE_TOKEN) !== -1) {
+        var partialPath = value.replace(config.FILE_TOKEN, '');
+        var resolvedPath = path.resolve(process.cwd(), partialPath);
+
+        log.write(resolvedPath, fullPath);
+
+        writePromise = fsThen.copy(resolvedPath, fullPath);
+      } else if (semver.validRange(value)) {
         writePromise = saveTgzThen(dependencyName, value, {
           path: fullPath,
           strip: 1
         });
       } else {
-        var partialPath = value.replace(config.FILE_TOKEN, '');
-        var resolvedPath = path.resolve(process.cwd(), partialPath);
-
-        writePromise = cprThen(resolvedPath, fullPath);
+        writePromise = saveRepoThen(value, fullPath);
       }
 
       return writePromise.then(function logSave () {
         log.write('Wrote', log.green(dependencyName), 'to', fullPath);
       });
-    }, TREE_SEP);
+    }, TREE_SEP)
+      .then(function allDone (values) {
+        log.write(log.green('Finished'), 'Wrote all dependencies');
+
+        return values;
+      });
   };
 };

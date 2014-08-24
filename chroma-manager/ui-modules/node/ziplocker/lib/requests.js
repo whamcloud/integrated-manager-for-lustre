@@ -28,7 +28,6 @@ exports.wiretree = function requestsModule (config, requestThen, request) {
   };
 
   /**
-   * Adds the registryUrl to the provided path.
    * Parses the response body as JSON.
    * Adds the proxy if set.
    * @param {String} path
@@ -36,7 +35,7 @@ exports.wiretree = function requestsModule (config, requestThen, request) {
    */
   function getOptions (path) {
     var options = {
-      uri: config.registryUrl + path,
+      uri: path,
       json: true
     };
 

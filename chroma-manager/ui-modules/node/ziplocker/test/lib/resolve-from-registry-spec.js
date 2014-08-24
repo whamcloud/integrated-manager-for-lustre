@@ -5,14 +5,18 @@ var semver = require('semver');
 var Promise = require('promise');
 
 describe('resolve from registry', function () {
-  var resolveFromRegistry, requests;
+  var resolveFromRegistry, requests, config;
 
   beforeEach(function () {
     requests = {
       requestThen: jasmine.createSpy('requestThen')
     };
 
-    resolveFromRegistry = resolveFromRegistryModule(requests, semver);
+    config = {
+      registryUrl: 'https://registry.npmjs.org/'
+    };
+
+    resolveFromRegistry = resolveFromRegistryModule(requests, semver, config);
   });
 
   it('should return a function', function () {
@@ -39,7 +43,7 @@ describe('resolve from registry', function () {
     });
 
     it('should make the request for the dependency info', function () {
-      expect(requests.requestThen).toHaveBeenCalledWith(dependency);
+      expect(requests.requestThen).toHaveBeenCalledWith(config.registryUrl + dependency);
     });
 
     pit('should return a response object', function () {
