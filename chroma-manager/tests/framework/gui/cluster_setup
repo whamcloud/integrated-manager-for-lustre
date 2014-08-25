@@ -103,14 +103,14 @@ fi
 # Install npm-based requirements
 cd chroma_ui
 npm install
-cd ../chroma_ui_new
-npm install
 cd ../ui-modules/node/ziplocker
 cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./node_modules/
 ./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../socket-router/
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../../../realtime/
+../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
+cd ../chroma_ui_new
 ../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 
 # Configure VNC server

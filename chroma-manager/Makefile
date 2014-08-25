@@ -80,9 +80,8 @@ realtime_prod/node_modules: realtime/package.json ziplocker/node_modules
 
 chroma_ui_new/node_modules: chroma_ui_new/package.json $(NPM)
 	@echo "Setting up the New Ui for development..."; \
-	$(PREFIXED_PROXIES) \
 	cd chroma_ui_new && \
-	npm install
+	../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 
 ziplocker/node_modules: ui-modules/node/ziplocker/package.json
 	@echo "Setting up ziplocker module for development..."; \
