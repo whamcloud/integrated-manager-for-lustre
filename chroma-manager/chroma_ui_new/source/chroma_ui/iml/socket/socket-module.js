@@ -111,16 +111,24 @@
        * @returns {Object}
        */
       extendedSpark.send = function send (ev, data, fn) {
+        var cookie = $document[0].cookie;
+
         data = _.merge({}, data, {
           options: {
             headers: {
-              Cookie: $document[0].cookie
+              Cookie: cookie
             }
           }
         });
 
+        var csrfTokenMatch = cookie.match(/csrftoken=(.+);/);
+        if (csrfTokenMatch && csrfTokenMatch[1])
+          data.options.headers['X-CSRFToken'] = csrfTokenMatch[1];
+
         if (typeof fn !== 'function')
           lastSend = arguments;
+        else
+          fn = $applyFunc(fn);
 
         spark.send(ev, data, fn);
 

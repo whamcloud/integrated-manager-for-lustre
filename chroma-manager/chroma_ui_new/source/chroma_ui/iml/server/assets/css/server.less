@@ -1,0 +1,61 @@
+.server-ctrl {
+  .edit-buttons {
+    -webkit-transition: all linear 0.1s;
+    transition: all linear 0.1s;
+    height: 150px;
+    position: relative;
+
+    &.ng-enter,
+    &.ng-leave.ng-leave-active {
+      opacity: 0;
+      height: 0;
+    }
+
+    &.ng-leave,
+    &.ng-enter.ng-enter-active {
+      opacity: 1;
+      height: 150px;
+    }
+
+    .btn {
+      margin-bottom: 5px;
+    }
+  }
+
+  .action-buttons {
+    position: relative;
+
+    button {
+      margin-right: 5px;
+
+      & + .tooltip .tooltip-inner {
+        width: 150px;
+      }
+    }
+  }
+
+  td.select-server {
+    width: 100px;
+
+    .btn {
+      width: 85px;
+    }
+  }
+}
+
+.confirm-server-action-modal {
+  h5 {
+    padding-bottom: 20px;
+  }
+
+  ul.well {
+    list-style-type: none;
+    max-height: 400px;
+    overflow: scroll;
+    margin-bottom: 0;
+
+    li {
+      padding: 10px 0;
+    }
+  }
+}

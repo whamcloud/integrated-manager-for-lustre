@@ -1,6 +1,6 @@
-<div ng-controller="ServerCtrl">
-  <h1>Server Configuration</h1>
-
+<h3 class="page-header"><i class="fa fa-tasks"></i> Server Configuration</h3>
+<div class="container container-full server-ctrl">
+  <h4 class="section-header">Servers</h4>
   <ul class="list-inline">
     <li>
       <label>PDSH Filter: </label>
@@ -20,20 +20,54 @@
   <table class="table">
     <thead>
     <tr>
-      <th><a href="" ng-click="server.reverse = !server.reverse">Hostname <i class="fa" ng-class="{'fa-sort-asc': server.reverse, 'fa-sort-desc': !server.reverse}"></i></a></th>
+      <th>
+        <a href="" ng-click="server.reverse = !server.reverse">Hostname <i class="fa" ng-class="{'fa-sort-asc': server.reverse, 'fa-sort-desc': !server.reverse}"></i></a>
+      </th>
+      <th>Profile</th>
       <th>LNet State</th>
       <th>Status</th>
+      <th ng-if="server.editable" class="select-server-header">Select Server</th>
     </tr>
     </thead>
     <tbody>
     <tr ng-repeat="item in server.servers.objects | pdsh:server.hostnames:server.getHostPath:server.pdshFuzzy | naturalSort:server.getHostPath:server.reverse | paginate:server.currentPage-1:server.getItemsPerPage() track by item.id">
-      <td>{{ item.host_name }}</td>
+      <td>{{ item.address }}</td>
+      <td>{{ item.server_profile.ui_name }}</td>
       <td>{{ item.lNet }}</td>
-      <td><span class="fa fa-check"></span></td>
+      <td>
+        <span class="fa fa-check"></span>
+      </td>
+      <td ng-if="server.editable" class="select-server">
+        <button ng-if="!server.getActionByValue(server.editName).isDisabled(item)" class="btn btn-info btn-sm" ng-model="server.selectedServers[item.fqdn]" btn-checkbox>
+          <span ng-if="server.selectedServers[item.fqdn]">
+            <i class="fa fa-check"></i> Selected
+          </span>
+          <span ng-if="!server.selectedServers[item.fqdn]">
+            Unselected
+          </span>
+        </button>
+        <button ng-if="server.getActionByValue(server.editName).isDisabled(item)" disabled class="btn btn-default btn-sm">Disabled</button>
+      </td>
     </tr>
     </tbody>
   </table>
   <div class="text-center">
     <pagination total-items="server.getTotalItems()" items-per-page="server.getItemsPerPage()" ng-model="server.currentPage" max-size="server.maxSize" class="pagination-sm" boundary-links="true" ng-show="server.getTotalItems() > server.getItemsPerPage()"></pagination>
+  </div>
+
+  <div class="edit-buttons" ng-if="server.editable">
+    <div class="btn-group btn-group-justified btn-block">
+      <a type="button" ng-click="server.toggleType('all')" ng-model="server.selectType" btn-radio="'all'" class="btn btn-info btn-lg">Select All</a>
+      <a type="button" ng-click="server.toggleType('none')" ng-model="server.selectType" btn-radio="'none'" class="btn btn-info btn-lg">Select None</a>
+      <a type="button" ng-click="server.toggleType('invert')" ng-model="server.selectType"  btn-radio="'invert'" class="btn btn-info btn-lg">Invert Selection</a>
+    </div>
+    <button tooltip-html-unsafe="{{server.getActionByValue(server.editName).helpTopic | insertHelp}}" ng-disabled="server.getSelectedHosts(server.editName).length === 0" ng-click="server.runAction(server.editName)" class="btn btn-success btn-lg btn-block">{{ server.editName }} <i class="fa fa-check-circle-o"></i></button>
+    <button class="btn btn-danger btn-lg btn-block" ng-click="server.setEditable(false)">Cancel <i class="fa fa-times-circle-o"></i></button>
+  </div>
+
+  <h4 class="section-header">Server Actions</h4>
+
+  <div class="action-buttons">
+    <button ng-repeat="action in server.actions track by action.value" tooltip="{{ action.tooltip | insertHelp}}" class="btn btn-primary btn-sm" ng-click="server.setEditName(action.value)">{{action.value}} <i class="fa fa-question-circle"></i></button>
   </div>
 </div>

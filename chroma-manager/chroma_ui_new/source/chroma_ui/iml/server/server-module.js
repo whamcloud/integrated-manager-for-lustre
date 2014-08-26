@@ -20,9 +20,11 @@
 // express and approved by Intel in writing.
 
 
-angular.module('server', ['pdsh-parser-module', 'filters'])
-  .controller('ServerCtrl', ['$scope', 'pdshParser', 'pdshFilter',
-    function ServerCtrl ($scope, pdshParser, pdshFilter) {
+angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module'])
+  .controller('ServerCtrl', ['$scope', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
+    'serverSpark', 'serverActions', 'selectedServers', 'runServerAction',
+    function ServerCtrl ($scope, $modal, pdshParser, pdshFilter, naturalSortFilter,
+                         serverSpark, serverActions, selectedServers, runServerAction) {
       'use strict';
 
       $scope.server = {
@@ -31,39 +33,37 @@ angular.module('server', ['pdsh-parser-module', 'filters'])
         currentPage: 1,
         pdshFuzzy: false,
         hostnames: [],
-        object: {
-          created_at: '2014-08-21T13:23:25.183372+00:00',
-          dismissed: false,
-          host: '/api/host/2/',
-          host_name: 'test00%s',
-          id: 1,
-          message: 'LNet started on server \'test002\'',
-          resource_uri: '/api/event/450/',
-          severity: 'INFO',
-          subtype: 'AlertEvent',
-          type: 'Event',
-          lNet: 'LNet up',
-          status: true
-        },
         servers: {
           objects: []
         },
+        actions: serverActions,
+        selectedServers: selectedServers.servers,
+        toggleType: selectedServers.toggleType,
 
         /**
-         * Returns the total number of entries in servers.objects
+         * Returns the current list of PDSH filtered hosts.
+         * @returns {Array}
+         */
+        getFilteredHosts: function getFilteredHosts () {
+          var filtered = pdshFilter(this.servers.objects, this.hostnames, this.getHostPath, this.pdshFuzzy);
+
+          return naturalSortFilter(filtered, this.getHostPath, this.reverse);
+        },
+
+        /**
+         * Returns the total number of entries in servers.objects.
          * @returns {Number}
          */
         getTotalItems: function getTotalItems () {
           // The total number of items is determined by the result of the pdsh filter
-          if (this.hostnames.length === 0) {
+          if (this.hostnames.length === 0)
             return this.servers.objects.length;
-          }
 
-          return pdshFilter(this.servers.objects, this.hostnames, this.getHostPath, this.pdshFuzzy).length;
+          return this.getFilteredHosts().length;
         },
 
         /**
-         * Called when the pdsh expression is updated
+         * Called when the pdsh expression is updated.
          * @param {String} expression pdsh expression
          */
         pdshUpdate: function pdshUpdate (expression) {
@@ -76,16 +76,16 @@ angular.module('server', ['pdsh-parser-module', 'filters'])
         },
 
         /**
-         * Used by filters to determine the context
+         * Used by filters to determine the context.
          * @param {Object} item
          * @returns {String}
          */
-        getHostPath: function (item) {
-          return item.host_name;
+        getHostPath: function getHostPath (item) {
+          return item.address;
         },
 
         /**
-         * Sets the current page
+         * Sets the current page.
          * @param {Number} pageNum
          */
         setPage: function setPage (pageNum) {
@@ -101,32 +101,98 @@ angular.module('server', ['pdsh-parser-module', 'filters'])
         },
 
         /**
-         * Retrieves the sort class
+         * Retrieves the sort class.
          * @returns {String}
          */
         getSortClass: function getSortClass () {
-          if (this.inverse === true) {
-            return 'fa-sort-asc';
-          } else {
-            return 'fa-sort-desc';
-          }
+          return (this.inverse === true ? 'fa-sort-asc' : 'fa-sort-desc');
         },
 
         /**
-         * Initializes the data structure for the table
+         * Puts the table in editable mode.
+         * @param {Boolean} editable
          */
-        initialize: function initialize () {
-          // Initialize some test data to display the table
-          for (var i = 0; i < 100; i += 1) {
-            var newObj = _.clone(this.object, true);
-            newObj.id = i;
-            newObj.host_name = newObj.host_name.replace('%s', i.toString());
-            this.servers.objects.push(newObj);
-          }
+        setEditable: function setEditable (editable) {
+          $scope.server.editable = editable;
+        },
+
+        /**
+         * Sets the action name to edit on
+         * and puts table in editable mode.
+         * @param {String} name
+         */
+        setEditName: function setEditName (name) {
+          $scope.server.editName = name;
+          $scope.server.setEditable(true);
+        },
+
+        /**
+         * Given a value, returns the action cooresponding to it.
+         * @param {String} value
+         * @returns {Object}
+         */
+        getActionByValue: function getActionByValue (value) {
+          return _.find(serverActions, { value: value });
+        },
+
+        /**
+         * Returns the list of filtered, selected and non-disabled hosts.
+         * @param {String} value
+         * @returns {Array}
+         */
+        getSelectedHosts: function getSelectedHosts (value) {
+          var action = this.getActionByValue (value);
+
+          return this.getFilteredHosts()
+            .filter(function pickSelected (host) {
+              return selectedServers.servers[host.fqdn];
+            })
+            .filter(function pickEnabled (host) {
+              if (!action.isDisabled)
+                return true;
+
+              return !action.isDisabled(host);
+            });
+        },
+
+        /**
+         * Runs a user selected server action.
+         * @param {String} value
+         */
+        runAction: function runAction (value) {
+          var action = this.getActionByValue(value);
+          var hosts = this.getSelectedHosts(value);
+
+          var modalInstance = $modal.open({
+            templateUrl: 'iml/server/assets/html/confirm-server-action-modal.html',
+            controller: 'ConfirmServerActionModalCtrl',
+            windowClass: 'confirm-server-action-modal',
+            keyboard: false,
+            backdrop: 'static',
+            resolve: {
+              actionName: function actionName () { return value; },
+              hosts: function getHosts () { return hosts; }
+            }
+          });
+
+          modalInstance.result.then(function handler () {
+            $scope.server.setEditable(false);
+            runServerAction(action, hosts);
+          });
         }
       };
 
-      // Initialize the table data
-      $scope.server.initialize();
+      var spark = serverSpark();
+      spark.onValue('data', function handler (response) {
+        if ('error' in response)
+          throw response.error;
 
+        $scope.server.servers = response.body;
+
+        selectedServers.addNewServers(response.body.objects);
+      });
+
+      $scope.$on('$destroy', function onDestroy () {
+        spark.end();
+      });
     }]);

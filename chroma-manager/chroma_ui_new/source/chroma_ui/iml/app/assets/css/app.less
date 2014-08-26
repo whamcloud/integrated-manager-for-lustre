@@ -83,6 +83,33 @@ footer {
   }
 }
 
+.btn-group > .btn:not(:first-child) {
+  border-left-color: darken(@btn-info-border, 15%);
+}
+
+.btn {
+  -webkit-transition: all 0.1s;
+  transition: all 0.1s;
+
+  &:disabled {
+    background-color: @gray-light;
+    border-color: darken(@gray-light, 5%);
+    color: @gray-dark;
+  }
+
+  &.ng-leave.ng-leave-active {
+    display: none;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:active, &.active {
+    .box-shadow(inset 0 3px 5px rgba(0, 0, 0, .225));
+  }
+}
+
 @media (max-width: 767px) {
   footer {
     margin-left: -20px;

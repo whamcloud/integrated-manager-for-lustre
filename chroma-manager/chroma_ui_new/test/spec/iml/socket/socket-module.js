@@ -225,7 +225,8 @@ describe('socket module', function () {
             path: '/host',
             options: {
               headers: {
-                Cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e'
+                Cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e',
+                'X-CSRFToken': 'yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT'
               }
             }
           }, ack);

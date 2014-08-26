@@ -1,0 +1,15 @@
+<div class="modal-header">
+  <h3 class="modal-title">Run {{confirmServerActionModal.actionName}}</h3>
+</div>
+<div class="modal-body">
+  <h5>{{confirmServerActionModal.actionName}} will be run for the following servers:</h5>
+  <ul class="well">
+    <li ng-repeat="host in confirmServerActionModal.hosts">
+      {{host.address}}
+    </li>
+  </ul>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-success" ng-click="confirmServerActionModal.go()">Go <i class="fa fa-check-circle-o"></i></button>
+  <button class="btn btn-danger" ng-click="confirmServerActionModal.cancel()">Cancel <i class="fa fa-times-circle-o"></i></button>
+</div>
