@@ -1,0 +1,71 @@
+<div class="server-detail-modal" bindonce="serverDetailModal">
+  <div class="modal-header">
+    <h3 class="modal-title">
+      <span ng-show="!serverDetailModal.removed">Details for Server <span bo-text="serverDetailModal.item.address">
+      </span></span>
+      <span ng-show="serverDetailModal.removed"><i class="fa fa-exclamation-triangle"/>Server
+        <span bo-text="serverDetailModal.address"></span> Removed</span>
+    </h3>
+  </div>
+  <div class="server-status" ng-class="{removed: serverDetailModal.removed}">
+    <div class="modal-body">
+      <alert ng-repeat="alert in serverDetailModal.alerts" type="{{alert.type}}" ng-show="serverDetailModal.removed"
+             close="serverDetailModal.closeAlert($index)">
+        <span bo-text="alert.msg"></span>
+      </alert>
+      <table class="table">
+        <tr>
+          <th>Address:</th>
+          <td bo-text="serverDetailModal.item.address"></td>
+        </tr>
+        <tr>
+          <th>FQDN:</th>
+          <td bo-text="serverDetailModal.item.fqdn"></td>
+        </tr>
+        <tr>
+          <th>Nodename:</th>
+          <td bo-text="serverDetailModal.item.nodename"></td>
+        </tr>
+        <tr>
+          <th>NIDs:</th>
+          <td>
+            <div ng-repeat="nid in serverDetailModal.item.nids">{{nid}}</div>
+          </td>
+        </tr>
+        <tr>
+          <th>State:</th>
+          <td>
+            <lnet-status item="serverDetailModal.item"></lnet-status>
+          </td>
+        </tr>
+        <tr>
+          <th>Boot time:</th>
+          <td>{{serverDetailModal.item.boot_time | date:'EEEE, MMMM d, y HH:mm:ss'}}</td>
+        </tr>
+        <tr>
+          <th>State changed:</th>
+          <td>{{serverDetailModal.item.state_modified_at | date:'EEEE, MMMM d, y HH:mm:ss'}}</td>
+        </tr>
+        <tr>
+          <th>Alerts:</th>
+          <td>
+            <job-status record-id="serverDetailModal.item.resource_uri"></job-status>
+            <record-state record-id="serverDetailModal.item.resource_uri" display-type="'medium'"></record-state>
+          </td>
+        </tr>
+        <tr>
+          <th>Actions:</th>
+          <td>
+            <action-dropdown record="serverDetailModal.item"></action-dropdown>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-danger" ng-click="serverDetailModal.close()">
+      Close
+      <i class="fa fa-times-circle-o"></i>
+    </button>
+  </div>
+</div>

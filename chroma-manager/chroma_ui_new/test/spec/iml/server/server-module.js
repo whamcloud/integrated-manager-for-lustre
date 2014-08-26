@@ -4,11 +4,11 @@ describe('Server module', function() {
   var $scope, pdshParser, pdshFilter, naturalSortFilter,
     server, $modal, serverSpark,  openCommandModal,
     selectedServers, serverActions, jobMonitor, alertMonitor, jobMonitorSpark,
-    alertMonitorSpark, openLnetModal, openAddServerModal;
+    alertMonitorSpark, openLnetModal, openAddServerModal, openServerDetailModal;
 
   beforeEach(module('server'));
 
-  beforeEach(inject(function ($rootScope, $controller) {
+  beforeEach(inject(function ($rootScope, $controller, $q) {
     $scope = $rootScope.$new();
 
     $modal = {
@@ -35,6 +35,8 @@ describe('Server module', function() {
     }];
 
     openCommandModal = jasmine.createSpy('openCommandModal');
+
+    openServerDetailModal = jasmine.createSpy('openServerDetailModal');
 
     openLnetModal = jasmine.createSpy('openLnetModal');
 
@@ -65,18 +67,20 @@ describe('Server module', function() {
 
     $controller('ServerCtrl', {
       $scope: $scope,
+      $q: $q,
       $modal: $modal,
       pdshParser: pdshParser,
       pdshFilter: pdshFilter,
-      serverSpark: serverSpark,
-      selectedServers: selectedServers,
       naturalSortFilter: naturalSortFilter,
+      serverSpark: serverSpark,
       serverActions: serverActions,
+      selectedServers: selectedServers,
       openCommandModal: openCommandModal,
       jobMonitor: jobMonitor,
       alertMonitor: alertMonitor,
       openLnetModal: openLnetModal,
-      openAddServerModal: openAddServerModal
+      openAddServerModal: openAddServerModal,
+      openServerDetailModal: openServerDetailModal
     });
 
     server = $scope.server;
@@ -283,6 +287,18 @@ describe('Server module', function() {
 
     it('should end the alertMonitor on destroy', function () {
       expect(alertMonitorSpark.end).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('Show Server Detail Modal', function () {
+    var item;
+    beforeEach(function () {
+      item = {};
+      server.showServerDetailModal(item);
+    });
+
+    it('should call openServerDetailModal', function () {
+      expect(openServerDetailModal).toHaveBeenCalledOnceWith(item, server);
     });
   });
 });

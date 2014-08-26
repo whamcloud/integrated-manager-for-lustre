@@ -25,10 +25,11 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
   'fancy-select'])
   .controller('ServerCtrl', ['$scope', '$q', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
-    'jobMonitor', 'alertMonitor', 'openLnetModal', 'openAddServerModal', 'ADD_SERVER_STEPS',
+    'jobMonitor', 'alertMonitor', 'openLnetModal', 'openAddServerModal', 'ADD_SERVER_STEPS', 'openServerDetailModal',
     function ServerCtrl ($scope, $q,  $modal, pdshParser, pdshFilter, naturalSortFilter,
                          serverSpark, serverActions, selectedServers, openCommandModal,
-                         jobMonitor, alertMonitor, openLnetModal, openAddServerModal, ADD_SERVER_STEPS) {
+                         jobMonitor, alertMonitor, openLnetModal, openAddServerModal, ADD_SERVER_STEPS,
+                         openServerDetailModal) {
       'use strict';
 
       $scope.server = {
@@ -58,11 +59,20 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
             });
         },
         /**
+         * Opens the server detail modal.
+         * @param {Object} item
+         */
+        showServerDetailModal: function showServerDetailModal (item) {
+          openServerDetailModal(item, $scope.server);
+        },
+
+        /**
          * Returns the current list of PDSH filtered hosts.
          * @returns {Array}
          */
         getFilteredHosts: function getFilteredHosts () {
-          var filtered = pdshFilter(this.servers.objects, this.hostnames, this.getHostPath, this.pdshFuzzy);
+          var filtered = pdshFilter(this.servers.objects, this.hostnames,
+            this.getHostPath, this.pdshFuzzy);
 
           return naturalSortFilter(filtered, this.getHostPath, this.reverse);
         },
@@ -72,7 +82,8 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
          * @returns {Number}
          */
         getTotalItems: function getTotalItems () {
-          // The total number of items is determined by the result of the pdsh filter
+          // The total number of items is determined by the result
+          // of the pdsh filter
           if (this.hostnames.length === 0)
             return this.servers.objects.length;
 

@@ -57,28 +57,15 @@
     </tr>
     </thead>
     <tbody>
-    <tr ng-repeat="item in server.servers.objects | pdsh:server.hostnames:server.getHostPath:server.pdshFuzzy | naturalSort:server.getHostPath:server.reverse | paginate:server.currentPage-1:server.getItemsPerPage() track by item.id">
-      <td>{{ item.address }}</td>
-      <td>{{ item.server_profile.ui_name }}</td>
+    <tr bindonce ng-repeat="item in server.servers.objects | pdsh:server.hostnames:server.getHostPath:server.pdshFuzzy | naturalSort:server.getHostPath:server.reverse | paginate:server.currentPage-1:server.getItemsPerPage() track by item.id">
+      <td>
+        <a ng-click="server.showServerDetailModal(item)">
+          <span bo-text="item.address"></span>
+        </a>
+      </td>
+      <td><span bo-text="item.server_profile.ui_name"></span></td>
       <td class="lnet-state">
-        <span ng-if="item.state === 'lnet_up'">
-          <i class="fa fa-plug text-success"></i> LNet Up
-        </span>
-        <span ng-if="item.state === 'lnet_down'">
-          <i class="fa fa-plug text-danger"></i> LNet Down
-        </span>
-        <span ng-if="item.state === 'lnet_unloaded'">
-          <i class="fa fa-plug text-warning"></i> LNet Unloaded
-        </span>
-        <span ng-if="item.state === 'configured'">
-          <i class="fa fa-plug text-info"></i> Configured
-        </span>
-        <span ng-if="item.state === 'unconfigured'">
-          <i class="fa fa-plug"></i> Unconfigured
-        </span>
-        <span ng-if="item.state === 'undeployed'">
-          <i class="fa fa-plug"></i> Undeployed
-        </span>
+        <lnet-status item="item"></lnet-status>
       </td>
       <td ng-if="!server.editable">
         <button ng-disabled="item.immutable_state" class="btn btn-primary btn-sm" ng-click="server.configureLnet(item)">Configure <i class="fa fa-gear"></i></button>

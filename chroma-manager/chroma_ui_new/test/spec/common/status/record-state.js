@@ -16,7 +16,7 @@ describe('Record State directive', function () {
 
   beforeEach(inject(function ($rootScope, $compile) {
     // Create an instance of the element
-    element = '<record-state record-id="host/6"></record-state>';
+    element = '<record-state record-id="host/6" display-type="\'medium\'"></record-state>';
 
     $scope = $rootScope.$new();
 
@@ -64,6 +64,7 @@ describe('Record State directive', function () {
 
       var handler = alertMonitor().onValue.mostRecentCall.args[1];
       handler(response);
+      $scope.$digest();
     });
 
     it('should have an alert message if the response contains one.', function () {
@@ -76,6 +77,14 @@ describe('Record State directive', function () {
 
     it('should be in error state', function () {
       expect($scope.$$childHead.recordState.isInErrorState()).toEqual(true);
+    });
+
+    it('should show the label', function () {
+      expect($scope.$$childHead.recordState.showLabel()).toEqual(true);
+    });
+
+    it('should show the label in markup', function () {
+      expect(node.find('.state-label').hasClass('ng-hide')).toEqual(false);
     });
   });
 
@@ -182,6 +191,49 @@ describe('Record State directive', function () {
 
     it('should contain only message1 in the difference array.', function () {
       expect($scope.$$childHead.recordState.getMessageDifference()).toEqual(['response message1']);
+    });
+  });
+
+  describe('no display type', function () {
+    beforeEach(inject(function ($rootScope, $compile) {
+      // Create an instance of the element
+      element = '<record-state record-id="host/6"></record-state>';
+
+      $scope = $rootScope.$new();
+
+      node = $compile(element)($scope);
+
+      // Update the html
+      $scope.$digest();
+
+      $scope.$$childHead.recordId = 'host/6';
+    }));
+
+    describe('response contains alerts', function () {
+      beforeEach(function () {
+        var response = {
+          body: {
+            objects: [
+              {
+                alert_item: 'host/6',
+                message: 'response message'
+              }
+            ]
+          }
+        };
+
+        var handler = alertMonitor().onValue.mostRecentCall.args[1];
+        handler(response);
+        $scope.$digest();
+      });
+
+      it('should not show the label', function () {
+        expect($scope.$$childHead.recordState.showLabel()).toEqual(false);
+      });
+
+      it('should not show the label in markup', function () {
+        expect(node.find('.state-label').hasClass('ng-hide')).toEqual(true);
+      });
     });
   });
 });

@@ -24,6 +24,14 @@
 
   angular.module('status')
   /**
+   * Constant representing the state directive size. The size specified will affect what is rendered on the view.
+   */
+    .constant('STATE_SIZE', {
+      SMALL: 'small',
+      MEDIUM: 'medium',
+      LARGE: 'large'
+    })
+  /**
    * Job monitor factory sets up a spark and sends a get request to the /job API. The sparksend function is
    * overriden such that it will set the spark to null after it ends. Include this service in a controller and make
    * sure to call the end method when the controller is destroyed:
@@ -340,12 +348,13 @@
    * display the list of alerts. As the number of alerts is reduced, they are crossed out. You can close the popover
    * by clicking anywhere outside its region.
    */
-    .directive('recordState', ['alertMonitor', function recordState (alertMonitor) {
+    .directive('recordState', ['alertMonitor', 'STATE_SIZE', function recordState (alertMonitor, STATE_SIZE) {
 
       // record contains a resource uri which maps to the write_locks[0]locked_item_uri
       return {
         scope: {
-          recordId: '='
+          recordId: '=',
+          displayType: '='
         },
         restrict: 'E',
         replace: true,
@@ -440,6 +449,9 @@
               };
 
               return _.pluralize(alerts.length, messageMap);
+            },
+            showLabel: function showLabel () {
+              return scope.displayType === STATE_SIZE.MEDIUM;
             }
           };
         }

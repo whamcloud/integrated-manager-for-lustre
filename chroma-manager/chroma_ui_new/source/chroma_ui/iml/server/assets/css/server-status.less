@@ -1,0 +1,40 @@
+.server-status {
+  .modal-body {
+    padding-bottom: 0;
+
+    table {
+      margin-bottom: 0;
+
+      tr:first-child {
+        th, td {
+          border-top: 0;
+        }
+      }
+    }
+  }
+
+  &.removed {
+    table {
+      .transition-fade(0.5s, 0.5);
+    }
+  }
+
+  .alert.ng-hide {
+    opacity: 0;
+  }
+
+  .alert {
+    .transition-fade(0.5s, 1);
+  }
+}
+
+.server-detail-modal {
+  .modal-title {
+    i {
+      &.fa-exclamation-triangle {
+        color: @brand-danger;
+        padding-right: 10px;
+      }
+    }
+  }
+}

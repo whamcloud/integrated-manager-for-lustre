@@ -1,0 +1,20 @@
+<span>
+<span ng-if="item.state === 'lnet_up'">
+  <i class="fa fa-plug text-success"></i> LNet Up
+</span>
+<span ng-if="item.state === 'lnet_down'">
+  <i class="fa fa-plug text-danger"></i> LNet Down
+</span>
+<span ng-if="item.state === 'lnet_unloaded'">
+  <i class="fa fa-plug text-warning"></i> LNet Unloaded
+</span>
+<span ng-if="item.state === 'configured'">
+  <i class="fa fa-plug text-info"></i> Configured
+</span>
+<span ng-if="item.state === 'unconfigured'">
+  <i class="fa fa-plug"></i> Unconfigured
+</span>
+<span ng-if="item.state === 'undeployed'">
+  <i class="fa fa-plug"></i> Undeployed
+</span>
+</span>
