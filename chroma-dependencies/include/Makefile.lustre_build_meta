@@ -5,5 +5,8 @@ include $(CURDIR)/$(dir $(lastword $(MAKEFILE_LIST)))/Makefile.jenkins_meta
 JENKINS_JOB_NAME		:= lustre-b_ieel2_0
 JENKINS_BUILD_NUMBER	:= 69
 
+KERNEL_RELEASE = 2.6.32-431.20.5.el6
+KERNEL_RELEASE_MANGLED = $(subst -,_,$(KERNEL_RELEASE))
+
 # This must match the version in the specified job/build
 LUSTRE_RELEASE			:= 2.5.23
