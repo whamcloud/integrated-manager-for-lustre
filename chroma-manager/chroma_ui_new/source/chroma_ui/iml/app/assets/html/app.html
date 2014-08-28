@@ -41,6 +41,7 @@
         <li ng-class="{active: app.$routeSegment.contains('status')}" ng-include src="'iml/notification/assets/html/status.html'"></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
+        <li ng-controller="CommandMonitorCtrl" ng-include="'iml/command/assets/html/command-monitor.html'"></li>
         <li>
           <a route-to="about/" target="_self">{{ app.RUNTIME_VERSION }}</a>
         </li>

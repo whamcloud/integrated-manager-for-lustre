@@ -1,0 +1,64 @@
+#modal-icons {
+  .icon-colors() {
+    &.fa-spin, &.fa-ellipsis-h, &.fa-times {
+      color: @gray-dark;
+    }
+
+    &.fa-exclamation {
+      color: @brand-danger;
+    }
+
+    &.fa-check {
+      color: @brand-success;
+    }
+  }
+}
+
+.command-modal {
+  .jobs {
+    max-height: 350px;
+    overflow: scroll;
+    padding-bottom: 50px;
+
+    .child-job {
+      margin-left: 20px;
+      margin-top: 15px;
+
+      .job-actions {
+        margin-left: 5px;
+      }
+
+      i {
+        width: 14px;
+        marging-right: 5px;
+      }
+    }
+  }
+}
+
+.command-modal, .step-modal {
+  .panel-title {
+    font-size: 13px;
+  }
+
+  .header-status {
+    margin: 0 5px 0 20px;
+
+    #modal-icons.icon-colors;
+  }
+
+  .logs {
+    background-color: @black;
+    color: @white;
+    max-height: 350px;
+    overflow: scroll;
+  }
+
+  .job-state {
+    margin-right: 5px;
+
+    i {
+      #modal-icons.icon-colors;
+    }
+  }
+}

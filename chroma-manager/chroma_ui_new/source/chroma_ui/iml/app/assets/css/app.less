@@ -84,7 +84,13 @@ footer {
 }
 
 .btn-group > .btn:not(:first-child) {
-  border-left-color: darken(@btn-info-border, 15%);
+  &.btn-info {
+    border-left-color: darken(@btn-info-border, 15%);
+  }
+
+  &.btn-success {
+    border-left-color: darken(@btn-success-border, 15%);
+  }
 }
 
 .btn {

@@ -20,41 +20,49 @@
 // express and approved by Intel in writing.
 
 (function() {
-'use strict';
+  'use strict';
 
-_.mixin({
-  /**
-   * Truncates the destination array and pushes the source into it.
-   * Operates in place.
-   * @param {Array} destination
-   * @param {Array} source
-   * @returns {Array} The destination.
-   */
-  replace: function (destination, source) {
-    if (!Array.isArray(destination) || !Array.isArray(source))
-      throw new Error('Both arguments to replace must be arrays!');
-    destination.length = 0;
-    source.forEach(function (item) {
-      destination.push(item);
-    });
-    return destination;
-  },
-  /**
-   * Takes an object and deletes the keys it holds.
-   * @param {Object} obj
-   * @returns {Object} Returns the passed in obj.
-   */
-  clear: function (obj) {
-    var keys;
-    try {
-      keys = Object.keys(obj);
-    } catch (error) {
-      throw new Error('Object to clear must be an object!');
+  _.mixin({
+    /**
+     * Truncates the destination array and pushes the source into it.
+     * Operates in place.
+     * @param {Array} destination
+     * @param {Array} source
+     * @returns {Array} The destination.
+     */
+    replace: function replace (destination, source) {
+      if (!Array.isArray(destination) || !Array.isArray(source))
+        throw new Error('Both arguments to replace must be arrays!');
+      destination.length = 0;
+      source.forEach(function (item) {
+        destination.push(item);
+      });
+      return destination;
+    },
+    /**
+     * Takes an object and deletes the keys it holds.
+     * @param {Object} obj
+     * @returns {Object} Returns the passed in obj.
+     */
+    clear: function clear (obj) {
+      var keys;
+      try {
+        keys = Object.keys(obj);
+      } catch (error) {
+        throw new Error('Object to clear must be an object!');
+      }
+      keys.forEach(function (key) {
+        delete obj[key];
+      });
+      return obj;
+    },
+    /**
+     * Capitalizes a string.
+     * @param {String} str
+     * @returns {String}
+     */
+    capitalize: function capitalize (str) {
+      return str[0].toUpperCase() + str.slice(1);
     }
-    keys.forEach(function (key) {
-      delete obj[key];
-    });
-    return obj;
-  }
-});
-})();
+  });
+}());

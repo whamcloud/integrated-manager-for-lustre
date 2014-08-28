@@ -142,7 +142,8 @@ JS_HINT_CHECK = {
             '.*/chroma_ui_new/karma.*\.conf\.js',
             '.*/chroma_ui_new/Gruntfile.js',
             '.*/chroma_ui_new/test/matchers/matchers\.js',
-            '.*/chroma-manager/chroma_ui_new/node_modules/.*'
+            '.*/chroma-manager/chroma_ui_new/node_modules/.*',
+            '.*/chroma-manager/chroma_ui_new/test/data-fixtures/.*'
         ],
         'print_filename': True,
     }
@@ -164,7 +165,8 @@ JS_CS_CHECK = {
             '.*/chroma_ui_new/karma.*\.conf\.js',
             '.*/chroma_ui_new/Gruntfile.js',
             '.*/chroma_ui_new/test/matchers/matchers\.js',
-            '.*/chroma-manager/chroma_ui_new/node_modules/.*'
+            '.*/chroma-manager/chroma_ui_new/node_modules/.*',
+            '.*/chroma-manager/chroma_ui_new/test/data-fixtures/.*'
         ],
         'print_filename': True,
     }

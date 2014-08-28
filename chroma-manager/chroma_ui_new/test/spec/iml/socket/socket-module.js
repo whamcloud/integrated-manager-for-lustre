@@ -69,6 +69,10 @@ describe('socket module', function () {
         expect(primus.plan().on).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
       });
 
+      it('should have a way to set the last data', function () {
+        expect(extendedSpark.setLastData).toEqual(jasmine.any(Function));
+      });
+
       describe('on', function () {
         var off, handler;
 
@@ -130,6 +134,7 @@ describe('socket module', function () {
           handler = function handler () {};
 
           handler.apply = jasmine.createSpy('apply');
+          handler.call = jasmine.createSpy('call');
         });
 
         it('should be a method', function () {
@@ -147,14 +152,45 @@ describe('socket module', function () {
         });
 
         it('should call handler directly with lastArgs', function () {
-          extendedSpark.lastArgs = {
+          var data = {
             statusCode: 200,
             body: { foo: 'bar' }
           };
 
+          extendedSpark.setLastData(data);
+
           extendedSpark.onValue('data', handler);
 
-          expect(handler.apply).toHaveBeenCalledOnceWith(undefined, extendedSpark.lastArgs);
+          expect(handler.apply).toHaveBeenCalledOnceWith(undefined, [data]);
+        });
+
+        it('should wrap onValue with an existing pipeline', function () {
+          var data = {
+            statusCode: 200,
+            body: { foo: 'bar' }
+          };
+
+          runPipeline.andCallFake(function (pipeline, response) {
+            return _.compose.apply(_, pipeline.reverse())(response);
+          });
+
+          extendedSpark.addPipe(function (response) {
+            response.body.bar = 'baz';
+
+            return response;
+          });
+
+          extendedSpark.setLastData(data);
+
+          extendedSpark.onValue('pipeline', handler);
+
+          expect(handler.call).toHaveBeenCalledOnceWith(undefined, {
+            statusCode: 200,
+            body: {
+              foo: 'bar',
+              bar: 'baz'
+            }
+          });
         });
       });
 
@@ -187,18 +223,26 @@ describe('socket module', function () {
               statusCode: 200,
               body: { foo: 'bar' }
             };
-
-            run(response);
           });
 
           it('should run pipeline when data comes in', function () {
+            run(response);
+
             expect(runPipeline).toHaveBeenCalledOnceWith([pipe, jasmine.any(Function)], response);
           });
 
           it('should emit pipeline as the last pipe', function () {
+            run(response);
+
             runPipeline.mostRecentCall.args[0][1](response);
 
             expect(spark.emit).toHaveBeenCalledOnceWith('pipeline', response);
+          });
+
+          it('should not run pipeline for primus-emitter data', function () {
+            run({type: 1});
+
+            expect(runPipeline).not.toHaveBeenCalled();
           });
         });
       });

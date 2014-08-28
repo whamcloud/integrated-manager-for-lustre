@@ -60,7 +60,7 @@
       if (!dashboardPath.isDashboard()) return;
 
       Object.keys(streamsGroup).forEach(function toggleStream(streamName) {
-        var capitalized = streamName.charAt(0).toUpperCase() + streamName.slice(1);
+        var capitalized = _.capitalize(streamName);
         var stream = streamsGroup[streamName];
 
         if (dashboardPath['is' + capitalized]()) {

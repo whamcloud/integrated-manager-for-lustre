@@ -19,18 +19,49 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-angular.module('server').controller('ConfirmServerActionModalCtrl', ['$scope', '$modalInstance', 'hosts', 'actionName',
-  function ConfirmServerActionModalCtrl ($scope, $modalInstance, hosts, actionName) {
+
+angular.module('server').controller('ConfirmServerActionModalCtrl',
+  ['$scope', '$modalInstance', 'hosts', 'action', 'requestSocket',
+  function ConfirmServerActionModalCtrl ($scope, $modalInstance, hosts, action, requestSocket) {
     'use strict';
 
     $scope.confirmServerActionModal = {
       hosts: hosts,
-      actionName: actionName,
+      actionName: action.value,
+      inProgress: false,
       /**
        * Resolves the modal.
+       * @param {Boolean} skips
        */
-      go: function go () {
-        $modalInstance.close('go');
+      go: function go (skips) {
+        this.inProgress = true;
+
+        var spark = requestSocket();
+        spark.sendPost('/command', {
+          json: {
+            message: action.message,
+            jobs: action.convertToJob(hosts)
+          }
+        }, ack);
+
+        /**
+         * Handles the response.
+         * Closes the modal and might pass data.
+         * @param {Object} response
+         */
+        function ack (response) {
+          spark.end();
+
+          if ('error' in response)
+            throw response.error;
+
+          var data;
+
+          if (!skips)
+            data = response.body;
+
+          $modalInstance.close(data);
+        }
       },
       /**
        * Rejects the modal.
@@ -39,5 +70,4 @@ angular.module('server').controller('ConfirmServerActionModalCtrl', ['$scope', '
         $modalInstance.dismiss('cancel');
       }
     };
-  }
-]);
+  }]);

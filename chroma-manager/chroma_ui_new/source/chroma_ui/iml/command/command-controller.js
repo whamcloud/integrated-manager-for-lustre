@@ -20,7 +20,7 @@
 // express and approved by Intel in writing.
 
 
-angular.module('command', [])
+angular.module('command')
   .controller('CommandCtrl', ['$scope', '$modal', 'CommandModel',
                               'modelFactory',
   function CommandCtrl($scope, $modal, CommandModel, modelFactory) {

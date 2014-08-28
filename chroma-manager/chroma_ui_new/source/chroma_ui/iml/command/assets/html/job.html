@@ -1,0 +1,19 @@
+<div class="child-job">
+  <a ng-if="job.steps.length > 0" ng-click="jobTree.openStep(job)">
+    <job-states job="job"></job-states> <span bindonce="job" bo-text="job.description"></span>
+  </a>
+  <span ng-if="job.steps.length === 0">
+    <job-states job="job"></job-states> <span bindonce="job" bo-text="job.description"></span>
+  </span>
+  <div class="btn-group job-actions" dropdown restrict-to="commandModal.GROUPS.FS_ADMINS" ng-if="jobTree.showTransition(job)">
+    <button type="button" class="btn btn-xs btn-primary dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+      Actions <i class="fa fa-caret-down"></i>
+    </button>
+    <ul class="dropdown-menu">
+      <li ng-repeat="transition in job.available_transitions">
+        <a dropdown-toggle ng-click="jobTree.doTransition(job, transition.state)">{{transition.label}}</a>
+      </li>
+    </ul>
+  </div>
+  <div ng-repeat="job in job.children track by job.id" ng-include="'iml/command/assets/html/job.html'"></div>
+</div>

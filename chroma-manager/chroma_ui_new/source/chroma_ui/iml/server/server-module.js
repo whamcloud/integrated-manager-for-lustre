@@ -20,11 +20,11 @@
 // express and approved by Intel in writing.
 
 
-angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module', 'pdsh-module'])
+angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module', 'pdsh-module', 'command'])
   .controller('ServerCtrl', ['$scope', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
-    'serverSpark', 'serverActions', 'selectedServers', 'runServerAction',
+    'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
     function ServerCtrl ($scope, $modal, pdshParser, pdshFilter, naturalSortFilter,
-                         serverSpark, serverActions, selectedServers, runServerAction) {
+                         serverSpark, serverActions, selectedServers, openCommandModal) {
       'use strict';
 
       $scope.server = {
@@ -180,14 +180,20 @@ angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module', 'pds
             keyboard: false,
             backdrop: 'static',
             resolve: {
-              actionName: function actionName () { return value; },
+              action: function getAction () { return action; },
               hosts: function getHosts () { return hosts; }
             }
           });
 
-          modalInstance.result.then(function handler () {
+          modalInstance.result.then(function handler (data) {
             $scope.server.setEditable(false);
-            runServerAction(action, hosts);
+
+            if (data != null)
+              openCommandModal({
+                body: {
+                  objects: [data]
+                }
+              });
           });
         }
       };

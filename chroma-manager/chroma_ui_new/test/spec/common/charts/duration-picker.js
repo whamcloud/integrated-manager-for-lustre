@@ -4,11 +4,6 @@ describe('duration picker', function () {
   var template, $scope, changeDurationButton, popover,
     updateButton, dropdownButton, dropdownMenu, currentDuration, input, DURATIONS;
 
-
-  function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
   beforeEach(module('charts', 'filters', 'templates'));
 
   beforeEach(inject(function ($templateCache, $rootScope, $compile, _DURATIONS_) {
@@ -51,7 +46,7 @@ describe('duration picker', function () {
 
     dropdownButton.click();
 
-    var minutes = capitalize(DURATIONS.MINUTES);
+    var minutes = _.capitalize(DURATIONS.MINUTES);
 
     expect(dropdownButton.filter(':contains("%s")'.sprintf(minutes)).length).toEqual(1);
   });
@@ -61,7 +56,7 @@ describe('duration picker', function () {
 
     dropdownButton.click();
 
-    var hours = capitalize(DURATIONS.HOURS);
+    var hours = _.capitalize(DURATIONS.HOURS);
 
     dropdownMenu.find('a:contains("%s")'.sprintf(hours)).click();
 

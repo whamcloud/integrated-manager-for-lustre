@@ -34,5 +34,8 @@
     }])
     .config(['modelFactoryProvider', function (modelFactoryProvider) {
       modelFactoryProvider.setUrlPrefix('/api/');
+    }])
+    .config(['$animateProvider', function ($animateProvider) {
+      $animateProvider.classNameFilter(/^((?!(fa-spin)).)*$/);
     }]);
 }());

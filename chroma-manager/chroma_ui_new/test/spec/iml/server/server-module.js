@@ -2,7 +2,7 @@ describe('Server module', function() {
   'use strict';
 
   var $scope, pdshParser, pdshFilter, naturalSortFilter,
-    server, $modal, serverSpark, runServerAction,
+    server, $modal, serverSpark,  openCommandModal,
     selectedServers, serverActions;
 
   beforeEach(module('server'));
@@ -33,7 +33,7 @@ describe('Server module', function() {
       value: 'Install Updates'
     }];
 
-    runServerAction = jasmine.createSpy('runServerAction');
+    openCommandModal = jasmine.createSpy('openCommandModal');
 
     pdshParser = jasmine.createSpy('pdshParser');
     pdshFilter = jasmine.createSpy('pdshFilter');
@@ -48,7 +48,7 @@ describe('Server module', function() {
       selectedServers: selectedServers,
       naturalSortFilter: naturalSortFilter,
       serverActions: serverActions,
-      runServerAction: runServerAction
+      openCommandModal: openCommandModal
     });
 
     server = $scope.server;
@@ -150,7 +150,6 @@ describe('Server module', function() {
         server.runAction('Install Updates');
 
         handler = $modal.open.plan().result.then.mostRecentCall.args[0];
-        handler();
       });
 
       it('should open a confirmation modal', function () {
@@ -161,7 +160,7 @@ describe('Server module', function() {
           keyboard: false,
           backdrop: 'static',
           resolve: {
-            actionName: jasmine.any(Function),
+            action: jasmine.any(Function),
             hosts: jasmine.any(Function)
           }
         });
@@ -172,13 +171,19 @@ describe('Server module', function() {
       });
 
       it('should stop editing when confirmed', function () {
+        handler();
+
         expect(server.editable).toBe(false);
       });
 
-      it('should run the serverAction when confirmed', function () {
-        expect(runServerAction).toHaveBeenCalledOnceWith(
-          { value : 'Install Updates' },
-          [ { fqdn : 'https://hostname1.localdomain.com' } ]);
+      it('should open the command modal', function () {
+        handler({ foo: 'bar' });
+
+        expect(openCommandModal).toHaveBeenCalledOnceWith({
+          body: {
+            objects: [{ foo: 'bar' }]
+          }
+        });
       });
     });
   });

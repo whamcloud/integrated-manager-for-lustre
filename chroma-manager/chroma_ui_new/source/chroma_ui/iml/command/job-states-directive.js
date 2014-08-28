@@ -20,38 +20,15 @@
 // express and approved by Intel in writing.
 
 
-angular.module('server').factory('runServerAction', ['socket', function runServerActionFactory (socket) {
+angular.module('command').directive('jobStates', function jobStatesDirective () {
   'use strict';
 
-  /**
-   * Given an action and list of hosts
-   * Does a post performing the action on those hosts.
-   * @param {Object} action
-   * @param {Array} hosts
-   */
-  return function runServerAction (action, hosts) {
-    var spark = socket('request');
-
-    spark.send('req', {
-      path: '/command',
-      options: {
-        method: 'post',
-        json: {
-          message: action.message,
-          jobs: action.convertToJob(hosts)
-        }
-      }
-    }, ack);
-
-    /**
-     * Ack handler for the post.
-     * @param {Object} response
-     */
-    function ack (response) {
-      if ('error' in response)
-        throw response.error;
-
-      console.log(response);
-    }
+  return {
+    scope: {
+      job: '='
+    },
+    restrict: 'E',
+    replace: true,
+    templateUrl: 'iml/command/assets/html/job-states.html'
   };
-}]);
+});

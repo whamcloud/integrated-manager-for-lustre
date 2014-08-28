@@ -35,6 +35,10 @@
    * @returns {Object}
    */
   function socketFactory ($applyFunc, $document, primus, runPipeline) {
+    var CUSTOM_EVENTS = Object.freeze({
+      PIPELINE: 'pipeline'
+    });
+
     /**
      * Connects to a socket and returns a spark from it.
      * @param {String} name The name of the channel to connect to.
@@ -66,23 +70,50 @@
       };
 
       /**
-       * This acts like a Bacon property. It looks for last arg and if available, emits
-       * immediately.
+       * Provides a hook to set the last data stored
+       * for onValue.
+       */
+      extendedSpark.setLastData = function setInitialData () {
+        extendedSpark.lastArgs = arguments;
+      };
+
+      /**
+       * This acts like a Bacon property. It looks for last arg and if available, calls fn directly.
        * @param {String} event
        * @param {Function} fn
        * @param {Object} context
        * @returns {Function}
        */
       extendedSpark.onValue = $applyFunc(function onValue (event, fn, context) {
-        if (extendedSpark.lastArgs)
-          fn.apply(context, extendedSpark.lastArgs);
+        if (extendedSpark.lastArgs) {
+          if (event === CUSTOM_EVENTS.PIPELINE) {
+            var runNow = pipeline.slice(0, -1).concat(function callFunc (response) {
+              fn.call(context, response);
+            });
+
+            runPipeline(runNow, extendedSpark.lastArgs[0]);
+          } else {
+            fn.apply(context, extendedSpark.lastArgs);
+          }
+        }
 
         return extendedSpark.on(event, fn, context);
       });
 
       var pipeline = [function emitPipeline (response) {
-        spark.emit('pipeline', response);
+        spark.emit(CUSTOM_EVENTS.PIPELINE, response);
       }];
+
+      /**
+       * We do not want to intercept
+       * transports from primus-emitter,
+       * so we let them pass through.
+       * @param {Object} response
+       * @returns {boolean}
+       */
+      function isEmitterTransport (response) {
+        return response.type === 0 || response.type === 1;
+      }
 
       /**
        * Adds a new pipe into the pipeline
@@ -94,6 +125,9 @@
 
         if (pipeline.length === 2)
           extendedSpark.on('data', function run (response) {
+            if (isEmitterTransport(response))
+              return;
+
             runPipeline(pipeline, response);
           });
 

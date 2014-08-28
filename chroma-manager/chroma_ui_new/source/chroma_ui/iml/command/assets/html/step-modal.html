@@ -1,0 +1,42 @@
+<div class="modal-header">
+  <h3 class="modal-title" bindonce="stepModal.job" bo-text="stepModal.job.description"></h3>
+</div>
+<div class="modal-body">
+  <h4>Details:</h4>
+  <table class="table">
+    <tr>
+      <td>Run At</td>
+      <td bindonce="stepModal.job" bo-bind="stepModal.job.modified_at | date : 'MMM dd yyyy HH:mm:ss'"></td>
+    </tr>
+    <tr>
+      <td>Status</td>
+      <td><job-states job="stepModal.job"></job-states> {{ stepModal.getJobAdjective(stepModal.job) | capitalize }}</td>
+    </tr>
+  </table>
+  <h4>Steps</h4>
+  <div class="well" ng-if="stepModal.steps.length === 0">
+    Loading Steps... <i class="fa fa-spinner fa-spin"></i>
+  </div>
+  <accordion close-others="false" ng-if="stepModal.steps.length > 0">
+    <accordion-group is-open="stepModal['accordion' + $index]" ng-repeat="step in stepModal.steps track by step.id">
+      <accordion-heading>
+        <i class="fa" ng-class="{'fa-chevron-down': stepModal['accordion' + $index], 'fa-chevron-right': !stepModal['accordion' + $index]}"></i>
+        <i class="fa header-status" ng-class="{'fa-exclamation': step.state === 'failed', 'fa-check': step.state === 'success', 'fa-refresh fa-spin': step.state === 'incomplete'}"></i>
+        <span bindonce="step" bo-bind=" (step.step_index + 1) + '/' + step.step_count + ' ' + step.class_name "></span>
+      </accordion-heading>
+      <h4>Arguments</h4>
+      <pre class="logs">{{ step.args|json }}</pre>
+      <div ng-if="step.console">
+        <h4>Logs</h4>
+        <pre class="logs">{{ step.console }}</pre>
+      </div>
+      <div ng-if="step.backtrace">
+        <h4>Backtrace</h4>
+        <pre class="logs">{{ step.backtrace }}</pre>
+      </div>
+    </accordion-group>
+  </accordion>
+</div>
+<div class="modal-footer">
+  <button class="btn btn-danger" ng-click="stepModal.close()">Close <i class="fa fa-times-circle-o"></i></button>
+</div>

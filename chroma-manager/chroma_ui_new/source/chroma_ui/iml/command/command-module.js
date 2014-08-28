@@ -20,22 +20,12 @@
 // express and approved by Intel in writing.
 
 
-(function () {
-  'use strict';
-
-  /**
-   * Upper case the first character of the passed in string.
-   */
-  angular.module('filters').filter('capitalize', [function capitalizeFilter () {
-    return function (words, all) {
-      if (!_.isString(words)) return words;
-
-      if (all)
-        words = words.trim().split(/\s+/).map(_.capitalize).join(' ');
-      else
-        words = _.capitalize(words);
-
-      return words;
-    };
-  }]);
-}());
+angular.module('command', ['socket-module'])
+  .constant('COMMAND_STATES', Object.freeze({
+    CANCELLED: 'cancelled',
+    FAILED: 'failed',
+    SUCCEEDED: 'succeeded',
+    PENDING: 'pending',
+    WAITING: 'waiting to run',
+    RUNNING: 'running'
+  }));
