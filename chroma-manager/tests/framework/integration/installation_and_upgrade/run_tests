@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-if [ "$slave" = "rhel6&&ssi" ]; then
+if [[ $slave = rhel6\&\&* ]]; then
     RHEL=true
 else
     RHEL=false
@@ -135,14 +135,13 @@ fi
 rm -f /etc/yum.repos.d/epel.repo
 
 if $RHEL; then
-# Now with the optional channel disabled
-release=\$(lsb_release -sr)
-yum-config-manager --disable  rhel-6-server-optional-rpms,RHEL-\$release-optional-x86_64
-if expect ../upgrade.exp; then
-    echo \"Installation unexpectedly succeeded with the RHEL optional channel disabled\"
-    exit 1
-fi
-yum-config-manager --enable  rhel-6-server-optional-rpms,RHEL-\$release-optional-x86_64
+    release=\$(lsb_release -sr)
+    yum-config-manager --disable  rhel-6-server-optional-rpms,RHEL-\$release-optional-x86_64
+    # let's also remove ann local RH optional repo
+    ed <<\"EOF\" /etc/yum.repos.d/cobbler-config.repo
+/\[RHEL-6\.[0-9]-optional-x86_64\]/;/^$/d
+wq
+EOF
 fi
 
 if ! expect ../upgrade.exp; then

@@ -432,18 +432,6 @@ def _install_or_upgrade_profiles(new_profiles):
     for profile in new_profiles:
         _run(['chroma-config', 'profile', 'register', profile])
 
-def _test_channels():
-    if platform.dist()[0] != "redhat":
-        return True
-
-    log.info("Testing for RHEL optional channel (or equivalent)")
-
-    yb = yum.YumBase()
-    yb.setCacheDir()
-
-    return len(list(yb.searchGenerator(["name"], ["avahi-ui-tools"],
-                                       searchrpmdb=False))) > 0
-
 def _test_repos():
 
     class ProxiedTransport(xmlrpclib.Transport):
@@ -563,11 +551,6 @@ def main():
     if not yum_ok:
         log.info("Yum does not seem to be able to find required network resources.  Please check your network and yum configuration and try again.  Perhaps you need to disable some repositories that are not reachable.")
         log.info("URLs that failed: %s" % ' '.join(urls))
-        sys.exit(1)
-
-    yum_ok = _test_channels()
-    if not yum_ok:
-        log.info("Yum does not seem to be able to find the RHEL optional packages.  Perhaps you need to add the rhel-x86_64-server-optional-6 channel.")
         sys.exit(1)
 
     if upgrade:
