@@ -61,7 +61,15 @@ class ChromaLogCollector(object):
             finally:
                 f.close()
 
-            pcs_configuration = subprocess.Popen(['ssh', lustre_server, 'pcs config'], stdout=subprocess.PIPE).communicate()[0]
+            pcs_configuration = subprocess.Popen(['ssh', lustre_server, '''mkdir -p /etc/cluster && cat <<EOF > /etc/cluster/cluster.conf
+<cluster name="IML" config_version="1">
+        <clusternodes>
+        <clusternode name="" nodeid="1">
+        </clusternode>
+        </clusternodes>
+</cluster>
+EOF
+pcs config; rm -f /etc/cluster/cluster.conf'''], stdout=subprocess.PIPE).communicate()[0]
             f = open('%s/%s-pcs-configuration.log' % (self.destination_path, lustre_server), 'w')
             try:
                 f.write(pcs_configuration)
