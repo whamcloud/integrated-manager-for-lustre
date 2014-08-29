@@ -193,7 +193,7 @@ fi
 %defattr(750,root,apache)
 %{installdir_www}/robinhood
 
-%files %{purpose}
+%files lhsm
 %defattr(-,root,root,-)
 #%doc README
 #%doc COPYING
