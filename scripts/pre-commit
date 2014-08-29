@@ -176,7 +176,7 @@ SEMVER_CHECK = {
         'command': 'chroma-manager/chroma_ui_new/node_modules/.bin/semver-check %s',
         'match_files': [
             '.*/chroma_ui_new/package.json',
-            '.*/chroma_ui_new/stub-daddy/package.json'
+            '.*/ui-modules/node/stub-daddy/package.json'
         ],
         'single': True,
         'print_filename': True

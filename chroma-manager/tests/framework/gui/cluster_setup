@@ -99,6 +99,8 @@ cd ../socket-router/
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../srcmap-reverse
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
+cd ../stub-daddy/
+../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../../../realtime/
 ../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 cd ../chroma_ui

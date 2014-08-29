@@ -31,14 +31,13 @@ mv test-results.xml \$HOME/test_reports/karma-test-results-new-ui.xml
 cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
 ./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=srcmap-generation-results
 
-# Run Stub Daddy Mock API Service unit tests
-cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new/stub-daddy
-npm i
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=stub-daddy-results
-
 # Run ziplocker tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/ziplocker
 ./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=ziplocker-results
+
+# Run Stub Daddy Mock API Service unit tests
+cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/stub-daddy
+./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=stub-daddy-results
 
 # Run socket-router tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/socket-router
