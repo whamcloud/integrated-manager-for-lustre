@@ -1,15 +1,8 @@
-#!/bin/bash -e
-
-# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
-# printing it into the console in plaintext calling this script.
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-. $HOME/auth.sh
-set -x
-
-[ -r localenv ] && . localenv
+#!/bin/bash -ex
 
 PROVISIONER=${PROVISIONER:-"ssh chromatest@autotest ./provisionchroma -v -S"}
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
+
+. chroma-manager/tests/framework/integration/utils/defaults.sh
 
 # Variables that we expect to be set upstream, no "default"
 WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
@@ -19,8 +12,7 @@ make requirements
 python tests/utils/pip_install_requirements.py $WORKSPACE/pip_cache
 
 # Release the provisioned cluster (at the exit of this script)
-trap "sed -i 's/provision\":true/provision\":false/g' provisioner_output.json
-cat provisioner_output.json | $PROVISIONER" EXIT
+trap "sed -e 's/provision\": *true/provision\": false/' < provisioner_output.json | $PROVISIONER" EXIT
 
 # Provision cluster to run tests on
 cd $WORKSPACE/chroma_test_env/

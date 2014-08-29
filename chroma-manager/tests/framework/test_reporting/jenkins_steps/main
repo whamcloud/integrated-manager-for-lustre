@@ -21,8 +21,8 @@ REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration c
 cd $WORKSPACE
 # Do not change +x below or risk exposing the jenkins-pull password in the console logs!
 set +x
-TEST_RESULTS=$(python chroma_test_env/chroma/chroma-manager/tests/framework/test_reporting/aggregate_test_results.py "${JENKINS_URL}" "jenkins-pull" "$JENKINS_PULL" "${BUILD_JOB_NAME}" "${BUILD_JOB_BUILD_NUMBER}" "$VALID_TEST_JOBS" "$REQUIRED_TEST_JOBS")
-echo "+TEST_RESULTS=\$(python chroma_test_env/chroma/chroma-manager/tests/framework/test_reporting/aggregate_test_results.py \"${JENKINS_URL}\" \"jenkins-pull\" \"***********\" \"${BUILD_JOB_NAME}\" \"${BUILD_JOB_BUILD_NUMBER}\" \"$VALID_TEST_JOBS\" \"$REQUIRED_TEST_JOBS\")" >&2
+TEST_RESULTS=$(python chroma_test_env/chroma/chroma-manager/tests/framework/test_reporting/aggregate_test_results.py "${JENKINS_URL}" "${JENKINS_USER:-jenkins-pull}" "$JENKINS_PULL" "${BUILD_JOB_NAME}" "${BUILD_JOB_BUILD_NUMBER}" "$VALID_TEST_JOBS" "$REQUIRED_TEST_JOBS")
+echo "+TEST_RESULTS=\$(python chroma_test_env/chroma/chroma-manager/tests/framework/test_reporting/aggregate_test_results.py \"${JENKINS_URL}\" \"${JENKINS_USER:-jenkins-pull}\" \"***********\" \"${BUILD_JOB_NAME}\" \"${BUILD_JOB_BUILD_NUMBER}\" \"$VALID_TEST_JOBS\" \"$REQUIRED_TEST_JOBS\")" >&2
 set -x
 
 echo "Test aggregation script ended with status code $?"
