@@ -22,6 +22,7 @@
 
 import re
 import socket
+from chroma_agent.chroma_common.lib import shell
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
@@ -65,3 +66,13 @@ class NodeAudit(BaseAudit, FileSystemMixin):
         """Returns a hash of metric values."""
         self._gather_raw_metrics()
         return {"raw": self.raw_metrics}
+
+    def properties(self):
+        """Returns less volatile node data suitable for host validation.
+
+        If the fetched property is expensive to compute, it should be cached / updated less frequently.
+        """
+        rc, stdout, stderr = shell.run(['which', 'zfs'])
+        return {
+            'zfs_installed': not rc,
+        }

@@ -21,6 +21,7 @@
 # express and approved by Intel in writing.
 
 
+import simplejson as json
 from chroma_core.services import log_register
 import dateutil.parser
 from django.db import transaction
@@ -57,6 +58,7 @@ class UpdateScan(object):
 
     @transaction.commit_on_success
     def audit_host(self):
+        self.update_properties(self.host_data.get('properties'))
         self.update_packages(self.host_data['packages'])
         self.update_resource_locations()
         self.update_target_mounts()
@@ -71,6 +73,10 @@ class UpdateScan(object):
 
         self.audit_host()
         self.store_metrics()
+
+    def update_properties(self, properties):
+        if properties is not None:
+            ManagedHost.objects.filter(id=self.host.id).update(properties=json.dumps(properties))
 
     def update_packages(self, packages):
         if not packages:

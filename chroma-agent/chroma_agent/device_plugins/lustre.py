@@ -156,8 +156,7 @@ class LustrePlugin(DevicePlugin):
 
     def _scan(self, initial=False):
         started_at = datetime.datetime.utcnow().isoformat() + "Z"
-
-        metrics = LocalAudit().metrics()
+        audit = LocalAudit()
 
         # Only set resource_locations if we have the management package
         try:
@@ -179,7 +178,8 @@ class LustrePlugin(DevicePlugin):
             "started_at": started_at,
             "agent_version": agent_version(),
             "capabilities": ActionPluginManager().capabilities,
-            "metrics": metrics,
+            "metrics": audit.metrics(),
+            "properties": audit.properties(),
             "mounts": mounts,
             "packages": packages,
             "resource_locations": resource_locations
