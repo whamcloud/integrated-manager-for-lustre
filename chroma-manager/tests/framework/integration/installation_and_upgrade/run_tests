@@ -10,15 +10,6 @@ spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
 
-d=${0%/*}
-if [[ $d != /* ]]; then
-    d=${PWD}/$d
-fi
-while [ ! -f $d/include/Makefile.version ]; do
-   d=${d%/*}
-done
-IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
-
 [ -r localenv ] && . localenv
 
 # Remove test results and coverage reports from previous run
@@ -58,8 +49,8 @@ fi
 # first fetch and install chroma 2.0.2.0
 BUILD_JOB=chroma-blessed
 BUILD_NUM=62
-IEEL_FROM_VERSION=$(curl -s -k -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-.*gz\)<.*/\1/')
-curl -k -O -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
+IEEL_FROM_VERSION=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-.*gz\)<.*/\1/')
+curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
 
 # Install and setup old chroma manager
 scp $IEEL_FROM_VERSION $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp

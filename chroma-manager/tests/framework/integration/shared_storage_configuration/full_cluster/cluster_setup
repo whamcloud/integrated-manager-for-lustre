@@ -4,15 +4,6 @@ spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
 
-d=${0%/*}
-if [[ $d != /* ]]; then
-    d=${PWD}/$d
-fi
-while [ ! -f $d/include/Makefile.version ]; do
-    d=${d%/*}
-done
-IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
-
 [ -r localenv ] && . localenv
 
 # Remove test results and coverage reports from previous run

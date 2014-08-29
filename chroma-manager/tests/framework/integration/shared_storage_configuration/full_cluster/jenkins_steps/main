@@ -1,40 +1,10 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
-# auth.sh contains the JENKINS_PULL environmental variable so we can avoid
-# printing it into the console in plaintext calling this script.
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-. $HOME/auth.sh
-set -x
-
-[ -r localenv ] && . localenv
-
-spacelist_to_commalist() {
-    echo $@ | tr ' ' ','
-}
-
-d=${0%/*}
-if [[ $d != /* ]]; then
-    d=${PWD}/$d
-fi
-while [ ! -f $d/include/Makefile.version ]; do
-    d=${d%/*}
-done
-IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
-PROVISIONER=${PROVISIONER:-"$HOME/provisionchroma -v -S --provisioner /home/bmurrell/provisioner"}
-MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
-
-# Variables that we expect to be set upstream, no "default"
-set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-JENKINS_PULL=${JENKINS_PULL:?"Need to set JENKINS_PULL"}
-set -x
-BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
-BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
-JOB_URL=${JOB_URL:?"Need to set JOB_URL"}
-WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+. chroma-manager/tests/framework/integration/utils/defaults.sh
 
 cd $WORKSPACE
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -O -u jenkins-pull:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
+curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
 sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json
@@ -67,7 +37,7 @@ cleanup() {
     if grep "Could not match packages: Cannot retrieve repository metadata (repomd.xml) for repository: lustre-client. Please verify its path and try again" $WORKSPACE/test_logs/*-chroma_test.log; then
         echo "bug: HYD-2948"
     fi
-    sed -e 's/provision": *true/provision": false/' provisioner_output.json < provisioner_output.json | $PROVISIONER || true
+    sed -e 's/provision": *true/provision": false/' < provisioner_output.json | $PROVISIONER || true
     echo "exit trap done"
     if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
         cat $tmpfile | mail -s "job aborted" brian.murrell@intel.com
@@ -109,7 +79,7 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
 fi
 cd /etc/yum.repos.d/
 for f in *.repo; do
-  sed -i -e 's/distro=el6.5/distro=el6.4/' \$f
+  sed -i -e 's/distro=el6.[0-9]/distro=el6.4/' \$f
 done" | dshbak -c
 if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1

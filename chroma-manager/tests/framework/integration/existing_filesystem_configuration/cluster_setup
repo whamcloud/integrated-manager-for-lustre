@@ -4,15 +4,6 @@ spacelist_to_commalist() {
     echo $@ | tr ' ' ','
 }
 
-d=${0%/*}
-if [[ $d != /* ]]; then
-    d=${PWD}/$d
-fi
-while [ ! -f $d/include/Makefile.version ]; do
-    d=${d%/*}
-done
-IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
-
 [ -r localenv ] && . localenv
 
 # Remove test results and coverage reports from previous run
@@ -107,7 +98,7 @@ timeout=180
 
 [lustre]
 name=lustre
-baseurl=${JENKINS_URL/\/\//\/\/jenkins-pull:$JENKINS_PULL@}/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
+baseurl=${JENKINS_URL/\/\//\/\/$JENKINS_USER:$JENKINS_PULL@}/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
 enabled=1
 priority=1
 gpgcheck=0

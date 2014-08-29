@@ -1,14 +1,5 @@
 #!/bin/bash -ex
 
-d=${0%/*}
-if [[ $d != /* ]]; then
-    d=${PWD}/$d
-fi
-while [ ! -f $d/include/Makefile.version ]; do
-    d=${d%/*}
-done
-IEEL_VERSION=$(make -f $d/include/Makefile.version .ieel_version)
-
 [ -r localenv ] && . localenv
 
 ARCHIVE_NAME=ieel-$IEEL_VERSION.tar.gz
