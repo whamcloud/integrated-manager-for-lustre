@@ -2,4 +2,5 @@ source/chroma_ui/vendor/primus-client
 coverage
 static
 templates
+!test/templates
 !source/chroma_ui/bower_components/**/dist

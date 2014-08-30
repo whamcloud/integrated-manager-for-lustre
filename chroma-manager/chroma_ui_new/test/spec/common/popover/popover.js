@@ -70,7 +70,7 @@ describe('popover', function () {
     expect(popover).toHaveClass('in');
   });
 
-  it('should provide a work function to hook into transcluded scope', function () {
-    expect($scope.workFn).toHaveBeenCalledWith(jasmine.any(Object), jasmine.any(Object));
+  it('should provide a work function', function () {
+    expect($scope.workFn).toHaveBeenCalledWith(jasmine.any(Object));
   });
 });

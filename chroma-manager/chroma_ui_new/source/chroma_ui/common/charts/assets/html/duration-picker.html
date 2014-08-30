@@ -5,7 +5,7 @@
   ></small>
   <a class="activate-popover btn btn-xs btn-info">Change Duration <i class="fa fa-clock-o"></i></a>
 
-  <iml-popover placement="right" title="Change Duration" work="duration.work(transcludedScope, actions)">
+  <iml-popover placement="right" title="Change Duration" work="duration.work(actions)">
     <form name="form" role="form" novalidate>
       <div class="alert alert-danger" ng-if="form.size.$error.max || form.size.$error.min">
         Duration must be between 1 and {{ duration.getCount(duration.unit) }} {{duration.unit}}.

@@ -21,7 +21,7 @@
 
 
 angular.module('iml-popover', ['position']).directive('imlPopover', ['position', '$timeout', '$window',
-  function (position, $timeout, $window) {
+   function (position, $timeout, $window) {
     'use strict';
 
     return {
@@ -34,10 +34,7 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
         work: '&'
       },
       templateUrl: 'common/popover/assets/html/popover.html',
-      controller: ['$transclude', function($transclude) {
-        this.$transclude = $transclude;
-      }],
-      link: function (scope, el, attrs, controller) {
+      link: function (scope, el) {
         var popoverButton = el.siblings('.activate-popover').eq(0),
           wrappedWindow = angular.element($window);
 
@@ -47,21 +44,15 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
 
         scope.open = false;
 
-        controller.$transclude(function(clone, transcludedScope) {
-          el.find('.popover-content').append(clone);
-
-          if (scope.work) {
-            scope.work({
-              transcludedScope: transcludedScope,
-              actions: {
-                recalculate: function () {
-                  $timeout(recalculate);
-                },
-                hide: hide
-              }
-            });
-          }
-        });
+        // Add the hook
+        if (scope.work) {
+          scope.work({
+            actions: {
+              hide: hide,
+              recalculate: recalculate
+            }
+          });
+        }
 
         popoverButton.on('click', function ($event) {
           scope.$apply(function () { toggle($event); });
@@ -88,7 +79,8 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
             hide();
           } else {
             el.css('display', 'block');
-            recalculate();
+            if (scope.placement)
+              recalculate();
             scope.open = true;
             wrappedWindow.on('click', applyAndHide);
           }

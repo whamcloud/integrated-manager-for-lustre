@@ -82,6 +82,18 @@ describe('pdsh parser', function () {
       }
     },
     {
+      expression: 'test[000-002].localdomain',
+      expanded: {
+        expansion: ['test000.localdomain', 'test001.localdomain', 'test002.localdomain']
+      }
+    },
+    {
+      expression: 'test[00☃-002].localdomain',
+      expanded: {
+        errors: ['Range is not in the proper format.']
+      }
+    },
+    {
       expression: '',
       expanded: {
         errors: ['Expression cannot be empty.']
@@ -133,6 +145,13 @@ describe('pdsh parser', function () {
       expression: 'hostname[01-009]',
       expanded: {
         errors: ['Beginning and ending prefixes don\'t match']
+      }
+    },
+    {
+      // We ran into an issue where any time we have a closing bracket before an open bracket.
+      expression: 'hostname]00[asdf',
+      expanded: {
+        errors: ['Expression is invalid']
       }
     }
   ];

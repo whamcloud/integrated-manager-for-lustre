@@ -36,9 +36,9 @@
 
   angular.module('charts')
   .constant('DURATIONS', DURATIONS)
-  .directive('durationPicker', ['DURATIONS', '$timeout', durationPicker]);
+  .directive('durationPicker', ['DURATIONS', durationPicker]);
 
-  function durationPicker(DURATIONS, $timeout) {
+  function durationPicker(DURATIONS) {
     return {
       restrict: 'E',
       replace: true,
@@ -82,10 +82,9 @@
           /**
            * Sets up an on submit handler for the form
            * and recalculates the popover layout when the transcluded scope changes.
-           * @param {object} transcludedScope The scope relating to the form.
            * @param {object} actions An object of actions that can be performed on the popover
            */
-          work: function(transcludedScope, actions) {
+          work: function(actions) {
             this.onSubmit = function () {
               scope.onUpdate({unit: this.unit, size: this.size});
 
@@ -94,14 +93,6 @@
 
               actions.hide();
             };
-
-            var unWatch = transcludedScope.$watch('form.size.$valid', function (newVal, oldVal) {
-              if (newVal === oldVal) return;
-
-              $timeout(actions.recalculate, 0);
-            });
-
-            transcludedScope.$on('$destroy', unWatch);
           },
           /**
            * Takes a plural duration and converts it to a singular representation.

@@ -2,7 +2,7 @@
   <small>Viewing usage at {{ usage.currentPercentage }}% or greater.</small>
   <a class="activate-popover btn btn-xs btn-info">Filter Usage <i class="fa fa-filter"></i></a>
 
-  <iml-popover placement="right" title="Filter Usage" work="usage.work(transcludedScope, actions)">
+  <iml-popover placement="right" title="Filter Usage" work="usage.work(actions)">
     <div ng-form name="form" role="form" novalidate>
       <div class="alert alert-danger alert-range" ng-show="form.percentage.$error.max || form.percentage.$error.min">
         Usage must be between 0% and 100%.

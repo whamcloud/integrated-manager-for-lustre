@@ -3,18 +3,28 @@
   <h4 class="section-header">Servers</h4>
   <ul class="list-inline">
     <li>
-      <label>PDSH Filter: </label>
-      <input type="search" ng-model="server.pdsh" ng-change="server.pdshUpdate(server.pdsh)" placeholder="pdsh expression..." />
-      <input type="checkbox" ng-model="server.pdshFuzzy" /><span>Fuzzy Match</span>
-    </li>
-    <li>
-      <label>Entries Per Page: </label>
-      <select ng-model="server.itemsPerPage">
-        <option value="10">10</option>
-        <option value="25">25</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-      </select>
+      <form name="pdshForm">
+        <pdsh pdsh-change="server.pdshUpdate(pdsh, hostnames)"></pdsh>
+        <button class="btn btn-info btn-sm" ng-model="server.pdshFuzzy" btn-checkbox>
+         <span ng-if="server.pdshFuzzy">
+            <i class="fa fa-check"></i> Fuzzy
+          </span>
+          <span ng-if="!server.pdshFuzzy">
+            Standard
+          </span>
+        </button>
+      </form>
+        <div class="btn-group btn-sm entries" dropdown is-open="server.itemsPerPageIsOpen">
+          <button type="button" class="btn btn-primary dropdown-toggle" ng-disabled="disabled">
+            Entries: {{server.itemsPerPage}} <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu" role="menu">
+            <li><a ng-click="server.setItemsPerPage(10); server.closeItemsPerPage();">10</a></li>
+            <li><a ng-click="server.setItemsPerPage(25); server.closeItemsPerPage();">25</a></li>
+            <li><a ng-click="server.setItemsPerPage(50); server.closeItemsPerPage();">50</a></li>
+            <li><a ng-click="server.setItemsPerPage(100); server.closeItemsPerPage();">100</a></li>
+          </ul>
+        </div>
     </li>
   </ul>
   <table class="table">

@@ -20,14 +20,14 @@
 // express and approved by Intel in writing.
 
 
-(function (){
+(function () {
   'use strict';
 
   angular.module('dashboard')
     .controller('DashboardFilterCtrl',
-      ['$scope', '$location', 'streams', 'help', 'dashboardPath', DashboardFilterCtrl]);
+      ['$scope', '$location', 'streams', 'help', 'dashboardPath', '$$rAF', DashboardFilterCtrl]);
 
-  function DashboardFilterCtrl($scope, $location, streams, help, dashboardPath) {
+  function DashboardFilterCtrl($scope, $location, streams, help, dashboardPath, $$rAF) {
     /**
      * Represents a base type fs and server inherit from.
      * @type {{isSelected: isSelected, selectedItem: Object, selectedItem: Object}}
@@ -51,7 +51,7 @@
        * Sets the selected item.
        * Ends this type's target stream
        * and starts a new one with the new selected id.
-       * @param newSelectedItem {Object}
+       * @param {Object} newSelectedItem
        */
       set selectedItem (newSelectedItem) {
         this._selectedItem = newSelectedItem;
@@ -119,20 +119,11 @@
       },
       /**
        * Called by the popover, watches for property changes that cause a resize.
-       * @param {Object} transcludedScope
        * @param {Object} actions
        */
-      work: function work(transcludedScope, actions) {
-        var unWatch = $scope.$watchCollection('[filter.type, filter.type.selectedItem, filter.type.selectedTarget]',
-          function (newVal, oldVal) {
-            if (newVal === oldVal) return;
-
-            actions.recalculate();
-          });
-
+      work: function work(actions) {
         $scope.$on('$locationChangeSuccess', actions.hide);
-
-        transcludedScope.$on('$destroy', unWatch);
+        $scope.recalculate = actions.recalculate;
       },
       /**
        * Called when filter is updated.
@@ -159,6 +150,16 @@
         $location.path(path);
       }
     };
+
+    // Listen for a change in the streams. Recalculate the position of the popup if any ofthem change.
+    $scope.$watchCollection('[filter.type, filter.type.selectedItem, filter.type.selectedTarget, ' +
+      'filter.typeTargetStream.objects.length]',
+
+      function () {
+        if ($scope.recalculate) {
+          $$rAF($scope.recalculate);
+        }
+    });
 
     /**
      * Extends base type for a fs.

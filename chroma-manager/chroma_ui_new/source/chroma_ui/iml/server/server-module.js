@@ -20,7 +20,7 @@
 // express and approved by Intel in writing.
 
 
-angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module'])
+angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module', 'pdsh-module'])
   .controller('ServerCtrl', ['$scope', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'runServerAction',
     function ServerCtrl ($scope, $modal, pdshParser, pdshFilter, naturalSortFilter,
@@ -66,11 +66,9 @@ angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module'])
          * Called when the pdsh expression is updated.
          * @param {String} expression pdsh expression
          */
-        pdshUpdate: function pdshUpdate (expression) {
-          var expansion = pdshParser(expression);
-          this.hostnames = [];
-          if (expansion.expansion) {
-            this.hostnames = expansion.expansion;
+        pdshUpdate: function pdshUpdate (expression, hostnames) {
+          if (hostnames != null) {
+            this.hostnames = hostnames;
             this.currentPage = 1;
           }
         },
@@ -98,6 +96,18 @@ angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module'])
          */
         getItemsPerPage: function getItemsPerPage () {
           return +this.itemsPerPage;
+        },
+
+        /**
+         * Sets the number of items per page.
+         * @param {String} num
+         */
+        setItemsPerPage: function setItemsPerPage (num) {
+          this.itemsPerPage = +num;
+        },
+
+        closeItemsPerPage: function closeItemsPerPage () {
+          this.itemsPerPageIsOpen = false;
         },
 
         /**

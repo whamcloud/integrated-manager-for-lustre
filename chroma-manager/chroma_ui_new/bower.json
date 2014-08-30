@@ -10,7 +10,7 @@
     "angular-bindonce": "0.3.1",
     "angular-bootstrap": "0.11.0",
     "font-awesome": "git://github.com/FortAwesome/Font-Awesome.git#~4.0.3",
-    "bootstrap": "3.0.3",
+    "bootstrap": "3.2",
     "lodash": "2.4.1",
     "jquery": "2.1.0",
     "underscore-contrib": "git://github.com/documentcloud/underscore-contrib.git#0.2.0",

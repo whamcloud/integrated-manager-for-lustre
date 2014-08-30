@@ -73,9 +73,8 @@ describe('Server module', function() {
     it('should return an expanded pdsh expression when the expression is updated', function () {
       server.currentPage = 5;
       pdshParser.andReturn({expansion: ['expression1']});
-      server.pdshUpdate('expression');
-      expect(pdshParser).toHaveBeenCalledWith('expression');
-      expect(server.hostnames).toEqual(['expression1']);
+      server.pdshUpdate('expression', ['expression']);
+      expect(server.hostnames).toEqual(['expression']);
       expect(server.currentPage).toEqual(1);
     });
 

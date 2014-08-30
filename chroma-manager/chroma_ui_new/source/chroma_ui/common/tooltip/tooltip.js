@@ -24,10 +24,10 @@
   'use strict';
 
   angular.module('iml-tooltip')
-    .directive('imlTooltip', ['position', '$timeout', 'strategies', imlTooltip])
+    .directive('imlTooltip', ['position', '$timeout', '$rootScope', '$$rAF', 'strategies', imlTooltip])
     .directive('helpTooltip', ['help', helpTooltip]);
 
-  function imlTooltip(position, $timeout, strategies) {
+  function imlTooltip(position, $timeout, $rootScope, $$rAF, strategies) {
     return {
       scope: {
         toggle: '=?',
@@ -41,6 +41,8 @@
         var deregister;
 
         var jqPreviousEl = jqElement.prev();
+
+        var positioner = position.positioner(jqElement[0]);
 
         // look at the parent's previous sibling
         if (!jqPreviousEl.length)
@@ -75,6 +77,23 @@
             else
               hide();
           }, true);
+        }
+
+        scope.$watch(function setWatch () {
+            return jqElement.html();
+          },
+          function handleChange (newValue, oldValue) {
+            if (newValue !== oldValue) {
+              $$rAF(recalculate);
+            }
+          });
+
+        /**
+         * Figures out the placement of the popover and applies it to the element's style.
+         */
+        function recalculate () {
+          jqElement.css('min-width', '');
+          jqElement.css(position.position(scope.direction, positioner));
         }
 
         function turnThenShow() {

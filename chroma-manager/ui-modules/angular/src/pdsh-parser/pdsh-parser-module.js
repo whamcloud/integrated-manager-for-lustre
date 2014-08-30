@@ -99,7 +99,14 @@
         var closingBraces = expression.match(/\]/g) || [];
         var commaNotLastCharacter = expression.charAt(expression.length-1) !== ',';
 
-        return openingBraces.length === closingBraces.length && commaNotLastCharacter;
+        var openingIndicies = getIndexArrayOfBraces(expression, '[');
+        var closingIndicies =  getIndexArrayOfBraces(expression, ']');
+
+        var hasValidBraceOrder = openingIndicies.reduce(function validateBraceOrder(prev, current, index) {
+          return prev && current < closingIndicies[index];
+        }, true);
+
+        return openingBraces.length === closingBraces.length && commaNotLastCharacter && hasValidBraceOrder;
       }
 
       /**
@@ -313,6 +320,10 @@
        * @returns {string}
        */
       function getPrefix(item) {
+        // If the number is 0 (ex. '000') then simply return the item
+        if (+item === 0)
+          return item.substring(0, item.length - 1);
+
         return item.substring(0, item.indexOf(+item.toString()));
       }
 
@@ -497,6 +508,22 @@
           tokens.push(expression.substring(0, index + addToIndex));
           [].push.apply(tokens, tokenize(expression.slice(index + addToIndex)));
         };
+      }
+
+      function getIndexArrayOfBraces (expression, brace) {
+        var re = (brace === '[') ? /([\[])/g : /([\]])/g;
+        var indicies = [];
+        var m;
+
+        while ((m = re.exec(expression)) != null) {
+          if (m.index === re.lastIndex) {
+            re.lastIndex++;
+          }
+
+          indicies.push(m.index);
+        }
+
+        return indicies;
       }
 
       /**
