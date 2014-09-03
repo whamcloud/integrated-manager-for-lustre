@@ -38,7 +38,6 @@ cd chroma_test_env/chroma/chroma-manager/
 python manage.py supervisor  &> /dev/null &
 supervisor_pid=\$!
 
-set +e
 echo "Begin running tests..."
 nosetests --verbosity=2 --tc-file=tests/simulator.json --tc-format=json --with-xunit --xunit-file /home/chromatest/test_report.xml $TESTS
 

@@ -71,8 +71,6 @@ yum-config-manager --disable addon-epel6-x86_64
 yum-config-manager --disable EPEL-6-x86_64
 EOF
 
-set +e
-
 echo "Beginning automated test run..."
 export CLUSTER_CONFIG=services_cluster_config.json
 export MEASURE_COVERAGE=$MEASURE_COVERAGE
