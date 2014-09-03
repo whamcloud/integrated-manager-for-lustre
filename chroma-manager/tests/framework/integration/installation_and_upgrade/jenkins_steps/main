@@ -57,8 +57,6 @@ retries=100
 timeout=300
 EOF" | dshbak -c
 
-set +e
-
 echo "Beginning automated test run..."
 set +x
 export JENKINS_PULL

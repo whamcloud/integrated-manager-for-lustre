@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-if [ "$slave" = "rhel6&&ssi" ]; then
+if [[ $slave = rhel6\&\&* ]]; then
     RHEL=true
 else
     RHEL=false
@@ -46,9 +46,9 @@ fi
 if [ -z "$JENKINS_PULL" ]; then
     JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
-# first fetch and install chroma 2.1.1.1 (ieel 2.0.1.1)
+# first fetch and install chroma 2.1.1.2 (ieel 2.0.1.2)
 BUILD_JOB=chroma-blessed
-BUILD_NUM=89
+BUILD_NUM=97
 IEEL_FROM_VERSION=$(curl -s -k -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-.*gz\)<.*/\1/')
 curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
 
@@ -61,15 +61,9 @@ yum -y install expect
 cd /tmp
 tar xzvf $IEEL_FROM_VERSION
 cd ${IEEL_FROM_VERSION%%.tar.gz}
-if $RHEL; then
-# need to hack out the repo check since it fails on EL6 in 2.0.2.0
-ed << \"EOF\" install
-/= _test_yum/s/,.*/ = True/
-wq
-EOF
-fi
 if ! expect ../install.exp $CHROMA_USER $CHROMA_EMAIL $CHROMA_PASS ${CHROMA_NTP_SERVER:-localhost}; then
     rc=\${PIPESTATUS[0]}
+    echo \"Install log:\"
     cat /var/log/chroma/install.log
     exit \$rc
 fi"
@@ -90,6 +84,7 @@ echo "Now upgrade IML..."
 scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/upgrade.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
+existing_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
 yum -y update
 # Install from the installation package
 cd /tmp
@@ -147,13 +142,22 @@ if expect ../upgrade.exp; then
     echo \"Installation unexpectedly succeeded with the RHEL optional channel disabled\"
     exit 1
 fi
-yum-config-manager --enable  rhel-6-server-optional-rpms
+yum-config-manager --enable  rhel-6-server-optional-rpms,RHEL-\$release-optional-x86_64
 fi
 
 if ! expect ../upgrade.exp; then
     rc=\${PIPESTATUS[0]}
+    echo \"Install log:\"
     cat /var/log/chroma/install.log
     exit \$rc
+fi
+# make sure it really did do an upgrade
+upgraded_IML_version=\$(rpm -q --qf \"%{VERSION}-%{RELEASE}\n\" chroma-manager)
+if [ \$existing_IML_version = \$upgraded_IML_version ]; then
+    echo \"Upgrade didn't actually upgrade the chroma-manager package\"
+    echo \"Install log:\"
+    cat /var/log/chroma/install.log
+    exit 1
 fi
 # install cman here to test that the fence-agents-iml package is being a
 # "duck-like" replacement for fence-agents since cman depends on
