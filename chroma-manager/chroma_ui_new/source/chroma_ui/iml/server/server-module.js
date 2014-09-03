@@ -20,7 +20,8 @@
 // express and approved by Intel in writing.
 
 
-angular.module('server', ['pdsh-parser-module', 'filters', 'socket-module', 'pdsh-module', 'command'])
+angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
+  'socket-module', 'command', 'action-dropdown-module'])
   .controller('ServerCtrl', ['$scope', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
     function ServerCtrl ($scope, $modal, pdshParser, pdshFilter, naturalSortFilter,

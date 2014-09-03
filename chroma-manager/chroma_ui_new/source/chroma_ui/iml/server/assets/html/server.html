@@ -35,6 +35,7 @@
       </th>
       <th>Profile</th>
       <th>LNet State</th>
+      <th ng-if="!server.editable">Actions</th>
       <th>Status</th>
       <th ng-if="server.editable" class="select-server-header">Select Server</th>
     </tr>
@@ -44,6 +45,9 @@
       <td>{{ item.address }}</td>
       <td>{{ item.server_profile.ui_name }}</td>
       <td>{{ item.lNet }}</td>
+      <td ng-if="!server.editable">
+        <action-dropdown record="item"></action-dropdown>
+      </td>
       <td>
         <span class="fa fa-check"></span>
       </td>

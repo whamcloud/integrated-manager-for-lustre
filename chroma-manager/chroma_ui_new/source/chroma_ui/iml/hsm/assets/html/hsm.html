@@ -80,17 +80,7 @@
               <div ng-include="'iml/hsm/assets/html/states/' + copytool.status() + '.html'"></div>
             </td>
             <td class="actions-cell">
-              <div class="dropdown">
-                <a class="dropdown-toggle btn btn-info btn-sm">Actions <i class="fa fa-caret-down"></i></a>
-                <ul class="dropdown-menu">
-                  <li class="help" ng-repeat="action in copytool.available_actions track by action.verb">
-                    <a ng-controller="CommandCtrl" ng-click="onActionSelection(copytool, action)">
-                      {{ action.verb }}
-                    </a>
-                    <iml-tooltip direction="left">{{ action.long_description }}</iml-tooltip>
-                  </li>
-                </ul>
-              </div>
+              <action-dropdown record="copytool"></action-dropdown>
             </td>
           </tr>
         </tbody>

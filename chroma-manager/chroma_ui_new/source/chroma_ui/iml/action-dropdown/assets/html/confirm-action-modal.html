@@ -1,0 +1,27 @@
+<div class="modal-header">
+  <h4 class="modal-title">Confirm {{ confirmAction.title }}</h4>
+</div>
+<div class="modal-body">
+  <div class="single-confirmation" ng-if="confirmAction.confirmPrompts.length === 1">
+    <p>{{ confirmAction.confirmPrompts[0] }}</p>
+  </div>
+  <div class="multi-confirmation" ng-if="confirmAction.confirmPrompts.length > 1">
+    <h4>This action will:</h4>
+    <ul class="well">
+      <li ng-repeat="message in confirmAction.confirmPrompts">{{ message }}</li>
+    </ul>
+  </div>
+</div>
+<div class="modal-footer">
+  <div class="btn-group" dropdown>
+    <button type="button" ng-click="confirmAction.confirm()" class="btn btn-success">Confirm <i class="fa fa-check-circle-o"></i></button>
+    <button type="button" class="btn btn-success dropdown-toggle">
+      <span class="caret"></span>
+      <span class="sr-only">Split button</span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+      <li><a ng-click="confirmAction.confirm(true)">Confirm and skip command view</a></li>
+    </ul>
+  </div>
+  <button class="btn btn-danger" ng-click="confirmAction.cancel()">Cancel <i class="fa fa-times-circle-o"></i></button>
+</div>
