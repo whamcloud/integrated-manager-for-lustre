@@ -29,14 +29,12 @@ fi
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json shared_storage_configuration_cluster_cfg.json
 cat shared_storage_configuration_cluster_cfg.json
 
-set +e
-
 echo "Beginning automated test run..."
 export CLUSTER_CONFIG=shared_storage_configuration_cluster_cfg.json
 export MEASURE_COVERAGE=$MEASURE_COVERAGE
 chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/cluster_setup
 chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/simulator/run_tests
-find ./test_reports/ -type f -size 0 -exec rm {} \;
+find ./test_reports/ -type f -size 0 -exec rm {} \; || true
 echo "Automated test run complete."
 
 # Combine coverage reports from the different nodes.

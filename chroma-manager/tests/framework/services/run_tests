@@ -13,7 +13,6 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 TESTS=${TESTS:-"tests/services/"}
 
 trap "set +e
-set +e
 cd $CHROMA_DIR/../..
 mkdir -p test_reports
 scp chromatest@$CHROMA_MANAGER:test_report.xml ./test_reports/

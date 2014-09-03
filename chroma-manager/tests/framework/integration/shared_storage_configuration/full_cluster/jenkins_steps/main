@@ -86,8 +86,6 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
-set +e
-
 echo "Beginning automated test run..."
 export MEASURE_COVERAGE=$MEASURE_COVERAGE
 chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/cluster_setup

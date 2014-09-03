@@ -13,7 +13,6 @@ pip install jenkinsapi==0.2.16
 #wq
 #EOF
 #sed -ne '/def get_url/,/^$/p' lib/python2.6/site-packages/jenkinsapi/utils/requester.py
-set +e
 
 VALID_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-integration-tests-shared-storage-configuration chroma-selenium-tests chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
 REQUIRED_TEST_JOBS="chroma-integration-tests-existing-filesystem-configuration chroma-selenium-tests chroma-unit-tests chroma-integration-tests-shared-storage-configuration-with-simulator chroma-tests-services chroma-integration-tests-shared-storage-configuration-brian chroma-upgrade-tests"
