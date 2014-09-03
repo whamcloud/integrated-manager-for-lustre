@@ -5,13 +5,15 @@ var srcmapRev = require('../index');
 var promisedFile = require('promised-file');
 
 
-describe('srcmap-reverse applied to real files', function () {
+describe('srcmap-reverse unit test', function () {
 
   var builtFilesPath;
   var sourceMapPath;
   var traceFilePath;
   var reversedTraceFilePath;
   var reversedTraceFileContents;
+  var reversedTraceShortPathsFilePath;
+  var reversedTraceShortPathsFileContents;
   var sourceMap;
   var traceCollection;
   var expectedFinalOutput;
@@ -50,6 +52,17 @@ describe('srcmap-reverse applied to real files', function () {
 
   });
 
+  beforeEach(function (done) {
+    reversedTraceShortPathsFilePath = __dirname + '/reversed-trace-short-paths.txt';
+
+    promisedFile.getFile(reversedTraceShortPathsFilePath)
+      .then(function assignReversedTraceShortPathsFileContents (contents) {
+        reversedTraceShortPathsFileContents = contents;
+        done();
+      });
+
+  });
+
   beforeEach(function () {
     expectedFinalOutput = reversedTraceFileContents;
   });
@@ -77,5 +90,19 @@ describe('srcmap-reverse applied to real files', function () {
     actual = srcmapRev.flattenTraceCollection(reversedCollection);
 
     expect(actual).toBe(expectedFinalOutput);
+  });
+
+  it('should strip the long paths.', function () {
+    var actual;
+    var reversedCollection;
+
+    // reverse every line in traceCollection
+    reversedCollection = traceCollection.map(function (traceLine) {
+      return srcmapRev.reverseSourceMap(traceLine, sourceMap);
+    });
+
+    actual = srcmapRev.stripLongPaths(srcmapRev.flattenTraceCollection(reversedCollection));
+
+    expect(actual).toBe(reversedTraceShortPathsFileContents);
   });
 });

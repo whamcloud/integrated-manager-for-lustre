@@ -52,6 +52,7 @@ module.exports = {
     return conf.MODE === 'PROD';
   },
   primusPort: conf.PRIMUS_PORT,
+  sourceMapDir: conf.SOURCE_MAP_DIR,
   primusUrl: url.format(parsedPrimusHttpUrl),
   parsedApiUrl: parsedApiHttpUrl,
   apiUrl: url.format(parsedApiHttpUrl),

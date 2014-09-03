@@ -78,7 +78,9 @@ var modules = [{
   CommandResource: ['factory', resources.commandResourceFactory],
   NotificationResource: ['factory', resources.notificationResourceFactory],
   requestChannelValidator: ['factory', require('./req-channel-validator')],
-  validator: ['value', new Validator()]
+  validator: ['value', new Validator()],
+  promisedFile: ['value', require('promised-file')],
+  srcmapReverse: ['value', require('srcmap-reverse')]
 }];
 
 loadDir('./routes');
