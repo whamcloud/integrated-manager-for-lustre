@@ -21,11 +21,13 @@
 
 
 angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
-  'socket-module', 'command', 'action-dropdown-module', 'status'])
+  'socket-module', 'command', 'action-dropdown-module', 'status', 'configure-lnet-module'])
   .controller('ServerCtrl', ['$scope', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
-    'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal', 'jobMonitor', 'alertMonitor',
+    'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
+    'jobMonitor', 'alertMonitor', 'openLnetModal',
     function ServerCtrl ($scope, $modal, pdshParser, pdshFilter, naturalSortFilter,
-                         serverSpark, serverActions, selectedServers, openCommandModal, jobMonitor, alertMonitor) {
+                         serverSpark, serverActions, selectedServers, openCommandModal,
+                         jobMonitor, alertMonitor, openLnetModal) {
       'use strict';
 
       $scope.server = {
@@ -40,6 +42,9 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
         actions: serverActions,
         selectedServers: selectedServers.servers,
         toggleType: selectedServers.toggleType,
+        configureLnet: function configureLnet (record) {
+          openLnetModal(record);
+        },
 
         /**
          * Returns the current list of PDSH filtered hosts.

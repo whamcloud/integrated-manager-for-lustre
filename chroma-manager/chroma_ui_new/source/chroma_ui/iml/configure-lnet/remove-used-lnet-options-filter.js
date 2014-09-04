@@ -20,26 +20,32 @@
 // express and approved by Intel in writing.
 
 
-(function () {
+angular.module('configure-lnet-module').filter('removeUsedLnetOptions', [function removeUsedLnetOptionsFilter () {
   'use strict';
 
-  var regexp = /%\(.+\)s/;
+  /**
+   * This filter picks out currently selected lnd_network options
+   * minus the current networkInterface and returns the altered list.
+   * @param {Array} options The list of Lustre Network options.
+   * @param {Array} networkInterfaces The list of network interfaces.
+   * @param {Array} networkInterface The network interface bound to the current select.
+   * @returns {Array} The filtered list of options.
+   */
+  return function (options, networkInterfaces, networkInterface) {
+    var nids = _.chain(networkInterfaces)
+      .without(networkInterface)
+      .pluck('nid')
+      .value();
 
-  angular.module('filters').filter('insertHelp', ['$sce', 'help', function insertHelpFilterFilter ($sce, help) {
-    /**
-     * Given a key from help.py, return a sanitized replacement string
-     * @param {String} key
-     * @param {Object} [params]
-     * @returns {Object}
-     */
-    return function insertHelpFilter (key, params) {
-      var wrapper = help.get(key);
-      var value = wrapper.valueOf();
+    return options.filter(function removeOptions (option) {
+      // Not Lustre Network is a special case.
+      // It should always be included.
+      if (option.value === -1)
+        return true;
 
-      if (regexp.test(value) && params)
-        wrapper = $sce.trustAsHtml(value.sprintf(params));
-
-      return wrapper;
-    };
-  }]);
-}());
+      return nids.every(function (nid) {
+        return nid.lnd_network !== option.value;
+      });
+    });
+  };
+}]);

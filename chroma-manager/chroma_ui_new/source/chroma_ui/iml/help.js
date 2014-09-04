@@ -32,7 +32,7 @@ angular.module('help', ['environment']).factory('help', ['$sce', 'HELP_TEXT', fu
   }
 
   return {
-    get: function (key) {
+    get: function get (key) {
       if (!HELP_TEXT[key]) throw new Error('Key %s is not in help text!'.sprintf(key));
 
       return trusted[key] || addToTrusted(key);

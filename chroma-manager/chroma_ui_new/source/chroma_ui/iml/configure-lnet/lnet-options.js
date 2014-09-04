@@ -23,23 +23,14 @@
 (function () {
   'use strict';
 
-  var regexp = /%\(.+\)s/;
+  var range = _.range(-1, 10);
+  var options = range.map(function buildOptions (value) {
+      return (value === -1 ?
+        {name: 'Not Lustre Network', value: value} :
+        {name: 'Lustre Network %s'.sprintf(value), value: value}
+      );
+    });
 
-  angular.module('filters').filter('insertHelp', ['$sce', 'help', function insertHelpFilterFilter ($sce, help) {
-    /**
-     * Given a key from help.py, return a sanitized replacement string
-     * @param {String} key
-     * @param {Object} [params]
-     * @returns {Object}
-     */
-    return function insertHelpFilter (key, params) {
-      var wrapper = help.get(key);
-      var value = wrapper.valueOf();
-
-      if (regexp.test(value) && params)
-        wrapper = $sce.trustAsHtml(value.sprintf(params));
-
-      return wrapper;
-    };
-  }]);
+  angular.module('configure-lnet-module')
+    .constant('LNET_OPTIONS', Object.freeze(options));
 }());

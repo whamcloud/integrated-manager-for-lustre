@@ -4,7 +4,7 @@ describe('Server module', function() {
   var $scope, pdshParser, pdshFilter, naturalSortFilter,
     server, $modal, serverSpark,  openCommandModal,
     selectedServers, serverActions, jobMonitor, alertMonitor, jobMonitorSpark,
-    alertMonitorSpark;
+    alertMonitorSpark, openLnetModal;
 
   beforeEach(module('server'));
 
@@ -36,6 +36,8 @@ describe('Server module', function() {
 
     openCommandModal = jasmine.createSpy('openCommandModal');
 
+    openLnetModal = jasmine.createSpy('openLnetModal');
+
     pdshParser = jasmine.createSpy('pdshParser');
     pdshFilter = jasmine.createSpy('pdshFilter');
     naturalSortFilter = jasmine.createSpy('naturalSortFilter').andCallFake(_.identity);
@@ -63,7 +65,8 @@ describe('Server module', function() {
       serverActions: serverActions,
       openCommandModal: openCommandModal,
       jobMonitor: jobMonitor,
-      alertMonitor: alertMonitor
+      alertMonitor: alertMonitor,
+      openLnetModal: openLnetModal
     });
 
     server = $scope.server;
@@ -140,6 +143,16 @@ describe('Server module', function() {
       server.setEditName('Install Updates');
 
       expect(server.editName).toEqual('Install Updates');
+    });
+
+    it('should open a configure lnet dialog', function () {
+      var record = {
+        id: 1
+      };
+
+      server.configureLnet(record);
+
+      expect(openLnetModal).toHaveBeenCalledOnceWith(record);
     });
 
     it('should get an action by value', function () {
