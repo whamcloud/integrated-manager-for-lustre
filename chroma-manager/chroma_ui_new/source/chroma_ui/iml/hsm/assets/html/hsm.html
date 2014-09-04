@@ -67,6 +67,7 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Archive</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -74,6 +75,7 @@
         <tbody>
         <tr ng-repeat="copytool in hsm.copytools.objects track by copytool.id" ng-class="{even: $even, odd: $odd}">
             <td>{{ copytool.host.label }}</td>
+            <td>{{ copytool.archive }}</td>
             <td class="status">
               <div ng-include="'iml/hsm/assets/html/states/' + copytool.status() + '.html'"></div>
             </td>
