@@ -62,6 +62,41 @@ Requires: system-config-firewall-base
 Requires: nodejs
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
+Obsoletes: nodejs-active-x-obfuscator
+Obsoletes: nodejs-bunyan
+Obsoletes: nodejs-commander
+Obsoletes: nodejs-nan
+Obsoletes: nodejs-primus
+Obsoletes: nodejs-primus-emitter
+Obsoletes: nodejs-primus-multiplex
+Obsoletes: nodejs-request
+Obsoletes: nodejs-socket.io
+Obsoletes: nodejs-socket.io-client
+Obsoletes: nodejs-ws
+Obsoletes: nodejs-tinycolor
+Obsoletes: nodejs-extendable
+Obsoletes: nodejs-xmlhttprequest
+Obsoletes: nodejs-dotty
+Obsoletes: nodejs-tough-cookie
+Obsoletes: nodejs-options
+Obsoletes: nodejs-punycode
+Obsoletes: nodejs-load
+Obsoletes: nodejs-json-stringify-safe
+Obsoletes: nodejs-lodash
+Obsoletes: nodejs-moment
+Obsoletes: nodejs-q
+Obsoletes: nodejs-qs
+Obsoletes: nodejs-node-uuid
+Obsoletes: nodejs-mime
+Obsoletes: nodejs-base64id
+Obsoletes: nodejs-policyfile
+Obsoletes: nodejs-uritemplate
+Obsoletes: nodejs-forever-agent
+Obsoletes: nodejs-uglify-js
+Obsoletes: nodejs-di
+Obsoletes: nodejs-mv
+Obsoletes: nodejs-json-mask
+Obsoletes: nodejs-zeparser
 
 %description
 This is the Intel Manager for Lustre Monitoring and Adminstration Interface
