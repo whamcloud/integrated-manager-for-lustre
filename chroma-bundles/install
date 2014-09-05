@@ -152,8 +152,9 @@ def spinner(p):
         line = p.stdout.readline()
         n+=1
         prev_time = this_time
-    p.wait()
+    rc = p.wait()
     print
+    return rc
 
 
 def _run(args, passthrough=False, drain_stdin=False):
@@ -367,7 +368,9 @@ def _install_or_upgrade_packages():
                               "upgrade" if upgrade else "install",
                               MAIN_PACKAGE], stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, bufsize=0)
-        spinner(p)
+        if spinner(p) != 0:
+            log.error("The package installation failed. Please contact support with details from %s." % LOG_FILE)
+            sys.exit(-1)
     finally:
         if manager_repo_dir:
             shutil.rmtree(manager_repo_dir)
