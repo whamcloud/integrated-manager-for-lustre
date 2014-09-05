@@ -3,7 +3,8 @@ describe('Server module', function() {
 
   var $scope, pdshParser, pdshFilter, naturalSortFilter,
     server, $modal, serverSpark,  openCommandModal,
-    selectedServers, serverActions;
+    selectedServers, serverActions, jobMonitor, alertMonitor, jobMonitorSpark,
+    alertMonitorSpark;
 
   beforeEach(module('server'));
 
@@ -39,6 +40,18 @@ describe('Server module', function() {
     pdshFilter = jasmine.createSpy('pdshFilter');
     naturalSortFilter = jasmine.createSpy('naturalSortFilter').andCallFake(_.identity);
 
+    jobMonitorSpark = {
+      end: jasmine.createSpy('end')
+    };
+    alertMonitorSpark = {
+      end: jasmine.createSpy('end')
+    };
+
+    jobMonitor = jasmine.createSpy('jobMonitor').andReturn(jobMonitorSpark);
+    alertMonitor = jasmine.createSpy('alertMonitor').andReturn(alertMonitorSpark);
+
+    $scope.$on = jasmine.createSpy('$on');
+
     $controller('ServerCtrl', {
       $scope: $scope,
       $modal: $modal,
@@ -48,7 +61,9 @@ describe('Server module', function() {
       selectedServers: selectedServers,
       naturalSortFilter: naturalSortFilter,
       serverActions: serverActions,
-      openCommandModal: openCommandModal
+      openCommandModal: openCommandModal,
+      jobMonitor: jobMonitor,
+      alertMonitor: alertMonitor
     });
 
     server = $scope.server;
@@ -185,6 +200,25 @@ describe('Server module', function() {
           }
         });
       });
+    });
+  });
+
+  describe('destroy', function () {
+    beforeEach(function () {
+      var handler = $scope.$on.mostRecentCall.args[1];
+      handler();
+    });
+
+    it('should listen', function () {
+      expect($scope.$on).toHaveBeenCalledWith('$destroy', jasmine.any(Function));
+    });
+
+    it('should end the jobMonitor on destroy', function () {
+      expect(jobMonitorSpark.end).toHaveBeenCalledOnce();
+    });
+
+    it('should end the alertMonitor on destroy', function () {
+      expect(alertMonitorSpark.end).toHaveBeenCalledOnce();
     });
   });
 });

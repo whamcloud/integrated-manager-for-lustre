@@ -96,7 +96,8 @@ class CommandResource(ModelResource):
                      'id': ['exact', 'in'],
                      'dismissed': ['exact'],
                      'errored': ['exact'],
-                     'created_at': ['gte', 'lte', 'gt', 'lt']}
+                     'created_at': ['gte', 'lte', 'gt', 'lt'],
+                     'cancelled': ['exact']}
         authorization = PATCHSupportDjangoAuth()
         authentication = AnonymousAuthentication()
         validation = CommandValidation()

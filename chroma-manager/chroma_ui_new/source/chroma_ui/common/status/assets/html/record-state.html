@@ -1,0 +1,12 @@
+<span class="record-state">
+  <i class="fa fa-check-circle" ng-show="!recordState.isInErrorState()"
+     tooltip="{{recordState.getTooltipMessage()}}" tooltip-placement="right"></i>
+  <i class="fa fa-exclamation-circle activate-popover" ng-show="recordState.isInErrorState()"
+    tooltip="{{recordState.getTooltipMessage()}}" tooltip-placement="right"></i>
+  <iml-popover class="bottom" title="Alerts" work="recordState.work(actions)">
+    <ul>
+      <li ng-repeat="alert in recordState.getAlerts()">{{alert}}</li>
+      <li ng-repeat="alert in recordState.getMessageDifference()"><s>{{alert}}</s></li>
+    </ul>
+  </iml-popover>
+</span>

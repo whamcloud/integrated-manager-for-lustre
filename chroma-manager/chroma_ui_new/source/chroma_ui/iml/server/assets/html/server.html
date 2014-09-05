@@ -49,7 +49,8 @@
         <action-dropdown record="item"></action-dropdown>
       </td>
       <td>
-        <span class="fa fa-check"></span>
+        <job-status record-id="item.resource_uri"></job-status>
+        <record-state record-id="item.resource_uri"></record-state>
       </td>
       <td ng-if="server.editable" class="select-server">
         <button ng-if="!server.getActionByValue(server.editName).isDisabled(item)" class="btn btn-info btn-sm" ng-model="server.selectedServers[item.fqdn]" btn-checkbox>

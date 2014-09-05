@@ -63,6 +63,10 @@
      */
     capitalize: function capitalize (str) {
       return str[0].toUpperCase() + str.slice(1);
+    },
+    pluralize: function pluralize (count, stringMap) {
+      var msg = stringMap[count] || stringMap.other || '';
+      return msg.replace('{}', count.toString());
     }
   });
 }());

@@ -55,6 +55,10 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
         }
 
         popoverButton.on('click', function ($event) {
+          // Close any other popovers that are currently open
+          if (!scope.open)
+            wrappedWindow.trigger('click');
+
           scope.$apply(function () { toggle($event); });
         });
 

@@ -179,7 +179,7 @@ class JobResource(ModelResource):
         ordering = ['created_at']
         list_allowed_methods = ['get']
         detail_allowed_methods = ['get', 'put']
-        filtering = {'id': ['exact', 'in'], 'state': ['exact']}
+        filtering = {'id': ['exact', 'in'], 'state': ['exact', 'in']}
         always_return_data = True
         validation = JobValidation()
 

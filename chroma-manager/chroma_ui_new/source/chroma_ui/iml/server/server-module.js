@@ -21,11 +21,11 @@
 
 
 angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
-  'socket-module', 'command', 'action-dropdown-module'])
+  'socket-module', 'command', 'action-dropdown-module', 'status'])
   .controller('ServerCtrl', ['$scope', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
-    'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
+    'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal', 'jobMonitor', 'alertMonitor',
     function ServerCtrl ($scope, $modal, pdshParser, pdshFilter, naturalSortFilter,
-                         serverSpark, serverActions, selectedServers, openCommandModal) {
+                         serverSpark, serverActions, selectedServers, openCommandModal, jobMonitor, alertMonitor) {
       'use strict';
 
       $scope.server = {
@@ -211,5 +211,7 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
 
       $scope.$on('$destroy', function onDestroy () {
         spark.end();
+        jobMonitor().end();
+        alertMonitor().end();
       });
     }]);

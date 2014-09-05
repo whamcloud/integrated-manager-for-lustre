@@ -1,0 +1,22 @@
+<span class="job-status">
+  <i class="fa fa-lock activate-popover" ng-show="jobStatus.shouldShowLockIcon() === true"
+tooltip="{{jobStatus.getLockTooltipMessage()}}" tooltip-placement="right"></i>
+  <iml-popover class="bottom" title="Job Operations">
+    <accordion close-others="jobStatus.closeOthers">
+      <accordion-group heading="Write Operations" ng-if="jobStatus.getWriteMessages().length > 0 ||
+      jobStatus.getWriteMessageDifference().length > 0" is-open="jobStatus.openWrite">
+        <ul>
+          <li ng-repeat="message in jobStatus.getWriteMessages()">{{message}}</li>
+          <li ng-repeat="message in jobStatus.getWriteMessageDifference()"><s>{{message}}</s></li>
+        </ul>
+      </accordion-group>
+      <accordion-group heading="Read Operations" ng-if="jobStatus.getReadMessages().length > 0 ||
+      jobStatus.getReadMessageDifference()" is-open="jobStatus.openRead">
+        <ul>
+          <li ng-repeat="message in jobStatus.getReadMessages()">{{message}}</li>
+          <li ng-repeat="message in jobStatus.getReadMessageDifference()"><s>{{message}}</s></li>
+        </ul>
+      </accordion-group>
+    </accordion>
+  </iml-popover>
+</span>
