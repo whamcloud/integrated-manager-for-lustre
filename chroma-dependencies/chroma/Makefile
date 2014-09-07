@@ -7,4 +7,7 @@ install::
 download:
 	@echo "Nothing to download"
 
+cleanrepo:
+	rm -rf $(REPO)
+
 .PHONY: download

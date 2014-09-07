@@ -33,6 +33,9 @@ clean:
 distclean: clean
 	$(MAKE) -f ../include/Makefile.rpmbuild distclean
 
+cleanrepo:
+	rm -rf $(REPO)
+
 endif
 
 # A DEVEL build occurs when this makefile is called via 'make develop'. In

@@ -72,6 +72,9 @@ distclean: clean
 		rm -f spec.ed; \
 	fi
 
+cleanrepo:
+	rm -rf $(REPO)
+
 include ../include/Makefile.requirements
 # it would be nice to do this, but it doesn't work since we need to be
 # sure the spec file exists before being able to use rules like this.

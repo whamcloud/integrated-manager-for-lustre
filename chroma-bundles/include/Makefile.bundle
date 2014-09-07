@@ -6,7 +6,28 @@ BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
 
 all: $(BUNDLE_NAME).tar.gz install
 
-$(BUNDLE_NAME).tar.gz: $(patsubst %,stamps/%.rpm,$(BUNDLE_RPMS))
+decruftinate:
+	exit 0
+	@echo "Checking for cruft in $(CURDIR)/repo..."
+	@rpm_name() { base=$${1##*/}; name=$${base%-*}; version=$${name%-*}; name=$${name%-*}; echo $$name; }; \
+	cd repo; \
+	WANTED=""; \
+	for rpm in $(BUNDLE_RPMS); do \
+	  WANTED="$$WANTED $$(rpm_name $$rpm)"; \
+	done; \
+	echo "Desired RPMs: $$WANTED"; \
+	for exists in $$(ls *.rpm 2>/dev/null); do \
+	    name=$$(rpm_name $$exists); \
+		if [[ $$WANTED != *$$name* ]]; then \
+		    echo "removing cruft: $$name"; \
+			rm -f $$exists; \
+		fi; \
+	done
+
+# TODO - ideally, we would only rebuild $(BUNDLE_NAME).tar.gz if decrufinate
+# removed some cruft.  it will take some thinking to restructre to achieve
+# that
+$(BUNDLE_NAME).tar.gz: decruftinate $(patsubst %,stamps/%.rpm,$(BUNDLE_RPMS))
 	cd repo && createrepo --pretty .
 	echo "{\"name\": \"$(NAME)\", \"version\": \"$(VERSION)\", \"description\": \"$(DESC)\"}" > repo/meta
 	rm -f *.tar.gz

@@ -54,6 +54,9 @@ distclean:
 
 download: $(addprefix $(TOP)/../chroma-externals/,$(ALL_RPMS))
 
+cleanrepo:
+	rm -rf $(REPO)
+
 $(REPO)/%.rpm: $(TOP)/../chroma-externals/%.rpm
 	mkdir -p $(REPO)
 	rm -f $@

@@ -6,8 +6,8 @@ SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\
 
 all: repo
 
-.PHONY: rpms clean distclean install requirements download debug
-debug download rpms clean distclean install requirements:: $(SUBDIRS)
+.PHONY: cleanrepo rpms clean distclean install requirements download debug
+cleanrepo debug download rpms clean distclean install requirements:: $(SUBDIRS)
 
 rpms: TARGET=rpms
 clean: TARGET=clean
@@ -16,6 +16,7 @@ install: TARGET=install
 requirements: TARGET=requirements
 download: TARGET=download
 debug: TARGET=debug
+cleanrepo: TARGET=cleanrepo
 
 requirements::
 	# these are the ones provided by EL
@@ -28,14 +29,15 @@ requirements::
 	# can't pip install the right versions for these dependencies:
 	# echo "python>=2.6.5"
 
-$(SUBDIRS): cleanrepo force
+$(SUBDIRS): do_cleanrepo force
 	$(MAKE) TOP=$(TOP) REPO=$(REPO) -C $@ $(TARGET)
 
-cleanrepo:
+do_cleanrepo:
 	if [ $(TARGET) = install ]; then \
-		rm -rf $(REPO);          \
+		make cleanrepo;          \
 		mkdir $(REPO);           \
 	fi
+
 .PHONY: force
 force :;
 

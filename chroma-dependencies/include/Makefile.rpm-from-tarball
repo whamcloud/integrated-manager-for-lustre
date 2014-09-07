@@ -92,4 +92,7 @@ distclean:
 		rm -f spec.ed; \
 	fi
 
+cleanrepo:
+	rm -rf $(REPO)
+
 include ../include/Makefile.requirements
