@@ -4,7 +4,7 @@ describe('Server module', function() {
   var $scope, pdshParser, pdshFilter, naturalSortFilter,
     server, $modal, serverSpark,  openCommandModal,
     selectedServers, serverActions, jobMonitor, alertMonitor, jobMonitorSpark,
-    alertMonitorSpark, openLnetModal;
+    alertMonitorSpark, openLnetModal, openAddServerModal;
 
   beforeEach(module('server'));
 
@@ -38,6 +38,15 @@ describe('Server module', function() {
 
     openLnetModal = jasmine.createSpy('openLnetModal');
 
+    openAddServerModal = jasmine.createSpy('openAddServerModal').andReturn({
+      opened: {
+        then: jasmine.createSpy('then')
+      },
+      result: {
+        then: jasmine.createSpy('then')
+      }
+    });
+
     pdshParser = jasmine.createSpy('pdshParser');
     pdshFilter = jasmine.createSpy('pdshFilter');
     naturalSortFilter = jasmine.createSpy('naturalSortFilter').andCallFake(_.identity);
@@ -66,7 +75,8 @@ describe('Server module', function() {
       openCommandModal: openCommandModal,
       jobMonitor: jobMonitor,
       alertMonitor: alertMonitor,
-      openLnetModal: openLnetModal
+      openLnetModal: openLnetModal,
+      openAddServerModal: openAddServerModal
     });
 
     server = $scope.server;
@@ -155,6 +165,12 @@ describe('Server module', function() {
       expect(openLnetModal).toHaveBeenCalledOnceWith(record);
     });
 
+    it('should open the addServer Dialog', function () {
+      server.addServer();
+
+      expect(openAddServerModal).toHaveBeenCalledOnce();
+    });
+
     it('should get an action by value', function () {
       var result = server.getActionByValue('Install Updates');
 
@@ -213,6 +229,41 @@ describe('Server module', function() {
           }
         });
       });
+    });
+  });
+
+  describe('override action click', function () {
+    var record, action;
+
+    beforeEach(function () {
+      record = {
+        state: 'undeployed',
+        install_method: 'root_password'
+      };
+
+      action = {
+        state: 'deployed'
+      };
+    });
+
+    it('should be a function', function () {
+      expect(server.overrideActionClick).toEqual(jasmine.any(Function));
+    });
+
+    it('should fallback without an action state', function () {
+      server.overrideActionClick(record, {}).then(function (resp) {
+        expect(resp).toEqual('fallback');
+      });
+
+      $scope.$digest();
+    });
+
+    it('should open the add server modal when needed', function () {
+      server.overrideActionClick(record, action).then(function () {
+        expect(openAddServerModal).toHaveBeenCalledOnceWith(record);
+      });
+
+      $scope.$digest();
     });
   });
 

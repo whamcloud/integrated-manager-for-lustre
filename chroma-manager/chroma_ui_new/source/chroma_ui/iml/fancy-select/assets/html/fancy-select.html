@@ -1,0 +1,14 @@
+<div class="btn-group fancy-select-box" dropdown on-toggle="fancy.onToggle(open)">
+  <button type="button" class="form-control dropdown-toggle" ng-disabled="disabled">
+    <span class="label {{fancy.selected.labelType}}"
+          ng-if="fancy.selected.labelType && fancy.selected.label">{{fancy.selected.label}}</span>
+    <span>{{fancy.selected.caption}}</span>
+    <i class="fa" ng-class="{'fa-caret-down': !fancy.open, 'fa-caret-up': fancy.open}"></i>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+    <li ng-repeat="item in data track by item.id" ng-click="fancy.selectItem(item)">
+      <a dropdown-toggle><span class="label {{item.labelType}}"
+        ng-if="item.labelType && item.label">{{item.label}}</span>
+      <span>{{item.caption}}</span></a></li>
+  </ul>
+</div>

@@ -1,0 +1,67 @@
+.status-cell-container {
+  position: relative;
+  float: left;
+  width: 20px;
+  height: 20px;
+
+  &.ng-move,
+  &.ng-enter,
+  &.ng-leave {
+    -webkit-transition: all linear 0.5s;
+    transition: all linear 0.5s;
+  }
+
+  &.ng-leave.ng-leave-active,
+  &.ng-move,
+  &.ng-enter {
+    opacity: 0;
+    width: 0;
+  }
+
+  &.ng-leave,
+  &.ng-move.ng-move-active,
+  &.ng-enter.ng-enter-active {
+    opacity: 1;
+    width: 20px;
+  }
+
+  ul {
+    list-style-type: none;
+  }
+
+  i {
+    padding-right: 5px;
+
+    &.fa-times-circle {
+      color: @brand-danger;
+    }
+
+    &.fa-check-circle {
+      color: @brand-success;
+    }
+  }
+}
+
+.status-cell {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+
+  &.valid {
+    background-color: @brand-success;
+    border: 1px solid darken(@brand-success, 10%);
+
+    &:hover {
+      background-color: lighten(@brand-success, 10%);
+    }
+  }
+
+  &.invalid {
+    background-color: @brand-danger;
+    border: 1px solid darken(@brand-danger, 10%);
+
+    &:hover {
+      background-color: lighten(@brand-danger, 10%);
+    }
+  }
+}

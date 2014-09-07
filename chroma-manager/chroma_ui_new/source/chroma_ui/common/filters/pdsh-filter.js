@@ -24,13 +24,14 @@ angular.module('filters').filter('pdsh', [function pdsh () {
 
   /**
    * Given an array of objects, return a list of objects that match the list of host names.
-   * @param {Array} input
-   * @param {Array} hostnames
+   * @param {Array} [input]
+   * @param {Array} [hostnames]
    * @param {Function} hostPath Function used to retrieve the hostName property from the object passed in
    * @param {Boolean} [fuzzy] Indicates if the filtering should be done on a fuzzy match.
    * @returns {Array}
    */
   return function pdshExpander (input, hostnames, hostPath, fuzzy) {
+    input = input || [];
     hostnames = hostnames || [];
     var filteredItems = input.filter(filterInputByHostName(hostnames, hostPath, fuzzy));
 

@@ -112,7 +112,7 @@ angular.module('socket-module')
         if ('error' in response)
           throw response.error;
 
-        return fn(response);
+        return fn.call(this, response);
       };
     };
   }]);

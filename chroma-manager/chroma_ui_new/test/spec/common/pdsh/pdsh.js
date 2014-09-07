@@ -10,13 +10,12 @@ describe('PDSH directive', function () {
     element = angular.element($templateCache.get('pdsh.html'));
 
     $scope = $rootScope.$new();
+    $scope.pdshChange = jasmine.createSpy('pdshChange');
 
     node = $compile(element)($scope);
 
     // Update the html
     $scope.$digest();
-
-    $scope.$$childHead.pdshChange = jasmine.createSpy('pdshChange');
 
     inputField = element.find('.form-control');
     groupAddOn = element.find('.input-group-addon');
@@ -49,7 +48,7 @@ describe('PDSH directive', function () {
     });
 
     it('should call pdshChange', function () {
-      expect($scope.$$childHead.pdshChange).toHaveBeenCalled();
+      expect($scope.pdshChange).toHaveBeenCalled();
     });
   });
 
@@ -85,5 +84,43 @@ describe('PDSH directive', function () {
       var tooltip = element.find('.error-tooltip li');
       expect(tooltip.length).toEqual(0);
     });
+  });
+
+  describe('initial entry', function () {
+    it('should have an initial value of \'invalid[\'', function () {
+      expect(node.find('input').val()).toEqual('invalid[');
+    });
+
+    it('should display the error tooltip', function () {
+      expect(node.find('.error-tooltip')).toBeShown();
+    });
+  });
+});
+
+describe('pdsh initial change', function () {
+  'use strict';
+
+  var $scope, element, node, initialValue;
+
+  beforeEach(module('pdsh-module', 'templates'));
+
+  beforeEach(inject(function ($rootScope, $compile) {
+    initialValue = 'storage0.localdomain';
+
+    // Create an instance of the element
+    element = angular.element('<form name="pdshForm"><pdsh pdsh-initial="\'' + initialValue + '\'" ' +
+      'pdsh-change="pdshChange(pdsh, hostnames)"></pdsh></form>');
+
+    $scope = $rootScope.$new();
+    $scope.pdshChange = jasmine.createSpy('pdshChange');
+
+    node = $compile(element)($scope);
+
+    // Update the html
+    $scope.$digest();
+  }));
+
+  it('should trigger a change for the initial value', function () {
+    expect($scope.pdshChange).toHaveBeenCalledOnceWith(initialValue, [initialValue]);
   });
 });

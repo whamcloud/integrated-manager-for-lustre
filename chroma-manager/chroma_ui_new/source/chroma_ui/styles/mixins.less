@@ -1,0 +1,26 @@
+.vertical-align(@alignment: 50%) {
+  position: relative;
+  top: @alignment;
+  -webkit-transform: translateY(-50%);
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+.transition-height(@height) {
+  -webkit-transition: all linear 0.1s;
+  transition: all linear 0.1s;
+
+  height: @height;
+
+  &.ng-enter,
+  &.ng-leave.ng-leave-active {
+    opacity: 0;
+    height: 0;
+  }
+
+  &.ng-leave,
+  &.ng-enter.ng-enter-active {
+    opacity: 1;
+    height: @height;
+  }
+}

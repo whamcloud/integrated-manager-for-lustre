@@ -69,9 +69,7 @@
             hide: hide
           });
         } else {
-          deregister = scope.$watch('toggle', function (newValue, oldValue) {
-            if (newValue === oldValue) return;
-
+          deregister = scope.$watch('toggle', function (newValue) {
             if (newValue)
               turnThenShow();
             else

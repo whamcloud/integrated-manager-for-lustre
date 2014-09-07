@@ -27,12 +27,15 @@ angular.module('action-dropdown-module', ['socket-module'])
 
       return {
         scope: {
-          record: '='
+          record: '=',
+          overrideClick: '&'
         },
         restrict: 'E',
         replace: true,
         templateUrl: 'iml/action-dropdown/assets/html/action-dropdown.html',
         link: function link (scope, el, attrs) {
+          var hasOverrideClick = 'overrideClick' in attrs;
+
           scope.actionDropdown = {
             tooltipPlacement: (attrs.tooltipPlacement != null ? attrs.tooltipPlacement : 'left'),
             actionsProperty: (attrs.actionsProperty != null ? attrs.actionsProperty : 'available_actions'),
@@ -42,27 +45,32 @@ angular.module('action-dropdown-module', ['socket-module'])
              * @param {Object} record
              * @param {Object} action
              */
-            handleAction: function runHandleAction (record, action) {
+            handleAction: function handleAction (record, action) {
               var setTrue = setOpenFlag(true);
               var setFalse = setOpenFlag(false);
 
               setTrue();
 
-              handleAction(record, action)
-                .then(function mightOpenCommandModal (data) {
-                  if (data)
-                    return openCommandModal({
-                      body: {
-                        objects: [data.body.command || data.body]
-                      }
-                    })
-                      .result;
-                })
-                .finally(setFalse);
+              var promise;
+              if (hasOverrideClick) {
+                promise = scope.overrideClick({record: record, action: action})
+                  .then(function (resp) {
+                    if (resp === 'fallback')
+                      return runHandleAction(record, action);
+                    else
+                      return resp;
+                  });
+              } else
+                promise = runHandleAction(record, action);
+
+              promise.finally(setFalse);
             }
           };
 
           scope.$watch('record.locks.write', function watchWriteLock (newVal) {
+            if (newVal == null)
+              return;
+
             scope.actionDropdown.disabled = newVal.length > 0;
           });
 
@@ -70,6 +78,19 @@ angular.module('action-dropdown-module', ['socket-module'])
             return function openFlag () {
               scope.actionDropdown.confirmOpen = state;
             };
+          }
+
+          function runHandleAction (record, action) {
+            return handleAction(record, action)
+              .then(function mightOpenCommandModal (data) {
+                if (data)
+                  return openCommandModal({
+                    body: {
+                      objects: [data.body.command || data.body]
+                    }
+                  })
+                  .result;
+              });
           }
         }
       };

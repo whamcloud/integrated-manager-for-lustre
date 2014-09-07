@@ -1,6 +1,14 @@
 .server-ctrl {
+  height: 100%;
+
   .pdsh-input {
     width: ~"calc(100% - 80px)";
+  }
+
+  .add-server-button {
+    i {
+      margin-right: 5px;
+    }
   }
 
   .edit-buttons {
@@ -48,6 +56,20 @@
 
   div.entries[dropdown] {
     padding-left: 0;
+  }
+
+  .no-servers {
+    .vertical-align(40%);
+
+    h1 {
+      color: @gray-light;
+      display: inline-block;
+    }
+
+    button {
+      vertical-align: super;
+      margin-left: 10px;
+    }
   }
 }
 

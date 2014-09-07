@@ -36,8 +36,9 @@
    * @returns {Object}
    */
   function socketFactory ($applyFunc, $document, $window, primus, runPipeline) {
-    var CUSTOM_EVENTS = Object.freeze({
-      PIPELINE: 'pipeline'
+    var EVENTS = Object.freeze({
+      PIPELINE: 'pipeline',
+      DATA: 'data'
     });
 
     /**
@@ -57,24 +58,28 @@
        * @returns {Function}
        */
       extendedSpark.on = extendedSpark.addListener = function on (event, fn, context) {
+        var newContext = Object.create(context || {});
         var $apply = $applyFunc(function handler () {
-          extendedSpark.lastArgs = arguments;
+          if (event === EVENTS.DATA)
+            extendedSpark.lastArgs = cloneDeepArguments(arguments);
 
-          fn.apply(context, extendedSpark.lastArgs);
+          fn.apply(newContext, arguments);
         });
 
-        spark.on(event, $apply, context);
-
-        return function off () {
+        newContext.off = function off () {
           spark.removeListener(event, $apply);
         };
+
+        spark.on(event, $apply, newContext);
+
+        return newContext.off;
       };
 
       /**
        * Provides a hook to set the last data stored
        * for onValue.
        */
-      extendedSpark.setLastData = function setInitialData () {
+      extendedSpark.setLastData = function setLastData () {
         extendedSpark.lastArgs = arguments;
       };
 
@@ -82,39 +87,35 @@
        * This acts like a Bacon property. It looks for last arg and if available, calls fn directly.
        * @param {String} event
        * @param {Function} fn
-       * @param {Object} context
+       * @param {Object} [context]
        * @returns {Function}
        */
-      extendedSpark.onValue = $applyFunc(function onValue (event, fn, context) {
+      extendedSpark.onValue = function onValue (event, fn, context) {
+        var off = extendedSpark.on(event, fn, context);
+
+        var newContext = Object.create(context || {});
+        newContext.off = off;
+
         if (extendedSpark.lastArgs) {
-          if (event === CUSTOM_EVENTS.PIPELINE) {
+          var lastArgs = cloneDeepArguments(extendedSpark.lastArgs);
+
+          if (event === EVENTS.PIPELINE) {
             var runNow = pipeline.slice(0, -1).concat(function callFunc (response) {
-              fn.call(context, response);
+              fn.call(newContext, response);
             });
 
-            runPipeline(runNow, extendedSpark.lastArgs[0]);
-          } else {
-            fn.apply(context, extendedSpark.lastArgs);
+            runPipeline(runNow, lastArgs[0]);
+          } else if (event === EVENTS.DATA) {
+            fn.apply(newContext, lastArgs);
           }
         }
 
-        return extendedSpark.on(event, fn, context);
-      });
+        return off;
+      };
 
       var pipeline = [function emitPipeline (response) {
-        spark.emit(CUSTOM_EVENTS.PIPELINE, response);
+        spark.emit(EVENTS.PIPELINE, response);
       }];
-
-      /**
-       * We do not want to intercept
-       * transports from primus-emitter,
-       * so we let them pass through.
-       * @param {Object} response
-       * @returns {boolean}
-       */
-      function isEmitterTransport (response) {
-        return response.type === 0 || response.type === 1;
-      }
 
       /**
        * Adds a new pipe into the pipeline
@@ -125,7 +126,7 @@
         pipeline.splice(-1, 0, pipe);
 
         if (pipeline.length === 2)
-          extendedSpark.on('data', function run (response) {
+          extendedSpark.on(EVENTS.DATA, function run (response) {
             if (isEmitterTransport(response))
               return;
 
@@ -189,6 +190,26 @@
 
       return extendedSpark;
     };
+
+    /**
+     * We do not want to intercept
+     * transports from primus-emitter,
+     * so we let them pass through.
+     * @param {Object} response
+     * @returns {boolean}
+     */
+    function isEmitterTransport (response) {
+      return response.type === 0 || response.type === 1;
+    }
+
+    /**
+     * Performs a deep clone of the arguments array-like.
+     * @param {Object} args
+     * @returns {Array}
+     */
+    function cloneDeepArguments (args) {
+      return _.cloneDeep(_.toArray(args));
+    }
   }
 
 

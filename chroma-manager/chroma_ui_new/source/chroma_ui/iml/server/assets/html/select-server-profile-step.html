@@ -1,0 +1,49 @@
+<div class="modal-body select-server-profile-step clearfix">
+  <div ng-if="selectServerProfile.warning" class="alert alert-danger" role="alert">
+    You are about to configure one or more servers with failed validations.
+    Configuring servers with failed validations is unsupported!
+    Click <strong>proceed</strong> to continue.
+  </div>
+  <fancy-select-box data="selectServerProfile.options" on-selected="selectServerProfile.onSelected(item)"></fancy-select-box>
+
+  <div ng-if="!selectServerProfile.item.valid" class="statuses">
+    <form class="filterServerForm" name="filterServerForm" novalidate>
+      <pdsh pdsh-initial="selectServerProfile.pdsh" pdsh-change="selectServerProfile.pdshUpdate(pdsh, hostnames)"></pdsh>
+    </form>
+    <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnames:selectServerProfile.getHostPath track by item.host">
+      <div ng-class="{invalid: !item.valid, valid: item.valid }" tooltip="Address: {{item.address}}" class="status-cell activate-popover"></div>
+      <iml-popover class="bottom" title="Status for {{ item.address }}" placement="bottom">
+        <div ng-if="item.valid">
+          <i class="fa fa-check-circle"></i> No issues
+        </div>
+        <div ng-if="!item.valid">
+          <div class="callout callout-danger">
+            <span>{{ item.address }}</span> incompatible with <span>{{ item.profile }}</span> profile.
+          </div>
+          <h4>Reasons: </h4>
+          <ul>
+            <li ng-repeat="problem in item.items">
+              <i class="fa fa-times-circle"></i>{{ problem.description }}
+            </li>
+          </ul>
+        </div>
+      </iml-popover>
+    </div>
+  </div>
+</div>
+<div class="modal-footer">
+  <span ng-if="selectServerProfile.disabled">
+    <button disabled class="btn btn-default"><i class="fa fa-long-arrow-left"></i> Previous</button>
+    <button disabled class="btn btn-success">Proceed <i class="fa fa-spinner fa-spin"></i></button>
+  </span>
+  <span ng-if="!selectServerProfile.disabled">
+    <button class="btn btn-default" ng-click="selectServerProfile.transition('previous')"><i class="fa fa-long-arrow-left"></i> Previous</button>
+    <span ng-if="!selectServerProfile.item.valid">
+      <button class="btn btn-warning" ng-if="!selectServerProfile.warning" ng-click="selectServerProfile.showWarning()">Override <i class="fa fa-exclamation-triangle"></i></button>
+      <button class="btn btn-danger" ng-if="selectServerProfile.warning" ng-click="selectServerProfile.transition('end')">Proceed <i class="fa fa-exclamation-circle"></i></button>
+    </span>
+    <span ng-if="selectServerProfile.item.valid">
+      <button class="btn btn-success" ng-click="selectServerProfile.transition('end')" ng-if="!selectServerProfile.disabled">Proceed <i class="fa fa-check-circle-o"></i></button>
+    </span>
+  </span>
+</div>

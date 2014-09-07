@@ -37,30 +37,30 @@
         pdshChange: '&',
         pdshRequired: '=?',
         pdshLabel: '=?',
-        pdshTooltip: '=?'
+        pdshTooltip: '=?',
+        pdshInitial: '=?'
       },
       restrict: 'E',
       templateUrl: 'common/pdsh/assets/html/pdsh.html',
       replace: true,
       require: '^form',
-      link: function (scope, elm, attrs, ctrl) {
+      link: function link (scope, elm, attrs, ctrl) {
         var states = {
           NEUTRAL: '',
           SUCCESS: 'has-success',
           ERROR: 'has-error'
         };
         var parsedState = states.NEUTRAL;
-        var errorMessages = '';
+        var errorMessages = [];
         var hostnames = [];
         var parsedExpression;
 
+        if (!scope.pdshInitial)
+          scope.pdshInitial = '';
         if (!scope.pdshLabel)
           scope.pdshLabel = 'Hostname';
         if (!scope.pdshTooltip)
           scope.pdshTooltip = 'The name of the host on your network. Takes a hostname or a PDSH expression.';
-
-        // Handle updating the validity of the directive when the view changes.
-        ctrl.pdsh.$parsers.unshift(updateModelAndValidity);
 
         /**
          * Sets the validity of the directive based on the pdsh expression being passed in.
@@ -70,13 +70,22 @@
         function updateModelAndValidity (value) {
           scope.pdsh.parseExpression(value);
 
-          if (_.isEmpty(value) || parsedState === states.SUCCESS) {
-            ctrl.pdsh.$setValidity('pdsh', true);
-            return value;
-          } else {
-            ctrl.pdsh.$setValidity('pdsh', false);
-            return undefined;
+          var validity = (_.isEmpty(value) || parsedState === states.SUCCESS ? true : false);
+
+          ctrl.pdsh.$setValidity('pdsh', validity);
+
+          return value;
+        }
+
+        var fired = false;
+
+        function triggerInitialChange (value) {
+          if (!fired && scope.pdshInitial) {
+            fired = true;
+            scope.pdsh.sendChange();
           }
+
+          return value;
         }
 
         scope.pdsh = {
@@ -86,30 +95,37 @@
            * @param {String} pdshExpression
            */
           parseExpression: function parseExpression(pdshExpression) {
+            if (pdshExpression == null)
+              return;
+
             parsedExpression = pdshParser(pdshExpression);
+            errorMessages = [];
 
             if ('errors' in parsedExpression && pdshExpression.length > 0) {
               parsedState = states.ERROR;
               hostnames = [];
               errorMessages = parsedExpression.errors;
-            }
-            else if (pdshExpression.length > 0) {
+            } else if (pdshExpression.length > 0) {
               parsedState = states.SUCCESS;
               hostnames = parsedExpression.expansion;
-            }
-            else {
+            } else {
               parsedState = states.NEUTRAL;
               hostnames = [];
             }
           },
           sendChange: function sendChange () {
-            scope.pdshChange({pdsh: pdsh.expression, hostnames: hostnames});
+            scope.pdshChange({pdsh: scope.pdsh.expression, hostnames: hostnames});
           },
           /**
            * Returns the error messages regarding the validity of the expression.
            * @returns {string}
            */
           getErrorMessages: function getErrorMessages () {
+            if (scope.pdshRequired && _.isEmpty(scope.pdsh.expression))
+              errorMessages.push('Expression required.');
+
+            errorMessages = _.unique(errorMessages);
+
             return errorMessages;
           },
           /**
@@ -121,6 +137,16 @@
           },
           pdshForm: ctrl
         };
+
+        // Set the initial value of the expression
+        scope.pdsh.expression = scope.pdshInitial;
+
+        // Handle updating the validity of the directive when the model is changed. This is applied when the
+        // model is changed, such as taking an initial value.
+        ctrl.pdsh.$formatters.unshift(updateModelAndValidity);
+        ctrl.pdsh.$formatters.unshift(triggerInitialChange);
+        // Handle updating the validity of the directive when the view changes.
+        ctrl.pdsh.$parsers.unshift(updateModelAndValidity);
       }
     };
   }

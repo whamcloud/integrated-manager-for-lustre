@@ -107,11 +107,11 @@ describe('socket module', function () {
         });
 
         it('should register an on listener with spark', function () {
-          expect(spark.on).toHaveBeenCalledOnceWith('data', jasmine.any(Function), undefined);
+          expect(spark.on).toHaveBeenCalledOnceWith('data', jasmine.any(Function), jasmine.any(Object));
         });
 
         it('should call $applyFunc with a handler', function () {
-          expect($applyFunc).toHaveBeenCalledTwiceWith(jasmine.any(Function));
+          expect($applyFunc).toHaveBeenCalledOnceWith(jasmine.any(Function));
         });
 
         describe('data', function () {
@@ -131,7 +131,7 @@ describe('socket module', function () {
           });
 
           it('should apply the response to the handler', function () {
-            expect(handler.apply).toHaveBeenCalledOnceWith(undefined, [response]);
+            expect(handler.apply).toHaveBeenCalledOnceWith({off: jasmine.any(Function)}, [response]);
           });
         });
       });
@@ -150,14 +150,10 @@ describe('socket module', function () {
           expect(extendedSpark.onValue).toEqual(jasmine.any(Function));
         });
 
-        it('should be wrapped in $applyFunc', function () {
-          expect($applyFunc).toHaveBeenCalledOnceWith(jasmine.any(Function));
-        });
-
         it('should call spark.on', function () {
           extendedSpark.onValue('data', handler);
 
-          expect(spark.on).toHaveBeenCalledOnceWith('data', jasmine.any(Function), undefined);
+          expect(spark.on).toHaveBeenCalledOnceWith('data', jasmine.any(Function), {off: jasmine.any(Function)});
         });
 
         it('should call handler directly with lastArgs', function () {
@@ -170,7 +166,20 @@ describe('socket module', function () {
 
           extendedSpark.onValue('data', handler);
 
-          expect(handler.apply).toHaveBeenCalledOnceWith(undefined, [data]);
+          expect(handler.apply).toHaveBeenCalledOnceWith({off: jasmine.any(Function)}, [data]);
+        });
+
+        it('should only call handler directly for data or pipeline', function () {
+          var data = {
+            statusCode: 200,
+            body: { foo: 'bar' }
+          };
+
+          extendedSpark.setLastData(data);
+
+          extendedSpark.onValue('datum', handler);
+
+          expect(handler.apply).not.toHaveBeenCalledOnce();
         });
 
         it('should wrap onValue with an existing pipeline', function () {
@@ -193,7 +202,7 @@ describe('socket module', function () {
 
           extendedSpark.onValue('pipeline', handler);
 
-          expect(handler.call).toHaveBeenCalledOnceWith(undefined, {
+          expect(handler.call).toHaveBeenCalledOnceWith({off: jasmine.any(Function )}, {
             statusCode: 200,
             body: {
               foo: 'bar',
@@ -221,7 +230,7 @@ describe('socket module', function () {
         });
 
         it('should register a data listener when adding a pipe', function () {
-          expect(spark.on).toHaveBeenCalledOnceWith('data', jasmine.any(Function), undefined);
+          expect(spark.on).toHaveBeenCalledOnceWith('data', jasmine.any(Function), { off: jasmine.any(Function) });
         });
 
         describe('run', function () {

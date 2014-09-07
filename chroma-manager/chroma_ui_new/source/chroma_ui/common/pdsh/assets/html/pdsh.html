@@ -15,7 +15,7 @@
         <li ng-repeat="hostname in pdsh.getHostnames()">{{hostname}}</li>
       </ul>
     </iml-popover>
-    <input class="form-control" type="search" name="pdsh" placeholder="pdsh expression..."
+    <input class="form-control" type="search" name="pdsh" placeholder="Enter hostname / PDSH hostname expression"
            ng-model="pdsh.expression" ng-change="pdsh.sendChange()" ng-required="pdshRequired">
     <iml-tooltip class="error-tooltip" toggle="pdsh.pdshForm.pdsh.$invalid" direction="bottom">
       <ul>

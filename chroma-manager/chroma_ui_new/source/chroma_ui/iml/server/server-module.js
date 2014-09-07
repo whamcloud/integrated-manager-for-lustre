@@ -21,13 +21,14 @@
 
 
 angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
-  'socket-module', 'command', 'action-dropdown-module', 'status', 'configure-lnet-module'])
-  .controller('ServerCtrl', ['$scope', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
+  'socket-module', 'command', 'action-dropdown-module', 'status', 'configure-lnet-module', 'steps-module',
+  'fancy-select'])
+  .controller('ServerCtrl', ['$scope', '$q', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
-    'jobMonitor', 'alertMonitor', 'openLnetModal',
-    function ServerCtrl ($scope, $modal, pdshParser, pdshFilter, naturalSortFilter,
+    'jobMonitor', 'alertMonitor', 'openLnetModal', 'openAddServerModal',
+    function ServerCtrl ($scope, $q,  $modal, pdshParser, pdshFilter, naturalSortFilter,
                          serverSpark, serverActions, selectedServers, openCommandModal,
-                         jobMonitor, alertMonitor, openLnetModal) {
+                         jobMonitor, alertMonitor, openLnetModal, openAddServerModal) {
       'use strict';
 
       $scope.server = {
@@ -45,7 +46,17 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
         configureLnet: function configureLnet (record) {
           openLnetModal(record);
         },
+        /**
+         * Opens the add host dialog.
+         */
+        addServer: function addServer () {
+          $scope.server.addServerClicked = true;
 
+          openAddServerModal()
+            .opened.then(function () {
+              $scope.server.addServerClicked = false;
+            });
+        },
         /**
          * Returns the current list of PDSH filtered hosts.
          * @returns {Array}
@@ -201,6 +212,15 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
                 }
               });
           });
+        },
+        overrideActionClick: function overrideActionClick (record, action) {
+          var serverStateIsGood = action.state && action.state !== 'removed';
+          var dataIsGood = record.state === 'undeployed' && record.install_method !== 'existing_keys_choice';
+
+          if (serverStateIsGood && dataIsGood)
+            return openAddServerModal(record).result;
+          else
+            return $q.when('fallback');
         }
       };
 

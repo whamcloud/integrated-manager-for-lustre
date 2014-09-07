@@ -8,6 +8,12 @@ html, body, .wrap {
   color: #FFFFFF;
 }
 
+alert.alert-warning {
+  background-color: lighten(@brand-warning, 15%);
+  border-color: @brand-warning;
+  color: @white;
+}
+
 a:hover {
   cursor: pointer;
 }
@@ -31,4 +37,20 @@ html body div.container-full {
 
 .invisible {
   display: none !important;
+}
+
+.callout {
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid @gray-lighter;
+  border-left-width: 5px;
+  border-radius: 3px;
+
+  &.callout-danger {
+    border-left-color: @brand-danger;
+
+    span {
+      color: @brand-danger;
+    }
+  }
 }

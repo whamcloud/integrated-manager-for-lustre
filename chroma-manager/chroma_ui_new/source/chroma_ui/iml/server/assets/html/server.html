@@ -1,5 +1,12 @@
 <h3 class="page-header"><i class="fa fa-tasks"></i> Server Configuration</h3>
 <div class="container container-full server-ctrl">
+  <div class="no-servers well text-center" ng-if="server.servers.objects.length === 0">
+    <h1>No servers are configured</h1>
+    <button ng-click="server.addServer()" type="button" class="add-server-button btn btn-success btn-lg" ng-disabled="server.addServerClicked">
+      <i class="fa fa-plus-circle"></i>Add Servers
+    </button>
+  </div>
+  <div ng-if="server.servers.objects.length > 0">
   <h4 class="section-header">Servers</h4>
   <ul class="list-inline">
     <li>
@@ -14,8 +21,8 @@
           </span>
         </button>
       </form>
-        <div class="btn-group btn-sm entries" dropdown is-open="server.itemsPerPageIsOpen">
-          <button type="button" class="btn btn-primary dropdown-toggle" ng-disabled="disabled">
+        <div class="btn-group entries" dropdown is-open="server.itemsPerPageIsOpen">
+          <button type="button" class="btn btn-info btn-sm dropdown-toggle" ng-disabled="disabled">
             Entries: {{server.itemsPerPage}} <span class="caret"></span>
           </button>
           <ul class="dropdown-menu" role="menu">
@@ -69,7 +76,7 @@
         <button ng-disabled="item.immutable_state" class="btn btn-primary btn-sm" ng-click="server.configureLnet(item)">Configure <i class="fa fa-gear"></i></button>
       </td>
       <td ng-if="!server.editable">
-        <action-dropdown record="item"></action-dropdown>
+        <action-dropdown record="item" override-click="server.overrideActionClick(record, action)"></action-dropdown>
       </td>
       <td>
         <job-status record-id="item.resource_uri"></job-status>
@@ -93,6 +100,10 @@
     <pagination total-items="server.getTotalItems()" items-per-page="server.getItemsPerPage()" ng-model="server.currentPage" max-size="server.maxSize" class="pagination-sm" boundary-links="true" ng-show="server.getTotalItems() > server.getItemsPerPage()"></pagination>
   </div>
 
+  <button ng-if="!server.editable" ng-disabled="server.addServerClicked" ng-click="server.addServer()" type="button" class="btn btn-default add-server-button btn-sm">
+    <i class="fa fa-plus-circle text-success"></i> Add More Servers
+  </button>
+
   <div class="edit-buttons" ng-if="server.editable">
     <div class="btn-group btn-group-justified btn-block">
       <a type="button" ng-click="server.toggleType('all')" ng-model="server.selectType" btn-radio="'all'" class="btn btn-info btn-lg">Select All</a>
@@ -107,5 +118,6 @@
 
   <div class="action-buttons">
     <button ng-repeat="action in server.actions track by action.value" tooltip="{{ action.tooltip | insertHelp}}" class="btn btn-primary btn-sm" ng-click="server.setEditName(action.value)">{{action.value}} <i class="fa fa-question-circle"></i></button>
+  </div>
   </div>
 </div>

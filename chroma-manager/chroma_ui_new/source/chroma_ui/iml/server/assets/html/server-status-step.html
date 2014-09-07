@@ -1,0 +1,31 @@
+<div class="modal-body server-status-step clearfix">
+  <div ng-if="serverStatus.warning" class="alert alert-danger" role="alert">
+    You are about to add one or more servers with failed validations.
+    Adding servers with failed validations is unsupported!
+    Click <strong>proceed</strong> to continue.
+  </div>
+  <form name="filterServerForm" novalidate>
+    <pdsh pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames)"></pdsh>
+  </form>
+  <div class="status-cell-container" ng-repeat="status in serverStatus.status | pdsh:serverStatus.hostnames:serverStatus.getHostPath track by status.address">
+    <div ng-class="{invalid: status.invalid, valid: !status.invalid}" tooltip="Address: {{ status.address }}" class="status-cell activate-popover"></div>
+    <iml-popover class="bottom" title="Status for {{ status.address }}" placement="bottom">
+      <ul class="well">
+        <li ng-repeat="(key, value) in status.fields">
+          <i ng-class="{ 'fa-times-circle': !value, 'fa-check-circle': value }" class="fa"></i> {{ key }}
+        </li>
+      </ul>
+    </iml-popover>
+  </div>
+</div>
+<div class="modal-footer">
+  <span ng-if="!serverStatus.disabled">
+    <button class="btn btn-default" ng-click="serverStatus.transition('previous')"><i class="fa fa-long-arrow-left"></i> Previous</button>
+    <button class="btn btn-warning" ng-if="!serverStatus.warning" ng-click="serverStatus.showWarning()">Override <i class="fa fa-exclamation-triangle"></i></button>
+    <button class="btn btn-danger" ng-if="serverStatus.warning" ng-click="serverStatus.transition('next')">Proceed <i class="fa fa-exclamation-circle"></i></button>
+  </span>
+  <span ng-if="serverStatus.disabled">
+    <button disabled class="btn btn-default"><i class="fa fa-long-arrow-left"></i> Previous</button>
+    <button disabled class="btn btn-danger">Working <i class="fa fa-spinner fa-spin"></i></button>
+  </span>
+</div>
