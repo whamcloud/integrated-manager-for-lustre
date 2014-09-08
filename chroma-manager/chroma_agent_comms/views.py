@@ -37,7 +37,7 @@ import settings
 import os
 from tastypie.http import HttpForbidden
 
-from chroma_core.models import ManagedHost, ClientCertificate, RegistrationToken, ServerProfile
+from chroma_core.models import ManagedHost, ClientCertificate, RegistrationToken, ServerProfile, Bundle
 from chroma_core.models.copytool import Copytool, CopytoolEvent, CopytoolOperation, log as copytool_log, UNKNOWN_UUID
 from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
@@ -542,9 +542,8 @@ def setup(request, key):
         return token_error
 
     repos = ""
-    repo_names = []
-    for bundle in token.profile.bundles.all():
-        repo_names.append(bundle.bundle_name)
+    repo_names = token.profile.bundles.values_list('bundle_name', flat=True)
+    for bundle in Bundle.objects.all():
         repos += """[%s]
 name=%s
 baseurl={0}/%s

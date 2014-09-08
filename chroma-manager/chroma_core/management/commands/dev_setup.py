@@ -109,7 +109,7 @@ that work.
     """ % {'bundle_url': "http://build.whamcloudlabs.com/job/chroma/arch=x86_64,distro=el6.4/lastSuccessfulBuild/artifact/chroma-bundles/", 'repo_path': settings.DEV_REPO_PATH, 'bundles': ", ".join(missing_bundles)}
                 sys.exit(1)
 
-        for name in ('base_managed', 'base_monitored', 'posix_copytool_worker', 'robinhood_server'):
+        for name in ('default', 'base_managed', 'base_monitored', 'posix_copytool_worker', 'robinhood_server'):
             base_profile_path = os.path.join(os.path.dirname(base_profile_path), name + '.profile')
             if not ServerProfile.objects.filter(name=name).exists():
                 chroma_core.lib.service_config.register_profile(open(base_profile_path))

@@ -25,8 +25,9 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_core.services.rpc import RpcError, RpcTimeout
 from chroma_core.services import log_register
 from tastypie.validation import Validation
+import simplejson as json
 
-from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile, LustreClientMount
+from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile, LustreClientMount, Command
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
@@ -49,11 +50,6 @@ class HostValidation(Validation):
         errors = defaultdict(list)
         if request.method != 'POST':
             return errors
-
-        try:
-            bundle.data['server_profile']
-        except KeyError:
-            errors['server_profile'].append(self.mandatory_message)
 
         try:
             address = bundle.data['address']
@@ -110,7 +106,7 @@ def _host_params(bundle, address = None):
 
 class ServerProfileResource(ModelResource):
     class Meta:
-        queryset = ServerProfile.objects.all()
+        queryset = ServerProfile.objects.filter(user_selectable=True)
         resource_name = 'server_profile'
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
@@ -235,7 +231,11 @@ class HostResource(MetricResource, StatefulModelResource):
 
     def _create_host(self, address, bundle, request):
         # Resolve a server profile URI to a record
-        profile = self.fields['server_profile'].hydrate(bundle).obj
+        # TODO for backwards compatibility, remove when client is updated
+        if 'server_profile' in bundle.data:
+            profile = self.fields['server_profile'].hydrate(bundle).obj
+        else:
+            profile = ServerProfile.objects.get(user_selectable=False)
 
         try:
             host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name,
@@ -333,3 +333,57 @@ class HostTestResource(Resource):
             raise custom_response(self, request, http.HttpBadRequest, {'address': ["Cannot contact host at this address:"]})
 
         raise custom_response(self, request, http.HttpAccepted, result)
+
+
+class HostProfileResource(Resource):
+    """
+    Get and set profiles associated with hosts.
+    """
+    class Meta:
+        list_allowed_methods = ['get', 'post']
+        detail_allowed_methods = ['get', 'put']
+        resource_name = 'host_profile'
+        authentication = AnonymousAuthentication()
+        authorization = DjangoAuthorization()
+        object_class = dict
+        include_resource_uri = False
+
+    def get_resource_uri(self, bundle_or_obj):
+        return self.get_resource_list_uri()
+
+    def full_dehydrate(self, bundle):
+        return bundle.obj
+
+    def get_profiles(self, host):
+        properties = json.loads(host.properties)
+        result = dict((name, []) for name, in ServerProfile.objects.filter(user_selectable=True).values_list('name'))
+        # TODO replace explicit validation with profile data
+        if 'base_managed' in result:
+            result['base_managed'].append({'result': not properties.get('zfs_installed'), 'description': "ZFS must not be installed"})
+        return result
+
+    def set_profile(self, host_id, profile):
+        # TODO validate against properties again or trust the client?
+        profile = get_object_or_404(ServerProfile, pk=profile)
+        if ManagedHost.objects.filter(pk=host_id).update(server_profile=profile, immutable_state=not profile.managed):
+            # TODO should following up with configuration be the client's responsibility?
+            host = ManagedHost.objects.get(pk=host_id)
+            if profile.initial_state in host.get_available_states(host.state):
+                Command.set_state([(host, profile.initial_state)])
+
+    def obj_get(self, request, pk=None):
+        return self.get_profiles(get_object_or_404(ManagedHost, pk=pk))
+
+    def obj_get_list(self, request):
+        return [{
+            'host': host.id,
+            'address': host.address,
+            'profiles': self.get_profiles(host),
+        } for host in ManagedHost.objects.filter(server_profile__user_selectable=False)]
+
+    def obj_create(self, bundle, request):
+        for data in bundle.data['objects']:
+            self.set_profile(data['host'], data['profile'])
+
+    def obj_update(self, bundle, request, pk=None):
+        self.set_profile(pk, bundle.data['profile'])

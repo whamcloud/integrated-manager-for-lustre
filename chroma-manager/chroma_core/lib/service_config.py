@@ -798,6 +798,8 @@ def register_profile(profile_file):
         "name": "default",
         "bundles": [],
         "ui_description": "This is the hard coded default profile.",
+        "user_selectable": True,
+        "initial_state": "configured",
         "packages": {}
     }
 
@@ -827,7 +829,7 @@ def register_profile(profile_file):
         log.error("Bundles not found for profile '%s': %s" % (data['name'], ", ".join(missing_bundles)))
         sys.exit(-1)
 
-    profile_fields = ['ui_name', 'ui_description', 'managed', 'worker']
+    profile_fields = ['ui_name', 'ui_description', 'managed', 'worker', 'user_selectable', 'initial_state']
     try:
         profile = ServerProfile.objects.get(name=data['name'])
         log.debug("Updating profile %s" % data['name'])
