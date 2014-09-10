@@ -76,7 +76,3 @@ class LocalAudit(BaseAudit, FileSystemMixin):
             agg_raw = self.__mergedicts(agg_raw, audit_metrics['raw'])
 
         return {'raw': agg_raw}
-
-    def properties(self):
-        """Returns merged properties suitable for host validation."""
-        return dict(item for cls in self.audit_classes() for item in cls().properties().items())

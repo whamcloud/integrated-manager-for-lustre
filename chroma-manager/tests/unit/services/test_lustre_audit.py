@@ -4,7 +4,7 @@ from django.test import TestCase
 import mock
 from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
 
-from chroma_core.models import Package, PackageVersion, PackageAvailability, ManagedHost
+from chroma_core.models import Package, PackageVersion, PackageAvailability
 from chroma_core.services.lustre_audit import UpdateScan
 from chroma_core.models.package import PackageInstallation
 
@@ -162,18 +162,3 @@ class TestPackageAudit(TestCase):
         self.assertFalse(PackageInstallation.objects.exists())
         self.assertFalse(PackageVersion.objects.exists())
         self.assertFalse(Package.objects.exists())
-
-
-class TestPropertiesAudit(TestCase):
-    def setUp(self):
-        load_default_profile()
-
-    def test_update_properties(self):
-        update_scan = UpdateScan()
-        update_scan.host = synthetic_host('test1')
-        self.assertEqual(update_scan.host.properties, '{}')
-        update_scan.update_properties({'key': 'value'})
-        host = ManagedHost.objects.get(id=update_scan.host.id)
-        self.assertEqual(host.properties, '{"key": "value"}')
-        update_scan.update_properties(None)
-        self.assertEqual(ManagedHost.objects.get(id=host.id).properties, host.properties)

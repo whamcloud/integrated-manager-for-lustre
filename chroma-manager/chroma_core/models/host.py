@@ -152,9 +152,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # The method used to install the host
     install_method = models.CharField(max_length = 32, help_text = "The method used to install the agent on the server")
 
-    # JSON object of properties suitable for validation
-    properties = models.TextField(default='{}')
-
     # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
     states = ['unconfigured', 'undeployed', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
     initial_state = 'unconfigured'

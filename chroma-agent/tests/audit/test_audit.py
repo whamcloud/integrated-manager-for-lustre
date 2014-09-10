@@ -31,6 +31,3 @@ class TestLocalAudit(PatchedContextTestCase):
     def test_localaudit_audit_classes(self):
         """LocalAudit.audit_classes() should return a list of classes."""
         self.assertEqual(self.audit.audit_classes(), [LnetAudit, MdtAudit, MgsAudit, NodeAudit])
-
-    def test_properties(self):
-        self.assertEqual(self.audit.properties(), {'zfs_installed': False})
