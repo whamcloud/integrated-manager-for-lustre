@@ -222,8 +222,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def get_available_states(self, begin_state):
         if begin_state == 'undeployed':
-            state = getattr(self.server_profile, 'initial_state', 'configured')
-            return [state] if self.install_method != ManagedHost.INSTALL_MANUAL else []
+            return ['configured'] if self.install_method != ManagedHost.INSTALL_MANUAL else []
 
         if self.immutable_state:
             if begin_state in ['undeployed', 'unconfigured']:
@@ -982,7 +981,7 @@ class SetupHostJob(StateChangeJob):
             steps.append((InstallPackagesStep, {
                 'repos': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
                 'host': self.managed_host,
-                'packages': list(self.managed_host.server_profile.packages) + ['chroma-agent-management']
+                'packages': list(self.managed_host.server_profile.packages)
             }))
 
             steps.append((RebootIfNeededStep, {

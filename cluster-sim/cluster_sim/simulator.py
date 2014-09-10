@@ -251,8 +251,6 @@ class ClusterSimulator(Persisted):
                 'lustre-client-modules': (0, "2.5.0", "1", "x86_64")
             }
         }
-        for packages in self.state['packages'].values():
-            packages['chroma-agent-management'] = 0, '', '', ''
         self.save()
 
         self.power.setup(pdu_count)

@@ -1,4 +1,3 @@
-import json
 from chroma_api.urls import api
 from chroma_core.models import Bundle, Command
 from chroma_core.models.host import ManagedHost, Nid
@@ -44,34 +43,6 @@ class TestHostResource(ChromaApiTestCase):
         self.assertEquals(test_sp.ui_name, current_profile.ui_name)
         self.assertEquals(test_sp.managed, current_profile.managed)
         self.assertEquals(list(test_sp.bundles.all()), list(current_profile.bundles.all()))
-
-    @create_host_ssh_patch
-    def test_profile(self):
-        profile = ServerProfile(name='default', ui_name='Default', ui_description='Default', managed=False, user_selectable=False)
-        profile.save()
-        profile.bundles.add(Bundle.objects.get(bundle_name='agent'))
-        response = self.api_client.post(self.RESOURCE_PATH, data={'address': 'foo'})
-        self.assertHttpAccepted(response)
-        host, = ManagedHost.objects.all()
-        self.assertEqual(host.server_profile.name, 'default')
-
-        response = self.api_client.get('/api/host_profile/{0}/'.format(host.id))
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(content, {'test_profile': []})
-
-        response = self.api_client.get('/api/host_profile/')
-        self.assertHttpOK(response)
-        content, = json.loads(response.content)['objects']
-        self.assertEqual(content, {'profiles': {'test_profile': []}, 'host': host.id, 'address': host.address})
-
-        response = self.api_client.put('/api/host_profile/{0}/'.format(host.id), data={'profile': 'test_profile'})
-        self.assertHttpAccepted(response)
-        self.assertEqual(ManagedHost.objects.get(id=host.id).server_profile.name, 'test_profile')
-
-        response = self.api_client.post('/api/host_profile/', data={'objects': [{'host': host.id, 'profile': 'test_profile'}]})
-        self.assertHttpCreated(response)
-        self.assertEqual(ManagedHost.objects.get(id=host.id).server_profile.name, 'test_profile')
 
 
 sample_private_key = """-----BEGIN RSA PRIVATE KEY-----
