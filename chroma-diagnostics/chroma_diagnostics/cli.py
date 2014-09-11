@@ -81,12 +81,9 @@ logrotate_logs = {
 def run_command(cmd, out, err):
 
     try:
-        p = subprocess.Popen(cmd,
-            stdout = out,
-            stderr = err)
+        p = subprocess.Popen(cmd, stdout = out, stderr = err)
     except OSError:
-    #  The cmd in this case could not run on this platform, skipping
-    #        log.info("Skipping: %s" % cmd)
+        #  The cmd in this case could not run, skipping
         return None
     else:
         p.wait()
@@ -245,19 +242,17 @@ def main():
 
     log.info("\nCollecting diagnostic files\n")
 
-    if save_command_output('detected_devices', ['chroma-agent', 'device_plugin',
-                                                '--plugin=linux'], output_directory):
+    if save_command_output('detected_devices', ['chroma-agent', 'device_plugin', '--plugin=linux'], output_directory):
         log.info("Detected devices")
     elif args.verbose > 0:
-        log.info("Failed to Detected devices")
+        log.info("Failed to detect Linux system devices")
 
     if save_command_output('monitored_devices', ['chroma-agent', 'detect_scan'], output_directory):
         log.info("Devices monitored")
     elif args.verbose > 0:
-        log.info("Failed to detect_scan")
+        log.info("Failed to detect devices containing Lustre components")
 
-    if save_command_output('rabbit_queue_status', ['rabbitmqctl', 'list_queues', '-p',
-                                                   'chromavhost'], output_directory):
+    if save_command_output('rabbit_queue_status', ['rabbitmqctl', 'list_queues', '-p', 'chromavhost'], output_directory):
         log.info("Inspected rabbit queues")
     elif args.verbose > 0:
         log.info("Failed to inspect rabbit queues")

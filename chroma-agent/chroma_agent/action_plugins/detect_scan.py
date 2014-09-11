@@ -25,12 +25,14 @@ import re
 import subprocess
 from tempfile import mktemp
 from collections import defaultdict
+from datetime import datetime
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.utils import Mounts
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log
+from chroma_agent import config
 
 
 class LocalTargets(object):
@@ -263,11 +265,43 @@ class MgsTargets(object):
                 os.unlink(tmpfile)
 
 
-def detect_scan(target_devices):
-    local_targets = LocalTargets(target_devices)
-    mgs_targets = MgsTargets(local_targets.targets)
+def detect_scan(target_devices=None):
+    """Look for Lustre on possible devices
 
-    return {"local_targets": local_targets.targets,
+    Save the input devices when possible.  Then future calls will
+    not need to specify the target_devices
+    """
+
+    right_now = str(datetime.now())
+
+    if target_devices is not None:
+        target_devices_time_stamped = dict(timestamp=right_now, target_devices=target_devices)
+        config.update('settings', 'last_detect_scan_target_devices', target_devices_time_stamped)
+
+    try:
+        # Recall the last target_devices used in this method
+        settings = config.get('settings', 'last_detect_scan_target_devices')
+    except KeyError:
+        # This method was never called with a non-null target_devices
+        # or the setting file holding the device record is not found.
+        daemon_log.warn("detect_scan improperly called without target_devices "
+                        "and without a previous call's target_devices to use.")
+
+        # TODO: Consider an exception here. But, since this is a rare case, it seems reasonable to return emptiness
+        # TODO: If this raised an exception, it should be a handled one in any client, and that seems too heavy
+        local_targets = LocalTargets([])
+        timestamp = right_now
+
+    else:
+        # Have target devices, so process them
+        timestamp = settings['timestamp']
+        daemon_log.info("detect_scan called at %s with target_devices saved on %s" % (str(datetime.now()), timestamp))
+        local_targets = LocalTargets(settings['target_devices'])
+
+    # Return the discovered Lustre components on the target devices, may return emptiness.
+    mgs_targets = MgsTargets(local_targets.targets)
+    return {"target_devices_saved_timestamp": timestamp,
+            "local_targets": local_targets.targets,
             "mgs_targets": mgs_targets.filesystems,
             "mgs_conf_params": mgs_targets.conf_params}
 
