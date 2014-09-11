@@ -197,7 +197,8 @@ function add_host_dialog(serverProfile, host, newState) {
         reverse_ping: 'add_host_reverse_ping',
         reverse_resolve: 'add_host_reverse_resolve',
         yum_valid_repos: 'add_host_yum_valid_repos',
-        yum_can_update: 'add_host_yum_can_update'
+        yum_can_update: 'add_host_yum_can_update',
+        openssl: 'add_host_openssl'
       };
 
       _.each(field_to_class, function(el_class, field) {

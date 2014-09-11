@@ -196,7 +196,8 @@ class TestHostAddValidations(JobTestCase):
                 'fqdn_resolves': True,
                 'fqdn_matches': True,
                 'yum_valid_repos': True,
-                'yum_can_update': True
+                'yum_can_update': True,
+                'openssl': True,
             },
             'mgr_fqdn': "test-server.company.domain",
             'self_fqdn': "test-server.company.domain",
@@ -269,7 +270,8 @@ class TestHostAddValidations(JobTestCase):
             u'reverse_resolve': True,
             u'reverse_ping': True,
             u'yum_valid_repos': True,
-            u'yum_can_update': True
+            u'yum_can_update': True,
+            u'openssl': True,
         }
 
         self.addCleanup(mock.patch.stopall)

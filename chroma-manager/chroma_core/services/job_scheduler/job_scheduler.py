@@ -1015,6 +1015,14 @@ class JobScheduler(object):
 
         return not epel_detected, can_update
 
+    def _test_openssl(self, agent_ssh, auth_args, address):
+        try:
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, "openssl version -a")
+        except AgentException:
+            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
+            return False
+        return not (rc or err)
+
     def _try_ssh_cmd(self, agent_ssh, auth_args, cmd):
         try:
             return agent_ssh.ssh(cmd, auth_args = auth_args)
@@ -1062,12 +1070,14 @@ class JobScheduler(object):
         fqdn_matches = False
         yum_valid_repos = False
         yum_can_update = False
+        openssl = False
 
         if resolve and ping:
             try:
                 reverse_resolve, reverse_ping = self._test_reverse_ping(agent_ssh, auth_args, address, manager_hostname)
                 hostname_valid, fqdn_resolves, fqdn_matches = self._test_hostname(agent_ssh, auth_args, address, resolved_address)
                 yum_valid_repos, yum_can_update = self._test_yum_sanity(agent_ssh, auth_args, address)
+                openssl = self._test_openssl(agent_ssh, auth_args, address)
             except (AuthenticationException, SSHException):
                 #  No auth methods available, or wrong creds
                 auth = False
@@ -1085,7 +1095,8 @@ class JobScheduler(object):
             'reverse_resolve': reverse_resolve,
             'reverse_ping': reverse_ping,
             'yum_valid_repos': yum_valid_repos,
-            'yum_can_update': yum_can_update
+            'yum_can_update': yum_can_update,
+            'openssl': openssl,
         }
 
     @classmethod
