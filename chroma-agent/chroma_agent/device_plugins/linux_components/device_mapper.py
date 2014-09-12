@@ -254,12 +254,7 @@ class DmsetupTable(DeviceHelper):
                 continue
 
         # Filter out nonlocal LVM components (HYD-2431)
+        self.vgs = dict([(vg, value) for vg, value in self.vgs.items() if vg in local_vgs])
+        self.lvs = dict([(lv, value) for lv, value in self.lvs.items() if lv in local_vgs])
         for vg_name, vg_lvs in self.lvs.items():
-            if vg_name not in local_vgs:
-                del self.lvs[vg_name]
-                del self.vgs[vg_name]
-                continue
-
-            for lv_name in vg_lvs:
-                if lv_name not in local_lvs:
-                    del self.lvs[vg_name][lv_name]
+            self.lvs[vg_name] = dict([(k, v) for k, v in self.lvs[vg_name].items() if k in local_lvs])
