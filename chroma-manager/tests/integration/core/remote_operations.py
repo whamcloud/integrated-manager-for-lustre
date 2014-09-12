@@ -139,7 +139,7 @@ class SimulatorRemoteOperations(RemoteOperations):
                 fqdn = server['fqdn']
 
         lustre_clients = [c['address'] for c in config['lustre_clients']]
-        if fqdn is None and not address in lustre_clients:
+        if fqdn is None and address not in lustre_clients:
             raise KeyError("No server with address %s" % address)
         elif fqdn is None and address in lustre_clients:
             client = self._simulator.get_lustre_client(address)
@@ -316,7 +316,7 @@ class RealRemoteOperations(RemoteOperations):
             self._test_case.assertEqual(exit_status, expected_return_code, stderr.read())
         return RemoteCommandResult(exit_status, stdout, stderr)
 
-    def _ssh_fqdn(self, fqdn, command, expected_return_code=0, timeout = TEST_TIMEOUT):
+    def _ssh_fqdn(self, fqdn, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
         address = None
         for host in config['lustre_servers']:
             if host['fqdn'] == fqdn:
@@ -324,7 +324,7 @@ class RealRemoteOperations(RemoteOperations):
         if address is None:
             raise KeyError(fqdn)
 
-        return self._ssh_address(address, command, expected_return_code, timeout)
+        return self._ssh_address(address, command, expected_return_code, timeout, buffer)
 
     def erase_block_device(self, fqdn, path):
         # Needless to say, we're not bothering to scrub the whole device, just enough
@@ -362,21 +362,37 @@ class RealRemoteOperations(RemoteOperations):
         result = self._ssh_address(address, "cat %s" % path)
         return result.stdout.read().strip()
 
-    def backup_cib(self, server, backup="/tmp/cib-backup.xml"):
+    def backup_cib(self, server):
+        backup = "/tmp/cib-backup-%s.xml" % server['nodename']
         running_targets = self.get_pacemaker_targets(server, running = True)
         for target in running_targets:
             self.stop_target(server['fqdn'], target)
 
         self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) < 1)
 
-        self._ssh_fqdn(server['fqdn'],
-                       '''cibadmin --query | sed -e 's/epoch="[[:digit:]]\+" //'> %s''' % backup)
+        open(backup, "w").write(self._ssh_fqdn(server['fqdn'],
+                                               "cibadmin --query").stdout.read())
 
         return running_targets
 
-    def restore_cib(self, server, start_targets, restore="/tmp/cib-backup.xml"):
-        self._ssh_fqdn(server['fqdn'], "cibadmin --erase --force")
-        self._ssh_fqdn(server['fqdn'], "cibadmin --modify --xml-file %s" % restore)
+    def restore_cib(self, server, start_targets):
+        import xml.etree.ElementTree as xml
+
+        new_cib = xml.fromstring(open("/tmp/cib-backup-%s.xml" %
+                                      server['nodename']).read())
+
+        # get the current admin_epoch
+        current_cib = xml.fromstring(
+            self._ssh_fqdn(server['fqdn'],
+                           "cibadmin --query").stdout.read())
+
+        new_cib.set('admin_epoch', str(int(current_cib.get('admin_epoch')) + 1))
+        new_cib.set('epoch', "0")
+
+        self._ssh_fqdn(server['fqdn'],
+                       "cibadmin --replace --xml-pipe",
+                       buffer=xml.tostring(new_cib))
+
         for target in start_targets:
             self.start_target(server['fqdn'], target)
 
@@ -543,7 +559,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def host_contactable(self, address):
         try:
-            #TODO: Better way to check this?
+            # TODO: Better way to check this?
             result = self._ssh_address(
                 address,
                 "echo 'Checking if node is ready to receive commands.'",
