@@ -1,5 +1,3 @@
-/*jslint node: true */
-
 'use strict';
 
 var manager = require('./util/manager');
@@ -24,7 +22,7 @@ exports.config = {
 
   baseUrl: manager.server_http_url,
 
-  onPrepare: function onPrepare() {
+  onPrepare: function onPrepare () {
     // Use jasmine-reporters junit reporter to create a results file consumable by Jenkins.
     require('jasmine-reporters');
 
@@ -32,7 +30,7 @@ exports.config = {
     var FailedScreenshotReporter = require('./reporters/failed-screenshot-reporter');
     var junitXmlReporter = new jasmine.JUnitXmlReporter('', true, false);
 
-    global.browser.getCapabilities().then(function (capabilities) {
+    browser.getCapabilities().then(function (capabilities) {
       var browserName = capabilities.caps_.browserName;
 
       // Lets get a more organized test report by putting all the results in "protractor-selenium-tests"
@@ -60,6 +58,8 @@ exports.config = {
   jasmineNodeOpts: {
     showColors: true,
     isVerbose: true,
-    defaultTimeoutInterval: 600000 // 10 minutes.
+    showTiming: true,
+    includeStackTrace: true,
+    defaultTimeoutInterval: manager.waitTimes.long
   }
 };

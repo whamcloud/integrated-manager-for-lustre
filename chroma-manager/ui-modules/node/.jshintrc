@@ -13,7 +13,8 @@
     "expect": false,
     "waits": false,
     "waitsFor": false,
-    "runs": false
+    "runs": false,
+    "element": false
   },
 
   "bitwise": true,

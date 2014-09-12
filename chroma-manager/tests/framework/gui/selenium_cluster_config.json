@@ -56,6 +56,12 @@
         "/dev/disk/by-id/scsi-1IET_00070001": "1IET 00070001",
         "/dev/disk/by-id/scsi-1IET_00080001": "1IET 00080001"
     },
+    "wait_time": {
+        "long": 900000,
+        "standard": 300000,
+        "medium": 60000,
+        "short": 30000
+    },
     "repos": {
         "chroma": {
             "build_job": "BUILD_JOB_NAME",
