@@ -30,19 +30,30 @@ import time
 import argparse
 from argparse import RawTextHelpFormatter
 import os
+import sys
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.INFO)
 handler = logging.FileHandler("chroma-diagnostics.log")
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s',
-                                       '%d/%b/%Y:%H:%M:%S'))
+handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', '%d/%b/%Y:%H:%M:%S'))
 log.addHandler(handler)
+
+DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
+
+PACKAGES = ['chroma-agent',
+            'chroma-agent-management',
+            'chroma-manager',
+            'chroma-manager-cli',
+            'chroma-manager-libs']
+
+# Always exclude these tables from DB output
+EXCLUDED_TABLES = ['chroma_core_logmessage', 'chroma_core_series', 'chroma_core_sample_*']
 
 # Dictionary of parent path to array of logfiles
 # that are rolled by logrotated such that when rotated
-# the current file copied with the extendion -<date>.gz
-# and the file is gzipped.
+# the current file is copied, gzipped and renamed
+# with the extention "-<date>.gz"
 logrotate_logs = {
     '/var/log/chroma/': ['job_scheduler.log',
                          'http.log',
@@ -64,18 +75,18 @@ logrotate_logs = {
     '/var/log/': ['messages',
                   'chroma-agent.log',
                   'chroma-agent-console.log'
-                  ]}
+    ]}
 
 
 def run_command(cmd, out, err):
 
     try:
         p = subprocess.Popen(cmd,
-                             stdout = out,
-                             stderr = err)
+            stdout = out,
+            stderr = err)
     except OSError:
-        #  The cmd in this case could not run on this platform, skipping
-#        log.info("Skipping: %s" % cmd)
+    #  The cmd in this case could not run on this platform, skipping
+    #        log.info("Skipping: %s" % cmd)
         return None
     else:
         p.wait()
@@ -92,7 +103,11 @@ def run_command(cmd, out, err):
         return p
 
 
-def dump(fn, cmd, output_directory):
+def run_command_output_piped(cmd):
+    return run_command(cmd, subprocess.PIPE, subprocess.PIPE)
+
+
+def save_command_output(fn, cmd, output_directory):
 
     out_fn = "%s.out" % fn
     err_fn = "%s.err" % fn
@@ -108,10 +123,6 @@ def dump(fn, cmd, output_directory):
         os.remove(err_path)
 
     return result
-
-
-def execute(cmd):
-    return run_command(cmd, subprocess.PIPE, subprocess.PIPE)
 
 
 def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
@@ -160,7 +171,7 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
     # Copy all files into one file per filename
     for file_name, log_files in collected_files.items():
         ordered_log_files = [t[0] for t in sorted(log_files,
-                             key=lambda file_tuple: file_tuple[1])]
+            key=lambda file_tuple: file_tuple[1])]
         output_file_name = os.path.join(output_directory, file_name)
         for log_file in ordered_log_files:
             if log_file.endswith('gz'):
@@ -173,13 +184,24 @@ def copy_logrotate_logs(output_directory, days_back=1, verbose=0):
 
     return len(collected_files)
 
-DEFAULT_OUTPUT_DIRECTORY = '/var/log/'
 
-PACKAGES = ['chroma-agent',
-            'chroma-agent-management',
-            'chroma-manager',
-            'chroma-manager-cli',
-            'chroma-manager-libs']
+def export_postgres_chroma_db(parent_directory):
+
+    # export db in plantext, compressed (gzip), and never ask for password
+    time_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    output_fn = 'chromadb_%s' % time_stamp
+    output_path = os.path.join(parent_directory, '%s.sql.gz' % output_fn)
+
+    #  Dump and compress to a file ...
+    cmd_export = ['pg_dump', '-U', 'chroma', '-F', 'p', '-Z', '9', '-w', '-f', output_path]
+
+    #  ... while excluding tables
+    cmd_export += ['-T %s' % table_name for table_name in EXCLUDED_TABLES]
+
+    # ... the IML database
+    cmd_export += ['chroma']
+
+    return run_command_output_piped(cmd_export)
 
 
 def main():
@@ -191,7 +213,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=desc, formatter_class=RawTextHelpFormatter)
     parser.add_argument('--verbose', '-v', action='count', required=False,
-                        help="More output for troubleshooting.")
+        help="More output for troubleshooting.")
 
     def _check_days_back(arg):
         try:
@@ -206,15 +228,15 @@ def main():
             else:
                 return days_back
     parser.add_argument('--days-back', '-d', required=False,
-                        type=_check_days_back, default=1,
-                        help="Number of days back to collect logs. "
-                             "default is 1.  0 would mean today's logs only.")
+        type=_check_days_back, default=1,
+        help="Number of days back to collect logs. "
+             "default is 1.  0 would mean today's logs only.")
     args = parser.parse_args()
 
     time_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     output_fn = 'diagnostics_%s' % time_stamp
 
-    hostname_process = execute(['hostname', '-f'])
+    hostname_process = run_command_output_piped(['hostname', '-f'])
     if hostname_process:
         output_fn = '%s_%s' % (output_fn, hostname_process.stdout.read().strip())
 
@@ -223,76 +245,76 @@ def main():
 
     log.info("\nCollecting diagnostic files\n")
 
-    if dump('detected_devices', ['chroma-agent', 'device_plugin',
-                                 '--plugin=linux'], output_directory):
+    if save_command_output('detected_devices', ['chroma-agent', 'device_plugin',
+                                                '--plugin=linux'], output_directory):
         log.info("Detected devices")
     elif args.verbose > 0:
         log.info("Failed to Detected devices")
 
-    if dump('monitored_devices', ['chroma-agent', 'detect_scan'], output_directory):
+    if save_command_output('monitored_devices', ['chroma-agent', 'detect_scan'], output_directory):
         log.info("Devices monitored")
     elif args.verbose > 0:
         log.info("Failed to detect_scan")
 
-    if dump('rabbit_queue_status', ['rabbitmqctl', 'list_queues', '-p',
-                                    'chromavhost'], output_directory):
+    if save_command_output('rabbit_queue_status', ['rabbitmqctl', 'list_queues', '-p',
+                                                   'chromavhost'], output_directory):
         log.info("Inspected rabbit queues")
     elif args.verbose > 0:
         log.info("Failed to inspect rabbit queues")
 
-    if dump('rpm_packges_installed', ['rpm', '-qa'], output_directory):
+    if save_command_output('rpm_packges_installed', ['rpm', '-qa'], output_directory):
         log.info("Listed installed packages")
     elif args.verbose > 0:
         log.info("Failed to list installed packages")
 
-    if dump('pacemaker-cib', ['cibadmin', '--query'], output_directory):
+    if save_command_output('pacemaker-cib', ['cibadmin', '--query'], output_directory):
         log.info("Listed cibadmin --query")
     elif args.verbose > 0:
         log.info("Failed to list cibadmin --query")
 
-    if dump('pacemaker-pcs-config-show', ['pcs', 'config', 'show'], output_directory):
+    if save_command_output('pacemaker-pcs-config-show', ['pcs', 'config', 'show'], output_directory):
         log.info("Listed: pcs config show")
     elif args.verbose > 0:
         log.info("Failed to list pcs config show")
 
-    if dump('pacemaker-crm-mon-1', ['crm_mon', '-1r', ], output_directory):
+    if save_command_output('pacemaker-crm-mon-1', ['crm_mon', '-1r', ], output_directory):
         log.info("Listed: crm_mon -1r")
     elif args.verbose > 0:
         log.info("Failed to list crm_mon -1r")
 
-    if dump('chroma-config-validate', ['chroma-config',
-                                       'validate'], output_directory):
+    if save_command_output('chroma-config-validate', ['chroma-config',
+                                                      'validate'], output_directory):
         log.info("Validated Intel Manager for Lustre® installation")
     elif args.verbose > 0:
         log.info("Failed to run Intel Manager for Lustre® installation validation")
 
-    if dump('finger-print', ['rpm', '-V', ] + PACKAGES, output_directory):
+    if save_command_output('finger-print', ['rpm', '-V', ] + PACKAGES, output_directory):
         log.info("Finger printed Intel Manager for Lustre® installation")
     elif args.verbose > 0:
         log.info("Failed to finger print Intel Manager for Lustre® installation")
 
-    if dump('ps', ['ps', '-ef', '--forest'], output_directory):
+    if save_command_output('ps', ['ps', '-ef', '--forest'], output_directory):
         log.info("Listed running processes")
     elif args.verbose > 0:
         log.info("Failed to list running processes: ps")
 
-    if dump('lspci', ['lspci', '-v'], output_directory):
+    if save_command_output('lspci', ['lspci', '-v'], output_directory):
         log.info("listed PCI devices")
     elif args.verbose > 0:
         log.info("Failed to list PCI devices: lspci")
 
-    if dump('df', ['df', '--all'], output_directory):
+    if save_command_output('df', ['df', '--all'], output_directory):
         log.info("listed file system disk space.")
     elif args.verbose > 0:
         log.info("Failed to list file system disk space : df")
 
     for proc in ['cpuinfo', 'meminfo', 'mounts', 'partitions']:
-        if dump(proc, ['cat', '/proc/%s' % proc], output_directory):
+        if save_command_output(proc, ['cat', '/proc/%s' % proc], output_directory):
             log.info("listed cat /proc/%s" % proc)
         elif args.verbose > 0:
             log.info("Failed to list cat /proc/%s" % proc)
 
-    if dump('etc_hosts', ['cat', '/etc/hosts', ], output_directory):
+    if save_command_output('etc_hosts', ['cat', '/etc/hosts', ], output_directory):
         log.info("Listed hosts")
     elif args.verbose > 0:
         log.info("Failed to list hosts: /etc/hosts")
@@ -303,18 +325,27 @@ def main():
     elif args.verbose > 0:
         log.info("Failed to copy logs")
 
+    if export_postgres_chroma_db(output_directory):
+        log.info("Exported manager system database")
+    elif args.verbose > 0:
+        log.info("Failed to export the manager system database, or none exists.  None exists on target servers.")
+
     archive_path = '%s.tar.lzma' % output_directory
     #  Using -C to change to parent of dump dir,
     # then tar.lzma'ing just the output dir
-    execute(['tar', '--lzma', '-cf', archive_path, '-C',
-             DEFAULT_OUTPUT_DIRECTORY, output_fn])
+    log.info("Compressing diagnostics into LZMA (archive)")
+    run_command_output_piped(['tar', '--lzma', '-cf', archive_path, '-C', DEFAULT_OUTPUT_DIRECTORY, output_fn])
 
     log.info("\nDiagnostic collection is completed.")
-    log.info(archive_path)
+    log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
 
     log.info(u"\nThe diagnostic report tar.lzma file can be "
              u"sent to Intel Manager for Lustre® Support for analysis.")
 
 
 if __name__ == "__main__":
+
+    if not os.geteuid() == 0:
+        sys.exit("\nOnly root can run this script\n")
+
     main()
