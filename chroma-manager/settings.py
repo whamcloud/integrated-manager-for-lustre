@@ -245,7 +245,7 @@ LUSTRE_MKFS_OPTIONS_OST = None
 LUSTRE_MKFS_OPTIONS_MGS = None
 
 # Argument to mkfs.ext4 '-J' option
-JOURNAL_SIZE = "2048"
+JOURNAL_SIZE = "4096"
 
 CELERY_ROUTES = (
         {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
