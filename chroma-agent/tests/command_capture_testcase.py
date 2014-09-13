@@ -11,7 +11,11 @@ class CommandCaptureTestCase(unittest.TestCase):
         def fake_try_run(args):
             self._command_history.append(args)
             if tuple(args) in self.results:
-                return self.results[tuple(args)]
+                result = self.results[tuple(args)]
+                if type(result) == str:
+                    return result
+                else:
+                    return result[1]
 
         self._old_try_run = chroma_agent.chroma_common.lib.shell.try_run
         chroma_agent.chroma_common.lib.shell.try_run = fake_try_run

@@ -1,7 +1,9 @@
 TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
 include $(TOP)/include/Makefile.meta
 
-rpms: $(addprefix $(TOP)/../chroma-externals/,$(ALL_RPMS))
+CHROMA_EXTERNALS_DIR := $(TOP)/../chroma-externals/$(CHROMA_EXTERNALS_SUBDIR)/
+
+rpms: $(addprefix $(CHROMA_EXTERNALS_DIR),$(ALL_RPMS))
 
 requirements:
 	for rpm in $(ALL_RPMS); do                \
@@ -52,16 +54,16 @@ clean:
 distclean:
 	rm -f $(ALL_RPMS)
 
-download: $(addprefix $(TOP)/../chroma-externals/,$(ALL_RPMS))
+download: $(addprefix $(CHROMA_EXTERNALS_DIR),$(ALL_RPMS))
 
 cleanrepo:
 	rm -rf $(REPO)
 
-$(REPO)/%.rpm: $(TOP)/../chroma-externals/%.rpm
+$(REPO)/%.rpm: $(CHROMA_EXTERNALS_DIR)/%.rpm
 	mkdir -p $(REPO)
 	rm -f $@
 	ln $^ $(REPO)/
 
-$(TOP)/../chroma-externals/%.rpm:
-	CACHE="$${CACHE:-$(TOP)/../chroma-externals}" . ../include/cache.sh; \
+$(CHROMA_EXTERNALS_DIR)/%.rpm:
+	CACHE="$${CACHE:-$(CHROMA_EXTERNALS_DIR)}" . ../include/cache.sh; \
 	cache_populate -t "RPM v3.0 bin " $(SRC_REPO)/$(notdir $@)

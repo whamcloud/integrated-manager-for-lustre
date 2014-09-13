@@ -22,6 +22,7 @@
 
 from ..lib import shell
 from filesystem import FileSystem
+from ..blockdevices.blockdevice_zfs import BlockDeviceZfs
 
 
 class FileSystemZfs(FileSystem):
@@ -29,7 +30,8 @@ class FileSystemZfs(FileSystem):
 
     @property
     def label(self):
-        return self._target_name
+        block_device = BlockDeviceZfs('zfs', self._device_path)
+        return block_device.zdb_values['svname']
 
     @property
     def inode_size(self):
@@ -40,8 +42,6 @@ class FileSystemZfs(FileSystem):
         return 0
 
     def mount(self, target_name, mount_point):
-        self._target_name = target_name
-
         return shell.try_run(["mount", "-t", "lustre", "%s" % self.mount_path(target_name), mount_point])
 
     def mount_path(self, target_name):

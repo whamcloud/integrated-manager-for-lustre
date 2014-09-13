@@ -44,7 +44,20 @@ class FileSystemMixin(object):
         If the optional filter_f argument is supplied, it will be applied
         prior to stripping each line.
         """
-        for line in open(self.abs(filename)):
+
+        # I really don't like this, but at present I can't see a way of the Audit's knowing enough about the
+        # devices to point to the correct device - The notion that Audit, Corosync, etc can all be seperate means
+        # they don't have the knowledge to deal with things like zfs verse's ldiskfs. So for know if the file doesn't
+        # exist and the path contains osd-ldiskfs then swap it for osd-zfs and use that - and if that doesn't exist we
+        # are no worse off.
+        # If I had a better solution without a major rewrite I would use it!
+
+        filename = self.abs(filename)
+
+        if (not os.path.isfile(filename)):
+            filename = filename.replace("osd-ldiskfs", "osd-zfs")
+
+        for line in open(filename):
             if filter_f:
                 if filter_f(line):
                     yield line.rstrip("\n")

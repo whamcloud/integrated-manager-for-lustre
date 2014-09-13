@@ -74,6 +74,23 @@ def find_normalized_end(device_basename):
     return values[0]
 
 
+def find_normalized_start(device_fullpath):
+    '''
+    :param device_path: The device_path being search for
+    :return: Given /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 returns
+             /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
+             /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
+             /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part9
+             etc.
+    '''
+
+    _prime_normalized_paths()
+
+    values = [value for value in _normalize_device_table.values() if value.startswith(device_fullpath)]
+
+    return values
+
+
 def _prime_normalized_paths():
     if _normalize_device_table == {}:
         lookup_paths = ["%s/*" % DISKBYIDPATH, "%s/*" % MAPPERPATH]

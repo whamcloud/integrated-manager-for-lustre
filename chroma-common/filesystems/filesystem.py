@@ -21,6 +21,8 @@
 
 from ..lib import shell
 
+_cached_filesystem_types = {}
+
 
 class FileSystem(object):
     """ Filesystem abstraction which provides filesystem specific functionality
@@ -33,6 +35,17 @@ class FileSystem(object):
 
     def __new__(cls, fstype, device_path):
         try:
+            # It is possible the caller doesn't know the device type, but they do know the path - these cases should be
+            # avoided but in IML today this is the case, so keep a class variable to allow use to resolve it. We default
+            # very badly to ldiskfs if we don't have a value.
+            if (fstype == None):
+                if device_path in _cached_filesystem_types:
+                    fstype = _cached_filesystem_types[device_path]
+                else:
+                    fstype = 'ldiskfs'
+            else:
+                _cached_filesystem_types[device_path] = fstype
+
             subtype = next(klass for klass in FileSystem.__subclasses__() if fstype in klass._supported_filesystems)
 
             if (cls != subtype):
@@ -44,6 +57,7 @@ class FileSystem(object):
             raise cls.UnknownFileSystem("Filesystem %s unknown" % fstype)
 
     def __init__(self, fstype, device_path):
+        self._fstype = fstype
         self._device_path = device_path
 
     def _initialize_modules(self):

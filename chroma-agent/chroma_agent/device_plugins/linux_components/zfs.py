@@ -27,6 +27,9 @@ from chroma_agent.device_plugins.linux_components.device_helper import DeviceHel
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.log import daemon_log
 
+from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
+
 
 class ZfsDevices(DeviceHelper):
     """Reads zfs pools"""
@@ -69,6 +72,10 @@ class ZfsDevices(DeviceHelper):
                                                               'size': size,
                                                               'filesystem_type': None,
                                                               'parent': None}
+
+            # Do this to cache the device, type see blockdevice and filesystem for info.
+            BlockDevice('zfs', pool)
+            FileSystem('zfs', pool)
 
             self._zpools[uuid] = {
                 "name": pool,
@@ -154,7 +161,7 @@ class ZfsDevices(DeviceHelper):
                 # Which means we are looking at devices
                 match = re.match("(\s*)(\S*)(\s*)ONLINE", line)
                 if match:
-                    devices.append(ndp.find_normalized_end(match.group(2)))
+                    devices += self.find_device_and_children(match.group(2))
 
         if pool:
             self._add_zpool(pool, uuid, size, state, devices, block_devices)
@@ -173,6 +180,10 @@ class ZfsDevices(DeviceHelper):
                                                               'size': size,
                                                               'filesystem_type': None,
                                                               'parent': None}
+
+            # Do this to cache the device, type see blockdevice and filesystem for info.
+            BlockDevice('zfs', pool)
+            FileSystem('zfs', pool)
 
             self._zpools[uuid] = {
                 "name": pool,
@@ -238,9 +249,7 @@ class ZfsDevices(DeviceHelper):
 
         for line in lines:
             device = re.match("\t\s*(\S*)", line).group(1)
-            device = ndp.find_normalized_end(device)
-            daemon_log.debug("zfs device '%s'" % device)
-            devices.append(device)
+            devices += self.find_device_and_children(device)
 
         return devices
 
@@ -267,6 +276,10 @@ class ZfsDevices(DeviceHelper):
                                                                   'size': size,
                                                                   'filesystem_type': None,
                                                                   'parent': None}
+
+                # Do this to cache the device, type see blockdevice and filesystem for info.
+                BlockDevice('zfs', name)
+                FileSystem('zfs', name)
 
                 zpool_datasets[uuid] = {
                     "name": name,
@@ -299,4 +312,26 @@ class ZfsDevices(DeviceHelper):
                 "drives": drives
             }
 
+            # Do this to cache the device, type see blockdevice and filesystem for info.
+            BlockDevice('zfs', zvol_path)
+            FileSystem('zfs', zvol_path)
+
         return zpool_vols
+
+    def find_device_and_children(self, device):
+        devices = []
+
+        # Find the full path of the matching device for example, this ends
+        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 so find
+        # /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
+        device = ndp.find_normalized_end(device)
+
+        # Then find all the partitions for that disk and add them, they are all a child of this
+        # zfs pool, so
+        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 includes
+        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
+        for device in ndp.find_normalized_start(device):
+            daemon_log.debug("zfs device '%s'" % device)
+            devices.append(device)
+
+        return devices

@@ -34,6 +34,8 @@ from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
 import chroma_agent.lib.normalize_device_path as ndp
 
+from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
+from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
 from chroma_agent.device_plugins.audit.local import LocalAudit
@@ -70,13 +72,16 @@ def scan_packages():
     for repo_name, packages in repo_packages.items():
         try:
             stdout = shell.try_run(["repoquery", "--repoid=%s" % repo_name, "-a", "--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}"])
-            for line in [l.strip() for l in stdout.strip().split("\n")]:
-                epoch, name, version, release, arch = line.split()
-                packages[name]['available'].append(VersionInfo(
-                    epoch=epoch,
-                    version=version,
-                    release=release,
-                    arch=arch))
+
+            # Returning nothing means the package was not found at all and so we have no data to deliver back.
+            if stdout:
+                for line in [l.strip() for l in stdout.strip().split("\n")]:
+                    epoch, name, version, release, arch = line.split()
+                    packages[name]['available'].append(VersionInfo(
+                        epoch=epoch,
+                        version=version,
+                        release=release,
+                        arch=arch))
         except ValueError, e:
             console_log.error("bug HYD-2948. repoquery Output: %s" % (stdout))
             raise e
@@ -110,17 +115,23 @@ class LustrePlugin(DevicePlugin):
             if fstype != 'lustre':
                 continue
 
-            if not os.path.exists(device):
-                continue
-
             # Assume that while a filesystem is mounted, its UUID and LABEL don't change.
             # Therefore we can avoid repeated blkid calls with a little caching.
             if device in self._mount_cache:
                 fs_uuid = self._mount_cache[device]['fs_uuid']
                 fs_label = self._mount_cache[device]['fs_label']
             else:
-                self._mount_cache[device]['fs_uuid'] = fs_uuid = shell.try_run(["blkid", "-o", "value", "-s", "UUID", device]).strip()
-                self._mount_cache[device]['fs_label'] = fs_label = shell.try_run(["blkid", "-o", "value", "-s", "LABEL", device]).strip()
+                # Sending none as the type means BlockDevice will use it's local cache to work the type.
+                # This is not a good method, and we should work on a way of not storing such state but for the
+                # present it is the best we have.
+                try:
+                    self._mount_cache[device]['fs_uuid'] = fs_uuid = BlockDevice(None, device).uuid
+                    self._mount_cache[device]['fs_label'] = fs_label = FileSystem(None, device).label
+                except shell.CommandExecutionError:
+                    # This deals with the case where the BlockDevice above isn't know yet because the linux scan
+                    # has not run.
+                    del self._mount_cache[device]
+                    continue
 
             dev_normalized = ndp.normalized_device_path(device)
 

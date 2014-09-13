@@ -20,6 +20,11 @@
 # express and approved by Intel in writing.
 
 
+from collections import namedtuple
+
+_cached_device_types = {}
+
+
 class BlockDevice(object):
     """ BlockDevice abstraction which provides blockdevice specific functionality
         This class really really really needs to be in a common place to all code
@@ -31,6 +36,17 @@ class BlockDevice(object):
 
     def __new__(cls, device_type, device):
         try:
+            # It is possible the caller doesn't know the device type, but they do know the path - these cases should be
+            # avoided but in IML today this is the case, so keep a class variable to allow use to resolve it. We default
+            # very badly to linux if we don't have a value.
+            if (device_type == None):
+                if device in _cached_device_types:
+                    device_type = _cached_device_types[device]
+                else:
+                    device_type = 'linux'
+            else:
+                _cached_device_types[device] = device_type
+
             subtype = next(klass for klass in BlockDevice.__subclasses__() if device_type in klass._supported_device_types)
 
             if (cls != subtype):
@@ -64,3 +80,16 @@ class BlockDevice(object):
     @property
     def device_path(self):
         return self._device_path
+
+    def mgs_targets(self, log):
+        '''
+        Creates a list of all the mgs targets on a given device, returning a dict of filesystems and names
+        :param log: The log to write debug info to
+        :return: dict of filesystems and names
+        '''
+        raise NotImplementedError("Unimplemented method - mgs_targets in class %s" % type(self))
+
+    TargetsInfo = namedtuple('TargetsInfo', ['names', 'params'])
+
+    def targets(self, uuid_name_to_target, device, log):
+        raise NotImplementedError("Unimplemented method - targets in class %s" % type(self))

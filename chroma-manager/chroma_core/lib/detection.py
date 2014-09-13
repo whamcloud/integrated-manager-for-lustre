@@ -147,6 +147,10 @@ class DetectScan(object):
         primary_target = None
         managed_target.managedtargetmount_set.update(primary=False)
         for tm in managed_target.managedtargetmount_set.all():
+            # We may well have scanned a subset of the hosts and so not have data for all the target mounts, if we
+            # are rescanning we can know about targetmounts we didn't scan.
+            if tm.host not in self.all_hosts_data:
+                continue
 
             target_info = next(dev for dev in self.all_hosts_data[tm.host]['local_targets'] if dev['uuid'] == managed_target.uuid)
             local_nids = set(tm.host.lnetconfiguration.get_nids())
