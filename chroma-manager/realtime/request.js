@@ -81,12 +81,17 @@ module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonM
         .replace(/^\/*/, '')
         .replace(/\/*$/, '/');
 
+      var log = logger.child({
+        path: path,
+        verb: verb
+      });
+
       return Q.ninvoke(defaultRequest, verb, conf.apiUrl + path, options)
         .spread(function logTiming (resp, body) {
           var diff = process.hrtime(time);
           var elapsed = parseInt(diff[1] / 1000000, 10); // divide by a million to get nano to milli
 
-          logger.debug('%s: %s (%d.%d seconds)', resp.statusCode, resp.request.href, diff[0], elapsed);
+          log.debug('%s: %s (%d.%d seconds)', resp.statusCode, resp.request.href, diff[0], elapsed);
 
           return [resp, body];
         })
@@ -105,7 +110,7 @@ module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonM
           var error = new Error(message);
           error.statusCode = resp.statusCode;
 
-          logger.error(error);
+          log.error(error);
 
           throw error;
         })
@@ -116,14 +121,14 @@ module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonM
           if (mask)
             resp.body = jsonMask(resp.body, mask);
 
-          logger.trace(resp.body);
+          log.trace(resp.body);
 
           return resp;
         })
         .finally(function allDone() {
           pendCount -= 1;
 
-          logger.trace('pend count is: %d', pendCount);
+          log.trace('pend count is: %d', pendCount);
         });
     };
   }

@@ -116,7 +116,7 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment', 'auth']
       });
 
     $routeSegmentProvider.when('/configure/hsm', 'app.hsm')
-      .when('/configure/server_new', 'app.server');
+      .when('/configure/server', 'app.server');
 
     $routeSegmentProvider.within('app')
       .segmentAuthenticated('hsm', {

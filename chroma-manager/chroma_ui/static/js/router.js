@@ -105,7 +105,6 @@ var ChromaRouter = Backbone.Router.extend({
     "configure/": "configureIndex",
     "command/:id/": 'command_detail',
     "target/:id/": 'target_detail',
-    "host/:id/": 'server_detail',
     "user/:id/": 'user_detail',
     "storage_resource/:id/": 'storage_resource_detail',
     "job/:id/": 'job_detail',
@@ -191,10 +190,6 @@ var ChromaRouter = Backbone.Router.extend({
   {
     this.object_detail(id, Job, JobDetail, 'description');
   },
-  server_detail: function(id)
-  {
-    this.object_detail(id, Server, ServerDetail, 'label');
-  },
   user_detail: function(id)
   {
     this.object_detail(id, User, UserDetail, 'username');
@@ -232,7 +227,7 @@ var ChromaRouter = Backbone.Router.extend({
     if ( this.failed_filesystem_admin_check() )
       return;
 
-    this.configure('server');
+    this.configure('filesystem');
   },
   toplevel: function(name, aroundDatetime)
   {
@@ -271,8 +266,6 @@ var ChromaRouter = Backbone.Router.extend({
 
     if (tab == 'filesystem') {
       this.filesystemList();
-    } else if (tab == 'server') {
-      ServerView.draw()
     } else if (tab == 'volume') {
       VolumeView.draw()
     } else if (tab == 'user') {

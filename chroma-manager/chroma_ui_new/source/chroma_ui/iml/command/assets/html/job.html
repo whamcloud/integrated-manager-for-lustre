@@ -11,7 +11,7 @@
     </button>
     <ul class="dropdown-menu">
       <li ng-repeat="transition in job.available_transitions">
-        <a dropdown-toggle ng-click="jobTree.doTransition(job, transition.state)">{{transition.label}}</a>
+        <a ng-click="jobTree.doTransition(job, transition.state)">{{transition.label}}</a>
       </li>
     </ul>
   </div>

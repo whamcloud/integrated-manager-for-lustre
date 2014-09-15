@@ -116,6 +116,7 @@
         return $modal.open({
           templateUrl: 'iml/server/assets/html/add-server-modal.html',
           controller: 'AddServerModalCtrl',
+          backdropClass: 'add-server-modal-backdrop',
           windowClass: 'add-server-modal',
           resolve: {
             serverSpark: function getServerSpark () {

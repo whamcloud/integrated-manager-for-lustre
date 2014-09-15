@@ -119,10 +119,10 @@ ProxyTimeout 330
         ProxyPass http://localhost:{{HTTP_API_PORT}}/api/
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
     </Location>
-    <LocationMatch "/primus/1/websocket/">
+    <Location /primus/1/websocket/>
       ProxyPass wss://localhost:{{REALTIME_PORT}}/primus/1/websocket/
       ProxyPassReverse wss://localhost:{{REALTIME_PORT}}/primus/1/websocket/
-    </LocationMatch>
+    </Location>
     <Location /primus/>
         ProxyPass https://localhost:{{REALTIME_PORT}}/primus/
         ProxyPassReverse https://localhost:{{REALTIME_PORT}}/primus/

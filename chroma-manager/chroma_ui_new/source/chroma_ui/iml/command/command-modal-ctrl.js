@@ -59,6 +59,7 @@ angular.module('command')
         templateUrl: 'iml/command/assets/html/command-modal.html',
         controller: 'CommandModalCtrl',
         windowClass: 'command-modal',
+        backdropClass: 'command-modal-backdrop',
         resolve: {
           /**
            * Resolves a spark representing the set of provided commands

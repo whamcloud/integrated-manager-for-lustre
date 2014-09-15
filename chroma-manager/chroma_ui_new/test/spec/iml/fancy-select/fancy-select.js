@@ -93,14 +93,11 @@ describe('fancy select', function () {
 
       describe('selecting an item', function () {
         var expected;
+        
         beforeEach(function () {
           customSelected = '';
           expected = 'Robinhood Policy Engine Server';
           buttonGroup.find('ul li a').eq(1).trigger('click');
-        });
-
-        it('should close the drop down after selecting the second item', function () {
-          expect(buttonGroup.hasClass('open')).toEqual(false);
         });
 
         it('should have the content of the second item selected in the button', function () {

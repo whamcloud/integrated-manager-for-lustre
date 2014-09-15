@@ -98,8 +98,10 @@
                   var hostSpark = hostProfile(data.flint, hosts);
 
                   return hostSpark.onceValueThen('data')
-                    .then(function () {
+                    .then(function handleResponse () {
                       return hostSpark;
+                    }, function handleError (response) {
+                      throw response.error;
                     });
                 });
               }

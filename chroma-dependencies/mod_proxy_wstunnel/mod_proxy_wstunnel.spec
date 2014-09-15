@@ -1,6 +1,6 @@
 Name:           mod_proxy_wstunnel
 Version:        0.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Websockets support module for mod_proxy
 
 Group:          System Environment/Libraries
@@ -51,3 +51,5 @@ rm -rf $RPM_BUILD_ROOT
 * Wed Dec 11 2013 Michael MacDonald <michael.macdonald@intel.com> - 0.1-1
 - Initial packaging for EL6
 
+ * Fri Sep 26 2014 Joe Grund <joe.grund@intel.com> - 0.1-2
+- Update with fixes from httpd 2.4.10

@@ -1,8 +1,14 @@
 <div class="modal-body select-server-profile-step clearfix">
   <div ng-if="selectServerProfile.overridden" class="alert alert-danger" role="alert">
-    You are about to configure one or more servers with failed validations.
-    Configuring servers with failed validations is unsupported!
+    You are about to configure one or more servers with an incompatible server profile.
+    Configuring servers with incompatible server profiles is unsupported.
     Click <strong>proceed</strong> to continue.
+  </div>
+  <div>
+    <label>Select Server Profile</label>
+    <i class="fa fa-question-circle"
+       tooltip="Select a server profile to set on unconfigured servers."
+       tooltip-placement="right"></i>
   </div>
   <fancy-select-box data="selectServerProfile.options" on-selected="selectServerProfile.onSelected(item)"></fancy-select-box>
 

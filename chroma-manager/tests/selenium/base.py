@@ -174,6 +174,7 @@ class SeleniumBaseTestCase(TestCase):
                 driver_log_path = os.path.join(os.getcwd(), LOG_NAME_TEMPLATE % LogType.DRIVER)
                 profile = webdriver.FirefoxProfile()
                 profile.set_preference('webdriver.log.file', driver_log_path)
+                profile.set_preference('security.use_mozillapkix_verification', False)
                 self.driver = webdriver.Firefox(profile)
 
         self.addCleanup(self.stop_driver)

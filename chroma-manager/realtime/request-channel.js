@@ -43,7 +43,7 @@ module.exports = function requestChannelFactory (primus, router, routes, logger,
 
     channel.on('connection', function onConnection (spark) {
       spark.on('req', function onData (data, ack) {
-        logger.info('got data', data);
+        logger.info('starting request');
 
         var ackOrWriteError = ackOrWriteErrorFactory(spark, ack);
         var errors = requestChannelValidator(data);

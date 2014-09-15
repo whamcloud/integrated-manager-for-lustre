@@ -7,8 +7,10 @@
   </button>
   <ul class="dropdown-menu" role="menu">
     <li ng-repeat="item in data track by item.id" ng-click="fancy.selectItem(item)">
-      <a dropdown-toggle><span class="label {{item.labelType}}"
-        ng-if="item.labelType && item.label">{{item.label}}</span>
-      <span>{{item.caption}}</span></a></li>
+      <a class="fancy-select-option">
+        <span class="label {{item.labelType}}" ng-if="item.labelType && item.label">{{item.label}}</span>
+        <span class="fancy-select-text">{{item.caption}}</span>
+      </a>
+    </li>
   </ul>
 </div>

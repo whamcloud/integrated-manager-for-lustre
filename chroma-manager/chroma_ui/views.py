@@ -44,7 +44,7 @@ from chroma_core.models import UserProfile
 from django.db.models import Q
 
 from chroma_api.filesystem import FilesystemResource
-from chroma_api.host import HostResource
+from chroma_api.host import HostResource, ServerProfileResource
 from chroma_api.target import TargetResource
 from chroma_api.session import SessionResource
 import settings
@@ -66,6 +66,7 @@ def _build_cache(request):
         TargetResource,
         HostResource,
         PowerControlTypeResource,
+        ServerProfileResource
     ]
     for resource in resources:
         if settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated():

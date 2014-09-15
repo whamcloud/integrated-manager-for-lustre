@@ -197,6 +197,7 @@ describe('add server modal ctrl', function () {
         templateUrl: 'iml/server/assets/html/add-server-modal.html',
         controller: 'AddServerModalCtrl',
         windowClass: 'add-server-modal',
+        backdropClass : 'add-server-modal-backdrop',
         resolve: {
           serverSpark: jasmine.any(Function),
           server: jasmine.any(Function),

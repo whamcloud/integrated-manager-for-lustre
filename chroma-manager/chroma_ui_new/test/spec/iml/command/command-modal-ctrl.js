@@ -116,6 +116,7 @@ describe('command modal', function () {
         templateUrl: 'iml/command/assets/html/command-modal.html',
         controller: 'CommandModalCtrl',
         windowClass: 'command-modal',
+        backdropClass : 'command-modal-backdrop',
         resolve: {
           commands: ['requestSocket', 'commandTransform', jasmine.any(Function)]
         }

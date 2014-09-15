@@ -429,10 +429,12 @@ static int proxy_wstunnel_transfer(request_rec *r, conn_rec *c_i, conn_rec *c_o,
         rv = ap_get_brigade(c_i->input_filters, bb, AP_MODE_READBYTES,
                             APR_NONBLOCK_READ, AP_IOBUFSIZE);
         if (rv == APR_SUCCESS) {
-            if (c_o->aborted)
+            if (c_o->aborted) {
                 return APR_EPIPE;
-            if (APR_BRIGADE_EMPTY(bb))
+            }
+            if (APR_BRIGADE_EMPTY(bb)) {
                 break;
+            }
 #ifdef DEBUGGING
             len = -1;
             apr_brigade_length(bb, 0, &len);
@@ -456,9 +458,12 @@ static int proxy_wstunnel_transfer(request_rec *r, conn_rec *c_i, conn_rec *c_o,
         }
     } while (rv == APR_SUCCESS);
 
+    ap_log_rerror(APLOG_MARK, APLOG_DEBUG, rv, r, "wstunnel_transfer complete");
+
     if (APR_STATUS_IS_EAGAIN(rv)) {
         rv = APR_SUCCESS;
     }
+   
     return rv;
 }
 
@@ -504,7 +509,6 @@ static int ap_proxy_wstunnel_request(apr_pool_t *p, request_rec *r,
     conn_rec *c = r->connection;
     apr_socket_t *sock = conn->sock;
     conn_rec *backconn = conn->connection;
-    int client_error = 0;
     char *buf;
     apr_bucket_brigade *header_brigade;
     apr_bucket *e;
@@ -550,7 +554,7 @@ static int ap_proxy_wstunnel_request(apr_pool_t *p, request_rec *r,
 
     pollfd.p = p;
     pollfd.desc_type = APR_POLL_SOCKET;
-    pollfd.reqevents = APR_POLLIN;
+    pollfd.reqevents = APR_POLLIN | APR_POLLHUP;
     pollfd.desc.s = sock;
     pollfd.client_data = NULL;
     apr_pollset_add(pollset, &pollfd);
@@ -558,13 +562,16 @@ static int ap_proxy_wstunnel_request(apr_pool_t *p, request_rec *r,
     pollfd.desc.s = client_socket;
     apr_pollset_add(pollset, &pollfd);
 
+    remove_reqtimeout(c->input_filters);
 
     r->output_filters = c->output_filters;
     r->proto_output_filters = c->output_filters;
     r->input_filters = c->input_filters;
     r->proto_input_filters = c->input_filters;
 
-    remove_reqtimeout(r->input_filters);
+    /* This handler should take care of the entire connection; make it so that
+     * nothing else is attempted on the connection after returning. */
+    c->keepalive = AP_CONN_CLOSE;
 
     while (1) { /* Infinite loop until error (one side closes the connection) */
         if ((rv = apr_pollset_poll(pollset, -1, &pollcnt, &signalled))
@@ -583,26 +590,39 @@ static int ap_proxy_wstunnel_request(apr_pool_t *p, request_rec *r,
 
             if (cur->desc.s == sock) {
                 pollevent = cur->rtnevents;
-                if (pollevent & APR_POLLIN) {
+                if (pollevent & (APR_POLLIN | APR_POLLHUP)) {
                     ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, "AH02446: "
                                   "sock was readable");
                     rv = proxy_wstunnel_transfer(r, backconn, c, bb, "sock");
-                    }
-                else if ((pollevent & APR_POLLERR)
-                         || (pollevent & APR_POLLHUP)) {
-                         rv = APR_EPIPE;
-                         ap_log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, "AH02447: "
-                                       "err/hup on backconn");
                 }
-                if (rv != APR_SUCCESS)
-                    client_error = 1;
+                else if (pollevent & APR_POLLERR) {
+                    rv = APR_EPIPE;
+                    ap_log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, "AH02447: "
+                            "error on backconn");
+                }
+                else { 
+                    rv = APR_EGENERAL;
+                    ap_log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, "AH02605: "
+                            "unknown event on backconn %d", pollevent);
+                }
             }
             else if (cur->desc.s == client_socket) {
                 pollevent = cur->rtnevents;
-                if (pollevent & APR_POLLIN) {
+                if (pollevent & (APR_POLLIN | APR_POLLHUP)) {
                     ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, "AH02448: "
                                   "client was readable");
                     rv = proxy_wstunnel_transfer(r, c, backconn, bb, "client");
+                }
+                else if (pollevent & APR_POLLERR) {
+                    rv = APR_EPIPE;
+                    c->aborted = 1;
+                    ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, "AH02607: "
+                            "error on client conn");
+                }
+                else { 
+                    rv = APR_EGENERAL;
+                    ap_log_rerror(APLOG_MARK, APLOG_NOTICE, 0, r, "AH02606: "
+                            "unknown event on client conn %d", pollevent);
                 }
             }
             else {
@@ -620,9 +640,6 @@ static int ap_proxy_wstunnel_request(apr_pool_t *p, request_rec *r,
     ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
                   "finished with poll() - cleaning up");
 
-    if (client_error) {
-        return HTTP_INTERNAL_SERVER_ERROR;
-    }
     return OK;
 }
 
@@ -638,10 +655,10 @@ static int proxy_wstunnel_handler(request_rec *r, proxy_worker *worker,
     proxy_conn_rec *backend = NULL;
     char *scheme;
     int retry;
-    int is_ssl = 0;
     conn_rec *c = r->connection;
     apr_pool_t *p = r->pool;
     apr_uri_t *uri;
+    int is_ssl = 0;
 
     if (strncasecmp(url, "wss:", 4) == 0) {
         scheme = "WSS";
@@ -697,7 +714,10 @@ static int proxy_wstunnel_handler(request_rec *r, proxy_worker *worker,
             if ((status = ap_proxy_connection_create(scheme, backend,
                                                      c, r->server)) != OK)
                 break;
-         }
+        }
+
+        backend->close = 1; /* must be after ap_proxy_determine_connection */
+
 
         /* Step Three: Process the Request */
         status = ap_proxy_wstunnel_request(p, r, backend, worker, conf, uri, locurl,

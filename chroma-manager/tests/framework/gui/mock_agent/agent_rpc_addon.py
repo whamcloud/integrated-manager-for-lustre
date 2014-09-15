@@ -58,7 +58,7 @@ JobScheduler.create_host_ssh = create_host_ssh
 def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
     ok = address in MockAgentRpc.mock_servers
     return {
-        'address': ok,
+        'address': address,
         'resolve': ok,
         'ping': ok,
         'auth': ok,

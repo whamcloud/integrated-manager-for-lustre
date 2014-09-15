@@ -25,6 +25,7 @@ import settings
 import json
 
 from optparse import make_option
+import logging
 
 from django.core.management.commands.runserver import Command as BaseCommand
 
@@ -61,9 +62,12 @@ class Command(BaseCommand):
 
         if kwargs.get('type') == 'dev':
             ssl = SITE_ROOT
-            mode = 'DEV'
         else:
             ssl = production_settings.get('ssl')
+
+        if settings.LOG_LEVEL == logging.DEBUG or settings.DEBUG:
+            mode = 'DEV'
+        else:
             mode = 'PROD'
 
         conf = {

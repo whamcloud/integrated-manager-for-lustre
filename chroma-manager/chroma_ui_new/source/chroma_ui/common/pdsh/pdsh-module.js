@@ -70,6 +70,9 @@
          */
         function parseExpressionForValidityWrapper() {
           parseExpressionForValidity(pdshExpression);
+
+          if (scope.$root.$$phase === null)
+            scope.$apply();
         }
 
         /**

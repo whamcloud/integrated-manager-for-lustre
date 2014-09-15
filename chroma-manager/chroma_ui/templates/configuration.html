@@ -69,10 +69,6 @@
   <div id='volume-tab'>
     {% include "volume_tab.html" %}
   </div>
-{% elif '/configure/server/' in request.path %}
-  <div id='server-tab'>
-    {% include "server_tab.html" %}
-  </div>
 {% elif '/configure/storage/' in request.path %}
   <div id='storage-tab'>
     {% include "storage_tab.html" %}

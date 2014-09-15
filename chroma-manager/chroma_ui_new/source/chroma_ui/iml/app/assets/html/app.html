@@ -16,7 +16,7 @@
         <li ng-class="{active: app.$routeSegment.contains('configure')}" restrict-to="{{ app.GROUPS.FS_ADMINS }}" class="dropdown">
           <a class="dropdown-toggle" href="#" id="configure-menu"><i class="fa fa-cog"></i> Configuration <i class="fa fa-caret-down"></i></a>
           <ul class="dropdown-menu inverse-dropdown" role="menu" aria-labelledby="dropdownMenu">
-            <li><a tabindex="-1" id="server-conf-item" route-to="configure/server/" target="_self">Servers</a></li>
+            <li><a tabindex="-1" id="server-conf-item" route-to="configure/server/">Servers</a></li>
             <li><a tabindex="-1" id="power-conf-item" route-to="configure/power/" target="_self">Power Control</a></li>
             <li><a tabindex="-1" id="filesystem-conf-item" route-to="configure/filesystem/" target="_self">File Systems</a></li>
             <li><a tabindex="-1" id="hsm-conf-item" route-to="configure/hsm/">HSM</a></li>

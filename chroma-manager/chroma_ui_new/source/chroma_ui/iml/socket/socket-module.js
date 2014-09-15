@@ -171,7 +171,7 @@
           }
         });
 
-        var csrfTokenMatch = cookie.match(/csrftoken=(.+);/);
+        var csrfTokenMatch = cookie.match(/csrftoken=([^;|$]+)/);
         if (csrfTokenMatch && csrfTokenMatch[1])
           data.options.headers['X-CSRFToken'] = csrfTokenMatch[1];
         data.options.headers['User-Agent'] = $window.navigator.userAgent;

@@ -4,7 +4,7 @@ describe('select server profile', function () {
   beforeEach(module('server'));
 
   describe('select server profile step ctrl', function () {
-    var $scope, $stepInstance, data, off;
+    var $scope, $stepInstance, data, off, CACHE_INITIAL_DATA;
 
     beforeEach(inject(function ($rootScope, $controller) {
       $scope = $rootScope.$new();
@@ -18,10 +18,60 @@ describe('select server profile', function () {
         }
       };
 
+      CACHE_INITIAL_DATA = {
+        server_profile: [
+          {
+            initial_state: 'configured',
+            managed: true,
+            name: 'base_managed',
+            default: false,
+            worker: false,
+            user_selectable: true,
+            ui_description: 'A storage server suitable for creating new HA-enabled filesystem targets',
+            ui_name: 'Managed storage server',
+            resource_uri: '/api/server_profile/base_managed/'
+          },
+          {
+            initial_state: 'configured',
+            managed: false,
+            name: 'base_monitored',
+            default: false,
+            worker: false,
+            user_selectable: true,
+            ui_description: 'A storage server suitable for monitoring only',
+            ui_name: 'Monitored storage server',
+            resource_uri: '/api/server_profile/base_monitored/'
+          },
+          {
+            initial_state: 'configured',
+            managed: true,
+            name: 'posix_copytool_worker',
+            default: false,
+            worker: true,
+            user_selectable: true,
+            ui_description: 'An HSM agent node using the POSIX copytool',
+            ui_name: 'POSIX HSM Agent Node',
+            resource_uri: '/api/server_profile/posix_copytool_worker/'
+          },
+          {
+            initial_state: 'configured',
+            managed: true,
+            name: 'robinhood_server',
+            default: false,
+            worker: true,
+            user_selectable: true,
+            ui_description: 'A server running the Robinhood Policy Engine',
+            ui_name: 'Robinhood Policy Engine Server',
+            resource_uri: '/api/server_profile/robinhood_server/'
+          }
+        ]
+      };
+
       $controller('SelectServerProfileStepCtrl', {
         $scope: $scope,
         $stepInstance: $stepInstance,
-        data: data
+        data: data,
+        CACHE_INITIAL_DATA: CACHE_INITIAL_DATA
       });
     }));
 
@@ -98,24 +148,24 @@ describe('select server profile', function () {
         expect($scope.selectServerProfile.options).toEqual([
           {
             id: 'base_managed',
-            caption: 'Base managed',
+            caption: 'Managed storage server',
             label: 'Incompatible',
             labelType: 'label-danger',
             valid: undefined
           },
           {
             id: 'base_monitored',
-            caption: 'Base monitored',
+            caption: 'Monitored storage server',
             valid: true
           },
           {
             id: 'posix_copytool_worker',
-            caption: 'Posix copytool worker',
+            caption: 'POSIX HSM Agent Node',
             valid: true
           },
           {
             id: 'robinhood_server',
-            caption: 'Robinhood server',
+            caption: 'Robinhood Policy Engine Server',
             valid: true
           }
         ]);

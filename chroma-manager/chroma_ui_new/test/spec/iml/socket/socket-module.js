@@ -328,15 +328,14 @@ describe('socket module', function () {
         });
 
         it('should call spark with args plus auth header', function () {
-          expect(spark.send).toHaveBeenCalledOnceWith('req', {
-            path: '/host',
+          expect(spark.send).toHaveBeenCalledOnceWith('req',  {
+            path : '/host',
             options: {
               headers: {
                 Cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e; \
 HTTP_USER_AGENT: chrome;',
-                'User-Agent': 'chrome',
-                'X-CSRFToken': 'yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e; \
-HTTP_USER_AGENT: chrome'
+                'X-CSRFToken': 'yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT',
+                'User-Agent': 'chrome'
               }
             }
           }, ack);

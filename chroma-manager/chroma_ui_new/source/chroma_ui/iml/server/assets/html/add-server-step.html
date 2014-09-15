@@ -63,6 +63,6 @@
   </form>
 </div>
 <div class="modal-footer">
-  <button ng-if="!addServer.disabled" class="btn btn-success" ng-disabled="addServerForm.$invalid" ng-click="addServer.transition()">Next <i class="fa fa-long-arrow-right"></i></button>
-  <button ng-if="addServer.disabled" disabled class="btn btn-success" ng-click="addServer.transition()">Verifying <i class="fa fa-spinner fa-spin"></i></button>
+  <button ng-if="!addServer.disabled" class="btn btn-success proceed" ng-disabled="addServerForm.$invalid" ng-click="addServer.transition()">Next <i class="fa fa-long-arrow-right"></i></button>
+  <button ng-if="addServer.disabled" disabled class="btn btn-success proceed" ng-click="addServer.transition()">Verifying <i class="fa fa-spinner fa-spin"></i></button>
 </div>

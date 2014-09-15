@@ -6,7 +6,7 @@
     </button>
     <ul class="dropdown-menu" role="menu">
       <li ng-class="{'end-of-group' : action.last }" ng-repeat="action in record[actionDropdown.actionsProperty] | groupActions track by action.verb">
-        <a dropdown-toggle tooltip-html-unsafe="{{action.long_description}}" tooltip-placement="{{actionDropdown.tooltipPlacement}}" ng-click="actionDropdown.handleAction(record, action)" bindonce="action" bo-text="action.verb"></a>
+        <a tooltip-html-unsafe="{{action.long_description}}" tooltip-placement="{{actionDropdown.tooltipPlacement}}" ng-click="actionDropdown.handleAction(record, action)" bindonce="action" bo-text="action.verb"></a>
       </li>
     </ul>
   </div>

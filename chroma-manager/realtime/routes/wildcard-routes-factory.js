@@ -34,6 +34,7 @@ module.exports = function wildcardRoutesFactory(router, request, loop, logger) {
     router.all('/(.*)', function genericGetHandler (req, resp) {
       var log = logger.child({ path: req.matches[0] });
       log.info('started');
+      log.debug(req);
 
       var makeRequest = request[req.verb].bind(request, req.matches[0], req.data);
 

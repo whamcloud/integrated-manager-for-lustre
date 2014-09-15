@@ -82,6 +82,7 @@ describe('confirm action modal', function () {
         templateUrl: 'iml/action-dropdown/assets/html/confirm-action-modal.html',
         controller: 'ConfirmActionModalCtrl',
         windowClass: 'confirm-action-modal',
+        backdropClass: 'confirm-action-modal-backdrop',
         backdrop: 'static',
         resolve: {
           title: jasmine.any(Function),

@@ -25,7 +25,8 @@ describe('wildcard routes', function () {
 
     logger = {
       child: jasmine.createSpy('child').andReturn({
-        info: jasmine.createSpy('info')
+        info: jasmine.createSpy('info'),
+        debug: jasmine.createSpy('debug')
       })
     };
 

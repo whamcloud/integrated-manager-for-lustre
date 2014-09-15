@@ -1,12 +1,15 @@
 {
   "name": "chroma-ui",
-  "version": "2.1.0",
+  "version": "2.2.0",
+  "private": true,
   "engines": {
     "node": ">=0.10.0"
   },
   "scripts": {
     "unit": "./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots",
-    "test-srcmaps": "mjnw"
+    "test-srcmaps": "mjnw",
+    "build": "gulp build",
+    "dev": "gulp"
   },
   "devDependencies": {
     "del": "0.1.1",

@@ -24,8 +24,10 @@
   'use strict';
 
   angular.module('server')
-    .controller('SelectServerProfileStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES', 'data',
-      function SelectServerProfileStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data) {
+    .controller('SelectServerProfileStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES',
+      'CACHE_INITIAL_DATA', 'data',
+      function SelectServerProfileStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES,
+                                            CACHE_INITIAL_DATA, data) {
         $scope.selectServerProfile = {
           /**
            * Tells manager to perform a transition.
@@ -95,7 +97,7 @@
             return profiles.map(function (profile) {
               var option = {
                 id: profile,
-                caption: _.capitalize(profile.split('_').join(' ')),
+                caption: _.find(CACHE_INITIAL_DATA.server_profile, {name: profile}).ui_name,
                 valid: valid
               };
 

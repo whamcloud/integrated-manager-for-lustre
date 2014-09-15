@@ -32,10 +32,12 @@ describe('request', function () {
     };
 
     logger = {
-      info: jasmine.createSpy('log.info'),
-      debug: jasmine.createSpy('log.debug'),
-      trace: jasmine.createSpy('log.trace'),
-      error: jasmine.createSpy('log.error')
+      child: jasmine.createSpy('child').andReturn({
+        info: jasmine.createSpy('log.info'),
+        debug: jasmine.createSpy('log.debug'),
+        trace: jasmine.createSpy('log.trace'),
+        error: jasmine.createSpy('log.error')
+      })
     };
 
     request = requestFactory(conf, patchedRequest, logger, Q, jsonMask, VERBS);
