@@ -45,7 +45,7 @@
     "optimist": "0.6.0",
     "promise": "5.0.0",
     "promised-file": "1.0.4",
-    "protractor": "0.20.1",
+    "protractor": "1.2.0",
     "semver-check": "0.0.2",
     "source-map": "0.1.38",
     "streamqueue": "0.1.1",
