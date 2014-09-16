@@ -112,7 +112,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         # Capture the rpm state if host setup fails
         for host_address, command_id in host_create_command_ids.items():
             try:
-                self.wait_for_command(self.chroma_manager, command_id, timeout=900)
+                self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
             except AssertionError:
                 # Debugging added for HYD-2849, must not impact normal exception handling
                 if not hasattr(self, 'simulator'):
