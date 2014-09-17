@@ -22,7 +22,7 @@ scp root@$TEST_RUNNER:~/test_report*.xml $PWD/test_reports/
 if $MEASURE_COVERAGE; then
     ssh root@$CHROMA_MANAGER chroma-config stop
 
-    pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) 'set -x
+    pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) 'set -x
       rm -f /usr/lib/python2.6/site-packages/sitecustomize.py*
       cd /var/tmp/
       coverage combine
@@ -34,8 +34,8 @@ if $MEASURE_COVERAGE; then
     fi
 
     # TODO: should use something like this for better efficiency:
-    # rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) /var/tmp/.coverage $PWD
-    for SERVER in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}; do
+    # rpdcp -l root -R ssh -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) /var/tmp/.coverage $PWD
+    for SERVER in $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}; do
         scp root@$SERVER:/var/tmp/.coverage .coverage.$SERVER
     done
 

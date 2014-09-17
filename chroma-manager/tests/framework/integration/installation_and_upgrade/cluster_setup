@@ -38,7 +38,7 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
 fi
 
 # need to remove the chroma repositories configured by the provisioner
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 if $RHEL; then
 yum-config-manager --enable  rhel-6-server-optional-rpms
 fi

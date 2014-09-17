@@ -34,7 +34,7 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
 fi
 
 # need to remove the chroma repositories configured by the provisioner
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 # Clean out any yum info, if this is a manual system not automated the underlying repos might have changed.
 yum clean all
 
@@ -101,7 +101,7 @@ fi"
 
 
 # Install and setup chroma software storage appliances
-pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]}) "exec 2>&1; set -xe
+pdsh -l root -R ssh -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]}) "exec 2>&1; set -xe
 if $MEASURE_COVERAGE; then
     cat <<\"EOF\" > /usr/lib/python2.6/site-packages/.coveragerc
 [run]
