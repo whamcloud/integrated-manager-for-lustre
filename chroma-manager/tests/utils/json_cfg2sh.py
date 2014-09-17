@@ -6,13 +6,19 @@ config = json.load(f)
 f.close()
 
 servers = []
+workers = []
 for server in config["lustre_servers"]:
-    servers.append(server["address"])
+    if server.get("profile") and \
+       server["profile"] == "posix_copytool_worker":
+        workers.append(server["address"])
+    else:
+        servers.append(server["address"])
 
 all_nodes = [config["chroma_managers"][0]["address"]] + servers
 
 print "CHROMA_MANAGER=\"%s\"" % config["chroma_managers"][0]["address"]
 print "STORAGE_APPLIANCES=(%s)" % " ".join(servers)
+print "WORKERS=(%s)" % " ".join(workers)
 
 if config.get('lustre_clients'):
     print "CLIENT_1=\"%s\"" % config["lustre_clients"][0]['address']
