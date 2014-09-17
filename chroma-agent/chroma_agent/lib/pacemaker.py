@@ -22,6 +22,7 @@
 
 import xml.etree.ElementTree as xml
 from xml.parsers.expat import ExpatError as ParseError
+import time
 
 from chroma_agent import shell
 from chroma_agent.shell import CommandExecutionError
@@ -209,7 +210,19 @@ class PacemakerConfig(object):
 
     @property
     def dc(self):
-        return self.root.get('dc-uuid')
+        timeout = 30
+        dc = None
+        while not dc and timeout > 0:
+            dc = self.root.get('dc-uuid')
+            if dc:
+                break
+            time.sleep(1)
+            timeout -= 1
+
+        if not dc:
+            raise PacemakerError("could not determine DC")
+
+        return dc
 
     @property
     def fenceable_nodes(self):
