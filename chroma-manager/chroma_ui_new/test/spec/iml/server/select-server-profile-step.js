@@ -39,10 +39,6 @@
       expect($scope.selectServerProfile.pdshUpdate).toEqual(jasmine.any(Function));
     });
 
-    it('should contain a showWarning method', function () {
-      expect($scope.selectServerProfile.showWarning).toEqual(jasmine.any(Function));
-    });
-
     it('should call data.hostProfileSpark.onValue', function () {
       expect(data.hostProfileSpark.onValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
     });
@@ -52,10 +48,6 @@
       beforeEach(function () {
         action = 'previous';
         $scope.selectServerProfile.transition(action);
-      });
-
-      it('should set the server profile to a disabled state', function () {
-        expect($scope.selectServerProfile.disabled).toEqual(true);
       });
 
       it('should call off', function () {
@@ -137,8 +129,8 @@
           $scope.selectServerProfile.onSelected(item);
         });
 
-        it('should set warning to false', function () {
-          expect($scope.selectServerProfile.warning).toEqual(false);
+        it('should set overridden to false', function () {
+          expect($scope.selectServerProfile.overridden).toEqual(false);
         });
 
         it('should set the item on the server profile', function () {
@@ -216,16 +208,6 @@
         });
       });
     });
-
-    describe('show warning', function () {
-      beforeEach(function () {
-        $scope.selectServerProfile.showWarning();
-      });
-
-      it('should set warning to true', function () {
-        expect($scope.selectServerProfile.warning).toEqual(true);
-      });
-    });
   });
 
   describe('selectServerProfileStep', function () {
@@ -248,8 +230,6 @@
     });
 
     describe('invoking the transition', function () {
-      var promise;
-
       beforeEach(function () {
         postPromise = $q.when('transition_end');
         spark = {
@@ -257,14 +237,9 @@
           end: jasmine.createSpy('end')
         };
         requestSocket = jasmine.createSpy('requestSocket').andReturn(spark);
-        data = {
-          statusSpark: {
-            onValue: jasmine.createSpy('onValue')
-          }
-        };
+        data = {};
         $transition = {
           steps: {
-            addServerStep: {},
             serverStatusStep: {}
           },
           end: jasmine.createSpy('end')
@@ -280,121 +255,30 @@
         };
       });
 
-      describe('not an end action', function () {
-        var response;
+      describe('previous action', function () {
+        var result;
+
         beforeEach(function () {
-          data.statusSpark.off = jasmine.createSpy('off');
+          $transition.action = 'previous';
+          result = _.last(selectServerProfileStep.transition)($q,
+            $transition, data, requestSocket, hostProfileData, profile);
         });
 
-        describe('previous action', function () {
-          beforeEach(function () {
-            $transition.action = 'previous';
-            promise = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1]($q,
-              $transition, data, requestSocket, hostProfileData, profile);
-          });
-
-          it('should call statusSpark.onValue', function () {
-            expect(data.statusSpark.onValue).toHaveBeenCalledOnceWith('pipeline', jasmine.any(Function));
-          });
-
-          [
-            {
-              description: 'valid',
-              valid: true,
-              expectedStep: 'addServersStep'
-            },
-            {
-              description: 'invalid',
-              valid: false,
-              expectedStep: 'serverStatusStep'
-            }
-          ].forEach(function testPreviousActionPermutations (json) {
-              describe(json.description, function () {
-                beforeEach(function () {
-                  response = {
-                    body: {
-                      isValid: json.valid
-                    }
-                  };
-
-                  data.statusSpark.onValue.mostRecentCall.args[1].call(data.statusSpark, response);
-                });
-
-                it('should call off', function () {
-                  expect(data.statusSpark.off).toHaveBeenCalledOnce();
-                });
-
-                it('should resolve with the addServersStep', function () {
-                  promise.then(function (result) {
-                    expect(result).toEqual({
-                      step: $transition.steps[json.expectedStep],
-                      resolve: { data: data }
-                    });
-                  });
-
-                  $scope.$digest();
-                });
-              });
-            });
-        });
-
-        describe('not previous action', function () {
-          beforeEach(function () {
-            $transition.action = 'next';
-            promise = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1]($q,
-              $transition, data, requestSocket, hostProfileData, profile);
-
-            response = {
-              body: {
-                isValid: true
-              }
-            };
-
-            data.statusSpark.onValue.mostRecentCall.args[1].call(data.statusSpark, response);
-          });
-
-          it('should resolve', function () {
-            promise.then(function (result) {
-              expect(result).toEqual({
-                step: undefined,
-                resolve: { data: data }
-              });
-            });
-
-            $scope.$digest();
-          });
-        });
-
-        describe('error in body', function () {
-          beforeEach(function () {
-            $transition.action = 'next';
-            promise = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1]($q,
-              $transition, data, requestSocket, hostProfileData, profile);
-
-            response = {
-              body: {
-                errors: [
-                  {msg: 'error'}
-                ]
-              }
-            };
-          });
-
-          it('should throw an error', function () {
-            try {
-              data.statusSpark.onValue.mostRecentCall.args[1].call(data.statusSpark, response);
-            } catch (e) {
-              expect(e.message).toEqual('[{"msg":"error"}]');
-            }
+        it('should resolve with the serverStatusStep', function () {
+          expect(result).toEqual({
+            step: $transition.steps.serverStatusStep,
+            resolve: { data: data }
           });
         });
       });
 
       describe('end action', function () {
+        var result;
+
         beforeEach(function () {
           $transition.action = 'end';
 
-          promise = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1]($q,
+          result = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1]($q,
             $transition, data, requestSocket, hostProfileData, profile);
 
           $scope.$digest();
@@ -426,7 +310,7 @@
         });
 
         it('should receive an undefined response', function () {
-          expect(promise).toEqual(undefined);
+          expect(result).toEqual(undefined);
         });
       });
     });

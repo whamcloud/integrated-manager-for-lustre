@@ -1,9 +1,9 @@
-(function () {
+describe('Add server step', function () {
   'use strict';
 
-  describe('Add servers step', function () {
+  beforeEach(module('server'));
 
-    beforeEach(module('server'));
+  describe('Add servers step', function () {
 
     var addServer, $stepInstance, buildTestHostData;
 
@@ -115,8 +115,6 @@
   describe('building test host data', function () {
     var buildTestHostData;
 
-    beforeEach(module('server'));
-
     beforeEach(inject(function (_buildTestHostData_) {
       buildTestHostData = _buildTestHostData_;
     }));
@@ -124,25 +122,29 @@
     [
       {
         type: 'existing keys',
-        in: { address: 'foo.bar', sshAuthChoice: 'existing_keys_choice' },
-        out: { address: 'foo.bar', auth_type: 'existing_keys_choice', commit: true }
+        in: {address: 'foo.bar', sshAuthChoice: 'existing_keys_choice'},
+        out: {address: 'foo.bar', auth_type: 'existing_keys_choice', commit: true}
       },
       {
         type: 'root password',
-        in: { address: 'foo.bar', sshAuthChoice: 'id_password_root', rootPassword: 'foo' },
-        out: { address: 'foo.bar', auth_type: 'id_password_root', commit: true, root_password: 'foo' }
+        in: {address: 'foo.bar', sshAuthChoice: 'id_password_root', rootPassword: 'foo'},
+        out: {address: 'foo.bar', auth_type: 'id_password_root', commit: true, root_password: 'foo'}
       },
       {
         type: 'private key no password',
-        in: { address: 'foo.bar', sshAuthChoice: 'private_key_choice', privateKey: 'foo' },
-        out: { address: 'foo.bar', auth_type: 'private_key_choice', commit: true, private_key: 'foo' }
+        in: {address: 'foo.bar', sshAuthChoice: 'private_key_choice', privateKey: 'foo'},
+        out: {address: 'foo.bar', auth_type: 'private_key_choice', commit: true, private_key: 'foo'}
       },
       {
         type: 'private key password',
-        in: { address: 'foo.bar', sshAuthChoice: 'private_key_choice', privateKey: 'foo',
-          privateKeyPassphrase: 'bar' },
-        out: { address: 'foo.bar', auth_type: 'private_key_choice',
-          commit: true, private_key: 'foo', private_key_passphrase: 'bar' }
+        in: {
+          address: 'foo.bar', sshAuthChoice: 'private_key_choice', privateKey: 'foo',
+          privateKeyPassphrase: 'bar'
+        },
+        out: {
+          address: 'foo.bar', auth_type: 'private_key_choice',
+          commit: true, private_key: 'foo', private_key_passphrase: 'bar'
+        }
       }
     ].forEach(function (item) {
         it('should transform data for ' + item.type, function () {
@@ -171,11 +173,10 @@
     });
 
     describe('transition', function () {
-      var $transition, data, testHost, createHosts, result, statusSpark, promise;
+      var $transition, data, testHost, result, statusSpark, promise;
       beforeEach(function () {
         $transition = {
           steps: {
-            selectServerProfileStep: jasmine.createSpy('selectServerProfileStep'),
             serverStatusStep: jasmine.createSpy('serverStatusStep')
           }
         };
@@ -187,7 +188,6 @@
           onValue: jasmine.createSpy('onValue')
         };
         testHost = jasmine.createSpy('testHost').andReturn(statusSpark);
-        createHosts = jasmine.createSpy('createHosts').andReturn('hostProfileSpark');
         promise = {
           catch: jasmine.any(Function),
           finally: jasmine.any(Function),
@@ -195,7 +195,7 @@
         };
 
         result = addServersStep.transition[addServersStep.transition.length - 1]($q, $transition, data, testHost,
-          createHosts, throwIfError);
+          throwIfError);
       });
 
       it('should invoke testHost', function () {
@@ -243,17 +243,12 @@
             $rootScope.$digest();
           });
 
-          it('should call createHost with flint and server data', function () {
-            expect(createHosts).toHaveBeenCalledOnceWith(data.flint, data.serverData);
-          });
-
-          it('should resolve with the selectServerProfileStep and hostProfileSpark', function () {
+          it('should resolve with the serverStatusStep', function () {
             result.then(function (resolvedData) {
               var expectedData = _.extend({}, data);
-              expectedData.hostProfileSpark = 'hostProfileSpark';
 
               expect(resolvedData).toEqual({
-                step: $transition.steps.selectServerProfileStep,
+                step: $transition.steps.serverStatusStep,
                 resolve: {
                   data: expectedData
                 }
@@ -287,11 +282,7 @@
             $rootScope.$digest();
           });
 
-          it('should not call createHost', function () {
-            expect(createHosts).not.toHaveBeenCalled();
-          });
-
-          it('should resolve with the selectServerProfileStep and hostProfileSpark', function () {
+          it('should resolve with the serverStatusStep', function () {
             result.then(function (resolvedData) {
               expect(resolvedData).toEqual({
                 step: $transition.steps.serverStatusStep,
@@ -329,4 +320,4 @@
       });
     });
   });
-})();
+});

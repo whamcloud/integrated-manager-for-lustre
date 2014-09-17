@@ -39,19 +39,9 @@ describe('Server Status Step', function () {
       expect(serverStatus.hostnames).toEqual(['foo', 'bar']);
     });
 
-    it('should set warning flag on the scope', function () {
-      serverStatus.showWarning();
-
-      expect(serverStatus.warning).toBe(true);
-    });
-
     describe('transitioning', function () {
       beforeEach(function () {
         serverStatus.transition('next');
-      });
-
-      it('should set the disabled flag', function () {
-        expect(serverStatus.disabled).toBe(true);
       });
 
       it('should delegate to $stepInstance', function () {
@@ -94,14 +84,19 @@ describe('Server Status Step', function () {
       expect(serverStatusStep).toEqual({
         templateUrl: 'iml/server/assets/html/server-status-step.html',
         controller: 'ServerStatusStepCtrl',
-        transition: ['$transition', 'data', 'createHosts', jasmine.any(Function)]
+        transition: ['$transition', '$q', 'data', 'createHosts', 'hostProfile', 'openCommandModal',
+          jasmine.any(Function)]
       });
     });
 
     describe('transitions', function () {
-      var $transition, data, createHosts, transition;
+      var $q, $rootScope, $transition, data, createHosts, hostProfile, createHostsDeferred,
+        openCommandModal, openCommandModalDeferred, transition;
 
-      beforeEach(function () {
+      beforeEach(inject(function (_$q_, _$rootScope_) {
+        $q = _$q_;
+        $rootScope = _$rootScope_;
+
         $transition = {
           steps: {
             addServersStep: {},
@@ -114,10 +109,18 @@ describe('Server Status Step', function () {
           serverData: {}
         };
 
-        createHosts = jasmine.createSpy('createHosts').andReturn({});
+        createHostsDeferred = $q.defer();
+        createHosts = jasmine.createSpy('createHosts').andReturn(createHostsDeferred.promise);
 
-        transition = serverStatusStep.transition[3];
-      });
+        openCommandModalDeferred = $q.defer();
+        openCommandModal = jasmine.createSpy('openCommandModal').andReturn(openCommandModalDeferred.promise);
+
+        hostProfile = jasmine.createSpy('hostProfile').andReturn({
+          onValue: jasmine.createSpy('onValue')
+        });
+
+        transition = _.last(serverStatusStep.transition);
+      }));
 
       describe('previous action', function () {
         var result;
@@ -125,7 +128,7 @@ describe('Server Status Step', function () {
         beforeEach(function () {
           $transition.action = 'previous';
 
-          result = transition($transition, data, createHosts);
+          result = transition($transition, $q, data, createHosts, hostProfile, openCommandModal);
         });
 
         it('should go to add servers step', function () {
@@ -141,18 +144,70 @@ describe('Server Status Step', function () {
         });
       });
 
-      describe('next action', function () {
+      describe('proceed and skip', function () {
         var result;
 
         beforeEach(function () {
-          $transition.action = 'next';
+          $transition.action = 'proceed and skip';
 
-          result = transition($transition, data, createHosts);
+          result = transition($transition, $q, data, createHosts, hostProfile, openCommandModal);
+
+          createHostsDeferred.resolve({
+            body: {
+              objects: [{command: {id: 1}, host: {id: 2}}]
+            }
+          });
+          $rootScope.$digest();
+        });
+
+        it('should not open the command modal', function () {
+          expect(openCommandModal).not.toHaveBeenCalled();
+        });
+      });
+
+      describe('proceed', function () {
+        var result;
+
+        beforeEach(function () {
+          $transition.action = 'proceed';
+
+          result = transition($transition, $q, data, createHosts, hostProfile, openCommandModal);
+
+          createHostsDeferred.resolve({
+            body: {
+              objects: [{command: {id: 1}, host: {id: 2}}]
+            }
+          });
+          $rootScope.$digest();
         });
 
         it('should get a hostProfileSpark', function () {
           expect(createHosts)
-            .toHaveBeenCalledOnceWith(data.flint, data.serverData);
+            .toHaveBeenCalledOnceWith(data.serverData);
+        });
+
+        it('should open the command modal', function () {
+          expect(openCommandModal).toHaveBeenCalledOnceWith({
+            body: {
+              objects: [{id: 1}]
+            }
+          });
+        });
+
+        it('should create a host profile spark', function () {
+          expect(hostProfile).toHaveBeenCalledOnceWith(data.flint, [{id: 2}]);
+        });
+
+        it('should register an onValue listener', function () {
+          expect(hostProfile.plan().onValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
+        });
+
+        it('should call the listener once', function () {
+          var off = jasmine.createSpy('off');
+          _.last(hostProfile.plan().onValue.mostRecentCall.args).call({
+            off: off
+          });
+          expect(off).toHaveBeenCalledOnce();
         });
 
         it('should go to select server profile step', function () {
@@ -162,7 +217,11 @@ describe('Server Status Step', function () {
               data: {
                 flint: data.flint,
                 serverData: data.serverData,
-                hostProfileSpark: createHosts.plan()
+                hostProfileSpark: {
+                  then: jasmine.any(Function),
+                  catch: jasmine.any(Function),
+                  finally: jasmine.any(Function)
+                }
               }
             }
           });

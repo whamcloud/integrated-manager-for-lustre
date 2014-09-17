@@ -1,5 +1,5 @@
 <div class="modal-body select-server-profile-step clearfix">
-  <div ng-if="selectServerProfile.warning" class="alert alert-danger" role="alert">
+  <div ng-if="selectServerProfile.overridden" class="alert alert-danger" role="alert">
     You are about to configure one or more servers with failed validations.
     Configuring servers with failed validations is unsupported!
     Click <strong>proceed</strong> to continue.
@@ -32,18 +32,6 @@
   </div>
 </div>
 <div class="modal-footer">
-  <span ng-if="selectServerProfile.disabled">
-    <button disabled class="btn btn-default"><i class="fa fa-long-arrow-left"></i> Previous</button>
-    <button disabled class="btn btn-success">Proceed <i class="fa fa-spinner fa-spin"></i></button>
-  </span>
-  <span ng-if="!selectServerProfile.disabled">
-    <button class="btn btn-default" ng-click="selectServerProfile.transition('previous')"><i class="fa fa-long-arrow-left"></i> Previous</button>
-    <span ng-if="!selectServerProfile.item.valid">
-      <button class="btn btn-warning" ng-if="!selectServerProfile.warning" ng-click="selectServerProfile.showWarning()">Override <i class="fa fa-exclamation-triangle"></i></button>
-      <button class="btn btn-danger" ng-if="selectServerProfile.warning" ng-click="selectServerProfile.transition('end')">Proceed <i class="fa fa-exclamation-circle"></i></button>
-    </span>
-    <span ng-if="selectServerProfile.item.valid">
-      <button class="btn btn-success" ng-click="selectServerProfile.transition('end')" ng-if="!selectServerProfile.disabled">Proceed <i class="fa fa-check-circle-o"></i></button>
-    </span>
-  </span>
+  <button ng-disabled="selectServerProfile.disabled" class="btn btn-default"><i class="fa fa-long-arrow-left"></i> Previous</button>
+  <override-button overridden="selectServerProfile.overridden" is-valid="selectServerProfile.item.valid" on-change="selectServerProfile.transition(message)" is-disabled="selectServerProfile.disabled"></override-button>
 </div>

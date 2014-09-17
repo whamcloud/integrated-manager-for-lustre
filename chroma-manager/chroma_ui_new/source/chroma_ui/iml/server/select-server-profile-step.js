@@ -24,26 +24,25 @@
   'use strict';
 
   angular.module('server')
-    .controller('SelectServerProfileStepCtrl', ['$scope', '$stepInstance', 'data',
-      function SelectServerProfileStepCtrl ($scope, $stepInstance, data) {
+    .controller('SelectServerProfileStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES', 'data',
+      function SelectServerProfileStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data) {
         $scope.selectServerProfile = {
           /**
            * Tells manager to perform a transition.
            * @param {String} action
            */
           transition: function transition (action) {
-            $scope.selectServerProfile.disabled = true;
-
             off();
 
-            $stepInstance.transition(action, {
-              data: data,
-              hostProfileData: $scope.selectServerProfile.data,
-              profile: $scope.selectServerProfile.item
-            });
+            if (action !== OVERRIDE_BUTTON_TYPES.OVERRIDE)
+              $stepInstance.transition(action, {
+                data: data,
+                hostProfileData: $scope.selectServerProfile.data,
+                profile: $scope.selectServerProfile.item
+              });
           },
           onSelected: function onSelected (item) {
-            $scope.selectServerProfile.warning = false;
+            $scope.selectServerProfile.overridden = false;
             $scope.selectServerProfile.item = item;
             $scope.selectServerProfile.items = $scope.selectServerProfile.data.map(function (object) {
               return _.extend({}, object, {
@@ -71,12 +70,6 @@
 
             if (hostnames)
               $scope.selectServerProfile.hostnames = hostnames;
-          },
-          /**
-           * Marks that we should show a warning.
-           */
-          showWarning: function showWarning () {
-            $scope.selectServerProfile.warning = true;
           }
         };
 
@@ -125,56 +118,46 @@
           }
         });
       }])
-    .factory('selectServerProfileStep', [function selectServerProfileStep () {
-      return {
-        templateUrl: 'iml/server/assets/html/select-server-profile-step.html',
-        controller: 'SelectServerProfileStepCtrl',
-        transition: ['$q', '$transition', 'data', 'requestSocket', 'hostProfileData', 'profile',
-          function transition ($q, $transition, data, requestSocket, hostProfileData, profile) {
-            if ($transition.action === 'end') {
-              var spark = requestSocket();
+    .factory('selectServerProfileStep', [
+      function selectServerProfileStep () {
+        return {
+          templateUrl: 'iml/server/assets/html/select-server-profile-step.html',
+          controller: 'SelectServerProfileStepCtrl',
+          transition: ['$q', '$transition', 'data', 'requestSocket', 'hostProfileData', 'profile',
+            function transition ($q, $transition, data, requestSocket, hostProfileData, profile) {
+              if ($transition.action !== 'previous') {
+                var spark = requestSocket();
 
-              spark.sendPost('/host_profile', {
-                json: {
-                  objects: hostProfileData.map(function convertToObjects (data) {
-                    return {
-                      host: data.host,
-                      profile: profile.id
-                    };
-                  })
-                }
-              }, true)
-                .then($transition.end)
-                .finally(function snuffSpark () {
-                  spark.end();
-                });
+                var hostProfile = spark.sendPost('/host_profile', {
+                  json: {
+                    objects: hostProfileData.map(function convertToObjects (data) {
+                      return {
+                        host: data.host,
+                        profile: profile.id
+                      };
+                    })
+                  }
+                }, true);
 
-              return;
-            }
+                //@TODO: The backend should return a command as the result of POSTing here.
+                //@TODO: Put open command modal here when that occurs.
 
-            var deferred = $q.defer();
+                hostProfile
+                  .then($transition.end)
+                  .finally(function snuffSpark () {
+                    spark.end();
+                  });
 
-            data.statusSpark.onValue('pipeline', function onValue (response) {
-              this.off();
+                return;
+              }
 
-              if (_.compact(response.body.errors).length)
-                throw new Error(JSON.stringify(response.body.errors));
-
-              var step;
-
-              if ($transition.action === 'previous')
-                step = response.body.isValid ? $transition.steps.addServersStep :
-                  $transition.steps.serverStatusStep;
-
-              deferred.resolve({
-                step: step,
+              return {
+                step: $transition.steps.serverStatusStep,
                 resolve: { data: data }
-              });
-            });
-
-            return deferred.promise;
-          }
-        ]
-      };
-    }]);
+              };
+            }
+          ]
+        };
+      }
+    ]);
 }());

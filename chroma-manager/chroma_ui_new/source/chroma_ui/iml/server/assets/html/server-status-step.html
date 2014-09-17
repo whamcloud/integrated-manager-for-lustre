@@ -1,5 +1,5 @@
 <div class="modal-body server-status-step clearfix">
-  <div ng-if="serverStatus.warning" class="alert alert-danger" role="alert">
+  <div ng-if="serverStatus.overridden" class="alert alert-danger" role="alert">
     You are about to add one or more servers with failed validations.
     Adding servers with failed validations is unsupported!
     Click <strong>proceed</strong> to continue.
@@ -19,13 +19,6 @@
   </div>
 </div>
 <div class="modal-footer">
-  <span ng-if="!serverStatus.disabled">
-    <button class="btn btn-default" ng-click="serverStatus.transition('previous')"><i class="fa fa-long-arrow-left"></i> Previous</button>
-    <button class="btn btn-warning" ng-if="!serverStatus.warning" ng-click="serverStatus.showWarning()">Override <i class="fa fa-exclamation-triangle"></i></button>
-    <button class="btn btn-danger" ng-if="serverStatus.warning" ng-click="serverStatus.transition('next')">Proceed <i class="fa fa-exclamation-circle"></i></button>
-  </span>
-  <span ng-if="serverStatus.disabled">
-    <button disabled class="btn btn-default"><i class="fa fa-long-arrow-left"></i> Previous</button>
-    <button disabled class="btn btn-danger">Working <i class="fa fa-spinner fa-spin"></i></button>
-  </span>
+  <button ng-disabled="serverStatus.disabled" class="btn btn-default" ng-click="serverStatus.transition('previous')"><i class="fa fa-long-arrow-left"></i> Previous</button>
+  <override-button overridden="serverStatus.overridden" is-valid="serverStatus.isValid" on-change="serverStatus.transition(message)" is-disabled="serverStatus.disabled"></override-button>
 </div>

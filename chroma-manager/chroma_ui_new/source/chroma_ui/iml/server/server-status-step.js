@@ -24,8 +24,8 @@
   'use strict';
 
   angular.module('server')
-    .controller('ServerStatusStepCtrl', ['$scope', '$stepInstance', 'data',
-      function ServerStatusStepCtrl ($scope, $stepInstance, data) {
+    .controller('ServerStatusStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES', 'data',
+      function ServerStatusStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data) {
         $scope.serverStatus = {
           /**
            * Used by filters to determine the context.
@@ -45,41 +45,64 @@
               $scope.serverStatus.hostnames = hostnames;
           },
           /**
-           * Marks that we should show a warning.
-           */
-          showWarning: function showWarning () {
-            $scope.serverStatus.warning = true;
-          },
-          /**
            * tells manager to perform a transition.
            * @param {String} action
            */
           transition: function transition (action) {
-            $scope.serverStatus.disabled = true;
-
             off();
 
-            $stepInstance.transition(action, { data: data });
+            if (action !== OVERRIDE_BUTTON_TYPES.OVERRIDE)
+              $stepInstance.transition(action, { data: data });
           }
         };
 
         var off = data.statusSpark.onValue('pipeline', function assignToScope (response) {
+          $scope.serverStatus.isValid = response.body.isValid;
           $scope.serverStatus.status = response.body.objects;
         });
       }])
-      .factory('serverStatusStep', [function serverStatusStepFactory () {
+      .factory('serverStatusStep', ['OVERRIDE_BUTTON_TYPES', function serverStatusStepFactory (OVERRIDE_BUTTON_TYPES) {
         return {
           templateUrl: 'iml/server/assets/html/server-status-step.html',
           controller: 'ServerStatusStepCtrl',
-          transition: ['$transition', 'data', 'createHosts',
-            function transition ($transition, data, createHosts) {
+          transition: ['$transition', '$q', 'data', 'createHosts', 'hostProfile', 'openCommandModal',
+            function transition ($transition, $q, data, createHosts, hostProfile, openCommandModal) {
               var step;
 
               if ($transition.action === 'previous') {
                 step = $transition.steps.addServersStep;
-              }  else if ($transition.action === 'next') {
+              } else {
                 step = $transition.steps.selectServerProfileStep;
-                data.hostProfileSpark = createHosts(data.flint, data.serverData);
+
+                var hosts = createHosts(data.serverData);
+
+                if ($transition.action === OVERRIDE_BUTTON_TYPES.PROCEED) {
+                  hosts.then(function startCommand (response) {
+                    if (_.compact(response.body.errors).length)
+                      throw new Error(JSON.stringify(response.body.errors));
+
+                    openCommandModal({
+                      body: {
+                        objects: _.pluck(response.body.objects, 'command')
+                      }
+                    });
+                  });
+                }
+
+                data.hostProfileSpark = hosts.then(function getHostProfileSpark (response) {
+                  var hosts = _.pluck(response.body.objects, 'host');
+
+                  var deferred = $q.defer();
+                  var hostSpark = hostProfile(data.flint, hosts);
+
+                  hostSpark.onValue('data', function checkOnce () {
+                    this.off();
+
+                    deferred.resolve(hostSpark);
+                  });
+
+                  return deferred.promise;
+                });
               }
 
               return {

@@ -53,7 +53,7 @@
               $scope.addServer.fields.address = hostnames;
           },
           /**
-           * Call the transition with the action.
+           * Call the transition.
            */
           transition: function transition () {
             $scope.addServer.disabled = true;
@@ -99,15 +99,15 @@
       return {
         templateUrl: 'iml/server/assets/html/add-server-step.html',
         controller: 'AddServerStepCtrl',
-        transition: ['$q', '$transition', 'data', 'testHost', 'createHosts', 'throwIfError',
-          function transition ($q, $transition, data, testHost, createHosts, throwIfError) {
+        transition: ['$q', '$transition', 'data', 'testHost', 'throwIfError',
+          function transition ($q, $transition, data, testHost, throwIfError) {
             var deferred = $q.defer();
             var statusSparkDeferred = $q.defer();
             var statusSpark = testHost(data.flint, data.serverData);
 
             data.statusSpark = statusSparkDeferred.promise;
 
-            statusSpark.onValue('pipeline', throwIfError(function (response) {
+            statusSpark.onValue('pipeline', throwIfError(function runOnce (response) {
               this.off();
 
               if (_.compact(response.body.errors).length)
@@ -115,14 +115,8 @@
 
               statusSparkDeferred.resolve(statusSpark);
 
-              var step = response.body.isValid ? $transition.steps.selectServerProfileStep :
-                $transition.steps.serverStatusStep;
-
-              if (response.body.isValid)
-                data.hostProfileSpark = createHosts(data.flint, data.serverData);
-
               deferred.resolve({
-                step: step,
+                step: $transition.steps.serverStatusStep,
                 resolve: { data: data }
               });
             }));

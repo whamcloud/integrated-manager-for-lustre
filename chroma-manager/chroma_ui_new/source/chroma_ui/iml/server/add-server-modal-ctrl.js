@@ -80,9 +80,9 @@
         });
       };
     }])
-    .factory('createHosts', ['$q', 'requestSocket', 'openCommandModal', 'hostProfile',
-      function createHostsFactory ($q, requestSocket, openCommandModal, hostProfile) {
-        return function createHosts (flint, serverData) {
+    .factory('createHosts', ['$q', 'requestSocket',
+      function createHostsFactory ($q, requestSocket) {
+        return function createHosts (serverData) {
           var spark = requestSocket();
 
           var objects = serverData.address.reduce(function buildObjects (arr, address) {
@@ -94,31 +94,10 @@
           return spark.sendPost('/host', {
             json: { objects: objects }
           }, true)
-            .then(function startCommand (response) {
-              if (_.compact(response.body.errors).length)
-                throw new Error(JSON.stringify(response.body.errors));
-
-              openCommandModal({
-                body: {
-                  objects: _.pluck(response.body.objects, 'command')
-                }
-              });
-
-              return _.pluck(response.body.objects, 'host');
+            .catch(function throwError (response) {
+              throw response.error;
             })
-            .then(function (hosts) {
-              var deferred = $q.defer();
-              var hostSpark = hostProfile(flint, hosts);
-
-              hostSpark.onValue('data', function checkOnce () {
-                this.off();
-
-                deferred.resolve(hostSpark);
-              });
-
-              return deferred.promise;
-            })
-            .finally(function () {
+            .finally(function endSpark () {
               spark.end();
             });
         };

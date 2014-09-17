@@ -157,21 +157,13 @@ describe('openAddServerModal', function () {
 describe('Create Hosts', function () {
   'use strict';
 
-  var $q, createHosts, requestSocket, openCommandModal, hostProfile, flint, serverData, spark,
-    sendPostDeferred, hostSpark, expandedServerData, $rootScope;
+  var $q, createHosts, requestSocket, serverData, spark,
+    sendPostDeferred, expandedServerData, $rootScope;
 
   beforeEach(module('server', function ($provide) {
     requestSocket = jasmine.createSpy('requestSocket');
-    openCommandModal = jasmine.createSpy('openCommandModal');
-    hostSpark = {
-      onValue: jasmine.createSpy('onValue'),
-      off: jasmine.createSpy('off')
-    };
-    hostProfile = jasmine.createSpy('hostProfile').andReturn(hostSpark);
 
     $provide.value('requestSocket', requestSocket);
-    $provide.value('openCommandModal', openCommandModal);
-    $provide.value('hostProfile', hostProfile);
 
     $provide.decorator('requestSocket', function ($q, $delegate) {
       sendPostDeferred = $q.defer();
@@ -188,7 +180,6 @@ describe('Create Hosts', function () {
     $rootScope = _$rootScope_;
     createHosts = _createHosts_;
 
-    flint = jasmine.createSpy('flint');
     serverData = {
       address: ['one', 'two', 'three'],
       extra: 'extra'
@@ -209,7 +200,7 @@ describe('Create Hosts', function () {
       }
     ];
 
-    createHosts(flint, serverData);
+    createHosts(serverData);
   }));
 
   it('should call request socket', function () {
@@ -220,77 +211,44 @@ describe('Create Hosts', function () {
     expect(spark.sendPost).toHaveBeenCalledWith('/host', { json: { objects: expandedServerData } }, true);
   });
 
-  describe('startCommand', function () {
-    describe('no errors', function () {
-      var response = {
-        body: {
-          objects: [
-            {
-              command: 'command1',
-              host: 'host1'
-            }
-          ]
-        }
-      };
-
-      beforeEach(function () {
-        sendPostDeferred.resolve(response);
-        $rootScope.$digest();
-      });
-
-      it('should open the command modal', function () {
-        expect(openCommandModal).toHaveBeenCalledWith({
-          body: {
-            objects: ['command1']
+  describe('no errors', function () {
+    var response = {
+      body: {
+        objects: [
+          {
+            command: 'command1',
+            host: 'host1'
           }
-        });
-      });
+        ]
+      }
+    };
 
-      describe('after start command and opening the modal', function () {
-        it('should call hostProfile', function () {
-          expect(hostProfile).toHaveBeenCalledOnceWith(flint, ['host1']);
-        });
-
-        it('should call hostSpark.onValue', function () {
-          expect(hostSpark.onValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
-        });
-
-        describe('host spark onValue data and finalizing the promise', function () {
-          beforeEach(function () {
-            hostSpark.onValue.mostRecentCall.args[1].call(hostSpark);
-            $rootScope.$digest();
-          });
-
-          it('should call the off function when the data event is received', function () {
-            expect(hostSpark.off).toHaveBeenCalledOnce();
-          });
-
-          describe('finally, end the spark', function () {
-            it('should call end on the spark', function () {
-              expect(spark.end).toHaveBeenCalledOnce();
-            });
-          });
-        });
-      });
+    beforeEach(function () {
+      sendPostDeferred.resolve(response);
+      $rootScope.$digest();
     });
 
-    describe('errors', function () {
-      var response = {
-        body: {
-          errors: [
-            {msg: 'error'}
-          ]
-        }
-      };
+    it('should call end on the spark', function () {
+      expect(spark.end).toHaveBeenCalledOnce();
+    });
+  });
 
-      it('should throw exception', function () {
-        try {
-          sendPostDeferred.resolve(response);
-          $rootScope.$digest();
-        } catch (e) {
-          expect(e.message).toEqual('[{"msg":"error"}]');
-        }
-      });
+  describe('errors', function () {
+    var response = {
+      body: {
+        errors: [
+          { msg: 'error' }
+        ]
+      }
+    };
+
+    it('should throw exception', function () {
+      try {
+        sendPostDeferred.resolve(response);
+        $rootScope.$digest();
+      } catch (e) {
+        expect(e.message).toEqual('[{"msg":"error"}]');
+      }
     });
   });
 });
