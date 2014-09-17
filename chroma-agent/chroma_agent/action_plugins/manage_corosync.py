@@ -122,7 +122,7 @@ def configure_pacemaker():
     # this could race with other cluster members to make sure
     # any errors are only due to it already existing
     try:
-        cibadmin(["--create", "--obj_type", "resources", "-X",
+        cibadmin(["--create", "-o", "resources", "-X",
                   "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
     except:
         rc, stdout, stderr = shell.run(['crm_resource', '--locate',
