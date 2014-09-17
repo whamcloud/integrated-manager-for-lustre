@@ -1,6 +1,15 @@
 <div class="modal-body add-server-step">
   <form name="addServerForm" novalidate>
-    <pdsh pdsh-initial="addServer.fields.pdsh" pdsh-change="addServer.pdshUpdate(pdsh, hostnames)" pdsh-required="true"></pdsh>
+    <div class="form-group pdsh-input" ng-class="{'has-error': addServerForm.pdsh.$invalid, 'has-success': addServerForm.pdsh.$valid}">
+      <div>
+        <label>Enter Hostname / Hostlist Expression</label>
+        <i class="fa fa-question-circle"
+           tooltip="Enter a hostname / hostlist expression for servers that you would like to add."
+           tooltip-placement="right"></i>
+      </div>
+      <pdsh pdsh-initial="addServer.fields.pdsh" pdsh-change="addServer.pdshUpdate(pdsh, hostnames)"
+            pdsh-required="true"></pdsh>
+    </div>
     <div class="form-group">
       <div>
         <label>

@@ -36,9 +36,8 @@
       scope: {
         pdshChange: '&',
         pdshRequired: '=?',
-        pdshLabel: '=?',
-        pdshTooltip: '=?',
-        pdshInitial: '=?'
+        pdshInitial: '=?',
+        pdshPlaceholder: '@?'
       },
       restrict: 'E',
       templateUrl: 'common/pdsh/assets/html/pdsh.html',
@@ -57,10 +56,8 @@
 
         if (!scope.pdshInitial)
           scope.pdshInitial = '';
-        if (!scope.pdshLabel)
-          scope.pdshLabel = 'Hostname';
-        if (!scope.pdshTooltip)
-          scope.pdshTooltip = 'The name of the host on your network. Takes a hostname or a PDSH expression.';
+        if (!scope.pdshPlaceholder)
+          scope.pdshPlaceholder = 'Enter hostname / hostlist Expression';
 
         /**
          * Sets the validity of the directive based on the pdsh expression being passed in.
@@ -135,7 +132,8 @@
           getHostnames: function getHostnames () {
             return hostnames;
           },
-          pdshForm: ctrl
+          pdshForm: ctrl,
+          pdshPlaceholder: scope.pdshPlaceholder
         };
 
         // Set the initial value of the expression

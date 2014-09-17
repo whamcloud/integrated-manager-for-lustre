@@ -1,27 +1,18 @@
-<div class="form-group pdsh-input" ng-class="{'has-error': pdsh.pdshForm.pdsh.$invalid, 'has-success': pdsh.pdshForm.pdsh.$valid}">
-  <div>
-
-  <label>{{pdshLabel}}</label><i class="fa fa-question-circle"
-                            tooltip="{{pdshTooltip}}"
-                            tooltip-placement="right"></i>
+<div class="input-group">
+  <div class="input-group-addon activate-popover" tooltip="Click for expanded hostlist expressions."
+       tooltip-placement="top">
+    <i class="fa fa-list-ul"></i>
   </div>
-  <div class="input-group">
-    <div class="input-group-addon activate-popover" tooltip="Click for expanded PDSH expressions."
-         tooltip-placement="top">
-      <i class="fa fa-list-ul"></i>
-    </div>
-    <iml-popover class="bottom" id="hostnamesPopover" title="Expanded Hostnames" ng-if="pdsh.getHostnames().length > 0">
-      <ul class="well">
-        <li ng-repeat="hostname in pdsh.getHostnames()">{{hostname}}</li>
-      </ul>
-    </iml-popover>
-    <input class="form-control" type="search" name="pdsh" placeholder="Enter hostname / PDSH hostname expression"
-           ng-model="pdsh.expression" ng-change="pdsh.sendChange()" ng-required="pdshRequired">
-    <iml-tooltip class="error-tooltip" toggle="pdsh.pdshForm.pdsh.$invalid" direction="bottom">
-      <ul>
-        <li ng-repeat="message in pdsh.getErrorMessages()">{{message}}</li>
-      </ul>
-    </iml-tooltip>
-
-  </div>
+  <iml-popover class="bottom" id="hostnamesPopover" title="Hostlist" ng-if="pdsh.getHostnames().length > 0">
+    <ul class="well">
+      <li ng-repeat="hostname in pdsh.getHostnames()">{{hostname}}</li>
+    </ul>
+  </iml-popover>
+  <input class="form-control" type="search" name="pdsh" placeholder="{{pdsh.pdshPlaceholder}}"
+         ng-model="pdsh.expression" ng-change="pdsh.sendChange()" ng-required="pdshRequired">
+  <iml-tooltip class="error-tooltip" toggle="pdsh.pdshForm.pdsh.$invalid" direction="bottom">
+    <ul>
+      <li ng-repeat="message in pdsh.getErrorMessages()">{{message}}</li>
+    </ul>
+  </iml-tooltip>
 </div>

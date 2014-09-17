@@ -11,7 +11,15 @@
   <ul class="list-inline">
     <li>
       <form name="pdshForm">
-        <pdsh pdsh-change="server.pdshUpdate(pdsh, hostnames)"></pdsh>
+        <div class="form-group pdsh-input" ng-class="{'has-error': pdshForm.pdsh.$invalid, 'has-success': pdshForm.pdsh.$valid}">
+          <div>
+            <label>Filter by Hostname / Hostlist Expression</label>
+            <i class="fa fa-question-circle"
+               tooltip="Enter a hostname / hostlist expression to filter the servers below."
+               tooltip-placement="right"></i>
+          </div>
+          <pdsh pdsh-change="server.pdshUpdate(pdsh, hostnames)"></pdsh>
+        </div>
         <button class="btn btn-info btn-sm" ng-model="server.pdshFuzzy" btn-checkbox>
          <span ng-if="server.pdshFuzzy">
             <i class="fa fa-check"></i> Fuzzy

@@ -84,6 +84,10 @@ describe('PDSH directive', function () {
       var tooltip = element.find('.error-tooltip li');
       expect(tooltip.length).toEqual(0);
     });
+
+    it('should have a placeholder', function () {
+      expect(inputField.attr('placeholder')).toEqual('placeholder text');
+    });
   });
 
   describe('initial entry', function () {

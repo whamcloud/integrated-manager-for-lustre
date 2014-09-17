@@ -5,7 +5,15 @@
     Click <strong>proceed</strong> to continue.
   </div>
   <form name="filterServerForm" novalidate>
-    <pdsh pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames)"></pdsh>
+    <div class="form-group pdsh-input" ng-class="{'has-error': filterServerForm.pdsh.$invalid, 'has-success': filterServerForm.pdsh.$valid}">
+      <div>
+        <label>Filter by Hostname / Hostlist Expression</label>
+        <i class="fa fa-question-circle"
+           tooltip="Enter a hostname / hostlist expression for servers that you would like to add."
+           tooltip-placement="right"></i>
+      </div>
+      <pdsh pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames)"></pdsh>
+    </div>
   </form>
   <div class="status-cell-container" ng-repeat="status in serverStatus.status | pdsh:serverStatus.hostnames:serverStatus.getHostPath track by status.address">
     <div ng-class="{invalid: status.invalid, valid: !status.invalid}" tooltip="Address: {{ status.address }}" class="status-cell activate-popover"></div>
