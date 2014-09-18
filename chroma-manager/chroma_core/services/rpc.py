@@ -73,7 +73,7 @@ RESPONSE_SCHEMA = {
     }
 }
 
-RESPONSE_TIMEOUT = 60
+RESPONSE_TIMEOUT = 300
 
 """
 Max number of lightweight RPCs that can be in flight concurrently.  This must
@@ -254,7 +254,7 @@ class RpcClientResponseHandler(threading.Thread):
         log.debug("ResponseThread.run")
 
         def callback(body, message):
-#            log.debug(body)
+            # log.debug(body)
             try:
                 jsonschema.validate(body, RESPONSE_SCHEMA)
             except jsonschema.ValidationError as e:
@@ -273,8 +273,12 @@ class RpcClientResponseHandler(threading.Thread):
         with rx_connections[_amqp_connection()].acquire(block = True) as connection:
             # Prepare the response queue
             with connection.Consumer(
-                queues = [kombu.messaging.Queue(self._response_routing_key, _amqp_exchange(), routing_key=self._response_routing_key, auto_delete = True, durable = False)],
-                callbacks = [callback]):
+                queues = [kombu.messaging.Queue(self._response_routing_key,
+                          _amqp_exchange(),
+                          routing_key=self._response_routing_key,
+                          auto_delete = True,
+                          durable = False)],
+                    callbacks = [callback]):
 
                 self._started.set()
                 while not self._stopping:
@@ -350,7 +354,7 @@ class RpcClient(object):
             self._complete = False
 
             def callback(body, message):
-#                log.debug(body)
+                # log.debug(body)
                 try:
                     jsonschema.validate(body, RESPONSE_SCHEMA)
                 except jsonschema.ValidationError as e:
@@ -363,8 +367,11 @@ class RpcClient(object):
 
             with lw_connections[_amqp_connection()].acquire(block = True) as connection:
                 with connection.Consumer(
-                    queues = [kombu.messaging.Queue(self._response_routing_key, _amqp_exchange(), routing_key=self._response_routing_key, auto_delete = True, durable = False)],
-                    callbacks = [callback]):
+                    queues = [kombu.messaging.Queue(self._response_routing_key,
+                              _amqp_exchange(),
+                              routing_key=self._response_routing_key,
+                              auto_delete = True, durable = False)],
+                        callbacks = [callback]):
 
                     self._send(connection, request)
 
@@ -460,7 +467,7 @@ class RpcClientFactory(object):
     def get_client(cls, queue_name):
         if cls._lightweight:
             if not cls._lightweight_initialized:
-                #connections.limit = LIGHTWEIGHT_CONNECTIONS_LIMIT
+                # connections.limit = LIGHTWEIGHT_CONNECTIONS_LIMIT
                 global lw_connections
                 lw_connections = kombu.pools.Connections(limit = LIGHTWEIGHT_CONNECTIONS_LIMIT)
                 cls._lightweight_initialized = True

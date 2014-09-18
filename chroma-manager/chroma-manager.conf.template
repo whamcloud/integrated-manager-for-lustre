@@ -48,6 +48,8 @@ NameVirtualHost *:{{HTTP_API_PORT}}
 # HTTP just to redirect to HTTPS
 NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
 
+ProxyTimeout 300
+
 <VirtualHost *:{{HTTP_FRONTEND_PORT}}>
     RewriteEngine On
     RewriteCond %{HTTPS} !=on
