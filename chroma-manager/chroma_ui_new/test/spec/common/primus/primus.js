@@ -68,11 +68,11 @@ describe('Primus', function () {
       expect(primusLibInstance.on).toHaveBeenCalledWith('reconnecting', jasmine.any(Function));
     });
 
-    it('should register an open listener', function () {
-      expect(primusLibInstance.on).toHaveBeenCalledWith('open', jasmine.any(Function));
+    it('should register a reconnected listener', function () {
+      expect(primusLibInstance.on).toHaveBeenCalledWith('reconnected', jasmine.any(Function));
     });
 
-    it('should register two listeners (reconnecting and open)', function () {
+    it('should register two listeners (reconnecting and reconnected)', function () {
       expect(primusLibInstance.on.calls.length).toBe(2);
     });
 
@@ -97,15 +97,15 @@ describe('Primus', function () {
         expect(disconnectModal).toHaveBeenCalledOnce();
       });
 
-      describe('open', function () {
-        var onOpen;
+      describe('reconnected', function () {
+        var onReconnected;
 
         beforeEach(function () {
-          onOpen = primusLibInstance.on.mostRecentCallThat(function(call) {
-            return call.args[0] === 'open';
+          onReconnected = primusLibInstance.on.mostRecentCallThat(function(call) {
+            return call.args[0] === 'reconnected';
           }).args[1];
 
-          onOpen();
+          onReconnected();
         });
 
         it('should close the modal', function () {
@@ -113,7 +113,7 @@ describe('Primus', function () {
         });
 
         it('should not close the modal when it\'s already closed', function () {
-          onOpen();
+          onReconnected();
 
           expect(disconnectModalInstance.close).toHaveBeenCalledOnce();
         });

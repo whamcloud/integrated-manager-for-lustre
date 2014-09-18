@@ -74,8 +74,8 @@ describe('socket module', function () {
         expect(Object.getPrototypeOf(extendedSpark)).toBe(spark);
       });
 
-      it('should register a listener for open', function () {
-        expect(primus.plan().on).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
+      it('should register a listener for reconnected', function () {
+        expect(primus.plan().on).toHaveBeenCalledOnceWith('reconnected', jasmine.any(Function));
       });
 
       it('should have a way to set the last data', function () {
@@ -307,8 +307,8 @@ HTTP_USER_AGENT: chrome'
           expect(spark.on).toHaveBeenCalledOnceWith('end', jasmine.any(Function));
         });
 
-        it('should remove the open listener on primus', function () {
-          expect(primus.plan().removeListener).toHaveBeenCalledOnceWith('open', jasmine.any(Function));
+        it('should remove the reconnected listener on primus', function () {
+          expect(primus.plan().removeListener).toHaveBeenCalledOnceWith('reconnected', jasmine.any(Function));
         });
 
         it('should remove all listeners from spark', function () {

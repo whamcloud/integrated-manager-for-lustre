@@ -176,14 +176,18 @@
        * nulls references.
        */
       spark.on('end', function cleanup () {
-        primus().removeListener('open', openListener);
+        primus().removeListener('reconnected', reconnectedListener);
         spark.removeAllListeners();
         spark = extendedSpark = lastSend = pipeline = null;
       });
 
-      primus().on('open', openListener);
+      primus().on('reconnected', reconnectedListener);
 
-      function openListener () {
+      /**
+       * Fired when the reconnected event occurs.
+       * Used to reestablish a pre-existing connection.
+       */
+      function reconnectedListener () {
         if (lastSend)
           spark.send.apply(spark, lastSend);
       }

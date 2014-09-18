@@ -32,7 +32,6 @@
 
     /**
      * Returns a new connection. or the existing one if get was already called.
-     * @param {string} [namespace]
      */
     return function get () {
       if (primus) return primus;
@@ -44,7 +43,7 @@
           modal = disconnectModal();
       }));
 
-      primus.on('open', $applyFunc(function onOpen() {
+      primus.on('reconnected', $applyFunc(function onReconnected() {
         if (modal) {
           modal.close();
           modal = null;
