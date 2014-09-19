@@ -23,15 +23,16 @@
 (function () {
   'use strict';
 
-  angular.module('pdsh-module', ['pdsh-parser-module', 'iml-tooltip'])
-    .directive('pdsh', ['pdshParser', pdsh]);
+  angular.module('pdsh-module', ['pdsh-parser-module', 'iml-tooltip', 'help'])
+    .directive('pdsh', ['pdshParser', 'help', pdsh]);
 
   /**
    * The pdsh directive.
    * @param {Object} pdshParser The pdsh parser service
+   * @param {Object} help
    * @returns {Object}
    */
-  function pdsh (pdshParser) {
+  function pdsh (pdshParser, help) {
     return {
       scope: {
         pdshChange: '&',
@@ -57,7 +58,7 @@
         if (!scope.pdshInitial)
           scope.pdshInitial = '';
         if (!scope.pdshPlaceholder)
-          scope.pdshPlaceholder = 'Enter hostname / hostlist Expression';
+          scope.pdshPlaceholder = help.get('pdsh_placeholder');
 
         /**
          * Sets the validity of the directive based on the pdsh expression being passed in.

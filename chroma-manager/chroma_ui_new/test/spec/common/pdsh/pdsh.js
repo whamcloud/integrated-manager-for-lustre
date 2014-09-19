@@ -1,130 +1,148 @@
 describe('PDSH directive', function () {
   'use strict';
 
-  var $scope, element, inputField, groupAddOn, node;
+  var $scope, element, inputField, groupAddOn, help, node;
 
-  beforeEach(module('pdsh-module', 'templates'));
+  beforeEach(module('pdsh-module', 'templates', function initialize ($provide) {
+    help = {
+      get: jasmine.createSpy('get').andReturn('Enter hostname / hostlist expression.')
+    };
 
-  beforeEach(inject(function ($templateCache, $rootScope, $compile) {
-    // Create an instance of the element
-    element = angular.element($templateCache.get('pdsh.html'));
-
-    $scope = $rootScope.$new();
-    $scope.pdshChange = jasmine.createSpy('pdshChange');
-
-    node = $compile(element)($scope);
-
-    // Update the html
-    $scope.$digest();
-
-    inputField = element.find('.form-control');
-    groupAddOn = element.find('.input-group-addon');
+    $provide.value('help', help);
   }));
 
-  describe('successful entry', function () {
-    var hostnames;
-    beforeEach(function () {
-      inputField.val('hostname[1-3]');
-      inputField.trigger('change');
-      groupAddOn.click();
-      hostnames = _.reduce(element.find('#hostnamesPopover li'),
-        function convertHostnamesToString (prev, next) {
-          var separator =  (prev === '') ? '' : ',';
-          return prev + separator + next.innerHTML;
-        }, '');
+  describe('General operation', function () {
+
+    beforeEach(inject(function ($templateCache, $rootScope, $compile) {
+      // Create an instance of the element
+      element = angular.element($templateCache.get('pdsh.html'));
+
+      $scope = $rootScope.$new();
+      $scope.pdshChange = jasmine.createSpy('pdshChange');
+
+      node = $compile(element)($scope);
+
+      // Update the html
+      $scope.$digest();
+
+      inputField = element.find('.form-control');
+      groupAddOn = element.find('.input-group-addon');
+    }));
+
+    describe('successful entry', function () {
+      var hostnames;
+      beforeEach(function () {
+        inputField.val('hostname[1-3]');
+        inputField.trigger('change');
+        groupAddOn.click();
+        hostnames = _.reduce(element.find('#hostnamesPopover li'),
+          function convertHostnamesToString (prev, next) {
+            var separator = (prev === '') ? '' : ',';
+            return prev + separator + next.innerHTML;
+          }, '');
+      });
+
+      it('should display the popover', function () {
+        expect(element.find('#hostnamesPopover')).toBeShown();
+      });
+
+      it('should contain the hostnames in the popover', function () {
+        expect(hostnames).toEqual('hostname1,hostname2,hostname3');
+      });
+
+      it('should not show the error tooltip', function () {
+        var tooltip = element.find('.error-tooltip li');
+        expect(tooltip.length).toEqual(0);
+      });
+
+      it('should call pdshChange', function () {
+        expect($scope.pdshChange).toHaveBeenCalled();
+      });
     });
 
-    it('should display the popover', function () {
-      expect(element.find('#hostnamesPopover')).toBeShown();
+    describe('unsuccessful entry', function () {
+      beforeEach(function () {
+        inputField.val('hostname[1-]');
+        inputField.trigger('change');
+        groupAddOn.click();
+      });
+
+      it('should not display the popover', function () {
+        expect(element.find('#hostnamesPopover')).toBeHidden();
+      });
+
+      it('should show the error tooltip', function () {
+        var tooltip = element.find('.error-tooltip li');
+        expect(tooltip.length).toEqual(1);
+      });
     });
 
-    it('should contain the hostnames in the popover', function () {
-      expect(hostnames).toEqual('hostname1,hostname2,hostname3');
+    describe('empty entry', function () {
+      beforeEach(function () {
+        inputField.val('');
+        inputField.trigger('change');
+        groupAddOn.click();
+      });
+
+      it('should not display the popover', function () {
+        expect(element.find('#hostnamesPopover')).toBeHidden();
+      });
+
+      it('should show the error tooltip', function () {
+        var tooltip = element.find('.error-tooltip li');
+        expect(tooltip.length).toEqual(0);
+      });
+
+      it('should have a placeholder', function () {
+        expect(inputField.attr('placeholder')).toEqual('placeholder text');
+      });
     });
 
-    it('should not show the error tooltip', function () {
-      var tooltip = element.find('.error-tooltip li');
-      expect(tooltip.length).toEqual(0);
-    });
+    describe('initial entry', function () {
+      it('should have an initial value of \'invalid[\'', function () {
+        expect(node.find('input').val()).toEqual('invalid[');
+      });
 
-    it('should call pdshChange', function () {
-      expect($scope.pdshChange).toHaveBeenCalled();
+      it('should display the error tooltip', function () {
+        expect(node.find('.error-tooltip')).toBeShown();
+      });
     });
   });
 
-  describe('unsuccessful entry', function () {
-    beforeEach(function () {
-      inputField.val('hostname[1-]');
-      inputField.trigger('change');
-      groupAddOn.click();
-    });
+  describe('pdsh initial change', function () {
 
-    it('should not display the popover', function () {
-      expect(element.find('#hostnamesPopover')).toBeHidden();
-    });
+    var initialValue;
 
-    it('should show the error tooltip', function () {
-      var tooltip = element.find('.error-tooltip li');
-      expect(tooltip.length).toEqual(1);
-    });
-  });
+    beforeEach(module('pdsh-module', 'templates'));
 
-  describe('empty entry', function () {
-    beforeEach(function () {
-      inputField.val('');
-      inputField.trigger('change');
-      groupAddOn.click();
-    });
+    beforeEach(inject(function ($rootScope, $compile) {
+      initialValue = 'storage0.localdomain';
 
-    it('should not display the popover', function () {
-      expect(element.find('#hostnamesPopover')).toBeHidden();
-    });
+      // Create an instance of the element
+      element = angular.element('<form name="pdshForm"><pdsh pdsh-initial="\'' + initialValue + '\'" ' +
+        'pdsh-change="pdshChange(pdsh, hostnames)"></pdsh></form>');
 
-    it('should show the error tooltip', function () {
-      var tooltip = element.find('.error-tooltip li');
-      expect(tooltip.length).toEqual(0);
+      $scope = $rootScope.$new();
+      $scope.pdshChange = jasmine.createSpy('pdshChange');
+
+      node = $compile(element)($scope);
+
+      // Update the html
+      $scope.$digest();
+
+      inputField = element.find('.form-control');
+    }));
+
+    it('should call help.get', function () {
+      expect(help.get).toHaveBeenCalledOnceWith('pdsh_placeholder');
     });
 
     it('should have a placeholder', function () {
-      expect(inputField.attr('placeholder')).toEqual('placeholder text');
-    });
-  });
-
-  describe('initial entry', function () {
-    it('should have an initial value of \'invalid[\'', function () {
-      expect(node.find('input').val()).toEqual('invalid[');
+      expect(inputField.attr('placeholder')).toEqual('Enter hostname / hostlist expression.');
     });
 
-    it('should display the error tooltip', function () {
-      expect(node.find('.error-tooltip')).toBeShown();
+    it('should trigger a change for the initial value', function () {
+      expect($scope.pdshChange).toHaveBeenCalledOnceWith(initialValue, [initialValue]);
     });
-  });
-});
-
-describe('pdsh initial change', function () {
-  'use strict';
-
-  var $scope, element, node, initialValue;
-
-  beforeEach(module('pdsh-module', 'templates'));
-
-  beforeEach(inject(function ($rootScope, $compile) {
-    initialValue = 'storage0.localdomain';
-
-    // Create an instance of the element
-    element = angular.element('<form name="pdshForm"><pdsh pdsh-initial="\'' + initialValue + '\'" ' +
-      'pdsh-change="pdshChange(pdsh, hostnames)"></pdsh></form>');
-
-    $scope = $rootScope.$new();
-    $scope.pdshChange = jasmine.createSpy('pdshChange');
-
-    node = $compile(element)($scope);
-
-    // Update the html
-    $scope.$digest();
-  }));
-
-  it('should trigger a change for the initial value', function () {
-    expect($scope.pdshChange).toHaveBeenCalledOnceWith(initialValue, [initialValue]);
   });
 });

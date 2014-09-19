@@ -94,6 +94,7 @@ help_text = {
     'server_status_lnet_unloaded': 'The LNet kernel module is not currently loaded on this server.',
     'server_status_lnet_up': 'LNet networking is started on this server.',
     'server_status_unconfigured': 'This server has not yet been configured for use with the manager GUI.',
+    'pdsh_placeholder': 'Enter hostname / hostlist expression.',
 
     'state_changed': 'Time at which the state last changed, either detected or as a result of user action.',
 
