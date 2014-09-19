@@ -23,7 +23,8 @@ describe('request channel', function () {
         error: {
           message: 'instance is not of a type(s) object\ninstance.path is required\n',
           name: 'Error',
-          stack: jasmine.any(String)
+          stack: jasmine.any(String),
+          statusCode: 400
         }
       });
       done();
@@ -37,7 +38,8 @@ describe('request channel', function () {
         error: {
           message: 'instance.path is required\n',
           name: 'Error',
-          stack: jasmine.any(String)
+          stack: jasmine.any(String),
+          statusCode: 400
         }
       });
       done();
@@ -51,7 +53,8 @@ describe('request channel', function () {
         error: {
           message: 'instance.options.method is not one of enum values: get,post,put,patch,delete\n',
           name: 'Error',
-          stack: jasmine.any(String)
+          stack: jasmine.any(String),
+          statusCode: 400
         }
       });
       done();
@@ -65,7 +68,8 @@ describe('request channel', function () {
         error: {
           message: 'instance is not of a type(s) object\ninstance.path is required\n',
           name: 'Error',
-          stack: jasmine.any(String)
+          stack: jasmine.any(String),
+          statusCode: 400
         }
       });
       done();
@@ -81,7 +85,8 @@ describe('request channel', function () {
         error: {
           message: 'instance.path is required\n',
           name: 'Error',
-          stack: jasmine.any(String)
+          stack: jasmine.any(String),
+          statusCode: 400
         }
       });
       done();
@@ -97,7 +102,8 @@ describe('request channel', function () {
         error: {
           message: 'instance.options.method is not one of enum values: get,post,put,patch,delete\n',
           name: 'Error',
-          stack: jasmine.any(String)
+          stack: jasmine.any(String),
+          statusCode: 400
         }
       });
       done();

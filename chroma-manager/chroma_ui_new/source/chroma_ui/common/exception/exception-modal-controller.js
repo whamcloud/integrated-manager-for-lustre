@@ -28,13 +28,14 @@
 
     $scope.exceptionModal = {
       messages: [],
-      reload: function () {
+      reload: function reload () {
         $document[0].location.reload(true);
       }
     };
 
     $scope.exceptionModal.messages = new PropLookup($parse, exception)
       .add('cause')
+      .add({name: 'statusCode', alias: 'Status Code'})
       .path('response')
       .add({name: 'status', alias: 'Response Status'})
       .path('response.data')
@@ -53,7 +54,7 @@
       .add({name: 'stack', alias: 'Client Stack Trace', transform: lookupAnd(multiLineTrim)})
       .get();
 
-    if (MODE === 'production' && stackTraceContainsLineNumber(exception)) {
+    if (!exception.statusCode && MODE === 'production' && stackTraceContainsLineNumber(exception)) {
       $scope.exceptionModal.loadingStack = true;
       sendStackTraceToRealTime(exception).then(function updateData (newException) {
         $scope.exceptionModal.loadingStack = false;
@@ -138,8 +139,8 @@
           },
           function processResponse (response) {
             // Keep the original stack trace if reformatting of the stack trace failed.
-            if (response.body)
-               exception.stack = response.body.data;
+            if (response.body && response.body.data)
+              exception.stack = response.body.data;
 
             deferred.resolve(exception);
           });

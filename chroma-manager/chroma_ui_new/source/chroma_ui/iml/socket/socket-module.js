@@ -216,38 +216,6 @@
     }
   }
 
-
-  socketModule.factory('$applyFunc', ['$rootScope', $applyFuncFactory]);
-
-  /**
-   * Generates an apply HOF.
-   * @param {Object} $rootScope
-   * @returns {Function}
-   */
-  function $applyFuncFactory ($rootScope) {
-    /**
-     * HOF. Returns a function that when called
-     * might invoke $apply if we are not in $$phase.
-     * @param {Function} func
-     * @returns {Function}
-     */
-    return function $applyFunc (func) {
-      return function $innerApplyFunc () {
-        var args = arguments;
-
-        if (!$rootScope.$$phase)
-          return $rootScope.$apply(apply);
-        else
-          return apply();
-
-        function apply () {
-          return func.apply(null, args);
-        }
-      };
-    };
-  }
-
-
   socketModule.factory('runPipeline', ['$rootScope', runPipelineFactory]);
 
   /**

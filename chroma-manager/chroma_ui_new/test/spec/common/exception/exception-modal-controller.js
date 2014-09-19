@@ -156,6 +156,34 @@ describe('Exception modal controller', function () {
     });
   });
 
+  describe('stack trace format from server', function () {
+    beforeEach(function () {
+      MODE = 'production';
+
+      plainError.statusCode = '400';
+
+      createController({
+        cause: 'fooz',
+        exception: plainError
+      });
+    });
+
+    it('should add the status code to the output', function () {
+      expect(getMessage('Status Code')).toEqual({
+        name : 'Status Code',
+        value : '400'
+      });
+    });
+
+    it('should not call sendStackTraceToRealTime', function () {
+      expect(sendStackTraceToRealTime).not.toHaveBeenCalled();
+    });
+
+    it('should have a loadingStack value of undefined', function () {
+      expect($scope.exceptionModal.loadingStack).toEqual(undefined);
+    });
+  });
+
   describe('stack trace format in development mode', function () {
     beforeEach(function () {
       MODE = 'development';

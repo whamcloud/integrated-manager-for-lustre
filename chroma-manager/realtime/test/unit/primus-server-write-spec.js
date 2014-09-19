@@ -22,8 +22,9 @@ describe('primus server write plugin', function () {
   ['response', 'error'].forEach(function testType (type) {
     var capType = capitalize(type);
     var error = new Error('foo');
+    error.statusCode = 400;
     var errorData = {
-      args: [400, error],
+      args: [400, new Error('foo')],
       expected: {
         statusCode: 400,
         error: error

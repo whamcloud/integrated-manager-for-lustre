@@ -41,10 +41,14 @@ module.exports = function primusServerWriteFactory(errorSerializer, MultiplexSpa
       });
 
       MultiplexSpark.prototype.getErrorFormat = function getErrorFormat (statusCode, error) {
-        return {
+        var message = {
           statusCode: statusCode,
           error: errorSerializer(error)
         };
+
+        message.error.statusCode = statusCode;
+
+        return message;
       };
 
       MultiplexSpark.prototype.getResponseFormat = function getResponseFormat (statusCode, response) {

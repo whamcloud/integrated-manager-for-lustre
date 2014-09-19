@@ -25,13 +25,15 @@
 
   angular.module('primus', [])
     .value('Primus', window.Primus)
-    .factory('primus', ['Primus', 'BASE', 'disconnectModal', '$rootScope', '$window', primusFactory]);
+    .value('WebSocket', window.WebSocket)
+    .factory('primus', ['$window', '$applyFunc', 'WebSocket', 'Primus', 'BASE', 'disconnectModal', primusFactory]);
 
-  function primusFactory(Primus, BASE, disconnectModal, $rootScope, $window) {
+  function primusFactory ($window, $applyFunc, WebSocket, Primus, BASE, disconnectModal) {
     var primus, modal;
 
     /**
-     * Returns a new connection. or the existing one if get was already called.
+     * Lazy. Returns a new connection or the existing one.
+     * @returns {Object}
      */
     return function get () {
       if (primus) return primus;
@@ -50,13 +52,53 @@
         }
       }));
 
+      /**
+       * If primus itself has an error, let's show it and end the connection.
+       * @param {Object} err The error.
+       */
+      primus.on('error', $applyFunc(function onError (err) {
+        // If the error is an unhelpful WebSocket.prototype.onError event
+        // without a message do nothing.
+        // Otherwise we will throw an error when we should just do a disconnect.
+        if (err.target instanceof WebSocket && !err.message)
+          return;
+
+        primus.end();
+
+        throw err;
+      }));
+
       return primus;
     };
+  }
 
-    function $applyFunc(func) {
-      return function () {
-        $rootScope.$apply(func);
+  angular.module('primus').factory('$applyFunc', ['$rootScope', $applyFuncFactory]);
+
+  /**
+   * Generates an apply HOF.
+   * @param {Object} $rootScope
+   * @returns {Function}
+   */
+  function $applyFuncFactory ($rootScope) {
+    /**
+     * HOF. Returns a function that when called
+     * might invoke $apply if we are not in $$phase.
+     * @param {Function} func
+     * @returns {Function}
+     */
+    return function $applyFunc (func) {
+      return function $innerApplyFunc () {
+        var args = arguments;
+
+        if (!$rootScope.$$phase)
+          return $rootScope.$apply(apply);
+        else
+          return apply();
+
+        function apply () {
+          return func.apply(null, args);
+        }
       };
-    }
+    };
   }
 }());
