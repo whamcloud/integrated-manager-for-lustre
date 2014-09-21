@@ -212,6 +212,51 @@ describe('socket module', function () {
         });
       });
 
+      describe('onceValue', function () {
+        var handler;
+
+        beforeEach(function () {
+          handler = function handler () {};
+
+          handler.apply = jasmine.createSpy('apply');
+
+          var data = {
+            statusCode: 200,
+            body: { foo: 'bar' }
+          };
+
+          extendedSpark.setLastData(data);
+
+          extendedSpark.onceValue('data', handler);
+        });
+
+        it('should be a method', function () {
+          expect(extendedSpark.onceValue).toEqual(jasmine.any(Function));
+        });
+
+        it('should call on', function () {
+          expect(spark.on)
+            .toHaveBeenCalledOnceWith('data', jasmine.any(Function), { off : jasmine.any(Function) });
+        });
+
+        it('should stop listening', function () {
+          expect(spark.removeListener)
+            .toHaveBeenCalledOnceWith('data', jasmine.any(Function));
+        });
+
+        it('should apply the handler', function () {
+          expect(handler.apply).toHaveBeenCalledOnceWith(
+            { off: jasmine.any(Function) },
+            {
+              0: {
+                statusCode: 200,
+                body: { foo: 'bar' }
+              }
+            }
+          );
+        });
+      });
+
       describe('addPipe', function () {
         var result, pipe, run;
 

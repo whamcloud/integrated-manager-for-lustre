@@ -1,9 +1,11 @@
-(function () {
+describe('select server profile', function () {
   'use strict';
+
+  beforeEach(module('server'));
+
   describe('select server profile step ctrl', function () {
     var $scope, $stepInstance, data, off;
 
-    beforeEach(module('server'));
     beforeEach(inject(function ($rootScope, $controller) {
       $scope = $rootScope.$new();
       $stepInstance = {
@@ -214,7 +216,6 @@
     var $q, $scope, $transition, data, requestSocket, hostProfileData, profile, selectServerProfileStep,
       spark, postPromise;
 
-    beforeEach(module('server'));
     beforeEach(inject(function (_selectServerProfileStep_, _$rootScope_, _$q_) {
       $scope = _$rootScope_.$new();
       selectServerProfileStep = _selectServerProfileStep_;
@@ -237,7 +238,11 @@
           end: jasmine.createSpy('end')
         };
         requestSocket = jasmine.createSpy('requestSocket').andReturn(spark);
-        data = {};
+        data = {
+          serverSpark: {
+            onceValue: jasmine.createSpy('onceValue')
+          }
+        };
         $transition = {
           steps: {
             serverStatusStep: {}
@@ -246,7 +251,7 @@
         };
         hostProfileData = [
           {
-            host: 'test001.localdomain'
+            host: 1
           }
         ];
         profile = {
@@ -260,7 +265,7 @@
 
         beforeEach(function () {
           $transition.action = 'previous';
-          result = _.last(selectServerProfileStep.transition)($q,
+          result = _.last(selectServerProfileStep.transition)(
             $transition, data, requestSocket, hostProfileData, profile);
         });
 
@@ -278,8 +283,21 @@
         beforeEach(function () {
           $transition.action = 'end';
 
-          result = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1]($q,
+          result = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1](
             $transition, data, requestSocket, hostProfileData, profile);
+
+          data.serverSpark.onceValue.mostRecentCall.args[1]({
+            body: {
+              objects: [
+                {
+                  id: '1',
+                  server_profile: {
+                    initial_state: 'unconfigured'
+                  }
+                }
+              ]
+            }
+          });
 
           $scope.$digest();
         });
@@ -288,12 +306,16 @@
           expect(requestSocket).toHaveBeenCalledOnce();
         });
 
+        it('should listen for value on data', function () {
+          expect(data.serverSpark.onceValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
+        });
+
         it('should send a post to /host_profile', function () {
           expect(spark.sendPost).toHaveBeenCalledOnceWith('/host_profile', {
             json: {
               objects: [
                 {
-                  host: 'test001.localdomain',
+                  host: 1,
                   profile: 'base_monitored'
                 }
               ]
@@ -315,4 +337,4 @@
       });
     });
   });
-})();
+});

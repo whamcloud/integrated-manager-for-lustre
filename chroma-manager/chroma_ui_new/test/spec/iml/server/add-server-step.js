@@ -5,152 +5,111 @@ describe('Add server step', function () {
 
   describe('Add servers step', function () {
 
-    var addServer, $stepInstance, buildTestHostData;
+    var addServer, $stepInstance;
 
     [
       {},
       {
         server: {
-          install_method: 'existing_keys_choice'
+          auth_type: 'existing_keys_choice',
+          address: ['foo2.localdomain']
         }
       },
       {
         server: {
-          install_method: 'existing_keys_choice',
-          address: 'foo1.localdomain'
+          auth_type: 'existing_keys_choice',
+          address: ['foo1.localdomain']
         }
       }
     ].forEach(function (data) {
-        describe('controller', function () {
+      describe('controller', function () {
 
-          var $scope;
+        var $scope;
 
-          beforeEach(inject(function ($controller, $rootScope) {
-            $scope = $rootScope.$new();
+        beforeEach(inject(function ($controller, $rootScope) {
+          $scope = $rootScope.$new();
 
-            $stepInstance = {
-              setState: jasmine.createSpy('setState'),
-              getState: jasmine.createSpy('getState'),
-              transition: jasmine.createSpy('transition')
+          $stepInstance = {
+            getState: jasmine.createSpy('getState'),
+            transition: jasmine.createSpy('transition')
+          };
+
+          $controller('AddServerStepCtrl', {
+            $scope: $scope,
+            $stepInstance: $stepInstance,
+            data: _.clone(data)
+          });
+
+          addServer = $scope.addServer;
+        }));
+
+        it('should setup the scope', function () {
+          var expected = {
+            fields: {
+              auth_type: getDataInstallMethod(data),
+              pdsh: getDataAddress(data)
+            },
+            CHOICES: Object.freeze({
+              EXISTING_KEYS: 'existing_keys_choice',
+              ROOT_PASSWORD: 'id_password_root',
+              ANOTHER_KEY: 'private_key_choice'
+            }),
+            pdshUpdate: jasmine.any(Function),
+            transition: jasmine.any(Function)
+          };
+
+          if (data.server && data.server.address)
+            expected.fields.address = data.server.address;
+
+          expect(addServer).toEqual(expected);
+        });
+
+        it('should update the fields on pdsh change', function () {
+          addServer.pdshUpdate('foo[01-02].com', ['foo01.com', 'foo02.com']);
+
+          expect(addServer.fields).toEqual({
+            auth_type: 'existing_keys_choice',
+            pdsh: 'foo[01-02].com',
+            address: ['foo01.com', 'foo02.com']
+          });
+        });
+
+        describe('calling transition', function () {
+          beforeEach(function () {
+            addServer.transition();
+          });
+
+          it('should set add server to disabled', function () {
+            expect($scope.addServer.disabled).toEqual(true);
+          });
+
+          it('should call transition on the step instance', function () {
+            var expected = {
+              data: {
+                server: {
+                  auth_type: getDataInstallMethod(data),
+                  pdsh: getDataAddress(data)
+                }
+              }
             };
 
-            buildTestHostData = jasmine.createSpy('buildTestHostData').andReturn(generateServerFields(data));
+            if (data.server && data.server.address)
+              expected.data.server.address = data.server.address;
 
-            $controller('AddServerStepCtrl', {
-              $scope: $scope,
-              $stepInstance: $stepInstance,
-              buildTestHostData: buildTestHostData,
-              data: data
-            });
-
-            addServer = $scope.addServer;
-          }));
-
-          it('should setup the scope', function () {
-            expect(addServer).toEqual({
-              fields: {
-                sshAuthChoice: getDataInstallMethod(data),
-                pdsh: getDataAddress(data)
-              },
-              CHOICES: Object.freeze({
-                EXISTING_KEYS: 'existing_keys_choice',
-                ROOT_PASSWORD: 'id_password_root',
-                ANOTHER_KEY: 'private_key_choice'
-              }),
-              pdshUpdate: jasmine.any(Function),
-              transition: jasmine.any(Function)
-            });
-          });
-
-          it('should update the fields on pdsh change', function () {
-            addServer.pdshUpdate('foo[01-02].com', ['foo01.com', 'foo02.com']);
-
-            expect(addServer.fields).toEqual({
-              sshAuthChoice: 'existing_keys_choice',
-              pdsh: 'foo[01-02].com',
-              address: ['foo01.com', 'foo02.com']
-            });
-          });
-
-          describe('calling transition', function () {
-            beforeEach(function () {
-              addServer.transition();
-            });
-
-            it('should set add server to disabled', function () {
-              expect($scope.addServer.disabled).toEqual(true);
-            });
-
-            it('should set server data', function () {
-              expect(data.serverData).toEqual(generateServerFields(data));
-            });
-
-            it('should set the state on the step instance', function () {
-              expect($stepInstance.setState).toHaveBeenCalledOnceWith(generateServerFields(data));
-            });
-
-            it('should call transition on the step instance', function () {
-              expect($stepInstance.transition).toHaveBeenCalledOnceWith('next', {data: data});
-            });
+            expect($stepInstance.transition)
+              .toHaveBeenCalledOnceWith('next', expected);
           });
         });
-
-        function generateServerFields (data) {
-          return {
-            sshAuthChoice: getDataInstallMethod(data),
-            pdsh: getDataAddress(data)
-          };
-        }
-
-        function getDataInstallMethod (data) {
-          return (data.server) ? data.server.install_method : 'existing_keys_choice';
-        }
-
-        function getDataAddress (data) {
-          return (data.server) ? data.server.address : null;
-        }
       });
-  });
 
-  describe('building test host data', function () {
-    var buildTestHostData;
-
-    beforeEach(inject(function (_buildTestHostData_) {
-      buildTestHostData = _buildTestHostData_;
-    }));
-
-    [
-      {
-        type: 'existing keys',
-        in: {address: 'foo.bar', sshAuthChoice: 'existing_keys_choice'},
-        out: {address: 'foo.bar', auth_type: 'existing_keys_choice', commit: true}
-      },
-      {
-        type: 'root password',
-        in: {address: 'foo.bar', sshAuthChoice: 'id_password_root', rootPassword: 'foo'},
-        out: {address: 'foo.bar', auth_type: 'id_password_root', commit: true, root_password: 'foo'}
-      },
-      {
-        type: 'private key no password',
-        in: {address: 'foo.bar', sshAuthChoice: 'private_key_choice', privateKey: 'foo'},
-        out: {address: 'foo.bar', auth_type: 'private_key_choice', commit: true, private_key: 'foo'}
-      },
-      {
-        type: 'private key password',
-        in: {
-          address: 'foo.bar', sshAuthChoice: 'private_key_choice', privateKey: 'foo',
-          privateKeyPassphrase: 'bar'
-        },
-        out: {
-          address: 'foo.bar', auth_type: 'private_key_choice',
-          commit: true, private_key: 'foo', private_key_passphrase: 'bar'
-        }
+      function getDataInstallMethod (data) {
+        return (data.server) ? data.server.auth_type : 'existing_keys_choice';
       }
-    ].forEach(function (item) {
-        it('should transform data for ' + item.type, function () {
-          expect(buildTestHostData(item.in)).toEqual(item.out);
-        });
-      });
+
+      function getDataAddress (data) {
+        return (data.server) ? data.server.address[0] : null;
+      }
+    });
   });
 
   describe('add servers step', function () {
@@ -173,7 +132,7 @@ describe('Add server step', function () {
     });
 
     describe('transition', function () {
-      var $transition, data, testHost, result, statusSpark, promise;
+      var $transition, data, getTestHostSparkThen, result, promise;
       beforeEach(function () {
         $transition = {
           steps: {
@@ -182,140 +141,33 @@ describe('Add server step', function () {
         };
         data = {
           flint: jasmine.createSpy('flint'),
-          serverData: jasmine.createSpy('serverData')
+          server: {}
         };
-        statusSpark = {
-          onValue: jasmine.createSpy('onValue')
-        };
-        testHost = jasmine.createSpy('testHost').andReturn(statusSpark);
         promise = {
           catch: jasmine.any(Function),
           finally: jasmine.any(Function),
           then: jasmine.any(Function)
         };
+        getTestHostSparkThen = jasmine.createSpy('getTestHostSparkThen').andReturn(promise);
 
-        result = addServersStep.transition[addServersStep.transition.length - 1]($q, $transition, data, testHost,
-          throwIfError);
+        var handler = addServersStep.transition[addServersStep.transition.length - 1];
+        result = handler($transition, data, getTestHostSparkThen);
       });
 
-      it('should invoke testHost', function () {
-        expect(testHost).toHaveBeenCalledOnceWith(data.flint, data.serverData);
+      it('should invoke getTestHostSparkThen', function () {
+        expect(getTestHostSparkThen).toHaveBeenCalledOnceWith(data.flint, data.server);
       });
 
-      it('should call statusSpark.onValue', function () {
-        expect(statusSpark.onValue).toHaveBeenCalledOnceWith('pipeline', jasmine.any(Function));
-      });
-
-      it('should set a promise on the statusSpark', function () {
-        expect(data.statusSpark).toEqual(promise);
-      });
-
-      it('should return a promise', function () {
-        expect(result).toEqual(promise);
-      });
-
-      describe('onValue pipeline', function () {
-        var response;
-
-        beforeEach(function () {
-          statusSpark.off = jasmine.createSpy('off');
-        });
-
-        describe('successful valid pipeline', function () {
-          beforeEach(function () {
-            response = {
-              body: {
-                isValid: true
-              }
-            };
-            statusSpark.onValue.mostRecentCall.args[1].call(statusSpark, response);
-          });
-
-          it('should call off', function () {
-            expect(statusSpark.off).toHaveBeenCalledOnce();
-          });
-
-          it('should resolve the status spark', function () {
-            data.statusSpark.then(function (resolvedStatusSpark) {
-              expect(resolvedStatusSpark).toEqual(statusSpark);
-            });
-
-            $rootScope.$digest();
-          });
-
-          it('should resolve with the serverStatusStep', function () {
-            result.then(function (resolvedData) {
-              var expectedData = _.extend({}, data);
-
-              expect(resolvedData).toEqual({
-                step: $transition.steps.serverStatusStep,
-                resolve: {
-                  data: expectedData
-                }
-              });
-            });
-
-            $rootScope.$digest();
-          });
-        });
-
-        describe('successful invalid pipeline', function () {
-          beforeEach(function () {
-            response = {
-              body: {
-                isValid: false
-              }
-            };
-
-            statusSpark.onValue.mostRecentCall.args[1].call(statusSpark, response);
-          });
-
-          it('should call off', function () {
-            expect(statusSpark.off).toHaveBeenCalledOnce();
-          });
-
-          it('should resolve the status spark', function () {
-            data.statusSpark.then(function (resolvedStatusSpark) {
-              expect(resolvedStatusSpark).toEqual(statusSpark);
-            });
-
-            $rootScope.$digest();
-          });
-
-          it('should resolve with the serverStatusStep', function () {
-            result.then(function (resolvedData) {
-              expect(resolvedData).toEqual({
-                step: $transition.steps.serverStatusStep,
-                resolve: {
-                  data: data
-                }
-              });
-            });
-
-            $rootScope.$digest();
-          });
-        });
-
-        describe('unsuccessful', function () {
-          beforeEach(function () {
-            response = {
-              body: {
-                errors: [
-                  {msg: 'error'}
-                ]
-              }
-            };
-          });
-
-          it('should call off', function () {
-            try {
-              statusSpark.onValue.mostRecentCall.args[1].call(statusSpark, response);
-            } catch (e) {
-              expect(e.message).toEqual('[{"msg":"error"}]');
+      it('should return the next step and data', function () {
+        expect(result).toEqual({
+          step: $transition.steps.serverStatusStep,
+          resolve: {
+            data: {
+              flint: data.flint,
+              server: data.server,
+              statusSpark: promise
             }
-
-            expect(statusSpark.off).toHaveBeenCalledOnce();
-          });
+          }
         });
       });
     });

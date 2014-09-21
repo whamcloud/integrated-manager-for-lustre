@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  var socketModule = angular.module('socket-module', ['primus'])
+  var socketModule = angular.module('socket-module', ['primus', 'regenerator-module'])
     .factory('socket', ['$applyFunc', '$document', '$window', 'primus', 'runPipeline', socketFactory]);
 
   /**
@@ -111,6 +111,21 @@
         }
 
         return off;
+      };
+
+      /**
+       * Listens for a value once, then stops listening.
+       * @param {String} event
+       * @param {Function} fn
+       * @param {Object} [context]
+       * @returns {Function}
+       */
+      extendedSpark.onceValue = function onceValue (event, fn, context) {
+        return extendedSpark.onValue(event, function handler () {
+          this.off();
+
+          fn.apply(this, arguments);
+        }, context);
       };
 
       var pipeline = [function emitPipeline (response) {

@@ -24,27 +24,70 @@
   'use strict';
 
   angular.module('server')
-    .controller('AddServerModalCtrl', ['$scope', '$modalInstance', 'stepsManager', 'addServersStep',
-      'serverStatusStep', 'selectServerProfileStep', 'server', 'regenerator', 'requestSocket',
-      function AddServerModalCtrl ($scope, $modalInstance, stepsManager, addServersStep,
-                                   serverStatusStep, selectServerProfileStep, server, regenerator, requestSocket) {
+    .constant('ADD_SERVER_STEPS', Object.freeze({
+      ADD: 'addServersStep',
+      STATUS: 'serverStatusStep',
+      SELECT_PROFILE: 'selectServerProfileStep'
+    }))
+    .factory('addServerSteps', ['ADD_SERVER_STEPS', 'addServersStep', 'serverStatusStep', 'selectServerProfileStep',
+      function addServerStepsFactory (ADD_SERVER_STEPS, addServersStep, serverStatusStep, selectServerProfileStep) {
+        var steps = {};
+        steps[ADD_SERVER_STEPS.ADD] = addServersStep;
+        steps[ADD_SERVER_STEPS.STATUS] = serverStatusStep;
+        steps[ADD_SERVER_STEPS.SELECT_PROFILE] = selectServerProfileStep;
 
-        var flint = regenerator(function setup () {
-          return requestSocket();
-        }, function teardown (spark) {
-          spark.end();
-        });
+        return steps;
+      }
+    ])
+    .controller('AddServerModalCtrl', ['$scope', '$modalInstance', 'ADD_SERVER_STEPS', 'stepsManager',
+      'serverSpark', 'server', 'step', 'getFlint', 'getTestHostSparkThen', 'addServerSteps',
+      'createOrUpdateHostsThen', 'hostProfile',
+      function AddServerModalCtrl ($scope, $modalInstance, ADD_SERVER_STEPS, stepsManager,
+                                   serverSpark, server, step, getFlint, getTestHostSparkThen, addServerSteps,
+                                   createOrUpdateHostsThen, hostProfile) {
 
-        var manager = stepsManager()
-          .addStep('addServersStep', addServersStep)
-          .addStep('serverStatusStep', serverStatusStep)
-          .addStep('selectServerProfileStep', selectServerProfileStep)
-          .start('addServersStep', {
-            data: {
-              server: server,
-              flint: flint
-            }
+        var manager = stepsManager();
+
+        _.pairs(addServerSteps)
+          .forEach(function addStep (pair) {
+            manager.addStep(pair[0], pair[1]);
           });
+
+        var flint = getFlint();
+
+        if (server)
+          server = _.extend({}, server, {
+            address: [server.address],
+            auth_type: server.install_method
+          });
+
+        var resolves = {
+          data: {
+            serverSpark: serverSpark,
+            server: server,
+            flint: flint
+          }
+        };
+
+        if (!step)
+          step = ADD_SERVER_STEPS.ADD;
+
+        if (step !== ADD_SERVER_STEPS.ADD)
+          resolves.data.statusSpark = getTestHostSparkThen(flint, server);
+
+        if (step === ADD_SERVER_STEPS.SELECT_PROFILE)
+          resolves.data.hostProfileSpark = createOrUpdateHostsThen(server, serverSpark)
+            .then(function getHostProfileSpark (response) {
+              var hosts = _.pluck(response.body.objects, 'host');
+              var hostSpark = hostProfile(flint, hosts);
+
+              return hostSpark.onceValueThen('data')
+                .then(function () {
+                  return hostSpark;
+                });
+            });
+
+        manager.start(step, resolves);
 
         manager.result.end.then(function closeModal () {
           $modalInstance.close();
@@ -64,45 +107,30 @@
 
       /**
        * Opens the add server modal
+       * @param {Object} serverSpark
        * @param {Object} [server]
+       * @param {Object} [step]
        * @returns {Object}
        */
-      return function openAddServerModal (server) {
+      return function openAddServerModal (serverSpark, server, step) {
         return $modal.open({
           templateUrl: 'iml/server/assets/html/add-server-modal.html',
           controller: 'AddServerModalCtrl',
           windowClass: 'add-server-modal',
           resolve: {
+            serverSpark: function getServerSpark () {
+              return serverSpark;
+            },
             server: function getServer () {
               return server;
+            },
+            step: function getStep () {
+              return step;
             }
           }
         });
       };
     }])
-    .factory('createHosts', ['$q', 'requestSocket',
-      function createHostsFactory ($q, requestSocket) {
-        return function createHosts (serverData) {
-          var spark = requestSocket();
-
-          var objects = serverData.address.reduce(function buildObjects (arr, address) {
-            arr.push(_(serverData).omit('address').extend({ address: address }).value());
-
-            return arr;
-          }, []);
-
-          return spark.sendPost('/host', {
-            json: { objects: objects }
-          }, true)
-            .catch(function throwError (response) {
-              throw response.error;
-            })
-            .finally(function endSpark () {
-              spark.end();
-            });
-        };
-      }
-    ])
     .factory('hostProfile', [function hostProfileFactory () {
       return function hostProfile (flint, hosts) {
         var spark = flint('hostProfile');
@@ -116,66 +144,77 @@
         return spark;
       };
     }])
-    .factory('testHost', ['throwIfError', function testHostFactory (throwIfError) {
+    .factory('getTestHostSparkThen', ['ADD_SERVER_AUTH_CHOICES', 'throwIfServerErrors',
+      'throwResponseError', 'throwIfError',
+      function getTestHostSparkThenFactory (ADD_SERVER_AUTH_CHOICES, throwIfServerErrors,
+                                            throwResponseError, throwIfError) {
 
-      /**
-       * Tests host with provided data.
-       * @param {Function} flint
-       * @param {Object} data
-       * @returns {Object}
-       */
-      return function testHost (flint, data) {
-        var spark = flint('testHost');
+        /**
+         * Tests host with provided data.
+         * Keeps asking about the server's status.
+         * Returns a promise containing the spark.
+         * @param {Function} flint Creates sparks.
+         * @param {Object} data The data to send.
+         * @returns {Object} A promise
+         */
+        return function getTestHostSparkThen (flint, data) {
+          var toPick = ['address', 'auth_type'];
 
-        spark.sendPost('/test_host', {
-          json: data
-        });
+          if (data.auth_type === ADD_SERVER_AUTH_CHOICES.ROOT_PASSWORD) {
+            toPick.push('root_password');
+          } else if (data.auth_type === ADD_SERVER_AUTH_CHOICES.ANOTHER_KEY) {
+            toPick.push('private_key');
 
-        spark.addPipe(throwIfError(function transformStatus (response) {
-          var isValid = true;
-          response.body.objects.forEach(function (status) {
+            if (data.private_key_passphrase)
+              toPick.push('private_key_passphrase');
+          }
+
+          var spark = flint('testHost');
+
+          spark.sendPost('/test_host', {
+            json: _.pick(data, toPick)
+          });
+
+          return spark.addPipe(throwIfError(throwIfServerErrors(function transformStatus (response) {
+            var isValid = true;
+            response.body.objects.forEach(function addProperties (status) {
               status.fields = Object.keys(status).reduce(function (obj, key) {
-                if (key === 'address')
-                  return obj;
-
-                obj[_.capitalize(key.split('_').join(' '))] = status[key];
+                if (key !== 'address')
+                  obj[_.capitalize(key.split('_').join(' '))] = status[key];
 
                 return obj;
               }, {});
 
               status.invalid = _.contains(status, false);
+
               isValid = isValid && !status.invalid;
             });
 
-          response.body.isValid = isValid;
-          return response;
-        }));
-
-        return spark;
-      };
-    }])
-    .factory('regenerator', [function regeneratorFactory () {
-      return function regenerator (setup, teardown) {
-        var cache = {};
-
-        var getter = function get (key) {
-          if (cache[key]) {
-            teardown(cache[key]);
-            delete cache[key];
-          }
-
-          return (cache[key] = setup());
+            response.body.isValid = isValid;
+            return response;
+          })))
+          .onceValueThen('pipeline')
+            .catch(throwResponseError)
+            .then(function resolveWithSpark () {
+              return spark;
+            });
         };
+      }
+    ])
+    .factory('throwIfServerErrors', [function throwIfServerErrorsFactory () {
+      /**
+       * HOF. Will throw if a bulk server response has errors
+       * or call the fn with the response.
+       * @param {Function} fn
+       * @returns {Function}
+       */
+      return function throwIfServerErrors (fn) {
+        return function throwOrCall (response) {
+          if (response.body && _.compact(response.body.errors).length)
+            throw new Error(JSON.stringify(response.body.errors));
 
-        getter.destroy = function destroy () {
-          Object.keys(cache).forEach(function (key) {
-            teardown(cache[key]);
-          });
-
-          cache = setup = teardown = null;
+          return fn(response);
         };
-
-        return getter;
       };
     }]);
 }());

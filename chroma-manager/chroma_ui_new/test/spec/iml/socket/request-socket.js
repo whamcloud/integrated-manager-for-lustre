@@ -5,7 +5,9 @@ describe('request socket', function () {
 
   beforeEach(module('socket-module', function ($provide) {
     socket = jasmine.createSpy('socket').andReturn({
-      send: jasmine.createSpy('send')
+      send: jasmine.createSpy('send'),
+      onceValue: jasmine.createSpy('onceValue')
+
     });
 
     $provide.value('socket', socket);
@@ -32,6 +34,63 @@ describe('request socket', function () {
 
   it('should return a function', function () {
     expect(requestSocket).toEqual(jasmine.any(Function));
+  });
+
+  describe('onceValueThen', function () {
+    var $rootScope, promise, off, spy, boundHandler;
+
+    beforeEach(inject(function (_$rootScope_) {
+      $rootScope = _$rootScope_;
+
+      off = jasmine.createSpy('off');
+      spark.onceValue.andCallFake(function (event, handler) {
+        boundHandler = handler.bind({
+          off: off
+        });
+      });
+
+      promise = spark.onceValueThen('pipeline');
+
+      spy = jasmine.createSpy('spy');
+    }));
+
+    it('should be exposed on the spark', function () {
+      expect(spark.onceValueThen).toEqual(jasmine.any(Function));
+    });
+
+    it('should return a promise', function () {
+      expect(promise).toEqual({
+        then: jasmine.any(Function),
+        catch: jasmine.any(Function),
+        finally: jasmine.any(Function)
+      });
+    });
+
+    it('should stop listening on response', function () {
+      boundHandler({});
+
+      expect(off).toHaveBeenCalledOnce();
+    });
+
+    it('should resolve on success', function () {
+      promise.then(spy);
+
+      boundHandler({});
+      $rootScope.$digest();
+
+      expect(spy).toHaveBeenCalledOnce();
+    });
+
+    it('should reject on error', function () {
+      promise.catch(spy);
+
+      boundHandler({
+        error: {message: 'Oh NOES!'}
+      });
+      $rootScope.$digest();
+
+      expect(spy).toHaveBeenCalledOnce();
+    });
   });
 
   ['get', 'put', 'post', 'delete', 'patch'].forEach(function (verb) {
@@ -141,5 +200,104 @@ describe('throw if error', function () {
     var response = check({});
 
     expect(response).toEqual({ foo: 'bar' });
+  });
+});
+
+describe('throw response error', function () {
+  'use strict';
+
+  beforeEach(module('socket-module'));
+
+  var throwResponseError;
+
+  beforeEach(inject(function (_throwResponseError_) {
+    throwResponseError = _throwResponseError_;
+  }));
+
+  it('should throw an existing error', function () {
+    var err = new Error('foo');
+
+    expect(shouldThrow).toThrow(err);
+
+    function shouldThrow () {
+      throwResponseError({
+        error: err
+      });
+    }
+  });
+
+  it('should turn an object into an error', function () {
+    expect(shouldThrow).toThrow(new Error('uh-oh'));
+
+    function shouldThrow () {
+      throwResponseError({
+        error: {
+          message: 'uh-oh'
+        }
+      });
+    }
+  });
+
+  it('should copy any object properties onto the error object', function () {
+    try {
+      throwResponseError({
+        error: {
+          message: 'err!',
+          statusCode: 400
+        }
+      });
+    } catch (err) {
+      expect(err.statusCode).toBe(400);
+    }
+  });
+
+  it('should turn a string into an error', function () {
+    expect(shouldThrow).toThrow(new Error('boom!'));
+
+    function shouldThrow () {
+      throwResponseError({
+        error: 'boom!'
+      });
+    }
+  });
+});
+
+describe('get flint', function () {
+  'use strict';
+
+  var regenerator, requestSocket;
+
+  beforeEach(module('socket-module', function ($provide) {
+    regenerator = jasmine.createSpy('regenerator');
+    $provide.value('regenerator', regenerator);
+
+    requestSocket = jasmine.createSpy('requestSocket');
+    $provide.value('requestSocket', requestSocket);
+  }));
+
+  var flint;
+
+  beforeEach(inject(function (_getFlint_) {
+    flint = _getFlint_();
+  }));
+
+  it('should call regenerator with setup and teardown', function () {
+    expect(regenerator).toHaveBeenCalledOnceWith(jasmine.any(Function), jasmine.any(Function));
+  });
+
+  it('should get a new requestSocket on setup', function () {
+    regenerator.mostRecentCall.args[0]();
+
+    expect(requestSocket).toHaveBeenCalledOnce();
+  });
+
+  it('should end the provided spark on teardown', function () {
+    var spark = {
+      end: jasmine.createSpy('end')
+    };
+
+    regenerator.mostRecentCall.args[1](spark);
+
+    expect(spark.end).toHaveBeenCalledOnce();
   });
 });

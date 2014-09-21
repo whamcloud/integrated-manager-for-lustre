@@ -1,425 +1,400 @@
-describe('Add Modal Controller', function () {
+describe('add server modal ctrl', function () {
   'use strict';
-
-  var $scope, resultEndPromise;
-  var steps = {};
 
   beforeEach(module('server'));
 
-  beforeEach(inject(function ($rootScope, $controller, $q) {
-    resultEndPromise = $q.defer();
+  describe('Add server steps constants', function () {
+    var ADD_SERVER_STEPS;
 
-    var stepsManager = jasmine.createSpy('stepsManager').andReturn({
-      addStep: jasmine.createSpy('addStep'),
-      start: jasmine.createSpy('start'),
-      result: {
-        end: resultEndPromise.promise
-      },
-      destroy: jasmine.createSpy('destroy')
+    beforeEach(inject(function (_ADD_SERVER_STEPS_) {
+      ADD_SERVER_STEPS = _ADD_SERVER_STEPS_;
+    }));
+
+    it('should contain the expected steps', function () {
+      expect(ADD_SERVER_STEPS).toEqual(Object.freeze({
+        ADD: 'addServersStep',
+        STATUS: 'serverStatusStep',
+        SELECT_PROFILE: 'selectServerProfileStep'
+      }));
     });
-
-    Object.keys(stepsManager.plan()).forEach(function (key) {
-      if (stepsManager.plan()[key].andReturn)
-        stepsManager.plan()[key].andReturn(stepsManager.plan());
-    });
-
-    steps.flint = {
-      destroy: jasmine.createSpy('destroy')
-    };
-
-    steps.$modalInstance = {
-      close: jasmine.createSpy('$modalInstance')
-    };
-    steps.stepsManager = stepsManager;
-    steps.addServersStep = jasmine.createSpy('addServersStep');
-    steps.serverStatusStep = jasmine.createSpy('serverStatusStep');
-    steps.selectServerProfileStep = jasmine.createSpy('selectServerProfileStep');
-    steps.server = jasmine.createSpy('server');
-    steps.regenerator = jasmine.createSpy('regenerator').andReturn(steps.flint);
-    steps.requestSocket = jasmine.createSpy('requestSocket');
-
-    $scope = $rootScope.$new();
-    $scope.$on = jasmine.createSpy('$on');
-
-    $controller('AddServerModalCtrl', {
-      $scope: $scope,
-      $modalInstance: steps.$modalInstance,
-      stepsManager: steps.stepsManager,
-      addServersStep: steps.addServersStep,
-      serverStatusStep: steps.serverStatusStep,
-      selectServerProfileStep: steps.selectServerProfileStep,
-      server: steps.server,
-      regenerator: steps.regenerator,
-      requestSocket: steps.requestSocket
-    });
-  }));
-
-  it('should invoke regenerator', function () {
-    expect(steps.regenerator).toHaveBeenCalledOnceWith(jasmine.any(Function), jasmine.any(Function));
   });
 
-  it('should invoke the steps manager', function () {
-    expect(steps.stepsManager).toHaveBeenCalled();
-  });
+  describe('Add Modal Controller', function () {
+    var $scope, resultEndPromise, invokeController;
+    var deps = {};
+    var steps = [
+      'addServersStep',
+      'serverStatusStep',
+      'selectServerProfileStep'
+    ];
 
-  [
-    'addServersStep',
-    'serverStatusStep',
-    'selectServerProfileStep'
-  ].forEach(function (step) {
-      it('should add step ' + step, function () {
-        expect(steps.stepsManager.plan().addStep).toHaveBeenCalledOnceWith(step, steps[step]);
+    beforeEach(inject(function ($rootScope, $controller, $q) {
+      resultEndPromise = $q.defer();
+
+      var stepsManager = jasmine.createSpy('stepsManager').andReturn({
+        addStep: jasmine.createSpy('addStep'),
+        start: jasmine.createSpy('start'),
+        result: {
+          end: resultEndPromise.promise
+        },
+        destroy: jasmine.createSpy('destroy')
+      });
+
+      Object.keys(stepsManager.plan()).forEach(function (key) {
+        if (stepsManager.plan()[key].andReturn)
+          stepsManager.plan()[key].andReturn(stepsManager.plan());
+      });
+
+      $scope = $rootScope.$new();
+      $scope.$on = jasmine.createSpy('$on');
+
+      _.extend(deps, {
+        $scope: $scope,
+        getFlint: jasmine.createSpy('getFlint').andReturn({
+          destroy: jasmine.createSpy('destroy')
+        }),
+        $modalInstance: {
+          close: jasmine.createSpy('$modalInstance')
+        },
+        stepsManager: stepsManager,
+        addServerSteps: {
+          addServersStep: {},
+          serverStatusStep: {},
+          selectServerProfileStep: {}
+        },
+        server: {
+          address: 'host001.localdomain',
+          install_method: 'existing key'
+        },
+        step: undefined,
+        requestSocket: jasmine.createSpy('requestSocket'),
+        serverSpark: jasmine.createSpy('serverSpark'),
+        createOrUpdateHostsThen: jasmine.createSpy('createOrUpdateHostsThen'),
+        getTestHostSparkThen: jasmine.createSpy('getTestHostSparkThen').andReturn($q.defer().promise)
+      });
+
+      invokeController = function invokeController (moreDeps) {
+        $controller('AddServerModalCtrl', _.extend(deps, moreDeps));
+      };
+    }));
+
+    describe('no step provided', function () {
+      beforeEach(function () {
+        invokeController();
+      });
+
+      it('should invoke the steps manager', function () {
+        expect(deps.stepsManager).toHaveBeenCalled();
+      });
+
+      steps.forEach(function (step) {
+        it('should add step ' + step, function () {
+          expect(deps.stepsManager.plan().addStep).toHaveBeenCalledOnceWith(step, deps.addServerSteps[step]);
+        });
+      });
+
+      it('should start the steps manager', function () {
+        expect(deps.stepsManager.plan().start).toHaveBeenCalledOnceWith('addServersStep', {
+          data: {
+            server: _.extend({}, deps.server, {
+              address: [deps.server.address],
+              auth_type: deps.server.install_method
+            }),
+            serverSpark: deps.serverSpark,
+            flint: deps.getFlint.plan()
+          }
+        });
+      });
+
+      it('should close the modal instance when the manager result ends', function () {
+        resultEndPromise.resolve('test');
+
+        $scope.$digest();
+        expect(deps.$modalInstance.close).toHaveBeenCalledOnce();
+      });
+
+      it('should contain the manager', function () {
+        expect($scope.addServer.manager).toEqual(deps.stepsManager.plan());
+      });
+
+      it('should set an on destroy event listener', function () {
+        expect($scope.$on).toHaveBeenCalledWith('$destroy', jasmine.any(Function));
+      });
+
+      describe('on destroy', function () {
+        beforeEach(function () {
+          $scope.$on.mostRecentCall.args[1]();
+        });
+
+        it('should destroy the manager', function () {
+          expect(deps.stepsManager.plan().destroy).toHaveBeenCalledOnce();
+        });
+
+        it('should destroy flint', function () {
+          expect(deps.getFlint.plan().destroy).toHaveBeenCalledOnce();
+        });
       });
     });
 
-  it('should start the steps manager', function () {
-    expect(steps.stepsManager.plan().start).toHaveBeenCalledOnceWith('addServersStep', {
-      data: {
-        server: steps.server,
-        flint: steps.flint
-      }
+    describe('server status step', function () {
+      beforeEach(function () {
+        invokeController({
+          step: 'serverStatusStep'
+        });
+      });
+
+      it('should get the test host spark', function () {
+        expect(deps.getTestHostSparkThen)
+          .toHaveBeenCalledOnceWith(deps.getFlint.plan(), {
+            address: ['host001.localdomain'],
+            auth_type : 'existing key',
+            install_method : 'existing key'
+          });
+      });
+
+      it('should go to serverStatusStep', function () {
+        expect(deps.stepsManager.plan().start).toHaveBeenCalledOnceWith('serverStatusStep', {
+          data: {
+            serverSpark: deps.serverSpark,
+            server: _.extend({}, deps.server, {
+              address: [deps.server.address],
+              auth_type: deps.server.install_method
+            }),
+            flint: deps.getFlint.plan(),
+            statusSpark: {
+              then: jasmine.any(Function),
+              catch: jasmine.any(Function),
+              finally: jasmine.any(Function)
+            }
+          }
+        });
+      });
     });
   });
 
-  it('should close the modal instance when the manager result ends', function () {
-    resultEndPromise.resolve('test');
-
-    $scope.$digest();
-    expect(steps.$modalInstance.close).toHaveBeenCalledOnce();
-  });
-
-  it('should contain the manager', function () {
-    expect($scope.addServer.manager).toEqual(steps.stepsManager.plan());
-  });
-
-  it('should set an on destroy event listener', function () {
-    expect($scope.$on).toHaveBeenCalledWith('$destroy', jasmine.any(Function));
-  });
-
-  describe('on destroy', function () {
-    beforeEach(function () {
-      $scope.$on.mostRecentCall.args[1]();
-    });
-
-    it('should destroy the manager', function () {
-      expect(steps.stepsManager.plan().destroy).toHaveBeenCalledOnce();
-    });
-
-    it('should destroy flint', function () {
-      expect(steps.flint.destroy).toHaveBeenCalledOnce();
-    });
-  });
-});
-
-describe('openAddServerModal', function () {
-  'use strict';
-
-  var openAddServerModal, $modal, server, response, $q, $rootScope;
-  beforeEach(module('server', function ($provide) {
-    $modal = {
-      open: jasmine.createSpy('$modal')
-    };
-
-    $provide.value('$modal', $modal);
-  }));
-
-  beforeEach(inject(function (_openAddServerModal_, _$q_, _$rootScope_) {
-    server = 'hostname1';
-    openAddServerModal = _openAddServerModal_;
-    $q = _$q_;
-    $rootScope = _$rootScope_;
-    response = openAddServerModal(server);
-  }));
-
-  it('should open the modal', function () {
-    expect($modal.open).toHaveBeenCalledWith({
-      templateUrl: 'iml/server/assets/html/add-server-modal.html',
-      controller: 'AddServerModalCtrl',
-      windowClass: 'add-server-modal',
-      resolve: {
-        server: jasmine.any(Function)
-      }
-    });
-  });
-
-  describe('handling resolve', function () {
-    var resolve;
-    beforeEach(function () {
-      resolve = $modal.open.mostRecentCall.args[0].resolve;
-    });
-
-    it('should return server', function () {
-      expect(resolve.server()).toEqual(server);
-    });
-  });
-});
-
-describe('Create Hosts', function () {
-  'use strict';
-
-  var $q, createHosts, requestSocket, serverData, spark,
-    sendPostDeferred, expandedServerData, $rootScope;
-
-  beforeEach(module('server', function ($provide) {
-    requestSocket = jasmine.createSpy('requestSocket');
-
-    $provide.value('requestSocket', requestSocket);
-
-    $provide.decorator('requestSocket', function ($q, $delegate) {
-      sendPostDeferred = $q.defer();
-      spark = {
-        sendPost: jasmine.createSpy('sendPost').andReturn(sendPostDeferred.promise),
-        end: jasmine.createSpy('end')
+  describe('openAddServerModal', function () {
+    var openAddServerModal, $modal, serverSpark, server, step, response, $q, $rootScope;
+    beforeEach(module(function ($provide) {
+      $modal = {
+        open: jasmine.createSpy('$modal')
       };
-      return $delegate.andReturn(spark);
-    });
-  }));
 
-  beforeEach(inject(function (_$q_, _createHosts_, _$rootScope_) {
-    $q = _$q_;
-    $rootScope = _$rootScope_;
-    createHosts = _createHosts_;
+      $provide.value('$modal', $modal);
+    }));
 
-    serverData = {
-      address: ['one', 'two', 'three'],
-      extra: 'extra'
-    };
+    beforeEach(inject(function (_openAddServerModal_, _$q_, _$rootScope_) {
+      server = { address: 'hostname1' };
+      serverSpark = jasmine.createSpy('serverSpark');
+      step = 'addServersStep';
+      openAddServerModal = _openAddServerModal_;
+      $q = _$q_;
+      $rootScope = _$rootScope_;
+      response = openAddServerModal(serverSpark, server, step);
+    }));
 
-    expandedServerData = [
-      {
-        address: 'one',
-        extra: 'extra'
-      },
-      {
-        address: 'two',
-        extra: 'extra'
-      },
-      {
-        address: 'three',
-        extra: 'extra'
-      }
-    ];
-
-    createHosts(serverData);
-  }));
-
-  it('should call request socket', function () {
-    expect(requestSocket).toHaveBeenCalledOnce();
-  });
-
-  it('should send post to /host', function () {
-    expect(spark.sendPost).toHaveBeenCalledWith('/host', { json: { objects: expandedServerData } }, true);
-  });
-
-  describe('no errors', function () {
-    var response = {
-      body: {
-        objects: [
-          {
-            command: 'command1',
-            host: 'host1'
-          }
-        ]
-      }
-    };
-
-    beforeEach(function () {
-      sendPostDeferred.resolve(response);
-      $rootScope.$digest();
+    it('should open the modal', function () {
+      expect($modal.open).toHaveBeenCalledWith({
+        templateUrl: 'iml/server/assets/html/add-server-modal.html',
+        controller: 'AddServerModalCtrl',
+        windowClass: 'add-server-modal',
+        resolve: {
+          serverSpark: jasmine.any(Function),
+          server: jasmine.any(Function),
+          step: jasmine.any(Function)
+        }
+      });
     });
 
-    it('should call end on the spark', function () {
-      expect(spark.end).toHaveBeenCalledOnce();
+    describe('checking resolve', function () {
+      var resolve;
+      beforeEach(function () {
+        resolve = $modal.open.mostRecentCall.args[0].resolve;
+      });
+
+      it('should return server', function () {
+        expect(resolve.server()).toEqual(server);
+      });
+
+      it('should return servers', function () {
+        expect(resolve.serverSpark()).toEqual(serverSpark);
+      });
+
+      it('should return a step', function () {
+        expect(resolve.step()).toEqual(step);
+      });
     });
   });
 
-  describe('errors', function () {
-    var response = {
-      body: {
-        errors: [
-          { msg: 'error' }
-        ]
-      }
-    };
+  describe('Host Profile', function () {
+    var hostProfile, flint, hosts, spark, result;
 
-    it('should throw exception', function () {
-      try {
-        sendPostDeferred.resolve(response);
-        $rootScope.$digest();
-      } catch (e) {
-        expect(e.message).toEqual('[{"msg":"error"}]');
-      }
-    });
-  });
-});
+    beforeEach(inject(function (_hostProfile_) {
+      hostProfile = _hostProfile_;
 
-describe('Host Profile', function () {
-  'use strict';
+      spark = {
+        sendGet: jasmine.createSpy('sendGet')
+      };
+      flint = jasmine.createSpy('flint').andReturn(spark);
 
-  var hostProfile, flint, hosts, spark, result;
-  beforeEach(module('server'));
+      hosts = [
+        {id: '1'},
+        {id: '2'}
+      ];
 
-  beforeEach(inject(function (_hostProfile_) {
-    hostProfile = _hostProfile_;
+      result = hostProfile(flint, hosts);
+    }));
 
-    spark = {
-      sendGet: jasmine.createSpy('sendGet')
-    };
-    flint = jasmine.createSpy('flint').andReturn(spark);
-
-    hosts = [
-      {id: '1'},
-      {id: '2'}
-    ];
-
-    result = hostProfile(flint, hosts);
-  }));
-
-  it('should invoke flint', function () {
-    expect(flint).toHaveBeenCalledOnceWith('hostProfile');
-  });
-
-  it('should call spark.sendGet', function () {
-    expect(spark.sendGet).toHaveBeenCalledOnceWith('/host_profile', {
-      qs: {
-        id__in: ['1', '2']
-      }
-    });
-  });
-
-  it('should return the spark', function () {
-    expect(result).toEqual(spark);
-  });
-
-});
-
-describe('testHost', function () {
-  'use strict';
-
-  var flint, spark, testHost, data, result;
-  beforeEach(module('server'));
-
-  beforeEach(inject(function (_testHost_) {
-    testHost = _testHost_;
-
-    spark = {
-      sendPost: jasmine.createSpy('sendPost'),
-      addPipe: jasmine.createSpy('addPipe')
-    };
-    flint = jasmine.createSpy('flint').andReturn(spark);
-    data = 'my data';
-    result = testHost(flint, data);
-  }));
-
-  it('should call sendPost', function () {
-    expect(spark.sendPost).toHaveBeenCalledWith('/test_host', {json: data});
-  });
-
-  it('should return a spark', function () {
-    expect(result).toEqual(spark);
-  });
-
-  describe('invoking the pipe', function () {
-    var response = {
-      body: {
-        objects: [
-          {
-            field1: 'value1',
-            address: 'address1',
-            key_with_underscore: 'underscore_value'
-          }
-        ]
-      }
-    };
-
-    beforeEach(function () {
-      response = spark.addPipe.mostRecentCall.args[0](response);
+    it('should invoke flint', function () {
+      expect(flint).toHaveBeenCalledOnceWith('hostProfile');
     });
 
-    it('should indicate that the response is valid', function () {
-      expect(response.body.isValid).toEqual(true);
+    it('should call spark.sendGet', function () {
+      expect(spark.sendGet).toHaveBeenCalledOnceWith('/host_profile', {
+        qs: {
+          id__in: ['1', '2']
+        }
+      });
     });
 
-    it('should have an updated response value', function () {
-      expect(response).toEqual({
+    it('should return the spark', function () {
+      expect(result).toEqual(spark);
+    });
+
+  });
+
+  describe('getTestHostSparkThen', function () {
+    var $rootScope, getTestHostSparkThen, flint, spark, deferred, promise, data;
+
+    beforeEach(inject(function ($q, _$rootScope_, _getTestHostSparkThen_) {
+      $rootScope = _$rootScope_;
+
+      deferred = $q.defer();
+
+      spark = {
+        sendPost: jasmine.createSpy('sendPost'),
+        addPipe: jasmine.createSpy('addPipe').andReturn({
+          onceValueThen: jasmine.createSpy('onceValueThen')
+            .andReturn(deferred.promise)
+        })
+      };
+
+      flint = jasmine.createSpy('flint').andReturn(spark);
+
+      data = {
         body: {
           objects: [
             {
               field1: 'value1',
               address: 'address1',
+              key_with_underscore: 'underscore_value'
+            }
+          ]
+        }
+      };
+
+      getTestHostSparkThen = _getTestHostSparkThen_;
+      promise = getTestHostSparkThen(flint, {
+        address: ['address1']
+      });
+    }));
+
+    it('should be a function', function () {
+      expect(getTestHostSparkThen).toEqual(jasmine.any(Function));
+    });
+
+    it('should return a promise', function () {
+      expect(promise).toEqual({
+        then: jasmine.any(Function),
+        catch: jasmine.any(Function),
+        finally: jasmine.any(Function)
+      });
+    });
+
+    it('should call sendPost', function () {
+      expect(spark.sendPost).toHaveBeenCalledWith('/test_host', { json: { address : [ 'address1' ] } });
+    });
+
+    it('should resolve with the spark', function () {
+      var spy = jasmine.createSpy('spy');
+
+      promise.then(spy);
+
+      deferred.resolve({});
+
+      $rootScope.$digest();
+
+      expect(spy).toHaveBeenCalledOnceWith(spark);
+    });
+
+    describe('invoking the pipe', function () {
+      var response;
+
+      beforeEach(function () {
+        response = spark.addPipe.mostRecentCall.args[0](data);
+      });
+
+      it('should indicate that the response is valid', function () {
+        expect(response.body.isValid).toEqual(true);
+      });
+
+      it('should have an updated response value', function () {
+        expect(response).toEqual({
+          body: {
+            objects: [{
+              field1: 'value1',
+              address: 'address1',
               key_with_underscore: 'underscore_value',
               fields: {
                 Field1: 'value1',
-                'Key with underscore': 'underscore_value',
-                Fields: { Field1: 'value1',
-                  'Key with underscore': 'underscore_value'
-                },
-                Invalid: false
+                'Key with underscore': 'underscore_value'
               },
-              invalid: true
-            }
-          ],
-          isValid: false
+              invalid: false
+            }],
+            isValid: true
+          }
+        });
+      });
+    });
+  });
+
+  describe('Throw if server errors', function () {
+    var throwIfServerErrors, handler;
+
+    beforeEach(inject(function (_throwIfServerErrors_) {
+      handler = jasmine.createSpy('handler');
+      throwIfServerErrors = _throwIfServerErrors_(handler);
+    }));
+
+    it('should be a function', function () {
+      expect(throwIfServerErrors).toEqual(jasmine.any(Function));
+    });
+
+    it('should return a function', function () {
+      expect(handler).toEqual(jasmine.any(Function));
+    });
+
+    it('should throw if there are any errors', function () {
+      expect(shouldThrow).toThrow(new Error('["fooz"]'));
+
+      function shouldThrow () {
+        throwIfServerErrors({
+          body: {
+            errors: ['fooz']
+          }
+        });
+      }
+    });
+
+    it('should call the handler if there are not any errors', function () {
+      var response = {
+        body: {
+          stuff: []
         }
-      });
-    });
-  });
-});
+      };
 
-describe('regenerator', function () {
-  'use strict';
+      throwIfServerErrors(response);
 
-  var regenerator, setup, teardown, getter;
-  beforeEach(module('server'));
-
-  beforeEach(inject(function (_regenerator_) {
-    regenerator = _regenerator_;
-
-    setup = jasmine.createSpy('setup').andReturn('setup');
-    teardown = jasmine.createSpy('teardown');
-    getter = regenerator(setup, teardown);
-  }));
-
-  describe('getting an object from the cache', function () {
-    var item;
-
-    describe('item hasn\'t been created in the cache yet', function () {
-      beforeEach(function () {
-        item = getter('item');
-      });
-
-      it('should not call the tear down function', function () {
-        expect(teardown).not.toHaveBeenCalled();
-      });
-
-      it('should call the setup function', function () {
-        expect(setup).toHaveBeenCalledOnce();
-      });
-    });
-
-    describe('item already in the cache', function () {
-      beforeEach(function () {
-        _.times(2, _.partial(getter, 'item'));
-      });
-
-      it('should call the teardown function once', function () {
-        expect(teardown).toHaveBeenCalledOnceWith('setup');
-      });
-
-      it('should call setup twice', function () {
-        expect(setup).toHaveBeenCalledTwice();
-      });
-    });
-  });
-
-  describe('destroying the objects in the cache', function () {
-    beforeEach(function () {
-      getter('item');
-      getter.destroy();
-    });
-
-    it('should call tear down', function () {
-      expect(teardown).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledOnceWith(response);
     });
   });
 });

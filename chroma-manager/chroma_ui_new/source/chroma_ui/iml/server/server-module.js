@@ -25,10 +25,10 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
   'fancy-select'])
   .controller('ServerCtrl', ['$scope', '$q', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
-    'jobMonitor', 'alertMonitor', 'openLnetModal', 'openAddServerModal',
+    'jobMonitor', 'alertMonitor', 'openLnetModal', 'openAddServerModal', 'ADD_SERVER_STEPS',
     function ServerCtrl ($scope, $q,  $modal, pdshParser, pdshFilter, naturalSortFilter,
                          serverSpark, serverActions, selectedServers, openCommandModal,
-                         jobMonitor, alertMonitor, openLnetModal, openAddServerModal) {
+                         jobMonitor, alertMonitor, openLnetModal, openAddServerModal, ADD_SERVER_STEPS) {
       'use strict';
 
       $scope.server = {
@@ -52,7 +52,7 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
         addServer: function addServer () {
           $scope.server.addServerClicked = true;
 
-          openAddServerModal()
+          openAddServerModal(spark)
             .opened.then(function () {
               $scope.server.addServerClicked = false;
             });
@@ -214,13 +214,23 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
           });
         },
         overrideActionClick: function overrideActionClick (record, action) {
-          var serverStateIsGood = action.state && action.state !== 'removed';
-          var dataIsGood = record.state === 'undeployed' && record.install_method !== 'existing_keys_choice';
+          var notRemoving = (action.state && action.state !== 'removed') && action.verb !== 'Force Remove';
+          var openForDeploy = record.state === 'undeployed';
+          var openForConfigure = (record.server_profile && record.server_profile.initial_state === 'unconfigured');
 
-          if (serverStateIsGood && dataIsGood)
-            return openAddServerModal(record).result;
-          else
+          if ((openForDeploy || openForConfigure) && notRemoving) {
+            var step;
+            if (record.install_method !== 'existing_keys_choice')
+              step = ADD_SERVER_STEPS.ADD;
+            else if (openForDeploy)
+              step = ADD_SERVER_STEPS.STATUS;
+            else
+              step = ADD_SERVER_STEPS.SELECT_PROFILE;
+
+            return openAddServerModal(spark, record, step).result;
+          } else {
             return $q.when('fallback');
+          }
         }
       };
 

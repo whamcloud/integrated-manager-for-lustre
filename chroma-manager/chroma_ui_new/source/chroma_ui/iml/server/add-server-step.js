@@ -30,16 +30,15 @@
   });
 
   angular.module('server')
-    .controller('AddServerStepCtrl', ['$scope', '$stepInstance', 'buildTestHostData', 'data',
-      function AddServerStepCtrl ($scope, $stepInstance, buildTestHostData, data) {
+    .constant('ADD_SERVER_AUTH_CHOICES', CHOICES)
+    .controller('AddServerStepCtrl', ['$scope', '$stepInstance', 'data',
+      function AddServerStepCtrl ($scope, $stepInstance, data) {
         var server = data.server;
-        var fields = _.extend({
-          sshAuthChoice: (server && server.install_method ? server.install_method : CHOICES.EXISTING_KEYS),
-          pdsh: (server ? server.address : null)
-        }, $stepInstance.getState());
 
         $scope.addServer = {
-          fields: fields,
+          fields: _.extend({ auth_type: CHOICES.EXISTING_KEYS }, server, {
+            pdsh: (server && (server.pdsh || server.address[0]) || null)
+          }),
           CHOICES: CHOICES,
           /**
            * Called on pdsh view change.
@@ -58,70 +57,25 @@
           transition: function transition () {
             $scope.addServer.disabled = true;
 
-            data.serverData = buildTestHostData($scope.addServer.fields);
-
-            $stepInstance.setState($scope.addServer.fields);
+            data.server = _.extend({}, server, $scope.addServer.fields);
 
             $stepInstance.transition('next', { data: data });
           }
         };
       }
     ])
-    .factory('buildTestHostData', [function buildTestHostDataFactory () {
-      /**
-       * Munges fields into an API acceptable format.
-       * @param {Object} fields
-       * @returns {Object}
-       */
-      return function buildTestHostData (fields) {
-        var data = {
-          address: fields.address,
-          auth_type: fields.sshAuthChoice,
-          commit: true
-        };
-
-        if (fields.sshAuthChoice === CHOICES.ROOT_PASSWORD) {
-          _.extend(data, {
-            root_password: fields.rootPassword
-          });
-        } else if (fields.sshAuthChoice === CHOICES.ANOTHER_KEY) {
-          var pass = (fields.privateKeyPassphrase ? { private_key_passphrase: fields.privateKeyPassphrase } : {});
-
-          _.extend(data, {
-            private_key: fields.privateKey
-          }, pass);
-        }
-
-        return data;
-      };
-    }])
     .factory('addServersStep', [function addServersStepFactory () {
       return {
         templateUrl: 'iml/server/assets/html/add-server-step.html',
         controller: 'AddServerStepCtrl',
-        transition: ['$q', '$transition', 'data', 'testHost', 'throwIfError',
-          function transition ($q, $transition, data, testHost, throwIfError) {
-            var deferred = $q.defer();
-            var statusSparkDeferred = $q.defer();
-            var statusSpark = testHost(data.flint, data.serverData);
+        transition: ['$transition', 'data', 'getTestHostSparkThen',
+          function transition ($transition, data, getTestHostSparkThen) {
+            data.statusSpark = getTestHostSparkThen(data.flint, data.server);
 
-            data.statusSpark = statusSparkDeferred.promise;
-
-            statusSpark.onValue('pipeline', throwIfError(function runOnce (response) {
-              this.off();
-
-              if (_.compact(response.body.errors).length)
-                throw new Error(JSON.stringify(response.body.errors));
-
-              statusSparkDeferred.resolve(statusSpark);
-
-              deferred.resolve({
-                step: $transition.steps.serverStatusStep,
-                resolve: { data: data }
-              });
-            }));
-
-            return deferred.promise;
+            return {
+              step: $transition.steps.serverStatusStep,
+              resolve: { data: data }
+            };
           }
         ]
       };

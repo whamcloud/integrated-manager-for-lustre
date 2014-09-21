@@ -65,8 +65,8 @@
         return {
           templateUrl: 'iml/server/assets/html/server-status-step.html',
           controller: 'ServerStatusStepCtrl',
-          transition: ['$transition', '$q', 'data', 'createHosts', 'hostProfile', 'openCommandModal',
-            function transition ($transition, $q, data, createHosts, hostProfile, openCommandModal) {
+          transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'openCommandModal',
+            function transition ($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal) {
               var step;
 
               if ($transition.action === 'previous') {
@@ -74,34 +74,31 @@
               } else {
                 step = $transition.steps.selectServerProfileStep;
 
-                var hosts = createHosts(data.serverData);
+                var hostsPromise = createOrUpdateHostsThen(data.server, data.serverSpark);
 
-                if ($transition.action === OVERRIDE_BUTTON_TYPES.PROCEED) {
-                  hosts.then(function startCommand (response) {
+                if ($transition.action === OVERRIDE_BUTTON_TYPES.PROCEED)
+                  hostsPromise.then(function startCommand (response) {
                     if (_.compact(response.body.errors).length)
                       throw new Error(JSON.stringify(response.body.errors));
 
-                    openCommandModal({
-                      body: {
-                        objects: _.pluck(response.body.objects, 'command')
-                      }
-                    });
+                    var commands = _(response.body.objects).pluck('command').compact().value();
+
+                    if (commands.length)
+                      openCommandModal({
+                        body: {
+                          objects: commands
+                        }
+                      });
                   });
-                }
 
-                data.hostProfileSpark = hosts.then(function getHostProfileSpark (response) {
+                data.hostProfileSpark = hostsPromise.then(function getHostProfileSpark (response) {
                   var hosts = _.pluck(response.body.objects, 'host');
-
-                  var deferred = $q.defer();
                   var hostSpark = hostProfile(data.flint, hosts);
 
-                  hostSpark.onValue('data', function checkOnce () {
-                    this.off();
-
-                    deferred.resolve(hostSpark);
-                  });
-
-                  return deferred.promise;
+                  return hostSpark.onceValueThen('data')
+                    .then(function () {
+                      return hostSpark;
+                    });
                 });
               }
 

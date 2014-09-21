@@ -84,13 +84,13 @@ describe('Server Status Step', function () {
       expect(serverStatusStep).toEqual({
         templateUrl: 'iml/server/assets/html/server-status-step.html',
         controller: 'ServerStatusStepCtrl',
-        transition: ['$transition', '$q', 'data', 'createHosts', 'hostProfile', 'openCommandModal',
+        transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'openCommandModal',
           jasmine.any(Function)]
       });
     });
 
     describe('transitions', function () {
-      var $q, $rootScope, $transition, data, createHosts, hostProfile, createHostsDeferred,
+      var $q, $rootScope, $transition, data, createOrUpdateHostsThen, hostProfile, createHostsDeferred,
         openCommandModal, openCommandModalDeferred, transition;
 
       beforeEach(inject(function (_$q_, _$rootScope_) {
@@ -106,17 +106,18 @@ describe('Server Status Step', function () {
 
         data = {
           flint: {},
-          serverData: {}
+          server: {},
+          serverSpark: {}
         };
 
         createHostsDeferred = $q.defer();
-        createHosts = jasmine.createSpy('createHosts').andReturn(createHostsDeferred.promise);
+        createOrUpdateHostsThen = jasmine.createSpy('createOrUpdateHostsThen').andReturn(createHostsDeferred.promise);
 
         openCommandModalDeferred = $q.defer();
         openCommandModal = jasmine.createSpy('openCommandModal').andReturn(openCommandModalDeferred.promise);
 
         hostProfile = jasmine.createSpy('hostProfile').andReturn({
-          onValue: jasmine.createSpy('onValue')
+          onceValueThen: jasmine.createSpy('onceValueThen').andReturn($q.when())
         });
 
         transition = _.last(serverStatusStep.transition);
@@ -128,7 +129,7 @@ describe('Server Status Step', function () {
         beforeEach(function () {
           $transition.action = 'previous';
 
-          result = transition($transition, $q, data, createHosts, hostProfile, openCommandModal);
+          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal);
         });
 
         it('should go to add servers step', function () {
@@ -137,7 +138,8 @@ describe('Server Status Step', function () {
             resolve: {
               data: {
                 flint: data.flint,
-                serverData: data.serverData
+                server: data.server,
+                serverSpark: data.serverSpark
               }
             }
           });
@@ -150,11 +152,11 @@ describe('Server Status Step', function () {
         beforeEach(function () {
           $transition.action = 'proceed and skip';
 
-          result = transition($transition, $q, data, createHosts, hostProfile, openCommandModal);
+          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal);
 
           createHostsDeferred.resolve({
             body: {
-              objects: [{command: {id: 1}, host: {id: 2}}]
+              objects: [{command: { id: 1 }, host: { id: 2 }}]
             }
           });
           $rootScope.$digest();
@@ -171,19 +173,19 @@ describe('Server Status Step', function () {
         beforeEach(function () {
           $transition.action = 'proceed';
 
-          result = transition($transition, $q, data, createHosts, hostProfile, openCommandModal);
+          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal);
 
           createHostsDeferred.resolve({
             body: {
-              objects: [{command: {id: 1}, host: {id: 2}}]
+              objects: [{command: { id: 1 }, host: { id: 2 }}]
             }
           });
           $rootScope.$digest();
         });
 
         it('should get a hostProfileSpark', function () {
-          expect(createHosts)
-            .toHaveBeenCalledOnceWith(data.serverData);
+          expect(createOrUpdateHostsThen)
+            .toHaveBeenCalledOnceWith(data.server, data.serverSpark);
         });
 
         it('should open the command modal', function () {
@@ -198,16 +200,8 @@ describe('Server Status Step', function () {
           expect(hostProfile).toHaveBeenCalledOnceWith(data.flint, [{id: 2}]);
         });
 
-        it('should register an onValue listener', function () {
-          expect(hostProfile.plan().onValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
-        });
-
-        it('should call the listener once', function () {
-          var off = jasmine.createSpy('off');
-          _.last(hostProfile.plan().onValue.mostRecentCall.args).call({
-            off: off
-          });
-          expect(off).toHaveBeenCalledOnce();
+        it('should register on onceValueThen', function () {
+          expect(hostProfile.plan().onceValueThen).toHaveBeenCalledOnceWith('data');
         });
 
         it('should go to select server profile step', function () {
@@ -216,7 +210,8 @@ describe('Server Status Step', function () {
             resolve: {
               data: {
                 flint: data.flint,
-                serverData: data.serverData,
+                server: data.server,
+                serverSpark: data.serverSpark,
                 hostProfileSpark: {
                   then: jasmine.any(Function),
                   catch: jasmine.any(Function),

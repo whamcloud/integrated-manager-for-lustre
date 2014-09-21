@@ -123,30 +123,44 @@
         return {
           templateUrl: 'iml/server/assets/html/select-server-profile-step.html',
           controller: 'SelectServerProfileStepCtrl',
-          transition: ['$q', '$transition', 'data', 'requestSocket', 'hostProfileData', 'profile',
-            function transition ($q, $transition, data, requestSocket, hostProfileData, profile) {
+          transition: ['$transition', 'data', 'requestSocket', 'hostProfileData', 'profile',
+            function transition ($transition, data, requestSocket, hostProfileData, profile) {
               if ($transition.action !== 'previous') {
                 var spark = requestSocket();
 
-                var hostProfile = spark.sendPost('/host_profile', {
-                  json: {
-                    objects: hostProfileData.map(function convertToObjects (data) {
+                data.serverSpark.onceValue('data', function (response) {
+                  var servers = response.body.objects;
+
+                  var objects = hostProfileData
+                    .map(function convertToObjects (data) {
                       return {
                         host: data.host,
                         profile: profile.id
                       };
                     })
-                  }
-                }, true);
+                    .filter(function limitToUnconfigured (object) {
+                      var server = _.find(servers, { id: object.host.toString()});
 
-                //@TODO: The backend should return a command as the result of POSTing here.
-                //@TODO: Put open command modal here when that occurs.
+                      return server && server.server_profile && server.server_profile.initial_state === 'unconfigured';
+                    });
 
-                hostProfile
-                  .then($transition.end)
-                  .finally(function snuffSpark () {
-                    spark.end();
-                  });
+                  var hostProfile = spark.sendPost('/host_profile', {
+                    json: { objects: objects }
+                  }, true)
+                    .catch(function throwError (response) {
+                      throw response.error;
+                    });
+
+                  //@TODO: The backend should return a command as the result of POSTing here.
+                  //@TODO: Put open command modal here when that occurs.
+
+                  hostProfile
+                    .then($transition.end)
+                    .finally(function snuffSpark () {
+                      spark.end();
+                    });
+
+                });
 
                 return;
               }

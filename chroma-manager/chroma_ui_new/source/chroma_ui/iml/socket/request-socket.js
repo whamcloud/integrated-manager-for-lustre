@@ -38,6 +38,29 @@ angular.module('socket-module')
     return function requestSocket () {
       var spark = socket('request');
 
+      /**
+       * Listens for a value once, then resolves
+       * or rejects the returned promise with that
+       * value.
+       * @param {String} event The event to listen for.
+       * @param {Object} [context] The context to call with.
+       * @returns {Object} A promise.
+       */
+      spark.onceValueThen = function onceValueThen (event, context) {
+        var deferred = $q.defer();
+
+        spark.onceValue(event, function handler (response) {
+          this.off();
+
+          if ('error' in response)
+            deferred.reject(response);
+          else
+            deferred.resolve(response);
+        }, context);
+
+        return deferred.promise;
+      };
+
       Object.keys(VERBS).forEach(function setupVerbs (key) {
 
         /**
@@ -99,7 +122,7 @@ angular.module('socket-module')
       return response;
     };
   }])
-  .factory('throwIfError', [function throwIfErrorFactory () {
+  .factory('throwIfError', ['throwResponseError', function throwIfErrorFactory (throwResponseError) {
     'use strict';
 
     /**
@@ -110,9 +133,55 @@ angular.module('socket-module')
     return function throwIfError (fn) {
       return function checkforError (response) {
         if ('error' in response)
-          throw response.error;
+          throwResponseError(response);
 
         return fn.call(this, response);
       };
+    };
+  }])
+  .factory('throwResponseError', [function throwResponseErrorFactory () {
+    'use strict';
+
+    var error;
+
+    /**
+     * Normalizes anything that is not an Error instance into one.
+     * @param {Object} response
+     * @throws {Error}
+     */
+    return function throwResponseError (response) {
+      if (response.error instanceof Error) {
+        error = response.error;
+      } else if (_.isPlainObject(response.error)) {
+        error = Object.keys(response.error)
+          .reduce(function fillOutProperties (error, key) {
+            if (key !== 'message')
+              error[key] = response.error[key];
+
+            return error;
+          }, new Error(response.error.message));
+      } else {
+        error = new Error(response.error);
+      }
+
+      throw error;
+    };
+  }])
+  .factory('getFlint', ['regenerator', 'requestSocket', function getFlintFactory (regenerator, requestSocket) {
+    'use strict';
+
+    /**
+     * Creates sparks.
+     * Keeps track of the current spark
+     * and snuffs it before creating another
+     * one.
+     * @returns {Function}
+     */
+    return function getFlint () {
+      return regenerator(function setup () {
+        return requestSocket();
+      }, function teardown (spark) {
+        spark.end();
+      });
     };
   }]);
