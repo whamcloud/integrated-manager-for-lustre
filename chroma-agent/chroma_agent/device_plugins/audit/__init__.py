@@ -37,3 +37,6 @@ class BaseAudit(object):
 
     def metrics(self):
         raise NotImplementedError
+
+    def properties(self):
+        return {}
