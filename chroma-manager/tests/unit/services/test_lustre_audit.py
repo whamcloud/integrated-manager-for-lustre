@@ -9,7 +9,7 @@ from chroma_core.services.lustre_audit import UpdateScan
 from chroma_core.models.package import PackageInstallation
 
 
-class TestPackageAudit(TestCase):
+class TestAudit(TestCase):
     def setUp(self):
         load_default_profile()
         self.old_notify = JobSchedulerClient.notify
@@ -162,3 +162,11 @@ class TestPackageAudit(TestCase):
         self.assertFalse(PackageInstallation.objects.exists())
         self.assertFalse(PackageVersion.objects.exists())
         self.assertFalse(Package.objects.exists())
+
+    def test_update_properties(self):
+        update_scan = UpdateScan()
+        update_scan.host = synthetic_host('test1')
+        update_scan.started_at = datetime.datetime.utcnow()
+        self.assertEqual(update_scan.host.properties, '{}')
+        update_scan.update_properties(None)
+        update_scan.update_properties({'key': 'value'})
