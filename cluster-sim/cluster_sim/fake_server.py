@@ -164,21 +164,19 @@ class FakeServer(Persisted):
         return nids
 
     def scan_packages(self):
-        packages = {
-            'foobundle': {}
-        }
+        packages = {}
         for package, available_version in self._simulator.available_packages(self.node_type).items():
             try:
                 installed = [self.get_package_version(package)]
             except KeyError:
                 installed = []
 
-            packages['foobundle'][package] = {
+            packages[package] = {
                 'available': [available_version],
                 'installed': installed
             }
 
-        return packages
+        return {'iml-agent': packages}
 
     def install_packages(self, repos, packages, force_dependencies=False):
         for package in packages:

@@ -985,7 +985,7 @@ class SetupHostJob(StateChangeJob):
             steps.append((InstallPackagesStep, {
                 'repos': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
                 'host': self.managed_host,
-                'packages': list(self.managed_host.server_profile.packages)
+                'packages': list(self.managed_host.server_profile.packages) + ['chroma-agent-management']
             }))
 
             steps.append((RebootIfNeededStep, {

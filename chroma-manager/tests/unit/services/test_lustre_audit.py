@@ -24,7 +24,7 @@ class TestAudit(TestCase):
         self.update_scan = UpdateScan()
         self.update_scan.host = host
         self.update_scan.started_at = datetime.datetime.utcnow()
-        self.update_scan.update_packages(data)
+        self.update_scan.update_packages({'agent': data})
 
     def test_update_notification(self):
         """
@@ -35,11 +35,9 @@ class TestAudit(TestCase):
         host = synthetic_host('test1')
 
         self._send_package_data(host, {
-            'bundle1': {
-                'libacme': {
-                    'installed': [('0', '1.0', '2', 'x86_64')],
-                    'available': [('0', '1.0', '3', 'x86_64')]
-                }
+            'libacme': {
+                'installed': [('0', '1.0', '2', 'x86_64')],
+                'available': [('0', '1.0', '3', 'x86_64')]
             }
         })
         # We reported different installed vs. available versions -- a notification that updates
@@ -62,11 +60,9 @@ class TestAudit(TestCase):
         # In a quiet state, same version available as installed
         # =====================================================
         self._send_package_data(host, {
-            'bundle1': {
-                'libacme': {
-                    'installed': [('0', '1.0', '2', 'x86_64')],
-                    'available': [('0', '1.0', '2', 'x86_64')]
-                }
+            'libacme': {
+                'installed': [('0', '1.0', '2', 'x86_64')],
+                'available': [('0', '1.0', '2', 'x86_64')]
             }
         })
 
@@ -90,11 +86,9 @@ class TestAudit(TestCase):
         # In a state waiting for an upgrade
         # =================================
         self._send_package_data(host, {
-            'bundle1': {
-                'libacme': {
-                    'installed': [('0', '1.0', '2', 'x86_64')],
-                    'available': [('0', '1.0', '3', 'x86_64')]
-                }
+            'libacme': {
+                'installed': [('0', '1.0', '2', 'x86_64')],
+                'available': [('0', '1.0', '3', 'x86_64')]
             }
         })
 
@@ -125,11 +119,9 @@ class TestAudit(TestCase):
         # ====================
 
         self._send_package_data(host, {
-            'bundle1': {
-                'libacme': {
-                    'installed': [('0', '1.0', '3', 'x86_64')],
-                    'available': [('0', '1.0', '3', 'x86_64')]
-                }
+            'libacme': {
+                'installed': [('0', '1.0', '3', 'x86_64')],
+                'available': [('0', '1.0', '3', 'x86_64')]
             }
         })
 
@@ -153,9 +145,7 @@ class TestAudit(TestCase):
         # When the package is neither available nor installed
         # ===================================================
 
-        self._send_package_data(host, {
-            'bundle1': {}
-        })
+        self._send_package_data(host, {})
 
         # The package should be gone
         self.assertFalse(PackageAvailability.objects.exists())

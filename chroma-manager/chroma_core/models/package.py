@@ -129,8 +129,9 @@ def update(host, package_report):
 
         return False
 
-    for repo_name, repo_packages in package_report.items():
-        for package_name, package_data in repo_packages.items():
+    repo_names = set(host.server_profile.bundles.values_list('bundle_name', flat=True))
+    for repo_name in repo_names.intersection(package_report):
+        for package_name, package_data in package_report[repo_name].items():
             for version_info in VersionInfoList(package_data['installed']):
                 package, created = Package.objects.get_or_create(name=package_name)
                 package_version, created = PackageVersion.objects.get_or_create(
