@@ -81,4 +81,6 @@ class TestExistsFilesystem(TestCreateFilesystem):
 
     def test_exists(self):
         self.assertTrue(self.get_filesystem_by_name(self.fs_name)['name'] == self.fs_name)
+        # wait for it to be available, in case we rebooted storage servers before getting here
+        self.wait_until_true(lambda: self.get_filesystem_by_name(self.fs_name)['state'] == 'available')
         self._exercise_simple(self.get_filesystem_by_name(self.fs_name)['id'])
