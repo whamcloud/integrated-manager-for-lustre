@@ -17,7 +17,7 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-true}
 trap "set +e
 echo 'Collecting reports...'
 
-scp root@$TEST_RUNNER:~/test_report*.xml $PWD/test_reports/
+scp root@$TEST_RUNNER:~/test_report*.xml \"$PWD/test_reports/\"
 
 if $MEASURE_COVERAGE; then
     ssh root@$CHROMA_MANAGER chroma-config stop
@@ -51,3 +51,4 @@ unset http_proxy; unset https_proxy
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json -x ~/test_report.xml $TESTS || true"
 
 echo "End running tests."
+exit 0
