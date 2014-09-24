@@ -200,19 +200,7 @@ EOF1
 fi
 EOF
 
-# wait for rebooted nodes
-sleep 5
-nodes="${STORAGE_APPLIANCES[@]} $CLIENT_1"
-RUNNING_TIME=0
-while [ -n "$nodes" ] && [ $RUNNING_TIME -lt 500 ]; do
-    for node in $nodes; do
-        if ssh root@$node id; then
-            nodes=$(echo "$nodes" | sed -e "s/$node//" -e 's/^ *//' -e 's/ *$//')
-        fi
-    done
-    (( RUNNING_TIME++ )) || true
-    sleep 1
-done
+$CHROMA_DIR/chroma-manager/tests/framework/integration/utils/wait_for_nodes.sh "${STORAGE_APPLIANCES[*]} $CLIENT_1"
 
 # Create a lustre filesystem outside of Chroma
 ssh root@$TEST_RUNNER <<EOF
