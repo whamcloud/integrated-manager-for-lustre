@@ -225,7 +225,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def get_available_states(self, begin_state):
         if begin_state == 'undeployed':
-            return ['configured'] if self.install_method != ManagedHost.INSTALL_MANUAL else []
+            state = getattr(self.server_profile, 'initial_state', 'configured')
+            return [state] if self.install_method != ManagedHost.INSTALL_MANUAL else []
 
         if self.immutable_state:
             if begin_state in ['undeployed', 'unconfigured']:

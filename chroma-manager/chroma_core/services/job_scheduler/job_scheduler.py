@@ -1353,7 +1353,7 @@ class JobScheduler(object):
 
             with transaction.commit_on_success():
                 command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
-                    [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
+                    [(ContentType.objects.get_for_model(host).natural_key(), host.id, host.server_profile.initial_state)],
                     "Setting up host %s" % host)
 
             # Tag the in-memory SSH auth information onto this DeployHostJob instance

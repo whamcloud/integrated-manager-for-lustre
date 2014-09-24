@@ -3,7 +3,7 @@ include $(TOP)/../include/Makefile.version
 REPO ?= $(TOP)/../chroma-dependencies/repo
 WORKDIR := $(notdir $(CURDIR))
 
-PROFILES := base_managed.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile
+PROFILES := default.profile base_managed.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile
 SUBDIRS ?= $(shell find . -mindepth 2 -maxdepth 2 -name Makefile | sed  -e '/.*\.old/d' -e 's/^\.\/\([^/]*\)\/.*$$/\1/')
 
 all: package
