@@ -23,7 +23,7 @@
 (function (_) {
   'use strict';
 
-  function CreatePduCtrl($scope, dialog, PowerControlTypeModel, PowerControlDeviceModel, devices, device, ipmi) {
+  function CreatePduCtrl($window, $scope, dialog, PowerControlTypeModel, PowerControlDeviceModel, devices, device, ipmi) {
     /**
      * @description A generic error callback that can be called for an update or a save.
      * @param {object} resp the error response.
@@ -96,23 +96,26 @@
 
     _.extend($scope.createPduCtrl, extension);
 
-    PowerControlTypeModel.query().$promise.then(function (resp) {
-      if (ipmi != null) {
-        $scope.createPduCtrl.powerControlTypes = resp;
-        extension.form.name = 'IPMI';
-        extension.form.address = '0.0.0.0';
-      } else {
+    if (ipmi != null) {
+      // Fetch the possible IPMI power controller types from page cache
+      $scope.createPduCtrl.powerControlTypes = $window.CACHE_INITIAL_DATA.power_control_type
+        .filter(function filterIPMI(item) { return item.make === 'IPMI'; });
+      extension.form.name = 'IPMI';
+      extension.form.address = '0.0.0.0';
+      extension.form.device_type = $scope.createPduCtrl.powerControlTypes[0];
+    } else {
+      // TODO:  Use CACHE_INITIAL_DATA like above.
+      PowerControlTypeModel.query().$promise.then(function (resp) {
         // Filter out IPMI types for non-IPMI PDU creation
         $scope.createPduCtrl.powerControlTypes = resp.filter(function (type) {
           return type.max_outlets > 0;
         });
-      }
-
       extension.form.device_type = getDeviceType(resp);
-    });
+      });
+    }
   }
 
   angular.module('controllers').controller('CreatePduCtrl',
-    ['$scope', 'dialog', 'PowerControlTypeModel', 'PowerControlDeviceModel', 'devices', 'device', 'ipmi', CreatePduCtrl]
+    ['$window', '$scope', 'dialog', 'PowerControlTypeModel', 'PowerControlDeviceModel', 'devices', 'device', 'ipmi', CreatePduCtrl]
   );
 }(window.lodash));

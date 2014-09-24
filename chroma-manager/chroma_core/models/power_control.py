@@ -98,8 +98,8 @@ class PowerControlType(DeletablePowerControlModel):
     def display_name(self):
         make = self.make if self.make != "" else "Unknown Make"
         model = self.model if self.model != "" else "Unknown Model"
-        count = "%s outlet%s" % (self.max_outlets, pluralize(self.max_outlets)) if self.max_outlets > 0 else "IPMI"
-        return "%s %s (%s)" % (make, model, count)
+        count = "(%s outlet%s)" % (self.max_outlets, pluralize(self.max_outlets)) if self.max_outlets > 0 else ""
+        return ("%s %s %s" % (make, model, count)).strip()
 
     def __str__(self):
         return self.display_name()
@@ -605,6 +605,7 @@ class ConfigureHostFencingStep(Step):
             if (outlet.device.is_ipmi
                 and outlet.device.device_type.agent != 'fence_virsh'):
                 fence_kwargs['ipaddr'] = outlet.identifier
+                fence_kwargs['lanplus'] = '2.0' in outlet.device.device_type.model  # lanplus
             else:
                 fence_kwargs['plug'] = outlet.identifier
                 fence_kwargs['ipaddr'] = outlet.device.address

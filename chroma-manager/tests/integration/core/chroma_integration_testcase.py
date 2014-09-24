@@ -366,7 +366,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         power_devices = {}
         for pdu in config['power_distribution_units']:
             body = pdu.copy()
-            body['device_type'] = power_types[pdu['type']]['resource_uri']
+            try:
+                body['device_type'] = power_types[pdu['type']]['resource_uri']
+            except KeyError:
+                logger.debug(pdu['type'])
+                logger.debug(power_types)
             del body['type']
             obj = self.create_power_control_device(body)
             power_devices["%s:%s" % (obj['address'], obj['port'])] = obj

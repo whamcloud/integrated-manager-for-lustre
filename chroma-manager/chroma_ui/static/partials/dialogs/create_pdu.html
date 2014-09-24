@@ -5,7 +5,7 @@
     <div class="modal-body">
       <alert ng-repeat="alert in createPduCtrl.err.__all__" type="'error'" close="createPduCtrl.closeAlert($index)">((alert))</alert>
       <form name="pduForm" class="form form-horizontal">
-        <div class="control-group" ng-hide="createPduCtrl.ipmi">
+        <div class="control-group">
           <label class="control-label">Device type:</label>
           <div class="controls">
             <select ng-model="createPduCtrl.form.device_type" ng-options="value.name for value in createPduCtrl.powerControlTypes | orderBy: 'name'" ng-disabled="createPduCtrl.type == 'edit'"></select>

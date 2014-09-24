@@ -66,8 +66,11 @@ class fence_virsh(FenceAgent):
 
 
 class fence_ipmilan(FenceAgent):
-    def __init__(self, agent, login, password, ipaddr):
-        self.base_cmd = [agent, '-a', ipaddr, '-l', login, '-p', password]
+    def __init__(self, agent, login, password, ipaddr, lanplus=False):
+        if lanplus:
+            self.base_cmd = [agent, '-P', '-a', ipaddr, '-l', login, '-p', password]
+        else:
+            self.base_cmd = [agent, '-a', ipaddr, '-l', login, '-p', password]
 
     def toggle_outlet(self, state):
         shell.try_run(self.base_cmd + ['-o', state])

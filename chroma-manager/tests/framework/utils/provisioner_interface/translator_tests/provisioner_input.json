@@ -17,7 +17,7 @@
   "power_distribution_units": [
     {
       "address": "VM_HOST_IP",
-      "type": "KVM Virtual PDU (IPMI)",
+      "type": "KVM Virtual PDU",
       "port": "22"
     }
   ],

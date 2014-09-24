@@ -27,6 +27,7 @@ import datetime
 import socket
 import traceback
 import os
+from chroma_api.power_control import PowerControlTypeResource
 from chroma_core.lib.service_config import SupervisorStatus
 from chroma_core.lib.service_config import ServiceConfig
 
@@ -63,7 +64,8 @@ def _build_cache(request):
     resources = [
         FilesystemResource,
         TargetResource,
-        HostResource
+        HostResource,
+        PowerControlTypeResource,
     ]
     for resource in resources:
         if settings.ALLOW_ANONYMOUS_READ or request.user.is_authenticated():
