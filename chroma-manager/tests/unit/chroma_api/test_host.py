@@ -47,11 +47,21 @@ class TestHostResource(ChromaApiTestCase):
 
     @create_host_ssh_patch
     def test_profile(self):
+        with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact', mock.Mock()):
+            response = self.api_client.post('/api/test_host/', data={'address': ['foo']})
+        self.assertHttpAccepted(response)
+        content = json.loads(response.content)
+        self.assertEqual(content['errors'], [None])
+        self.assertEqual(len(content['objects']), 1)
+
         profile = ServerProfile(name='default', ui_name='Default', ui_description='Default', managed=False, user_selectable=False)
         profile.save()
         profile.bundles.add(Bundle.objects.get(bundle_name='agent'))
-        response = self.api_client.post(self.RESOURCE_PATH, data={'address': 'foo'})
+        response = self.api_client.post(self.RESOURCE_PATH, data={'objects': [{'address': 'foo'}]})
         self.assertHttpAccepted(response)
+        content = json.loads(response.content)
+        self.assertEqual(content['errors'], [None])
+        self.assertEqual(map(sorted, content['objects']), [['command', 'host']])
         host, = ManagedHost.objects.all()
         self.assertEqual(host.server_profile.name, 'default')
 
@@ -60,10 +70,11 @@ class TestHostResource(ChromaApiTestCase):
         content = json.loads(response.content)
         self.assertEqual(content, {'test_profile': []})
 
-        response = self.api_client.get('/api/host_profile/')
-        self.assertHttpOK(response)
-        content, = json.loads(response.content)['objects']
-        self.assertEqual(content, {'profiles': {'test_profile': []}, 'host': host.id, 'address': host.address})
+        for data in ({}, {'id__in': [host.id, 0]}):
+            response = self.api_client.get('/api/host_profile/', data=data)
+            self.assertHttpOK(response)
+            content, = json.loads(response.content)['objects']
+            self.assertEqual(content, {'profiles': {'test_profile': []}, 'host': host.id, 'address': host.address})
 
         response = self.api_client.put('/api/host_profile/{0}/'.format(host.id), data={'profile': 'test_profile'})
         self.assertHttpAccepted(response)

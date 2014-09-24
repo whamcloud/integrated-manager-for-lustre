@@ -50,18 +50,17 @@ class HostValidation(Validation):
         errors = defaultdict(list)
         if request.method != 'POST':
             return errors
+        for data in bundle.data.get('objects', [bundle.data]):
+            try:
+                address = data['address']
+            except KeyError:
+                errors['address'].append(self.mandatory_message)
+            else:
+                # TODO: validate URI
+                host_must_exist = data.get("host_must_exist", None)
 
-        try:
-            address = bundle.data['address']
-        except KeyError:
-            errors['address'].append(self.mandatory_message)
-        else:
-            # TODO: validate URI
-
-            host_must_exist = bundle.data.get("host_must_exist", None)
-
-            if (host_must_exist != None) and (host_must_exist != ManagedHost.objects.filter(address=address).exists()):
-                errors['address'].append("Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already"))
+                if (host_must_exist != None) and (host_must_exist != ManagedHost.objects.filter(address=address).exists()):
+                    errors['address'].append("Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already"))
 
         return errors
 
@@ -96,12 +95,14 @@ class HostTestValidation(HostValidation):
         return errors
 
 
-def _host_params(bundle, address = None):
+def _host_params(data, address=None):
 #  See the UI (e.g. server_configuration.js)
-    return {'address': bundle.data.get('address', address),
-            'root_pw': bundle.data.get('root_password'),
-            'pkey': bundle.data.get('private_key'),
-            'pkey_pw': bundle.data.get('private_key_passphrase')}
+    return {
+        'address': data.get('address', address),
+        'root_pw': data.get('root_password'),
+        'pkey': data.get('private_key'),
+        'pkey_pw': data.get('private_key_passphrase'),
+    }
 
 
 class ServerProfileResource(ModelResource):
@@ -236,29 +237,36 @@ class HostResource(MetricResource, StatefulModelResource):
             profile = self.fields['server_profile'].hydrate(bundle).obj
         else:
             profile = ServerProfile.objects.get(user_selectable=False)
-
-        try:
-            host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name,
-                                                               **_host_params(bundle, address))
-        except RpcError, e:
-            # Return 400, a failure here could mean the address was already occupied, or that
-            # we couldn't reach that address using SSH (network or auth problem)
-            raise custom_response(self, request, http.HttpBadRequest,
-                {'address': ["Cannot add host at this address: %s" % e],
-                'traceback': e.traceback})
-        else:
-            #  TODO:  Could simplify this by adding a 'command' key to the
-            #  bundle, then optionally handling dehydrating that
-            #  in super.alter_detail_data_to_serialize.  That way could
-            #  return from this method avoiding all this extra code, and
-            #  providing a central handling for all things that migth have
-            #  a command argument.  NB:  not tested, and not part of any ticket
-            args = {'command': dehydrate_command(command),
-                    'host': self.alter_detail_data_to_serialize(None,
-                                self.full_dehydrate(
-                                    self.build_bundle(obj = host))).data
-            }
-            raise custom_response(self, request, http.HttpAccepted, args)
+        objects, errors = [], []
+        for data in bundle.data.get('objects', [bundle.data]):
+            try:
+                host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name, **_host_params(data, address))
+            except RpcError as exc:
+                objects.append({})
+                errors.append({'error': str(exc)})
+            else:
+                #  TODO:  Could simplify this by adding a 'command' key to the
+                #  bundle, then optionally handling dehydrating that
+                #  in super.alter_detail_data_to_serialize.  That way could
+                #  return from this method avoiding all this extra code, and
+                #  providing a central handling for all things that migth have
+                #  a command argument.  NB:  not tested, and not part of any ticket
+                objects.append({
+                    'command': dehydrate_command(command),
+                    'host': self.alter_detail_data_to_serialize(None, self.full_dehydrate(self.build_bundle(obj=host))).data,
+                })
+                errors.append(None)
+        if 'objects' in bundle.data:
+            raise custom_response(self, request, http.HttpAccepted, {'objects': objects, 'errors': errors})
+        result, = objects
+        if result:
+            raise custom_response(self, request, http.HttpAccepted, result)
+        # Return 400, a failure here could mean the address was already occupied, or that
+        # we couldn't reach that address using SSH (network or auth problem)
+        raise custom_response(self, request, http.HttpBadRequest, {
+            'address': ["Cannot add host at this address: %s" % exc],
+            'traceback': exc.traceback,
+        })
 
     def apply_filters(self, request, filters = None):
         objects = super(HostResource, self).apply_filters(request, filters)
@@ -326,13 +334,23 @@ class HostTestResource(Resource):
         validation = HostTestValidation()
 
     def obj_create(self, bundle, request = None, **kwargs):
-
-        try:
-            result = JobSchedulerClient.test_host_contact(**_host_params(bundle))
-        except RpcTimeout:
-            raise custom_response(self, request, http.HttpBadRequest, {'address': ["Cannot contact host at this address:"]})
-
-        raise custom_response(self, request, http.HttpAccepted, result)
+        params = _host_params(bundle.data)
+        address = params.pop('address')
+        bulk = isinstance(address, list)
+        objects, errors = [], []
+        for address in (address if bulk else [address]):
+            try:
+                objects.append(JobSchedulerClient.test_host_contact(address=address, **params))
+                errors.append(None)
+            except RpcTimeout as exc:
+                objects.append({})
+                errors.append({'error': str(exc)})
+        if bulk:
+            raise custom_response(self, request, http.HttpAccepted, {'objects': objects, 'errors': errors})
+        result, = objects
+        if result:
+            raise custom_response(self, request, http.HttpAccepted, result)
+        raise custom_response(self, request, http.HttpBadRequest, {'address': ["Cannot contact host at this address:"]})
 
 
 class HostProfileResource(Resource):
@@ -375,11 +393,13 @@ class HostProfileResource(Resource):
         return self.get_profiles(get_object_or_404(ManagedHost, pk=pk))
 
     def obj_get_list(self, request):
+        ids = request.GET.getlist('id__in')
+        filters = {'id__in': ids} if ids else {'server_profile__user_selectable': False}
         return [{
             'host': host.id,
             'address': host.address,
             'profiles': self.get_profiles(host),
-        } for host in ManagedHost.objects.filter(server_profile__user_selectable=False)]
+        } for host in ManagedHost.objects.filter(**filters)]
 
     def obj_create(self, bundle, request):
         commands = [self.set_profile(data['host'], data['profile']) for data in bundle.data['objects']]
