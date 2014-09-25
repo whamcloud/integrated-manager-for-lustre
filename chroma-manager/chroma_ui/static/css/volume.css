@@ -26,8 +26,8 @@
 }
 
 #volume-tab #volume_configuration_content .dirty {
-  background-color: #FFA500;
-  border: 1px solid #EA9800;
+  background-color: #5bc0de;
+  border: 1px solid #85d0e7;
 }
 
 #volume-tab #volume_configuration_content .dirty .icon-remove-sign {
