@@ -19,12 +19,6 @@
     }
   }
 
-  #hostnamesPopover {
-    position: absolute;
-    left: 0;
-    top: 100%;
-  }
-
   > .fa-question-circle {
     padding-left: 5px;
   }
@@ -33,20 +27,25 @@
     margin-bottom: 0;
   }
 
-  .popover-content {
-    > ul {
-      list-style-type: none;
-      overflow-y: auto;
-      max-height: 100px;
-      padding: 2px 5px;
+  .popover {
+    top: 100% !important;
+    left: 0 !important;
+
+    .arrow {
+      left: 20px;
     }
 
-    padding: 10px;
-    max-height: 120px;
-  }
+    .popover-content {
+      > ul {
+        list-style-type: none;
+        overflow-y: auto;
+        max-height: 100px;
+        padding: 2px 5px;
+      }
 
-  .popover .arrow {
-    left: 20px;
+      padding: 10px;
+      max-height: 120px;
+    }
   }
 
   .input-group-addon[tooltip] + .tooltip {

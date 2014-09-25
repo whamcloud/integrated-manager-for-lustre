@@ -1,12 +1,14 @@
 describe('duration picker', function () {
   'use strict';
 
-  var template, $scope, changeDurationButton, popover,
+  var template, $scope, $timeout, changeDurationButton, popover,
     updateButton, dropdownButton, dropdownMenu, currentDuration, input, DURATIONS;
 
   beforeEach(module('charts', 'filters', 'templates'));
 
-  beforeEach(inject(function ($templateCache, $rootScope, $compile, _DURATIONS_) {
+  beforeEach(inject(function ($templateCache, $rootScope, _$timeout_, $compile, _DURATIONS_) {
+    $timeout = _$timeout_;
+
     DURATIONS = _DURATIONS_;
 
     template = angular.element($templateCache.get('duration-picker.html'));
@@ -21,6 +23,10 @@ describe('duration picker', function () {
     $scope.$digest();
 
     changeDurationButton = template.find('.activate-popover');
+
+    changeDurationButton.click();
+    $timeout.flush();
+
     updateButton = template.find('.btn-success');
     dropdownButton = template.find('.dropdown-toggle');
     popover = template.find('.popover');
@@ -36,14 +42,10 @@ describe('duration picker', function () {
   });
 
   it('should open the popover when the change duration button is clicked', function () {
-    changeDurationButton.click();
-
     expect(popover).toHaveClass('in');
   });
 
   it('should default to minutes', function () {
-    changeDurationButton.click();
-
     dropdownButton.click();
 
     var minutes = _.capitalize(DURATIONS.MINUTES);
@@ -52,8 +54,6 @@ describe('duration picker', function () {
   });
 
   it('should change the duration unit when the user clicks a dropdown item', function () {
-    changeDurationButton.click();
-
     dropdownButton.click();
 
     var hours = _.capitalize(DURATIONS.HOURS);
@@ -64,8 +64,6 @@ describe('duration picker', function () {
   });
 
   it('should call the update method when the user clicks update with the correct moments', function () {
-    changeDurationButton.click();
-
     dropdownButton.click();
 
     updateButton.click();

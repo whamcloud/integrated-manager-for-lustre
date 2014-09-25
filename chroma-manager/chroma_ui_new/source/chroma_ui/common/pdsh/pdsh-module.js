@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  angular.module('pdsh-module', ['pdsh-parser-module', 'iml-tooltip', 'help'])
+  angular.module('pdsh-module', ['pdsh-parser-module', 'iml-tooltip', 'iml-popover', 'help'])
     .directive('pdsh', ['pdshParser', 'help', pdsh]);
 
   /**

@@ -5,7 +5,7 @@ describe('Usage picker', function () {
 
   beforeEach(module('charts', 'templates'));
 
-  beforeEach(inject(function ($templateCache, $rootScope, $compile) {
+  beforeEach(inject(function ($templateCache, $rootScope, $compile, $timeout) {
     template = angular.element($templateCache.get('usage-picker.html'));
 
     $scope = $rootScope.$new();
@@ -18,12 +18,14 @@ describe('Usage picker', function () {
     $scope.$digest();
 
     changeUsageButton = template.find('.activate-popover');
+
+    changeUsageButton.click();
+    $timeout.flush();
+
     input = template.find('input');
     rangeAlert = template.find('.alert.alert-range');
     requiredAlert = template.find('.alert.alert-required');
     submitButton = template.find('.btn-success');
-
-    changeUsageButton.click();
   }));
 
   it('should default to 0%', function () {

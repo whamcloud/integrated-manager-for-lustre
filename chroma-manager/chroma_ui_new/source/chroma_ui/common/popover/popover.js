@@ -20,96 +20,139 @@
 // express and approved by Intel in writing.
 
 
-angular.module('iml-popover', ['position']).directive('imlPopover', ['position', '$timeout', '$window',
-   function (position, $timeout, $window) {
+angular.module('iml-popover', ['position']).directive('imlPopover', ['position', '$timeout', '$window', '$compile',
+  function (position, $timeout, $window, $compile) {
     'use strict';
+
+    var template = '<div class="popover fade {{ placement }}" ng-class="{in: open}">\
+<div class="arrow"></div>\
+<h3 class="popover-title" ng-bind="title" ng-show="title"></h3>\
+<div class="popover-content"></div>\
+</div>';
 
     return {
       restrict: 'E',
       transclude: true,
-      replace: true,
       scope: {
         placement: '@',
         title: '@',
         work: '&'
       },
-      templateUrl: 'common/popover/assets/html/popover.html',
-      link: function (scope, el) {
+      link: function link (scope, el, attrs, ctrl, $transclude) {
+        var popoverLinker = $compile(template);
+
         var popoverButton = el.siblings('.activate-popover').eq(0),
           wrappedWindow = angular.element($window);
 
-        if (!popoverButton) throw new Error('No popover button found!');
-
-        var positioner = position.positioner(el[0]);
+        if (!popoverButton) throw new Error('No popover button found.');
 
         scope.open = false;
 
-        // Add the hook
-        if (scope.work) {
-          scope.work({
-            actions: {
-              hide: hide,
-              recalculate: recalculate
-            }
-          });
-        }
+        scope.work({
+          actions: {
+            hide: hide,
+            recalculate: recalculate
+          }
+        });
 
-        popoverButton.on('click', function ($event) {
+        popoverButton.on('click', function handleClick ($event) {
           // Close any other popovers that are currently open
           if (!scope.open)
             wrappedWindow.trigger('click');
 
-          scope.$apply(function () { toggle($event); });
+          toggle($event);
+          scope.$digest();
         });
 
-        el.on('click', function ($event) { $event.stopPropagation(); });
-
-        scope.$on('$destroy', function () {
+        scope.$on('$destroy', function onDestroy () {
           popoverButton.off('click');
-          popoverButton = null;
+          wrappedWindow.off('click', digestAndHide);
+          wrappedWindow = popoverButton = popoverLinker = null;
 
-          wrappedWindow.off('click', applyAndHide);
-          wrappedWindow = null;
+          destroyPopover();
         });
+
+        var inheritedScope, popoverEl, positioner;
+        function createPopover () {
+          $transclude(function createNewPopover (clone, transcludedScope) {
+            inheritedScope = transcludedScope;
+
+            popoverEl = popoverLinker(scope, angular.noop);
+
+            positioner = position.positioner(popoverEl[0]);
+
+            popoverEl.find('.popover-content').append(clone);
+            popoverEl.on('click', function handleClick ($event) {
+              $event.stopPropagation();
+            });
+
+            el.before(popoverEl);
+            $timeout(function showAndRecalculate () {
+              transcludedScope.$parent.$digest();
+              popoverEl.css('display', 'block');
+
+              if (scope.placement)
+                recalculate();
+
+              scope.open = true;
+              scope.$digest();
+            }, 0, false);
+          });
+        }
+
+        function destroyPopover () {
+          if (popoverEl) {
+            popoverEl.off('click');
+            popoverEl.remove();
+            popoverEl = null;
+          }
+
+          if (inheritedScope) {
+            inheritedScope.$destroy();
+            inheritedScope = null;
+          }
+        }
 
         /**
          * Toggles the visibility of the popover. Used as an event callback.
          * @param {object} $event
          */
-        function toggle($event) {
+        function toggle ($event) {
           $event.stopPropagation();
 
           if (scope.open) {
             hide();
           } else {
-            el.css('display', 'block');
-            if (scope.placement)
-              recalculate();
-            scope.open = true;
-            wrappedWindow.on('click', applyAndHide);
+            createPopover();
+            wrappedWindow.on('click', digestAndHide);
           }
         }
 
-        function applyAndHide() { scope.$apply(hide); }
+        function digestAndHide () {
+          hide();
+          scope.$digest();
+        }
 
         /**
-         * Hides the popover and unbinds the window click listener.
+         * destroys the popover and unbinds the window click listener.
          */
-        function hide() {
+        function hide () {
           scope.open = false;
 
-          //@TODO: Use $animation in 1.2.
-          $timeout(function () { el.css('display', 'none'); }, 400);
+          $timeout(destroyPopover, 500);
 
-          wrappedWindow.off('click', applyAndHide);
+          wrappedWindow.off('click', digestAndHide);
         }
 
         /**
          * Figures out the placement of the popover and applies it to the element's style.
          */
         function recalculate () {
-          el.css('min-width', '');
-          el.css(position.position(scope.placement, positioner));
+          if (!popoverEl)
+            return;
+
+          popoverEl.css('min-width', '');
+          popoverEl.css(position.position(scope.placement, positioner));
         }
       }
     };

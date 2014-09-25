@@ -19,43 +19,38 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
-(function () {
+angular.module('charts')
+.directive('usagePicker', [function usagePicker () {
   'use strict';
 
-  angular.module('charts')
-  .directive('usagePicker', [usagePicker]);
+  return {
+    restrict: 'E',
+    replace: true,
+    templateUrl: 'common/charts/assets/html/usage-picker.html',
+    scope: {
+      onUpdate: '&'
+    },
+    controller: ['$scope', function controller ($scope) {
+      $scope.usage = {
+        percentage: 0,
+        /**
+         * Sets up an on submit handler for the form
+         * and recalculates the popover layout when the transcluded scope changes.
+         * @param {object} actions An object of actions that can be performed on the popover
+         */
+        work: function work (actions) {
+          this.onSubmit = function onSubmit () {
+            $scope.onUpdate({percentage: this.percentage});
 
-  function usagePicker() {
-    return {
-      restrict: 'E',
-      replace: true,
-      templateUrl: 'common/charts/assets/html/usage-picker.html',
-      scope: {
-        onUpdate: '&'
-      },
-      link: function (scope) {
-        scope.usage = {
-          percentage: 0,
-          /**
-           * Sets up an on submit handler for the form
-           * and recalculates the popover layout when the transcluded scope changes.
-           * @param {object} actions An object of actions that can be performed on the popover
-           */
-          work: function(actions) {
-            this.onSubmit = function () {
-              scope.onUpdate({percentage: this.percentage});
+            this.currentPercentage = this.percentage;
 
-              this.currentPercentage = this.percentage;
+            actions.hide();
+          };
+        }
+      };
 
-              actions.hide();
-            };
-          }
-        };
-
-        scope.usage.currentPercentage = scope.usage.percentage;
-      }
-    };
-  }
-}());
+      $scope.usage.currentPercentage = $scope.usage.percentage;
+    }]
+  };
+}]);
 

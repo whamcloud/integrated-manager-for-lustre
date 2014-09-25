@@ -38,7 +38,7 @@
   .constant('DURATIONS', DURATIONS)
   .directive('durationPicker', ['DURATIONS', durationPicker]);
 
-  function durationPicker(DURATIONS) {
+  function durationPicker (DURATIONS) {
     return {
       restrict: 'E',
       replace: true,
@@ -48,11 +48,10 @@
         startUnit: '@',
         startSize: '@'
       },
-      link: function (scope) {
-
-        scope.duration = {
-          unit: scope.startUnit || DURATIONS.MINUTES,
-          size: parseInt(scope.startSize, 10) || 1,
+      controller: ['$scope', function controller ($scope) {
+        $scope.duration = {
+          unit: $scope.startUnit || DURATIONS.MINUTES,
+          size: parseInt($scope.startSize, 10) || 1,
           units: [
             {unit: DURATIONS.MINUTES, count: 60},
             {unit: DURATIONS.HOURS, count: 24},
@@ -64,7 +63,7 @@
            * @param {string} unit
            * @returns {number|undefined} The count or undefined if a match was not found.
            */
-          getCount: function getCount(unit) {
+          getCount: function getCount (unit) {
             var item = this.units.filter(function (item) {
               return item.unit === unit;
             }).pop();
@@ -75,7 +74,7 @@
            * Sets the unit to the passed in value. Also resets size to 1;
            * @param {string} unit
            */
-          setUnit: function setUnit(unit) {
+          setUnit: function setUnit (unit) {
             this.unit = unit;
             this.size = 1;
           },
@@ -84,9 +83,9 @@
            * and recalculates the popover layout when the transcluded scope changes.
            * @param {object} actions An object of actions that can be performed on the popover
            */
-          work: function(actions) {
-            this.onSubmit = function () {
-              scope.onUpdate({unit: this.unit, size: this.size});
+          work: function work (actions) {
+            this.onSubmit = function onSubmit () {
+              $scope.onUpdate({unit: this.unit, size: this.size});
 
               this.currentUnit = this.unit;
               this.currentSize = this.size;
@@ -99,14 +98,14 @@
            * @param {string} duration
            * @returns {string} The singular duration.
            */
-          singular: function singular(duration) {
+          singular: function singular (duration) {
             return duration.replace(singularRegexp, '');
           }
         };
 
-        scope.duration.currentUnit = scope.duration.unit;
-        scope.duration.currentSize = scope.duration.size;
-      }
+        $scope.duration.currentUnit = $scope.duration.unit;
+        $scope.duration.currentSize = $scope.duration.size;
+      }]
     };
   }
 }());

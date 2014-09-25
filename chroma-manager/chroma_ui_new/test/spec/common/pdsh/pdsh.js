@@ -1,9 +1,9 @@
 describe('PDSH directive', function () {
   'use strict';
 
-  var $scope, element, inputField, groupAddOn, help, node, throttleParseExpression;
+  var $scope, $timeout, element, inputField, groupAddOn, help, node, throttleParseExpression;
 
-  beforeEach(module('pdsh-module', 'templates', function initialize ($provide) {
+  beforeEach(module('pdsh-module', 'templates', 'ui.bootstrap', function initialize ($provide) {
     help = {
       get: jasmine.createSpy('get').andReturn('Enter hostname / hostlist expression.')
     };
@@ -17,7 +17,9 @@ describe('PDSH directive', function () {
 
   describe('General operation', function () {
 
-    beforeEach(inject(function ($templateCache, $rootScope, $compile) {
+    beforeEach(inject(function ($templateCache, $rootScope, $compile, _$timeout_) {
+      $timeout = _$timeout_;
+
       // Create an instance of the element
       element = angular.element($templateCache.get('pdsh.html'));
 
@@ -43,8 +45,8 @@ describe('PDSH directive', function () {
         $scope.$digest();
 
         groupAddOn.click();
-
-        hostnames = _.reduce(element.find('#hostnamesPopover li'),
+        $timeout.flush();
+        hostnames = _.reduce(element.find('.popover li'),
           function convertHostnamesToString (prev, next) {
             var separator = (prev === '') ? '' : ',';
             return prev + separator + next.innerHTML;
@@ -60,7 +62,7 @@ describe('PDSH directive', function () {
       });
 
       it('should display the popover', function () {
-        expect(element.find('#hostnamesPopover')).toBeShown();
+        expect(element.find('.popover')).toBeShown();
       });
 
       it('should contain the hostnames in the popover', function () {
@@ -85,10 +87,11 @@ describe('PDSH directive', function () {
         $scope.$digest();
 
         groupAddOn.click();
+        $timeout.flush();
       });
 
       it('should not display the popover', function () {
-        expect(element.find('#hostnamesPopover')).toBeHidden();
+        expect(element.find('.popover')).toBeHidden();
       });
 
       it('should show the error tooltip', function () {
@@ -102,10 +105,11 @@ describe('PDSH directive', function () {
         inputField.val('');
         inputField.trigger('change');
         groupAddOn.click();
+        $timeout.flush();
       });
 
       it('should not display the popover', function () {
-        expect(element.find('#hostnamesPopover')).toBeHidden();
+        expect(element.find('.popover')).toBeHidden();
       });
 
       it('should show the error tooltip', function () {

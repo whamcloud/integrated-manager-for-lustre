@@ -3,7 +3,7 @@
        tooltip-placement="top">
     <i class="fa fa-list-ul"></i>
   </div>
-  <iml-popover class="bottom" id="hostnamesPopover" title="Hosts" ng-if="pdsh.hostnameSections.length > 0">
+  <iml-popover placement="bottom" title="Hosts" ng-if="pdsh.hostnameSections.length > 0">
     <ul class="well">
       <li bindonce ng-repeat="hostname in pdsh.hostnameSections"><span bo-text="hostname"></span></li>
     </ul>

@@ -17,7 +17,7 @@
   </form>
   <div class="status-cell-container" ng-repeat="status in serverStatus.status | pdsh:serverStatus.hostnames:serverStatus.getHostPath track by status.address">
     <div ng-class="{invalid: status.invalid, valid: !status.invalid}" tooltip="Address: {{ status.address }}" class="status-cell activate-popover"></div>
-    <iml-popover class="bottom" title="Status for {{ status.address }}" placement="bottom">
+    <iml-popover title="Status for {{ status.address }}" placement="bottom">
       <ul class="well">
         <li ng-repeat="(key, value) in status.fields">
           <i ng-class="{ 'fa-times-circle': !value, 'fa-check-circle': value }" class="fa"></i> {{ key }}

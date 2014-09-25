@@ -26,7 +26,7 @@
     </form>
     <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnames:selectServerProfile.getHostPath track by item.host">
       <div ng-class="{invalid: !item.valid, valid: item.valid }" tooltip="Address: {{item.address}}" class="status-cell activate-popover"></div>
-      <iml-popover class="bottom" title="Status for {{ item.address }}" placement="bottom">
+      <iml-popover title="Status for {{ item.address }}" placement="bottom">
         <div ng-if="item.valid">
           <i class="fa fa-check-circle"></i> No issues
         </div>
