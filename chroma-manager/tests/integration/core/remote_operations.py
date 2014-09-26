@@ -370,8 +370,9 @@ class RealRemoteOperations(RemoteOperations):
 
         self._test_case.wait_until_true(lambda: len(self.get_pacemaker_targets(server, running = True)) < 1)
 
-        open(backup, "w").write(self._ssh_fqdn(server['fqdn'],
-                                               "cibadmin --query").stdout.read())
+        with open(backup, "w") as f:
+            f.write(self._ssh_fqdn(server['fqdn'],
+                    "cibadmin --query").stdout.read())
 
         return running_targets
 
