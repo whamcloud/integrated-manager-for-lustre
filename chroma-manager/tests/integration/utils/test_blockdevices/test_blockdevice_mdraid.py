@@ -19,36 +19,35 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-import re
-
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 
 
-class TestBlockDeviceZfs(TestBlockDevice):
-    _supported_device_types = ['zfs']
+class TestBlockDeviceMdRaid(TestBlockDevice):
+    _supported_device_types = ['mdraid']
 
     def __init__(self, device_type, device_path):
-        super(TestBlockDeviceZfs, self).__init__(device_type, device_path)
+        super(TestBlockDeviceMdRaid, self).__init__(device_type, device_path)
 
     @property
     def preferred_fstype(self):
-        return 'zfs'
+        return 'ldiskfs'
 
-    # Create a zpool on the device.
+    # Create a mdraid on the device.
     @property
     def prepare_device_commands(self):
-        return ["zpool create -f %s %s" % (self.device_path, self._device_path)]
+        return ["mdadm --zero-superblock %s" % self._device_path,
+                "yes | mdadm --create %s --level=1 --raid-disks=2 missing %s" % (self.device_path, self._device_path)]
 
     @property
     def device_path(self):
-        return "zfs_pool_%s" % "".join([c for c in self._device_path if re.match(r'\w', c)])
+        return "/dev/md/%s" % self._device_path[-24:]
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if zpool list %s; then zpool destroy %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
-                                                                              TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths] + \
-               ["yum remove -y zfs spl"]
+        return ["if [ -e %s ]; then mdadm --stop %s && mdadm --zero-superblock %s; fi" % (TestBlockDeviceMdRaid('mdraid', device_path).device_path,
+                                                                                          TestBlockDeviceMdRaid('mdraid', device_path).device_path,
+                                                                                          device_path) for device_path in device_paths]
 
     @property
     def install_packages_commands(self):
-        return ["yum install -y zfs"]
+        return ["yum install -y mdadm"]

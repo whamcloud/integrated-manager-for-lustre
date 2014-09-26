@@ -9,16 +9,13 @@ from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
 class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
-    def tearDown(self):
-        super(TestFilesystemDetection, self).tearDown()
+    def setUp(self):
+        super(TestFilesystemDetection, self).setUp()
 
-        # Double extra check the clients are left unmounted, leave it how we found it.
+        # Ensure the clients are unmounted.
         self.remote_operations.unmount_clients()
 
     def _detect_filesystem(self):
-        # All clients unmounted at the start
-        self.remote_operations.unmount_clients()
-
         if self.get_list('/api/target/') == []:
             # Attempt to ensure all the targets are mounted for the filesystem.
             for host in config['lustre_servers']:
@@ -86,7 +83,8 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
 
         return response.json['objects']
 
-    # HYD-3576 and HYD-3577
+    # HYD-3576 is a problem with zfs stats, this routine allows us to check if any of the targets are zfs
+    # and returns true if so.
     @property
     def _if_any_zfs(self):
         return any(server['device_type'] == 'zfs' for server in config['lustre_servers'])

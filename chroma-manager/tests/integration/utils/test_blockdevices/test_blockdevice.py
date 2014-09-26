@@ -56,21 +56,25 @@ class TestBlockDevice(object):
 
     @property
     def device_path(self):
-        raise Exception.Unimplemented("Unimplemented property - device_path in class %s" % type(self))
+        return self._device_path
 
     @classmethod
-    def clear_device_commands(cls):
+    def clear_device_commands(cls, device_paths):
+        return []
+
+    @property
+    def prepare_device_commands(self):
         return []
 
     @classmethod
-    def all_clear_device_commands(cls):
+    def all_clear_device_commands(cls, device_paths):
         commands = []
 
         for klass in TestBlockDevice.__subclasses__():
-            if klass.clear_device_commands != cls.clear_device_commands:    # Don't call ourselves.
-                commands = commands + klass.clear_device_commands()
+            commands = commands + klass.clear_device_commands(device_paths)
 
         return commands
 
-    def install_packages_commands(cls):
+    @property
+    def install_packages_commands(self):
         return []

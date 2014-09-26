@@ -32,11 +32,3 @@ class TestBlockDeviceLinux(TestBlockDevice):
     @property
     def preferred_fstype(self):
         return 'ldiskfs'
-
-    # Nothing to do to prepare a linux device.
-    def prepare_device(self):
-        return ""
-
-    @property
-    def device_path(self):
-        return self._device_path

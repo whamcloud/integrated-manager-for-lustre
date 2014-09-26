@@ -41,8 +41,9 @@ class TestFileSystemZfs(TestFileSystem):
                                                                          "--mgsnode=%s@tcp0" % mgs_ip if mgs_ip else "",
                                                                          self.mount_path)
 
+    @property
     def install_packages_commands(cls):
-        return ["yum install --enablerepo=lustre -y lustre-osd-zfs"]
+        return ["yum install -y lustre-osd-zfs"]
 
     @property
     def mount_path(self):

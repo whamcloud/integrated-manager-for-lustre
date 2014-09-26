@@ -20,12 +20,12 @@ ssh root@$TEST_RUNNER <<EOF
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy
 
-# When create_lustre_filesystem.py runs it will save the modified config file to LUSTRE_FILESYSTEM_CONFIGFILE
-export LUSTRE_FILESYSTEM_CONFIGFILE=/root/cluster_cfg_result.json
+# When create_lustre_filesystem.py runs it will save the modified config file to a file of the same name and location as the source file so
+# in the case below because the configuration file is /root/cluster_cfg.json it will save the result to /root/cluster_cfg_updated_configuration.json
 ./tests/integration/run_tests -f -c /root/cluster_cfg.json tests/integration/existing_filesystem_configuration/utils/create_lustre_filesystem.py
 EOF
 
-# Fetch the modified config file back from the test runnner and overwrite the original.
-scp root@$TEST_RUNNER:/root/cluster_cfg_result.json $CLUSTER_CONFIG
+# Fetch the modified config file back from the test runner and overwrite the original.
+scp root@$TEST_RUNNER:/root/cluster_cfg_updated_configuration.json $CLUSTER_CONFIG
 
 echo "End filesystem setup."

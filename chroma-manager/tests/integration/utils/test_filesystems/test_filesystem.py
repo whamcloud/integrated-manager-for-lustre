@@ -53,5 +53,6 @@ class TestFileSystem(object):
     def mount_path(self):
         raise Exception.Unimplemented("Unimplemented property - mount_path in class %s" % type(self))
 
+    @property
     def install_packages_commands(cls):
         return []

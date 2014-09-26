@@ -24,31 +24,41 @@ import re
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 
 
-class TestBlockDeviceZfs(TestBlockDevice):
-    _supported_device_types = ['zfs']
+class TestBlockDeviceLvm(TestBlockDevice):
+    _supported_device_types = ['lvm']
 
     def __init__(self, device_type, device_path):
-        super(TestBlockDeviceZfs, self).__init__(device_type, device_path)
+        super(TestBlockDeviceLvm, self).__init__(device_type, device_path)
 
     @property
     def preferred_fstype(self):
-        return 'zfs'
+        return 'ldiskfs'
 
-    # Create a zpool on the device.
+    # Create a lvm on the device.
     @property
     def prepare_device_commands(self):
-        return ["zpool create -f %s %s" % (self.device_path, self._device_path)]
+        return ["vgcreate %s %s; lvcreate -l 100%%FREE --name %s %s" % (self.vg_name,
+                                                                        self._device_path,
+                                                                        self.lv_name,
+                                                                        self.vg_name)]
+
+    @property
+    def vg_name(self):
+        return "vg_%s" % "".join([c for c in self._device_path if re.match(r'\w', c)])
+
+    @property
+    def lv_name(self):
+        return "lv_%s" % "".join([c for c in self._device_path if re.match(r'\w', c)])
 
     @property
     def device_path(self):
-        return "zfs_pool_%s" % "".join([c for c in self._device_path if re.match(r'\w', c)])
+        return "/dev/%s/%s" % (self.vg_name, self.lv_name)
 
     @classmethod
     def clear_device_commands(cls, device_paths):
-        return ["if zpool list %s; then zpool destroy %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
-                                                                              TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths] + \
-               ["yum remove -y zfs spl"]
+        return ["if vgdisplay %s; then vgremove -f %s; else exit 0; fi" % (TestBlockDeviceLvm('lvm', device_path).vg_name,
+                                                                           TestBlockDeviceLvm('lvm', device_path).vg_name) for device_path in device_paths]
 
     @property
     def install_packages_commands(self):
-        return ["yum install -y zfs"]
+        return []

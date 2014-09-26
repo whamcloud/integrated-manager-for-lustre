@@ -22,3 +22,5 @@
 
 import test_blockdevice_linux
 import test_blockdevice_zfs
+import test_blockdevice_lvm
+import test_blockdevice_mdraid
