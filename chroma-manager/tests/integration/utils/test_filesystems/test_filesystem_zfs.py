@@ -42,7 +42,7 @@ class TestFileSystemZfs(TestFileSystem):
                                                                          self.mount_path)
 
     def install_packages_commands(cls):
-        return ["yum install -y lustre-osd-zfs"]
+        return ["yum install --enablerepo=lustre -y lustre-osd-zfs"]
 
     @property
     def mount_path(self):
