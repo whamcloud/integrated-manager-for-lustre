@@ -176,10 +176,14 @@ describe('select server profile', function () {
     });
 
     describe('pdsh update', function () {
-      var pdsh, hostnames;
+      var pdsh, hostnames, hostnamesHash;
       beforeEach(function () {
         pdsh = 'test[001-002].localdomain';
         hostnames = ['test001.localdomain', 'test002.localdomain'];
+        hostnamesHash = {
+          'test001.localdomain': 1,
+          'test002.localdomain': 1
+        };
       });
 
       describe('without hostnames', function () {
@@ -198,7 +202,7 @@ describe('select server profile', function () {
 
       describe('with hostnames', function () {
         beforeEach(function () {
-          $scope.selectServerProfile.pdshUpdate(pdsh, hostnames);
+          $scope.selectServerProfile.pdshUpdate(pdsh, hostnames, hostnamesHash);
         });
 
         it('should contain the pdsh expression', function () {
@@ -207,6 +211,10 @@ describe('select server profile', function () {
 
         it('should have the hostnames', function () {
           expect($scope.selectServerProfile.hostnames).toEqual(hostnames);
+        });
+
+        it('should have the hostnamesHash', function () {
+          expect($scope.selectServerProfile.hostnamesHash).toEqual(hostnamesHash);
         });
       });
     });

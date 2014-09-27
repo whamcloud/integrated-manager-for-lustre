@@ -38,6 +38,7 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
         currentPage: 1,
         pdshFuzzy: false,
         hostnames: [],
+        hostnamesHash: {},
         servers: {
           objects: []
         },
@@ -71,8 +72,7 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
          * @returns {Array}
          */
         getFilteredHosts: function getFilteredHosts () {
-          var filtered = pdshFilter(this.servers.objects, this.hostnames,
-            this.getHostPath, this.pdshFuzzy);
+          var filtered = pdshFilter(this.servers.objects, this.hostnamesHash, this.getHostPath, this.pdshFuzzy);
 
           return naturalSortFilter(filtered, this.getHostPath, this.reverse);
         },
@@ -94,9 +94,10 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
          * Called when the pdsh expression is updated.
          * @param {String} expression pdsh expression
          */
-        pdshUpdate: function pdshUpdate (expression, hostnames) {
+        pdshUpdate: function pdshUpdate (expression, hostnames, hostnamesHash) {
           if (hostnames != null) {
             this.hostnames = hostnames;
+            this.hostnamesHash = hostnamesHash;
             this.currentPage = 1;
           }
         },

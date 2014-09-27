@@ -33,10 +33,18 @@ describe('Server Status Step', function () {
       expect(serverStatus.getHostPath({ address: 'foo' })).toEqual('foo');
     });
 
-    it('should set hostnames', function () {
-      serverStatus.pdshUpdate('foo,bar', ['foo', 'bar']);
+    describe('hostnames and has', function () {
+      beforeEach(function () {
+        serverStatus.pdshUpdate('foo,bar', ['foo', 'bar'], {'foo': 1, 'bar': 1});
+      });
 
-      expect(serverStatus.hostnames).toEqual(['foo', 'bar']);
+      it('should set hostnames', function () {
+        expect(serverStatus.hostnames).toEqual(['foo', 'bar']);
+      });
+
+      it('should set hostnamesHash', function () {
+        expect(serverStatus.hostnamesHash).toEqual({foo: 1, bar: 1});
+      });
     });
 
     describe('transitioning', function () {

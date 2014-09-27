@@ -33,6 +33,7 @@
    * @returns {Object}
    */
   function pdsh (pdshParser, help) {
+
     return {
       scope: {
         pdshChange: '&',
@@ -53,7 +54,11 @@
         var parsedState = states.NEUTRAL;
         var errorMessages = [];
         var hostnames = [];
+        var hostnamesHash = {};
+        var hostnameSections = [];
         var parsedExpression;
+        var pdshExpression = '';
+        var throttleParseExpression = _.throttle(parseExpressionForValidityWrapper, 500);
 
         if (!scope.pdshInitial)
           scope.pdshInitial = '';
@@ -61,22 +66,45 @@
           scope.pdshPlaceholder = help.get('pdsh_placeholder');
 
         /**
-         * Sets the validity of the directive based on the pdsh expression being passed in.
-         * @param {String} value
-         * @returns {String|undefined}
+         * A wrapper to call parseExpressionForValidity with the current pdshExpression. This is used by _.throttle.
          */
-        function updateModelAndValidity (value) {
+        function parseExpressionForValidityWrapper() {
+          parseExpressionForValidity(pdshExpression);
+        }
+
+        /**
+         * Parses the expression to determine if the expression is valid. The value is set on the form.
+         * @param {String} value
+         */
+        function parseExpressionForValidity (value) {
           scope.pdsh.parseExpression(value);
 
           var validity = (_.isEmpty(value) || parsedState === states.SUCCESS ? true : false);
 
           ctrl.pdsh.$setValidity('pdsh', validity);
+        }
+
+        /**
+         * Sets the validity of the directive based on the pdsh expression being passed in.
+         * @param {String} value
+         * @returns {String|undefined}
+         */
+        function updateModelAndValidity (value) {
+          pdshExpression = value;
+
+          // delay by 500 milliseconds before parsing. This will make the user experience better.
+          throttleParseExpression();
 
           return value;
         }
 
         var fired = false;
 
+        /**
+         * Triggers the inital change.
+         * @param {String} value
+         * @returns {String}
+         */
         function triggerInitialChange (value) {
           if (!fired && scope.pdshInitial) {
             fired = true;
@@ -102,23 +130,31 @@
             if ('errors' in parsedExpression && pdshExpression.length > 0) {
               parsedState = states.ERROR;
               hostnames = [];
+              hostnamesHash = {};
+              hostnameSections = [];
               errorMessages = parsedExpression.errors;
             } else if (pdshExpression.length > 0) {
               parsedState = states.SUCCESS;
               hostnames = parsedExpression.expansion;
+              hostnamesHash = parsedExpression.expansionHash;
+              hostnameSections = parsedExpression.sections;
             } else {
               parsedState = states.NEUTRAL;
               hostnames = [];
+              hostnamesHash = {};
+              hostnameSections = [];
             }
+
+            scope.pdsh.sendChange();
           },
           sendChange: function sendChange () {
-            scope.pdshChange({pdsh: scope.pdsh.expression, hostnames: hostnames});
+            scope.pdshChange({pdsh: scope.pdsh.expression, hostnames: hostnames, hostnamesHash: hostnamesHash});
           },
           /**
            * Returns the error messages regarding the validity of the expression.
            * @returns {string}
            */
-          getErrorMessages: function getErrorMessages () {
+          get errorMessages () {
             if (scope.pdshRequired && _.isEmpty(scope.pdsh.expression))
               errorMessages.push('Expression required.');
 
@@ -130,8 +166,14 @@
            * Returns the host names expanded by the expression.
            * @returns {Array}
            */
-          getHostnames: function getHostnames () {
+          get hostnames () {
             return hostnames;
+          },
+          /**
+           * Returns the section of hostnames
+           */
+          get hostnameSections () {
+            return hostnameSections;
           },
           pdshForm: ctrl,
           pdshPlaceholder: scope.pdshPlaceholder

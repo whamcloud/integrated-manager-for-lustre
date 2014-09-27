@@ -44,12 +44,15 @@
            * Called on pdsh view change.
            * @param {String} pdsh
            * @param {Array} hostnames
+           * @param {Object} hostnamesHash
            */
-          pdshUpdate: function pdshUpdate (pdsh, hostnames) {
+          pdshUpdate: function pdshUpdate (pdsh, hostnames, hostnamesHash) {
             $scope.addServer.fields.pdsh = pdsh;
 
-            if (hostnames != null)
+            if (hostnames != null) {
               $scope.addServer.fields.address = hostnames;
+              $scope.addServer.fields.addressHash = hostnamesHash;
+            }
           },
           /**
            * Call the transition.

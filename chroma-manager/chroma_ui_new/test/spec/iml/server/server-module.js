@@ -102,12 +102,22 @@ describe('Server module', function() {
   });
 
   describe('test table functionality', function () {
-    it('should return an expanded pdsh expression when the expression is updated', function () {
-      server.currentPage = 5;
-      pdshParser.andReturn({expansion: ['expression1']});
-      server.pdshUpdate('expression', ['expression']);
-      expect(server.hostnames).toEqual(['expression']);
-      expect(server.currentPage).toEqual(1);
+    describe('updating the expression', function () {
+      beforeEach(function () {
+        server.currentPage = 5;
+        pdshParser.andReturn({expansion: ['expression1']});
+        server.pdshUpdate('expression', ['expression'], {expression: 1});
+      });
+
+      it('should have populated hostnames', function () {
+        expect(server.hostnames).toEqual(['expression']);
+      });
+      it('should set the current page to 1', function () {
+        expect(server.currentPage).toEqual(1);
+      });
+      it('should have populated the hostname hash', function () {
+        expect(server.hostnamesHash).toEqual({expression: 1});
+      });
     });
 
     it('should return the host name from getHostPath', function () {
@@ -135,16 +145,26 @@ describe('Server module', function() {
       expect(server.getSortClass()).toEqual('fa-sort-desc');
     });
 
-    it('should retrieve only the filtered items when calling getTotalItems', function () {
-      server.hostnames = [
-        'hostname1'
-      ];
+    describe('calling getTotalItems', function () {
+      var result;
+      beforeEach(function () {
+        server.hostnamesHash = {
+          hostname1: 1
+        };
+        server.hostnames = ['hostname1'];
 
-      pdshFilter.andReturn(['hostname1']);
-      var result = server.getTotalItems();
+        pdshFilter.andReturn(['hostname1']);
+        result = server.getTotalItems();
+      });
 
-      expect(result).toEqual(1);
-      expect(pdshFilter).toHaveBeenCalledWith(server.servers.objects, server.hostnames, server.getHostPath, false);
+      it('should have one item in the result', function () {
+        expect(result).toEqual(1);
+      });
+
+      it('should call the pdsh filter with appropriate args', function () {
+        expect(pdshFilter).toHaveBeenCalledWith(server.servers.objects, server.hostnamesHash, server.getHostPath,
+          false);
+      });
     });
 
     it('should set table editable', function () {

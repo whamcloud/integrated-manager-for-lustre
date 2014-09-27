@@ -40,9 +40,11 @@
            * @param {String} pdsh
            * @param {Array} hostnames
            */
-          pdshUpdate: function pdshUpdate (pdsh, hostnames) {
-            if (hostnames)
+          pdshUpdate: function pdshUpdate (pdsh, hostnames, hostnamesHash) {
+            if (hostnames) {
               $scope.serverStatus.hostnames = hostnames;
+              $scope.serverStatus.hostnamesHash = hostnamesHash;
+            }
           },
           /**
            * tells manager to perform a transition.

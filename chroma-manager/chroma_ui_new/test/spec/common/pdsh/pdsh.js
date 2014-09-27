@@ -1,12 +1,16 @@
 describe('PDSH directive', function () {
   'use strict';
 
-  var $scope, element, inputField, groupAddOn, help, node;
+  var $scope, element, inputField, groupAddOn, help, node, throttleParseExpression;
 
   beforeEach(module('pdsh-module', 'templates', function initialize ($provide) {
     help = {
       get: jasmine.createSpy('get').andReturn('Enter hostname / hostlist expression.')
     };
+
+    throttleParseExpression = jasmine.createSpy('throttleExpression');
+
+    _.throttle = jasmine.createSpy('throttle').andReturn(throttleParseExpression);
 
     $provide.value('help', help);
   }));
@@ -34,7 +38,12 @@ describe('PDSH directive', function () {
       beforeEach(function () {
         inputField.val('hostname[1-3]');
         inputField.trigger('change');
+
+        $scope.$$childHead.pdsh.parseExpression('hostname[1-3]');
+        $scope.$digest();
+
         groupAddOn.click();
+
         hostnames = _.reduce(element.find('#hostnamesPopover li'),
           function convertHostnamesToString (prev, next) {
             var separator = (prev === '') ? '' : ',';
@@ -42,12 +51,20 @@ describe('PDSH directive', function () {
           }, '');
       });
 
+      it('should call _.throttle', function () {
+        expect(_.throttle).toHaveBeenCalledWith(jasmine.any(Function), 500);
+      });
+
+      it('should call throttleParseExpression', function () {
+        expect(throttleParseExpression).toHaveBeenCalled();
+      });
+
       it('should display the popover', function () {
         expect(element.find('#hostnamesPopover')).toBeShown();
       });
 
       it('should contain the hostnames in the popover', function () {
-        expect(hostnames).toEqual('hostname1,hostname2,hostname3');
+        expect(hostnames).toEqual('<span bo-text="hostname"></span>');
       });
 
       it('should not show the error tooltip', function () {
@@ -64,6 +81,9 @@ describe('PDSH directive', function () {
       beforeEach(function () {
         inputField.val('hostname[1-]');
         inputField.trigger('change');
+        $scope.$$childHead.pdsh.parseExpression('hostname[1-]');
+        $scope.$digest();
+
         groupAddOn.click();
       });
 
@@ -129,6 +149,8 @@ describe('PDSH directive', function () {
 
       // Update the html
       $scope.$digest();
+
+      $scope.$$childHead.pdsh.parseExpression(initialValue);
 
       inputField = element.find('.form-control');
     }));

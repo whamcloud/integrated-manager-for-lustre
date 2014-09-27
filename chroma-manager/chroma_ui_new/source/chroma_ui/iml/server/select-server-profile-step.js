@@ -65,11 +65,13 @@
            * @param {String} pdsh
            * @param {Array|undefined} hostnames
            */
-          pdshUpdate: function pdshUpdate (pdsh, hostnames) {
+          pdshUpdate: function pdshUpdate (pdsh, hostnames, hostnamesHash) {
             $scope.selectServerProfile.pdsh = pdsh;
 
-            if (hostnames)
+            if (hostnames) {
               $scope.selectServerProfile.hostnames = hostnames;
+              $scope.selectServerProfile.hostnamesHash = hostnamesHash;
+            }
           }
         };
 

@@ -12,7 +12,7 @@
            tooltip="Enter a hostname / hostlist expression to filter servers."
            tooltip-placement="right"></i>
       </div>
-      <pdsh pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames)"></pdsh>
+      <pdsh pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
     </div>
   </form>
   <div class="status-cell-container" ng-repeat="status in serverStatus.status | pdsh:serverStatus.hostnames:serverStatus.getHostPath track by status.address">

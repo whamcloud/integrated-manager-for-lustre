@@ -22,7 +22,7 @@
 angular.module('filters').filter('naturalSort', [function naturalSort () {
   'use strict';
 
-  var re = /\d+/g;
+  var re = /([a-zA-Z]+)|([0-9]+)/g;
   var getStringToSort;
 
   /**
@@ -125,25 +125,13 @@ angular.module('filters').filter('naturalSort', [function naturalSort () {
     if (typeof val === 'number')
       return [val];
 
-    var tempString = val;
+    var m;
     var components = [];
-    var result;
-    while ((result = re.exec(tempString)) != null) {
-      if (result.index === re.lastIndex) {
+    while ((m = re.exec(val)) != null) {
+      if (m.index === re.lastIndex)
         re.lastIndex += 1;
-      }
 
-      if (result.index > 0) {
-        var substring = tempString.substring(0, result.index);
-        tempString = tempString.replace(substring, '');
-        components.push(substring);
-      }
-      tempString = tempString.replace(result[0], '');
-      components.push(+result[0]);
-    }
-
-    if (tempString.length > 0) {
-      components.push(tempString);
+      components.push(isNaN(m[0]) ? m[0] : +m[0]);
     }
 
     return components;

@@ -23,10 +23,12 @@
 (function () {
   'use strict';
 
-  angular.module('pdsh-parser-module', ['comparators'])
-    .factory('pdshParser', ['comparators', function pdshParser (comparators) {
+  angular.module('pdsh-parser-module', ['comparators', 'filters'])
+    .factory('pdshParser', ['comparators', 'naturalSortFilter', function pdshParser (comparators, naturalSort) {
       var errorCollection = {errors: []};
-      var expansionCollection = {expansion: []};
+      var expansionCollection = {expansion: [], sections: [], expansionHash: {}};
+      var hostnameCache = {};
+      var duplicates = [];
       var and = comparators.and;
       var maybe = comparators.maybe;
       var memorizeVal = comparators.memorizeVal;
@@ -36,17 +38,22 @@
       var empty = comparators.empty;
       var referenceEqualTo = comparators.referenceEqualTo;
       var greaterThan = comparators.greaterThan;
+      var lessThan = comparators.lessThan;
       var validRangeRegex = /^[0-9]+(?:-[0-9]+)?$/;
+      var expressionRegex = /(\[.*?\])/g;
 
       var constants = Object.freeze({
         OPEN_BRACE: '[',
         CLOSING_BRACE: ']',
+        TOKEN_TO_REPLACE: '%s',
         RANGE_NOT_PROPER_FORMAT: 'Range is not in the proper format.',
         EXPRESSION_EMPTY: 'Expression cannot be empty.',
         EXPRESSION_INVALID: 'Expression is invalid',
         INDEX_OF: 'indexOf',
         LAST_INDEX_OF: 'lastIndexOf',
-        PREFIXES_DONT_MATCH: 'Beginning and ending prefixes don\'t match'
+        PREFIXES_DONT_MATCH: 'Beginning and ending prefixes don\'t match',
+        EXPRESSION_OVER_CAP: 'The hostlist cannot contain more than 50000 entries.',
+        CAP: 50000
       });
 
       /**
@@ -66,9 +73,11 @@
        * Initializes the service by clearning out any existing entries in the error and expansion
        * collections.
        */
-      function initialize() {
+      function initialize () {
         errorCollection = {errors: []};
-        expansionCollection = {expansion: []};
+        expansionCollection = {expansion: [], sections: [], expansionHash: {}};
+        hostnameCache = {};
+        duplicates = [];
       }
 
       /**
@@ -78,13 +87,94 @@
        * @param {Array} errorCollection
        */
       function parseExpression (expression, expansionCollection, errorCollection) {
-        if (isExpressionValid(expression)) {
-          expansionCollection.expansion = _.unique(splitExpressions(expression, isInsideBraces)
-            .map(expandExpressions)
-            .reduce(flattenArrayOfValues));
-        } else {
-          errorCollection.errors.push(constants.EXPRESSION_INVALID);
-        }
+        var isValid = isExpressionValid(expression);
+        var notAboveCap = isNotAboveCap(isValid, expression);
+
+        maybe(and(isTrue(isValid), isTrue(notAboveCap)), parseExpressionIntoGroups)
+        (expression);
+      }
+
+      /**
+       * Parses the expression into groups
+       * @param expression
+       */
+      function parseExpressionIntoGroups (expression) {
+        var expansionGroups = splitExpressions(expression, isInsideBraces)
+          .reduce(combineSimilarExpressions, [])
+          .map(expandExpressions)
+          .reduce(function reduceGroupsToExpansions (prev, curGroup) {
+            prev.expansion[curGroup.expression] = curGroup.expansion;
+            prev.sections[curGroup.expression] = curGroup.sections;
+
+            return prev;
+          }, {
+            expansion: {},
+            sections: {}
+          });
+
+        processExpandedGroups(expansionGroups);
+      }
+
+      /**
+       * Processes the expanded groups by checking for duplicates and adding to the expansion collection
+       * or error collection depending on results.
+       * @param {Array} expansionGroups
+       */
+      function processExpandedGroups (expansionGroups) {
+        // Are there any duplicates? If so, add an error indicating which item is duplicated and from
+        // which expression.
+        var expandedExpressions = _.flatten(_.values(expansionGroups.expansion));
+
+        // If a dup was found, locate which expression it came from.
+        maybe(greaterThan(duplicates.length, 0), retrieveDupExpressionsAndAddErrorMessage, updateExpansionCollection)
+        (expansionGroups, expandedExpressions, duplicates);
+      }
+
+      /**
+       * Retrieves the expressions in which duplicate items exist and adds the error message.
+       * @param {Object} expansionGroups
+       * @param {Array} expandedExpressions
+       * @param {Array} dups
+       */
+      function retrieveDupExpressionsAndAddErrorMessage (expansionGroups, expandedExpressions, dups) {
+        var dupHostname = dups[0];
+
+        var firstExpression = Object.keys(expansionGroups.expansion).reduce(
+          identifyDuplicateExpression(dupHostname, expansionGroups.expansion), '');
+
+        var secondExpression = Object.keys(expansionGroups.expansion).reduce(
+          identifyDuplicateExpression(dupHostname, expansionGroups.expansion, firstExpression), '');
+
+        addErrorObject('Expression ' + secondExpression + ' matches previous expansion of ' +
+          dupHostname + ' generated by ' + firstExpression);
+      }
+
+      /**
+       * HOF used in a reduce to identify expressions in which a duplicate entry occurred.
+       * @param {String} dupHostname
+       * @param {Object} expansionGroups
+       * @param {String} [matchingExpression]
+       * @returns {String}
+       */
+      function identifyDuplicateExpression (dupHostname, expansionGroups, matchingExpression) {
+        return function innerIdentifyDuplicateExpression (match, curExpression) {
+          if (match === '' && (matchingExpression == null || curExpression !== matchingExpression) &&
+            _.contains(expansionGroups[curExpression], dupHostname))
+            return curExpression;
+          else
+            return match;
+        };
+      }
+
+      /**
+       * Updates the expansion collection with the expanded list as well as the grouped sections.
+       * @param {Object} expansionGroups
+       * @param {Array} expandedExpressions
+       */
+      function updateExpansionCollection (expansionGroups, expandedExpressions) {
+        expansionCollection.expansion = expandedExpressions;
+        expansionCollection.sections = _.flatten(_.values(expansionGroups.sections));
+        expansionCollection.expansionHash = hostnameCache;
       }
 
       /**
@@ -97,17 +187,204 @@
         // is a closing brace.
         var openingBraces = expression.match(/\[/g) || [];
         var closingBraces = expression.match(/\]/g) || [];
-        var commaNotLastCharacter = expression.charAt(expression.length-1) !== ',';
+        var commaNotLastCharacter = expression.charAt(expression.length - 1) !== ',';
 
         var openingIndicies = getIndexArrayOfBraces(expression, '[');
-        var closingIndicies =  getIndexArrayOfBraces(expression, ']');
+        var closingIndicies = getIndexArrayOfBraces(expression, ']');
 
-        var hasValidBraceOrder = openingIndicies.reduce(function validateBraceOrder(prev, current, index) {
+        var hasValidBraceOrder = openingIndicies.reduce(function validateBraceOrder (prev, current, index) {
           return prev && current < closingIndicies[index];
         }, true);
 
-        return openingBraces.length === closingBraces.length && commaNotLastCharacter && hasValidBraceOrder;
+        var isValid = openingBraces.length === closingBraces.length && commaNotLastCharacter && hasValidBraceOrder;
+        maybe(isFalse(isValid), addErrorObject)(constants.EXPRESSION_INVALID);
+
+        return isValid;
       }
+
+      /**
+       * Indicates if the hostlist is greater than cap.
+       * @param {Boolean} isValid
+       * @param {String} expression
+       * @returns {Boolean}
+       */
+      function isNotAboveCap (isValid, expression) {
+        var notAboveCap = isValid ? getTotalEntries(expression) <= constants.CAP : false;
+        maybe(and(isTrue(isValid), isFalse(notAboveCap)), addErrorObject)(constants.EXPRESSION_OVER_CAP);
+
+        return notAboveCap;
+      }
+
+      /**
+       * Calculates the number of entries that will be produced by the expression.
+       * @param {String} expression
+       * @return {Number}
+       */
+      function getTotalEntries (expression) {
+        var ranges = [];
+        var m;
+
+        while ((m = expressionRegex.exec(expression)) != null) {
+          if (m.index === expressionRegex.lastIndex) {
+            expressionRegex.lastIndex++;
+          }
+          ranges.push(m[0]);
+        }
+
+        return ranges.map(getRangeLength)
+          .reduce(sum(returnVal), 0);
+      }
+
+      /**
+       * Examines a range and computes the total number of items for that range.
+       * @example
+       * // returns 7
+       * expandRanges('[0-4,7,9]')
+       * @param {String} rangeComponent
+       * @returns {Number}
+       */
+      function getRangeLength (rangeComponent) {
+        // Remove the beginning and ending brackets
+        var componentToParse = rangeComponent.slice(1, -1);
+        return componentToParse.split(',')
+          .reduce(sum(parseItemIntoTotalLength), 0);
+      }
+
+      /**
+       * This method is intended to used by reduce. It examines each expression to see if any of the expressions can be
+       * combined. If they can, the expression list wil be reduced into a combined list. One important note is that
+       * expressions can only be combined if they have a range difference no greater than one.
+       * @example
+       * // returns ['hostname[5-7,10-12].iml[1-2].com']
+       * ['hostname[5-7].iml.com[1-2]', 'hostname[10-12].iml[1-2].com'].reduce(combineSimilarExpressions)
+       * @example
+       * // returns ['hostname[5-7].iml[1-2].com', 'hostname[10-12].iml[2-3]']
+       * ['hostname[5-7].iml[1-2].com', 'hostname[10-12].iml[2-3]'].reduce(combineSimilarExpressions)
+       * @param prevExpressions
+       * @param curExpression
+       * @returns {*}
+       */
+      function combineSimilarExpressions (prevExpressions, curExpression) {
+        prevExpressions = maybe(isTrue(typeof prevExpressions === 'string'), wrapValueInArray,
+          returnVal)(prevExpressions);
+
+        var updatedExpressions = prevExpressions.map(compareExpressions(curExpression));
+
+        if (_.difference(updatedExpressions, prevExpressions).length === 0)
+          updatedExpressions.push(curExpression);
+
+        return updatedExpressions;
+      }
+
+      /**
+       * HOF
+       * Used by the mapping function, compares the current expression to each expression in an array. It attempts to
+       * combine like ranges if there is at MOST one corresponding range section that is different. If ranges are
+       * combined, the new mapping will reflect the combined result.
+       * @example
+       * // returns ['hostname[2,6,7,8,10].iml.com']
+       * ['hostname[2,6,7].iml.com'].map(compareExpressions('hostname[8,10].iml.com');
+       *
+       * @param {String} curExpression
+       * @returns {Function}
+       */
+      function compareExpressions (curExpression) {
+        /**
+         * @param {String} expression The current expression
+         * @returns {String} The updated expression if it can be combined; otherwise, it will return the original.
+         */
+        return function innerCompareExpressions (expression) {
+          var simplifiedPrevExpression = expression.replace(expressionRegex, constants.TOKEN_TO_REPLACE);
+          var simplifiedCurrentExpression = curExpression.replace(expressionRegex, constants.TOKEN_TO_REPLACE);
+
+          // Does the simplified expression match the current expression?
+          return maybe(isTrue(simplifiedPrevExpression === simplifiedCurrentExpression), examineAndCombineRanges,
+            returnVal)(expression, curExpression, simplifiedCurrentExpression);
+        };
+      }
+
+      /**
+       * Examines and combines the ranges together if appropriate
+       * @param {String} prevExpression The previous expression
+       * @param {String} curExpression The current expression
+       * @param {String} simplifiedCurrentExpression The hostname with the ranges replaced with %s
+       * @returns {*}
+       */
+      function examineAndCombineRanges (prevExpression, curExpression, simplifiedCurrentExpression) {
+        var prevRanges = getExpandedRangesFromRegex(prevExpression);
+        var curRanges = getExpandedRangesFromRegex(curExpression);
+
+        // In order to combine ranges, both the previous and current ranges must contain at MOST
+        // one corresponding value that is different. If there is more than one, it cannot be combined.
+        // For example:
+        // host[1,2].iml[1-3] and host[5-7].iml[1-3] can be combined to make host[1,2,5-7].iml[1-3]
+        // but the following can NOT be combined:
+        // host[1,2].iml[1-3] and host[5-7].iml[2-3]
+        return maybe(lessThan(_.difference(prevRanges.expanded, curRanges.expanded).length, 2),
+          updateExpressionBasedOnPrevAndCurrentRanges, returnVal)(prevExpression, simplifiedCurrentExpression,
+          prevRanges.ranges, curRanges.ranges);
+      }
+
+      /**
+       * Updates the expression based on the previous and current ranges.
+       * @param {String} prevExpression
+       * @param {String} simplifiedCurrentExpression
+       * @param {Array} prevRanges
+       * @param {Array} curRanges
+       * @returns {*}
+       */
+      function updateExpressionBasedOnPrevAndCurrentRanges (prevExpression, simplifiedCurrentExpression, prevRanges, curRanges) {
+        var updatedExpression = simplifiedCurrentExpression;
+
+        for (var i = 0; i < prevRanges.length; i++) {
+          var updatedExpressionFromPrevRange = _.partial(replaceTokenWithText, updatedExpression);
+          updatedExpression = maybe(not(referenceEqualTo(prevRanges[i], curRanges[i])),
+            expandExpressionUsingPrevAndCurrentRanges, updatedExpressionFromPrevRange)
+          (prevRanges[i], curRanges[i], updatedExpression);
+        }
+
+        // combine the sections into a new string
+        return updatedExpression;
+      }
+
+      /**
+       * Expands the expression using the previous and current ranges.
+       * @param {String} prevRange
+       * @param {String} curRange
+       * @param {String} updatedExpression
+       * @returns {String}
+       */
+      function expandExpressionUsingPrevAndCurrentRanges (prevRange, curRange, updatedExpression) {
+        var prevRangeNumbers = prevRange.slice(1, -1);
+        var curRangeNumbers = curRange.slice(1, -1);
+        var combinedRange = '[' + prevRangeNumbers + ',' + curRangeNumbers + ']';
+        return replaceTokenWithText(updatedExpression, combinedRange);
+      }
+
+      /**
+       * Returns the ranges and expanded ranges for the given expression
+       * @param {String} expression
+       * @returns {{ranges: Array, expandedRanges: Array}}
+       */
+      function getExpandedRangesFromRegex (expression) {
+        var m;
+        var ranges = [];
+        var expanded = [];
+
+        while ((m = expressionRegex.exec(expression)) != null) {
+          if (m.index === expressionRegex.lastIndex) {
+            expressionRegex.lastIndex += 1;
+          }
+          ranges.push(m[0]);
+          expanded.push(expandRangesAsString(m[0]));
+        }
+
+        return {
+          ranges: ranges,
+          expanded: expanded
+        };
+      }
+
 
       /**
        * Expands the expression list
@@ -124,8 +401,8 @@
        * @param {Object} expansion
        * @param {Object} errorsCollection
        */
-      function handleEmptyExpression (expression, expansion, errorsCollection) {
-        errorsCollection.errors.push(constants.EXPRESSION_EMPTY);
+      function handleEmptyExpression () {
+        addErrorObject(constants.EXPRESSION_EMPTY);
       }
 
       /**
@@ -134,7 +411,7 @@
        * //returns ['hostname6.iml.com','hostname7.iml.com']
        * expandComponents(['hostname', '[6,7]', '.iml.com'])
        * @param {Array} components
-       * @returns {Array}
+       * @returns {Object}
        */
       function expandComponents (components) {
         var ranges = [];
@@ -142,8 +419,86 @@
 
         // Expand the ranges and save them in expandedRanges
         var expandedRanges = ranges.map(expandRanges);
+        // Sort the expanded ranges
+        expandedRanges = expandedRanges.map(_.unique);
+        var rangeGroups = expandedRanges.map(findRangeInList);
 
-        return formatString(hostname, expandedRanges);
+        return {
+          expression: components.join(''),
+          expansion: formatString(hostname, expandedRanges),
+          sections: formatHostnameGroups(rangeGroups, hostname)
+        };
+      }
+
+      /**
+       * Returns an array of range group sections based on the hostname format
+       * @example
+       * // returns 'hostname6..7-9..11.iml.com
+       * formatHostnameGroups([[6,7],[9,10,11]], 'hostname%s-%s.iml.com')
+       * @param {Array} rangeGroups
+       * @param {String} hostnameFormat
+       */
+      function formatHostnameGroups (rangeGroups, hostnameFormat) {
+
+        var hostnameGroups = [];
+        var curGroup = rangeGroups.shift();
+
+        if (Array.isArray(curGroup) && curGroup.length > 0)
+          curGroup.forEach(function buildHostnameFromGroup (curRange) {
+            var rangeString = curRange[0];
+            if (curRange.length > 1)
+              rangeString += '..' + curRange[curRange.length - 1];
+
+            var updatedHostname = replaceTextWithToken(rangeString, hostnameFormat, constants.TOKEN_TO_REPLACE);
+
+            if (rangeGroups.length > 0)
+              hostnameGroups = hostnameGroups.concat(formatHostnameGroups(rangeGroups, updatedHostname));
+            else
+              hostnameGroups.push(updatedHostname);
+          });
+        else
+          hostnameGroups.push(hostnameFormat);
+
+        return hostnameGroups;
+      }
+
+      /**
+       * Receives a list of numbers in string format (due to prefixes) and returns the discovered
+       * ranges.
+       * @example
+       * // returns [[7], [9,10,11]]
+       * findRangeInList([7,9,10,11])
+       * @param {Array} list A sorted list of numbers in string format (due to prefixes)
+       * @returns {Array}
+       */
+      function findRangeInList (list) {
+        if (!Array.isArray(list) || list.length === 0)
+          return [];
+
+        // Put the first item in the range
+        var curLocation = 0;
+        var range = [list[0]];
+        var ranges = [];
+        var length = list.length;
+
+        while (curLocation < length - 1) {
+          if (+list[curLocation + 1] === +range[range.length - 1] + 1) {
+            range.push(list[curLocation + 1]);
+            curLocation += 1;
+          } else {
+            // The next item is not a range. Recursively call findRangeInList with an array
+            // starting at the next location
+            var newList = list.slice(curLocation + 1);
+            var subranges = findRangeInList(newList);
+            ranges = ranges.concat(subranges);
+
+            // Set current location to end of array
+            curLocation = list.length - 1;
+          }
+        }
+
+        ranges.unshift(range);
+        return ranges;
       }
 
       /**
@@ -160,7 +515,7 @@
         // Concat the filtered ranges onto ranges
         [].push.apply(ranges, filteredRanges);
         // replace the ranges in newVal with a token
-        var replaceTextWithTokenS = _.partial(replaceTextWithToken, '%s');
+        var replaceTextWithTokenS = _.partial(replaceTextWithToken, constants.TOKEN_TO_REPLACE);
         return filteredRanges.reduce(replaceTextWithTokenS, newVal);
       }
 
@@ -176,6 +531,16 @@
       }
 
       /**
+       * Replaces the %s in the source with the specified token.
+       * @param {String} source
+       * @param {String}token
+       * @returns {String}
+       */
+      function replaceTokenWithText (source, token) {
+        return source.replace(constants.TOKEN_TO_REPLACE, token);
+      }
+
+      /**
        * Takes a hostname and an array of ranges and then generates a list of valid host names based on the
        * array of ranges passed in.
        * @param {String} hostname (hostname%s.iml.com)
@@ -187,7 +552,7 @@
         var curArrayId = (typeof id === 'number' ? id : 0);
         var serverList = [];
 
-        maybe(greaterThan(ranges.length, 0), formatCurrentRange, addItemToArray)
+        maybe(greaterThan(ranges.length, 0), formatCurrentRange, addHostnameToServerListAndCache)
         (serverList, hostname, ranges, curArrayId);
 
         return serverList;
@@ -214,13 +579,32 @@
        * @param {String} part
        */
       function computeString (serverList, hostname, ranges, curArrayId, part) {
-        var updatedHostName = hostname.replace('%s', part);
+        var updatedHostName = replaceTokenWithText(hostname, part);
 
-        maybe(_.partial(moreRangesAvailable, ranges, curArrayId), processMoreRanges)
+        /**
+         * A predicate used to determine if more ranges should be processed or if an item needs to be added.
+         * @param {Array} ranges
+         * @param {Number} curArrayId
+         * @returns {Function}
+         */
+        function predicate (ranges, curArrayId) {
+          return function innerPredicate () {
+            return moreRangesAvailable(ranges, curArrayId);
+          };
+        }
+
+        maybe(predicate(ranges, curArrayId), processMoreRanges)
         (updatedHostName, ranges, curArrayId, serverList);
 
-        maybe(not(_.partial(moreRangesAvailable, ranges, curArrayId)), addItemToArray)
+        maybe(not(predicate(ranges, curArrayId)), addHostnameToServerListAndCache)
         (serverList, updatedHostName);
+      }
+
+      function addHostnameToServerListAndCache (serverList, hostname) {
+        addItemToArray(serverList, hostname);
+        hostnameCache[hostname] = hostnameCache[hostname] ? hostnameCache[hostname] + 1 : 1;
+
+        maybe(greaterThan(hostnameCache[hostname], 1), addDuplicate)(hostname);
       }
 
       /**
@@ -245,23 +629,92 @@
       }
 
       /**
+       * Adds a hostname to the list of duplicate items
+       * @param {String} hostname
+       */
+      function addDuplicate (hostname) {
+        duplicates.push(hostname);
+      }
+
+      /**
        * Parses a range into an array.
        * @example
-       * // returns [0, 1, 2, 3, 4, 7, 9]
-       * expandRanges('[0-4,7,9]')
+       * // returns [0, 1, 2, 3, 4, 5, 6, 7]
+       * expandRanges('[0-4,7,5-6]')
        * @param {String} rangeComponent
        * @returns {Array}
        */
       function expandRanges (rangeComponent) {
+        // Sort the range string
+        var sortedRangeComponent = sortRangeString(rangeComponent);
         // Remove the beginning and ending brackets
-        var componentToParse = rangeComponent.slice(1, -1);
-        return componentToParse.split(',')
+        return sortedRangeComponent.split(',')
           .map(parseItem)
           .reduce(flattenArrayOfValues);
       }
 
       /**
-       * Parses an item
+       * Takes in a range string and does a basic sort
+       * @example
+       * // returns '[0-4,5-6,7]'
+       * sortRangeString('[0-4,7,5-6]')
+       * @param {String} rangeComponent
+       * @returns {Array}
+       */
+      function sortRangeString (rangeComponent) {
+        var componentToParse = rangeComponent.slice(1, -1);
+        var components = componentToParse.split(',');
+
+        // return an array of min/max items
+        var minMaxComponents = components.map(function mapComponentToMinMax (component) {
+          var rangeComponents = component.split('-');
+          return {
+            min: +rangeComponents[0],
+            max: +rangeComponents[rangeComponents.length - 1],
+            prefix: getPrefix(rangeComponents[0])
+          };
+        });
+
+        minMaxComponents.sort(compare);
+
+        // reduce the sorted array back to a string
+        var sortedRangeString = minMaxComponents.reduce(function reduceMinMaxComponentsToString (prev, current) {
+          var rangeString = (current.min === current.max) ? current.prefix + current.min : current.prefix +
+            current.min + '-' + current.prefix + current.max;
+          var separator = (prev === '') ? '' : ',';
+
+          return prev + separator + rangeString;
+        }, '');
+
+        // sort on the min/max values
+        function compare (a, b) {
+          // a < b
+          if (a.max < b.min)
+            return -1;
+          if (a.min > b.max)
+            return 1;
+          return 0;
+        }
+
+        return sortedRangeString;
+      }
+
+      /**
+       * Parses a range string into a comma delimited representation of the range.
+       * @example
+       * // returns "[0,1,2,3,4,7,9]"
+       * expandRanges('[0-4,7,9]')
+       * @param {String} rangeComponent
+       */
+      function expandRangesAsString (rangeComponent) {
+        return '[' + expandRanges(rangeComponent).join(',') + ']';
+      }
+
+      /**
+       * Parses an item and returns an array representation of the items
+       * @example
+       * // returns ['09', '010', '011']
+       * parseItem('09-011')
        * @param {String} item
        * @returns {Array}
        */
@@ -274,6 +727,18 @@
         maybe(isFalse(isSanitized), _.partial(addErrorObject, constants.RANGE_NOT_PROPER_FORMAT))();
 
         return rangeValues;
+      }
+
+      /**
+       * Parses an item and returns the total length
+       * @example
+       * // returns 3
+       * parseItemIntoTotalLength('09-011')
+       * @param {String} item
+       * @returns {Number}
+       */
+      function parseItemIntoTotalLength (item) {
+        return parseItem(item).length;
       }
 
       /**
@@ -309,7 +774,8 @@
        * @param {Object} constants
        */
       function addPrefixNotEqualError (errors, constants) {
-        errors.push(constants.PREFIXES_DONT_MATCH);
+        if (!_.contains(errors, constants.PREFIXES_DONT_MATCH))
+          addErrorObject(constants.PREFIXES_DONT_MATCH);
       }
 
       /**
@@ -319,7 +785,7 @@
        * @param item
        * @returns {string}
        */
-      function getPrefix(item) {
+      function getPrefix (item) {
         // If the number is 0 (ex. '000') then simply return the item
         if (+item === 0)
           return item.substring(0, item.length - 1);
@@ -526,12 +992,25 @@
         return indicies;
       }
 
+      /**x
+       * HOF to be used as an argument to reduce. Give it a function that will be executed
+       * on each item of the array during the reduction process.
+       * @param {Function} fn
+       * @returns {Function}
+       */
+      function sum (fn) {
+        return function innerSum (prev, current) {
+          return prev + fn(current);
+        };
+      }
+
       /**
        * Adds an error message to the errors object
        * @param {String} msg
        */
       function addErrorObject (msg) {
-        errorCollection.errors.push(msg);
+        if (!_.contains(errorCollection.errors, msg))
+          errorCollection.errors.push(msg);
       }
 
       /**
@@ -542,6 +1021,15 @@
        */
       function flattenArrayOfValues (prev, current) {
         return prev.concat(current);
+      }
+
+      /**
+       * Takes multiple arrays and flattens them taking sorting into account
+       * @param prev
+       * @param current
+       */
+      function flattentArrayOfValuesSorted (prev, current) {
+
       }
 
       /**
@@ -588,6 +1076,24 @@
        */
       function range (e) {
         return e[0] === constants.OPEN_BRACE;
+      }
+
+      /**
+       * Simply returns the value that is passed in. This is used in the sum.
+       * @param {*} val
+       * @returns {*}
+       */
+      function returnVal (val) {
+        return val;
+      }
+
+      /**
+       * Wraps the value in an array and returns it.
+       * @param {*} val
+       * @returns {Array}
+       */
+      function wrapValueInArray (val) {
+        return [val];
       }
     }]);
 }());

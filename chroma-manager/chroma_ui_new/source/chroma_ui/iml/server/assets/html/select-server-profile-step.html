@@ -15,7 +15,7 @@
              tooltip="Enter a hostname / hostlist expression to filter servers."
              tooltip-placement="right"></i>
         </div>
-        <pdsh pdsh-initial="selectServerProfile.pdsh" pdsh-change="selectServerProfile.pdshUpdate(pdsh, hostnames)"></pdsh>
+        <pdsh pdsh-initial="selectServerProfile.pdsh" pdsh-change="selectServerProfile.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
       </div>
     </form>
     <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnames:selectServerProfile.getHostPath track by item.host">

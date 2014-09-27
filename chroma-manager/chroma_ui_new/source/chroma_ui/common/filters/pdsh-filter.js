@@ -25,27 +25,30 @@ angular.module('filters').filter('pdsh', [function pdsh () {
   /**
    * Given an array of objects, return a list of objects that match the list of host names.
    * @param {Array} [input]
-   * @param {Array} [hostnames]
+   * @param {Object} [hostnamesHash]
    * @param {Function} hostPath Function used to retrieve the hostName property from the object passed in
    * @param {Boolean} [fuzzy] Indicates if the filtering should be done on a fuzzy match.
    * @returns {Array}
    */
-  return function pdshExpander (input, hostnames, hostPath, fuzzy) {
+  return function pdshExpander (input, hostnamesHash, hostPath, fuzzy) {
     input = input || [];
-    hostnames = hostnames || [];
-    var filteredItems = input.filter(filterInputByHostName(hostnames, hostPath, fuzzy));
+    hostnamesHash = hostnamesHash || {};
+    var hostnames = Object.keys(hostnamesHash);
+
+    var filteredItems = input.filter(filterInputByHostName(hostnamesHash, hostnames, hostPath, fuzzy));
 
     return (hostnames.length > 0) ? filteredItems : input;
   };
 
   /**
    * Filters the input by the host name
+   * @param {Object} hostnamesHash
    * @param {Array} hostnames
    * @param {Function} hostPath
    * @param {Boolean} fuzzy
    * @returns {Function}
    */
-  function filterInputByHostName (hostnames, hostPath, fuzzy) {
+  function filterInputByHostName (hostnamesHash, hostnames, hostPath, fuzzy) {
 
     /**
      * Filters the input by the host name
@@ -53,9 +56,12 @@ angular.module('filters').filter('pdsh', [function pdsh () {
      * @returns {Boolean}
      */
     return function innerFilterInputByHostName (item) {
-      var matches = hostnames.filter(filterCurrentItemByHostNameList(hostPath(item), fuzzy));
-
-      return matches.length > 0;
+      if (fuzzy) {
+        var matches = hostnames.filter(filterCurrentItemByHostNameList(hostPath(item), fuzzy));
+        return matches.length > 0;
+      } else {
+        return hostnamesHash[hostPath(item)] != null;
+      }
     };
   }
 

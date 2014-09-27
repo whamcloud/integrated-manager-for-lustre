@@ -65,13 +65,16 @@ describe('Add server step', function () {
         });
 
         it('should update the fields on pdsh change', function () {
-          addServer.pdshUpdate('foo[01-02].com', ['foo01.com', 'foo02.com']);
+          addServer.pdshUpdate('foo[01-02].com', ['foo01.com', 'foo02.com'],
+            {'foo01.com': 1, 'foo02.com': 1});
 
-          expect(addServer.fields).toEqual({
-            auth_type: 'existing_keys_choice',
-            pdsh: 'foo[01-02].com',
-            address: ['foo01.com', 'foo02.com']
-          });
+          expect(addServer.fields).toEqual(
+            {
+              auth_type: 'existing_keys_choice',
+              pdsh: 'foo[01-02].com',
+              address: [ 'foo01.com', 'foo02.com' ],
+              addressHash: { 'foo01.com': 1, 'foo02.com': 1}
+            });
         });
 
         describe('calling transition', function () {

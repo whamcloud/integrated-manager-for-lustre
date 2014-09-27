@@ -18,7 +18,7 @@
                tooltip="Enter a hostname / hostlist expression to filter the servers below."
                tooltip-placement="right"></i>
           </div>
-          <pdsh pdsh-change="server.pdshUpdate(pdsh, hostnames)"></pdsh>
+          <pdsh pdsh-change="server.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
         </div>
         <button class="btn btn-info btn-sm" ng-model="server.pdshFuzzy" btn-checkbox>
          <span ng-if="server.pdshFuzzy">
@@ -57,7 +57,7 @@
     </tr>
     </thead>
     <tbody>
-    <tr bindonce ng-repeat="item in server.servers.objects | pdsh:server.hostnames:server.getHostPath:server.pdshFuzzy | naturalSort:server.getHostPath:server.reverse | paginate:server.currentPage-1:server.getItemsPerPage() track by item.id">
+    <tr bindonce ng-repeat="item in server.servers.objects | pdsh:server.hostnamesHash:server.getHostPath:server.pdshFuzzy | naturalSort:server.getHostPath:server.reverse | paginate:server.currentPage-1:server.getItemsPerPage() track by item.id">
       <td>
         <a ng-click="server.showServerDetailModal(item)">
           <span bo-text="item.address"></span>
