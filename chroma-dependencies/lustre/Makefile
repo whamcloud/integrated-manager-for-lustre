@@ -1,14 +1,13 @@
 include ../include/Makefile.lustre_build_meta
 
 override REPO          := $(dir $(patsubst %/,%,$(REPO)))/repo-lustre
-RELEASE_POSTFIX        =
-KERNEL_RELEASE         := $(KERNEL_RELEASE)_lustre.x86_64
+KERNEL_RELEASE         := $(KERNEL_RELEASE)_lustre.g2371682.x86_64
 
 SRC_REPO               = $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_BUILD_NUMBER)/arch=x86_64,build_type=server,distro=el6,ib_stack=inkernel/artifact/artifacts/RPMS/x86_64/
-ALL_RPMS               = lustre-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
-			 lustre-modules-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
-			 lustre-osd-ldiskfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
-			 lustre-osd-zfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(RELEASE_POSTFIX).x86_64.rpm \
+ALL_RPMS               = lustre-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
+			 lustre-modules-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
+			 lustre-osd-ldiskfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
+			 lustre-osd-zfs-$(LUSTRE_RELEASE)-$(KERNEL_RELEASE_MANGLED)$(UNDERSCORE_RELEASE_POSTFIX).x86_64.rpm \
 			 kernel-$(KERNEL_RELEASE).rpm \
 			 kernel-firmware-$(KERNEL_RELEASE).rpm \
 			 kernel-headers-$(KERNEL_RELEASE).rpm \

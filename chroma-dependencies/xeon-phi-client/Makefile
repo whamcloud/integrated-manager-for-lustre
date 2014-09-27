@@ -1,7 +1,7 @@
 include ../include/Makefile.lustre_build_meta
 
 override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-xeon-phi-client
-RELEASE_POSTFIX		= +mpss3.1.2
+RELEASE_POSTFIX		:= +mpss3.4$(UNDERSCORE_RELEASE_POSTFIX)
 KERNEL_RELEASE		= 2.6.38.8
 KERNEL_RELEASE_MANGLED	= $(subst -,_,$(KERNEL_RELEASE))
 SRC_REPO		= $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_BUILD_NUMBER)/arch=xeonphi,build_type=client,distro=el6,ib_stack=inkernel/artifact/artifacts/RPMS/x86_64/

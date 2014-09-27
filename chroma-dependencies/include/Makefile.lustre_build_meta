@@ -3,10 +3,16 @@ include $(CURDIR)/$(dir $(lastword $(MAKEFILE_LIST)))/Makefile.jenkins_meta
 
 # Define the job/build that should be used for Lustre packages
 JENKINS_JOB_NAME		:= lustre-b_ieel2_0
-JENKINS_BUILD_NUMBER	:= 69
+JENKINS_BUILD_NUMBER	:= 92
 
-KERNEL_RELEASE = 2.6.32-431.20.5.el6
+KERNEL_RELEASE = 2.6.32-431.29.2.el6
 KERNEL_RELEASE_MANGLED = $(subst -,_,$(KERNEL_RELEASE))
 
 # This must match the version in the specified job/build
-LUSTRE_RELEASE			:= 2.5.23
+LUSTRE_RELEASE			:= 2.5.24
+
+RELEASE_SHA1 := g2371682
+# TODO: these need to be set only if $(RELEASE_SHA1) has a value
+# until then, if there is no $(RELEASE_SHA1 value above, set these to empty
+UNDERSCORE_RELEASE_POSTFIX	:= _$(RELEASE_SHA1)
+DOT_RELEASE_POSTFIX		:= .$(RELEASE_SHA1)

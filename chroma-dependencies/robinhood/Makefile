@@ -5,7 +5,7 @@ REQUIREMENT :=
 INSTALL_PKGS := robinhood-lhsm robinhood-adm robinhood-webgui
 TARBALL_NOT_PYTHON := TRUE
 RPM_OPTS := "--define '%lustre_source $(CURDIR)/lustre'"
-RELEASE_POSTFIX = .x86_64
+RELEASE_POSTFIX := .x86_64$(UNDERSCORE_RELEASE_POSTFIX)
 
 LUSTRE_INCLUDES = lustre/lustre/include/lustre/liblustreapi.h lustre/lustre/include/lustre/lustreapi.h lustre/lustre/include/lustre/lustre_idl.h
 
