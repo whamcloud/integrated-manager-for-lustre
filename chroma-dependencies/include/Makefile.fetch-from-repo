@@ -59,11 +59,11 @@ download: $(addprefix $(CHROMA_EXTERNALS_DIR),$(ALL_RPMS))
 cleanrepo:
 	rm -rf $(REPO)
 
-$(REPO)/%.rpm: $(CHROMA_EXTERNALS_DIR)/%.rpm
+$(REPO)/%.rpm: $(CHROMA_EXTERNALS_DIR)%.rpm
 	mkdir -p $(REPO)
 	rm -f $@
 	ln $^ $(REPO)/
 
-$(CHROMA_EXTERNALS_DIR)/%.rpm:
+$(CHROMA_EXTERNALS_DIR)%.rpm:
 	CACHE="$${CACHE:-$(CHROMA_EXTERNALS_DIR)}" . ../include/cache.sh; \
 	cache_populate -t "RPM v3.0 bin " $(SRC_REPO)/$(notdir $@)
