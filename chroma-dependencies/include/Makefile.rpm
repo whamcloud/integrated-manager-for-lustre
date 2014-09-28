@@ -9,7 +9,7 @@ RPM_NAME     := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_RELEASE)/}; echo $$a)
 RPM_VERSION  := $(shell a="$(RPM_NAME)"; a=$${a\#\#*-}; echo $$a)
 RPM_NAME     := $(shell a="$(RPM_NAME)"; a=$${a/-$(RPM_VERSION)/}; echo $$a)
 SRPM         := $(RPM_NAME)-$(RPM_VERSION)-$(RPM_RELEASE).src.rpm
-LAST_BUILT   := $(shell [ -f .last_built ] && cat .last_built)
+LAST_BUILT   := $(shell [ -f .last_built ] && ! grep -q '*.src.rpm' .last_built && cat .last_built)
 SRPMS        := $(SRPM)
 ifneq ($(SRPM),$(LAST_BUILT))
 SRPMS        += $(LAST_BUILT)
