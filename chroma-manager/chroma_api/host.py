@@ -39,6 +39,7 @@ from chroma_api.utils import custom_response, StatefulModelResource, MetricResou
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
+from chroma_common.lib.evaluator import safe_eval
 
 log = log_register(__name__)
 
@@ -374,10 +375,16 @@ class HostProfileResource(Resource):
 
     def get_profiles(self, host):
         properties = json.loads(host.properties)
-        result = dict((name, []) for name, in ServerProfile.objects.filter(user_selectable=True).values_list('name'))
-        # TODO replace explicit validation with profile data
-        if 'base_managed' in result:
-            result['base_managed'].append({'result': not properties.get('zfs_installed'), 'description': "ZFS must not be installed"})
+        result = {}
+        for profile in ServerProfile.objects.filter(user_selectable=True):
+            tests = result[profile.name] = []
+            for validation in profile.serverprofilevalidation_set.all():
+                error = ''
+                try:
+                    test = safe_eval(validation.test, properties)
+                except Exception as error:
+                    test = False
+                tests.append({'pass': bool(test), 'test': validation.test, 'description': validation.description, 'error': str(error)})
         return result
 
     def set_profile(self, host_id, profile):

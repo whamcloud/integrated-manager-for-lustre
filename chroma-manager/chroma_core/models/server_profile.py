@@ -90,3 +90,24 @@ class ServerProfilePackage(models.Model):
     bundle = models.ForeignKey(Bundle)
     server_profile = models.ForeignKey(ServerProfile)
     package_name = models.CharField(max_length=255)
+
+
+class ServerProfileValidation(models.Model):
+    """
+    Represents a validation that must be true for the profile to be installed on a server.
+    Each server profile has a set of ServerProfileValidation records identifying a set
+    of validation attributes that must be true.
+    For example a profile might have the following
+    test=> "zfs_installed == False"  description=> "ZFS must not be installed"
+    test=> "distro == 'rhel'"        description=> "RHEL is the only support distribution"
+    test=> "memory_gb >= 32"         description=> "32GB of memory is required"
+
+    test is the python expression that must evaluate to true for the profile to be valid
+    description is the user information that can be viewed in the GUI
+    """
+    class Meta:
+        app_label = 'chroma_core'
+
+    server_profile = models.ForeignKey(ServerProfile)
+    test = models.CharField(max_length=256)
+    description = models.CharField(max_length=256)

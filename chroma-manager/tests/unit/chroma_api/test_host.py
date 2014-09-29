@@ -2,7 +2,7 @@ import json
 from chroma_api.urls import api
 from chroma_core.models import Bundle, Command
 from chroma_core.models.host import ManagedHost, Nid
-from chroma_core.models.server_profile import ServerProfile
+from chroma_core.models.server_profile import ServerProfile, ServerProfileValidation
 from chroma_core.services.job_scheduler import job_scheduler_client
 import mock
 
@@ -47,6 +47,9 @@ class TestHostResource(ChromaApiTestCase):
 
     @create_host_ssh_patch
     def test_profile(self):
+        validations = [{'test': 'variable1 == 1', 'description': 'variable1 should equal 1'},
+                       {'test': 'variable2 == 2', 'description': 'variable2 should equal 2'}]
+
         with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact', mock.Mock()):
             response = self.api_client.post('/api/test_host/', data={'address': ['foo']})
         self.assertHttpAccepted(response)
@@ -54,6 +57,9 @@ class TestHostResource(ChromaApiTestCase):
         self.assertEqual(content['errors'], [None])
         self.assertEqual(len(content['objects']), 1)
 
+        for profile in ServerProfile.objects.all():
+            for validation in validations:
+                profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
         profile = ServerProfile(name='default', ui_name='Default', ui_description='Default', managed=False, user_selectable=False)
         profile.save()
         profile.bundles.add(Bundle.objects.get(bundle_name='agent'))
@@ -65,16 +71,41 @@ class TestHostResource(ChromaApiTestCase):
         host, = ManagedHost.objects.all()
         self.assertEqual(host.server_profile.name, 'default')
 
+        # Check we no properties, both should fail.
+        for validation in validations:
+            validation['pass'] = False
+            validation['error'] = 'zero length field name in format'
+
         response = self.api_client.get('/api/host_profile/{0}/'.format(host.id))
         self.assertHttpOK(response)
         content = json.loads(response.content)
-        self.assertEqual(content, {'test_profile': []})
+        content['test_profile'].sort()
+        validations.sort()
+        self.assertEqual(content['test_profile'], validations)
+
+        # Now set the first property = variable1 = 1
+        host.properties = json.dumps({'variable1': 1})
+        host.save()
+
+        # And change the validation.
+        self.assertEqual(validations[0]['test'], 'variable1 == 1')
+        validations[0]['pass'] = True
+        validations[0]['error'] = ''
+
+        response = self.api_client.get('/api/host_profile/{0}/'.format(host.id))
+        self.assertHttpOK(response)
+        content = json.loads(response.content)
+        content['test_profile'].sort()
+        validations.sort()
+        self.assertEqual(content['test_profile'], validations)
 
         for data in ({}, {'id__in': [host.id, 0]}):
             response = self.api_client.get('/api/host_profile/', data=data)
             self.assertHttpOK(response)
             content, = json.loads(response.content)['objects']
-            self.assertEqual(content, {'profiles': {'test_profile': []}, 'host': host.id, 'address': host.address})
+            content['profiles']['test_profile'].sort()
+            validations.sort()
+            self.assertEqual(content, {'profiles': {'test_profile': validations}, 'host': host.id, 'address': host.address})
 
         response = self.api_client.put('/api/host_profile/{0}/'.format(host.id), data={'profile': 'test_profile'})
         self.assertHttpAccepted(response)

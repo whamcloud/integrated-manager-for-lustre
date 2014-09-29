@@ -15,5 +15,8 @@
       "lustre-osd-ldiskfs",
       "lustre"
     ]
-  }
+  },
+  "validation": [
+    {"test": "zfs_installed == False", "description": "ZFS must not be installed"}
+  ]
 }

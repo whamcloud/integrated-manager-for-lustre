@@ -47,7 +47,7 @@ from django.core.exceptions import ValidationError
 
 from chroma_core.models.bundle import Bundle
 from chroma_core.services.http_agent.crypto import Crypto
-from chroma_core.models.server_profile import ServerProfile, ServerProfilePackage
+from chroma_core.models.server_profile import ServerProfile, ServerProfilePackage, ServerProfileValidation
 from chroma_core.lib.util import CommandLine, CommandError
 
 
@@ -800,7 +800,8 @@ def register_profile(profile_file):
         "ui_description": "This is the hard coded default profile.",
         "user_selectable": True,
         "initial_state": "configured",
-        "packages": {}
+        "packages": {},
+        "validation": [],
     }
 
     # create new profile record
@@ -851,6 +852,10 @@ def register_profile(profile_file):
                 server_profile=profile,
                 bundle=Bundle.objects.get(bundle_name=bundle_name),
                 package_name=package_name)
+
+    profile.serverprofilevalidation_set.all().delete()
+    for validation in data['validation']:
+        profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
 
 
 def delete_profile(name):
