@@ -40,17 +40,39 @@ binOps = {
 }
 
 
-def safe_eval(s, subsitutions):
-    for key, value in subsitutions.items():
-        if (type(value) == str):
-            value = "'%s'" % value
+def safe_eval(expression, properties):
+    '''
+    safe_eval is an safe expression evaluator. It is fairly well featured and allows for all the operators
+    defined abot in binops to be used, it can handle bracketing and understand operator precedence.
 
-        s = s.replace(key, str(value))
+    The code takes an expression and a list of properties that will be substituted into the expression.
 
-    for key, value in {"False": "0", "True": "1"}.items():
-        s = s.replace(key, value)
+    For example the expression may be "zfs_installed == False" and the properties might be {"zfs_installed": True}
 
-    node = ast.parse(s, mode='eval')
+    Before evaluation this "zfs_installed == False" would be transformed to "1 == 0" - Note that as well as transforming
+    the variables True/False and transformed to 1/0.
+
+    The evaluator can return true/false (1/0) or arithmetic answers, it can also deal with string comparisons.
+
+    :param expression: The expression to evaluate.
+    :param properties: The properties to be used for the evaluation
+    :return: The result of the evaluation or an exception.
+    '''
+
+    def substitute_properties(expression, properties):
+        for prop, value in properties.items():
+            # If the property is a string then it's value needs to be enclosed in quotes.
+            if (type(value) == str):
+                value = "'%s'" % value
+
+            expression = expression.replace(prop, str(value))
+
+        return expression
+
+    expression = substitute_properties(expression, properties)                  # Sub our properties for their values
+    expression = substitute_properties(expression, {'False': 0, 'True': 1})     # Turn False/True into 0/1
+
+    node = ast.parse(expression, mode='eval')
 
     def _eval(node):
         if isinstance(node, ast.Expression):
