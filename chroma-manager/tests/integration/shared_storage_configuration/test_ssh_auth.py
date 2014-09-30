@@ -5,6 +5,7 @@ from django.utils.unittest import skipIf
 from testconfig import config
 from tests.integration.core.chroma_integration_testcase import (
     ChromaIntegrationTestCase)
+from tests.chroma_common.lib.name_value_list import NameValueList
 
 log = logging.getLogger(__name__)
 
@@ -49,23 +50,24 @@ class TestSshAuth(ChromaIntegrationTestCase):
         response = self.chroma_manager.post('/api/test_host/', body=body)
 
         self.assertEqual(response.successful, True, response.text)
-        command_id = response.json['objects'][0]['id']
+        command_id = response.json['id']
 
         self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
 
-        results = {}
+        results = []
 
-        for job in response.json['objects'][0]['jobs']:
+        for job in response.json['jobs']:
             response = self.chroma_manager.get(job)
             self.assertEqual(response.successful, True, response.text)
 
-            results = dict(results.items() + response.json['step_results'].items())
+            for item in response.json['step_results'].items():
+                results.append(NameValueList(item[1]['status']))
 
         # We have a result for each host, but as we have posted 1 host then 1 result
         self.assertEqual(len(results), 1)
 
         # As we have 1 result just return that result
-        return results.values()[0]
+        return results[0]
 
     @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_public_private_key(self):

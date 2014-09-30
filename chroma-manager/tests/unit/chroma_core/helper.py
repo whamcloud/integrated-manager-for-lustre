@@ -111,9 +111,9 @@ def synthetic_host_optional_profile(address=None, nids = list([]), storage_resou
     return host
 
 
-def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None):
+def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None, server_profile = 'test_profile'):
 
-    server_profile = ServerProfile.objects.get(name='test_profile')
+    server_profile = ServerProfile.objects.get(name=server_profile)
     return synthetic_host_optional_profile(address,
                                            nids,
                                            storage_resource,
@@ -253,15 +253,19 @@ create_filesystem_patch = mock.patch("chroma_core.services.job_scheduler.job_sch
 
 
 def _synthetic_create_host_ssh(address, server_profile, root_pw=None, pkey=None, pkey_pw=None):
-    host_info = MockAgentRpc.mock_servers[address]
-    host = synthetic_host(
-        address,
-        fqdn=host_info['fqdn'],
-        nids=host_info['nids'],
-        nodename=host_info['nodename']
-    )
-    host.server_profile = ServerProfile.objects.get(name=server_profile)
-    host.save()
+    try:
+        host = ManagedHost.objects.get(address=address)
+        assert host.state == 'undeployed'
+    except ManagedHost.DoesNotExist:
+        host_info = MockAgentRpc.mock_servers[address]
+
+        host = synthetic_host(
+            address,
+            fqdn=host_info['fqdn'],
+            nids=host_info['nids'],
+            nodename=host_info['nodename'],
+            server_profile = server_profile
+        )
 
     command = Command.objects.create(message="No-op", complete=True)
     return host, command
@@ -311,7 +315,7 @@ def load_default_profile():
     load_default_bundles()
     default_sp = ServerProfile(name='test_profile', ui_name='Managed storage server',
                                ui_description='A storage server suitable for creating new HA-enabled filesystem targets',
-                               managed=True)
+                               managed=True, default=True)
     default_sp.bundles.add('lustre')
     default_sp.bundles.add('agent')
     default_sp.bundles.add('agent_dependencies')

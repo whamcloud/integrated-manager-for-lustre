@@ -24,16 +24,11 @@
   'use strict';
 
   angular.module('server')
-    .controller('ServerStatusStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES', 'data',
-      'naturalSortFilter', 'pdshFilter',
-      function ServerStatusStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data, naturalSortFilter,
-                                     pdshFilter) {
-
-        var matchingSpaces = / /g;
-
-        $scope.serverStatus = {
-          pdsh: ((data.server && data.server.pdsh) || null),
-
+    .controller('ServerStatusStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES', 'data', 'statusSpark',
+      'hostlistFilter',
+      function ServerStatusStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data, statusSpark, hostlistFilter) {
+        _.extend(this, {
+          pdsh: data.pdsh,
           /**
            * Update hostnames.
            * @param {String} pdsh
@@ -41,92 +36,65 @@
            * @param {Object} hostnamesHash
            */
           pdshUpdate: function pdshUpdate (pdsh, hostnames, hostnamesHash) {
-            if (hostnames) {
-              $scope.serverStatus.hostnames = hostnames;
-              $scope.serverStatus.hostnamesHash = hostnamesHash;
-            }
+            this.serversStatus = hostlistFilter
+              .setHash(hostnamesHash)
+              .compute();
           },
           /**
            * tells manager to perform a transition.
            * @param {String} action
            */
           transition: function transition (action) {
-            off();
+            if (action === OVERRIDE_BUTTON_TYPES.OVERRIDE)
+              return;
 
-            if (action !== OVERRIDE_BUTTON_TYPES.OVERRIDE)
-              $stepInstance.transition(action, { data: data });
+            statusSpark.end();
+
+            $stepInstance.transition(action, {
+              data: data,
+              showCommand: action === OVERRIDE_BUTTON_TYPES.PROCEED
+            });
           },
           /**
            * Close the modal
            */
           close: function close () {
             $scope.$emit('addServerModal::closeModal');
-          },
-          /**
-           * Convert the check to something that maps back to a help property
-           * @param {String} key
-           * @returns {string}
-           */
-          convertToHelp: function convertToHelp (key) {
-            return key.toLowerCase().replace(matchingSpaces, '_');
-          }
-        };
-
-        var off = data.statusSpark.onValue('pipeline', function assignToScope (response) {
-          $scope.serverStatus.isValid = response.body.isValid;
-          $scope.serverStatus.status = naturalSortFilter(
-            pdshFilter(response.body.objects, $scope.serverStatus.hostnamesHash, comparator),
-            comparator
-          );
-
-          /**
-           * Defines the property to look at for host name comparison.
-           * @param {Object} obj
-           * @returns {String}
-           */
-          function comparator (obj) {
-            return obj.address;
           }
         });
+
+        var serverStatusStep = this;
+
+        statusSpark.onValue('pipeline', function assignToScope (response) {
+          serverStatusStep.isValid = response.body.valid;
+          serverStatusStep.serversStatus = hostlistFilter
+            .setHosts(response.body.objects)
+            .compute();
+        });
       }])
-      .factory('serverStatusStep', ['OVERRIDE_BUTTON_TYPES', function serverStatusStepFactory (OVERRIDE_BUTTON_TYPES) {
+      .factory('serverStatusStep', [function serverStatusStepFactory () {
         return {
           templateUrl: 'iml/server/assets/html/server-status-step.html',
-          controller: 'ServerStatusStepCtrl',
-          transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'waitForCommandCompletion',
-            function transition ($transition, data, createOrUpdateHostsThen, hostProfile, waitForCommandCompletion) {
-              var step;
-
-              if ($transition.action === 'previous') {
-                step = $transition.steps.addServersStep;
-              } else {
-                step = $transition.steps.selectServerProfileStep;
-
-                var hostsPromise = createOrUpdateHostsThen(data.server, data.serverSpark)
-                  .then(waitForCommandCompletion($transition.action === OVERRIDE_BUTTON_TYPES.PROCEED))
-                  .catch(function throwError (response) {
-                    throw response.error;
-                  });
-
-                data.hostProfileSpark = hostsPromise.then(function getHostProfileSpark (response) {
-                  var hosts = _.pluck(response.body.objects, 'host');
-                  var hostSpark = hostProfile(data.flint, hosts);
-
-                  return hostSpark.onceValueThen('data')
-                    .then(function handleResponse () {
-                      return hostSpark;
-                    }, function handleError (response) {
-                      throw response.error;
-                    });
-                });
-              }
+          controller: 'ServerStatusStepCtrl as serverStatus',
+          onEnter: ['data', 'getTestHostSparkThen', 'serversToApiObjects',
+            function onEnter (data, getTestHostSparkThen, serversToApiObjects) {
+              var objects = serversToApiObjects(data.servers);
 
               return {
-                step: step,
-                resolve: { data: data }
+                statusSpark: getTestHostSparkThen(data.flint, { objects: objects }),
+                data: data
               };
             }
-          ]
+          ],
+          /**
+           * Move to another step in the flow
+           * @param {Object} steps
+           * @param {String} action
+           * @returns {Object} The step to move to.
+           */
+          transition: function transition (steps, action) {
+            return (action === 'previous' ? steps.addServersStep : steps.selectServerProfileStep);
+          }
         };
       }]);
 }());

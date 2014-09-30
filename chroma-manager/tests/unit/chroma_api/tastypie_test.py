@@ -357,6 +357,12 @@ class ResourceTestCase(TestCase):
         """
         return self.assertTrue(resp.status_code in [202, 204], resp.content)
 
+    def assertHttpNoContent(self, resp):
+        """
+        Ensures the response is returning a HTTP 204.
+        """
+        return self.assertEqual(resp.status_code, 204)
+
     def assertHttpMultipleChoices(self, resp):
         """
         Ensures the response is returning a HTTP 300.

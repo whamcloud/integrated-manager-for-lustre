@@ -25,15 +25,15 @@
 'use strict';
 
 var uriTemplate = require('uritemplate');
-var _ = require('lodash');
 
 /**
  * Creates a new Resource CLASS when called
  * @param {request} request
  * @param {Object} logger
+ * @param {Object} _
  * @returns {Resource}
  */
-module.exports = function resourceFactory (request, logger) {
+module.exports = function resourceFactory (request, logger, _) {
   /*
    * The Base Resource
    * @name Resource

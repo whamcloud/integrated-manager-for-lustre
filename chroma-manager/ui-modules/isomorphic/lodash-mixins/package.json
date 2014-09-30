@@ -1,0 +1,18 @@
+{
+  "name": "lodash-mixins",
+  "version": "1.0.0",
+  "description": "Mixins for Lo-Dash we find useful.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Lo-Dash",
+    "Functional"
+  ],
+  "author": "IML Team",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "2.4.1"
+  }
+}

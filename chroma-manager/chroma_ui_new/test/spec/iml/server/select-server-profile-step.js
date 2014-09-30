@@ -1,251 +1,105 @@
 describe('select server profile', function () {
   'use strict';
 
-  beforeEach(module('server'));
+  beforeEach(module('server', 'dataFixtures'));
 
   describe('select server profile step ctrl', function () {
-    var $scope, $stepInstance, data, off, CACHE_INITIAL_DATA;
+    var $scope, $stepInstance, data,
+      createHostProfiles, hostProfileSpark, selectServerProfileStep;
 
     beforeEach(inject(function ($rootScope, $controller) {
       $scope = $rootScope.$new();
       $stepInstance = {
         transition: jasmine.createSpy('transition')
       };
-      off = jasmine.createSpy('off');
+
+      hostProfileSpark = {
+        onValue: jasmine.createSpy('onValue'),
+        end: jasmine.createSpy('end')
+      };
+
+      createHostProfiles = jasmine.createSpy('createHostProfiles');
+
       data = {
-        hostProfileSpark: {
-          onValue: jasmine.createSpy('onValue').andReturn(off)
-        },
-        server: {
-          pdsh: 'storage0.localdomain'
-        }
+        pdsh: 'storage0.localdomain'
       };
 
-      CACHE_INITIAL_DATA = {
-        server_profile: [
-          {
-            initial_state: 'configured',
-            managed: true,
-            name: 'base_managed',
-            default: false,
-            worker: false,
-            user_selectable: true,
-            ui_description: 'A storage server suitable for creating new HA-enabled filesystem targets',
-            ui_name: 'Managed storage server',
-            resource_uri: '/api/server_profile/base_managed/'
-          },
-          {
-            initial_state: 'configured',
-            managed: false,
-            name: 'base_monitored',
-            default: false,
-            worker: false,
-            user_selectable: true,
-            ui_description: 'A storage server suitable for monitoring only',
-            ui_name: 'Monitored storage server',
-            resource_uri: '/api/server_profile/base_monitored/'
-          },
-          {
-            initial_state: 'configured',
-            managed: true,
-            name: 'posix_copytool_worker',
-            default: false,
-            worker: true,
-            user_selectable: true,
-            ui_description: 'An HSM agent node using the POSIX copytool',
-            ui_name: 'POSIX HSM Agent Node',
-            resource_uri: '/api/server_profile/posix_copytool_worker/'
-          },
-          {
-            initial_state: 'configured',
-            managed: true,
-            name: 'robinhood_server',
-            default: false,
-            worker: true,
-            user_selectable: true,
-            ui_description: 'A server running the Robinhood Policy Engine',
-            ui_name: 'Robinhood Policy Engine Server',
-            resource_uri: '/api/server_profile/robinhood_server/'
-          }
-        ]
-      };
-
-      $controller('SelectServerProfileStepCtrl', {
+      selectServerProfileStep = $controller('SelectServerProfileStepCtrl', {
         $scope: $scope,
         $stepInstance: $stepInstance,
         data: data,
-        CACHE_INITIAL_DATA: CACHE_INITIAL_DATA
+        hostProfileSpark: hostProfileSpark,
+        createHostProfiles: createHostProfiles
       });
     }));
 
-    it('should contain a transition method', function () {
-      expect($scope.selectServerProfile.transition).toEqual(jasmine.any(Function));
+    it('should setup the controller', function () {
+      expect(selectServerProfileStep).toEqual({
+        pdsh: data.pdsh,
+        transition: jasmine.any(Function),
+        onSelected: jasmine.any(Function),
+        getHostPath: jasmine.any(Function),
+        pdshUpdate: jasmine.any(Function),
+        close: jasmine.any(Function)
+      });
     });
 
-    it('should contain an onSelected method', function () {
-      expect($scope.selectServerProfile.onSelected).toEqual(jasmine.any(Function));
-    });
-
-    it('should contain a getHostPath method', function () {
-      expect($scope.selectServerProfile.getHostPath).toEqual(jasmine.any(Function));
-    });
-
-    it('should contain a pdshUpdate method', function () {
-      expect($scope.selectServerProfile.pdshUpdate).toEqual(jasmine.any(Function));
-    });
-
-    it('should contain the pdsh expression on the scope', function () {
-      expect($scope.selectServerProfile.pdsh).toEqual(data.server.pdsh);
-    });
-
-    it('should call data.hostProfileSpark.onValue', function () {
-      expect(data.hostProfileSpark.onValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
+    it('should call hostProfileSpark.onValue', function () {
+      expect(hostProfileSpark.onValue)
+        .toHaveBeenCalledOnceWith('pipeline', jasmine.any(Function));
     });
 
     describe('transition', function () {
       var action;
       beforeEach(function () {
         action = 'previous';
-        $scope.selectServerProfile.transition(action);
+        selectServerProfileStep.transition(action);
       });
 
-      it('should call off', function () {
-        expect(off).toHaveBeenCalledOnce();
+      it('should end the hostProfileSpark', function () {
+        expect(hostProfileSpark.end).toHaveBeenCalledOnce();
       });
 
       it('should call transition on the step instance', function () {
         expect($stepInstance.transition).toHaveBeenCalledOnceWith(action, {
-          data: data,
-          hostProfileData: $scope.selectServerProfile.data,
-          profile: $scope.selectServerProfile.item
+          data: data
         });
       });
     });
 
     describe('receiving data change on hostProfileSpark', function () {
-      var profile, response;
-      beforeEach(function () {
-        response = {
-          statusCode: 200,
-          body: {
-            meta: {
-              limit: 20,
-              next: null,
-              offset: 0,
-              previous: null,
-              total_count: 1
-            },
-            objects: [
-              {
-                address: 'storage1.localdomain',
-                host: 69,
-                profiles: {
-                  base_managed: [
-                    {
-                      description: '',
-                      pass: true,
-                      test: 'zfs_installed == False'
-                    }
-                  ],
-                  base_monitored: [],
-                  posix_copytool_worker: [],
-                  robinhood_server: []
-                }
-              }
-            ]
-          }
-        };
-        data.hostProfileSpark.onValue.mostRecentCall.args[1](response);
-      });
+      var transformedHostProfileFixture;
+      beforeEach(inject(function (_transformedHostProfileFixture_) {
+        transformedHostProfileFixture = _transformedHostProfileFixture_;
 
-      it('should set the data on the server profile', function () {
-        expect($scope.selectServerProfile.data).toEqual(response.body.objects);
+        hostProfileSpark.onValue.mostRecentCall.args[1](transformedHostProfileFixture);
+      }));
+
+      it('should set the profiles', function () {
+        expect(selectServerProfileStep.profiles).toEqual(transformedHostProfileFixture);
       });
 
       describe('receiving more data', function () {
         beforeEach(function () {
-          response = {
-            statusCode: 200,
-            body: {
-              meta: {
-                limit: 20,
-                next: null,
-                offset: 0,
-                previous: null,
-                total_count: 1
-              },
-              objects: [
-                {
-                  address: 'storage1.localdomain',
-                  host: 69,
-                  profiles: {
-                    base_managed: [
-                      {
-                        description: 'ZFS must not be installed',
-                        error: '',
-                        pass: true,
-                        test: 'zfs_installed == False'
-                      }
-                    ],
-                    base_monitored: [],
-                    posix_copytool_worker: [],
-                    robinhood_server: []
-                  }
-                }
-              ]
-            }
-          };
-          data.hostProfileSpark.onValue.mostRecentCall.args[1](response);
+          hostProfileSpark.onValue.mostRecentCall.args[1](transformedHostProfileFixture);
         });
 
         it('should keep the same profile', function () {
-          expect($scope.selectServerProfile.profile).toEqual({
-            name: 'base_managed',
-            uiName: 'Managed storage server',
-            invalid: false,
-            hosts: [{
-              address: 'storage1.localdomain',
-              invalid: false,
-              problems: [{
-                description: 'ZFS must not be installed',
-                error: '',
-                pass: true,
-                test: 'zfs_installed == False'
-              }],
-              uiName: 'Managed storage server'
-            }]
-          });
+          expect(selectServerProfileStep.profile).toEqual(transformedHostProfileFixture[0]);
         });
       });
 
       describe('onSelected', function () {
         beforeEach(function () {
-          profile = {
-            name: 'base_managed',
-            uiName: 'Managed storage server',
-            invalid: false,
-            hosts: [{
-              address: 'storage1.localdomain',
-              invalid: false,
-              problems: [{
-                description: 'ZFS must not be installed',
-                error: '',
-                pass: false,
-                test: 'zfs_installed == False'
-              }],
-              uiName: 'Managed storage server'
-            }]
-          };
-
-          $scope.selectServerProfile.onSelected(profile);
+          selectServerProfileStep.onSelected(transformedHostProfileFixture[0]);
         });
 
         it('should set overridden to false', function () {
-          expect($scope.selectServerProfile.overridden).toEqual(false);
+          expect(selectServerProfileStep.overridden).toEqual(false);
         });
 
         it('should set the profile on the scope', function () {
-          expect($scope.selectServerProfile.profile).toEqual(profile);
+          expect(selectServerProfileStep.profile).toEqual(transformedHostProfileFixture[0]);
         });
       });
     });
@@ -259,7 +113,7 @@ describe('select server profile', function () {
       });
 
       it('should retrieve the host address', function () {
-        expect($scope.selectServerProfile.getHostPath(item)).toEqual(item.address);
+        expect(selectServerProfileStep.getHostPath(item)).toEqual(item.address);
       });
     });
 
@@ -274,182 +128,226 @@ describe('select server profile', function () {
         };
       });
 
-      describe('without hostnames', function () {
-        beforeEach(function () {
-          $scope.selectServerProfile.pdshUpdate(pdsh);
-        });
-
-        it('should contain the pdsh expression', function () {
-          expect($scope.selectServerProfile.pdsh).toEqual(pdsh);
-        });
-
-        it('should not have the hostnames', function () {
-          expect($scope.selectServerProfile.hostnames).toEqual(undefined);
-        });
+      beforeEach(function () {
+        selectServerProfileStep.pdshUpdate(pdsh, hostnames, hostnamesHash);
       });
 
-      describe('with hostnames', function () {
-        beforeEach(function () {
-          $scope.selectServerProfile.pdshUpdate(pdsh, hostnames, hostnamesHash);
-        });
-
-        it('should contain the pdsh expression', function () {
-          expect($scope.selectServerProfile.pdsh).toEqual(pdsh);
-        });
-
-        it('should have the hostnames', function () {
-          expect($scope.selectServerProfile.hostnames).toEqual(hostnames);
-        });
-
-        it('should have the hostnamesHash', function () {
-          expect($scope.selectServerProfile.hostnamesHash).toEqual(hostnamesHash);
-        });
+      it('should have the hostnamesHash', function () {
+        expect(selectServerProfileStep.hostnamesHash).toEqual(hostnamesHash);
       });
     });
   });
 
   describe('selectServerProfileStep', function () {
-    var $q, $scope, $transition, data, requestSocket, hostProfileData, profile, selectServerProfileStep,
-      spark, postPromise;
-    var waitForCommandCompletion, OVERRIDE_BUTTON_TYPES;
+    var selectServerProfileStep;
 
-    beforeEach(inject(function (_selectServerProfileStep_, _$rootScope_, _$q_) {
-      $scope = _$rootScope_.$new();
+    beforeEach(inject(function (_selectServerProfileStep_) {
       selectServerProfileStep = _selectServerProfileStep_;
-      $q = _$q_;
-
-      waitForCommandCompletion = jasmine.createSpy('waitForCommandCompletion')
-        .andReturn($q.when('transition_end'));
-
-      OVERRIDE_BUTTON_TYPES = {
-        OVERRIDE: 'override',
-        PROCEED: 'proceed',
-        PROCEED_SKIP: 'proceed and skip'
-      };
     }));
 
     it('should contain the appropriate properties', function () {
       expect(selectServerProfileStep).toEqual({
         templateUrl: 'iml/server/assets/html/select-server-profile-step.html',
-        controller: 'SelectServerProfileStepCtrl',
-        transition: jasmine.any(Array)
+        controller: 'SelectServerProfileStepCtrl as selectServerProfile',
+        onEnter: ['data', 'createOrUpdateHostsThen', 'getHostProfiles',
+          'waitForCommandCompletion', 'showCommand', jasmine.any(Function)],
+        transition: jasmine.any(Function)
       });
     });
 
-    describe('invoking the transition', function () {
-      beforeEach(function () {
-        postPromise = $q.when({
+    it('should transition to the server status step', function () {
+      var steps = {
+        serverStatusStep: {}
+      };
+
+      expect(selectServerProfileStep.transition(steps)).toEqual(steps.serverStatusStep);
+    });
+
+    describe('on enter', function () {
+      var onEnter, data, createOrUpdateHostsThen,
+        getHostProfiles, waitForCommandCompletion, result,
+        response;
+
+      beforeEach(inject(function ($q, $rootScope) {
+        data = {
+          flint: jasmine.createSpy('flint'),
+          servers: [],
+          serverSpark: {}
+        };
+
+        response = {
           body: {
             objects: [
-              {id: 1}
+              {
+                command_and_host: {
+                  command: {
+                    cancelled: false,
+                    complete: false,
+                    created_at: '2014-12-10T17:11:00.852148+00:00',
+                    dismissed: false,
+                    errored: false,
+                    id: '390',
+                    jobs: [
+                      '/api/job/390/'
+                    ],
+                    logs: '',
+                    message: 'Setting up host lotus-34vm5.iml.intel.com',
+                    resource_uri: '/api/command/390/'
+                  },
+                  host: {
+                    address: 'lotus-34vm5.iml.intel.com',
+                    available_actions: [],
+                    available_jobs: [],
+                    available_transitions: [],
+                    boot_time: null,
+                    client_mounts: [],
+                    content_type_id: 35,
+                    corosync_reported_up: false,
+                    fqdn: 'lotus-34vm5.iml.intel.com',
+                    id: '32',
+                    immutable_state: true,
+                    install_method: 'existing_keys_choice',
+                    label: 'lotus-34vm5.iml.intel.com',
+                    locks: {
+                      read: [],
+                      write: [
+                        390
+                      ]
+                    },
+                    member_of_active_filesystem: false,
+                    needs_fence_reconfiguration: false,
+                    needs_update: false,
+                    nids: [],
+                    nodename: 'lotus-34vm5',
+                    private_key: null,
+                    private_key_passphrase: null,
+                    properties: '{}',
+                    resource_uri: '/api/host/32/',
+                    root_pw: null,
+                    server_profile: {
+                      default: false,
+                      initial_state: 'unconfigured',
+                      managed: false,
+                      name: 'default',
+                      resource_uri: '/api/server_profile/default/',
+                      ui_description: 'An unconfigured server.',
+                      ui_name: 'Unconfigured Server',
+                      user_selectable: false,
+                      worker: false
+                    },
+                    state: 'undeployed',
+                    state_modified_at: '2014-12-10T17:11:00.845748+00:00',
+                    version: null
+                  }
+                },
+                error: null,
+                traceback: null
+              },
+              {
+                command_and_host: {
+                  command: {
+                    cancelled: false,
+                    complete: false,
+                    created_at: '2014-12-10T17:11:03.280882+00:00',
+                    dismissed: false,
+                    errored: false,
+                    id: '391',
+                    jobs: [
+                      '/api/job/391/'
+                    ],
+                    logs: '',
+                    message: 'Setting up host lotus-34vm6.iml.intel.com',
+                    resource_uri: '/api/command/391/'
+                  },
+                  host: {
+                    address: 'lotus-34vm6.iml.intel.com',
+                    available_actions: [],
+                    available_jobs: [],
+                    available_transitions: [],
+                    boot_time: null,
+                    client_mounts: [],
+                    content_type_id: 35,
+                    corosync_reported_up: false,
+                    fqdn: 'lotus-34vm6.iml.intel.com',
+                    id: '33',
+                    immutable_state: true,
+                    install_method: 'existing_keys_choice',
+                    label: 'lotus-34vm6.iml.intel.com',
+                    locks: {
+                      read: [],
+                      write: [
+                        391
+                      ]
+                    },
+                    member_of_active_filesystem: false,
+                    needs_fence_reconfiguration: false,
+                    needs_update: false,
+                    nids: [],
+                    nodename: 'lotus-34vm6',
+                    private_key: null,
+                    private_key_passphrase: null,
+                    properties: '{}',
+                    resource_uri: '/api/host/33/',
+                    root_pw: null,
+                    server_profile: {
+                      default: false,
+                      initial_state: 'unconfigured',
+                      managed: false,
+                      name: 'default',
+                      resource_uri: '/api/server_profile/default/',
+                      ui_description: 'An unconfigured server.',
+                      ui_name: 'Unconfigured Server',
+                      user_selectable: false,
+                      worker: false
+                    },
+                    state: 'undeployed',
+                    state_modified_at: '2014-12-10T17:11:03.273059+00:00',
+                    version: null
+                  }
+                },
+                error: null,
+                traceback: null
+              }
             ]
           }
+        };
+
+        createOrUpdateHostsThen = jasmine.createSpy('createOrUpdateHostsThen')
+          .andReturn($q.when(_.cloneDeep(response)));
+        waitForCommandCompletion = jasmine.createSpy('waitForCommandCompletion')
+          .andReturn(_.identity);
+        getHostProfiles = jasmine.createSpy('getHostProfiles').andReturn({
+          onceValueThen: jasmine.createSpy('onceValueThen').andReturn($q.when('gotHostProfiles'))
         });
-        spark = {
-          sendPost: jasmine.createSpy('sendPost').andReturn(postPromise),
-          end: jasmine.createSpy('end')
-        };
-        requestSocket = jasmine.createSpy('requestSocket').andReturn(spark);
-        data = {
-          serverSpark: {
-            onceValue: jasmine.createSpy('onceValue')
-          }
-        };
-        $transition = {
-          steps: {
-            serverStatusStep: {}
-          },
-          end: jasmine.createSpy('end')
-        };
-        hostProfileData = [
-          {
-            host: 1
-          }
-        ];
-        profile = {
-          caption: 'Base Monitored',
-          name: 'base_monitored'
-        };
+
+        onEnter = _.last(selectServerProfileStep.onEnter);
+
+        result = onEnter(data, createOrUpdateHostsThen, getHostProfiles, waitForCommandCompletion, true);
+        $rootScope.$apply();
+      }));
+
+      it('should create or update the hosts', function () {
+        expect(createOrUpdateHostsThen).toHaveBeenCalledOnceWith(data.servers, data.serverSpark);
       });
 
-      describe('previous action', function () {
-        var result;
-
-        beforeEach(function () {
-          $transition.action = 'previous';
-          result = _.last(selectServerProfileStep.transition)(
-            $transition, data, requestSocket, hostProfileData, profile);
-        });
-
-        it('should resolve with the serverStatusStep', function () {
-          expect(result).toEqual({
-            step: $transition.steps.serverStatusStep,
-            resolve: { data: data }
-          });
-        });
+      it('should wait for command completion', function () {
+        expect(waitForCommandCompletion).toHaveBeenCalledOnceWith(true);
       });
 
-      describe('end action', function () {
-        var result;
+      it('should call getHostProfiles', function () {
+        var hosts = _.fmap(_.pluckPath('command_and_host.host'), response.body.objects);
 
-        beforeEach(function () {
-          $transition.action = 'end';
+        expect(getHostProfiles).toHaveBeenCalledOnceWith(data.flint, hosts);
+      });
 
-          result = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1](
-            $transition, data, requestSocket, hostProfileData, profile, $q, waitForCommandCompletion,
-            OVERRIDE_BUTTON_TYPES);
-
-          data.serverSpark.onceValue.mostRecentCall.args[1]({
-            body: {
-              objects: [
-                {
-                  id: '1',
-                  server_profile: {
-                    initial_state: 'unconfigured'
-                  }
-                }
-              ]
-            }
-          });
-
-          $scope.$digest();
-        });
-
-        it('should invoke the request socket', function () {
-          expect(requestSocket).toHaveBeenCalledOnce();
-        });
-
-        it('should listen for value on data', function () {
-          expect(data.serverSpark.onceValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
-        });
-
-        it('should send a post to /host_profile', function () {
-          expect(spark.sendPost).toHaveBeenCalledOnceWith('/host_profile', {
-            json: {
-              objects: [
-                {
-                  host: 1,
-                  profile: 'base_monitored'
-                }
-              ]
-            }
-          }, true);
-        });
-
-        it('should call waitForCommandCompletion', function () {
-          expect(waitForCommandCompletion).toHaveBeenCalledWith(false);
-        });
-
-        it('should call $transition.end', function () {
-          expect($transition.end).toHaveBeenCalledOnce();
-        });
-
-        it('should end the spark', function () {
-          expect(spark.end).toHaveBeenCalledOnce();
-        });
-
-        it('should receive an undefined response', function () {
-          expect(result).toEqual(undefined);
+      it('should return data and a hostProfileSpark promise', function () {
+        expect(result).toEqual({
+          data: data,
+          hostProfileSpark: {
+            then: jasmine.any(Function),
+            catch: jasmine.any(Function),
+            finally: jasmine.any(Function)
+          }
         });
       });
     });

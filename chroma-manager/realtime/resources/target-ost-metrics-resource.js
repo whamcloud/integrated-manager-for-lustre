@@ -22,11 +22,9 @@
 
 'use strict';
 
-var inherits = require('util').inherits,
-  _ = require('lodash');
+var inherits = require('util').inherits;
 
-
-module.exports = function targetOstMetricsResourceFactory(TargetResource, Q) {
+module.exports = function targetOstMetricsResourceFactory(TargetResource, Q, _) {
   /**
    * Extension of the TargetResource.
    * Used for joining target names to OST metrics.

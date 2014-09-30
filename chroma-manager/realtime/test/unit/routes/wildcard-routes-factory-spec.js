@@ -2,6 +2,7 @@
 
 var wildcardRoutesFactory = require('../../../routes/wildcard-routes-factory');
 var errorSerializer = require('bunyan').stdSerializers.err;
+var _ = require('lodash-mixins');
 
 describe('wildcard routes', function () {
   var wildcardRoutes, router, request, loop, logger;
@@ -30,7 +31,7 @@ describe('wildcard routes', function () {
       })
     };
 
-    wildcardRoutes = wildcardRoutesFactory(router, request, loop, logger)();
+    wildcardRoutes = wildcardRoutesFactory(router, request, loop, logger, _)();
   });
 
   it('should register a wildcard handler', function () {

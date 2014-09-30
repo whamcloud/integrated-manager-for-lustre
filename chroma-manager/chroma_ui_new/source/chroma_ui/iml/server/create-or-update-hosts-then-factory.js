@@ -20,80 +20,81 @@
 // express and approved by Intel in writing.
 
 
-angular.module('server').factory('createOrUpdateHostsThen', ['$q', 'requestSocket', 'throwIfError',
-  function createOrUpdateHostsThenFactory ($q, requestSocket, throwIfError) {
+angular.module('server')
+  .factory('createOrUpdateHostsThen', ['$q', 'requestSocket', 'throwResponseError',
+    'serversToApiObjects', 'CACHE_INITIAL_DATA',
+  function createOrUpdateHostsThenFactory ($q, requestSocket, throwResponseError,
+                                           serversToApiObjects, CACHE_INITIAL_DATA) {
     'use strict';
+
+    var defaultProfileResourceUri = _.find(CACHE_INITIAL_DATA.server_profile, { name: 'default' }).resource_uri;
 
     /**
      * Creates or updates hosts as needed.
-     * @param {Object} server
+     * @param {Object} servers
      * @param {Object} serverSpark
      * @returns {Object} A promise.
      */
-    return function createOrUpdateHostsThen (server, serverSpark) {
-      var deferred = $q.defer();
+    return function createOrUpdateHostsThen (servers, serverSpark) {
+      var objects = serversToApiObjects(servers);
+      var spark = requestSocket();
 
-      var objects = server.address.reduce(function buildObjects (arr, address) {
-        arr.push(_(server).omit(['address', 'pdsh']).extend({ address: address }).value());
+      return serverSpark.onceValueThen('data')
+        .catch(throwResponseError)
+        .then(_.pluckPath('body.objects'))
+        .then(function handleResponse (servers) {
+          var findByAddress = _.findInCollection(['address']);
 
-        return arr;
-      }, []);
-
-      serverSpark.onceValue('data', throwIfError(function handleResponse (response) {
-        var spark = requestSocket();
-
-        var servers = response.body.objects;
-
-        var toPost = objects.filter(function removeUsed (object) {
-          return _.find(servers, { address: object.address }) === undefined;
-        });
-        var toPostPromise = hostWorkerThen(spark, 'sendPost', toPost);
-
-        var toPut = _.difference(objects, toPost).filter(function removeDeployed (object) {
-          return _.find(servers, { address: object.address }).state === 'undeployed';
-        });
-        var toPutPromise = hostWorkerThen(spark, 'sendPut', toPut);
-
-        var leftovers = _.difference(objects, toPut, toPost);
-        var unchangedServers = servers
-          .filter(function mapToServers (server) {
-            return _.find(leftovers, { address: server.address });
-          })
-          .reduce(function buildResponse (response, server) {
-            response.body.objects.push({
-              host: server
+          var toPost = objects
+            .filter(_.compose(_.inverse, findByAddress(servers)))
+            .map(function addDefaultProfile (object) {
+              object.server_profile = defaultProfileResourceUri;
+              return object;
             });
 
-            return response;
-          }, {
-            body: { objects: [] }
-          });
+          var toPostPromise = hostWorkerThen(spark, 'sendPost', toPost);
 
-        //@TODO: Switch to allSettled once
-        //we are on 1.3.x and $q is prototype
-        //based and can be extended.
-        $q.all([toPostPromise, toPutPromise])
-          .then(function combineResponses (responses) {
-            responses = responses
-              .concat(unchangedServers)
-              .concat(function concatArrays (a, b) {
-                return Array.isArray(a) ? a.concat(b) : undefined;
-              });
+          var undeployedServers = _.where(servers, { state: 'undeployed' });
+          var toPut = _.difference(objects, toPost)
+            .filter(findByAddress(undeployedServers));
 
-            return _.merge.apply(_, responses);
-          })
-          .then(function resolveDeferred (response) {
-            deferred.resolve(response);
-          })
-          .catch(function rejectDeferred (response) {
-            deferred.reject(response);
-          })
-          .finally(function endSpark () {
-            spark.end();
-          });
-      }));
+          var toPutPromise = hostWorkerThen(spark, 'sendPut', toPut);
 
-      return deferred.promise;
+          var leftovers = _.difference(objects, toPut, toPost);
+          var unchangedServers = {
+            body: {
+              objects: servers
+                .filter(findByAddress(leftovers))
+                .map(function buildResponse (server) {
+                  return {
+                    command_and_host: {
+                      command: false,
+                      host: server
+                    },
+                    error: null,
+                    traceback: null
+                  };
+                })
+            }
+          };
+
+          //@TODO: Switch to allSettled once
+          //we are on 1.3.x and $q is prototype
+          //based and can be extended.
+          return $q.all([toPostPromise, toPutPromise])
+            .then(function combineResponses (responses) {
+              responses = responses
+                .concat(unchangedServers)
+                .concat(function concatArrays (a, b) {
+                  return Array.isArray(a) ? a.concat(b) : undefined;
+                });
+
+              return _.merge.apply(_, responses);
+            });
+      })
+        .finally(function endSpark () {
+          spark.end();
+        });
     };
 
     /**

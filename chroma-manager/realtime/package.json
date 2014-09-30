@@ -13,7 +13,6 @@
     "di": "0.0.1",
     "json-mask": "0.3.2",
     "jsonschema": "1.0.0",
-    "lodash": "2.4.1",
     "primus": "2.4.10",
     "primus-emitter": "3.0.3",
     "primus-multiplex": "3.0.3",
@@ -23,6 +22,7 @@
     "socket-router": "file://../ui-modules/node/socket-router",
     "socket.io": "0.9.17",
     "srcmap-reverse": "file://../ui-modules/node/srcmap-reverse",
+    "lodash-mixins": "file://../ui-modules/isomorphic/lodash-mixins",
     "uritemplate": "0.3.4"
   },
   "devDependencies": {

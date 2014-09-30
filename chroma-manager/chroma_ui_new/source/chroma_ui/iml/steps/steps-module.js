@@ -24,8 +24,8 @@
   'use strict';
 
   angular.module('steps-module', [])
-    .directive('stepContainer', ['$q', '$controller', '$http', '$templateCache', '$compile', 'getResolvePromises',
-      function stepContainerDirective ($q, $controller, $http, $templateCache, $compile, getResolvePromises) {
+    .directive('stepContainer', ['$q', '$controller', '$http', '$templateCache', '$compile',
+      function stepContainerDirective ($q, $controller, $http, $templateCache, $compile) {
         return {
           restrict: 'E',
           scope: {
@@ -37,47 +37,43 @@
             /**
              * Listens for changes and updates the view.
              * @param {Object} step
-             * @param {Object} [extraResolves]
+             * @param {Object} [resolves]
              * @param {Object} [waitingStep]
              */
-            scope.manager.registerChangeListener(function onChanges (step, extraResolves, waitingStep) {
-              var resolves = _.extend({}, step.resolve, extraResolves);
-              var promises = getResolvePromises(resolves);
-              promises.template = getTemplatePromise(step.templateUrl);
-
+            scope.manager.registerChangeListener(function onChanges (step, resolves, waitingStep) {
               if (!resolvesFinished && waitingStep && waitingStep.templateUrl) {
                 // Create new scope
                 innerScope = scope.$new();
 
                 getTemplatePromise(waitingStep.templateUrl)
-                  .then(function loadUntilTemplate(template) {
+                  .then(function loadUntilTemplate (template) {
                     // Make sure the resolves haven't finished before loading the template
-                    if (!resolvesFinished) {
-                      loadUpSteps({$scope: innerScope}, el, template, waitingStep.controller);
-                    }
+                    if (!resolvesFinished)
+                      loadUpSteps({ $scope: innerScope }, el, template, waitingStep.controller);
                   });
               }
 
-              $q.all(promises)
-                .then(function (resolves) {
+              resolves = scope.manager.onEnter(resolves);
+              resolves.template = getTemplatePromise(step.templateUrl);
+
+              $q.all(resolves)
+                .then(function (results) {
+                  var template = results.template;
+                  delete results.template;
+
                   // Indicate that resolves are complete so the untilTemplate isn't loaded
                   resolvesFinished = true;
-
-                  var template = resolves.template;
-                  delete resolves.template;
 
                   if (innerScope)
                     innerScope.$destroy();
 
-                  resolves.$scope = innerScope = scope.$new();
-                  resolves.$stepInstance = {
+                  results.$scope = innerScope = scope.$new();
+                  results.$stepInstance = {
                     transition: scope.manager.transition,
-                    end: scope.manager.end,
-                    setState: scope.manager.setState,
-                    getState: scope.manager.getState
+                    end: scope.manager.end
                   };
 
-                  loadUpSteps(resolves, el, template, step.controller);
+                  loadUpSteps(results, el, template, step.controller);
                 });
 
               /**
@@ -107,19 +103,18 @@
         };
 
         function getTemplatePromise (templateUrl) {
-          return $http.get(templateUrl, {cache: $templateCache})
+          return $http.get(templateUrl, { cache: $templateCache })
             .then(function (result) {
               return result.data;
             });
         }
       }
     ])
-    .factory('stepsManager', ['$q', '$injector', 'getResolvePromises',
-      function stepManagerFactory ($q, $injector, getResolvePromises) {
+    .factory('stepsManager', ['$q', '$injector',
+      function stepManagerFactory ($q, $injector) {
         return function stepManager () {
           var currentStep, listener, pending;
           var steps = {};
-          var states = {};
           var endDeferred = $q.defer();
 
           return {
@@ -155,6 +150,8 @@
              * @returns {Object}
              */
             start: function start (stepName, extraResolves) {
+              currentStep = steps[stepName];
+
               if (listener)
                 listener(steps[stepName], extraResolves, steps.waitingStep);
               else
@@ -163,41 +160,40 @@
                   extraResolves: extraResolves
                 };
 
-              currentStep = steps[stepName];
-
               return this;
+            },
+            end: function end (data) {
+              endDeferred.resolve(data);
+            },
+            /**
+             * Called before entering a new step.
+             * Has the ability to pend until the step is ready.
+             * @param {Object} [resolves]
+             * @returns {Object} A promise.
+             */
+            onEnter: function onEnter (resolves) {
+              resolves = resolves || {};
+
+              if (currentStep.onEnter)
+                return $injector.invoke(currentStep.onEnter, null, resolves);
+              else
+                return resolves;
             },
             /**
              * Performs a transition from one step to another
              * @param {String} action
-             * @param {Object} [extraResolves]
+             * @param {Object} resolves
              */
-            transition: function transition (action, extraResolves) {
+            transition: function transition (action, resolves) {
               if (!currentStep)
                 return;
 
-              $q.all(getResolvePromises(extraResolves))
-                .then(function (resolves) {
-                  resolves.$transition = {
-                    action: action,
-                    steps: steps,
-                    /**
-                     * End the steps.
-                     * @param {*} data
-                     */
-                    end: function end (data) {
-                      endDeferred.resolve(data);
-                    }
-                  };
+              var nextStep = currentStep.transition(steps, action);
 
-                  return $injector.invoke(currentStep.transition, null, resolves);
-                })
-                .then(function (next) {
-                  if (next) {
-                    currentStep = next.step;
-                    listener(next.step, next.resolve);
-                  }
-                });
+              if (nextStep) {
+                currentStep = nextStep;
+                listener(nextStep, resolves);
+              }
             },
             /**
              * Adds a change listener that gets called when a step changes.
@@ -215,28 +211,10 @@
               return this;
             },
             /**
-             * Sets state for the current step.
-             * @param {*} state
-             */
-            setState: function setState (state) {
-              var name = _.findKey(steps, currentStep);
-
-              states[name] = state;
-            },
-            /**
-             * Gets state for the current step.
-             * @returns {*}
-             */
-            getState: function getState () {
-              var name = _.findKey(steps, currentStep);
-
-              return states[name];
-            },
-            /**
              * Cleans all references.
              */
             destroy: function destroy () {
-              listener = steps = currentStep = states = pending = null;
+              listener = steps = currentStep = pending = null;
             },
             result: {
               end: endDeferred.promise
@@ -244,31 +222,5 @@
           };
         };
       }
-    ])
-    .factory('getResolvePromises', ['$q', '$injector', function ($q, $injector) {
-      /**
-       * Takes an object of resolves and invokes them all.
-       * The result of invoking them is used as a promise
-       * so we can wait on all dependencies to load.
-       * @param {Object} resolves
-       * @returns {Object}
-       */
-      return function getResolvePromises (resolves) {
-        resolves = resolves || {};
-
-        return Object.keys(resolves).reduce(function promisfyResolves (obj, key) {
-          var value = resolves[key];
-
-          var isAngularAnnotation = (Array.isArray(value) && typeof _.last(value) === 'function');
-
-          if (typeof value === 'function' || isAngularAnnotation)
-            obj[key] = $q.when($injector.invoke(value));
-          else if (_.isPlainObject(value) || Array.isArray(value))
-            obj[key] = $q.all(value);
-
-          return obj;
-        }, {});
-      };
-    }]);
+    ]);
 }());
-

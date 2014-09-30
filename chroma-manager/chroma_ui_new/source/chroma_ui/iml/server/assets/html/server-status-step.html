@@ -24,13 +24,13 @@
       <pdsh pdsh-initial="serverStatus.pdsh" pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
     </div>
   </form>
-  <div class="status-cell-container" ng-repeat="status in serverStatus.status track by status.address">
-    <div ng-class="{invalid: status.invalid, valid: !status.invalid}" tooltip="Address: {{ status.address }}" class="status-cell activate-popover"></div>
-    <iml-popover title="Status for {{ status.address }}" placement="bottom">
+  <div class="status-cell-container" ng-repeat="server in serverStatus.serversStatus track by server.address">
+    <div ng-class="{invalid: !server.valid, valid: server.valid}" tooltip="Address: {{ server.address }}" class="status-cell activate-popover"></div>
+    <iml-popover title="Status for {{ server.address }}" placement="bottom">
       <ul class="well">
-        <li ng-repeat="(key, value) in status.fields">
-          <a tooltip="{{ serverStatus.convertToHelp(key) | insertHelp }}">
-            <i ng-class="{ 'fa-times-circle': value == false, 'fa-check-circle': value, 'fa-question-circle': value === null }" class="fa"></i> {{ key }}
+        <li ng-repeat="check in server.status track by check.name">
+          <a tooltip="{{ check.name | insertHelp }}">
+            <i ng-class="{ 'fa-times-circle': check.value == false, 'fa-check-circle': check.value }" class="fa"></i> {{ check.uiName }}
           </a>
         </li>
       </ul>

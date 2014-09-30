@@ -1,10 +1,17 @@
 describe('create or update hosts then', function () {
   'use strict';
 
-
-  var requestSocket, postDeferred, putDeferred;
+  var requestSocket, postDeferred, putDeferred, CACHE_INITIAL_DATA;
   beforeEach(module('server', function ($provide, $exceptionHandlerProvider) {
     $exceptionHandlerProvider.mode('log');
+
+    CACHE_INITIAL_DATA = {
+      server_profile: [{
+        name: 'default',
+        resource_uri: '/api/server_profile/default/'
+      }]
+    };
+    $provide.constant('CACHE_INITIAL_DATA', CACHE_INITIAL_DATA);
 
     requestSocket = jasmine.createSpy('requestSocket').andReturn({
       sendPost: jasmine.createSpy('sendPost'),
@@ -24,8 +31,9 @@ describe('create or update hosts then', function () {
     });
   }));
 
-  var $rootScope, $exceptionHandler, createOrUpdateHostsThen, serverSpark, server, promise, handler, spy;
-  beforeEach(inject(function (_$rootScope_, _$exceptionHandler_, _createOrUpdateHostsThen_) {
+  var $q, $rootScope, $exceptionHandler, createOrUpdateHostsThen, serverSpark, server, promise, handler, spy;
+  beforeEach(inject(function (_$q_, _$rootScope_, _$exceptionHandler_, _createOrUpdateHostsThen_) {
+    $q = _$q_;
     $rootScope = _$rootScope_;
     $exceptionHandler = _$exceptionHandler_;
     createOrUpdateHostsThen = _createOrUpdateHostsThen_;
@@ -33,21 +41,27 @@ describe('create or update hosts then', function () {
     spy = jasmine.createSpy('spy');
 
     serverSpark = {
-      onceValue: jasmine.createSpy('onceValue')
+      onceValueThen: jasmine.createSpy('onceValueThen').andCallFake(function () {
+        var deferred = $q.defer();
+
+        handler = function (resp) {
+          deferred.resolve(resp);
+          $rootScope.$apply();
+        };
+
+        return deferred.promise;
+      })
     };
 
     server = {
       auth_type: 'existing_keys_choice',
-      pdsh: 'storage[0-1].localdomain',
-      address: [
+      addresses: [
         'storage0.localdomain',
         'storage1.localdomain'
       ]
     };
 
     promise = createOrUpdateHostsThen(server, serverSpark);
-
-    handler = _.last(serverSpark.onceValue.mostRecentCall.args);
   }));
 
   it('should be a function', function () {
@@ -55,7 +69,7 @@ describe('create or update hosts then', function () {
   });
 
   it('should wait for data once on the serverSpark', function () {
-    expect(serverSpark.onceValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
+    expect(serverSpark.onceValueThen).toHaveBeenCalledOnceWith('data');
   });
 
   it('should return a promise', function () {
@@ -81,11 +95,13 @@ describe('create or update hosts then', function () {
           objects: [
             {
               auth_type: 'existing_keys_choice',
-              address: 'storage0.localdomain'
+              address: 'storage0.localdomain',
+              server_profile : '/api/server_profile/default/'
             },
             {
               auth_type: 'existing_keys_choice',
-              address: 'storage1.localdomain'
+              address: 'storage1.localdomain',
+              server_profile : '/api/server_profile/default/'
             }
           ]
         }
@@ -103,8 +119,8 @@ describe('create or update hosts then', function () {
         response = {
           body: {
             objects: [
-              {command: {id: 1}, host: {id: 1, address: 'storage0.localdomain'}},
-              {command: {id: 2}, host: {id: 2, address: 'storage1.localdomain'}}
+              {command: { id: 1 }, host: { id: 1, address: 'storage0.localdomain' }},
+              {command: { id: 2 }, host: { id: 2, address: 'storage1.localdomain' }}
             ]
           }
         };
@@ -198,7 +214,11 @@ describe('create or update hosts then', function () {
       expect(requestSocket.plan().sendPost).toHaveBeenCalledOnceWith('/host', {
         json: {
           objects: [
-            { auth_type : 'existing_keys_choice', address : 'storage1.localdomain' }
+            {
+              auth_type : 'existing_keys_choice',
+              address : 'storage1.localdomain',
+              server_profile : '/api/server_profile/default/'
+            }
           ]
         }
       }, true);
@@ -290,10 +310,20 @@ describe('create or update hosts then', function () {
         body: {
           objects: [
             {
-              host: { address: 'storage0.localdomain' }
+              error: null,
+              traceback: null,
+              command_and_host: {
+                command: false,
+                host: { address: 'storage0.localdomain' }
+              }
             },
             {
-              host: { address : 'storage1.localdomain' }
+              error: null,
+              traceback: null,
+              command_and_host: {
+                command: false,
+                host: { address: 'storage1.localdomain' }
+              }
             }
           ]
         }

@@ -26,7 +26,7 @@
 
 var conf = require('./conf.json');
 var url = require('url');
-var _ = require('lodash');
+var _ = require('lodash-mixins');
 
 var parsedPrimusHttpUrl = url.parse(conf.SERVER_HTTP_URL);
 var parsedApiHttpUrl = _.clone(parsedPrimusHttpUrl);

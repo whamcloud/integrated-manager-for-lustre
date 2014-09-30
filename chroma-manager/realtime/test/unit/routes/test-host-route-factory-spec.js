@@ -2,6 +2,7 @@
 
 var testHostRouteFactory = require('../../../routes/test-host-route-factory');
 var Q = require('q');
+var _ = require('lodash-mixins');
 
 describe('test host route ', function () {
   var testHostRoute, router, request, loop, logger,
@@ -17,7 +18,6 @@ describe('test host route ', function () {
 
     spyOn(Q.makePromise.prototype, 'done').andCallFake(function () {
       this.then(function () {
-        console.log('here');
         deferred.resolve();
       });
     });
@@ -45,7 +45,7 @@ describe('test host route ', function () {
       })
     };
 
-    testHostRoute = testHostRouteFactory(router, request, loop, logger)();
+    testHostRoute = testHostRouteFactory(router, request, loop, logger, Q, _)();
   });
 
   it('should register a test host handler', function () {
@@ -121,31 +121,37 @@ describe('test host route ', function () {
           body: {
             objects: [
               {
-                cancelled: false,
-                complete: true,
-                errored: false,
-                id: '1',
-                jobs: [
-                  '/api/job/1/'
-                ]
+                command: {
+                  cancelled: false,
+                  complete: true,
+                  errored: false,
+                  id: '1',
+                  jobs: [
+                    '/api/job/1/'
+                  ]
+                }
               },
               {
-                cancelled: false,
-                complete: true,
-                errored: false,
-                id: '2',
-                jobs: [
-                  '/api/job/2/'
-                ]
+                command: {
+                  cancelled: false,
+                  complete: true,
+                  errored: false,
+                  id: '2',
+                  jobs: [
+                    '/api/job/2/'
+                  ]
+                }
               },
               {
-                cancelled: false,
-                complete: true,
-                errored: false,
-                id: '3',
-                jobs: [
-                  '/api/job/3/'
-                ]
+                command: {
+                  cancelled: false,
+                  complete: true,
+                  errored: false,
+                  id: '3',
+                  jobs: [
+                    '/api/job/3/'
+                  ]
+                }
               }
             ]
           }

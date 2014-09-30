@@ -23,7 +23,6 @@
 'use strict';
 
 var inherits = require('util').inherits;
-var _ = require('lodash');
 
 var STATES;
 exports.STATES = STATES = {
@@ -38,7 +37,7 @@ exports.STATES = STATES = {
 
 exports.notificationResourceFactory = notificationResourceFactory;
 
-function notificationResourceFactory (Resource, AlertResource) {
+function notificationResourceFactory (Resource, AlertResource, _) {
   var alertResource = new AlertResource();
 
   /**

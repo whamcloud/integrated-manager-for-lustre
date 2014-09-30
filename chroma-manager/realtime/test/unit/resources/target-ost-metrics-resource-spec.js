@@ -1,7 +1,8 @@
 'use strict';
 
-var Q = require('q'),
-  targetOstMetricsResourceFactory = require('../../../resources/target-ost-metrics-resource');
+var Q = require('q');
+var targetOstMetricsResourceFactory = require('../../../resources/target-ost-metrics-resource');
+var _ = require('lodash-mixins');
 
 describe('Target ost metrics resource', function () {
   var TargetResource, TargetOstMetricsResource, targetOstMetricsResource;
@@ -16,7 +17,7 @@ describe('Target ost metrics resource', function () {
 
     spyOn(TargetResource, 'call');
 
-    TargetOstMetricsResource = targetOstMetricsResourceFactory(TargetResource, Q);
+    TargetOstMetricsResource = targetOstMetricsResourceFactory(TargetResource, Q, _);
     targetOstMetricsResource = new TargetOstMetricsResource();
   });
 

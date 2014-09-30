@@ -2,7 +2,7 @@
   "js": {
     "source": [
       "source/chroma_ui/bower_components/lodash/dist/lodash.js",
-      "source/chroma_ui/common/mixins/lodash-mixins.js",
+      "../ui-modules/isomorphic/lodash-mixins/index.js",
       "source/chroma_ui/bower_components/underscore-contrib/underscore.function.iterators.js",
       "source/chroma_ui/vendor/sprintf/sprintf.js",
       "source/chroma_ui/bower_components/jquery/jquery.js",

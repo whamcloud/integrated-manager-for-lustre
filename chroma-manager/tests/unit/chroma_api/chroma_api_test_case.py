@@ -146,6 +146,13 @@ class ChromaApiTestCase(ResourceTestCase):
                 if 'get' in resource._meta.detail_allowed_methods:
                     objects = self.deserialize(response)['objects']
 
-                    for o in objects:
-                        response = self.api_client.get(o['resource_uri'])
-                        self.assertEqual(response.status_code, 200, "resource_url: %s, %s %s %s" % (o['resource_uri'], response.status_code, self.deserialize(response), o))
+                    for object in objects:
+                        # Deal with the newer bulk data format, if it is in that format.
+                        if ('resource_uri' not in object) and ('traceback' in object) and ('error' in object):
+                            del object['traceback']
+                            del object['error']
+                            self.assertEqual(len(object), 1)
+                            object = object.values()[0]
+
+                        response = self.api_client.get(object['resource_uri'])
+                        self.assertEqual(response.status_code, 200, "resource_url: %s, %s %s %s" % (object['resource_uri'], response.status_code, self.deserialize(response), object))

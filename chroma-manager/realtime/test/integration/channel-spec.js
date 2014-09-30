@@ -2,8 +2,8 @@
 
 require('jasmine-n-matchers');
 
-var getClient = require('./util/get-client'),
-  _ = require('lodash');
+var getClient = require('./util/get-client');
+var _ = require('lodash-mixins');
 
 describe('channel', function () {
   var client, channel;

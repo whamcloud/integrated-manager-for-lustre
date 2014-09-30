@@ -11,6 +11,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.models import ManagedHost
 from chroma_core.services.http_agent import ValidatedClientView
+from chroma_core.chroma_common.lib.name_value_list import NameValueList
 
 AgentRpc = MockAgentRpc
 AgentSsh = MockAgentSsh
@@ -81,19 +82,22 @@ def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
 
     ok = address in MockAgentRpc.mock_servers
 
+    status = NameValueList([{'resolve': ok},
+                            {'ping': ok},
+                            {'auth': ok},
+                            {'hostname_valid': ok},
+                            {'fqdn_resolves': ok},
+                            {'fqdn_matches': ok},
+                            {'reverse_resolve': ok},
+                            {'reverse_ping': ok},
+                            {'yum_valid_repos': ok},
+                            {'yum_can_update': ok},
+                            {'openssl': ok}])
+
     result = {
         'address': address,
-        'resolve': ok,
-        'ping': ok,
-        'auth': ok,
-        'hostname_valid': ok,
-        'fqdn_resolves': ok,
-        'fqdn_matches': ok,
-        'reverse_resolve': ok,
-        'reverse_ping': ok,
-        'yum_valid_repos': ok,
-        'yum_can_update': ok,
-        'openssl': ok,
+        'status': status.collection(),
+        'valid': ok
     }
 
     command = Command.objects.create(message="Mock Test Host Contact", complete=True)

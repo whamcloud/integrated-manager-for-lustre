@@ -4,7 +4,7 @@ describe('Server Status Step', function () {
   beforeEach(module('server'));
 
   describe('controller', function () {
-    var $stepInstance, data, serverStatus;
+    var $stepInstance, data, serverStatus, statusSpark, hostlistFilter;
 
     beforeEach(inject(function ($rootScope, $controller) {
       var $scope = $rootScope.$new();
@@ -13,45 +13,42 @@ describe('Server Status Step', function () {
         transition: jasmine.createSpy('transition')
       };
 
-      data = {
-        statusSpark: {
-          onValue: jasmine.createSpy('onValue').andReturn(jasmine.createSpy('off')
-          )
-        },
-        server: {
-          pdsh: 'storage0.localdomain'
-        }
+      statusSpark = {
+        onValue: jasmine.createSpy('onValue'),
+        end: jasmine.createSpy('end')
       };
 
-      $controller('ServerStatusStepCtrl', {
+      data = {
+        pdsh: 'storage0.localdomain'
+      };
+
+      hostlistFilter = {
+        setHash: jasmine.createSpy('setHash').andCallFake(returnHostlistFilter),
+        setHosts: jasmine.createSpy('setHosts').andCallFake(returnHostlistFilter),
+        compute: jasmine.createSpy('compute')
+      };
+
+      function returnHostlistFilter () {
+        return hostlistFilter;
+      }
+
+      serverStatus = $controller('ServerStatusStepCtrl', {
         $scope: $scope,
         $stepInstance: $stepInstance,
-        data: data
+        data: data,
+        statusSpark: statusSpark,
+        hostlistFilter: hostlistFilter
       });
-
-      serverStatus = $scope.serverStatus;
     }));
 
-    it('should convert a readable name to a help property', function () {
-      expect(serverStatus.convertToHelp('Hostname valid')).toEqual('hostname_valid');
-    });
-
     it('should set the pdsh expression on the scope', function () {
-      expect(serverStatus.pdsh).toEqual(data.server.pdsh);
+      expect(serverStatus.pdsh).toEqual(data.pdsh);
     });
 
-    describe('hostnames and has', function () {
-      beforeEach(function () {
-        serverStatus.pdshUpdate('foo,bar', ['foo', 'bar'], {'foo': 1, 'bar': 1});
-      });
+    it('should set hostnamesHash', function () {
+      serverStatus.pdshUpdate('foo,bar', ['foo', 'bar'], {'foo': 1, 'bar': 1});
 
-      it('should set hostnames', function () {
-        expect(serverStatus.hostnames).toEqual(['foo', 'bar']);
-      });
-
-      it('should set hostnamesHash', function () {
-        expect(serverStatus.hostnamesHash).toEqual({foo: 1, bar: 1});
-      });
+      expect(hostlistFilter.setHash).toHaveBeenCalledOnceWith({foo: 1, bar: 1});
     });
 
     describe('transitioning', function () {
@@ -61,56 +58,49 @@ describe('Server Status Step', function () {
 
       it('should delegate to $stepInstance', function () {
         expect($stepInstance.transition).toHaveBeenCalledOnceWith('next', {
-          data: data
+          data: data,
+          showCommand: false
         });
       });
 
-      it('should remove the pipeline listener', function () {
-        expect(data.statusSpark.onValue.plan()).toHaveBeenCalledOnce();
+      it('should end the status spark', function () {
+        expect(statusSpark.end).toHaveBeenCalledOnce();
       });
     });
 
     it('should listen on the pipeline', function () {
-      expect(data.statusSpark.onValue)
+      expect(statusSpark.onValue)
         .toHaveBeenCalledOnceWith('pipeline', jasmine.any(Function));
     });
 
-    it('should set the status on pipeline value', function () {
-      var handler = data.statusSpark.onValue.mostRecentCall.args[1];
+    describe('on pipeline', function () {
+      var response;
 
-      serverStatus.pdshUpdate(
-        'test[001-0011].localdomain',
-        [
-          { address: 'test001.localdomain'},
-          { address: 'test0011.localdomain'},
-          { address: 'test003.localdomain' },
-          { address: 'test005.localdomain' }
-        ],
-        { 'test001.localdomain': 1,
-          'test0011.localdomain': 1,
-          'test003.localdomain': 1,
-          'test005.localdomain': 1
-        }
-      );
+      beforeEach(function () {
+        response = {
+          body: {
+            valid: false,
+            objects: [
+              { address: 'test001.localdomain'},
+              { address: 'test0011.localdomain'},
+              { address: 'test003.localdomain' },
+              { address: 'test0015.localdomain' },
+              { address: 'test005.localdomain' }
+            ]
+          }
+        };
 
-      handler({
-        body: {
-          objects: [
-            { address: 'test001.localdomain'},
-            { address: 'test0011.localdomain'},
-            { address: 'test003.localdomain' },
-            { address: 'test0015.localdomain' },
-            { address: 'test005.localdomain' }
-          ]
-        }
+        var handler = statusSpark.onValue.mostRecentCall.args[1];
+        handler(response);
       });
 
-      expect(serverStatus.status).toEqual([
-        { address: 'test001.localdomain'},
-        { address: 'test003.localdomain' },
-        { address: 'test005.localdomain' },
-        { address: 'test0011.localdomain'}
-      ]);
+      it('should set the hosts on the filter', function () {
+        expect(hostlistFilter.setHosts).toHaveBeenCalledOnceWith(response.body.objects);
+      });
+
+      it('should set status validity', function () {
+        expect(serverStatus.isValid).toBe(false);
+      });
     });
   });
 
@@ -124,149 +114,78 @@ describe('Server Status Step', function () {
     it('should be created as expected', function () {
       expect(serverStatusStep).toEqual({
         templateUrl: 'iml/server/assets/html/server-status-step.html',
-        controller: 'ServerStatusStepCtrl',
-        transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'waitForCommandCompletion',
-          jasmine.any(Function)]
+        controller: 'ServerStatusStepCtrl as serverStatus',
+        onEnter: ['data', 'getTestHostSparkThen', 'serversToApiObjects', jasmine.any(Function)],
+        transition: jasmine.any(Function)
       });
     });
 
-    describe('transitions', function () {
-      var $q, $rootScope, $transition, data, createOrUpdateHostsThen, hostProfile, createHostsDeferred,
-        openCommandModal, openCommandModalDeferred, transition, waitForCommandCompletion, OVERRIDE_BUTTON_TYPES;
+    describe('on enter', function () {
+      var data, getTestHostSparkThen, onEnter, serversToApiObjects;
 
-      beforeEach(inject(function (_$q_, _$rootScope_) {
-        $q = _$q_;
-        $rootScope = _$rootScope_;
+      beforeEach(function () {
+        getTestHostSparkThen = jasmine.createSpy('getTestHostSparkThen');
+        serversToApiObjects = jasmine.createSpy('serversToApiObjects')
+          .andReturn([{
+            address: 'lotus-34vm5.iml.intel.com',
+            auth_type: 'existing_keys_choice'
+          },
+          {
+            address: 'lotus-34vm6.iml.intel.com',
+            auth_type: 'existing_keys_choice'
+          }]);
 
-        $transition = {
-          steps: {
-            addServersStep: {},
-            selectServerProfileStep: {}
+        data = {
+          flint: jasmine.createSpy('flint'),
+          servers: {
+            addresses: [
+              'lotus-34vm5.iml.intel.com',
+              'lotus-34vm6.iml.intel.com'
+            ]
           }
         };
 
-        data = {
-          flint: {},
-          server: {},
-          serverSpark: {}
-        };
-
-        waitForCommandCompletion = jasmine.createSpy('waitForCommandCompletion')
-          .andReturn($q.when());
-
-        OVERRIDE_BUTTON_TYPES = {
-          OVERRIDE: 'override',
-          PROCEED: 'proceed',
-          PROCEED_SKIP: 'proceed and skip'
-        };
-
-        createHostsDeferred = $q.defer();
-        createOrUpdateHostsThen = jasmine.createSpy('createOrUpdateHostsThen').andReturn(createHostsDeferred.promise);
-
-        openCommandModalDeferred = $q.defer();
-        openCommandModal = jasmine.createSpy('openCommandModal').andReturn(openCommandModalDeferred.promise);
-
-        hostProfile = jasmine.createSpy('hostProfile').andReturn({
-          onceValueThen: jasmine.createSpy('onceValueThen').andReturn($q.when())
-        });
-
-        transition = _.last(serverStatusStep.transition);
-      }));
-
-      describe('previous action', function () {
-        var result;
-
-        beforeEach(function () {
-          $transition.action = 'previous';
-
-          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal);
-        });
-
-        it('should go to add servers step', function () {
-          expect(result).toEqual({
-            step: $transition.steps.addServersStep,
-            resolve: {
-              data: {
-                flint: data.flint,
-                server: data.server,
-                serverSpark: data.serverSpark
-              }
-            }
-          });
-        });
+        onEnter = _.last(serverStatusStep.onEnter);
+        onEnter(data, getTestHostSparkThen, serversToApiObjects);
       });
 
-      describe('proceed and skip', function () {
-        var result;
-
-        beforeEach(function () {
-          $transition.action = 'proceed and skip';
-
-          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, waitForCommandCompletion);
-
-          createHostsDeferred.resolve({
-            body: {
-              objects: [{command: { id: 1 }, host: { id: 2 }}]
-            }
-          });
-          $rootScope.$digest();
-        });
-
-        it('should call waitForCommandCompletion', function () {
-          expect(waitForCommandCompletion).toHaveBeenCalledWith(false);
-        });
+      it('should convert the servers to api objects', function () {
+        expect(serversToApiObjects).toHaveBeenCalledOnceWith(data.servers);
       });
 
-      describe('proceed', function () {
-        var result;
-
-        beforeEach(function () {
-          $transition.action = 'proceed';
-
-          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, waitForCommandCompletion);
-
-          createHostsDeferred.resolve({
-            body: {
-              objects: [{command: { id: 1 }, host: { id: 2 }}]
-            }
-          });
-          $rootScope.$digest();
+      it('should test the api objects', function () {
+        expect(getTestHostSparkThen).toHaveBeenCalledOnceWith(data.flint, {
+          objects: serversToApiObjects.plan()
         });
+      });
+    });
 
-        it('should get a hostProfileSpark', function () {
-          expect(createOrUpdateHostsThen)
-            .toHaveBeenCalledOnceWith(data.server, data.serverSpark);
-        });
+    describe('transition', function () {
+      var steps;
 
-        it('should open the command modal', function () {
-          expect(waitForCommandCompletion).toHaveBeenCalledOnceWith(true);
-        });
+      beforeEach(function () {
+        steps = {
+          addServersStep: {},
+          selectServerProfileStep: {}
+        };
+      });
 
-        it('should create a host profile spark', function () {
-          expect(hostProfile).toHaveBeenCalledOnceWith(data.flint, [{id: 2}]);
-        });
+      it('should go to add servers step for a previous action', function () {
+        var result = serverStatusStep.transition(steps, 'previous');
 
-        it('should register on onceValueThen', function () {
-          expect(hostProfile.plan().onceValueThen).toHaveBeenCalledOnceWith('data');
-        });
+        expect(result).toEqual(steps.addServersStep);
+      });
 
-        it('should go to select server profile step', function () {
-          expect(result).toEqual({
-            step: $transition.steps.selectServerProfileStep,
-            resolve: {
-              data: {
-                flint: data.flint,
-                server: data.server,
-                serverSpark: data.serverSpark,
-                hostProfileSpark: {
-                  then: jasmine.any(Function),
-                  catch: jasmine.any(Function),
-                  finally: jasmine.any(Function)
-                }
-              }
-            }
-          });
-        });
+      it('should go to select profile step for proceed and skip', function () {
+        var result = serverStatusStep.transition(steps, 'proceed and skip');
+
+        expect(result).toEqual(steps.selectServerProfileStep);
+      });
+
+      it('should go to select profile step for proceed', function () {
+        var result = serverStatusStep.transition(steps, 'proceed');
+
+        expect(result).toEqual(steps.selectServerProfileStep);
       });
     });
   });

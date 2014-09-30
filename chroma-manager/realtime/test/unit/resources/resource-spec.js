@@ -1,6 +1,7 @@
 'use strict';
 
 var resourceFactory = require('../../../resources/resource');
+var _ = require('lodash-mixins');
 
 describe('resource', function () {
   var Resource, request, logger, log;
@@ -20,11 +21,12 @@ describe('resource', function () {
       child: jasmine.createSpy('logger.child').andReturn(log)
     };
 
-    Resource = resourceFactory(request, logger);
+    Resource = resourceFactory(request, logger, _);
   });
 
   it('should throw if path is not passed', function () {
     function shouldThrow () {
+      /* jshint nonew: false */
       new Resource();
     }
 

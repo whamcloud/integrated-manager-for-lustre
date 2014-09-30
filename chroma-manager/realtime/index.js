@@ -47,6 +47,7 @@ http.globalAgent.maxSockets = 25;
 var modules = [{
   conf: ['value', require('./conf')],
   http: ['value', http],
+  _: ['value', require('lodash-mixins')],
   Primus: ['value', require('primus')],
   jsonMask: ['value', require('json-mask')],
   serverWrite: ['value', require('./primus-server-write')],

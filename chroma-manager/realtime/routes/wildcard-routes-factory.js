@@ -22,9 +22,7 @@
 
 'use strict';
 
-var _ = require('lodash');
-
-module.exports = function wildcardRoutesFactory(router, request, loop, logger) {
+module.exports = function wildcardRoutesFactory(router, request, loop, logger, _) {
   return function wildcardRoutes () {
     /**
      * Handles all unmatched requests

@@ -4,6 +4,7 @@ from collections import namedtuple
 from testconfig import config
 from tests.integration.core.api_testcase_with_test_reset import ApiTestCaseWithTestReset
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
+from tests.chroma_common.lib.name_value_list import NameValueList
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -81,22 +82,23 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 self.assertEqual(response.successful, True, response.text)
 
                 # If the manager return some commands then this is a 2.2 or later manager (should be a better way of knowing versions!
-                if 'objects' in response.json:
-                    command_id = response.json['objects'][0]['id']
+                if 'id' in response.json:
+                    command_id = response.json['id']
 
                     self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
 
-                    results = {}
+                    results = []
 
-                    for job in response.json['objects'][0]['jobs']:
+                    for job in response.json['jobs']:
                         response = self.chroma_manager.get(job)
                         self.assertEqual(response.successful, True, response.text)
 
-                        results = dict(results.items() + response.json['step_results'].items())
+                        for item in response.json['step_results'].items():
+                            results.append(NameValueList(item[1]['status']))
                 else:
-                    results = {"": response.json}
+                    results = [response.json]
 
-                for result in results.values():
+                for result in results:
                     if not config.get('ssh_config', None):
                         self.assertTrue(result['ping'])
                         self.assertTrue(result['resolve'])

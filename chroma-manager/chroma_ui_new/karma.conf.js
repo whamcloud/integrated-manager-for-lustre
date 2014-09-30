@@ -18,7 +18,9 @@ module.exports = function(config) {
   var imlDir = bound(sourceDir('iml/%s'));
   var commonDir = bound(sourceDir('common/%s'));
   var testDir = bound('test/%s');
-  var angularComponentsDir = bound('../ui-modules/angular/%s');
+  var uiModulesDir = bound('../ui-modules/%s');
+  var isomorphicModulesDir = bound(uiModulesDir('isomorphic/%s'));
+  var angularComponentsDir = bound(uiModulesDir('angular/%s'));
 
   config.set({
 
@@ -45,6 +47,7 @@ module.exports = function(config) {
       bowerDir('twix/bin/twix.js'),
       bowerDir('d3/d3.js'),
       bowerDir('angular-bootstrap/ui-bootstrap-tpls.js'),
+      isomorphicModulesDir('lodash-mixins/index.js'),
       vendorDir('**/*.js'),
       commonDir('**/*-module.js'),
       commonDir('**/*.js'),

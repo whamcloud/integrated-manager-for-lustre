@@ -136,9 +136,6 @@ def detect_scan(target_devices=None):
         daemon_log.info("detect_scan called at %s with target_devices saved on %s" % (str(datetime.now()), timestamp))
         local_targets = LocalTargets(settings['target_devices'])
 
-    #from pydevd.pydevd import settrace
-    #settrace('cgearing-mac01.local', port=2100, stdoutToServer=True, stderrToServer=True)
-
     # Return the discovered Lustre components on the target devices, may return emptiness.
     mgs_targets = MgsTargets(local_targets.targets)
     return {"target_devices_saved_timestamp": timestamp,

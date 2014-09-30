@@ -4,6 +4,7 @@ var Q = require('q');
 var requestFactory = require('../../request');
 var jsonMask = require('json-mask');
 var VERBS = require('socket-router').verbs;
+var _ = require('lodash-mixins');
 
 describe('request', function () {
   var conf, patchedRequest, requestInstance, request, logger;
@@ -39,7 +40,7 @@ describe('request', function () {
       })
     };
 
-    request = requestFactory(conf, patchedRequest, logger, Q, jsonMask, VERBS);
+    request = requestFactory(conf, patchedRequest, logger, Q, jsonMask, VERBS, _);
   });
 
   it('should setup a default request', function () {

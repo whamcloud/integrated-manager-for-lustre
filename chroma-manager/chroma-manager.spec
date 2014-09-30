@@ -30,6 +30,7 @@ Requires: python-dse
 Requires: python-supervisor
 Requires: python-jsonschema
 Requires: python-dateutil
+Requires: python-ordereddict
 Requires: python-uuid
 Requires: python-paramiko
 Requires: python-kombu >= 2.4.7
@@ -116,7 +117,7 @@ or on a separate node.
 %package integration-tests
 Summary: Chroma Manager Integration Tests
 Group: Development/Tools
-Requires: python-dateutil python-requests python-nose python-nose-testconfig python-paramiko python-django
+Requires: python-dateutil python-requests python-nose python-nose-testconfig python-paramiko python-django python-ordereddict
 %description integration-tests
 This package contains the Chroma Manager integration tests and scripts and is intended
 to be used by the Chroma test framework.
@@ -311,6 +312,7 @@ fi
 %{manager_root}/tests/sample_data/*
 %{manager_root}/tests/plugins/*
 %{manager_root}/tests/integration/*
+%{manager_root}/tests/chroma_common/*
 %attr(0755,root,root)%{manager_root}/tests/integration/run_tests
 
 %files -f devel.files devel

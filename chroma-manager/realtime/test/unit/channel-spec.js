@@ -1,7 +1,8 @@
 'use strict';
 
-var Q = require('q'),
-  channelFactory = require('../../channel');
+var Q = require('q');
+var channelFactory = require('../../channel');
+var _ = require('lodash-mixins');
 
 describe('channel', function () {
   var logger, Stream, Resource, primus, setup, channelInstance, spark, log;
@@ -37,7 +38,7 @@ describe('channel', function () {
       channel: jasmine.createSpy('primus.channel').andReturn(channelInstance)
     };
 
-    setup = channelFactory(primus, logger, Stream);
+    setup = channelFactory(primus, logger, Stream, _);
   });
 
   describe('setup', function () {

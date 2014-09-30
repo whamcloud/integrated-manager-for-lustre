@@ -393,7 +393,7 @@ class ApiEndpoint(object):
                             continue
 
                     try:
-                        if query in candidates[0][field]:
+                        if query in str(candidates[0][field]):
                             return candidates[0]['resource_uri']
                     except (IndexError, KeyError):
                         continue

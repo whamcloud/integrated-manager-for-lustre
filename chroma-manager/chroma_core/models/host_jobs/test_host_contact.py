@@ -34,6 +34,7 @@ from chroma_core.models.jobs import Job
 from chroma_core.lib.job import Step
 from chroma_help.help import help_text
 from chroma_core.lib.job import job_log
+from chroma_core.chroma_common.lib.name_value_list import NameValueList
 
 import settings
 
@@ -219,42 +220,35 @@ exit(missing_electric_fence)"
 
         manager_hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
 
-        auth = False
-        reverse_resolve = False
-        reverse_ping = False
-        hostname_valid = False
-        fqdn_resolves = False
-        fqdn_matches = False
-        yum_valid_repos = False
-        yum_can_update = False
-        openssl = False
+        status = NameValueList([{'resolve': resolve},
+                                {'ping': ping},
+                                {'auth': False},
+                                {'hostname_valid': False},
+                                {'fqdn_resolves': False},
+                                {'fqdn_matches': False},
+                                {'reverse_resolve': False},
+                                {'reverse_ping': False},
+                                {'yum_valid_repos': False},
+                                {'yum_can_update': False},
+                                {'openssl': False}])
 
         if resolve and ping:
             try:
-                reverse_resolve, reverse_ping = self._test_reverse_ping(agent_ssh, auth_args, address, manager_hostname)
-                hostname_valid, fqdn_resolves, fqdn_matches = self._test_hostname(agent_ssh, auth_args, address, resolved_address)
-                yum_valid_repos, yum_can_update = self._test_yum_sanity(agent_ssh, auth_args, address)
-                openssl = self._test_openssl(agent_ssh, auth_args, address)
+                status['reverse_resolve'], status['reverse_ping'] = self._test_reverse_ping(agent_ssh, auth_args, address, manager_hostname)
+                status['hostname_valid'], status['fqdn_resolves'], status['fqdn_matches'] = self._test_hostname(agent_ssh, auth_args, address, resolved_address)
+                status['yum_valid_repos'], status['yum_can_update'] = self._test_yum_sanity(agent_ssh, auth_args, address)
+                status['openssl'] = self._test_openssl(agent_ssh, auth_args, address)
             except (AuthenticationException, SSHException):
                 #  No auth methods available, or wrong credentials
-                auth = False
+                status['auth'] = False
             else:
-                auth = True
+                status['auth'] = True
 
         return {
             'address': address,
-            'resolve': resolve,
-            'ping': ping,
-            'auth': auth,
-            'hostname_valid': hostname_valid,
-            'fqdn_resolves': fqdn_resolves,
-            'fqdn_matches': fqdn_matches,
-            'reverse_resolve': reverse_resolve,
-            'reverse_ping': reverse_ping,
-            'yum_valid_repos': yum_valid_repos,
-            'yum_can_update': yum_can_update,
-            'openssl': openssl,
-            }
+            'valid': all(entry.value is True for entry in status),
+            'status': status.collection()
+        }
 
 
 class TestHostConnectionJob(Job):

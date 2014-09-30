@@ -33,34 +33,35 @@
     .constant('ADD_SERVER_AUTH_CHOICES', CHOICES)
     .controller('AddServerStepCtrl', ['$scope', '$stepInstance', 'data',
       function AddServerStepCtrl ($scope, $stepInstance, data) {
-        var server = data.server;
+        var servers = data.servers;
 
-        $scope.addServer = {
-          fields: _.extend({ auth_type: CHOICES.EXISTING_KEYS }, server, {
-            pdsh: (server && (server.pdsh || server.address[0]) || null)
-          }),
+        _.extend(this, {
+          fields: {
+            auth_type: (servers && servers.auth_type) || CHOICES.EXISTING_KEYS,
+            pdsh: data.pdsh
+          },
           CHOICES: CHOICES,
           /**
            * Called on pdsh view change.
            * @param {String} pdsh
            * @param {Array} hostnames
-           * @param {Object} hostnamesHash
            */
-          pdshUpdate: function pdshUpdate (pdsh, hostnames, hostnamesHash) {
-            $scope.addServer.fields.pdsh = pdsh;
+          pdshUpdate: function pdshUpdate (pdsh, hostnames) {
+            this.fields.pdsh = pdsh;
 
-            if (hostnames != null) {
-              $scope.addServer.fields.address = hostnames;
-              $scope.addServer.fields.addressHash = hostnamesHash;
-            }
+            if (hostnames != null)
+              this.fields.addresses = hostnames;
           },
           /**
            * Call the transition.
            */
           transition: function transition () {
-            $scope.addServer.disabled = true;
+            this.disabled = true;
 
-            data.server = _.extend({}, server, $scope.addServer.fields);
+            data.pdsh = this.fields.pdsh;
+            delete this.fields.pdsh;
+
+            data.servers = this.fields;
 
             $stepInstance.transition('next', { data: data });
           },
@@ -70,23 +71,16 @@
           close: function close () {
             $scope.$emit('addServerModal::closeModal');
           }
-        };
+        });
       }
     ])
     .factory('addServersStep', [function addServersStepFactory () {
       return {
         templateUrl: 'iml/server/assets/html/add-server-step.html',
-        controller: 'AddServerStepCtrl',
-        transition: ['$transition', 'data', 'getTestHostSparkThen',
-          function transition ($transition, data, getTestHostSparkThen) {
-            data.statusSpark = getTestHostSparkThen(data.flint, data.server);
-
-            return {
-              step: $transition.steps.serverStatusStep,
-              resolve: { data: data }
-            };
-          }
-        ]
+        controller: 'AddServerStepCtrl as addServer',
+        transition: function transition (steps) {
+          return steps.serverStatusStep;
+        }
       };
     }]);
 }());

@@ -22,8 +22,6 @@
 
 'use strict';
 
-var _ = require('lodash');
-
 /**
  * Returns a wrapped default request.
  * @param {Object} conf
@@ -32,9 +30,10 @@ var _ = require('lodash');
  * @param {Q} Q
  * @param {Function} jsonMask
  * @param {Object} VERBS
+ * @param {Object} _
  * @returns {Object}
  */
-module.exports = function requestFactory (conf, requestModule, logger, Q, jsonMask, VERBS) {
+module.exports = function requestFactory (conf, requestModule, logger, Q, jsonMask, VERBS, _) {
   var pendCount = 0;
   var defaultRequest = requestModule.defaults({
     json: true,

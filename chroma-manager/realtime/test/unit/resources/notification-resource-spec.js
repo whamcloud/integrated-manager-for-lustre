@@ -4,6 +4,7 @@ var Q = require('q');
 var notificationsResourceModule = require('../../../resources/notification-resource');
 var notificationsResourceFactory = notificationsResourceModule.notificationResourceFactory;
 var STATES = notificationsResourceModule.STATES;
+var _ = require('lodash-mixins');
 
 describe('Notifications resource', function () {
   var NotificationsResource, notificationsResource, Resource, AlertResource;
@@ -12,7 +13,7 @@ describe('Notifications resource', function () {
     Resource = createResource('resource');
     AlertResource = createResource('alert');
 
-    NotificationsResource = notificationsResourceFactory(Resource, AlertResource);
+    NotificationsResource = notificationsResourceFactory(Resource, AlertResource, _);
     notificationsResource = new NotificationsResource();
   });
 

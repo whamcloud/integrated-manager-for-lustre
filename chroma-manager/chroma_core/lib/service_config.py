@@ -802,6 +802,7 @@ def register_profile(profile_file):
         "initial_state": "configured",
         "packages": {},
         "validation": [],
+        "default": False,
     }
 
     # create new profile record

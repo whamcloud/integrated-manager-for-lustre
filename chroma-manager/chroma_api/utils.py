@@ -19,16 +19,25 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-
+import sys
+import traceback
 import logging
 import itertools
 from chroma_core.models.jobs import SchedulingError
 import dateutil.parser
 import bisect
+from collections import namedtuple
+
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.utils import timezone
+
+from tastypie.resources import ModelDeclarativeMetaclass, Resource, ModelResource, ResourceOptions
+from tastypie import fields
+from tastypie import http
+from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
+
 from chroma_core.models.jobs import Command
 from chroma_core.models.target import ManagedMgs
 from chroma_core.models import StorageResourceRecord, StorageResourceStatistic
@@ -37,14 +46,11 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
 from chroma_core.lib.cache import ObjectCache
-
-from tastypie.resources import ModelDeclarativeMetaclass, Resource, ModelResource, ResourceOptions
-from tastypie import fields
-from tastypie import http
-from tastypie.http import HttpBadRequest, HttpMethodNotAllowed
 from chroma_core.lib.metrics import MetricStore, Counter
 
 from collections import defaultdict
+from django.db.models.query import QuerySet
+from django.db.models import fields as django_fields
 
 log = log_register(__name__)
 
@@ -68,6 +74,41 @@ def dehydrate_command(command):
         return cr.full_dehydrate(cr.build_bundle(obj = command)).data
     else:
         return None
+
+
+# Given a dict of queries, turn the variables into the correct format for a django filter.
+def filter_fields_to_type(klass, query_dict):
+    reserved_fields = ['order_by', 'format', 'limit', 'offset']
+
+    q = QuerySet(klass)
+
+    query = dict(query_dict)
+
+    fields = {}
+    for field in q.model._meta.fields:
+        fields[field.column] = field
+
+    # Remove the reserved fields we know about.
+    for field in query.keys():
+        if field in reserved_fields:
+            del query[field]
+
+    # This will error if it find an unknown field and cause the standard tasty pie query to run.
+    for field in query.keys():
+        try:
+            field_type = type(fields[field])
+            value = query[field]
+
+            if field_type == django_fields.AutoField or field_type == django_fields.IntegerField:
+                value = int(value)
+            elif field_type == django_fields.BooleanField:
+                value = (value.lower() == 'true')
+
+            query[field] = value
+        except KeyError:
+            pass
+
+    return query
 
 
 # monkey-patch ResourceOptions to have a default-empty readonly list
@@ -563,3 +604,45 @@ class SeverityResource(ModelResource):
                 filters.setlist('severity__in', converted_list)
 
         return super(SeverityResource, self).build_filters(filters)
+
+
+class BulkResourceOperation(object):
+    def _bulk_operation(self, action, object_name, bundle, request, **kwargs):
+        bulk_action_results = []
+        errors_exist = False
+
+        def _call_action(bulk_action_results, action, data, request, **kwargs):
+            try:
+                bulk_action_result = action(self, data, request, **kwargs)
+            except Exception as e:
+                bulk_action_result = self.BulkActionResult(None,
+                                                           str(e),
+                                                           '\n'.join(traceback.format_exception(*(sys.exc_info()))))
+
+            bulk_action_results.append(bulk_action_result)
+            return (bulk_action_result.error != None)
+
+        for data in bundle.data.get('objects', [bundle.data]):
+            errors_exist |= _call_action(bulk_action_results, action, data, request, **kwargs)
+
+        if 'objects' in bundle.data:
+            raise custom_response(self,
+                                  request,
+                                  http.HttpBadRequest if errors_exist else http.HttpAccepted,
+                                  {'objects': [{object_name: bulk_action_result.object,
+                                                                                  'error': bulk_action_result.error,
+                                                                                  'traceback': bulk_action_result.traceback} for bulk_action_result in bulk_action_results]})
+
+        if errors_exist:
+            # Return 400, a failure here could mean many things.
+            raise custom_response(self, request, http.HttpBadRequest, {
+                'error': bulk_action_results[0].error,
+                'traceback': bulk_action_results[0].traceback,
+            })
+        else:
+            raise custom_response(self,
+                                  request,
+                                  http.HttpAccepted if bulk_action_results[0].object else http.HttpNoContent,
+                                  bulk_action_results[0].object)
+
+    BulkActionResult = namedtuple('BulkActionResult', ['object', 'error', 'traceback'])

@@ -1,6 +1,7 @@
 'use strict';
 
 var loopFactory = require('../../loop-factory');
+var _ = require('lodash-mixins');
 
 describe('loop', function () {
   var loop, timers, handler, finish;
@@ -13,7 +14,7 @@ describe('loop', function () {
 
     handler = jasmine.createSpy('handler');
 
-    loop = loopFactory(timers);
+    loop = loopFactory(timers, _);
 
     finish = loop(handler, 1000);
   });

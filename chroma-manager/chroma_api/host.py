@@ -19,26 +19,33 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+import re
 from collections import defaultdict
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.services.rpc import RpcError
 from chroma_core.services import log_register
 from tastypie.validation import Validation
+from tastypie.utils import dict_strip_unicode_keys
+
 import simplejson as json
+
 
 from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile, LustreClientMount, Command
 
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from tastypie.bundle import Bundle
+from tastypie.exceptions import ImmediateHttpResponse
+
 
 import tastypie.http as http
 from tastypie.resources import Resource, ModelResource
 from tastypie import fields
-from chroma_api.utils import custom_response, StatefulModelResource, MetricResource, dehydrate_command
+from chroma_api.utils import custom_response, StatefulModelResource, MetricResource, dehydrate_command, BulkResourceOperation
 from tastypie.authorization import DjangoAuthorization
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.authentication import PermissionAuthorization
 from chroma_common.lib.evaluator import safe_eval
+from chroma_api.utils import filter_fields_to_type
 
 log = log_register(__name__)
 
@@ -51,16 +58,22 @@ class HostValidation(Validation):
         if request.method != 'POST':
             return errors
         for data in bundle.data.get('objects', [bundle.data]):
-            try:
-                address = data['address']
-            except KeyError:
-                errors['address'].append(self.mandatory_message)
+            if ('host' in data) and ('address' in data):
+                errors['host_and_data'].append('Only the host id or host address must be provided, not both.')
+            elif 'host' in data:
+                # Check host exists
+                if not ManagedHost.objects.filter(id=data['host']).exists():
+                    errors['host'].append("Host of id %s must exist" % data['host'])
             else:
-                # TODO: validate URI
-                host_must_exist = data.get("host_must_exist", None)
+                if 'address' in data:
+                    # TODO: validate URI
+                    host_must_exist = data.get("host_must_exist", None)
+                    address = data['address']
 
-                if (host_must_exist != None) and (host_must_exist != ManagedHost.objects.filter(address=address).exists()):
-                    errors['address'].append("Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already"))
+                    if (host_must_exist != None) and (host_must_exist != ManagedHost.objects.filter(address=address).exists()):
+                        errors['address'].append("Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already"))
+                else:
+                    errors['address'].append(self.mandatory_message)
 
         return errors
 
@@ -96,7 +109,6 @@ class HostTestValidation(HostValidation):
 
 
 def _host_params(data, address=None):
-#  See the UI (e.g. server_configuration.js)
     return {
         'address': data.get('address', address),
         'root_pw': data.get('root_password'),
@@ -107,7 +119,7 @@ def _host_params(data, address=None):
 
 class ServerProfileResource(ModelResource):
     class Meta:
-        queryset = ServerProfile.objects.filter(user_selectable=True)
+        queryset = ServerProfile.objects.all()
         resource_name = 'server_profile'
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
@@ -115,7 +127,8 @@ class ServerProfileResource(ModelResource):
         list_allowed_methods = ['get']
         readonly = ['ui_name']
         filtering = {'name': ['exact'], 'managed': ['exact'],
-                     'worker': ['exact'], 'default': ['exact']}
+                     'worker': ['exact'], 'default': ['exact'],
+                     'user_selectable': ['exact']}
 
 
 class ClientMountResource(ModelResource):
@@ -149,7 +162,7 @@ class ClientMountResource(ModelResource):
         raise custom_response(self, request, http.HttpAccepted, args)
 
 
-class HostResource(MetricResource, StatefulModelResource):
+class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation):
     """
     Represents a Lustre server that is being monitored and managed from the manager server.
 
@@ -193,7 +206,7 @@ class HostResource(MetricResource, StatefulModelResource):
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
         ordering = ['fqdn']
-        list_allowed_methods = ['get', 'post']
+        list_allowed_methods = ['get', 'post', 'put']
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['nodename', 'fqdn', 'nids', 'member_of_active_filesystem',
                     'needs_fence_reconfiguration', 'needs_update', 'boot_time',
@@ -207,66 +220,92 @@ class HostResource(MetricResource, StatefulModelResource):
                      'fqdn': ['exact', 'startswith'],
                      'role': ['exact']}
 
+    def put_list(self, request, **kwargs):
+        """
+        based on tastypie/resources.py but modified to do what we actually want!
+
+        Up a collection of resources with another collection.
+
+        Calls ``delete_list`` to clear out the collection then ``obj_create``
+        with the provided the data to create the new collection.
+
+        Return ``HttpNoContent`` (204 No Content) if
+        ``Meta.always_return_data = False`` (default).
+
+        Return ``HttpAccepted`` (202 Accepted) if
+        ``Meta.always_return_data = True``.
+        """
+        deserialized = self.deserialize(request, request.raw_post_data, format=request.META.get('CONTENT_TYPE', 'application/json'))
+        deserialized = self.alter_deserialized_list_data(request, deserialized)
+
+        if not 'objects' in deserialized:
+            raise http.HttpBadRequest("Invalid data sent.")
+
+        bundle = self.build_bundle(data=dict_strip_unicode_keys(deserialized), request=request)
+
+        self.obj_update(bundle, request, **kwargs)
+
     def obj_update(self, bundle, request, **kwargs):
-        # If the host that is being updated is in the undeployed state then this is a special case and the normal
-        # state change doesn't work because we need to provide some parameters to the allow the ssh connection to
-        # bootstrap the agent into existance.
-        bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
 
-        assert isinstance(bundle.obj, ManagedHost)
+        def _update_action(self, data, request, **kwargs):
+            # For simplicity lets fake the kwargs if we can, this is for when we are working from objects
+            if 'host' in data:
+                host = ManagedHost.objects.get(id = data['host'])
+            elif 'pk' in kwargs:
+                host = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
+            else:
+                return self.BulkActionResult(None, "Unable to decipher target host", None)
 
-        if bundle.obj.state == 'undeployed':
-            self._create_host(bundle.obj.address, bundle, request)
+            # If the host that is being updated is in the undeployed state then this is a special case and the normal
+            # state change doesn't work because we need to provide some parameters to the allow the ssh connection to
+            # bootstrap the agent into existence.
+            if host.state == 'undeployed':
+                    return self._create_host(host.address, data, request)
+            else:
+                if 'pk' in kwargs:
+                    try:
+                        super(HostResource, self).obj_update(self.build_bundle(data=data, request=request), request, **kwargs)
+                        return self.BulkActionResult(None, "State data not present for host %s" % host, None)
+                    except ImmediateHttpResponse as ihr:
+                        if int(ihr.response.status_code / 100) == 2:
+                            return self.BulkActionResult(json.loads(ihr.response.content), None, None)
+                        else:
+                            return self.BulkActionResult(None, json.loads(ihr.response.content), None)
+                else:
+                    return self.BulkActionResult(None, "Bulk setting of state not yet supported", None)
 
-        return super(HostResource, self).obj_update(bundle, request, **kwargs)
+        self._bulk_operation(_update_action, 'command_and_host', bundle, request, **kwargs)
 
     def obj_create(self, bundle, request = None, **kwargs):
         # FIXME HYD-1657: we get errors back just fine when something goes wrong
         # during registration, but the UI tries to format backtraces into
         # a 'validation errors' dialog which is pretty ugly.
-
         if bundle.data.get('failed_validations'):
             log.warning("Attempting to create host %s after failed validations: %s" % (bundle.data.get('address'), bundle.data.get('failed_validations')))
 
-        self._create_host(None, bundle, request)
+        def _update_action(self, data, request, **kwargs):
+            return self._create_host(None, data, request)
 
-    def _create_host(self, address, bundle, request):
+        self._bulk_operation(_update_action, 'command_and_host', bundle, request, **kwargs)
+
+    def _create_host(self, address, data, request):
         # Resolve a server profile URI to a record
-        # TODO for backwards compatibility, remove when client is updated
-        if 'server_profile' in bundle.data:
-            profile = self.fields['server_profile'].hydrate(bundle).obj
-        else:
-            profile = ServerProfile.objects.get(user_selectable=False)
-        objects, errors = [], []
-        for data in bundle.data.get('objects', [bundle.data]):
-            try:
-                host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name, **_host_params(data, address))
-            except RpcError as exc:
-                objects.append({})
-                errors.append({'error': str(exc)})
-            else:
-                #  TODO:  Could simplify this by adding a 'command' key to the
-                #  bundle, then optionally handling dehydrating that
-                #  in super.alter_detail_data_to_serialize.  That way could
-                #  return from this method avoiding all this extra code, and
-                #  providing a central handling for all things that migth have
-                #  a command argument.  NB:  not tested, and not part of any ticket
-                objects.append({
-                    'command': dehydrate_command(command),
-                    'host': self.alter_detail_data_to_serialize(None, self.full_dehydrate(self.build_bundle(obj=host))).data,
-                })
-                errors.append(None)
-        if 'objects' in bundle.data:
-            raise custom_response(self, request, http.HttpAccepted, {'objects': objects, 'errors': errors})
-        result, = objects
-        if result:
-            raise custom_response(self, request, http.HttpAccepted, result)
-        # Return 400, a failure here could mean the address was already occupied, or that
-        # we couldn't reach that address using SSH (network or auth problem)
-        raise custom_response(self, request, http.HttpBadRequest, {
-            'address': ["Cannot add host at this address: %s" % exc],
-            'traceback': exc.traceback,
-        })
+        profile = ServerProfileResource().get_via_uri(data['server_profile'])
+
+        host, command = JobSchedulerClient.create_host_ssh(server_profile=profile.name, **_host_params(data, address))
+
+        #  TODO:  Could simplify this by adding a 'command' key to the
+        #  bundle, then optionally handling dehydrating that
+        #  in super.alter_detail_data_to_serialize.  That way could
+        #  return from this method avoiding all this extra code, and
+        #  providing a central handling for all things that migth have
+        #  a command argument.  NB:  not tested, and not part of any ticket
+        object = {
+            'command': dehydrate_command(command),
+            'host': self.alter_detail_data_to_serialize(None, self.full_dehydrate(self.build_bundle(obj=host))).data,
+            }
+
+        return self.BulkActionResult(object, None, None)
 
     def apply_filters(self, request, filters = None):
         objects = super(HostResource, self).apply_filters(request, filters)
@@ -298,7 +337,7 @@ class HostResource(MetricResource, StatefulModelResource):
         return objects.distinct()
 
 
-class HostTestResource(Resource):
+class HostTestResource(Resource, BulkResourceOperation):
     """
     A request to test a potential host address for accessibility, typically
     used prior to creating the host.  Only supports POST with the 'address'
@@ -334,19 +373,13 @@ class HostTestResource(Resource):
         validation = HostTestValidation()
 
     def obj_create(self, bundle, request = None, **kwargs):
-        params = _host_params(bundle.data)
-        address = params.pop('address')
-        bulk = isinstance(address, list)
+        def _test_host_contact(self, data, request, **kwargs):
+            return self.BulkActionResult(dehydrate_command(JobSchedulerClient.test_host_contact(**_host_params(data))), None, None)
 
-        commands = []
-
-        for address in (address if bulk else [address]):
-            commands.append(JobSchedulerClient.test_host_contact(address=address, **params))
-
-        raise custom_response(self, request, http.HttpAccepted, {'objects': map(dehydrate_command, commands)})
+        self._bulk_operation(_test_host_contact, 'command', bundle, request, **kwargs)
 
 
-class HostProfileResource(Resource):
+class HostProfileResource(Resource, BulkResourceOperation):
     """
     Get and set profiles associated with hosts.
     """
@@ -357,18 +390,34 @@ class HostProfileResource(Resource):
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
         object_class = dict
-        include_resource_uri = False
 
     def get_resource_uri(self, bundle_or_obj):
-        return self.get_resource_list_uri()
+        kwargs = {
+            'resource_name': self._meta.resource_name,
+            'api_name': self._meta.api_name
+        }
+
+        if isinstance(bundle_or_obj, Bundle):
+            kwargs['pk'] = bundle_or_obj.obj.id
+        else:
+            kwargs['pk'] = bundle_or_obj.id
+
+        return self._build_reverse_url("api_dispatch_detail", kwargs=kwargs)
 
     def full_dehydrate(self, bundle):
         return bundle.obj
 
-    def get_profiles(self, host):
+    def get_profiles(self, host, request):
         properties = json.loads(host.properties)
+
+        filters = {}
+        for filter in request.GET:
+            match = re.search('^server_profile__(.*)', filter)
+            if match:
+                filters[match.group(1)] = request.GET[filter]
+
         result = {}
-        for profile in ServerProfile.objects.filter(user_selectable=True):
+        for profile in ServerProfile.objects.filter(**filter_fields_to_type(ServerProfile, filters)):
             tests = result[profile.name] = []
             for validation in profile.serverprofilevalidation_set.all():
                 error = ''
@@ -401,29 +450,29 @@ class HostProfileResource(Resource):
             if server_profile.initial_state in host.get_available_states(host.state):
                 commands.append(Command.set_state([(host, server_profile.initial_state)]))
 
-        return commands
+        return map(dehydrate_command, commands)
 
     def obj_get(self, request, pk=None):
-        return self.get_profiles(get_object_or_404(ManagedHost, pk=pk))
+        return self.get_profiles(get_object_or_404(ManagedHost, pk=pk), request)
 
     def obj_get_list(self, request):
         ids = request.GET.getlist('id__in')
-        filters = {'id__in': ids} if ids else {'server_profile__user_selectable': False}
-        return [{
-            'host': host.id,
-            'address': host.address,
-            'profiles': self.get_profiles(host),
-        } for host in ManagedHost.objects.filter(**filters)]
+        filters = {'id__in': ids} if ids else {}
+        return [{'host_profiles': {'host': host.id,
+                                   'address': host.address,
+                                   'profiles': self.get_profiles(host, request),
+                                   'resource_uri': self.get_resource_uri(host)},
+                 "error": None,
+                 "traceback": None} for host in ManagedHost.objects.filter(**filters)]
 
-    def obj_create(self, bundle, request):
-        commands = []
+    def obj_create(self, bundle, request, **kwargs):
+        def _create_action(self, data, request, **kwargs):
+            return self.BulkActionResult(self._set_profile(data['host'], data['profile']), None, None)
 
-        for data in bundle.data['objects']:
-            commands += self._set_profile(data['host'], data['profile'])
+        self._bulk_operation(_create_action, 'commands', bundle, request, **kwargs)
 
-        raise custom_response(self, request, http.HttpAccepted, {'objects': map(dehydrate_command, commands)})
+    def obj_update(self, bundle, request, **kwargs):
+        def _update_action(self, data, request, **kwargs):
+            return self.BulkActionResult(self._set_profile(kwargs['pk'], data['profile']), None, None)
 
-    def obj_update(self, bundle, request, pk=None):
-        commands = self._set_profile(pk, bundle.data['profile'])
-
-        raise custom_response(self, request, http.HttpAccepted, {'objects': map(dehydrate_command, commands)})
+        self._bulk_operation(_update_action, 'commands', bundle, request, **kwargs)

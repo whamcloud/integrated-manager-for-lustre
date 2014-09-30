@@ -328,9 +328,9 @@ class ServerHandler(Handler):
             'yum_can_update': "Unable to verify that %s is able to access any yum mirrors for vendor packages"
         }
 
-        commands = self.api.endpoints['test_host'].create(**kwargs)
+        content = self.api.endpoints['test_host'].create(**kwargs)
 
-        job = Job.objects.filter(command__pk = commands['objects'][0]['id'])[0]
+        job = Job.objects.filter(command__pk = content['id'])[0]
         step_result = StepResult.objects.filter(job__pk = job.id)[0]
         test_results = json.loads(step_result.result)
 

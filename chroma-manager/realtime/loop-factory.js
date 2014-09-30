@@ -22,9 +22,7 @@
 
 'use strict';
 
-var _ = require('lodash');
-
-module.exports = function loopFactory (timers) {
+module.exports = function loopFactory (timers, _) {
   var DEFAULT_INTERVAL = 1000;
 
   /**

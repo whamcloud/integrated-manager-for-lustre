@@ -22,9 +22,7 @@
 
 'use strict';
 
-var _ = require('lodash');
-
-module.exports = function testHostRouteFactory (router, request, loop, logger) {
+module.exports = function testHostRouteFactory (router, request, loop, logger, Q, _) {
   var jobRegexp = /^\/api\/job\/(\d+)\/$/;
 
   return function testHostRoute () {
@@ -38,27 +36,50 @@ module.exports = function testHostRouteFactory (router, request, loop, logger) {
       log.info('started');
       log.debug(req);
 
-      var cached, commandPromise;
+      var cached, pendingCommandPromise;
+
+      var ifExists = _.if(_.exists);
 
       var finish = loop(function handler (next) {
-        commandPromise = (commandPromise ? commandPromise.then(askAgain) : request.post('/test_host', req.data));
-        commandPromise = commandPromise.then(transformCommand);
+        var objectsPromise;
 
-        commandPromise
-          .then(getJobsOrUndefined)
-          .then(function writeResponseIfFinished (response) {
-            if (!response) return;
+        if (pendingCommandPromise)
+          objectsPromise = pendingCommandPromise
+            .then(askAgain);
+        else
+          objectsPromise = request.post('/test_host', req.data)
+            .then(_.unwrapResponse(_.fmapProp('command')));
 
-            response.body.objects = response.body.objects.map(function normalize (job) {
-              return job.step_results[job.steps[0]];
-            });
+        objectsPromise = objectsPromise.then(function (response) {
+          return response.body.objects;
+        });
 
+        var isCommandFinishedPromise = objectsPromise
+          .then(_.fmapProps(['cancelled', 'complete', 'errored']))
+          .then(_.fmap(_.values))
+          .then(_.fmap(_.any))
+          .then(_.flatten)
+          .then(_.every);
+
+        pendingCommandPromise = objectsPromise.then(_.fmapProp('id'));
+
+        var jobIds = objectsPromise
+          .then(_.fmapProp('jobs'))
+          .then(_.flatten)
+          .then(_.fmap(extractIds));
+
+        Q.all([isCommandFinishedPromise, jobIds])
+          .spread(getJobsOrUndefined)
+          .then(ifExists(_.unwrapResponse(_.fmap(function (job) {
+            return job.step_results[job.steps[0]];
+          }))))
+          .then(ifExists(function writeResponseIfFinished (response) {
             if (!_.isEqual(response.body, cached))
               resp.spark.writeResponse(response.statusCode, response.body);
 
             cached = response.body;
-            commandPromise = null;
-          })
+            pendingCommandPromise = null;
+          }))
           .catch(function writeError (err) {
             resp.spark.writeError(err.statusCode || 500, err);
           })
@@ -76,13 +97,13 @@ module.exports = function testHostRouteFactory (router, request, loop, logger) {
 
   /**
    * Given some command info, asks for a newer representation of the command.
-   * @param {Object} commandInfo
+   * @param {Array} ids
    * @returns {Object}
    */
-  function askAgain (commandInfo) {
+  function askAgain (ids) {
     return request.get('/command', {
       qs: {
-        id__in: commandInfo.ids,
+        id__in: ids,
         limit: 0
       }
     });
@@ -91,15 +112,16 @@ module.exports = function testHostRouteFactory (router, request, loop, logger) {
   /**
    * Returns jobs if the command has finished,
    * otherwise undefined
-   * @param {Object} commandInfo
+   * @param {Boolean} finished
+   * @param {Array} jobIds
    * @returns {Object|undefined}
    */
-  function getJobsOrUndefined (commandInfo) {
-    if (commandInfo.finished)
+  function getJobsOrUndefined (finished, jobIds) {
+    if (finished)
       return request.get('/job', {
         jsonMask: 'objects(step_results,steps)',
         qs: {
-          id__in: commandInfo.jobIds,
+          id__in: jobIds,
           limit: 0
         }
       });
@@ -112,43 +134,5 @@ module.exports = function testHostRouteFactory (router, request, loop, logger) {
    */
   function extractIds (jobUri) {
     return jobUri.match(jobRegexp)[1];
-  }
-
-  /**
-   * Given a generic command response, transforms it to
-   * something useful to the pipeline.
-   * @param {Object} response
-   * @returns {{finished: boolean, ids: Array, jobIds: Array}}
-   */
-  function transformCommand (response) {
-    var finished = _(response.body.objects)
-        .map(pickStatuses)
-        .map(_.values)
-        .flatten()
-        .compact()
-        .size() === response.body.objects.length;
-
-    var ids = _.pluck(response.body.objects, 'id');
-
-    var jobIds = _(response.body.objects)
-      .pluck('jobs')
-      .flatten()
-      .map(extractIds)
-      .value();
-
-    return {
-      finished: finished,
-      ids: ids,
-      jobIds: jobIds
-    };
-  }
-
-  /**
-   * Given some commands, picks status properties
-   * @param {Array} commands
-   * @returns {Array}
-   */
-  function pickStatuses (commands) {
-    return _.pick(commands, ['cancelled', 'complete', 'errored']);
   }
 };

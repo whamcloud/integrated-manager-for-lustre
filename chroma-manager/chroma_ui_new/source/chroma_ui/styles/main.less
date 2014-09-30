@@ -5,13 +5,20 @@ html, body, .wrap {
 .alert.alert-danger {
   background-color: @errorColor;
   border-color: darken(@errorColor, 10%);
-  color: #FFFFFF;
+  color: @white;
 }
 
-alert.alert-warning {
+.alert.alert-warning {
   background-color: lighten(@brand-warning, 15%);
   border-color: @brand-warning;
   color: @white;
+}
+
+button.btn[disabled]:active {
+  background-color: @btn-link-disabled-color;
+  color: @gray-dark;
+  border-color: #6a6a6a;
+  .box-shadow(none);
 }
 
 a:hover {

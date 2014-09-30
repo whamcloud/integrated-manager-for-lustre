@@ -1,7 +1,7 @@
 'use strict';
 
 var primusServerWriteFactory = require('../../primus-server-write');
-var _ = require('lodash');
+var _ = require('lodash-mixins');
 var format = require('util').format;
 
 describe('primus server write plugin', function () {
