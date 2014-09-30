@@ -24,7 +24,7 @@
   'use strict';
 
   angular.module('pdsh-parser-module', ['comparators', 'filters'])
-    .factory('pdshParser', ['comparators', 'naturalSortFilter', function pdshParser (comparators, naturalSort) {
+    .factory('pdshParser', ['comparators', function pdshParser (comparators) {
       var errorCollection = {errors: []};
       var expansionCollection = {expansion: [], sections: [], expansionHash: {}};
       var hostnameCache = {};
@@ -88,18 +88,19 @@
        */
       function parseExpression (expression, expansionCollection, errorCollection) {
         var isValid = isExpressionValid(expression);
-        var notAboveCap = isNotAboveCap(isValid, expression);
+        var allExpressions = splitExpressions(expression, isInsideBraces);
+        var notAboveCap = isNotAboveCap(isValid, allExpressions);
 
         maybe(and(isTrue(isValid), isTrue(notAboveCap)), parseExpressionIntoGroups)
-        (expression);
+        (allExpressions);
       }
 
       /**
        * Parses the expression into groups
-       * @param expression
+       * @param {Array} allExpressions Array of expressions
        */
-      function parseExpressionIntoGroups (expression) {
-        var expansionGroups = splitExpressions(expression, isInsideBraces)
+      function parseExpressionIntoGroups (allExpressions) {
+        var expansionGroups = allExpressions
           .reduce(combineSimilarExpressions, [])
           .map(expandExpressions)
           .reduce(function reduceGroupsToExpansions (prev, curGroup) {
@@ -205,49 +206,45 @@
       /**
        * Indicates if the hostlist is greater than cap.
        * @param {Boolean} isValid
-       * @param {String} expression
+       * @param {Array} allExpressions Array of all expressions
        * @returns {Boolean}
        */
-      function isNotAboveCap (isValid, expression) {
-        var notAboveCap = isValid ? getTotalEntries(expression) <= constants.CAP : false;
-        maybe(and(isTrue(isValid), isFalse(notAboveCap)), addErrorObject)(constants.EXPRESSION_OVER_CAP);
+      function isNotAboveCap (isValid, allExpressions) {
+        var notAboveCap = false;
+        var totalEntries = 0;
+        if (isValid) {
+          totalEntries = getTotalEntries(allExpressions);
+          notAboveCap = totalEntries <= constants.CAP;
+        }
+        maybe(and(isTrue(isValid), isFalse(notAboveCap), isFalse(isNaN(totalEntries))),
+          addErrorObject)(constants.EXPRESSION_OVER_CAP);
 
         return notAboveCap;
       }
 
       /**
        * Calculates the number of entries that will be produced by the expression.
-       * @param {String} expression
+       * @param {Array} allExpressions Array of expressions
        * @return {Number}
        */
-      function getTotalEntries (expression) {
+      function getTotalEntries (allExpressions) {
         var ranges = [];
         var m;
 
-        while ((m = expressionRegex.exec(expression)) != null) {
-          if (m.index === expressionRegex.lastIndex) {
-            expressionRegex.lastIndex++;
+        return allExpressions.reduce(function getSeparateEntryTotals (prev, currentExpression) {
+          while ((m = expressionRegex.exec(currentExpression)) != null) {
+            if (m.index === expressionRegex.lastIndex) {
+              expressionRegex.lastIndex += 1;
+            }
+            ranges.push(m[0].slice(1, -1));
           }
-          ranges.push(m[0]);
-        }
 
-        return ranges.map(getRangeLength)
-          .reduce(sum(returnVal), 0);
-      }
-
-      /**
-       * Examines a range and computes the total number of items for that range.
-       * @example
-       * // returns 7
-       * expandRanges('[0-4,7,9]')
-       * @param {String} rangeComponent
-       * @returns {Number}
-       */
-      function getRangeLength (rangeComponent) {
-        // Remove the beginning and ending brackets
-        var componentToParse = rangeComponent.slice(1, -1);
-        return componentToParse.split(',')
-          .reduce(sum(parseItemIntoTotalLength), 0);
+          return prev + ranges.reduce(function reduceRangeGroupInCurrentExpression (prev, currentRange) {
+            return prev * currentRange.split(',')
+              .map(parseItemIntoTotalLength)
+              .reduce(sum(returnVal), 0);
+          }, 1);
+        }, 0);
       }
 
       /**
@@ -333,10 +330,11 @@
        * @param {Array} curRanges
        * @returns {*}
        */
-      function updateExpressionBasedOnPrevAndCurrentRanges (prevExpression, simplifiedCurrentExpression, prevRanges, curRanges) {
+      function updateExpressionBasedOnPrevAndCurrentRanges (prevExpression, simplifiedCurrentExpression, prevRanges,
+                                                            curRanges) {
         var updatedExpression = simplifiedCurrentExpression;
 
-        for (var i = 0; i < prevRanges.length; i++) {
+        for (var i = 0; i < prevRanges.length; i += 1) {
           var updatedExpressionFromPrevRange = _.partial(replaceTokenWithText, updatedExpression);
           updatedExpression = maybe(not(referenceEqualTo(prevRanges[i], curRanges[i])),
             expandExpressionUsingPrevAndCurrentRanges, updatedExpressionFromPrevRange)
@@ -397,9 +395,6 @@
 
       /**
        * Adds the expression empty error message to the errors list
-       * @param {String} expression
-       * @param {Object} expansion
-       * @param {Object} errorsCollection
        */
       function handleEmptyExpression () {
         addErrorObject(constants.EXPRESSION_EMPTY);
@@ -648,7 +643,8 @@
         // Sort the range string
         var sortedRangeComponent = sortRangeString(rangeComponent);
         // Remove the beginning and ending brackets
-        return sortedRangeComponent.split(',')
+        return sortedRangeComponent.slice(1,-1)
+          .split(',')
           .map(parseItem)
           .reduce(flattenArrayOfValues);
       }
@@ -662,29 +658,19 @@
        * @returns {Array}
        */
       function sortRangeString (rangeComponent) {
-        var componentToParse = rangeComponent.slice(1, -1);
-        var components = componentToParse.split(',');
-
-        // return an array of min/max items
-        var minMaxComponents = components.map(function mapComponentToMinMax (component) {
-          var rangeComponents = component.split('-');
-          return {
-            min: +rangeComponents[0],
-            max: +rangeComponents[rangeComponents.length - 1],
-            prefix: getPrefix(rangeComponents[0])
-          };
-        });
+        var minMaxComponents = getMinMaxComponents(rangeComponent);
 
         minMaxComponents.sort(compare);
 
         // reduce the sorted array back to a string
         var sortedRangeString = minMaxComponents.reduce(function reduceMinMaxComponentsToString (prev, current) {
-          var rangeString = (current.min === current.max) ? current.prefix + current.min : current.prefix +
-            current.min + '-' + current.prefix + current.max;
+          var rangeString = (current.min === current.max) ? current.minPrefix + current.min :
+            current.minPrefix + current.min + '-' + current.maxPrefix + current.max;
           var separator = (prev === '') ? '' : ',';
 
           return prev + separator + rangeString;
         }, '');
+        sortedRangeString = '[' + sortedRangeString + ']';
 
         // sort on the min/max values
         function compare (a, b) {
@@ -697,6 +683,30 @@
         }
 
         return sortedRangeString;
+      }
+
+      /**
+       * Receives a range components and returns a list of min/max objects
+       * @example
+       * // returns [{min: 1, max: 10}, {min: 15, max: 15}]
+       * getMinMaxComponents('[1-10,15]')
+       * @param {String} rangeComponent
+       * @returns {Array}
+       */
+      function getMinMaxComponents (rangeComponent) {
+        var componentToParse = (rangeComponent[0] === '[') ? rangeComponent.slice(1, -1) : rangeComponent;
+        var components = componentToParse.split(',');
+
+        // return an array of min/max items
+        return components.map(function mapComponentToMinMax (component) {
+          var rangeComponents = component.split('-');
+          return {
+            min: +rangeComponents[0],
+            max: +rangeComponents[rangeComponents.length - 1],
+            minPrefix: getPrefix(rangeComponents[0]),
+            maxPrefix: getPrefix(rangeComponents[rangeComponents.length - 1])
+          };
+        });
       }
 
       /**
@@ -734,11 +744,27 @@
        * @example
        * // returns 3
        * parseItemIntoTotalLength('09-011')
-       * @param {String} item
+       * @param {String} rangeComponent
        * @returns {Number}
        */
-      function parseItemIntoTotalLength (item) {
-        return parseItem(item).length;
+      function parseItemIntoTotalLength (rangeComponent) {
+        var isSanitized = isValidRange(rangeComponent);
+
+        return maybe(isTrue(isSanitized), countItemsInRange, _.partial(addErrorObject,
+          constants.RANGE_NOT_PROPER_FORMAT))(rangeComponent);
+      }
+
+      /**
+       * Counts the items in the range component
+       * @param {String} rangeComponent
+       * @returns {Number}
+       */
+      function countItemsInRange (rangeComponent) {
+        var minMaxComponents = getMinMaxComponents(rangeComponent);
+
+        return minMaxComponents.reduce(function sumRanges (prev, current) {
+          return prev + (+current.max) - (+current.min) + 1;
+        }, 0);
       }
 
       /**
@@ -911,10 +937,10 @@
 
       /**
        * HOF that checks if the the specified side has a brace according to the rules below:
-       * 1. hasLeftBrace - Is there a brace to the left of this location in which an open brace is NOT closer in distance, or
-       * is there no closing brace to the left at all?
-       * 2. hasRightBrace - Is there a brace to the right of this location in which a closing brace is NOT closer in distance,
-       * or is there no open brace to the right at all?
+       * 1. hasLeftBrace - Is there a brace to the left of this location in which an open brace is NOT closer in
+       * distance, or is there no closing brace to the left at all?
+       * 2. hasRightBrace - Is there a brace to the right of this location in which a closing brace is NOT closer in
+       * distance, or is there no open brace to the right at all?
        * @param {String} indexMethod
        * @param {String} sideString The string in which a search will be performed for the brace.
        * @returns {Boolean}
@@ -983,7 +1009,7 @@
 
         while ((m = re.exec(expression)) != null) {
           if (m.index === re.lastIndex) {
-            re.lastIndex++;
+            re.lastIndex += 1;
           }
 
           indicies.push(m.index);
@@ -1021,15 +1047,6 @@
        */
       function flattenArrayOfValues (prev, current) {
         return prev.concat(current);
-      }
-
-      /**
-       * Takes multiple arrays and flattens them taking sorting into account
-       * @param prev
-       * @param current
-       */
-      function flattentArrayOfValuesSorted (prev, current) {
-
       }
 
       /**

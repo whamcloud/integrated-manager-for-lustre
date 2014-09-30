@@ -396,6 +396,27 @@ describe('pdsh parser', function () {
       expanded: {
         errors: ['The hostlist cannot contain more than 50000 entries.']
       }
+    },
+    // Goving over cap using multiple ranges in a single expression
+    {
+      expression: 'hostname[1-25001].iml[1-2].com',
+      expanded: {
+        errors: ['The hostlist cannot contain more than 50000 entries.']
+      }
+    },
+    // Goving over cap using multiple ranges in multiple expressions
+    {
+      expression: 'hostname[1-20000].iml[1-2].com,host[1-10001].iml[1].com',
+      expanded: {
+        errors: ['The hostlist cannot contain more than 50000 entries.']
+      }
+    },
+    // Going over cap so far that it could freeze the browser
+    {
+      expression: 'hostname[1-5000000000000000000000001].iml.com',
+      expanded: {
+        errors: ['The hostlist cannot contain more than 50000 entries.']
+      }
     }
   ];
 
