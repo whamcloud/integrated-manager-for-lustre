@@ -119,14 +119,26 @@ describe('select server profile', function () {
       var item, response;
       beforeEach(function () {
         response = {
+          statusCode: 200,
           body: {
+            meta: {
+              limit: 20,
+              next: null,
+              offset: 0,
+              previous: null,
+              total_count: 1
+            },
             objects: [
               {
+                address: 'storage1.localdomain',
+                host: 69,
                 profiles: {
                   base_managed: [
                     {
                       description: 'ZFS must not be installed',
-                      result: true
+                      error: 'zero length field name in format',
+                      pass: false,
+                      test: 'zfs_installed == False'
                     }
                   ],
                   base_monitored: [],
@@ -151,7 +163,7 @@ describe('select server profile', function () {
             caption: 'Managed storage server',
             label: 'Incompatible',
             labelType: 'label-danger',
-            valid: undefined
+            valid: false
           },
           {
             id: 'base_monitored',
@@ -175,7 +187,8 @@ describe('select server profile', function () {
         beforeEach(function () {
           item = {
             id: 'base_monitored',
-            caption: 'Base monitored'
+            caption: 'Base monitored',
+            valid: true
           };
 
           $scope.selectServerProfile.onSelected(item);
@@ -192,20 +205,10 @@ describe('select server profile', function () {
         it('should set the items', function () {
           expect($scope.selectServerProfile.items).toEqual([
             {
-              items: [],
-              profile: 'Base monitored',
-              profiles: {
-                base_managed: [
-                  {
-                    description: 'ZFS must not be installed',
-                    result: true
-                  }
-                ],
-                base_monitored: [],
-                posix_copytool_worker: [],
-                robinhood_server: []
-              },
-              valid: true
+              address: 'storage1.localdomain',
+              caption: 'Base monitored',
+              problems: [],
+              valid : true
             }
           ]);
         });

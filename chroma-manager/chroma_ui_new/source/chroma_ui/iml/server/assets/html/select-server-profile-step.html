@@ -24,20 +24,22 @@
         <pdsh pdsh-initial="selectServerProfile.pdsh" pdsh-change="selectServerProfile.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
       </div>
     </form>
-    <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnames:selectServerProfile.getHostPath track by item.host">
+    <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnames:selectServerProfile.getHostPath track by item.address">
       <div ng-class="{invalid: !item.valid, valid: item.valid }" tooltip="Address: {{item.address}}" class="status-cell activate-popover"></div>
       <iml-popover title="Status for {{ item.address }}" placement="bottom">
         <div ng-if="item.valid">
-          <i class="fa fa-check-circle"></i> No issues
+          <i class="fa fa-check-circle"></i> {{ item.caption }} profile is compatible.
         </div>
         <div ng-if="!item.valid">
           <div class="callout callout-danger">
-            <span>{{ item.address }}</span> incompatible with <span>{{ item.profile }}</span> profile.
+            <span>{{ item.address }}</span> incompatible with <span>{{ item.caption }}</span> profile.
           </div>
           <h4>Reasons: </h4>
           <ul>
-            <li ng-repeat="problem in item.items">
-              <i class="fa fa-times-circle"></i>{{ problem.description }}
+            <li ng-repeat="problem in item.problems">
+              <i class="fa fa-times-circle"></i>
+              <span ng-if="problem.error">There was an error: {{ problem.error }}.</span>
+              <span ng-if="!problem.error">{{ problem.description }}.</span>
             </li>
           </ul>
         </div>

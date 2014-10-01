@@ -47,11 +47,14 @@
             $scope.selectServerProfile.overridden = false;
             $scope.selectServerProfile.item = item;
             $scope.selectServerProfile.items = $scope.selectServerProfile.data.map(function (object) {
-              return _.extend({}, object, {
-                profile: item.caption,
-                items: object.profiles[item.id],
-                valid: object.profiles[item.id].length === 0
-              });
+              var profile = object.profiles[item.id];
+
+              return {
+                address: object.address,
+                caption: item.caption,
+                problems: profile.checks,
+                valid: profile.valid
+              };
             });
           },
           /**
@@ -78,48 +81,47 @@
         };
 
         var off = data.hostProfileSpark.onValue('data', function (response) {
-          var profiles = _.pluck(response.body.objects, 'profiles');
+          var options = [];
 
-          var valid = buildReducer(function predicate (profile) {
-            return profile.length === 0;
-          })(profiles);
+          response.body.objects.forEach(function iterateServers (server) {
+            server.profiles = _.mapValues(server.profiles, function mapProfiles (profile, profileName) {
+              var invalid = profile.some(function (check) {
+                return !check.pass;
+              });
 
-          var invalid = buildReducer(function predicate (profile) {
-            return profile.length > 0;
-          })(profiles);
+              var option = _.find(options, {id: profileName});
 
-          valid = _.difference(valid, invalid);
+              if (!option) {
+                option = {
+                  id: profileName,
+                  caption: _.find(CACHE_INITIAL_DATA.server_profile, { name: profileName }).ui_name,
+                  valid: !invalid
+                };
+                options.push(option);
+              }
 
-          $scope.selectServerProfile.data = response.body.objects;
-          $scope.selectServerProfile.options = makeFancy(invalid).concat(makeFancy(valid, true));
-
-          function makeFancy (profiles, valid) {
-            return profiles.map(function (profile) {
-              var option = {
-                id: profile,
-                caption: _.find(CACHE_INITIAL_DATA.server_profile, {name: profile}).ui_name,
-                valid: valid
-              };
-
-              if (!valid)
+              if (invalid && !option.label)
                 _.extend(option, {
                   labelType: 'label-danger',
-                  label: 'Incompatible'
+                  label: 'Incompatible',
+                  valid: false
                 });
 
-              return option;
-            });
-          }
+              if (!invalid && option.label) {
+                delete option.labelType;
+                delete option.label;
+                option.valid = true;
+              }
 
-          function buildReducer (predicate) {
-            return function reducer (profiles) {
-              return _.unique(profiles.reduce(function (arr, profile) {
-                return arr.concat(Object.keys(profile).filter(function (key) {
-                  return predicate(profile[key]);
-                }));
-              }, []));
-            };
-          }
+              return {
+                valid: !invalid,
+                checks: profile
+              };
+            });
+          });
+
+          $scope.selectServerProfile.options = options;
+          $scope.selectServerProfile.data = response.body.objects;
         });
       }])
     .factory('selectServerProfileStep', [

@@ -22,6 +22,8 @@
 
 'use strict';
 
+var _ = require('lodash');
+
 /**
  * Returns a wrapped default request.
  * @param {Object} conf
@@ -67,7 +69,7 @@ module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonM
     return function promisifyRequest (path, options) {
       var time = process.hrtime();
 
-      options = options || {};
+      options = _.clone(options || {});
 
       pendCount += 1;
 

@@ -25,6 +25,7 @@ describe('status controller', function () {
     name: 'Job Monitor',
     type: 'job',
     api: '/job/',
+    jsonMask: 'objects(write_locks,read_locks,description)',
     qs: {
       limit: 0,
       state__in: ['pending', 'tasked']
@@ -34,6 +35,7 @@ describe('status controller', function () {
     name: 'Alert Monitor',
     type: 'alert',
     api: '/alert/',
+    jsonMask : 'objects(alert_item,message)',
     qs: {
       limit: 0,
       active: true
@@ -78,6 +80,7 @@ describe('status controller', function () {
 
       it('should get pending jobs', function () {
         expect(result.sendGet).toHaveBeenCalledOnceWith(monitor.api, {
+          jsonMask : monitor.jsonMask,
           qs: monitor.qs
         });
       });

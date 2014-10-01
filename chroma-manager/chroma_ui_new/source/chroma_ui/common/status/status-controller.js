@@ -68,6 +68,7 @@
 
           // Get the list of pending and tasked jobs
           extendedSpark.sendGet('/job/', {
+            jsonMask: 'objects(write_locks,read_locks,description)',
             qs: {
               limit: 0,
               state__in: ['pending', 'tasked']
@@ -116,6 +117,7 @@
 
           // Get the list of pending and tasked jobs
           extendedSpark.sendGet('/alert/', {
+            jsonMask: 'objects(alert_item,message)',
             qs: {
               limit: 0,
               active: true
@@ -150,7 +152,7 @@
          * @param {Object} scope
          * @param {Object} element
          */
-        link: function (scope, element) {
+        link: function link (scope, element) {
           var jobs = [];
           var readMessages = [];
           var writeMessages = [];
@@ -359,7 +361,7 @@
         restrict: 'E',
         replace: true,
         templateUrl: 'common/status/assets/html/record-state.html',
-        link: function (scope, element) {
+        link: function link (scope, element) {
           var alerts = [];
           var messageRecord = [];
           var messageDifference = [];
