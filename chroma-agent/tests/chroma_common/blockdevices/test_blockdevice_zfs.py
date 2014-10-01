@@ -13,87 +13,87 @@ class TestBlockDeviceZFS(CommandCaptureTestCase):
 
     def test_uuid(self):
         self.results = {
-            ("zfs", "list", "-o", "name,guid"): (0, """NAME                                                                  GUID\n
+            ('zfs', 'get', '-H', '-o', 'value', 'guid', 'zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0'): (0, '169883839435093209\n', 0),
+            ('zfs', 'list', '-o', 'name,guid'): (0, """NAME                                                                  GUID\n
 zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333             1672148304068375665\n
 zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0  169883839435093209\n
 zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP5555555             16305972746322234197\n
 zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP5555555/ost_index2  5057404647579993229\n""", 0)}
 
         self.assertEqual('169883839435093209', self.blockdevice.uuid)
+        self.assertEqual('169883839435093209', self.blockdevice.uuid_new_method)
 
     def test_preferred_fstype(self):
         self.assertEqual('zfs', self.blockdevice.preferred_fstype)
 
-    def test_zdb_values(self):
+    def test_property_values(self):
         self.results = {
-            ("zdb", "-h", "zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0"):
-                "Dataset zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0 [ZPL], ID 40, cr_txg 20, 2.38M, 283 objects\n",
-            ("zdb", "-h", "zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333"):
-                """\n
-History:\n
-2014-09-24.08:54:10 zpool create -f zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333 /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333\n
-2014-09-24.08:54:10 [internal pool create txg:5] pool spa 5000; zfs spa 5000; zpl 5; uts lotus-19vm6 2.6.32-431.20.5.el6_lustre.x86_64 #1 SMP Fri Jul 25 16:51:42 PDT 2014 x86_64\n
+            ("zfs", "get", "-Hp", "-o", "property,value", "all", "zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0"):
+                """type	filesystem
+garbageline followed by blank line
 
-2014-09-24.08:55:22 [internal create txg:20] dataset = 40\n
-2014-09-24.08:55:22 [internal property set txg:21] canmount=0 dataset = 40\n
-2014-09-24.08:55:22 [internal property set txg:21] xattr=2 dataset = 40\n
-2014-09-24.08:55:22 zfs create -o canmount=off -o xattr=sa zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0\n
-2014-09-24.08:55:22 [internal property set txg:22] lustre:version=1 dataset = 40\n
-2014-09-24.08:55:22 [internal property set txg:23] lustre:flags=98 dataset = 40\n
-2014-09-24.08:55:22 [internal property set txg:24] lustre:index=0 dataset = 40\n
-2014-09-24.08:55:22 [internal property set txg:25] lustre:fsname=efs dataset = 40\n
-2014-09-24.08:55:22 [internal property set txg:26] lustre:svname=efs:OST0000 dataset = 40\n
-2014-09-24.08:55:22 [internal property set txg:27] lustre:mgsnode=10.14.82.251@tcp dataset = 40\n
-2014-09-24.08:55:23 [internal property set txg:28] lustre:version=1 dataset = 40\n
-2014-09-24.08:55:23 [internal property set txg:29] lustre:flags=34 dataset = 40\n
-2014-09-24.08:55:23 [internal property set txg:30] lustre:index=0 dataset = 40\n
-2014-09-24.08:55:23 [internal property set txg:31] lustre:fsname=efs dataset = 40\n
-2014-09-24.08:55:23 [internal property set txg:32] lustre:svname=efs:OST0000 dataset = 40\n
-2014-09-24.08:55:23 [internal property set txg:33] lustre:mgsnode=10.14.82.251@tcp dataset = 40\n
-2014-09-24.08:55:24 [internal property set txg:36] lustre:svname=efs-OST0000 dataset = 40\n
-2014-09-24.08:55:24 [internal property set txg:36] lustre:svname=shoud-be-ignored dataset = 20\n"""}
+creation	1412156944
+used	4602880
+available	21002432000
+referenced	4602880
+compressratio	1.00x
+mounted	no
+quota	0
+reservation	0
+recordsize	131072
+mountpoint	/zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP2222222/mgt
+sharenfs	off
+checksum	on
+compression	off
+atime	on
+devices	on
+exec	on
+setuid	on
+readonly	off
+zoned	off
+snapdir	hidden
+aclinherit	restricted
+canmount	off
+xattr	sa
+copies	1
+version	5
+utf8only	off
+normalization	none
+casesensitivity	sensitive
+vscan	off
+nbmand	off
+sharesmb	off
+refquota	0
+refreservation	0
+primarycache	all
+secondarycache	all
+usedbysnapshots	0
+usedbydataset	4602880
+usedbychildren	0
+usedbyrefreservation	0
+logbias	latency
+dedup	off
+mlslabel	none
+sync	standard
+refcompressratio	1.00x
+written	4602880
+logicalused	3874304
+logicalreferenced	3874304
+snapdev	hidden
+acltype	off
+context	none
+fscontext	none
+defcontext	none
+rootcontext	none
+relatime	off
+lustre:version	1
+lustre:fsname	efs
+lustre:index	0
+lustre:svname	efs-MDT0000
+lustre:flags	37"""}
 
-        zdb_values = self.blockdevice.zdb_values
+        zfs_properties = self.blockdevice.zfs_properties()
 
-        self.assertEqual(zdb_values['fsname'], 'efs')
-        self.assertEqual(zdb_values['svname'], 'efs-OST0000')
-        self.assertEqual(zdb_values['flags'], '34')
-
-    def mgs_targets(self, log):
-        zdb_values = self.zdb_values
-
-        if ('fsname' in zdb_values) and ('svname' in zdb_values):
-            return {zdb_values['fsname']: {"name": zdb_values['svname'][len(zdb_values['fsname']) + 1:]}}
-        else:
-            return {}
-
-    def targets(self, uuid_name_to_target, device, log):
-        log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
-
-        zdb_values = self.zdb_values
-
-        if ('svname' not in zdb_values) or ('flags' not in zdb_values):
-            log.info("Device %s did not have a Lustre zdb values required" % device['path'])
-            return self.TargetsInfo([], None)
-
-        # For a Lustre block device, extract name and params
-        # ==================================================
-        name = zdb_values['svname']
-        flags = int(zdb_values['flags'], 16)
-
-        if  ('mgsnode' in zdb_values):
-            params = {'mgsnode': [zdb_values['mgsnode']]}
-        else:
-            params = {}
-
-        if name.find("ffff") != -1:
-            log.info("Device %s reported an unregistered lustre target and so will not be reported" % device['path'])
-            return self.TargetsInfo([], None)
-
-        if flags & 0x0005 == 0x0005:
-            # For combined MGS/MDT volumes, synthesise an 'MGS'
-            names = ["MGS", name]
-        else:
-            names = [name]
-
-        return self.TargetsInfo(names, params)
+        self.assertEqual(zfs_properties['lustre:fsname'], 'efs')
+        self.assertEqual(zfs_properties['lustre:svname'], 'efs-MDT0000')
+        self.assertEqual(zfs_properties['lustre:flags'], '37')

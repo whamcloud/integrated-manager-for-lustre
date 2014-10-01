@@ -254,17 +254,14 @@ class ZfsDevices(DeviceHelper):
         return devices
 
     def _get_zpool_datasets(self, pool_name, drives, block_devices):
-        out = shell.try_run(['zfs', 'list', '-o', 'name,guid,avail'])
+        out = shell.try_run(['zfs', 'list', '-Hp', '-o', 'name,guid,avail'])
         lines = [l for l in out.split("\n") if len(l) > 0]
-
-        # Slice off the first line it is just titles.
-        lines[0:1] = []
 
         zpool_datasets = {}
 
         for line in lines:
             name, uuid, size_str = line.split()
-            size = self._human_to_bytes(size_str)
+            size = int(size_str)
 
             if name.startswith("%s/" % pool_name):
                 # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?

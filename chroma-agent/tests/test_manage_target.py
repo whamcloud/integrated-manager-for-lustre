@@ -60,7 +60,8 @@ class TestFormatTarget(CommandCaptureTestCase):
         ("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"): "123456\n",
         ("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"): "ext4\n",
         ("dumpe2fs", "-h", "/dev/foo"): "        Inode count: 1\n        Inode size: 2\n",
-        ('zfs', 'list', '-o', 'name,guid'): "lustre1     123456789ABCDEF\n"}
+        ('zfs', 'list', '-o', 'name,guid'): "lustre1     123456789ABCDEF\n",
+        ('zfs', 'get', '-H', '-o', 'value', 'guid', 'lustre1'): '123456789ABCDEF'}
 
     block_device_list = [BlockDevice('linux', '/dev/foo'),
                          BlockDevice('zfs', 'lustre1')]

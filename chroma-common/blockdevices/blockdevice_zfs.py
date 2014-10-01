@@ -29,7 +29,7 @@ class BlockDeviceZfs(BlockDevice):
     _supported_device_types = ['zfs']
 
     def __init__(self, device_type, device_path):
-        self._zdb_values = None
+        self._zfs_properties = None
 
         super(BlockDeviceZfs, self).__init__(device_type, device_path)
 
@@ -50,74 +50,74 @@ class BlockDeviceZfs(BlockDevice):
         raise RuntimeError("Unabled to find UUID for device %s" % self._device_path)
 
     @property
+    def uuid_new_method(self):
+        '''
+        This method is simpler than the method above, but doesn't yet work with exported pools, however I want to keep
+        the code so have left it in place. The code works and has tests.
+        :return:
+        '''
+        out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
+        lines = [l for l in out.split("\n") if len(l) > 0]
+
+        if len(lines) == 1:
+            return lines[0]
+
+        raise RuntimeError("Unabled to find UUID for device %s" % self._device_path)
+
+    @property
     def preferred_fstype(self):
         return 'zfs'
 
-    @property
-    def zdb_values(self):
-        if not self._zdb_values:
-            self._zdb_values = {}
+    def zfs_properties(self, log=None):
+        if not self._zfs_properties:
+            self._zfs_properties = {}
 
             # First get the id for the dataset
             try:
-                ls = shell.try_run(["zdb", "-h", self._device_path])
-            except (shell.CommandExecutionError, OSError):          # Errors or zdb not found.
+                ls = shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
+            except (shell.CommandExecutionError, OSError):          # Errors or zfs not found.
                 try:
                     ls = shell.try_run(["zdb", "-e", "-h", self._device_path])
-                except (shell.CommandExecutionError, OSError):      # Errors or zdb not found.
-                    return self._zdb_values
-
-            dataset_id = None
+                except (shell.CommandExecutionError, OSError):      # Errors or zfs not found.
+                    return self._zfs_properties
 
             for line in ls.split("\n"):
-                match = re.search("ID ([\w-]+)", line)
-
-                if match:
-                    dataset_id = match.group(1)
-                    break
-
-            if dataset_id:
                 try:
-                    ls = shell.try_run(["zdb", "-h", self._device_path.split("/")[0]])
-                except shell.CommandExecutionError:
-                    ls = shell.try_run(["zdb", "-e", "-h", self._device_path.split("/")[0]])
+                    key, value = line.split('\t')
 
-                for line in ls.split("\n"):
-                    try:
-                        match = re.search("lustre:([\w-]+)=([^\s]+) dataset = ([\w-]+)", line)
+                    self._zfs_properties[key] = value
+                except ValueError:
+                    # Be resilient to things we don't understand.
+                    if log:
+                        log.info("zfs get for %s returned %s which was not parsable." % (self._device_path, line))
+                    pass
 
-                        if (match is not None) and (match.group(3) == dataset_id):
-                            self._zdb_values[match.group(1)] = match.group(2)
-
-                    except IndexError:
-                        pass
-
-        return self._zdb_values
+        return self._zfs_properties
 
     def mgs_targets(self, log):
-        zdb_values = self.zdb_values
+        zfs_properties = self.zfs_properties(log)
 
-        if ('fsname' in zdb_values) and ('svname' in zdb_values):
-            return {zdb_values['fsname']: {"name": zdb_values['svname'][len(zdb_values['fsname']) + 1:]}}
+        if ('lustre:fsname' in zfs_properties) and ('lustre:svname' in zfs_properties):
+            return {zfs_properties['lustre:fsname']: {"name": zfs_properties['lustre:svname'][len(zfs_properties['lustre:fsname']) + 1:]}}
         else:
             return {}
 
     def targets(self, uuid_name_to_target, device, log):
         log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
 
-        zdb_values = self.zdb_values
+        zfs_properties = self.zfs_properties(log)
 
-        if ('svname' not in zdb_values) or ('flags' not in zdb_values):
-            log.info("Device %s did not have a Lustre zdb values required" % device['path'])
+        if ('lustre:svname' not in zfs_properties) or ('lustre:flags' not in zfs_properties):
+            log.info("Device %s did not have a Lustre property values required" % device['path'])
             return self.TargetsInfo([], None)
 
         # For a Lustre block device, extract name and params
         # ==================================================
-        name = zdb_values['svname']
-        flags = int(zdb_values['flags'], 16)
+        name = zfs_properties['lustre:svname']
+        flags = int(zfs_properties['lustre:flags'], 16)
 
-        if  ('mgsnode' in zdb_values):
-            params = {'mgsnode': [zdb_values['mgsnode']]}
+        if  ('lustre:mgsnode' in zfs_properties):
+            params = {'mgsnode': [zfs_properties['lustre:mgsnode']]}
         else:
             params = {}
 

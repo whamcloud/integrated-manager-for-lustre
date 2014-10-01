@@ -31,7 +31,7 @@ class FileSystemZfs(FileSystem):
     @property
     def label(self):
         block_device = BlockDeviceZfs('zfs', self._device_path)
-        return block_device.zdb_values['svname']
+        return block_device.zfs_properties()['lustre:svname']
 
     @property
     def inode_size(self):
