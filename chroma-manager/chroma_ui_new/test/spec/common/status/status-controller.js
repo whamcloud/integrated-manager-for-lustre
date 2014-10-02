@@ -74,10 +74,6 @@ describe('status controller', function () {
         expect(requestSocket).toHaveBeenCalledOnce();
       });
 
-      it('should return a spark with an end function', function () {
-        expect(result.end).toEqual(jasmine.any(Function));
-      });
-
       it('should get pending jobs', function () {
         expect(result.sendGet).toHaveBeenCalledOnceWith(monitor.api, {
           jsonMask : monitor.jsonMask,

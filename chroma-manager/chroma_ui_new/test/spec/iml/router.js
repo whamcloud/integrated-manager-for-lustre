@@ -1,7 +1,7 @@
 describe('The router', function () {
   'use strict';
 
-  var $routeSegmentProvider, GROUPS;
+  var $rootScope, $routeSegmentProvider, GROUPS, $q;
 
   beforeEach(function () {
     $routeSegmentProvider = {
@@ -23,8 +23,10 @@ describe('The router', function () {
 
   beforeEach(module('imlRoutes', 'auth'));
 
-  beforeEach(inject(function (_GROUPS_) {
+  beforeEach(inject(function (_GROUPS_, _$rootScope_, _$q_) {
     GROUPS = _GROUPS_;
+    $rootScope = _$rootScope_;
+    $q = _$q_;
   }));
 
   describe('when setting up job stats', function () {
@@ -124,10 +126,12 @@ describe('The router', function () {
         .toHaveBeenCalledOnceWith('server', {
           controller: 'ServerCtrl',
           templateUrl: 'iml/server/assets/html/server.html',
-          access: GROUPS.FS_ADMINS,
           resolve: {
+            jobMonitorSpark: jasmine.any(Array),
+            alertMonitorSpark: jasmine.any(Array),
             hasAccess: ['hasAccess', jasmine.any(Function)]
           },
+          access: GROUPS.FS_ADMINS,
           untilResolved: {
             templateUrl: 'common/loading/assets/html/loading.html'
           }});
@@ -135,6 +139,35 @@ describe('The router', function () {
 
     it('should add the segmentAuthenticated property to the result of within', function () {
       expect($routeSegmentProvider.segmentAuthenticated).not.toBeNull();
+    });
+
+    ['jobMonitorSpark', 'alertMonitorSpark'].forEach(function testSparks (sparkType) {
+      describe(sparkType, function () {
+        var monitorSpark, monitor, spark;
+
+        beforeEach(function () {
+          spark = {
+            onceValueThen: jasmine.createSpy('onceValueThen').andReturn($q.when())
+          };
+          monitor = jasmine.createSpy('monitor').andReturn(spark);
+
+          var segment = $routeSegmentProvider.segment.calls.filter(function findServerSegment (segment) {
+            return segment.args[0] === 'server' && segment.args[1].resolve != null;
+          });
+
+          monitorSpark = segment[0].args[1].resolve[sparkType];
+        });
+
+        it('should return a spark', function () {
+          var expectedSpark = monitorSpark[monitorSpark.length - 1](monitor);
+
+          expectedSpark.then(function hasSpark (resp) {
+            expect(resp).toBe(spark);
+          });
+
+          $rootScope.$apply();
+        });
+      });
     });
   });
 });

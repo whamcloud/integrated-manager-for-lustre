@@ -27,7 +27,8 @@
       function ServerDetailModalCtrl ($scope, $modalInstance, item, itemScope) {
 
         $scope.serverDetailModal = {
-
+          jobMonitorSpark: itemScope.jobMonitorSpark,
+          alertMonitorSpark: itemScope.alertMonitorSpark,
           /**
            * Rejects the modal.
            */

@@ -48,11 +48,11 @@
       <th>
         <a href="" ng-click="server.reverse = !server.reverse">Hostname <i class="fa" ng-class="{'fa-sort-asc': server.reverse, 'fa-sort-desc': !server.reverse}"></i></a>
       </th>
+      <th>Status</th>
       <th>Profile</th>
       <th>LNet State</th>
       <th ng-if="!server.editable">Configure LNet</th>
       <th ng-if="!server.editable">Actions</th>
-      <th>Status</th>
       <th ng-if="server.editable" class="select-server-header">Select Server</th>
     </tr>
     </thead>
@@ -63,6 +63,10 @@
           <span bo-text="item.address"></span>
         </a>
       </td>
+      <td>
+        <job-status record-id="item.resource_uri" job-spark="server.jobMonitorSpark"></job-status>
+        <record-state record-id="item.resource_uri" alert-spark="server.alertMonitorSpark"></record-state>
+      </td>
       <td><span bo-text="item.server_profile.ui_name"></span></td>
       <td class="lnet-state">
         <lnet-status item="item"></lnet-status>
@@ -72,10 +76,6 @@
       </td>
       <td ng-if="!server.editable">
         <action-dropdown record="item" override-click="server.overrideActionClick(record, action)"></action-dropdown>
-      </td>
-      <td>
-        <job-status record-id="item.resource_uri"></job-status>
-        <record-state record-id="item.resource_uri"></record-state>
       </td>
       <td ng-if="server.editable" class="select-server">
         <button ng-if="!server.getActionByValue(server.editName).isDisabled(item)" class="btn btn-info btn-sm" ng-model="server.selectedServers[item.fqdn]" btn-checkbox>

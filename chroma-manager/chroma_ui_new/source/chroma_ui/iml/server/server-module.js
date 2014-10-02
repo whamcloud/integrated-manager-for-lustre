@@ -25,14 +25,17 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
   'fancy-select'])
   .controller('ServerCtrl', ['$scope', '$q', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
-    'jobMonitor', 'alertMonitor', 'openLnetModal', 'openAddServerModal', 'ADD_SERVER_STEPS', 'openServerDetailModal',
+    'jobMonitorSpark', 'alertMonitorSpark', 'openLnetModal', 'openAddServerModal',
+    'ADD_SERVER_STEPS', 'openServerDetailModal',
     function ServerCtrl ($scope, $q,  $modal, pdshParser, pdshFilter, naturalSortFilter,
                          serverSpark, serverActions, selectedServers, openCommandModal,
-                         jobMonitor, alertMonitor, openLnetModal, openAddServerModal, ADD_SERVER_STEPS,
-                         openServerDetailModal) {
+                         jobMonitorSpark, alertMonitorSpark, openLnetModal, openAddServerModal,
+                         ADD_SERVER_STEPS, openServerDetailModal) {
       'use strict';
 
       $scope.server = {
+        jobMonitorSpark: jobMonitorSpark,
+        alertMonitorSpark: alertMonitorSpark,
         maxSize: 10,
         itemsPerPage: 10,
         currentPage: 1,
@@ -258,7 +261,7 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
 
       $scope.$on('$destroy', function onDestroy () {
         spark.end();
-        jobMonitor().end();
-        alertMonitor().end();
+        jobMonitorSpark.end();
+        alertMonitorSpark.end();
       });
     }]);

@@ -129,6 +129,24 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment', 'auth']
       }).segmentAuthenticated('server', {
         controller: 'ServerCtrl',
         templateUrl: 'iml/server/assets/html/server.html',
+        resolve: {
+          jobMonitorSpark: ['jobMonitor', function jobMonitorSpark (jobMonitor) {
+            var spark = jobMonitor();
+
+            return spark.onceValueThen('data')
+              .then(function onData () {
+                return spark;
+              });
+          }],
+          alertMonitorSpark: ['alertMonitor', function alertMonitorSpark (alertMonitor) {
+            var spark = alertMonitor();
+
+            return spark.onceValueThen('data')
+              .then(function onData () {
+                return spark;
+              });
+          }]
+        },
         access: GROUPS.FS_ADMINS,
         untilResolved: {
           templateUrl: 'common/loading/assets/html/loading.html'

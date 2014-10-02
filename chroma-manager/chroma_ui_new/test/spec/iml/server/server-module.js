@@ -3,7 +3,7 @@ describe('Server module', function() {
 
   var $scope, pdshParser, pdshFilter, naturalSortFilter,
     server, $modal, serverSpark,  openCommandModal,
-    selectedServers, serverActions, jobMonitor, alertMonitor, jobMonitorSpark,
+    selectedServers, serverActions, jobMonitorSpark,
     alertMonitorSpark, openLnetModal, openAddServerModal, openServerDetailModal;
 
   beforeEach(module('server'));
@@ -60,9 +60,6 @@ describe('Server module', function() {
       end: jasmine.createSpy('end')
     };
 
-    jobMonitor = jasmine.createSpy('jobMonitor').andReturn(jobMonitorSpark);
-    alertMonitor = jasmine.createSpy('alertMonitor').andReturn(alertMonitorSpark);
-
     $scope.$on = jasmine.createSpy('$on');
 
     $controller('ServerCtrl', {
@@ -76,8 +73,8 @@ describe('Server module', function() {
       serverActions: serverActions,
       selectedServers: selectedServers,
       openCommandModal: openCommandModal,
-      jobMonitor: jobMonitor,
-      alertMonitor: alertMonitor,
+      jobMonitorSpark: jobMonitorSpark,
+      alertMonitorSpark: alertMonitorSpark,
       openLnetModal: openLnetModal,
       openAddServerModal: openAddServerModal,
       openServerDetailModal: openServerDetailModal
@@ -98,6 +95,16 @@ describe('Server module', function() {
       it('should have a ' + key + ' value of ' + expectedProperties[key], function () {
         expect(server[key]).toEqual(expectedProperties[key]);
       });
+    });
+  });
+
+  describe('verify sparks are passed in', function () {
+    it('should contain the job monitor spark', function () {
+      expect(server.jobMonitorSpark).toEqual(jobMonitorSpark);
+    });
+
+    it('should contain the alert monitor spark', function () {
+      expect(server.alertMonitorSpark).toEqual(alertMonitorSpark);
     });
   });
 

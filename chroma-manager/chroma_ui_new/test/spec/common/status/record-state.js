@@ -1,24 +1,20 @@
 describe('Record State directive', function () {
   'use strict';
 
-  var $scope, element, node, alertMonitor, popover, i;
+  var $scope, element, node, getPopover, i;
 
-  beforeEach(module('status', 'templates', 'ui.bootstrap.tooltip', 'ui.bootstrap.tpls', function ($provide) {
-    var spark = {
-      onValue: jasmine.createSpy('onValue')
-    };
-
-    alertMonitor = jasmine.createSpy('alertMonitor').andReturn(spark);
-
-    $provide.value('alertMonitor', alertMonitor);
-
-  }));
+  beforeEach(module('status', 'templates', 'ui.bootstrap.tooltip', 'ui.bootstrap.tpls'));
 
   beforeEach(inject(function ($rootScope, $compile) {
     // Create an instance of the element
-    element = '<record-state record-id="host/6" display-type="\'medium\'"></record-state>';
+    element = '<record-state record-id="host/6" alert-spark="alertSpark" display-type="\'medium\'">' +
+      '</record-state>';
 
     $scope = $rootScope.$new();
+
+    $scope.alertSpark = {
+      onValue: jasmine.createSpy('onValue')
+    };
 
     node = $compile(element)($scope);
 
@@ -27,7 +23,10 @@ describe('Record State directive', function () {
 
     $scope.$$childHead.recordId = 'host/6';
 
-    popover = node.find('iml-popover');
+    getPopover = function getPopover () {
+      return node.find('i ~ .popover');
+    };
+
     i = node.find('i');
   }));
 
@@ -36,7 +35,7 @@ describe('Record State directive', function () {
     beforeEach(function () {
       var response = {};
 
-      var handler = alertMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.alertSpark.onValue.mostRecentCall.args[1];
       handler(response);
     });
 
@@ -62,7 +61,7 @@ describe('Record State directive', function () {
         }
       };
 
-      var handler = alertMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.alertSpark.onValue.mostRecentCall.args[1];
       handler(response);
       $scope.$digest();
     });
@@ -103,7 +102,7 @@ describe('Record State directive', function () {
         }
       };
 
-      var handler = alertMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.alertSpark.onValue.mostRecentCall.args[1];
       handler(response);
 
       // Update the html
@@ -119,8 +118,7 @@ describe('Record State directive', function () {
     it('should display the popover after clicking info icon', function () {
       i.trigger('click');
 
-      popover = node.find('i ~ .popover');
-      expect(popover).toBeShown();
+      expect(getPopover()).toBeShown();
     });
 
     it('should display the tooltip after mousing over the info icon', function () {
@@ -145,7 +143,7 @@ describe('Record State directive', function () {
         }
       };
 
-      var handler = alertMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.alertSpark.onValue.mostRecentCall.args[1];
       handler(response);
 
       // Change the response to have 2 messages now
@@ -197,9 +195,13 @@ describe('Record State directive', function () {
   describe('no display type', function () {
     beforeEach(inject(function ($rootScope, $compile) {
       // Create an instance of the element
-      element = '<record-state record-id="host/6"></record-state>';
+      element = '<record-state record-id="host/6" alert-spark="alertSpark"></record-state>';
 
       $scope = $rootScope.$new();
+
+      $scope.alertSpark = {
+        onValue: jasmine.createSpy('onValue')
+      };
 
       node = $compile(element)($scope);
 
@@ -222,7 +224,7 @@ describe('Record State directive', function () {
           }
         };
 
-        var handler = alertMonitor().onValue.mostRecentCall.args[1];
+        var handler = $scope.alertSpark.onValue.mostRecentCall.args[1];
         handler(response);
         $scope.$digest();
       });

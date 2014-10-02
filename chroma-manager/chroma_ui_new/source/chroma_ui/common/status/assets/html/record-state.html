@@ -3,7 +3,7 @@
      tooltip="{{recordState.getTooltipMessage()}}" tooltip-placement="right"></i>
   <i class="fa fa-exclamation-circle activate-popover" ng-show="recordState.isInErrorState()"
     tooltip="{{recordState.getTooltipMessage()}}" tooltip-placement="right"></i>
-  <iml-popover placement="bottom" title="Alerts" work="recordState.work(actions)">
+  <iml-popover placement="bottom" title="Alerts" work="recordState.work(actions)" on-toggle="recordState.onToggle(state)">
     <ul>
       <li ng-repeat="alert in recordState.getAlerts()">{{alert}}</li>
       <li ng-repeat="alert in recordState.getMessageDifference()"><s>{{alert}}</s></li>

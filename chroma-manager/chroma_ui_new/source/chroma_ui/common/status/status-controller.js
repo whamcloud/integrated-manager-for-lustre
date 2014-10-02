@@ -36,7 +36,7 @@
    * overriden such that it will set the spark to null after it ends. Include this service in a controller and make
    * sure to call the end method when the controller is destroyed:
    * $scope.$on('$destroy', function onDestroy () {
-   *    jobMonitor().end();
+   *    jobSpark().end();
    *  });
    *  @param {String} jobMonitor - The service name
    *  @param {Array} Dependencies and the actual service HOF being returned.
@@ -48,26 +48,15 @@
        * @returns {Function}
        */
       function jobMonitorFactory (requestSocket) {
-        var extendedSpark;
-
         /**
          * The job monitor Service
          * @return {Object} The extended spark object
          */
         return function innerJobMonitorFactory () {
-          if (extendedSpark)
-            return extendedSpark;
-
           var spark = requestSocket();
-          extendedSpark = Object.create(spark);
-          extendedSpark.end = function end () {
-            spark.end();
-            spark = null;
-            extendedSpark = null;
-          };
 
           // Get the list of pending and tasked jobs
-          extendedSpark.sendGet('/job/', {
+          spark.sendGet('/job/', {
             jsonMask: 'objects(write_locks,read_locks,description)',
             qs: {
               limit: 0,
@@ -75,7 +64,7 @@
             }
           });
 
-          return extendedSpark;
+          return spark;
         };
       }])
 
@@ -84,9 +73,8 @@
    * overriden such that it will set the spark to null after it ends. Include this service in a controller and make
    * sure to call the end method when the controller is destroyed:
    * $scope.$on('$destroy', function onDestroy () {
-   *    alertMonitor().end();
+   *    alertSpark.end();
    *  });
-   *  @param {String} The alertMonitor service
    *  @param {Array} The alert monitor dependencies and function
    */
     .factory('alertMonitor', ['requestSocket',
@@ -97,26 +85,15 @@
        * @returns {Function}
        */
       function alertMonitorFactory (requestSocket) {
-        var extendedSpark;
-
         /**
          * The alert monitor Service
          * @return {Object} The extended spark object
          */
         return function innerAlertMonitorFactory () {
-          if (extendedSpark)
-            return extendedSpark;
-
           var spark = requestSocket();
-          extendedSpark = Object.create(spark);
-          extendedSpark.end = function end () {
-            spark.end();
-            spark = null;
-            extendedSpark = null;
-          };
 
           // Get the list of pending and tasked jobs
-          extendedSpark.sendGet('/alert/', {
+          spark.sendGet('/alert/', {
             jsonMask: 'objects(alert_item,message)',
             qs: {
               limit: 0,
@@ -124,7 +101,7 @@
             }
           });
 
-          return extendedSpark;
+          return spark;
         };
       }])
 
@@ -136,12 +113,13 @@
    * close the popover by clicking anywhere outside its region. Note that the lock icon and the popover will remain
    * visible, even if all the jobs finish.
    */
-    .directive('jobStatus', ['jobMonitor', function jobStatus (jobMonitor) {
+    .directive('jobStatus', [function jobStatus () {
 
       // record contains a resource uri which maps to the write_locks[0]locked_item_uri
       return {
         scope: {
-          recordId: '='
+          recordId: '=',
+          jobSpark: '='
         },
         restrict: 'E',
         replace: true,
@@ -150,9 +128,8 @@
         /**
          * The link function
          * @param {Object} scope
-         * @param {Object} element
          */
-        link: function link (scope, element) {
+        link: function link (scope) {
           var jobs = [];
           var readMessages = [];
           var writeMessages = [];
@@ -162,10 +139,10 @@
           var writeMessageDifference = [];
 
           /**
-           * Called whenever there is a data change on the jobMonitor spark.
+           * Called whenever there is a data change on the jobSpark.
            * @param {Object} response The response returned by the spark
            */
-          jobMonitor().onValue('data', function onValueData (response) {
+          scope.jobSpark.onValue('data', function onValueData (response) {
             if (!response.body)
               return; // Do I need to throw an error here?
 
@@ -193,24 +170,6 @@
           });
 
           /**
-           * Watches for the directive's popover to become visible or hidden. When it detects a change it
-           * clears the message records.
-           */
-          scope.$watch(function () {
-            return element.find('.popover.in').html();
-          },
-            /**
-             * Clears the message records if the status of the popover has changed.
-             * @param {String} newVal
-             * @param {String} oldVal
-             */
-            function (newVal, oldVal) {
-            if (newVal !== oldVal && newVal == null) {
-              scope.jobStatus.clearMessageRecords();
-            }
-          });
-
-          /**
            * Determines if any of the joblocks matche the record id of this directive.
            * @param {Array} jobLocks
            * @returns {Boolean}
@@ -224,10 +183,20 @@
             });
           }
 
+          var isOpened = false;
+
           scope.jobStatus = {
             closeOthers: false,
             openWrite: true,
             openRead: true,
+            onToggle: function onToggle (state) {
+              if (state === 'closed') {
+                scope.jobStatus.clearMessageRecords();
+                isOpened = false;
+              } else if (state === 'opened') {
+                isOpened = true;
+              }
+            },
             /**
              * Getter that returns if there are any job messages for this directive.
              * @returns {Boolean}
@@ -297,7 +266,7 @@
              * @returns {boolean}
              */
             shouldShowLockIcon: function shouldShowLockIcon () {
-              return writeMessages.length + readMessages.length > 0 || element.find('.popover.in').html() != null;
+              return writeMessages.length + readMessages.length > 0 || isOpened;
             },
             /**
              * Returns the tooltip message for the lock icon based on the write and read message lengths.
@@ -350,27 +319,28 @@
    * display the list of alerts. As the number of alerts is reduced, they are crossed out. You can close the popover
    * by clicking anywhere outside its region.
    */
-    .directive('recordState', ['alertMonitor', 'STATE_SIZE', function recordState (alertMonitor, STATE_SIZE) {
+    .directive('recordState', ['STATE_SIZE', function recordState (STATE_SIZE) {
 
       // record contains a resource uri which maps to the write_locks[0]locked_item_uri
       return {
         scope: {
           recordId: '=',
-          displayType: '='
+          displayType: '=',
+          alertSpark: '='
         },
         restrict: 'E',
         replace: true,
         templateUrl: 'common/status/assets/html/record-state.html',
-        link: function link (scope, element) {
+        link: function link (scope) {
           var alerts = [];
           var messageRecord = [];
           var messageDifference = [];
 
           /**
-           * Called whenever there is a data change on the alertMonitor spark.
+           * Called whenever there is a data change on the alertSpark.
            * @param {Object} response The response returned by the spark
            */
-          alertMonitor().onValue('data', function onValueData (response) {
+          scope.alertSpark.onValue('data', function onValueData (response) {
             if (!response.body)
               return;
 
@@ -385,24 +355,11 @@
             messageDifference = _.difference(messageRecord, alerts);
           });
 
-          /**
-           * Watches for the directive's popover to become visible or hidden. When it detects a change it
-           * clears the message records.
-           */
-          scope.$watch(function () {
-            return element.find('.popover.in').html();
-          },
-            /**
-             * Clears the message records if the status of the popover has changed.
-             * @param {String} newVal
-             * @param {String} oldVal
-             */
-            function (newVal, oldVal) {
-            if (newVal !== oldVal && newVal == null)
-              scope.recordState.clearMessageRecord();
-          });
-
           scope.recordState = {
+            onToggle: function onToggle (state) {
+              if (state === 'closed')
+                scope.recordState.clearMessageRecord();
+            },
             /**
              * Indicates if the command contains alerts (the directive is in an alert state).
              * @returns {Boolean}

@@ -1,25 +1,21 @@
 describe('Job Status directive', function () {
   'use strict';
 
-  var $scope, element, node, jobMonitor, popover, i, spark;
+  var $scope, $timeout, element, node, getPopover, i;
 
-  beforeEach(module('status', 'templates', 'ui.bootstrap.tooltip', 'ui.bootstrap.tpls', function ($provide) {
+  beforeEach(module('status', 'templates', 'ui.bootstrap.tooltip', 'ui.bootstrap.tpls'));
 
-    spark = {
-      onValue: jasmine.createSpy('onValue')
-    };
+  beforeEach(inject(function ($rootScope, $compile, _$timeout_) {
+    $timeout = _$timeout_;
 
-    jobMonitor = jasmine.createSpy('jobMonitor').andReturn(spark);
-
-    $provide.value('jobMonitor', jobMonitor);
-
-  }));
-
-  beforeEach(inject(function ($rootScope, $compile) {
     // Create an instance of the element
-    element = '<job-status record-id="host/6"></job-status>';
+    element = '<job-status record-id="host/6" job-spark="spark"></job-status>';
 
     $scope = $rootScope.$new();
+
+    $scope.spark = {
+      onValue: jasmine.createSpy('onValue')
+    };
 
     node = $compile(element)($scope);
 
@@ -28,16 +24,41 @@ describe('Job Status directive', function () {
 
     $scope.$$childHead.recordId = 'host/6';
 
-    popover = node.find('iml-popover');
+    getPopover = function getPopover () {
+      return node.find('i ~ .popover');
+    };
+
     i = node.find('i');
   }));
+
+  describe('toggling', function () {
+    beforeEach(function() {
+      i.trigger('click');
+      $timeout.flush();
+    });
+
+    it('should display the popover', function () {
+      expect(getPopover()).toHaveClass('in');
+    });
+
+    it('should show the lock icon', function () {
+      expect($scope.$$childHead.jobStatus.shouldShowLockIcon()).toEqual(true);
+    });
+
+    it('should have a toggle status of closed', function () {
+      i.trigger('click');
+      $timeout.flush();
+      expect(getPopover().length).toBe(0);
+    });
+
+  });
 
   describe('populate jobs on data change', function () {
 
     it('should have no job messages if the response doesn\'t contain a body.', function () {
       var response = {};
 
-      var handler = jobMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.spark.onValue.mostRecentCall.args[1];
       handler(response);
 
       expect($scope.$$childHead.jobStatus.containsJobMessages()).toEqual(false);
@@ -61,7 +82,7 @@ describe('Job Status directive', function () {
           }
         };
 
-        var handler = jobMonitor().onValue.mostRecentCall.args[1];
+        var handler = $scope.spark.onValue.mostRecentCall.args[1];
         handler(response);
       });
 
@@ -93,7 +114,7 @@ describe('Job Status directive', function () {
           }
         };
 
-        var handler = jobMonitor().onValue.mostRecentCall.args[1];
+        var handler = $scope.spark.onValue.mostRecentCall.args[1];
         handler(response);
       });
 
@@ -134,7 +155,7 @@ describe('Job Status directive', function () {
           }
         };
 
-        var handler = jobMonitor().onValue.mostRecentCall.args[1];
+        var handler = $scope.spark.onValue.mostRecentCall.args[1];
         handler(response);
       });
 
@@ -180,7 +201,7 @@ describe('Job Status directive', function () {
         }
       };
 
-      var handler = jobMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.spark.onValue.mostRecentCall.args[1];
       handler(response);
 
       // Update the html
@@ -195,13 +216,14 @@ describe('Job Status directive', function () {
 
     it('should display the popover after clicking info icon', function () {
       i.trigger('click');
+      $timeout.flush();
 
-      popover = node.find('i ~ .popover');
-      expect(popover).toBeShown();
+      expect(getPopover()).toBeShown();
     });
 
     it('should display the tooltip after mousing over the info icon', function () {
       i.trigger('mouseover');
+      $timeout.flush();
 
       var tooltip = node.find('.tooltip');
       expect(tooltip).toBeShown();
@@ -226,7 +248,7 @@ describe('Job Status directive', function () {
         }
       };
 
-      var handler = jobMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.spark.onValue.mostRecentCall.args[1];
       handler(response);
 
       // Change the response to have 2 messages now
@@ -306,7 +328,7 @@ describe('Job Status directive', function () {
         }
       };
 
-      var handler = jobMonitor().onValue.mostRecentCall.args[1];
+      var handler = $scope.spark.onValue.mostRecentCall.args[1];
       handler(response);
 
       // Change the response to have 2 messages now

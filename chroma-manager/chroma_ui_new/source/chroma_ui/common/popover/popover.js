@@ -36,7 +36,8 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
       scope: {
         placement: '@',
         title: '@',
-        work: '&'
+        work: '&',
+        onToggle: '&'
       },
       link: function link (scope, el, attrs, ctrl, $transclude) {
         var popoverLinker = $compile(template);
@@ -87,6 +88,11 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
             });
 
             el.before(popoverEl);
+
+            scope.onToggle({
+              state: 'opened'
+            });
+
             $timeout(function showAndRecalculate () {
               transcludedScope.$parent.$digest();
               popoverEl.css('display', 'block');
@@ -101,6 +107,10 @@ angular.module('iml-popover', ['position']).directive('imlPopover', ['position',
         }
 
         function destroyPopover () {
+          scope.onToggle({
+            state: 'closed'
+          });
+
           if (popoverEl) {
             popoverEl.off('click');
             popoverEl.remove();

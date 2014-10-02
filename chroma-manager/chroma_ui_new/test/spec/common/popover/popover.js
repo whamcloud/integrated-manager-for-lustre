@@ -13,6 +13,7 @@ describe('popover', function () {
     $scope = $rootScope.$new();
 
     $scope.workFn = jasmine.createSpy('workFn');
+    $scope.onToggle = jasmine.createSpy('onToggle');
 
     $compile(template)($scope);
 
@@ -43,11 +44,22 @@ describe('popover', function () {
       expect(popover).toHaveClass('in');
     });
 
+    it('should call scope.onToggle and set state to open', function () {
+      expect($scope.onToggle).toHaveBeenCalledOnceWith('opened');
+    });
+
     it('should hide when button is clicked twice', function () {
       button.click();
       $timeout.flush();
 
       expect(popover).not.toHaveClass('in');
+    });
+
+    it('should call scope.onToggle and set the state to closed', function () {
+      button.click();
+      $timeout.flush();
+
+      expect($scope.onToggle).toHaveBeenCalledOnceWith('closed');
     });
 
     it('should hide when window is clicked', function () {

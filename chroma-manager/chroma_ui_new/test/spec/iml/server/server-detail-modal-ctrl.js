@@ -18,6 +18,7 @@ describe('server detail modal controller', function () {
         id: 1,
         address: 'foo1.localdomain'
       };
+
       itemScope = {
         servers: {
           objects: [
@@ -26,7 +27,9 @@ describe('server detail modal controller', function () {
               address: 'foo1.localdomain'
             }
           ]
-        }
+        },
+        jobMonitorSpark: jasmine.createSpy('jobMonitorSpark'),
+        alertMonitorSpark: jasmine.createSpy('alertMonitorSpark')
       };
 
       $controller('ServerDetailModalCtrl', {
@@ -41,6 +44,14 @@ describe('server detail modal controller', function () {
 
     it('should set item on the scope', function () {
       expect(myServer).toEqual(item);
+    });
+
+    it('should contain the job monitor spark', function () {
+      expect($scope.serverDetailModal.jobMonitorSpark).toEqual(itemScope.jobMonitorSpark);
+    });
+
+    it('should contain the alert monitor spark', function () {
+      expect($scope.serverDetailModal.alertMonitorSpark).toEqual(itemScope.alertMonitorSpark);
     });
 
     it('should dismiss the modal on close', function () {
