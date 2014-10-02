@@ -1,5 +1,7 @@
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support.expected_conditions import element_to_be_clickable
+from selenium.webdriver.common.by import By
 
 from tests.selenium.base_view import BaseView
 
@@ -43,6 +45,10 @@ class CommandModal(Modal):
     @property
     def close_button(self):
         return self.driver.find_element_by_css_selector(self.CLOSE_BUTTON)
+
+    def wait_for_close_button_to_be_clickable(self):
+        return WebDriverWait(self.driver, self.medium_wait).until(
+            element_to_be_clickable((By.CSS_SELECTOR, self.CLOSE_BUTTON)), 'Close button not clickable.')
 
 
 class ConfirmActionModal(Modal):

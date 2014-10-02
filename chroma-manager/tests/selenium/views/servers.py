@@ -51,6 +51,7 @@ class Servers(BaseView):
             add_server_modal.proceed_button.click()
 
             command_modal.wait_for_modal()
+            command_modal.wait_for_close_button_to_be_clickable()
             command_modal.close_button.click()
             command_modal.wait_for_modal_remove()
 
