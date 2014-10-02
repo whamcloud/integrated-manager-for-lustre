@@ -28,6 +28,7 @@ import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.log import daemon_log
 
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
+from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 
 
@@ -57,36 +58,7 @@ class ZfsDevices(DeviceHelper):
         lines = [l for l in out.split("\n") if len(l) > 0]
 
         for line in lines:
-            pool, size_str, uuid = line.split()
-            size = self._human_to_bytes(size_str)
-
-            drives = [self._dev_major_minor(dp) for dp in self._get_zpool_devices(pool)]
-
-            # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
-            block_device = "zfspool:%s" % pool
-
-            block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
-                                                              'path': pool,
-                                                              'serial_80': None,
-                                                              'serial_83': None,
-                                                              'size': size,
-                                                              'filesystem_type': None,
-                                                              'parent': None}
-
-            # Do this to cache the device, type see blockdevice and filesystem for info.
-            BlockDevice('zfs', pool)
-            FileSystem('zfs', pool)
-
-            self._zpools[uuid] = {
-                "name": pool,
-                "path": pool,
-                "block_device": block_device,
-                "uuid": uuid,
-                "size": size,
-                "drives": drives,
-                "datasets": self._get_zpool_datasets(pool, drives, block_devices),
-                "zvols": self._get_zpool_zvols(pool, drives, block_devices)
-                }
+            self._add_zfs_pool(line, block_devices)
 
     def _search_for_inactive(self, block_devices):
         # importable zpools
@@ -111,90 +83,46 @@ class ZfsDevices(DeviceHelper):
 
         lines = [l for l in out.split("\n") if len(l) > 0]
 
-        # Define them all to remove the warnings from Pyflakes
-        pool = None
-        uuid = None
-        searching_config = False
-        size = None
-        state = None
-        devices = []
-
         for line in lines:
             match = re.match("(\s*)pool: (\S*)", line)
             if match:
-                # Are we moving to the next pool in the list?
-                if pool:
-                    self._add_zpool(pool, uuid, size, state, devices, block_devices)
-
                 pool = match.group(2)
-                uuid = None                 # Reset uuid so we throw errors if it is not found.
-                searching_config = False
-                size = 0
-                state = None
-                devices = []
-                continue
 
-            match = re.match("(\s*)id: (\S*)", line)
-            if match:
-                uuid = match.group(2)
-                continue
+                with BlockDeviceZfs('zfs', pool).ExportedDevice(pool):
+                    out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool])
+                    self._add_zfs_pool(out, block_devices)
 
-            match = re.match("(\s*)state: (\S*)", line)
-            if match:
-                state = match.group(2)
-                continue
+    def _add_zfs_pool(self, line, block_devices):
+        pool, size_str, uuid = line.split()
+        size = self._human_to_bytes(size_str)
 
-            match = re.match("(\s*)action:", line)
-            if match:
-                continue
+        drives = [self._dev_major_minor(dp) for dp in self._get_zpool_devices(pool)]
 
-            match = re.match("(\s*)config:", line)
-            if match:
-                searching_config = True
-                continue
+        # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
+        block_device = "zfspool:%s" % pool
 
-            if searching_config:
-                match = re.match("(\s*)%s" % pool, line)
-                if match:
-                    continue
+        block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
+                                                          'path': pool,
+                                                          'serial_80': None,
+                                                          'serial_83': None,
+                                                          'size': size,
+                                                          'filesystem_type': None,
+                                                          'parent': None}
 
-                # Which means we are looking at devices
-                match = re.match("(\s*)(\S*)(\s*)ONLINE", line)
-                if match:
-                    devices += self.find_device_and_children(match.group(2))
+        # Do this to cache the device, type see blockdevice and filesystem for info.
+        BlockDevice('zfs', pool)
+        FileSystem('zfs', pool)
 
-        if pool:
-            self._add_zpool(pool, uuid, size, state, devices, block_devices)
-
-    def _add_zpool(self, pool, uuid, size, state, devices, block_devices):
-        if state == "ONLINE":
-            drives = [self._dev_major_minor(dp) for dp in devices]
-
-            # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
-            block_device = "zfspool:%s" % pool
-
-            block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
-                                                              'path': pool,
-                                                              'serial_80': None,
-                                                              'serial_83': None,
-                                                              'size': size,
-                                                              'filesystem_type': None,
-                                                              'parent': None}
-
-            # Do this to cache the device, type see blockdevice and filesystem for info.
-            BlockDevice('zfs', pool)
-            FileSystem('zfs', pool)
-
-            self._zpools[uuid] = {
-                "name": pool,
-                "path": pool,
-                "block_device": block_device,
-                "uuid": uuid,
-                "size": size,
-                "drives": drives,
-                "datasets": {},
-                "zvols": {}
-                }
+        self._zpools[uuid] = {
+            "name": pool,
+            "path": pool,
+            "block_device": block_device,
+            "uuid": uuid,
+            "size": size,
+            "drives": drives,
+            "datasets": self._get_zpool_datasets(pool, drives, block_devices),
+            "zvols": self._get_zpool_zvols(pool, drives, block_devices)
+            }
 
     @property
     def zpools(self):
@@ -254,14 +182,14 @@ class ZfsDevices(DeviceHelper):
         return devices
 
     def _get_zpool_datasets(self, pool_name, drives, block_devices):
-        out = shell.try_run(['zfs', 'list', '-Hp', '-o', 'name,guid,avail'])
+        out = shell.try_run(['zfs', 'list', '-H', '-o', 'name,guid,avail'])
         lines = [l for l in out.split("\n") if len(l) > 0]
 
         zpool_datasets = {}
 
         for line in lines:
             name, uuid, size_str = line.split()
-            size = int(size_str)
+            size = self._human_to_bytes(size_str)
 
             if name.startswith("%s/" % pool_name):
                 # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
@@ -318,17 +246,20 @@ class ZfsDevices(DeviceHelper):
     def find_device_and_children(self, device):
         devices = []
 
-        # Find the full path of the matching device for example, this ends
-        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 so find
-        # /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
-        device = ndp.find_normalized_end(device)
+        try:
+            # Find the full path of the matching device for example, this ends
+            # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 so find
+            # /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333
+            device = ndp.find_normalized_end(device)
 
-        # Then find all the partitions for that disk and add them, they are all a child of this
-        # zfs pool, so
-        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 includes
-        # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
-        for device in ndp.find_normalized_start(device):
-            daemon_log.debug("zfs device '%s'" % device)
-            devices.append(device)
+            # Then find all the partitions for that disk and add them, they are all a child of this
+            # zfs pool, so
+            # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333 includes
+            # scsi-0QEMU_QEMU_HARDDISK_WD-WMAP3333333-part1
+            for device in ndp.find_normalized_start(device):
+                daemon_log.debug("zfs device '%s'" % device)
+                devices.append(device)
+        except KeyError:
+            pass
 
         return devices

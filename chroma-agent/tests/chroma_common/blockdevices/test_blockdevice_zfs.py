@@ -13,15 +13,9 @@ class TestBlockDeviceZFS(CommandCaptureTestCase):
 
     def test_uuid(self):
         self.results = {
-            ('zfs', 'get', '-H', '-o', 'value', 'guid', 'zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0'): (0, '169883839435093209\n', 0),
-            ('zfs', 'list', '-o', 'name,guid'): (0, """NAME                                                                  GUID\n
-zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333             1672148304068375665\n
-zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0  169883839435093209\n
-zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP5555555             16305972746322234197\n
-zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP5555555/ost_index2  5057404647579993229\n""", 0)}
+            ('zfs', 'get', '-H', '-o', 'value', 'guid', 'zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0'): (0, '169883839435093209\n', 0)}
 
         self.assertEqual('169883839435093209', self.blockdevice.uuid)
-        self.assertEqual('169883839435093209', self.blockdevice.uuid_new_method)
 
     def test_preferred_fstype(self):
         self.assertEqual('zfs', self.blockdevice.preferred_fstype)

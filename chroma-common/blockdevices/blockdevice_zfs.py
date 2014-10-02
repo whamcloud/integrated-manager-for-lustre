@@ -19,14 +19,29 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-import re
-
 from ..lib import shell
 from blockdevice import BlockDevice
 
 
 class BlockDeviceZfs(BlockDevice):
     _supported_device_types = ['zfs']
+
+    class ExportedDevice(object):
+        def __init__(self, device_path):
+            self.device_path = device_path
+            self.pool_imported = False
+
+        def __enter__(self):
+            imported_pools = shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
+
+            if self.device_path not in imported_pools:
+                shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.device_path])
+                self.pool_imported = True
+
+        def __exit__(self, type, value, traceback):
+            if self.pool_imported:
+                shell.try_run(['zpool', 'export', self.device_path])
+                self.pool_imported = False
 
     def __init__(self, device_type, device_path):
         self._zfs_properties = None
@@ -40,29 +55,26 @@ class BlockDeviceZfs(BlockDevice):
 
     @property
     def uuid(self):
-        out = shell.try_run(['zfs', 'list', '-o', 'name,guid'])
-        lines = [l for l in out.split("\n") if len(l) > 0]
-        for line in lines:
-            result = re.search("^%s\s+(.+)" % self._device_path, line)
-            if (result):
-                return result.group(1)
-
-        raise RuntimeError("Unabled to find UUID for device %s" % self._device_path)
-
-    @property
-    def uuid_new_method(self):
         '''
         This method is simpler than the method above, but doesn't yet work with exported pools, however I want to keep
         the code so have left it in place. The code works and has tests.
         :return:
         '''
-        out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
+        try:
+            out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
+        except (shell.CommandExecutionError, OSError):
+            try:
+                with self.ExportedDevice(self.device_path):
+                    out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
+            except (shell.CommandExecutionError, OSError):      # Errors or zfs not found.
+                out = ''
+
         lines = [l for l in out.split("\n") if len(l) > 0]
 
         if len(lines) == 1:
             return lines[0]
 
-        raise RuntimeError("Unabled to find UUID for device %s" % self._device_path)
+        raise RuntimeError("Unable to find UUID for device %s" % self._device_path)
 
     @property
     def preferred_fstype(self):
@@ -72,12 +84,12 @@ class BlockDeviceZfs(BlockDevice):
         if not self._zfs_properties:
             self._zfs_properties = {}
 
-            # First get the id for the dataset
             try:
                 ls = shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
             except (shell.CommandExecutionError, OSError):          # Errors or zfs not found.
                 try:
-                    ls = shell.try_run(["zdb", "-e", "-h", self._device_path])
+                    with self.ExportedDevice(self.device_path):
+                        ls = shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
                 except (shell.CommandExecutionError, OSError):      # Errors or zfs not found.
                     return self._zfs_properties
 
