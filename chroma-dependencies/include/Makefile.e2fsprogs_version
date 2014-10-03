@@ -1,0 +1,5 @@
+E2FSPROGS_VERSION := 1.42.12.wc1
+E2FSPROGS_RHEL_RELEASE := 7
+E2FSPROGS_SLES_RELEASE := 0suse
+
+URL := https://downloads.hpdd.intel.com/public/e2fsprogs
