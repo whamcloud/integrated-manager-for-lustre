@@ -1369,6 +1369,30 @@ class JobScheduler(object):
 
         return host.id, command.id
 
+    def set_host_profile(self, host_id, server_profile_id):
+        '''
+        Set the profile for the given host to the given profile, this includes updating the manager view
+        and making the appropriate changes to the host.
+        :param host_id:
+        :param server_profile_id:
+        :return: Command for the host job.
+        '''
+
+        with self._lock:
+            with transaction.commit_on_success():
+                server_profile = ServerProfile.objects.get(pk=server_profile_id)
+
+                host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
+
+                command = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs([{"class_name": "SetHostProfileJob",
+                                                                                                 "args": {"host": host,
+                                                                                                          "server_profile": server_profile}}],
+                                                                                               "Changing Host Profile")
+
+        self.progress.advance()
+
+        return command
+
     def create_host(self, fqdn, nodename, address, server_profile_id):
         """
         Create a new host, or update a host in the process of being deployed.

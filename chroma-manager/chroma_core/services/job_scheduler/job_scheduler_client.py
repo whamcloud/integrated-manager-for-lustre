@@ -29,14 +29,15 @@ non-remote functionality is wrapped in JobSchedulerClient.
 """
 import datetime
 
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import DateTimeField
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
-from django.contrib.contenttypes.models import ContentType
-from django.db.models import DateTimeField
+from chroma_core.models import ManagedHost, Command
 
 
 log = log_register(__name__)
@@ -60,6 +61,7 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'update_nids',
                'update_lnet_configuration',
                'create_host',
+               'set_host_profile',
                'create_targets',
                'available_transitions',
                'available_jobs',
@@ -218,8 +220,6 @@ class JobSchedulerClient(object):
         :param address: SSH address
         :return: (<ManagedHost instance>, <Command instance>)
         """
-        from chroma_core.models import ManagedHost, Command
-
         host_id, command_id = JobSchedulerRpc().create_host_ssh(address, server_profile, root_pw, pkey, pkey_pw)
         return ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id)
 
@@ -242,7 +242,6 @@ class JobSchedulerClient(object):
 
     @classmethod
     def create_host(cls, fqdn, nodename, address, server_profile_id):
-        from chroma_core.models import ManagedHost, Command
         # The address of a host isn't something we can learn from it (the
         # address is specifically how the host is to be reached from the manager
         # for outbound connections, not just its FQDN).  If during creation we know
@@ -253,6 +252,19 @@ class JobSchedulerClient(object):
         host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
 
         return ManagedHost.objects.get(pk = host_id), Command.objects.get(pk = command_id)
+
+    @classmethod
+    def set_host_profile(cls, host_id, server_profile_id):
+        '''
+        Set the profile for the given host to the given profile, this includes updating the manager view
+        and making the appropriate changes to the host.
+        :param host_id:
+        :param server_profile_id:
+        :return: Command for the host job.
+        '''
+        command_id = JobSchedulerRpc().set_host_profile(host_id, server_profile_id)
+
+        return Command.objects.get(pk = command_id)
 
     @classmethod
     def create_targets(cls, targets_data):

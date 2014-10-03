@@ -1,9 +1,11 @@
 from collections import defaultdict
 import mock
+
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_api.tastypie_test import ResourceTestCase
 from tests.unit.chroma_core.helper import synthetic_volume_full
+from chroma_core.models import ManagedTarget
 
 
 class ChromaApiTestCase(ResourceTestCase):
@@ -111,6 +113,11 @@ class ChromaApiTestCase(ResourceTestCase):
         self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
         self.mdt, _ = ManagedMdt.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
         self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
+
+        ObjectCache.add(ManagedFilesystem, self.fs)
+        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.mgt.id))
+        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.mdt.id))
+        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.ost.id))
 
     def api_get_list(self, uri):
         response = self.api_client.get(uri)

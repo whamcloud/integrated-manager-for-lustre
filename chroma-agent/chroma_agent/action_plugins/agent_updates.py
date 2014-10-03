@@ -31,6 +31,7 @@ from chroma_agent.device_plugins import lustre
 from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
+from chroma_agent.utils import ReadServerURI
 
 
 REPO_CONTENT = """
@@ -75,6 +76,8 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
         cmd = ['yum', 'clean', 'all']
     elif action == 'install':
         cmd = ['yum', 'install', '-y'] + repo_arg + list(packages)
+    elif action == 'remove':
+        cmd = ['yum', 'remove', '-y'] + repo_arg + list(packages)
     elif action == 'update':
         cmd = ['yum', 'update', '-y'] + repo_arg + list(packages)
     elif action == 'requires':
@@ -83,6 +86,52 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
         cmd = ['repoquery'] + repo_arg + list(packages)
 
     return shell.try_run(cmd)
+
+
+def set_profile(profile_name):
+    '''
+    Sets the profile to the profile_name by fetching the profile from the manager
+    :param profile_name:
+    :return: None is OK else an error String
+    '''
+    old_profile = config.get('settings', 'profile')
+
+    host_uri = 'api/server_profile/?name=%s' % profile_name
+
+    try:
+        new_profile = ReadServerURI(host_uri)['objects'][0]
+    except IndexError:
+        return "Unable to read profile %s from the manager" % profile_name
+
+    '''
+    This is an incomplete solution but the incompleteness is at the bottom of the stack and we need this as a fix up
+    for 2.2 release.
+
+    What really needs to happen here is that the profile contains the name of the packages to install and then this
+    code would diff the old list and the new list and remove and add appropriately. For now we are just going to do that
+    in a hard coded way using the managed property.
+
+    To do this properly the profile needs to contain the packages and the endpoint needs to return them. We are going to
+    need it and when we do this function and profiles will need to be extended.
+
+    This code might want to use the update_pacakges as well but it's not clear and we are in a pickle here. This code is
+    not bad and doesn't have bad knock on effects.
+    '''
+
+    if old_profile['managed'] != new_profile['managed']:
+        if new_profile['managed']:
+            action = 'install'
+        else:
+            action = 'remove'
+
+        try:
+            yum_util(action, enablerepo=["iml-agent"], packages=['chroma-agent-management'])
+        except shell.CommandExecutionError as cee:
+            return "Unable to set profile because yum returned %s" % cee.stdout
+
+    config.update('settings', 'profile', new_profile)
+
+    return None
 
 
 def update_packages(repos, packages):
@@ -198,5 +247,5 @@ def restart_agent():
     raise CallbackAfterResponse(None, _shutdown)
 
 
-ACTIONS = [configure_repo, unconfigure_repo, update_packages, install_packages, kernel_status, restart_agent]
+ACTIONS = [configure_repo, unconfigure_repo, update_packages, install_packages, kernel_status, restart_agent, set_profile]
 CAPABILITIES = ['manage_updates']

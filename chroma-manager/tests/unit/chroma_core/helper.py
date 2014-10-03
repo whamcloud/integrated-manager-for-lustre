@@ -96,6 +96,8 @@ def synthetic_host_optional_profile(address=None, nids = list([]), storage_resou
         server_profile=server_profile
     )
 
+    ObjectCache.add(ManagedHost, host)
+
     lnet_configuration = synthetic_host_create_lnet_configuration(host, nids)
 
     log.debug("synthetic_host: %s %s" % (address, lnet_configuration.get_nids()))
@@ -313,6 +315,22 @@ def load_default_profile():
     default_sp.bundles.add('agent')
     default_sp.bundles.add('agent_dependencies')
     default_sp.save()
+
+
+def make_command(dismissed=False, complete=False, created_at=None, failed=True, message='test'):
+
+    command = Command.objects.create(dismissed=dismissed,
+        message=message,
+        complete=complete,
+        errored=failed)
+
+    #  Command.created_at is auto_add_now - so have to update it
+    if created_at is not None:
+        command.created_at = created_at
+        command.save()
+        command = freshen(command)
+
+    return command
 
 
 class MockAgentRpc(object):

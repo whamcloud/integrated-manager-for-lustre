@@ -380,21 +380,33 @@ class HostProfileResource(Resource):
             tests = result[profile.name] = []
             for validation in profile.serverprofilevalidation_set.all():
                 error = ''
-                try:
-                    test = safe_eval(validation.test, properties)
-                except Exception as error:
+
+                if properties == {}:
                     test = False
+                    error = "Result unavailable while host agent starts"
+                else:
+                    try:
+                        test = safe_eval(validation.test, properties)
+                    except Exception as error:
+                        test = False
+
                 tests.append({'pass': bool(test), 'test': validation.test, 'description': validation.description, 'error': str(error)})
         return result
 
-    def set_profile(self, host_id, profile):
-        # TODO validate against properties again or trust the client?
-        profile = get_object_or_404(ServerProfile, pk=profile)
-        if ManagedHost.objects.filter(pk=host_id).update(server_profile=profile, immutable_state=not profile.managed):
-            # TODO should following up with configuration be the client's responsibility?
-            host = ManagedHost.objects.get(pk=host_id)
-            if profile.initial_state in host.get_available_states(host.state):
-                return Command.set_state([(host, profile.initial_state)])
+    def _set_profile(self, host_id, profile):
+        server_profile = get_object_or_404(ServerProfile, pk=profile)
+
+        commands = []
+
+        host = ManagedHost.objects.get(pk=host_id)
+
+        if host.server_profile.name != profile:
+            commands.append(JobSchedulerClient.set_host_profile(host.id, server_profile.id))
+
+            if server_profile.initial_state in host.get_available_states(host.state):
+                commands.append(Command.set_state([(host, server_profile.initial_state)]))
+
+        return commands
 
     def obj_get(self, request, pk=None):
         return self.get_profiles(get_object_or_404(ManagedHost, pk=pk))
@@ -409,9 +421,14 @@ class HostProfileResource(Resource):
         } for host in ManagedHost.objects.filter(**filters)]
 
     def obj_create(self, bundle, request):
-        commands = [self.set_profile(data['host'], data['profile']) for data in bundle.data['objects']]
+        commands = []
+
+        for data in bundle.data['objects']:
+            commands += self._set_profile(data['host'], data['profile'])
+
         raise custom_response(self, request, http.HttpAccepted, {'commands': map(dehydrate_command, commands)})
 
     def obj_update(self, bundle, request, pk=None):
-        command = self.set_profile(pk, bundle.data['profile'])
-        raise custom_response(self, request, http.HttpAccepted, {'command': dehydrate_command(command)})
+        commands = self._set_profile(pk, bundle.data['profile'])
+
+        raise custom_response(self, request, http.HttpAccepted, {'commands': map(dehydrate_command, commands)})

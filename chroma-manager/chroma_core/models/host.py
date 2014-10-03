@@ -41,6 +41,7 @@ from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
+from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn, DependAll, Step
@@ -975,6 +976,18 @@ class SetupHostJob(StateChangeJob):
         return "Setup server %s" % self.managed_host
 
     def get_steps(self):
+
+        '''
+        This is a workaround for the fact that the object for a stateful object is not updated before the job runs, it
+        is a snapshot of the object when the job was requested. This seems wrong to me and something that I will endevour
+        to understand and put write. Couple with that is the fact that strangely John took a reference to the object at
+        creation time meaning that is the Stateful object was re-read the reference _so_cache is invalid.
+
+        What is really needed is self._managed_host.refreash() which updates the values in managed_host without creating
+        a new managed host instance. For today this works and I will think about this an improve it for 3.0
+        '''
+        self._so_cache = self.managed_host = ObjectCache.update(self.managed_host)
+
         steps = [(ConfigureNTPStep, {'host': self.managed_host}),
                  (ConfigureRsyslogStep, {'host': self.managed_host})]
 
@@ -1087,6 +1100,62 @@ class DetectTargetsJob(Job, HostListMixin):
             deps.append(DependOn(host, 'lnet_up'))
 
         return DependAll(deps)
+
+
+class SetHostProfileStep(Step):
+    database = True
+
+    def is_dempotent(self):
+        return True
+
+    def run(self, kwargs):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc, AgentException
+
+        host = kwargs['host']
+        server_profile = kwargs['server_profile']
+
+        error = self.invoke_agent(host, 'set_profile', {"profile_name": server_profile.name})
+
+        if error:
+            raise AgentException(error)
+
+        host.server_profile = server_profile
+        host.immutable_state = not server_profile.managed
+        host.save()
+        ObjectCache.update(host)
+
+        # If we have installed any updates at all, then assume it is necessary to restart the agent, as
+        # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
+        old_session_id = AgentRpc.get_session_id(host.fqdn)
+        self.invoke_agent(host, 'restart_agent')
+        AgentRpc.await_restart(host.fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
+
+
+class SetHostProfileJob(Job):
+    host = models.ForeignKey(ManagedHost)
+    server_profile = models.ForeignKey(ServerProfile)
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return help_text['set_host_profile']
+
+    def description(self):
+        return "Set profile and update host %s" % self.host.nodename
+
+    def get_steps(self):
+        return [(SetHostProfileStep, {'host': self.host,
+                                      'server_profile': self.server_profile})]
+
+    def create_locks(self):
+        return [StateLock(
+            job = self,
+            locked_item = self.host,
+            write = True
+        )]
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
 
 
 class StartLNetStep(Step):

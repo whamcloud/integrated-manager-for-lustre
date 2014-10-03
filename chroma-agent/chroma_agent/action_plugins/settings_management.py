@@ -23,20 +23,18 @@
 import os
 import re
 import json
+import socket
 
 from chroma_agent import config
 from chroma_agent.config_store import ConfigKeyExistsError
+from chroma_agent.utils import ReadServerURI
 
 
 def get_api_profile():
-    from urlparse import urlparse
-    import socket
-    from chroma_agent.crypto import Crypto
-    from chroma_agent.agent_client import CryptoClient
-    scheme, netloc = urlparse(config.get('settings', 'server')['url'])[:2]
-    host_uri = '%s://%s/api/host/?fqdn=%s' % (scheme, netloc, socket.getfqdn())
-    client = CryptoClient(host_uri, Crypto(config.path))
-    profile = client.get()['objects'][0]['server_profile']
+    host_uri = 'api/host/?fqdn=%s' % socket.getfqdn()
+
+    profile = ReadServerURI(host_uri)['objects'][0]['server_profile']
+
     try:
         config.set('settings', 'profile', profile)
     except ConfigKeyExistsError:

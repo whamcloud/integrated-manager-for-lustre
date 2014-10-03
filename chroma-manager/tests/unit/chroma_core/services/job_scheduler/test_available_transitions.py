@@ -196,4 +196,5 @@ class TestAvailableTransitions(TestCase):
         avail_trans = job_scheduler.available_transitions([(host_ct_key, host_id), ])[host.id]
         self.assertTrue(len(avail_trans) == 0, avail_trans)
         avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id), ])[host.id]
-        self.assertTrue(len(avail_jobs) == 0)
+        self.assertTrue(host.state, 'configured')
+        self.assertTrue(len(avail_jobs) == 3)   # Three states from configured -> Force Remove. Reboot, Shutdown

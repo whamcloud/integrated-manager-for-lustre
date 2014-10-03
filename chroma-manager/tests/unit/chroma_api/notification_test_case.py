@@ -3,7 +3,7 @@ import logging
 from chroma_core.models import (Command, HostOfflineAlert, ManagedHost, Event, AlertState, SyslogEvent)
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import freshen, synthetic_host, random_str
+from tests.unit.chroma_core.helper import freshen, synthetic_host, random_str, make_command
 
 INFO = logging.INFO
 WARNING = logging.WARNING
@@ -36,11 +36,11 @@ class NotificationTestCase(ChromaApiTestCase):
                                    created_at=date,
                                    host=host)
         elif notification_obj_type == Command:
-            return self.make_command(dismissed=dismissed,
-                                     created_at=date,
-                                     failed=failed,
-                                     complete=complete,
-                                     message=message)
+            return make_command(dismissed=dismissed,
+                                created_at=date,
+                                failed=failed,
+                                complete=complete,
+                                message=message)
 
     def make_event(self, host=None, dismissed=False,
                    severity=INFO, created_at=None):
@@ -60,21 +60,6 @@ class NotificationTestCase(ChromaApiTestCase):
         event = freshen(event)
 
         return event
-
-    def make_command(self, dismissed=False, complete=False, created_at=None, failed=True, message='test'):
-
-        command = Command.objects.create(dismissed=dismissed,
-            message=message,
-            complete=complete,
-            errored=failed)
-
-        #  Command.created_at is auto_add_now - so have to update it
-        if created_at is not None:
-            command.created_at = created_at
-            command.save()
-            command = freshen(command)
-
-        return command
 
     def make_alertstate(self, alert_obj=HostOfflineAlert, alert_item=None, dismissed=False, severity=INFO,
                         created_at=None, active=False):

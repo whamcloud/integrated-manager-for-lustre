@@ -28,7 +28,7 @@ import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.log import daemon_log
 
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
-from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import BlockDeviceZfs
+from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ExportedZfsDevice
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 
 
@@ -88,7 +88,7 @@ class ZfsDevices(DeviceHelper):
             if match:
                 pool = match.group(2)
 
-                with BlockDeviceZfs('zfs', pool).ExportedDevice(pool):
+                with ExportedZfsDevice(pool):
                     out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool])
                     self._add_zfs_pool(out, block_devices)
 

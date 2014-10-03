@@ -115,7 +115,8 @@ class TestAvailableJobs(TestCase):
         """
 
         # 20131217 - mjmac: bumped to 7 for new Client management jobs
-        EXPECTED_QUERIES = 7  # but 3 are for setup
+        # 20141007 - chris: change to 5 because some objects are now in the ObjectCache
+        EXPECTED_QUERIES = 5  # but 3 are for setup
 
         host_ct_key = ContentType.objects.get_for_model(
             self.host.downcast()).natural_key()
