@@ -4,10 +4,9 @@ VERSION     ?= 0.0.0
 NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
 
-all: $(BUNDLE_NAME).tar.gz install
+all: decruftinate $(BUNDLE_NAME).tar.gz install
 
 decruftinate:
-	exit 0
 	@echo "Checking for cruft in $(CURDIR)/repo..."
 	@rpm_name() { base=$${1##*/}; name=$${base%-*}; version=$${name%-*}; name=$${name%-*}; echo $$name; }; \
 	cd repo; \
@@ -23,23 +22,27 @@ decruftinate:
 			rm -f $$exists; \
 		fi; \
 	done
+	# we used to have a stamps subdir in this Makefile so clean it up
+	rm -rf stamps
 
-# TODO - ideally, we would only rebuild $(BUNDLE_NAME).tar.gz if decrufinate
-# removed some cruft.  it will take some thinking to restructre to achieve
-# that
-$(BUNDLE_NAME).tar.gz: decruftinate $(patsubst %,stamps/%.rpm,$(BUNDLE_RPMS))
+$(BUNDLE_NAME).tar.gz: $(patsubst %,repo/%.rpm,$(BUNDLE_RPMS))
+	rm -f *.tar.gz
 	cd repo && createrepo --pretty .
 	echo "{\"name\": \"$(NAME)\", \"version\": \"$(VERSION)\", \"description\": \"$(DESC)\"}" > repo/meta
-	rm -f *.tar.gz
-	tar -C repo -czf $@ .
+	tar -C repo -czvf $@ ./meta ./repodata $(patsubst repo/%,./%,$^)
 
-stamps/%.rpm: $(REPO)/%.rpm Makefile
-	# can't trust the contents of the repo if even one thing is out
-	# of date, so just nuke it and recreate it
-	rm -rf repo stamps
-	mkdir repo stamps
-	ln $(patsubst %,$(REPO)/%.rpm,$(BUNDLE_RPMS)) repo
-	touch $(patsubst %,stamps/%.rpm,$(BUNDLE_RPMS))
+repo:
+	mkdir repo
+
+repo/%.rpm: $(REPO)/%.rpm repo Makefile ../include/Makefile.bundle
+	# remove any previous verisons of the target also
+	set -x; \
+	RPM_NAME=$@; \
+	RPM_NAME=$${RPM_NAME%-*}; \
+	RPM_NAME=$${RPM_NAME%-*}; \
+	rm -f $$RPM_NAME-[R0-9]*
+	ln $< $@
+	touch $@
 
 $(TOP)/../artifacts/$(BUNDLE_NAME).tar.gz: $(BUNDLE_NAME).tar.gz
 	mkdir -p $(TOP)/../artifacts
@@ -49,7 +52,7 @@ $(TOP)/../artifacts/$(BUNDLE_NAME).tar.gz: $(BUNDLE_NAME).tar.gz
 install: $(TOP)/../artifacts/$(BUNDLE_NAME).tar.gz
 
 clean:
-	rm -rf repo stamps $(BUNDLE_NAME).tar.gz
+	rm -rf repo $(BUNDLE_NAME).tar.gz
 
 list:
 	@echo "$(BUNDLE_RPMS)" | tr ' ' '\n'
