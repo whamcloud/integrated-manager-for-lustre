@@ -87,17 +87,26 @@ ProxyTimeout 330
         <Location /static/>
             ProxyPass http://localhost:{{HTTP_API_PORT}}/static/
 
-            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript
-
+            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript text/javascript
         </Location>
     </IfDefine>
     <IfDefine !ChromaDev>
         Alias /static {{app}}/static/
+
+        <LocationMatch "/static/chroma_ui/styles/imports-.+.css">
+            ExpiresActive On
+            ExpiresDefault "access plus 3 years"
+        </LocationMatch>
+
+        <LocationMatch "/static/chroma_ui/built-.+.js">
+            ExpiresActive On
+            ExpiresDefault "access plus 3 years"
+        </LocationMatch>
+
         <Location "/static">
             SetHandler None
 
-            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript
-
+            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript text/javascript
         </Location>
     </IfDefine>
 
