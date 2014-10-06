@@ -47,6 +47,9 @@ class CommandModal(Modal):
         return self.driver.find_element_by_css_selector(self.CLOSE_BUTTON)
 
     def wait_for_close_button_to_be_clickable(self):
+        self.test_for_angular()
+        self.wait_for_angular()
+
         return WebDriverWait(self.driver, self.medium_wait).until(
             element_to_be_clickable((By.CSS_SELECTOR, self.CLOSE_BUTTON)), 'Close button not clickable.')
 
