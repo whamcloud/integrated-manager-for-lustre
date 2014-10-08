@@ -101,6 +101,11 @@
           manager.destroy();
           flint.destroy();
         });
+
+        // Listen of the closeModal event from the step controllers
+        $scope.$on('closeModal', function onClose() {
+          $modalInstance.close();
+        });
       }
     ])
     .factory('openAddServerModal', ['$modal', function openAddServerModalFactory ($modal) {

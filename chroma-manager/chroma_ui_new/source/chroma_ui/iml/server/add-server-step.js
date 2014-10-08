@@ -63,6 +63,12 @@
             data.server = _.extend({}, server, $scope.addServer.fields);
 
             $stepInstance.transition('next', { data: data });
+          },
+          /**
+           * Close the modal
+           */
+          close: function close () {
+            $scope.$emit('closeModal');
           }
         };
       }

@@ -121,9 +121,12 @@ describe('add server modal ctrl', function () {
         expect($scope.$on).toHaveBeenCalledWith('$destroy', jasmine.any(Function));
       });
 
-      describe('on destroy', function () {
+      describe('on close and destroy', function () {
         beforeEach(function () {
-          $scope.$on.mostRecentCall.args[1]();
+          // Invoke the $destroy and closeModal functions
+          $scope.$on.calls.forEach(function (call) {
+            call.args[1]();
+          });
         });
 
         it('should destroy the manager', function () {
@@ -132,6 +135,10 @@ describe('add server modal ctrl', function () {
 
         it('should destroy flint', function () {
           expect(deps.getFlint.plan().destroy).toHaveBeenCalledOnce();
+        });
+
+        it('should close the modal', function () {
+          expect(deps.$modalInstance.close).toHaveBeenCalledOnce();
         });
       });
     });

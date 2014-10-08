@@ -1,3 +1,12 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="selectServerProfile.close()">
+    <i class="fa fa-times"></i>
+  </button>
+  <h4 class="modal-title">Add Server - Add Server Profiles</h4>
+  <i class="fa fa-question-circle"
+     tooltip="Select the server profile to be applied to all servers. Green squares represent servers that are compatible with the selected profile. Red squares represent servers that are incompatible with the selected server profile."
+     tooltip-placement="bottom"></i>
+</div>
 <div class="modal-body select-server-profile-step clearfix">
   <div ng-if="selectServerProfile.overridden" class="alert alert-danger" role="alert">
     You are about to configure one or more servers with an incompatible server profile.
@@ -24,7 +33,7 @@
         <pdsh pdsh-initial="selectServerProfile.pdsh" pdsh-change="selectServerProfile.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
       </div>
     </form>
-    <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnames:selectServerProfile.getHostPath track by item.address">
+    <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnamesHash:selectServerProfile.getHostPath track by item.address">
       <div ng-class="{invalid: !item.valid, valid: item.valid }" tooltip="Address: {{item.address}}" class="status-cell activate-popover"></div>
       <iml-popover title="Status for {{ item.address }}" placement="bottom">
         <div ng-if="item.valid">

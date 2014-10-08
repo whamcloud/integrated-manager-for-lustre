@@ -1,3 +1,12 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="serverStatus.close()">
+    <i class="fa fa-times"></i>
+  </button>
+  <h4 class="modal-title">Add Server - Check Server Status</h4>
+  <i class="fa fa-question-circle"
+     tooltip="Verify the status of the servers below. Green squares represent servers that have passed all checks. Red squares represent servers with one or more failed checks."
+     tooltip-placement="bottom"></i>
+</div>
 <div class="modal-body server-status-step clearfix">
   <div ng-if="serverStatus.overridden" class="alert alert-danger" role="alert">
     You are about to add one or more servers with failed validations.
@@ -12,10 +21,10 @@
            tooltip="Enter a hostname / hostlist expression to filter servers."
            tooltip-placement="right"></i>
       </div>
-      <pdsh pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
+      <pdsh pdsh-initial="serverStatus.pdsh" pdsh-change="serverStatus.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
     </div>
   </form>
-  <div class="status-cell-container" ng-repeat="status in serverStatus.status | pdsh:serverStatus.hostnames:serverStatus.getHostPath track by status.address">
+  <div class="status-cell-container" ng-repeat="status in serverStatus.status | pdsh:serverStatus.hostnamesHash:serverStatus.getHostPath track by status.address">
     <div ng-class="{invalid: status.invalid, valid: !status.invalid}" tooltip="Address: {{ status.address }}" class="status-cell activate-popover"></div>
     <iml-popover title="Status for {{ status.address }}" placement="bottom">
       <ul class="well">

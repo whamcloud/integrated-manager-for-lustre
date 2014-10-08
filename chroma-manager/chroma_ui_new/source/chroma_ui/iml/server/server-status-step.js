@@ -27,6 +27,7 @@
     .controller('ServerStatusStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES', 'data',
       function ServerStatusStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data) {
         $scope.serverStatus = {
+          pdsh: ((data.server && data.server.pdsh) || null),
           /**
            * Used by filters to determine the context.
            * @param {Object} item
@@ -55,6 +56,12 @@
 
             if (action !== OVERRIDE_BUTTON_TYPES.OVERRIDE)
               $stepInstance.transition(action, { data: data });
+          },
+          /**
+           * Close the modal
+           */
+          close: function close () {
+            $scope.$emit('closeModal');
           }
         };
 

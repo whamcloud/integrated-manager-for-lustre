@@ -1,3 +1,12 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="addServer.close()">
+    <i class="fa fa-times"></i>
+  </button>
+  <h4 class="modal-title">Add Server - Add New Servers</h4>
+  <i class="fa fa-question-circle"
+     tooltip="Use the Hostlist Expression input below to add multiple hosts."
+     tooltip-placement="bottom"></i>
+</div>
 <div class="modal-body add-server-step">
   <form name="addServerForm" novalidate>
     <div class="form-group pdsh-input" ng-class="{'has-error': addServerForm.pdsh.$invalid, 'has-success': addServerForm.pdsh.$valid}">

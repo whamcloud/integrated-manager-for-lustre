@@ -17,6 +17,9 @@ describe('Server Status Step', function () {
         statusSpark: {
           onValue: jasmine.createSpy('onValue').andReturn(jasmine.createSpy('off')
           )
+        },
+        server: {
+          pdsh: 'storage0.localdomain'
         }
       };
 
@@ -31,6 +34,10 @@ describe('Server Status Step', function () {
 
     it('should get the host path', function () {
       expect(serverStatus.getHostPath({ address: 'foo' })).toEqual('foo');
+    });
+
+    it('should set the pdsh expression on the scope', function () {
+      expect(serverStatus.pdsh).toEqual(data.server.pdsh);
     });
 
     describe('hostnames and has', function () {

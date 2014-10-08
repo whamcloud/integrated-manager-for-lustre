@@ -55,7 +55,8 @@ describe('Add server step', function () {
               ANOTHER_KEY: 'private_key_choice'
             }),
             pdshUpdate: jasmine.any(Function),
-            transition: jasmine.any(Function)
+            transition: jasmine.any(Function),
+            close: jasmine.any(Function)
           };
 
           if (data.server && data.server.address)

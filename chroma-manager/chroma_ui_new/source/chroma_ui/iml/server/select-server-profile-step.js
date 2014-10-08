@@ -29,6 +29,7 @@
       function SelectServerProfileStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES,
                                             CACHE_INITIAL_DATA, data) {
         $scope.selectServerProfile = {
+          pdsh: ((data.server && data.server.pdsh) || null),
           /**
            * Tells manager to perform a transition.
            * @param {String} action
@@ -77,6 +78,12 @@
               $scope.selectServerProfile.hostnames = hostnames;
               $scope.selectServerProfile.hostnamesHash = hostnamesHash;
             }
+          },
+          /**
+           * Close the modal
+           */
+          close: function close () {
+            $scope.$emit('closeModal');
           }
         };
 

@@ -15,6 +15,9 @@ describe('select server profile', function () {
       data = {
         hostProfileSpark: {
           onValue: jasmine.createSpy('onValue').andReturn(off)
+        },
+        server: {
+          pdsh: 'storage0.localdomain'
         }
       };
 
@@ -89,6 +92,10 @@ describe('select server profile', function () {
 
     it('should contain a pdshUpdate method', function () {
       expect($scope.selectServerProfile.pdshUpdate).toEqual(jasmine.any(Function));
+    });
+
+    it('should contain the pdsh expression on the scope', function () {
+      expect($scope.selectServerProfile.pdsh).toEqual(data.server.pdsh);
     });
 
     it('should call data.hostProfileSpark.onValue', function () {
