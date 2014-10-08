@@ -1,16 +1,12 @@
 describe('PDSH directive', function () {
   'use strict';
 
-  var $scope, $timeout, element, inputField, groupAddOn, help, node, throttleParseExpression;
+  var $scope, $timeout, element, inputField, groupAddOn, help, node;
 
   beforeEach(module('pdsh-module', 'templates', 'ui.bootstrap', function initialize ($provide) {
     help = {
       get: jasmine.createSpy('get').andReturn('Enter hostname / hostlist expression.')
     };
-
-    throttleParseExpression = jasmine.createSpy('throttleExpression');
-
-    _.throttle = jasmine.createSpy('throttle').andReturn(throttleParseExpression);
 
     $provide.value('help', help);
   }));
@@ -37,75 +33,92 @@ describe('PDSH directive', function () {
 
     describe('successful entry', function () {
       var hostnames;
+
       beforeEach(function () {
-        inputField.val('hostname[1-3]');
-        inputField.trigger('change');
+        runs(function () {
+          inputField.val('hostname[1-3]');
+          inputField.trigger('input');
+        });
 
-        $scope.$$childHead.pdsh.parseExpression('hostname[1-3]');
-        $scope.$digest();
-
-        groupAddOn.click();
-        $timeout.flush();
-        hostnames = _.reduce(element.find('.popover li'),
-          function convertHostnamesToString (prev, next) {
-            var separator = (prev === '') ? '' : ',';
-            return prev + separator + next.innerHTML;
-          }, '');
-      });
-
-      it('should call _.throttle', function () {
-        expect(_.throttle).toHaveBeenCalledWith(jasmine.any(Function), 500);
-      });
-
-      it('should call throttleParseExpression', function () {
-        expect(throttleParseExpression).toHaveBeenCalled();
-      });
-
-      it('should display the popover', function () {
-        expect(element.find('.popover')).toBeShown();
-      });
-
-      it('should contain the hostnames in the popover', function () {
-        expect(hostnames).toEqual('<span bo-text="hostname"></span>');
+        waitsFor(function () {
+          return element.scope().pdshForm.pdsh.$viewValue === 'hostname[1-3]' &&
+            element.scope().pdshForm.pdsh.$valid === true;
+        }, 'The view value isn\'t hostname[1-3] or element is not valid yet due to async call.', 1000);
       });
 
       it('should not show the error tooltip', function () {
-        var tooltip = element.find('.error-tooltip li');
-        expect(tooltip.length).toEqual(0);
+        expect(element.find('.error-tooltip li').length).toEqual(0);
       });
 
       it('should call pdshChange', function () {
         expect($scope.pdshChange).toHaveBeenCalled();
       });
+
+      describe('expression popover', function () {
+        var popover;
+        beforeEach(function () {
+          groupAddOn.click();
+          $timeout.flush();
+
+          popover = element.find('.popover li');
+          hostnames = _.reduce(popover,
+            function convertHostnamesToString (prev, next) {
+              var separator = (prev === '') ? '' : ',';
+              return prev + separator + next.innerHTML;
+            }, '');
+        });
+
+        it('should display the popover', function () {
+          expect(popover).toBeShown();
+        });
+
+        it('should contain the hostnames in the popover', function () {
+          expect(hostnames).toEqual('<span bo-text="hostname"></span>');
+        });
+      });
     });
 
     describe('unsuccessful entry', function () {
+
       beforeEach(function () {
-        inputField.val('hostname[1-]');
-        inputField.trigger('change');
-        $scope.$$childHead.pdsh.parseExpression('hostname[1-]');
-        $scope.$digest();
+        runs(function () {
+          inputField.val('hostname[1-]');
+          inputField.trigger('change');
+        });
 
-        groupAddOn.click();
-        $timeout.flush();
+        waitsFor(function () {
+          return element.scope().pdshForm.pdsh.$viewValue === 'hostname[1-]';
+        }, 'The expression should have changed', 1000);
       });
 
-      it('should not display the popover', function () {
-        expect(element.find('.popover')).toBeHidden();
-      });
+      describe('group add on', function () {
+        beforeEach(function () {
+          groupAddOn.click();
+          $timeout.flush();
+        });
 
-      it('should show the error tooltip', function () {
-        var tooltip = element.find('.error-tooltip li');
-        expect(tooltip.length).toEqual(1);
+        it('should not display the popover', function () {
+          expect(element.find('.popover')).toBeHidden();
+        });
+
+        it('should show the error tooltip', function () {
+          var tooltip = element.find('.error-tooltip li');
+          expect(tooltip.length).toEqual(1);
+        });
       });
     });
 
     describe('empty entry', function () {
       beforeEach(function () {
-        inputField.val('');
-        inputField.trigger('change');
-        groupAddOn.click();
-        $timeout.flush();
+        runs(function () {
+          inputField.val('');
+          inputField.trigger('input');
+          groupAddOn.click();
+        });
+
+        waitsFor(function () {
+          return $scope.pdshChange.calls.length === 3;
+        }, 'The expression should have changed', 1000);
       });
 
       it('should not display the popover', function () {
@@ -154,8 +167,6 @@ describe('PDSH directive', function () {
       // Update the html
       $scope.$digest();
 
-      $scope.$$childHead.pdsh.parseExpression(initialValue);
-
       inputField = element.find('.form-control');
     }));
 
@@ -168,7 +179,28 @@ describe('PDSH directive', function () {
     });
 
     it('should trigger a change for the initial value', function () {
-      expect($scope.pdshChange).toHaveBeenCalledOnceWith(initialValue, [initialValue]);
+      expect($scope.pdshChange).toHaveBeenCalledWith(initialValue, [initialValue]);
+    });
+
+    describe('modify existing value after throttle', function () {
+      beforeEach(function () {
+        var flag = false;
+        waitsFor(function () {
+          setTimeout(function () {
+            inputField.val('storage[1-10].localdomain');
+            inputField.trigger('input');
+            flag = true;
+          }, 600);
+
+          return flag;
+
+        }, 'The expression should have changed', 5000);
+      });
+
+      it('should call pdshChange with storage[1-10].localdomain', function () {
+        expect($scope.pdshChange.calls[$scope.pdshChange.calls.length - 1].args[0])
+          .toEqual('storage[1-10].localdomain');
+      });
     });
   });
 });

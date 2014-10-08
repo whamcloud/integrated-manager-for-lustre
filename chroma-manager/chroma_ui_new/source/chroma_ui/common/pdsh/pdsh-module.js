@@ -58,22 +58,18 @@
         var hostnameSections = [];
         var parsedExpression;
         var pdshExpression = '';
-        var throttleParseExpression = _.throttle(parseExpressionForValidityWrapper, 500);
+
+        var throttleParseExpression = _.throttle(function throttleInputAndDigest () {
+          parseExpressionForValidity(pdshExpression);
+
+          if (!scope.$root.$$phase)
+            scope.$parent.$digest();
+        }, 500);
 
         if (!scope.pdshInitial)
           scope.pdshInitial = '';
         if (!scope.pdshPlaceholder)
           scope.pdshPlaceholder = help.get('pdsh_placeholder');
-
-        /**
-         * A wrapper to call parseExpressionForValidity with the current pdshExpression. This is used by _.throttle.
-         */
-        function parseExpressionForValidityWrapper() {
-          parseExpressionForValidity(pdshExpression);
-
-          if (scope.$root.$$phase === null)
-            scope.$apply();
-        }
 
         /**
          * Parses the expression to determine if the expression is valid. The value is set on the form.
@@ -151,7 +147,7 @@
             scope.pdsh.sendChange();
           },
           sendChange: function sendChange () {
-            scope.pdshChange({pdsh: scope.pdsh.expression, hostnames: hostnames, hostnamesHash: hostnamesHash});
+            scope.pdshChange({pdsh: pdshExpression, hostnames: hostnames, hostnamesHash: hostnamesHash});
           },
           /**
            * Returns the error messages regarding the validity of the expression.
