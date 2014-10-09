@@ -1387,7 +1387,7 @@ class JobScheduler(object):
                 command = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs([{"class_name": "SetHostProfileJob",
                                                                                                  "args": {"host": host,
                                                                                                           "server_profile": server_profile}}],
-                                                                                               "Changing Host Profile")
+                                                                                               "Changing Host Profile %s" % host.fqdn)
 
         self.progress.advance()
 

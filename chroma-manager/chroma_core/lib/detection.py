@@ -38,7 +38,7 @@ log = log_register(__name__)
 class DetectScan(object):
     def __init__(self, step):
         self.created_filesystems = []
-        self.discovered_filesystems = []
+        self.discovered_filesystems = set()
         self.created_mgts = []
         self.step = step
 
@@ -195,13 +195,13 @@ class DetectScan(object):
                 return False
 
     def target_available_here(self, host, mgs, local_info):
+        if local_info['mounted']:
+            return True
+
         target_nids = []
         if 'failover.node' in local_info['params']:
             for failover_str in local_info['params']['failover.node']:
                 target_nids.extend(failover_str.split(","))
-
-        if local_info['mounted']:
-            return True
 
         if mgs:
             mgs_host = mgs.primary_server()
@@ -326,11 +326,18 @@ class DetectScan(object):
 
                 fsname, index_str = re.search("([\w\-]+)-(\w)+", name).groups()
                 index = int(index_str, 16)
-                try:
-                    filesystem = ManagedFilesystem.objects.get(name = fsname, mgs = mgs)
-                except ManagedFilesystem.DoesNotExist:
-                    self.log("Encountered target (%s) for unknown filesystem %s on mgs %s" % (name, fsname, mgs.primary_server()))
-                    return None
+
+                # Create Filesystem objects if we've not seen this FS before.
+                (filesystem, created) = ManagedFilesystem.objects.get_or_create(name = fsname, mgs = mgs)
+                self.discovered_filesystems.add(filesystem)
+
+                if created:
+                    self.created_filesystems.append(filesystem)
+                    filesystem.immutable_state = True
+                    filesystem.save()
+                    log.info("Learned filesystem '%s'" % fsname)
+                    self._learn_event(host, filesystem)
+                    ObjectCache.add(ManagedFilesystem, filesystem)
 
                 try:
                     klass.objects.get(uuid = uuid)
@@ -362,7 +369,7 @@ class DetectScan(object):
                 continue
 
             try:
-                mgs = ManagedMgs.objects.get(uuid = mgs_local_info['uuid'])
+                ManagedMgs.objects.get(uuid = mgs_local_info['uuid'])
             except ManagedMgs.DoesNotExist:
                 try:
                     volumenode = self._get_volume_node(host, mgs_local_info['device_paths'])
@@ -377,15 +384,3 @@ class DetectScan(object):
                     name = "MGS", immutable_state = True)
                 mgs.save()
                 self.created_mgts.append(mgs)
-
-            # Create Filesystem objects from the MGS config logs
-            for fs_name, targets in host_data['mgs_targets'].items():
-                (fs, created) = ManagedFilesystem.objects.get_or_create(name = fs_name, mgs = mgs)
-                self.discovered_filesystems.append(fs)
-                if created:
-                    self.created_filesystems.append(fs)
-                    fs.immutable_state = True
-                    fs.save()
-                    log.info("Learned filesystem '%s'" % fs_name)
-                    self._learn_event(host, fs)
-                    ObjectCache.add(ManagedFilesystem, fs)

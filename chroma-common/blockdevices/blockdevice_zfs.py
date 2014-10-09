@@ -19,6 +19,10 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+import re
+
+from collections import defaultdict
+
 from ..lib import shell
 from blockdevice import BlockDevice
 
@@ -30,23 +34,28 @@ class ExportedZfsDevice(object):
     it was locally active.
     '''
     def __init__(self, device_path):
-        self.device_path = device_path
+        self.pool_path = device_path.split('/')[0]
         self.pool_imported = False
 
     def __enter__(self):
         imported_pools = shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
 
-        if self.device_path not in imported_pools:
-            shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.device_path])
+        if self.pool_path not in imported_pools:
+            shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.pool_path])
             self.pool_imported = True
 
     def __exit__(self, type, value, traceback):
         if self.pool_imported:
-            shell.try_run(['zpool', 'export', self.device_path])
-            self.pool_imported = False
+            shell.try_run(['zpool', 'export', self.pool_path])
 
 
 class BlockDeviceZfs(BlockDevice):
+
+    # From lustre_disk.h
+    LDD_F_SV_TYPE_MDT = 0x0001
+    LDD_F_SV_TYPE_OST = 0x0002
+    LDD_F_SV_TYPE_MGS = 0x0004
+
     _supported_device_types = ['zfs']
 
     def __init__(self, device_type, device_path):
@@ -113,12 +122,7 @@ class BlockDeviceZfs(BlockDevice):
         return self._zfs_properties
 
     def mgs_targets(self, log):
-        zfs_properties = self.zfs_properties(log)
-
-        if ('lustre:fsname' in zfs_properties) and ('lustre:svname' in zfs_properties):
-            return {zfs_properties['lustre:fsname']: {"name": zfs_properties['lustre:svname'][len(zfs_properties['lustre:fsname']) + 1:]}}
-        else:
-            return {}
+        return {}
 
     def targets(self, uuid_name_to_target, device, log):
         log.info("Searching device %s of type %s, uuid %s for a Lustre filesystem" % (device['path'], device['type'], device['uuid']))
@@ -132,18 +136,25 @@ class BlockDeviceZfs(BlockDevice):
         # For a Lustre block device, extract name and params
         # ==================================================
         name = zfs_properties['lustre:svname']
-        flags = int(zfs_properties['lustre:flags'], 16)
+        flags = int(zfs_properties['lustre:flags'])
 
-        if  ('lustre:mgsnode' in zfs_properties):
-            params = {'mgsnode': [zfs_properties['lustre:mgsnode']]}
-        else:
-            params = {}
+        params = defaultdict(list)
+
+        # The split for multiple properties seems to be inconsistant so create a look up table for the split.
+        property_splitters = defaultdict(lambda: "")
+        property_splitters['failover.node'] = ':'
+        property_splitters['mgsnode'] = ':'
+
+        for prop in zfs_properties:
+            if prop.startswith('lustre:'):
+                lustre_property = prop.split(':')[1]
+                params[lustre_property].extend(re.split(property_splitters[lustre_property], zfs_properties[prop]))
 
         if name.find("ffff") != -1:
             log.info("Device %s reported an unregistered lustre target and so will not be reported" % device['path'])
             return self.TargetsInfo([], None)
 
-        if flags & 0x0005 == 0x0005:
+        if flags & (self.LDD_F_SV_TYPE_MDT | self.LDD_F_SV_TYPE_MGS) == (self.LDD_F_SV_TYPE_MDT | self.LDD_F_SV_TYPE_MGS):
             # For combined MGS/MDT volumes, synthesise an 'MGS'
             names = ["MGS", name]
         else:

@@ -17,6 +17,6 @@
     ]
   },
   "validation": [
-    {"test": "zfs_installed == False", "description": "ZFS must not be installed"}
+    {"test": "zfs_installed == False", "description": "ZFS is installed but is unsupported by the Managed storage server profile"}
   ]
 }
