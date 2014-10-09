@@ -96,8 +96,8 @@ if [ -f /etc/yum.repos.d/autotest.repo ]; then
 retries=50
 timeout=180
 
-[lustre]
-name=lustre
+[jenkins-repo-lustre]
+name=jenkins-repo-lustre
 baseurl=${JENKINS_URL/\/\//\/\/$JENKINS_USER:$JENKINS_PULL@}/job/$BUILD_JOB_NAME/arch=x86_64%2Cdistro=$UPSTREAM_DISTRO/$BUILD_JOB_BUILD_NUMBER/artifact/chroma-dependencies/repo-lustre/
 enabled=1
 priority=1
@@ -108,7 +108,7 @@ timeout=180
 EOF
     $PROXY yum install -y python-setuptools
     $PROXY yum install -y --disablerepo=* --enablerepo=chroma python-coverage
-    $PROXY yumdownloader --disablerepo=* --enablerepo=lustre kernel kernel-firmware
+    $PROXY yumdownloader --disablerepo=* --enablerepo=jenkins-repo-lustre kernel kernel-firmware
     if ! rpm -q \$(rpm -qp kernel-firmware-*.rpm); then
         rpm -Uvh --oldpackage kernel-firmware-*.rpm
     fi

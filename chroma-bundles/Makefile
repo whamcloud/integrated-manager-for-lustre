@@ -27,7 +27,7 @@ package: subdirs $(PROFILES) lesskey.out EULA.txt
 		--transform 's|$(HADOOPDIR)|hadoop|' \
 		--show-transformed-names \
 		-C ../ \
-	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/install $(WORKDIR)/lesskey.out $(WORKDIR)/EULA.txt $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz)) $(TOP)/../$(HADOOPDIR)/*
+	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/create_installer $(WORKDIR)/install $(WORKDIR)/lesskey.out $(WORKDIR)/EULA.txt $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz)) $(TOP)/../$(HADOOPDIR)/*
 
 lesskey.out: lesskey.in
 	lesskey -o $@ $<

@@ -2,6 +2,8 @@ include ../include/Makefile.e2fsprogs_version
 
 E2FSPROGS_RELEASE := $(E2FSPROGS_VERSION)-$(E2FSPROGS_SLES_RELEASE)
 
+CHROMA_EXTERNALS_SUBDIR := sles-e2fsprogs
+
 SRC_REPO = $(URL)/$(E2FSPROGS_VERSION)/sles11sp3/RPMS/x86_64/
 
 override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-sles-e2fsprogs

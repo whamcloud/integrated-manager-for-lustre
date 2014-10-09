@@ -1,5 +1,5 @@
 REPO        := $(patsubst %/,%,$(REPO))
-BUNDLE_RPMS := $(shell python ../include/find_deps.py $(REPO) "$(RPMS)" "$(EXCLUDES)")
+BUNDLE_RPMS := $(shell python ../include/find_deps.py "$(REPO)" "$(RPMS)" "$(EXCLUDES)")
 VERSION     ?= 0.0.0
 NAME        ?= $(notdir $(CURDIR))
 BUNDLE_NAME ?= $(NAME)-$(VERSION)-bundle
@@ -25,7 +25,7 @@ decruftinate:
 	# we used to have a stamps subdir in this Makefile so clean it up
 	rm -rf stamps
 
-$(BUNDLE_NAME).tar.gz: $(patsubst %,repo/%.rpm,$(BUNDLE_RPMS))
+$(BUNDLE_NAME).tar.gz: $(patsubst %,repo/%.rpm,$(BUNDLE_RPMS)) $(patsubst %,repo/%,$(OTHER))
 	rm -f *.tar.gz
 	cd repo && createrepo --pretty .
 	echo "{\"name\": \"$(NAME)\", \"version\": \"$(VERSION)\", \"description\": \"$(DESC)\"}" > repo/meta
@@ -36,7 +36,6 @@ repo:
 
 repo/%.rpm: $(REPO)/%.rpm repo Makefile ../include/Makefile.bundle
 	# remove any previous verisons of the target also
-	set -x; \
 	RPM_NAME=$@; \
 	RPM_NAME=$${RPM_NAME%-*}; \
 	RPM_NAME=$${RPM_NAME%-*}; \

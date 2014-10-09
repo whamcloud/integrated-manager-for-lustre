@@ -1,0 +1,91 @@
+#!/bin/sh -e
+
+usage() {
+
+    echo "Usage: $0 {zfs|ldiskfs}"
+    exit 1
+}
+
+ldiskfs_installer() {
+    tar -xzf ../e2fsprogs-*-bundle.tar.gz
+
+    rm -rf meta repodata lustre-osd-zfs-* lustre-dkms-*
+
+    # create an installer for the user
+    cat <<"EOF" > install
+#!/bin/sh
+
+if ! rpm -q $(rpm -qp kernel-firmware-*.rpm); then
+    rpm -Uvh --oldpackage kernel-firmware-*.rpm
+fi
+if ! rpm -q $(rpm -qp kernel-[0-9]*.rpm); then
+    rpm -ivh --oldpackage kernel-[0-9]*.rpm
+fi
+
+PKGS=""
+for pkg in e2fsprogs-devel libcom_err-devel kernel-headers kernel-devel; do
+    if rpm -q $pkg >/dev/null; then
+        PKGS+=" $pkg-*.rpm"
+    fi
+done
+
+yum -y install lustre-modules-[0-9]*.rpm lustre-[0-9]*.rpm \
+       lustre-osd-ldiskfs-[0-9]*.rpm e2fsprogs-[0-9]*.rpm $PKGS \
+       e2fsprogs-libs-[0-9]*.rpm libcom_err-[0-9]*.rpm libss-[0-9]*.rpm
+
+echo "You need to reboot to activate the Lustre kernel"
+
+EOF
+
+}
+
+zfs_installer() {
+    ZFS_VERSION=0.6.3-1.1
+
+    tar -xzf ../zfs-*-bundle.tar.gz
+
+    rm -rf meta repodata kernel-* lustre-osd-ldiskfs-* lustre-modules-*
+
+    # create an installer for the user
+    cat <<EOF > install
+#!/bin/sh
+
+yum -y install rpm-build zlib-devel libuuid-devel gcc
+rpmbuild --rebuild spl-$ZFS_VERSION.el6.src.rpm
+rpmbuild --rebuild zfs-$ZFS_VERSION.el6.src.rpm
+_rpmdir=\$(rpm --eval %_rpmdir)
+yum -y install dkms-*.el6.noarch.rpm \
+               zfs-dkms-*.noarch.rpm spl-dkms-*.noarch.rpm \
+               lustre-dkms-*.noarch.rpm lustre-osd-zfs-[0-9]*.rpm \
+               lustre-[0-9]*.rpm \
+               kernel-devel-\$(uname -r) kernel-headers-\$(uname -r) \
+               \$_rpmdir/x86_64/spl-$ZFS_VERSION.el6.x86_64.rpm \
+               \$_rpmdir/x86_64/libnvpair1-$ZFS_VERSION.el6.x86_64.rpm \
+               \$_rpmdir/x86_64/libuutil1-$ZFS_VERSION.el6.x86_64.rpm \
+               \$_rpmdir/x86_64/libzfs2-$ZFS_VERSION.el6.x86_64.rpm \
+               \$_rpmdir/x86_64/libzpool2-$ZFS_VERSION.el6.x86_64.rpm \
+               \$_rpmdir/x86_64/zfs-$ZFS_VERSION.el6.x86_64.rpm \
+               \$_rpmdir/x86_64/zfs-dracut-$ZFS_VERSION.el6.x86_64.rpm
+EOF
+
+}
+
+case $1 in
+    zfs|ldiskfs) :
+    ;;
+    *) usage
+    ;;
+esac
+
+mkdir -p lustre-$1
+cd lustre-$1
+
+tar -xzf ../lustre-[0-9]*-bundle.tar.gz
+${1}_installer
+
+chmod 755 install
+cd ..
+
+tar czf lustre-$1-installer.tar.gz lustre-$1
+
+rm -rf lustre-$1
