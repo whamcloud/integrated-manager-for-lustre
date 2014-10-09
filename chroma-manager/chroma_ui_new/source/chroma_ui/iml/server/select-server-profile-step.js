@@ -35,28 +35,24 @@
            * @param {String} action
            */
           transition: function transition (action) {
+            if (action === OVERRIDE_BUTTON_TYPES.OVERRIDE)
+              return;
+
             off();
 
-            if (action !== OVERRIDE_BUTTON_TYPES.OVERRIDE)
-              $stepInstance.transition(action, {
-                data: data,
-                hostProfileData: $scope.selectServerProfile.data,
-                profile: $scope.selectServerProfile.item
-              });
-          },
-          onSelected: function onSelected (item) {
-            $scope.selectServerProfile.overridden = false;
-            $scope.selectServerProfile.item = item;
-            $scope.selectServerProfile.items = $scope.selectServerProfile.data.map(function (object) {
-              var profile = object.profiles[item.id];
-
-              return {
-                address: object.address,
-                caption: item.caption,
-                problems: profile.checks,
-                valid: profile.valid
-              };
+            $stepInstance.transition(action, {
+              data: data,
+              hostProfileData: $scope.selectServerProfile.data,
+              profile: $scope.selectServerProfile.profile
             });
+          },
+          /**
+           * Called when the user selects a new server profile.
+           * @param {Object} profile The selected profile
+           */
+          onSelected: function onSelected (profile) {
+            $scope.selectServerProfile.overridden = false;
+            $scope.selectServerProfile.profile = profile;
           },
           /**
            * Used by filters to determine the context.
@@ -70,6 +66,7 @@
            * Update hostnames.
            * @param {String} pdsh
            * @param {Array|undefined} hostnames
+           * @param {Object} hostnamesHash
            */
           pdshUpdate: function pdshUpdate (pdsh, hostnames, hostnamesHash) {
             $scope.selectServerProfile.pdsh = pdsh;
@@ -87,49 +84,60 @@
           }
         };
 
-        var off = data.hostProfileSpark.onValue('data', function (response) {
-          var options = [];
+        var off = data.hostProfileSpark.onValue('data', function handleData (response) {
+          //Save initial data for transition.
+          $scope.selectServerProfile.data = response.body.objects;
 
-          response.body.objects.forEach(function iterateServers (server) {
-            server.profiles = _.mapValues(server.profiles, function mapProfiles (profile, profileName) {
-              var invalid = profile.some(function (check) {
-                return !check.pass;
-              });
+          // Pull out the profiles and flatten them.
+          var profiles = [{}]
+            .concat(_.pluck(response.body.objects, 'profiles'))
+            .concat(function concatArrays (a, b) {
+              return _.isArray(a) ? a.concat(b) : undefined;
+            });
+          var merged = _.merge.apply(_, profiles);
 
-              var option = _.find(options, {id: profileName});
+          // Mutate the structure to something that is usable
+          // by both the select box and the christmas tree.
+          $scope.selectServerProfile.profiles = Object.keys(merged).reduce(function buildStructure (arr, profileName) {
+            var item = {
+              name: profileName,
+              uiName: _.find(CACHE_INITIAL_DATA.server_profile, { name: profileName }).ui_name,
+              invalid: merged[profileName].some(didProfileFail)
+            };
 
-              if (!option) {
-                option = {
-                  id: profileName,
-                  caption: _.find(CACHE_INITIAL_DATA.server_profile, { name: profileName }).ui_name,
-                  valid: !invalid
-                };
-                options.push(option);
-              }
-
-              if (invalid && !option.label)
-                _.extend(option, {
-                  labelType: 'label-danger',
-                  label: 'Incompatible',
-                  valid: false
-                });
-
-              if (!invalid && option.label) {
-                delete option.labelType;
-                delete option.label;
-                option.valid = true;
-              }
+            item.hosts = response.body.objects.map(function setHosts (host) {
+              var profiles = host.profiles[profileName];
 
               return {
-                valid: !invalid,
-                checks: profile
+                address: host.address,
+                invalid: profiles.some(didProfileFail),
+                problems: profiles,
+                uiName: item.uiName
               };
             });
-          });
 
-          $scope.selectServerProfile.options = options;
-          $scope.selectServerProfile.data = response.body.objects;
+            arr.push(item);
+
+            return arr;
+          }, []);
+
+          // Avoid a stale reference here by
+          // pulling off the new value if we already have a profile.
+          var profile = $scope.selectServerProfile.profile;
+          $scope.selectServerProfile.profile = (profile ?
+            _.find($scope.selectServerProfile.profiles, { name: profile.name }) :
+            $scope.selectServerProfile.profiles[0]
+          );
         });
+
+        /**
+         * Predicate. Did the given profile fail it's checks.
+         * @param {Object} profile The profile to check.
+         * @returns {boolean}
+         */
+        function didProfileFail (profile) {
+          return !profile.pass;
+        }
       }])
     .factory('selectServerProfileStep', [
       function selectServerProfileStep () {
@@ -138,50 +146,46 @@
           controller: 'SelectServerProfileStepCtrl',
           transition: ['$transition', 'data', 'requestSocket', 'hostProfileData', 'profile',
             function transition ($transition, data, requestSocket, hostProfileData, profile) {
-              if ($transition.action !== 'previous') {
-                var spark = requestSocket();
+              if ($transition.action === 'previous')
+                return {
+                  step: $transition.steps.serverStatusStep,
+                  resolve: { data: data }
+                };
 
-                data.serverSpark.onceValue('data', function (response) {
-                  var servers = response.body.objects;
+              var spark = requestSocket();
 
-                  var objects = hostProfileData
-                    .map(function convertToObjects (data) {
-                      return {
-                        host: data.host,
-                        profile: profile.id
-                      };
-                    })
-                    .filter(function limitToUnconfigured (object) {
-                      var server = _.find(servers, { id: object.host.toString()});
+              data.serverSpark.onceValue('data', function sendNewProfiles (response) {
+                var servers = response.body.objects;
 
-                      return server && server.server_profile && server.server_profile.initial_state === 'unconfigured';
-                    });
+                var objects = hostProfileData
+                  .map(function convertToObjects (data) {
+                    return {
+                      host: data.host,
+                      profile: profile.name
+                    };
+                  })
+                  .filter(function limitToUnconfigured (object) {
+                    var server = _.find(servers, { id: object.host.toString()});
 
-                  var hostProfile = spark.sendPost('/host_profile', {
-                    json: { objects: objects }
-                  }, true)
-                    .catch(function throwError (response) {
-                      throw response.error;
-                    });
+                    return server && server.server_profile && server.server_profile.initial_state === 'unconfigured';
+                  });
 
-                  //@TODO: The backend should return a command as the result of POSTing here.
-                  //@TODO: Put open command modal here when that occurs.
+                var hostProfile = spark.sendPost('/host_profile', {
+                  json: { objects: objects }
+                }, true)
+                  .catch(function throwError (response) {
+                    throw response.error;
+                  });
 
-                  hostProfile
-                    .then($transition.end)
-                    .finally(function snuffSpark () {
-                      spark.end();
-                    });
+                //@TODO: The backend should return a command as the result of POSTing here.
+                //@TODO: Put open command modal here when that occurs.
 
-                });
-
-                return;
-              }
-
-              return {
-                step: $transition.steps.serverStatusStep,
-                resolve: { data: data }
-              };
+                hostProfile
+                  .then($transition.end)
+                  .finally(function snuffSpark () {
+                    spark.end();
+                  });
+              });
             }
           ]
         };

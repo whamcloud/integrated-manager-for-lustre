@@ -20,39 +20,36 @@
 // express and approved by Intel in writing.
 
 
-angular.module('server').factory('serverSpark', ['socket', 'CACHE_INITIAL_DATA',
-  function serverSparkFactory (socket, CACHE_INITIAL_DATA) {
+angular.module('server').factory('serverSpark', ['requestSocket', 'CACHE_INITIAL_DATA',
+  function serverSparkFactory (requestSocket, CACHE_INITIAL_DATA) {
     'use strict';
 
-    var lastResponse = [{
+    var lastResponse = {
       statusCode: 200,
       body: {
         objects: CACHE_INITIAL_DATA.host
       }
-    }];
+    };
 
     /**
      * Sets up a persistent connection to fetch all hosts
      * @returns {Object}
      */
     return function getServerSpark () {
-      var spark = socket('request');
+      var spark = requestSocket();
 
-      spark.lastArgs = lastResponse;
+      spark.setLastData(lastResponse);
 
-      spark.send('req', {
-        path: '/host',
-        options: {
-          jsonMask: 'objects(id,address,available_actions,boot_time,fqdn,immutable_state,install_method,label,\
+      spark.sendGet('/host', {
+        jsonMask: 'objects(id,address,available_actions,boot_time,fqdn,immutable_state,install_method,label,\
 locks,member_of_available_filesystem,nids,nodename,resource_uri,server_profile,state)',
-          qs: {
-            limit: 0
-          }
+        qs: {
+          limit: 0
         }
       });
 
       spark.on('data', function onData (response) {
-        lastResponse = [response];
+        lastResponse = response;
       });
 
       return spark;

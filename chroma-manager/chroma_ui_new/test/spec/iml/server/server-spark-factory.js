@@ -1,12 +1,13 @@
 describe('server spark', function () {
   'use strict';
 
-  var socket, CACHE_INITIAL_DATA;
+  var requestSocket, CACHE_INITIAL_DATA;
 
   beforeEach(module('server', function ($provide) {
-    socket = jasmine.createSpy('socket').andReturn({
-      send: jasmine.createSpy('send'),
-      on: jasmine.createSpy('on')
+    requestSocket = jasmine.createSpy('requestSocket').andReturn({
+      sendGet: jasmine.createSpy('sendGet'),
+      on: jasmine.createSpy('on'),
+      setLastData: jasmine.createSpy('setLastData')
     });
 
     CACHE_INITIAL_DATA = {
@@ -15,7 +16,7 @@ describe('server spark', function () {
 
     $provide.constant('CACHE_INITIAL_DATA', CACHE_INITIAL_DATA);
 
-    $provide.value('socket', socket);
+    $provide.value('requestSocket', requestSocket);
   }));
 
   var serverSpark, spark;
@@ -26,7 +27,7 @@ describe('server spark', function () {
   }));
 
   it('should get the spark', function () {
-    expect(socket).toHaveBeenCalledOnceWith('request');
+    expect(requestSocket).toHaveBeenCalledOnce();
   });
 
   it('should return the spark', function () {
@@ -34,23 +35,20 @@ describe('server spark', function () {
   });
 
   it('should set the last response', function () {
-    expect(spark.lastArgs).toEqual([{
+    expect(spark.setLastData).toHaveBeenCalledOnceWith({
       statusCode: 200,
       body: {
         objects: {}
       }
-    }]);
+    });
   });
 
   it('should send the request', function () {
-    expect(spark.send).toHaveBeenCalledOnceWith('req', {
-      path: '/host',
-      options: {
-        jsonMask : 'objects(id,address,available_actions,boot_time,fqdn,immutable_state,install_method,label,locks\
+    expect(spark.sendGet).toHaveBeenCalledOnceWith('/host', {
+      jsonMask : 'objects(id,address,available_actions,boot_time,fqdn,immutable_state,install_method,label,locks\
 ,member_of_available_filesystem,nids,nodename,resource_uri,server_profile,state)',
-        qs: {
-          limit: 0
-        }
+      qs: {
+        limit: 0
       }
     });
   });

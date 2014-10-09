@@ -19,44 +19,56 @@
        tooltip="Select a server profile to set on unconfigured servers."
        tooltip-placement="right"></i>
   </div>
-  <fancy-select-box data="selectServerProfile.options" on-selected="selectServerProfile.onSelected(item)"></fancy-select-box>
+  <div class="btn-group fancy-select-box" dropdown on-toggle="open = !open">
+    <button type="button" class="form-control dropdown-toggle" ng-disabled="disabled">
+      <span ng-if="selectServerProfile.profile.invalid" class="label label-danger">Incompatible</span>
+      <span>{{ selectServerProfile.profile.uiName }}</span>
+      <i class="fa" ng-class="{'fa-caret-down': open, 'fa-caret-up': !open}"></i>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+      <li ng-repeat="profile in selectServerProfile.profiles track by profile.name" ng-click="selectServerProfile.onSelected(profile)">
+        <a class="fancy-select-option">
+          <span ng-if="profile.invalid" class="label label-danger">Incompatible</span>
+          <span class="fancy-select-text">{{ profile.uiName }}</span>
+        </a>
+      </li>
+    </ul>
+  </div>
 
-  <div ng-if="!selectServerProfile.item.valid" class="statuses">
-    <form class="filterServerForm" name="filterServerForm" novalidate>
-      <div class="form-group pdsh-input" ng-class="{'has-error': filterServerForm.pdsh.$invalid, 'has-success': filterServerForm.pdsh.$valid}">
-        <div>
-          <label>Filter by Hostname / Hostlist Expression</label>
-          <i class="fa fa-question-circle"
-             tooltip="Enter a hostname / hostlist expression to filter servers."
-             tooltip-placement="right"></i>
-        </div>
-        <pdsh pdsh-initial="selectServerProfile.pdsh" pdsh-change="selectServerProfile.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
+  <form class="filterServerForm" name="filterServerForm" novalidate>
+    <div class="form-group pdsh-input" ng-class="{'has-error': filterServerForm.pdsh.$invalid, 'has-success': filterServerForm.pdsh.$valid}">
+      <div>
+        <label>Filter by Hostname / Hostlist Expression</label>
+        <i class="fa fa-question-circle"
+           tooltip="Enter a hostname / hostlist expression to filter servers."
+           tooltip-placement="right"></i>
       </div>
-    </form>
-    <div class="status-cell-container" ng-repeat="item in selectServerProfile.items | pdsh:selectServerProfile.hostnamesHash:selectServerProfile.getHostPath track by item.address">
-      <div ng-class="{invalid: !item.valid, valid: item.valid }" tooltip="Address: {{item.address}}" class="status-cell activate-popover"></div>
-      <iml-popover title="Status for {{ item.address }}" placement="bottom">
-        <div ng-if="item.valid">
-          <i class="fa fa-check-circle"></i> {{ item.caption }} profile is compatible.
-        </div>
-        <div ng-if="!item.valid">
-          <div class="callout callout-danger">
-            <span>{{ item.address }}</span> incompatible with <span>{{ item.caption }}</span> profile.
-          </div>
-          <h4>Reasons: </h4>
-          <ul>
-            <li ng-repeat="problem in item.problems">
-              <i class="fa fa-times-circle"></i>
-              <span ng-if="problem.error">There was an error: {{ problem.error }}.</span>
-              <span ng-if="!problem.error">{{ problem.description }}.</span>
-            </li>
-          </ul>
-        </div>
-      </iml-popover>
+      <pdsh pdsh-initial="selectServerProfile.pdsh" pdsh-change="selectServerProfile.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
     </div>
+  </form>
+  <div class="status-cell-container" ng-repeat="host in selectServerProfile.profile.hosts | pdsh:selectServerProfile.hostnamesHash:selectServerProfile.getHostPath track by host.address">
+    <div ng-class="{invalid: host.invalid, valid: !host.invalid }" tooltip="Address: {{host.address}}" class="status-cell activate-popover"></div>
+    <iml-popover title="Status for {{ host.address }}" placement="bottom">
+      <div ng-if="!host.invalid">
+        <i class="fa fa-check-circle"></i> {{ host.uiName }} profile is compatible.
+      </div>
+      <div ng-if="host.invalid">
+        <div class="callout callout-danger">
+          <span>{{ host.address }}</span> incompatible with <span>{{ host.uiName }}</span> profile.
+        </div>
+        <h4>Reasons: </h4>
+        <ul>
+          <li ng-repeat="problem in host.problems track by problem.test">
+            <i class="fa fa-times-circle"></i>
+            <span ng-if="problem.error">There was an error: {{ problem.error }}.</span>
+            <span ng-if="!problem.error">{{ problem.description }}.</span>
+          </li>
+        </ul>
+      </div>
+    </iml-popover>
   </div>
 </div>
 <div class="modal-footer">
   <button ng-disabled="selectServerProfile.disabled" ng-click="selectServerProfile.transition('previous')" class="btn btn-default"><i class="fa fa-long-arrow-left"></i> Previous</button>
-  <override-button overridden="selectServerProfile.overridden" is-valid="selectServerProfile.item.valid" on-change="selectServerProfile.transition(message)" is-disabled="selectServerProfile.disabled"></override-button>
+  <override-button overridden="selectServerProfile.overridden" is-valid="!selectServerProfile.profile.invalid" on-change="selectServerProfile.transition(message)" is-disabled="selectServerProfile.disabled"></override-button>
 </div>

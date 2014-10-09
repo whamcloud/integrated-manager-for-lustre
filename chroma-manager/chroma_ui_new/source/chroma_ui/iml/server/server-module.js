@@ -21,8 +21,7 @@
 
 
 angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
-  'socket-module', 'command', 'action-dropdown-module', 'status', 'configure-lnet-module', 'steps-module',
-  'fancy-select'])
+  'socket-module', 'command', 'action-dropdown-module', 'status', 'configure-lnet-module', 'steps-module'])
   .controller('ServerCtrl', ['$scope', '$q', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
     'jobMonitorSpark', 'alertMonitorSpark', 'openLnetModal', 'openAddServerModal',

@@ -123,7 +123,7 @@ describe('select server profile', function () {
     });
 
     describe('receiving data change on hostProfileSpark', function () {
-      var item, response;
+      var profile, response;
       beforeEach(function () {
         response = {
           statusCode: 200,
@@ -142,9 +142,8 @@ describe('select server profile', function () {
                 profiles: {
                   base_managed: [
                     {
-                      description: 'ZFS must not be installed',
-                      error: 'zero length field name in format',
-                      pass: false,
+                      description: '',
+                      pass: true,
                       test: 'zfs_installed == False'
                     }
                   ],
@@ -163,61 +162,90 @@ describe('select server profile', function () {
         expect($scope.selectServerProfile.data).toEqual(response.body.objects);
       });
 
-      it('should set fancy options', function () {
-        expect($scope.selectServerProfile.options).toEqual([
-          {
-            id: 'base_managed',
-            caption: 'Managed storage server',
-            label: 'Incompatible',
-            labelType: 'label-danger',
-            valid: false
-          },
-          {
-            id: 'base_monitored',
-            caption: 'Monitored storage server',
-            valid: true
-          },
-          {
-            id: 'posix_copytool_worker',
-            caption: 'POSIX HSM Agent Node',
-            valid: true
-          },
-          {
-            id: 'robinhood_server',
-            caption: 'Robinhood Policy Engine Server',
-            valid: true
-          }
-        ]);
+      describe('receiving more data', function () {
+        beforeEach(function () {
+          response = {
+            statusCode: 200,
+            body: {
+              meta: {
+                limit: 20,
+                next: null,
+                offset: 0,
+                previous: null,
+                total_count: 1
+              },
+              objects: [
+                {
+                  address: 'storage1.localdomain',
+                  host: 69,
+                  profiles: {
+                    base_managed: [
+                      {
+                        description: 'ZFS must not be installed',
+                        error: '',
+                        pass: true,
+                        test: 'zfs_installed == False'
+                      }
+                    ],
+                    base_monitored: [],
+                    posix_copytool_worker: [],
+                    robinhood_server: []
+                  }
+                }
+              ]
+            }
+          };
+          data.hostProfileSpark.onValue.mostRecentCall.args[1](response);
+        });
+
+        it('should keep the same profile', function () {
+          expect($scope.selectServerProfile.profile).toEqual({
+            name: 'base_managed',
+            uiName: 'Managed storage server',
+            invalid: false,
+            hosts: [{
+              address: 'storage1.localdomain',
+              invalid: false,
+              problems: [{
+                description: 'ZFS must not be installed',
+                error: '',
+                pass: true,
+                test: 'zfs_installed == False'
+              }],
+              uiName: 'Managed storage server'
+            }]
+          });
+        });
       });
 
       describe('onSelected', function () {
         beforeEach(function () {
-          item = {
-            id: 'base_monitored',
-            caption: 'Base monitored',
-            valid: true
+          profile = {
+            name: 'base_managed',
+            uiName: 'Managed storage server',
+            invalid: false,
+            hosts: [{
+              address: 'storage1.localdomain',
+              invalid: false,
+              problems: [{
+                description: 'ZFS must not be installed',
+                error: '',
+                pass: false,
+                test: 'zfs_installed == False'
+              }],
+              uiName: 'Managed storage server'
+            }]
           };
 
-          $scope.selectServerProfile.onSelected(item);
+          $scope.selectServerProfile.onSelected(profile);
         });
 
         it('should set overridden to false', function () {
           expect($scope.selectServerProfile.overridden).toEqual(false);
         });
 
-        it('should set the item on the server profile', function () {
-          expect($scope.selectServerProfile.item).toEqual(item);
-        });
-
-        it('should set the items', function () {
-          expect($scope.selectServerProfile.items).toEqual([
-            {
-              address: 'storage1.localdomain',
-              caption: 'Base monitored',
-              problems: [],
-              valid : true
-            }
-          ]);
+        it('should set the profile on the scope', function () {
+          expect($scope.selectServerProfile.profile).toEqual(profile);
         });
       });
     });
@@ -324,7 +352,7 @@ describe('select server profile', function () {
         ];
         profile = {
           caption: 'Base Monitored',
-          id: 'base_monitored'
+          name: 'base_monitored'
         };
       });
 
