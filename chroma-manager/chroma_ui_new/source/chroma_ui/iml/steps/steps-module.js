@@ -32,20 +32,37 @@
             manager: '='
           },
           link: function link (scope, el) {
-            var innerScope;
+            var innerScope, resolvesFinished;
 
             /**
              * Listens for changes and updates the view.
              * @param {Object} step
              * @param {Object} [extraResolves]
+             * @param {Object} [waitingStep]
              */
-            scope.manager.registerChangeListener(function onChanges (step, extraResolves) {
+            scope.manager.registerChangeListener(function onChanges (step, extraResolves, waitingStep) {
               var resolves = _.extend({}, step.resolve, extraResolves);
               var promises = getResolvePromises(resolves);
               promises.template = getTemplatePromise(step.templateUrl);
 
+              if (!resolvesFinished && waitingStep && waitingStep.templateUrl) {
+                // Create new scope
+                innerScope = scope.$new();
+
+                getTemplatePromise(waitingStep.templateUrl)
+                  .then(function loadUntilTemplate(template) {
+                    // Make sure the resolves haven't finished before loading the template
+                    if (!resolvesFinished) {
+                      loadUpSteps({$scope: innerScope}, el, template, waitingStep.controller);
+                    }
+                  });
+              }
+
               $q.all(promises)
                 .then(function (resolves) {
+                  // Indicate that resolves are complete so the untilTemplate isn't loaded
+                  resolvesFinished = true;
+
                   var template = resolves.template;
                   delete resolves.template;
 
@@ -60,12 +77,24 @@
                     getState: scope.manager.getState
                   };
 
-                  $controller(step.controller, resolves);
-
-                  el.html(template);
-
-                  $compile(el.children())(resolves.$scope);
+                  loadUpSteps(resolves, el, template, step.controller);
                 });
+
+              /**
+               * Loads the steps
+               * @param {Object} resolves
+               * @param {Object} el
+               * @param {String} template
+               * @param {Object} controller
+               */
+              function loadUpSteps (resolves, el, template, controller) {
+                if (controller)
+                  $controller(controller, resolves);
+
+                el.html(template);
+
+                $compile(el.children())(resolves.$scope);
+              }
             });
 
             scope.$on('$destroy', function onDestroy () {
@@ -95,6 +124,20 @@
 
           return {
             /**
+             * Adds the waiting step.
+             * @param {Object} step
+             * @throws
+             * @returns {*}
+             */
+            addWaitingStep: function addWaitingStep (step) {
+              if (steps.waitingStep)
+                throw new Error('Cannot assign the waiting step as it is already defined.');
+
+              steps.waitingStep = step;
+
+              return this;
+            },
+            /**
              * Adds a step to the manager.
              * @param {String} stepName
              * @param {Object} step
@@ -113,7 +156,7 @@
              */
             start: function start (stepName, extraResolves) {
               if (listener)
-                listener(steps[stepName], extraResolves);
+                listener(steps[stepName], extraResolves, steps.waitingStep);
               else
                 pending = {
                   step: steps[stepName],
@@ -165,7 +208,7 @@
               listener = changeListener;
 
               if (pending) {
-                listener(pending.step, pending.extraResolves);
+                listener(pending.step, pending.extraResolves, steps.waitingStep);
                 pending = null;
               }
 

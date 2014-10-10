@@ -88,7 +88,9 @@ help_text = {
     'rewrite_target_configuration-tooltip': 'Update each target with the current NID for the server with which it is associated.',
     'install_updates_dialog': 'Installs updated software on the selected servers. </br> Select the servers to include in this update operation. Then, click Run to install the updated packages on those servers. <b>Any server that belongs to an active file system is not selectable.</b>',
     'install_updates_configuration-tooltip': 'Install updated software on the selected servers.',
-
+    'server_waiting_title': 'Add Server - Loading',
+    'server_waiting': 'Please wait while the server data is processed.',
+    'server_waiting_header': 'Loading Server Data',
     'server_status_configured': 'This server has been configured for use with the manager GUI.',
     'server_status_lnet_down': 'The LNet kernel module is loaded, but LNet networking is not currently started on this server.',
     'server_status_lnet_unloaded': 'The LNet kernel module is not currently loaded on this server.',

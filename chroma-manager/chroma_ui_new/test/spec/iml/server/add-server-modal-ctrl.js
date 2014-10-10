@@ -32,6 +32,7 @@ describe('add server modal ctrl', function () {
       resultEndPromise = $q.defer();
 
       var stepsManager = jasmine.createSpy('stepsManager').andReturn({
+        addWaitingStep: jasmine.createSpy('addWaitingStep'),
         addStep: jasmine.createSpy('addStep'),
         start: jasmine.createSpy('start'),
         result: {
@@ -57,6 +58,7 @@ describe('add server modal ctrl', function () {
           close: jasmine.createSpy('$modalInstance')
         },
         stepsManager: stepsManager,
+        waitUntilLoadedStep: jasmine.createSpy('waitUntilLoadedStep'),
         addServerSteps: {
           addServersStep: {},
           serverStatusStep: {},
@@ -81,6 +83,10 @@ describe('add server modal ctrl', function () {
     describe('no step provided', function () {
       beforeEach(function () {
         invokeController();
+      });
+
+      it('should call addWaitingStep', function () {
+        expect(deps.stepsManager.plan().addWaitingStep).toHaveBeenCalledOnce(deps.waitUntilLoadedStep);
       });
 
       it('should invoke the steps manager', function () {

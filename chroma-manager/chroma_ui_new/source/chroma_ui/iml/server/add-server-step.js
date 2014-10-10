@@ -68,7 +68,7 @@
            * Close the modal
            */
           close: function close () {
-            $scope.$emit('closeModal');
+            $scope.$emit('addServerModal::closeModal');
           }
         };
       }

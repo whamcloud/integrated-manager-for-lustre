@@ -40,11 +40,11 @@
       }
     ])
     .controller('AddServerModalCtrl', ['$scope', '$modalInstance', 'ADD_SERVER_STEPS', 'stepsManager',
-      'serverSpark', 'server', 'step', 'getFlint', 'getTestHostSparkThen', 'addServerSteps',
+      'serverSpark', 'server', 'step', 'getFlint', 'getTestHostSparkThen', 'addServerSteps', 'waitUntilLoadedStep',
       'createOrUpdateHostsThen', 'hostProfile',
       function AddServerModalCtrl ($scope, $modalInstance, ADD_SERVER_STEPS, stepsManager,
                                    serverSpark, server, step, getFlint, getTestHostSparkThen, addServerSteps,
-                                   createOrUpdateHostsThen, hostProfile) {
+                                   waitUntilLoadedStep, createOrUpdateHostsThen, hostProfile) {
 
         var manager = stepsManager();
 
@@ -52,6 +52,8 @@
           .forEach(function addStep (pair) {
             manager.addStep(pair[0], pair[1]);
           });
+
+        manager.addWaitingStep(waitUntilLoadedStep);
 
         var flint = getFlint();
 
@@ -103,7 +105,7 @@
         });
 
         // Listen of the closeModal event from the step controllers
-        $scope.$on('closeModal', function onClose() {
+        $scope.$on('addServerModal::closeModal', function onClose() {
           $modalInstance.close();
         });
       }
