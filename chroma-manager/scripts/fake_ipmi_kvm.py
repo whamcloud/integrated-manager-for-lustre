@@ -45,7 +45,7 @@ except ImportError:
 
 if __name__ == "__main__":
     try:
-        ipmi = PowerControlType.objects.get(make = "Generic", model = "IPMI")
+        ipmi = PowerControlType.objects.get(make = "IPMI", model = "1.5 (LAN)")
     except PowerControlType.DoesNotExist:
         fatal("Could not find the IPMI power type! Is the DB set up?")
 
