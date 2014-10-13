@@ -40,11 +40,13 @@ var resources = require('./resources');
 var path = require('path');
 var Validator = require('jsonschema').Validator;
 
+var http = require('http');
+
+http.globalAgent.maxSockets = 25;
 
 var modules = [{
   conf: ['value', require('./conf')],
-  https: ['value', require('https')],
-  http: ['value', require('http')],
+  http: ['value', http],
   Primus: ['value', require('primus')],
   jsonMask: ['value', require('json-mask')],
   serverWrite: ['value', require('./primus-server-write')],
@@ -68,7 +70,6 @@ var modules = [{
   HostResource: ['factory', resources.hostResourceFactory],
   primus: ['factory', require('./primus')],
   Resource: ['factory', resources.resourceFactory],
-  server: ['factory', require('./server')],
   TargetResource: ['factory', resources.targetResourceFactory],
   HsmCopytoolResource: ['factory', resources.hsmCopytoolResourceFactory],
   HsmCopytoolOperationResource: ['factory', resources.hsmCopytoolOperationResourceFactory],

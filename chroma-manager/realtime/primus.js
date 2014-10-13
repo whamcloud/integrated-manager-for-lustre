@@ -25,14 +25,19 @@
 /**
  * Given a server instance wires it into primus.
  * @param {Function} Primus The primus constructor
- * @param {Object} server
+ * @param {Object} conf
  * @param {Object} multiplex The multiplex plugin.
  * @param {Object} primusServerWrite The server write plugin.
  * @param {Function} Emitter
  * @returns {Object} The primus instance.
  */
-module.exports = function getPrimus (Primus, server, multiplex, primusServerWrite, Emitter) {
-  var primus = new Primus(server, { parser: 'JSON', transformer: 'socket.io' });
+module.exports = function getPrimus (Primus, conf, multiplex, primusServerWrite, Emitter) {
+  var primus = Primus.createServer({
+    parser: 'JSON',
+    transformer: 'socket.io',
+    port: conf.primusPort,
+    iknowhttpsisbetter: true
+  });
 
   primus.use('serverWrite', primusServerWrite);
   primus.use('multiplex', multiplex);

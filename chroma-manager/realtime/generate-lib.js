@@ -22,7 +22,6 @@
 
 'use strict';
 
-var http = require('http');
 var primus = require('./primus');
 var Primus = require('primus');
 var multiplex = require('primus-multiplex');
@@ -33,9 +32,11 @@ var primusServerWrite = primusServerWriteFactory(errorSerializer, MultiplexSpark
 var Emitter = require('primus-emitter');
 
 module.exports = function () {
-  var server = http.createServer();
+  var instance = primus(Primus, { primusPort: 8889 }, multiplex, primusServerWrite, Emitter);
 
-  var instance = primus(Primus, server, multiplex, primusServerWrite, Emitter);
+  var lib = instance.library();
 
-  return instance.library();
+  instance.end();
+
+  return lib;
 };

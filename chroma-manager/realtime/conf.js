@@ -34,17 +34,12 @@ var parsedPrimusHttpUrl = url.parse(conf.SERVER_HTTP_URL),
   parsedApiHttpUrl = _.clone(parsedPrimusHttpUrl);
 
 parsedPrimusHttpUrl.port = conf.PRIMUS_PORT;
+parsedPrimusHttpUrl.protocol = 'http';
 delete parsedPrimusHttpUrl.host;
 
 parsedApiHttpUrl.pathname = '/api/';
 
 module.exports = {
-  get certFile() {
-    return getFile('manager.crt');
-  },
-  get keyFile() {
-    return getFile('manager.pem');
-  },
   get caFile() {
     return getFile('authority.crt');
   },

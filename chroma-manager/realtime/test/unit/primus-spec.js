@@ -3,34 +3,45 @@
 var primusFactory = require('../../primus');
 
 describe('primus', function () {
-  var Primus, Emitter, server, multiplex, primusServerWrite, primus;
+  var Primus, Emitter, conf, multiplex, primusServerWrite, primus;
 
   beforeEach(function () {
-    Primus = jasmine.createSpy('Primus').andReturn({
-      use: jasmine.createSpy('primus.use')
-    });
+    Primus = {
+      createServer: jasmine.createSpy('createServer').andReturn({
+        use: jasmine.createSpy('primus.use')
+      })
+    };
 
-    server = {};
+    conf = {
+      primusPort: 8888
+    };
+
     multiplex = {};
     primusServerWrite = {};
     Emitter = function Emitter () {};
 
-    primus = primusFactory(Primus, server, multiplex, primusServerWrite, Emitter);
+    primus = primusFactory(Primus, conf, multiplex, primusServerWrite, Emitter);
   });
 
-  it('should create a primus instance', function () {
-    expect(Primus).toHaveBeenCalledOnceWith(server, {
+  it('should create a server', function () {
+    expect(Primus.createServer).toHaveBeenCalledOnceWith({
       parser: 'JSON',
-      transformer: jasmine.any(String)
+      transformer: 'socket.io',
+      port: 8888,
+      iknowhttpsisbetter: true
     });
   });
 
-  it('should use the multiplex plugin', function () {
-    expect(primus.use).toHaveBeenCalledOnceWith('multiplex', multiplex);
+  it('should return a primus instance', function () {
+    expect(primus).toEqual(Primus.createServer.plan());
   });
 
   it('should use the primusServerWrite plugin', function () {
     expect(primus.use).toHaveBeenCalledOnceWith('serverWrite', primusServerWrite);
+  });
+
+  it('should use the multiplex plugin', function () {
+    expect(primus.use).toHaveBeenCalledOnceWith('multiplex', multiplex);
   });
 
   it('should use the Emitter plugin', function () {
