@@ -50,7 +50,7 @@ describe('request', function () {
       strictSSL: false,
       maxSockets: 25,
       forever: true,
-      timeout: 120000
+      timeout: 180000
     });
   });
 
@@ -104,7 +104,7 @@ describe('request', function () {
       it('should have the error message', function (done) {
         promise
           .catch(function assertError (err) {
-            expect(err.message).toEqual('"foo is not bar."');
+            expect(err.message).toContain('"foo is not bar."');
           })
           .done(done);
       });

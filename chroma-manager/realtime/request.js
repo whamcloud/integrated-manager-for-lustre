@@ -42,7 +42,7 @@ module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonM
     strictSSL: false,
     maxSockets: 25,
     forever: true,
-    timeout: 120000 // 2 minutes
+    timeout: 180000 // 3 minutes
   });
 
   return Object.keys(VERBS)
@@ -112,8 +112,6 @@ module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonM
           var error = new Error(message);
           error.statusCode = resp.statusCode;
 
-          log.error(error);
-
           throw error;
         })
         .then(function handleResponseBody (resp) {
@@ -126,6 +124,13 @@ module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonM
           log.trace(resp.body);
 
           return resp;
+        })
+        .catch(function enhanceError (error) {
+          error.message = error.message + ' During ' + verb + ' request to ' + path;
+
+          log.error(error);
+
+          throw error;
         })
         .finally(function allDone() {
           pendCount -= 1;
