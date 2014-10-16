@@ -19,6 +19,7 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+from threading import Thread
 
 from collections import defaultdict
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -338,14 +339,25 @@ class HostTestResource(Resource):
         params = _host_params(bundle.data)
         address = params.pop('address')
         bulk = isinstance(address, list)
-        objects, errors = [], []
-        for address in (address if bulk else [address]):
+        objects, errors, threads = [], [], []
+
+        def test_host_contact(address):
             try:
                 objects.append(JobSchedulerClient.test_host_contact(address=address, **params))
                 errors.append(None)
             except RpcTimeout as exc:
                 objects.append({})
                 errors.append({'error': str(exc)})
+
+        for address in (address if bulk else [address]):
+            thread = Thread(target = test_host_contact,
+                            args = (address, ))
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join()
+
         if bulk:
             raise custom_response(self, request, http.HttpAccepted, {'objects': objects, 'errors': errors})
         result, = objects
