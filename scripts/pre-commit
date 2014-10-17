@@ -14,8 +14,6 @@ localNodeModulesDir = 'chroma-manager/chroma_ui_new/node_modules'
 
 jshintBinDir = localNodeModulesDir + '/gulp-jshint/node_modules/jshint/bin'
 
-localNodeModulesDir = 'chroma-manager/chroma_ui_new/node_modules'
-
 jscsBinDir = localNodeModulesDir + '/gulp-jscs/node_modules/.bin'
 
 DISABLED_CHECKS = [
@@ -127,7 +125,7 @@ DJANGO_PROJECTS = ['chroma-manager']
 
 JS_HINT_CHECK = {
         'output': 'Running JSHint...',
-        'command': jshintBinDir + '/jshint -c chroma-manager/chroma_ui_new/.jshintrc %s',
+        'command': jshintBinDir + '/jshint %s',
         'match_files': [
             '.*/chroma_ui_new/.*\.js$',
             '.*/chroma_ui/static/js/.+/[^/]+\.js$',
@@ -227,7 +225,6 @@ def check_files(files, check):
                         print err
                     result = 1
     return result
-
 
 def main(all_files, exclude = []):
     files = []
