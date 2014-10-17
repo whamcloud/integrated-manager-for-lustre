@@ -4,7 +4,6 @@
 var srcmapRev = require('../index');
 var promisedFile = require('promised-file');
 
-
 describe('srcmap-reverse unit test', function () {
 
   var builtFilesPath;
