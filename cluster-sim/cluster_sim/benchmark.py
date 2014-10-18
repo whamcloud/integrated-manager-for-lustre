@@ -485,9 +485,11 @@ class ServerCountLimit(Benchmark):
             for queue in self.get_queues():
                 if queue['messages'] - baseline.get(queue['name'], 0) > max(queue['message_stats_ack_details_rate'], i):
                     backed_up_queues.append(queue['name'])
-                    log.info("Queue %s is backed up (%s in=%.2f out=%.2f)" % (
+                    log.info("Queue %s is backed up (%s-%s>%s in=%.2f out=%.2f)" % (
                         queue['name'],
                         queue['messages'],
+                        baseline.get(queue['name'], 0),
+                        max(queue['message_stats_ack_details_rate'], i),
                         queue['message_stats_publish_details_rate'],
                         queue['message_stats_ack_details_rate']))
 

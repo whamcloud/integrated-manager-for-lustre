@@ -145,8 +145,8 @@ class AgentRpcMessenger(object):
             except KeyError:
                 pass
 
-    def _abort_session(self, fqdn, old_session_id, new_session_id=None):
-        log.warning("AgentRpcMessenger.on_rx: aborting session %s" % old_session_id)
+    def _abort_session(self, fqdn, message, old_session_id, new_session_id=None):
+        log.warning("AgentRpcMessenger.on_rx: aborting session %s because %s" % (old_session_id, message))
         old_rpcs = self._session_rpcs[old_session_id]
 
         if new_session_id is not None:
@@ -159,12 +159,12 @@ class AgentRpcMessenger(object):
 
         for rpc in old_rpcs.values():
             if new_session_id:
-                log.warning("AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s)" % (
-                    rpc.id, new_session_id, old_session_id))
+                log.warning("AgentRpcMessenger.on_rx: re-issuing RPC %s for session %s (was %s) because %s" % (
+                    rpc.id, new_session_id, old_session_id, message))
                 rpc.session_id = new_session_id
                 self._resend(rpc)
             else:
-                rpc.exception = "Communications error with %s" % fqdn
+                rpc.exception = "Communications error with %s because %s" % (fqdn, message)
                 rpc.complete.set()
         del self._session_rpcs[old_session_id]
 
@@ -218,17 +218,17 @@ class AgentRpcMessenger(object):
             if message['type'] == 'SESSION_CREATE':
                 if fqdn in self._sessions:
                     old_session_id = self._sessions[fqdn]
-                    self._abort_session(fqdn, old_session_id, session_id)
+                    self._abort_session(fqdn, "new session created", old_session_id, session_id)
                 else:
                     self._sessions[fqdn] = session_id
             elif message['type'] == 'SESSION_TERMINATE':
                 # An agent has timed out or restarted, we're being told its session is now dead
                 if message['fqdn'] in self._sessions:
-                    self._abort_session(fqdn, message['session_id'])
+                    self._abort_session(fqdn, "session terminated", message['session_id'])
             elif message['type'] == 'SESSION_TERMINATE_ALL':
                 # The http_agent service has restarted, all sessions are now over
                 for fqdn, session in self._sessions.items():
-                    self._abort_session(fqdn, session)
+                    self._abort_session(fqdn, "all sessions terminated", session)
             else:
                 rpc_response = message['body']
                 if rpc_response['type'] != 'ACTION_COMPLETE':
@@ -237,7 +237,7 @@ class AgentRpcMessenger(object):
 
                 if fqdn in self._sessions and self._sessions[fqdn] != session_id:
                     log.info("AgentRpcMessenger.on_rx: cancelling session %s/%s (replaced by %s)" % (fqdn, self._sessions[fqdn], session_id))
-                    self._abort_session(fqdn, self._sessions[fqdn])
+                    self._abort_session(fqdn, "session cancelled", self._sessions[fqdn])
                     HttpAgentRpc().reset_session(fqdn, AgentRpcMessenger.PLUGIN_NAME, session_id)
                 elif fqdn in self._sessions:
                     log.info("AgentRpcMessenger.on_rx: good session %s/%s" % (fqdn, session_id))

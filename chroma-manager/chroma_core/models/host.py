@@ -979,11 +979,11 @@ class SetupHostJob(StateChangeJob):
 
         '''
         This is a workaround for the fact that the object for a stateful object is not updated before the job runs, it
-        is a snapshot of the object when the job was requested. This seems wrong to me and something that I will endevour
-        to understand and put write. Couple with that is the fact that strangely John took a reference to the object at
+        is a snapshot of the object when the job was requested. This seems wrong to me and something that I will endeavour
+        to understand and put right. Couple with that is the fact that strangely John took a reference to the object at
         creation time meaning that is the Stateful object was re-read the reference _so_cache is invalid.
 
-        What is really needed is self._managed_host.refreash() which updates the values in managed_host without creating
+        What is really needed is self._managed_host.refresh() which updates the values in managed_host without creating
         a new managed host instance. For today this works and I will think about this an improve it for 3.0
         '''
         self._so_cache = self.managed_host = ObjectCache.update(self.managed_host)

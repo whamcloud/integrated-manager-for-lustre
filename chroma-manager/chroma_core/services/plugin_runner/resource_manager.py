@@ -30,6 +30,7 @@ import logging
 import json
 import threading
 from collections import defaultdict
+from django.utils.timezone import now
 
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
@@ -868,8 +869,7 @@ class ResourceManager(object):
                 # We can just set the state of the host, no transition is required. This is not a good thing to do but as an interim
                 # change until we complete dynamic lnet it is OK.
                 if (host.state in ['configured', 'lnet_unloaded', 'lnet_down', 'lnet_up']) and (host.state != lnet_configuration.state):
-                    host.set_state(lnet_configuration.state)
-                    host.save()
+                    JobSchedulerClient.notify(host, now(), {'state': lnet_configuration.state})
 
         # Only get the lnet_configuration if we actually have a LNetInterface (nid) to add.
         if (len(node_resources[LNETInterface]) > 0):

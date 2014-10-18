@@ -133,6 +133,16 @@ class BaseFakeSyslogPlugin(DevicePlugin):
             return result
 
 
+class ClusterSimulater(DevicePlugin):
+    _server = None
+
+    def start_session(self):
+        return {}
+
+    def update_session(self):
+        return {}
+
+
 class BaseFakeLustrePlugin(DevicePlugin):
     _server = None
 
@@ -276,7 +286,8 @@ class FakeDevicePlugins():
             'lustre': FakeLustrePlugin,
             'action_runner': ActionRunnerPlugin,
             'syslog': FakeSyslogPlugin,
-            'corosync': FakeCorosyncPlugin
+            'corosync': FakeCorosyncPlugin,
+            'simulator_controller': ClusterSimulater
         }
 
     def get_plugins(self):
