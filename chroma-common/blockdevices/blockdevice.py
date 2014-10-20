@@ -47,7 +47,7 @@ class BlockDevice(object):
             else:
                 _cached_device_types[device] = device_type
 
-            subtype = next(klass for klass in BlockDevice.__subclasses__() if device_type in klass._supported_device_types)
+            subtype = next(klass for klass in BlockDevice.all_subclasses() if device_type in klass._supported_device_types)
 
             if (cls != subtype):
                 return subtype.__new__(subtype, device_type, device)
@@ -60,6 +60,10 @@ class BlockDevice(object):
     def __init__(self, device_type, device_path):
         self._device_type = device_type
         self._device_path = device_path
+
+    @classmethod
+    def all_subclasses(cls):
+        return cls.__subclasses__() + [g for s in cls.__subclasses__() for g in s.all_subclasses()]
 
     @property
     def filesystem_type(self):

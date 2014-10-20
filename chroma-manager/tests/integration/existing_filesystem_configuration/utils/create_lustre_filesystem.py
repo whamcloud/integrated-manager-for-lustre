@@ -42,7 +42,7 @@ class CreateLustreFilesystem(UtilityTestCase):
             for command in TestBlockDevice.all_clear_device_commands():
                 result = self.remote_command(server['address'],
                                              command)
-                logger.info("clear command output:\n %s" % result.stdout.read())
+                logger.info("clear command:%s  output:\n %s" % (command, result.stdout.read()))
 
             self.umount_devices(server['address'])
             self.dd_devices(server['address'])

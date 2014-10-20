@@ -40,6 +40,11 @@ errno.NO_MEDIA_ERRNO = 123
 
 
 class LinuxDevicePlugin(DevicePlugin):
+    # Some places require that the devices have been scanned before then can operate correctly, this is because the
+    # scan creates and stores some information that is use in other places. This is non-optimal because it gives the
+    # agent some state which we try and avoid. But this flag does at least allow us to keep it neat.
+    devices_scanned = False
+
     def _quick_scan(self):
         """Lightweight enumeration of available block devices"""
         zfs = ZfsDevices().quick_scan()
@@ -72,6 +77,9 @@ class LinuxDevicePlugin(DevicePlugin):
 
         # Local filesystems (not lustre) in /etc/fstab or /proc/mounts
         local_fs = LocalFilesystems(block_devices).all()
+
+        # We have scan devices, so set the devices scanned flags.
+        LinuxDevicePlugin.devices_scanned = True
 
         return {"vgs": dmsetup.vgs,
                 "lvs": dmsetup.lvs,

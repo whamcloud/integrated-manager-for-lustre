@@ -26,6 +26,7 @@ from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
 import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 
 
 class DmsetupTable(DeviceHelper):
@@ -45,6 +46,9 @@ class DmsetupTable(DeviceHelper):
                 'pvs_major_minor': []}
             self.lvs[vg_name] = {}
             for lv_name, lv_uuid, lv_size, lv_path in self._get_lvs(vg_name):
+                # Do this to cache the device, type see blockdevice and filesystem for info.
+                BlockDevice('lvm_volume', '/dev/mapper/%s-%s' % (vg_name, lv_name))
+
                 self.lvs[vg_name][lv_name] = {
                     'name': lv_name,
                     'uuid': lv_uuid,

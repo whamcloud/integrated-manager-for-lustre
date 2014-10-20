@@ -46,7 +46,7 @@ class FileSystem(object):
             else:
                 _cached_filesystem_types[device_path] = fstype
 
-            subtype = next(klass for klass in FileSystem.__subclasses__() if fstype in klass._supported_filesystems)
+            subtype = next(klass for klass in FileSystem.all_subclasses() if fstype in klass._supported_filesystems)
 
             if (cls != subtype):
                 return subtype.__new__(subtype, fstype, device_path)
@@ -59,6 +59,10 @@ class FileSystem(object):
     def __init__(self, fstype, device_path):
         self._fstype = fstype
         self._device_path = device_path
+
+    @classmethod
+    def all_subclasses(cls):
+        return cls.__subclasses__() + [g for s in cls.__subclasses__() for g in s.all_subclasses()]
 
     def _initialize_modules(self):
         '''

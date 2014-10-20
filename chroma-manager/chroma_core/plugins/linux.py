@@ -170,6 +170,11 @@ class LvmVolume(resources.LogicalDriveSlice):
     def get_label(self):
         return "%s-%s" % (self.vg.name, self.name)
 
+    """ This has to be a class method today because at the point we call it we only has the type not the object"""
+    @classmethod
+    def device_type(cls):
+        return "lvm_volume"
+
 
 class Linux(Plugin):
     internal = True

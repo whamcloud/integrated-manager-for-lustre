@@ -32,6 +32,7 @@ from chroma_agent.log import console_log
 from chroma_agent.utils import Mounts
 from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
+from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 import chroma_agent.lib.normalize_device_path as ndp
 
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
@@ -125,12 +126,14 @@ class LustrePlugin(DevicePlugin):
                 # This is not a good method, and we should work on a way of not storing such state but for the
                 # present it is the best we have.
                 try:
-                    self._mount_cache[device]['fs_uuid'] = fs_uuid = BlockDevice(None, device).uuid
-                    self._mount_cache[device]['fs_label'] = fs_label = FileSystem(None, device).label
+                    fs_uuid = BlockDevice(None, device).uuid
+                    fs_label = FileSystem(None, device).label
+
+                    # If we have scanned the devices then it is safe to cache the values.
+                    if LinuxDevicePlugin.devices_scanned:
+                        self._mount_cache[device]['fs_uuid'] = fs_uuid
+                        self._mount_cache[device]['fs_label'] = fs_label
                 except shell.CommandExecutionError:
-                    # This deals with the case where the BlockDevice above isn't know yet because the linux scan
-                    # has not run.
-                    del self._mount_cache[device]
                     continue
 
             dev_normalized = ndp.normalized_device_path(device)

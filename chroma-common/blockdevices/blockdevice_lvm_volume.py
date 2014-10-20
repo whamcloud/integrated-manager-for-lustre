@@ -20,6 +20,15 @@
 # express and approved by Intel in writing.
 
 
-import blockdevice_linux
-import blockdevice_zfs
-import blockdevice_lvm_volume
+from blockdevice_linux import BlockDeviceLinux
+from ..lib import shell
+
+
+class BlockDeviceLvmVolume(BlockDeviceLinux):
+    _supported_device_types = ['lvm_volume']
+
+    @property
+    def uuid(self):
+        out = shell.try_run(["lvs", "--noheadings", "-o", "lv_uuid", self._device_path])
+
+        return out.strip()
