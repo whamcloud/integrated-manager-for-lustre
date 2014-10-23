@@ -57,7 +57,7 @@ NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
 <VirtualHost *:{{HTTPS_FRONTEND_PORT}}>
     SSLEngine on
     SSLProxyEngine on
-    SSLProtocol all -SSLv2
+    SSLProtocol all -SSLv2 -SSLv3
     SSLCipherSuite ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:!LOW:!SSLv2:+EXP
     SSLCertificateFile {{ssl}}/manager.crt
     SSLCertificateKeyFile {{ssl}}/manager.pem
