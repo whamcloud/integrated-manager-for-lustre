@@ -19,7 +19,7 @@
     "primus-multiplex": "3.0.3",
     "promised-file": "1.0.4",
     "q": "1.0.0",
-    "request": "2.33.0",
+    "request": "2.46.0",
     "socket-router": "file://../ui-modules/node/socket-router",
     "socket.io": "0.9.17",
     "srcmap-reverse": "file://../ui-modules/node/srcmap-reverse",

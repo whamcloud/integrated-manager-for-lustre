@@ -29,8 +29,6 @@ import logging
 
 from django.core.management.commands.runserver import Command as BaseCommand
 
-from scripts.production_settings import production_settings
-
 
 class Command(BaseCommand):
     """
@@ -60,11 +58,6 @@ class Command(BaseCommand):
         REALTIME_DIR = os.path.join(SITE_ROOT, "realtime")
         CONF = os.path.join(REALTIME_DIR, "conf.json")
 
-        if kwargs.get('type') == 'dev':
-            ssl = SITE_ROOT
-        else:
-            ssl = production_settings.get('ssl')
-
         if settings.LOG_LEVEL == logging.DEBUG or settings.DEBUG:
             mode = 'DEV'
         else:
@@ -73,7 +66,6 @@ class Command(BaseCommand):
         conf = {
             "PRIMUS_PORT": settings.REALTIME_PORT,
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
-            "SSL": ssl,
             "MODE": mode,
             "SOURCE_MAP_DIR": os.path.join(SITE_ROOT, "chroma_ui_new", "static", "chroma_ui", "built*.map")
         }

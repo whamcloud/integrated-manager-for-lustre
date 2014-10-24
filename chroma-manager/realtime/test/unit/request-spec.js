@@ -15,8 +15,7 @@ describe('request', function () {
     spyOn(Q.makePromise.prototype, 'then').andCallThrough();
 
     conf = {
-      apiUrl: 'https://fake.com/api/',
-      caFile: 'blah'
+      apiUrl: 'https://fake.com/api/'
     };
 
     requestInstance = {
@@ -46,11 +45,13 @@ describe('request', function () {
   it('should setup a default request', function () {
     expect(patchedRequest.defaults).toHaveBeenCalledOnceWith({
       json: true,
-      ca: conf.caFile,
       strictSSL: false,
-      maxSockets: 25,
       forever: true,
-      timeout: 180000
+      useQuerystring: true,
+      timeout: 60000, // 1 minute
+      pool: {
+        maxSockets: 20
+      }
     });
   });
 

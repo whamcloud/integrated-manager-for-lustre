@@ -24,14 +24,12 @@
 
 'use strict';
 
-var conf = require('./conf.json'),
-  fs = require('fs'),
-  path = require('path'),
-  url = require('url'),
-  _ = require('lodash');
+var conf = require('./conf.json');
+var url = require('url');
+var _ = require('lodash');
 
-var parsedPrimusHttpUrl = url.parse(conf.SERVER_HTTP_URL),
-  parsedApiHttpUrl = _.clone(parsedPrimusHttpUrl);
+var parsedPrimusHttpUrl = url.parse(conf.SERVER_HTTP_URL);
+var parsedApiHttpUrl = _.clone(parsedPrimusHttpUrl);
 
 parsedPrimusHttpUrl.port = conf.PRIMUS_PORT;
 parsedPrimusHttpUrl.protocol = 'http';
@@ -40,9 +38,6 @@ delete parsedPrimusHttpUrl.host;
 parsedApiHttpUrl.pathname = '/api/';
 
 module.exports = {
-  get caFile() {
-    return getFile('authority.crt');
-  },
   get isProd() {
     return conf.MODE === 'PROD';
   },
@@ -53,13 +48,3 @@ module.exports = {
   apiUrl: url.format(parsedApiHttpUrl),
   mode: conf.MODE
 };
-
-/**
- * Abstracts the path to the cert files.
- *
- * @param {string} fileName
- * @returns The file contents.
- */
-function getFile(fileName) {
-  return fs.readFileSync(path.join(conf.SSL, fileName));
-}

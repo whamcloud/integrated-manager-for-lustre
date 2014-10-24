@@ -59,7 +59,7 @@ var modules = [{
   loop: ['factory', require('./loop-factory')],
   primusServerWrite: ['factory', require('./primus-server-write')],
   requestChannel: ['factory', require('./request-channel')],
-  patchedRequest: ['value', require('./request-patched')],
+  requestModule: ['value', require('request')],
   request: ['factory', require('./request')],
   Q: ['value', require('q')],
   timers: ['value', require('./timers')],

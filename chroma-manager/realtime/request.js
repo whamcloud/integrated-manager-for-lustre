@@ -27,22 +27,24 @@ var _ = require('lodash');
 /**
  * Returns a wrapped default request.
  * @param {Object} conf
- * @param {Object} patchedRequest
+ * @param {Object} requestModule
  * @param {Object} logger
  * @param {Q} Q
  * @param {Function} jsonMask
  * @param {Object} VERBS
  * @returns {Object}
  */
-module.exports = function requestFactory (conf, patchedRequest, logger, Q, jsonMask, VERBS) {
+module.exports = function requestFactory (conf, requestModule, logger, Q, jsonMask, VERBS) {
   var pendCount = 0;
-  var defaultRequest = patchedRequest.defaults({
+  var defaultRequest = requestModule.defaults({
     json: true,
-    ca: conf.caFile,
     strictSSL: false,
-    maxSockets: 25,
     forever: true,
-    timeout: 180000 // 3 minutes
+    useQuerystring: true,
+    timeout: 60000, // 1 minute
+    pool: {
+      maxSockets: 20
+    }
   });
 
   return Object.keys(VERBS)
