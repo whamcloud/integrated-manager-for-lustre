@@ -33,7 +33,7 @@ var _ = require('lodash');
  * @param {Object} logger
  * @returns {Resource}
  */
-module.exports = function resourceFactory(request, logger) {
+module.exports = function resourceFactory (request, logger) {
   /*
    * The Base Resource
    * @name Resource
