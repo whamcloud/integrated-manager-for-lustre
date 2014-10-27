@@ -1,16 +1,18 @@
 {
   "name": "socket-router",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A simple utility to route requests to actions.",
   "main": "index.js",
   "scripts": {
     "test": "mjnw",
-    "cover": "cover"
+    "cover": "cover",
+    "ziplock": "../ziplocker/bin/ziplocker --overrides.ziplockDir='../../../../chroma-externals/'",
+    "zipdev": "../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'"
   },
-  "author": "Joe Grund",
+  "author": "IML Team",
   "license": "MIT",
   "dependencies": {
-    "lodash.find": "2.4.1",
+    "lodash": "2.4.1",
     "path-to-regexp": "0.2.4"
   },
   "devDependencies": {

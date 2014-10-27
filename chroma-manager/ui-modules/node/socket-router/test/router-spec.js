@@ -24,7 +24,7 @@ describe('Router', function () {
     expect(action).toHaveBeenCalledOnce();
   });
 
-  it('should call a matched route with a request object and response object', function () {
+  it('should call a matched route with request response and next', function () {
     var action = jasmine.createSpy('action');
 
     router.route('/foo/').get(action);
@@ -44,7 +44,8 @@ describe('Router', function () {
       {
         spark: {},
         ack: undefined
-      });
+      },
+      jasmine.any(Function));
   });
 
   it('should handle named parameters', function () {
@@ -65,7 +66,8 @@ describe('Router', function () {
     }, {
       spark: {},
       ack: undefined
-    });
+    },
+    jasmine.any(Function));
   });
 
   it('should handle regexp parameters', function () {
@@ -86,7 +88,8 @@ describe('Router', function () {
     }, {
       spark: {},
       ack: undefined
-    });
+    },
+    jasmine.any(Function));
   });
 
   it('should have an all method', function () {
@@ -173,7 +176,8 @@ describe('Router', function () {
     }, {
       spark: {},
       ack: jasmine.any(Function)
-    });
+    },
+    jasmine.any(Function));
   });
 
   describe('the all method', function () {
@@ -220,11 +224,14 @@ describe('Router', function () {
     });
   });
 
-  describe('overwriting routes', function () {
+  describe('adding routes', function () {
     var fooAction1, fooAction2;
 
     beforeEach(function () {
-      fooAction1 = jasmine.createSpy('fooAction1');
+      fooAction1 = jasmine.createSpy('fooAction1')
+        .and.callFake(function (req, resp, next) {
+          next(req, resp);
+        });
       fooAction2 = jasmine.createSpy('fooAction2');
 
       router.route('/foo/bar/').get(fooAction1);
@@ -232,12 +239,56 @@ describe('Router', function () {
       router.go('/foo/bar/', 'get', {});
     });
 
-    it('should ignore the old route', function () {
-      expect(fooAction1).not.toHaveBeenCalled();
+    it('should call the old route', function () {
+      expect(fooAction1).toHaveBeenCalled();
     });
 
     it('should call the new route', function () {
       expect(fooAction2).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('route middleware', function () {
+    var beforeAction, middleAction, afterAction, callNext;
+
+    beforeEach(function () {
+      beforeAction = jasmine.createSpy('beforeAction');
+      middleAction = jasmine.createSpy('middleAction');
+      afterAction = jasmine.createSpy('afterAction');
+
+      callNext = function callNext (spy) {
+        var args = spy.calls.mostRecent().args;
+        args[2](args[0], args[1]);
+      };
+
+      router
+        .addStart(beforeAction)
+        .addEnd(afterAction)
+        .route('/foo/bar/').get(middleAction);
+      router.go('/foo/bar/', 'get', {});
+    });
+
+    it('should call before', function () {
+      expect(beforeAction).toHaveBeenCalledOnce();
+    });
+
+    it('should not call middle', function () {
+      expect(middleAction).not.toHaveBeenCalled();
+    });
+
+    it('should not call end', function () {
+      expect(afterAction).not.toHaveBeenCalled();
+    });
+
+    it('should call middle after before', function () {
+      callNext(beforeAction);
+      expect(middleAction).toHaveBeenCalledOnce();
+    });
+
+    it('should call after after before and middle', function () {
+      callNext(beforeAction);
+      callNext(middleAction);
+      expect(afterAction).toHaveBeenCalledOnce();
     });
   });
 });

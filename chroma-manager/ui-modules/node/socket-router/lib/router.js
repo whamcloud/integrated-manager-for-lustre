@@ -23,11 +23,14 @@
 'use strict';
 
 var format = require('util').format;
-var find = require('lodash.find');
+var _ = require('lodash');
 var pathRegexp = require('path-to-regexp');
 var verbs = ['get', 'post', 'put', 'patch', 'delete'];
 var verbsPlusAll = verbs.concat('all');
+var pipeline = require('./pipeline');
 var routes = [];
+var start = [];
+var end = [];
 
 /**
  * A router singleton.
@@ -40,7 +43,7 @@ var router = {
    * @returns {Object} A pathRouter object.
    */
   route: function addRoute (path) {
-    var route = find(routes, { path: path });
+    var route = _.find(routes, { path: path });
 
     if (route)
       return route.pathRouter;
@@ -71,16 +74,16 @@ var router = {
    */
   go: function go (path, verb, spark, data, ack) {
     var matched = routes.some(function findMatch (route) {
-      var action;
+      var routeActions;
 
       var matches = route.regexp.exec(path);
 
       if (!matches) return false;
 
       if (route.pathRouter.verbs[verb] != null)
-        action = route.pathRouter.verbs[verb];
+        routeActions = route.pathRouter.verbs[verb];
       else if (route.pathRouter.verbs.all != null)
-        action = route.pathRouter.verbs.all;
+        routeActions = route.pathRouter.verbs.all;
       else
         throw new Error(format('Route: %s does not have verb %s', path, verb));
 
@@ -96,7 +99,7 @@ var router = {
         ack: ack
       };
 
-      action(req, resp);
+      pipeline(start.concat(routeActions).concat(end), req, resp);
 
       return true;
     });
@@ -117,6 +120,28 @@ var router = {
    */
   reset: function reset () {
     routes.length = 0;
+    start.length = 0;
+    end.length = 0;
+  },
+  /**
+   * Adds middleware at the start of the chain.
+   * @param {Function} action
+   * @returns {router}
+   */
+  addStart: function addStart (action) {
+    start.push(action);
+
+    return this;
+  },
+  /**
+   * Adds middleware at the end of the chain.
+   * @param {Function} action
+   * @returns {router}
+   */
+  addEnd: function addEnd (action) {
+    end.push(action);
+
+    return this;
   },
   verbs: verbs.reduce(function buildVerbObject (verbs, verb) {
     verbs[verb.toUpperCase()] = verb;
@@ -142,13 +167,13 @@ module.exports = router;
 function getAPathRouter () {
   return verbsPlusAll.reduce(function buildMethods (pathRouter, verb) {
     /**
-     * Pushes a verb corresponding to an action into this router's
-     * verb list.
+     * Adds an action to the corresponding verb.
      * @param {Function} action
      * @returns {Object}
      */
     pathRouter[verb] = function verbMapper (action) {
-      pathRouter.verbs[verb] = action;
+      pathRouter.verbs[verb] = pathRouter.verbs[verb] || [];
+      pathRouter.verbs[verb].push(action);
 
       return pathRouter;
     };
