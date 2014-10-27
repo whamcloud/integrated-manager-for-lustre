@@ -1,6 +1,6 @@
 'use strict';
 
-var reqChannelValidatorFactory = require('../../req-channel-validator');
+var reqChannelValidatorFactory = require('../../req-channel-validator').wiretree;
 var Validator = require('jsonschema').Validator;
 
 describe('request channel validator', function () {

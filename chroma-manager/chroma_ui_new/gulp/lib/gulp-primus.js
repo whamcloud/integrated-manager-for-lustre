@@ -1,14 +1,14 @@
 'use strict';
 
 var File = require('gulp-util').File;
-var generateLib = require('../../../realtime/generate-lib');
+var getClientLib = require('../../../realtime/get-client-lib');
 var from = require('from');
 
 module.exports = function gulpPrimus () {
   return from(function fromStream () {
     var file = new File({
       path: 'chroma_ui/vendor/primus-client/primus.js',
-      contents: new Buffer(generateLib())
+      contents: new Buffer(getClientLib())
     });
 
     this.emit('data', file);

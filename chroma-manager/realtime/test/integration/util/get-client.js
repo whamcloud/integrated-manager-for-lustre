@@ -7,7 +7,7 @@ var conf = require('../../../conf');
 var errorSerializer = require('bunyan/lib/bunyan').stdSerializers.err;
 var MultiplexSpark = require('primus-multiplex/lib/server/spark');
 var primusServerWriteFactory = require('../../../primus-server-write');
-var primusServerWrite = primusServerWriteFactory(errorSerializer, MultiplexSpark);
+var primusServerWrite = primusServerWriteFactory.wiretree(errorSerializer, MultiplexSpark);
 
 module.exports = function getClient () {
   var Socket = Primus.createSocket({parser: 'JSON', transformer: 'socket.io', plugin: {

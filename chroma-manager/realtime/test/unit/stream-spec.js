@@ -1,6 +1,6 @@
 'use strict';
 
-var streamFactory = require('../../stream'),
+var streamFactory = require('../../stream').wiretree,
   Q = require('q');
 
 describe('stream', function () {

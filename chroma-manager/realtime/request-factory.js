@@ -33,7 +33,7 @@
  * @param {Object} _
  * @returns {Object}
  */
-module.exports = function requestFactory (conf, requestModule, logger, Q, jsonMask, VERBS, _) {
+exports.wiretree = function requestFactory (conf, requestModule, logger, Q, jsonMask, VERBS, _) {
   var pendCount = 0;
   var defaultRequest = requestModule.defaults({
     json: true,

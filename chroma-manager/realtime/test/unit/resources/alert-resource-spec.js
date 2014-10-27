@@ -1,6 +1,6 @@
 'use strict';
 
-var commandResourceFactory = require('../../../resources/command-resource');
+var commandResourceFactory = require('../../../resources/command-resource').wiretree;
 
 describe('Command resource', function () {
   var Resource, CommandResource, commandResource;

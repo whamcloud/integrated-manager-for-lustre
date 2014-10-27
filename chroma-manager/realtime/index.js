@@ -33,63 +33,77 @@ function cleanShutdown (signal) {
   };
 }
 
-var di = require('di');
-var fs = require('fs');
+var WireTree = require('wiretree');
 var router = require('socket-router');
-var resources = require('./resources');
-var path = require('path');
 var Validator = require('jsonschema').Validator;
-
+var _ = require('lodash-mixins');
 var http = require('http');
-
 http.globalAgent.maxSockets = 25;
 
-var modules = [{
-  conf: ['value', require('./conf')],
-  http: ['value', http],
-  _: ['value', require('lodash-mixins')],
-  Primus: ['value', require('primus')],
-  jsonMask: ['value', require('json-mask')],
-  serverWrite: ['value', require('./primus-server-write')],
-  multiplex: ['value', require('primus-multiplex')],
-  Emitter: ['value', require('primus-emitter')],
-  VERBS: ['value', router.verbs],
-  errorSerializer: ['value', require('bunyan').stdSerializers.err],
-  MultiplexSpark: ['value', require('primus-multiplex/lib/server/spark')],
-  logger: ['factory', require('./logger')],
-  loop: ['factory', require('./loop-factory')],
-  primusServerWrite: ['factory', require('./primus-server-write')],
-  requestChannel: ['factory', require('./request-channel')],
-  requestModule: ['value', require('request')],
-  request: ['factory', require('./request')],
-  Q: ['value', require('q')],
-  timers: ['value', require('./timers')],
-  router: ['value', router],
-  channelFactory: ['factory', require('./channel')],
-  Stream: ['factory', require('./stream')],
-  FileSystemResource: ['factory', resources.fileSystemResourceFactory],
-  HostResource: ['factory', resources.hostResourceFactory],
-  primus: ['factory', require('./primus')],
-  Resource: ['factory', resources.resourceFactory],
-  TargetResource: ['factory', resources.targetResourceFactory],
-  HsmCopytoolResource: ['factory', resources.hsmCopytoolResourceFactory],
-  HsmCopytoolOperationResource: ['factory', resources.hsmCopytoolOperationResourceFactory],
-  TargetOstMetricsResource: ['factory', resources.targetOstMetricsResourceFactory],
-  AlertResource: ['factory', resources.alertResourceFactory],
-  EventResource: ['factory', resources.eventResourceFactory],
-  CommandResource: ['factory', resources.commandResourceFactory],
-  NotificationResource: ['factory', resources.notificationResourceFactory],
-  requestChannelValidator: ['factory', require('./req-channel-validator')],
-  validator: ['value', new Validator()],
-  promisedFile: ['value', require('promised-file')],
-  srcmapReverse: ['value', require('srcmap-reverse')]
-}];
+if (require.main === module) {
+  var tree = createWireTree();
+  tree.get('main');
+} else {
+  module.exports = createWireTree;
+}
 
-loadDir('./routes');
+/**
+ * Creates a new WireTree instance and returns it.
+ * @param {Object} [conf] A conf to use.
+ * @returns {Object}
+ */
+function createWireTree (conf) {
+  var tree = new WireTree(__dirname);
 
-var injector = new di.Injector(modules);
+  tree.add(router, 'router');
+  tree.add(router.verbs, 'VERBS');
+  tree.add(new Validator(), 'validator');
+  tree.add(_, '_');
+  tree.add(require('bunyan').stdSerializers.err, 'errorSerializer');
 
-injector.invoke(function (logger, channelFactory,
+  conf = conf || require('./conf');
+  tree.add(conf, 'conf');
+
+  var deps = {
+    './channel': 'channelFactory',
+    'json-mask': 'jsonMask',
+    './logger': 'logger',
+    './loop-factory': 'loop',
+    primus: 'Primus',
+    './primus': 'primus',
+    'primus-emitter': 'Emitter',
+    'primus-multiplex': 'multiplex',
+    './primus-server-write': 'primusServerWrite',
+    'promised-file': 'promisedFile',
+    q: 'Q',
+    request: 'requestModule',
+    './request-factory': 'request',
+    './request-channel': 'requestChannel',
+    './req-channel-validator': 'requestChannelValidator',
+    'srcmap-reverse': 'srcmapReverse',
+    './stream': 'Stream',
+    'primus-multiplex/lib/server/spark': 'MultiplexSpark',
+    './timers': 'timers'
+  };
+
+  tree.folder(__dirname + '/routes', {
+    transform: transform
+  });
+
+  tree.folder(__dirname + '/resources', {
+    transform: transformUpper
+  });
+
+  Object.keys(deps).forEach(function addDep (dep) {
+    tree.add(require(dep), deps[dep]);
+  });
+
+  tree.add({ wiretree: main }, 'main');
+
+  return tree;
+}
+
+function main (logger, channelFactory,
                           FileSystemResource, HostResource, TargetResource, TargetOstMetricsResource,
                           HsmCopytoolResource, HsmCopytoolOperationResource,
                           NotificationResource, requestChannel) {
@@ -105,23 +119,14 @@ injector.invoke(function (logger, channelFactory,
   channelFactory('copytool_operation', HsmCopytoolOperationResource);
   channelFactory('targetostmetrics', TargetOstMetricsResource);
   channelFactory('notification', NotificationResource);
-});
+}
 
-function loadDir (dir) {
-  var files = fs.readdirSync(path.normalize(__dirname + '/' + dir));
-
-  files.forEach(function (file) {
-    var withoutExtension = file.split('.').slice(0, -1).join('.');
-    var withoutExtensionParts = withoutExtension.split('-');
-    var type = withoutExtensionParts.pop().toLowerCase();
-    var name = withoutExtensionParts.join('-');
-
-    modules[0][camelCaseText(name)] = [type, require(dir + '/' + withoutExtension)];
+function transform (text) {
+  return text.split(/\-|\./).reduce(function convert (str, part) {
+    return str += _.capitalize(part);
   });
 }
 
-function camelCaseText (text) {
-  return text.split('-').reduce(function convert (str, part) {
-    return (str += part.charAt(0).toUpperCase() + part.slice(1));
-  });
+function transformUpper (text) {
+  return transform(_.capitalize(text));
 }

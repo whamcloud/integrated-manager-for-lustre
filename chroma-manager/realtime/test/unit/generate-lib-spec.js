@@ -1,51 +1,28 @@
 'use strict';
 
-var proxyquire = require('proxyquire');
+var generateLib = require('../../generate-lib').wiretree;
 
 describe('generate lib', function () {
-  var generateLib, PrimusStub, primusStub, primusMultiplexStub,
-    EmitterStub, primusServerWriteStub, lib;
+  var primus, lib;
 
   beforeEach(function () {
-    PrimusStub = jasmine.createSpy('Primus');
+    primus = {
+      library: jasmine.createSpy('library').andReturn('lib'),
+      end: jasmine.createSpy('end')
+    };
 
-    primusStub = jasmine.createSpy('primus')
-      .andReturn({
-        library: function library () {
-          return 'foo';
-        },
-        end: jasmine.createSpy('end')
-      });
-
-    primusMultiplexStub = jasmine.createSpy('primusMultiplex');
-
-    primusServerWriteStub = jasmine.createSpy('primusServerWrite');
-
-    EmitterStub = jasmine.createSpy('Emitter');
-
-    generateLib = proxyquire('../../generate-lib', {
-      primus: PrimusStub,
-      './primus': primusStub,
-      'primus-multiplex': primusMultiplexStub,
-      'primus-emitter': EmitterStub,
-      './primus-server-write': function primusServerWriteFactory () {
-        return primusServerWriteStub;
-      }
-    });
-
-    lib = generateLib();
+    lib = generateLib(primus);
   });
 
-  it('should create Primus with the expected params', function () {
-    expect(primusStub).toHaveBeenCalledOnceWith(
-      PrimusStub, { primusPort: 8889 }, primusMultiplexStub, primusServerWriteStub, EmitterStub);
-  });
-
-  it('should return the client lib when called', function () {
-    expect(lib).toEqual('foo');
+  it('should invoke the library method', function () {
+    expect(primus.library).toHaveBeenCalledOnce();
   });
 
   it('should end the instance', function () {
-    expect(primusStub.plan().end).toHaveBeenCalledOnce();
+    expect(primus.end).toHaveBeenCalledOnce();
+  });
+
+  it('should return the lib', function () {
+    expect(lib).toEqual('lib');
   });
 });

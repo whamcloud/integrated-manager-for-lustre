@@ -25,7 +25,7 @@
 var inherits = require('util').inherits;
 
 
-module.exports = function EventResourceFactory(Resource) {
+exports.wiretree = function EventResourceFactory (Resource) {
   /**
    * Bridge to the event api endpoint.
    * @constructor

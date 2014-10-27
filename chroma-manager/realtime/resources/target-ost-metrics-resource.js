@@ -24,7 +24,8 @@
 
 var inherits = require('util').inherits;
 
-module.exports = function targetOstMetricsResourceFactory(TargetResource, Q, _) {
+
+exports.wiretree = function targetOstMetricsResourceFactory (TargetResource, Q, _) {
   /**
    * Extension of the TargetResource.
    * Used for joining target names to OST metrics.

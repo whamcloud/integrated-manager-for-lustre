@@ -22,21 +22,10 @@
 
 'use strict';
 
-var primus = require('./primus');
-var Primus = require('primus');
-var multiplex = require('primus-multiplex');
-var errorSerializer = require('bunyan/lib/bunyan').stdSerializers.err;
-var MultiplexSpark = require('primus-multiplex/lib/server/spark');
-var primusServerWriteFactory = require('./primus-server-write');
-var primusServerWrite = primusServerWriteFactory(errorSerializer, MultiplexSpark);
-var Emitter = require('primus-emitter');
+exports.wiretree = function generateLib (primus) {
+  var lib = primus.library();
 
-module.exports = function () {
-  var instance = primus(Primus, { primusPort: 8889 }, multiplex, primusServerWrite, Emitter);
-
-  var lib = instance.library();
-
-  instance.end();
+  primus.end();
 
   return lib;
 };

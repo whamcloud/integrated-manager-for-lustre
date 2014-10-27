@@ -26,7 +26,7 @@ var bunyan = require('bunyan'),
   path = require('path'),
   Logger = require('bunyan/lib/bunyan');
 
-module.exports = function loggerFactory(conf) {
+exports.wiretree = function loggerFactory (conf) {
   var logPath, level;
 
   if (conf.isProd) {

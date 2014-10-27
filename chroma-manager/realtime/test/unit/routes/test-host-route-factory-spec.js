@@ -1,6 +1,6 @@
 'use strict';
 
-var testHostRouteFactory = require('../../../routes/test-host-route-factory');
+var testHostRouteFactory = require('../../../routes/test-host-route').wiretree;
 var Q = require('q');
 var _ = require('lodash-mixins');
 

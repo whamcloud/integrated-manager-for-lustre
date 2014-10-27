@@ -22,7 +22,6 @@
 
 'use strict';
 
-
 module.exports = {
   setTimeout: setTimeout,
   setInterval: setInterval,

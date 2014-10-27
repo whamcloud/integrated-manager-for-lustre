@@ -1,6 +1,6 @@
 'use strict';
 
-var wildcardRoutesFactory = require('../../../routes/wildcard-routes-factory');
+var wildcardRoutesFactory = require('../../../routes/wildcard-routes').wiretree;
 var errorSerializer = require('bunyan').stdSerializers.err;
 var _ = require('lodash-mixins');
 

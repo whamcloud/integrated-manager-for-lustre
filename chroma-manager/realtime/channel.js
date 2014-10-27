@@ -24,7 +24,7 @@
 
 var errorSerializer = require('bunyan/lib/bunyan').stdSerializers.err;
 
-module.exports = function channelFactory (primus, logger, Stream, _) {
+exports.wiretree = function channelFactory (primus, logger, Stream, _) {
   return function setup(channelName, Resource) {
     var log = logger.child({channelName: channelName});
 

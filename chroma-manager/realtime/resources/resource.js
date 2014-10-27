@@ -33,7 +33,7 @@ var uriTemplate = require('uritemplate');
  * @param {Object} _
  * @returns {Resource}
  */
-module.exports = function resourceFactory (request, logger, _) {
+exports.wiretree = function resourceFactory (request, logger, _) {
   /*
    * The Base Resource
    * @name Resource

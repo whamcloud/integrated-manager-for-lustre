@@ -1,6 +1,6 @@
 'use strict';
 
-var primusFactory = require('../../primus');
+var primusFactory = require('../../primus').wiretree;
 
 describe('primus', function () {
   var Primus, Emitter, conf, multiplex, primusServerWrite, primus;

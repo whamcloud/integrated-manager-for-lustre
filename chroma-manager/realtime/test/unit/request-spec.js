@@ -1,7 +1,7 @@
 'use strict';
 
 var Q = require('q');
-var requestFactory = require('../../request');
+var requestFactory = require('../../request-factory').wiretree;
 var jsonMask = require('json-mask');
 var VERBS = require('socket-router').verbs;
 var _ = require('lodash-mixins');
@@ -111,7 +111,7 @@ describe('request', function () {
       });
     });
 
-    it('should strip leading slashes from the path for ' + verb , function () {
+    it('should strip leading slashes from the path for ' + verb, function () {
       request[verb]('/foo/bar/');
 
       expect(Q.ninvoke).toHaveBeenCalledOnceWith(requestInstance, verb, 'https://fake.com/api/foo/bar/', {});

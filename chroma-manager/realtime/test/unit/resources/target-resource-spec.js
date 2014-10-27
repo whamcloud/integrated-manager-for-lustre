@@ -1,6 +1,6 @@
 'use strict';
 
-var targetResourceFactory = require('../../../resources/target-resource');
+var targetResourceFactory = require('../../../resources/target-resource').wiretree;
 
 describe('Host resource', function () {
   var Resource, TargetResource, targetResource;

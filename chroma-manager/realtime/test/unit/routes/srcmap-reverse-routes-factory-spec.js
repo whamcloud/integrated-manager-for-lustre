@@ -1,6 +1,6 @@
 'use strict';
 
-var srcmapReverseRoutesFactory = require('../../../routes/srcmap-reverse-routes-factory');
+var srcmapReverseRoutesFactory = require('../../../routes/srcmap-reverse-routes').wiretree;
 var Q = require('q');
 
 describe('srcmap-reverse reverse in realtime', function () {

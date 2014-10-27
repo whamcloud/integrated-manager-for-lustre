@@ -1,9 +1,10 @@
 'use strict';
 
 var Q = require('q');
-var notificationsResourceModule = require('../../../resources/notification-resource');
-var notificationsResourceFactory = notificationsResourceModule.notificationResourceFactory;
-var STATES = notificationsResourceModule.STATES;
+
+var notificationsResource = require('../../../resources/notification-resource');
+var notificationsResourceFactory = notificationsResource.wiretree;
+var STATES = notificationsResource.STATES;
 var _ = require('lodash-mixins');
 
 describe('Notifications resource', function () {

@@ -1,6 +1,6 @@
 'use strict';
 
-var fileSystemResourceFactory = require('../../../resources/file-system-resource');
+var fileSystemResourceFactory = require('../../../resources/file-system-resource').wiretree;
 
 describe('file system resource', function () {
   var Resource, FileSystemResource, fileSystemResource;

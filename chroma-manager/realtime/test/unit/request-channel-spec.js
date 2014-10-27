@@ -1,6 +1,6 @@
 'use strict';
 
-var requestChannelFactory = require('../../request-channel');
+var requestChannelFactory = require('../../request-channel').wiretree;
 
 describe('request channel', function () {
 

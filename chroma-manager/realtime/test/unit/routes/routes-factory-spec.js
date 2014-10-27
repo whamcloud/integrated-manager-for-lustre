@@ -1,6 +1,6 @@
 'use strict';
 
-var routesFactory = require('../../routes/routes-factory');
+var routesFactory = require('../../../routes/routes').wiretree;
 
 describe('routes', function () {
   var routes, wildcardRoutes, srcmapReverseRoutes, testHostRoute;

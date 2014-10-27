@@ -35,9 +35,7 @@ exports.STATES = STATES = {
   COMPLETE: 'COMPLETE'
 };
 
-exports.notificationResourceFactory = notificationResourceFactory;
-
-function notificationResourceFactory (Resource, AlertResource, _) {
+exports.wiretree = function notificationResourceFactory (Resource, AlertResource, _) {
   var alertResource = new AlertResource();
 
   /**
@@ -100,4 +98,4 @@ function notificationResourceFactory (Resource, AlertResource, _) {
   };
 
   return NotificationResource;
-}
+};

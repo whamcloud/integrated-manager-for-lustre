@@ -22,7 +22,7 @@
 
 'use strict';
 
-module.exports = function srcmapReverseRoutesFactory(router, request, logger, srcmapReverse, promisedFile, conf) {
+exports.wiretree = function srcmapReverseRoutesWrapper (router, request, logger, srcmapReverse, promisedFile, conf) {
   return function srcmapReverseRoutes() {
 
     router.post('/srcmap-reverse', function srcmapReverseHandler (req, resp) {
@@ -30,7 +30,7 @@ module.exports = function srcmapReverseRoutesFactory(router, request, logger, sr
 
       promisedFile.getFile(conf.sourceMapDir)
         .then(function reverseTrace (sourceMapFile) {
-          return srcmapReverse.execute(req.data.stack, sourceMapFile)
+          return srcmapReverse.execute(req.data.stack, sourceMapFile);
         })
         .catch(function handleErr (err) {
           resp.ack(resp.spark.getErrorFormat(500, err));
@@ -57,7 +57,6 @@ module.exports = function srcmapReverseRoutesFactory(router, request, logger, sr
         })
         .catch(function doNothing () { })
         .done();
-
     });
   };
 };

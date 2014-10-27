@@ -1,7 +1,7 @@
 'use strict';
 
 var Q = require('q');
-var channelFactory = require('../../channel');
+var channelFactory = require('../../channel').wiretree;
 var _ = require('lodash-mixins');
 
 describe('channel', function () {

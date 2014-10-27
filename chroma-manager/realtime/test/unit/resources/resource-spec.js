@@ -1,6 +1,6 @@
 'use strict';
 
-var resourceFactory = require('../../../resources/resource');
+var resourceFactory = require('../../../resources/resource').wiretree;
 var _ = require('lodash-mixins');
 
 describe('resource', function () {

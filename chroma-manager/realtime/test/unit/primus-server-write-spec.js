@@ -1,6 +1,6 @@
 'use strict';
 
-var primusServerWriteFactory = require('../../primus-server-write');
+var primusServerWriteFactory = require('../../primus-server-write').wiretree;
 var _ = require('lodash-mixins');
 var format = require('util').format;
 

@@ -1,7 +1,7 @@
 'use strict';
 
 var Q = require('q');
-var targetOstMetricsResourceFactory = require('../../../resources/target-ost-metrics-resource');
+var targetOstMetricsResourceFactory = require('../../../resources/target-ost-metrics-resource').wiretree;
 var _ = require('lodash-mixins');
 
 describe('Target ost metrics resource', function () {

@@ -22,7 +22,7 @@
 
 'use strict';
 
-module.exports = function testHostRouteFactory (router, request, loop, logger, Q, _) {
+exports.wiretree = function testHostRouteWrapper (router, request, loop, logger, Q, _) {
   var jobRegexp = /^\/api\/job\/(\d+)\/$/;
 
   return function testHostRoute () {

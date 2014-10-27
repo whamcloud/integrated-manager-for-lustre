@@ -25,7 +25,7 @@
 var inherits = require('util').inherits;
 
 
-module.exports = function hsmCopytoolResourceFactory(Resource) {
+exports.wiretree = function hsmCopytoolResourceFactory (Resource) {
   /**
    * Bridge to the copytool api endpoint.
    * @constructor

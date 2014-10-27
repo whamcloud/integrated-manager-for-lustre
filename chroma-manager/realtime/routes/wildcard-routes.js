@@ -22,7 +22,7 @@
 
 'use strict';
 
-module.exports = function wildcardRoutesFactory(router, request, loop, logger, _) {
+exports.wiretree = function wildcardRoutesWrapper (router, request, loop, logger, _) {
   return function wildcardRoutes () {
     /**
      * Handles all unmatched requests

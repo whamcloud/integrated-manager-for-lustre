@@ -25,7 +25,7 @@
 var inherits = require('util').inherits;
 
 
-module.exports = function alertResourceFactory(Resource) {
+exports.wiretree = function alertResourceFactory (Resource) {
   /**
    * Bridge to the alert api endpoint.
    * @constructor

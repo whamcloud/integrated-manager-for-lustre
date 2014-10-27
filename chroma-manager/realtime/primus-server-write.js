@@ -28,7 +28,7 @@
  * @param {Function} MultiplexSpark
  * @returns {Object}
  */
-module.exports = function primusServerWriteFactory(errorSerializer, MultiplexSpark) {
+exports.wiretree = function primusServerWriteFactory (errorSerializer, MultiplexSpark) {
   return {
     /**
      * Add methods to write / end data in a predefined format.

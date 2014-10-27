@@ -31,7 +31,7 @@
  * @param {Function} Emitter
  * @returns {Object} The primus instance.
  */
-module.exports = function getPrimus (Primus, conf, multiplex, primusServerWrite, Emitter) {
+exports.wiretree = function getPrimus (Primus, conf, multiplex, primusServerWrite, Emitter) {
   var primus = Primus.createServer({
     parser: 'JSON',
     transformer: 'socket.io',

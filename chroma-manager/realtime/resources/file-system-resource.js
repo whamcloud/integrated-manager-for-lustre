@@ -24,8 +24,7 @@
 
 var inherits = require('util').inherits;
 
-
-module.exports = function fileSystemResourceFactory(Resource) {
+exports.wiretree = function fileSystemResourceFactory (Resource) {
   /**
    * Bridge to the filesystem api endpoint.
    * @constructor

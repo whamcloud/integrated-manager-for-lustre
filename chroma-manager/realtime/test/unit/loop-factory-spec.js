@@ -1,6 +1,6 @@
 'use strict';
 
-var loopFactory = require('../../loop-factory');
+var loopFactory = require('../../loop-factory').wiretree;
 var _ = require('lodash-mixins');
 
 describe('loop', function () {

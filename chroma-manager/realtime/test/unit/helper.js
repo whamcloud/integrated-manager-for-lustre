@@ -1,3 +1,5 @@
+'use strict';
+
 require('jasmine-n-matchers');
 require('jasmine-stealth');
 

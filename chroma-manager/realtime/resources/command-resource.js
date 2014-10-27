@@ -25,7 +25,7 @@
 var inherits = require('util').inherits;
 
 
-module.exports = function commandResourceFactory(Resource) {
+exports.wiretree = function commandResourceFactory (Resource) {
   /**
    * Bridge to the command api endpoint.
    * @constructor

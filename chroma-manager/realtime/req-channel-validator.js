@@ -27,7 +27,7 @@
  * @param {Object} validator
  * @returns {Function}
  */
-module.exports = function requestChannelValidatorFactory (validator) {
+exports.wiretree = function requestChannelValidatorFactory (validator) {
   var schema = {
     id: '/RequestData',
     type: 'object',

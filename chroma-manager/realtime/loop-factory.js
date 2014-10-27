@@ -22,7 +22,7 @@
 
 'use strict';
 
-module.exports = function loopFactory (timers, _) {
+exports.wiretree = function loopFactory (timers, _) {
   var DEFAULT_INTERVAL = 1000;
 
   /**

@@ -25,7 +25,7 @@
 var inherits = require('util').inherits;
 
 
-module.exports = function targetResourceFactory(Resource) {
+exports.wiretree = function targetResourceFactory (Resource) {
   /**
    * Bridge to the host api endpoint.
    * @constructor

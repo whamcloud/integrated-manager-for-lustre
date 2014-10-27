@@ -22,10 +22,10 @@
 
 'use strict';
 
-module.exports = function streamFactory(Q, timers) {
+exports.wiretree = function streamFactory (Q, timers) {
   /**
    * A class used for looping, with a latch function.
-   * @param [interval] number of seconds between polls. Defaults to 10s.
+   * @param {Number} [interval] number of seconds between polls. Defaults to 10s.
    * @constructor
    */
   function Stream (interval) {

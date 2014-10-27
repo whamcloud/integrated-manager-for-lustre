@@ -1,6 +1,6 @@
 'use strict';
 
-var alertResourceFactory = require('../../../resources/alert-resource');
+var alertResourceFactory = require('../../../resources/alert-resource').wiretree;
 
 describe('Alert resource', function () {
   var Resource, AlertResource, alertResource;

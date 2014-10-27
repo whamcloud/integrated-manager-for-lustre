@@ -31,7 +31,7 @@
  * @param {Function} requestChannelValidator
  * @returns {Object}
  */
-module.exports = function requestChannelFactory (primus, router, routes, logger, requestChannelValidator) {
+exports.wiretree = function requestChannelFactory (primus, router, routes, logger, requestChannelValidator) {
   /**
    * Inner factory.
    * @returns {Object}
