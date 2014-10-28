@@ -6,14 +6,14 @@
 # The install directory for the manager
 %{?!manager_root: %define manager_root /usr/share/chroma-manager}
 
-Summary: The Intel Manager for Lustre Monitoring and Adminisration Interface
+Summary: The Intel Manager for Lustre Monitoring and Administration Interface
 Name: %{name}
 Version: %{version}
 Release: %{release}
 Source0: %{name}-%{version}.tar.gz
-Source1: chroma-manager.conf
-Source2: chroma-supervisor-init.sh
-Source3: chroma-host-discover-init.sh
+Source1: chroma-supervisor-init.sh
+Source2: chroma-host-discover-init.sh
+Source3: chroma-max-clients-init.sh
 Source4: logrotate.cfg
 License: Proprietary
 Group: Development/Libraries
@@ -97,7 +97,7 @@ Obsoletes: nodejs-json-mask
 Obsoletes: nodejs-zeparser
 
 %description
-This is the Intel Manager for Lustre Monitoring and Adminstration Interface
+This is the Intel Manager for Lustre Monitoring and Administration Interface
 
 %package libs
 Summary: Common libraries for Chroma Server
@@ -131,13 +131,13 @@ This package contains the .py files stripped out of the production build.
 %prep
 %setup -n %{name}-%{version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
-echo -e "/^HTTPS_FRONTEND_PORT =/s/= .*$/= 443/\nwq" | ed settings.py 2>/dev/null
 
 %build
 %{__python} setup.py build
 # workaround setuptools inanity for top-level datafiles
 cp -a chroma-manager.wsgi build/lib
 cp -a production_supervisord.conf build/lib
+cp -a chroma-manager.conf.template build/lib
 
 %install
 %{__python} setup.py install --skip-build --root=%{buildroot}
@@ -146,9 +146,10 @@ mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
 mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,httpd/conf}.d
-cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d/chroma-manager.conf
-cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
-cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
+touch $RPM_BUILD_ROOT/etc/httpd/conf.d/chroma-manager.conf
+cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
+cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
+cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/chroma-max-clients
 install -m 644 %{SOURCE4} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
 # Nuke source code (HYD-1849), but preserve key .py files needed for operation
@@ -191,6 +192,12 @@ ed /etc/httpd/conf.d/wsgi.conf <<EOF 2>/dev/null
 w
 q
 EOF
+
+%{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_httpd.pyc \
+    $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/httpd/conf.d/chroma-manager.conf
+
+# Turn on worker
+sed -i 's/^#HTTPD=\/usr\/sbin\/httpd.worker/HTTPD=\/usr\/.\/sbin\/httpd.worker/' /etc/sysconfig/httpd
 
 # Start apache which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
@@ -254,6 +261,9 @@ if [ $1 -lt 1 ]; then
     if [ -d /var/lib/chroma ]; then
         rm -rf /var/lib/chroma
     fi
+
+    #Turn off worker
+    sed -i 's/^HTTPD=\/usr\/.\/sbin\/httpd.worker/#HTTPD=\/usr\/sbin\/httpd.worker/' /etc/sysconfig/httpd
 fi
 
 %files -f manager.files
@@ -264,10 +274,12 @@ fi
 /etc/httpd/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
+%attr(0755,root,root)/etc/init.d/chroma-max-clients
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
 %attr(0755,root,root)%{manager_root}/manage.pyc
 %{manager_root}/*.conf
 %{manager_root}/*.wsgi
+%{manager_root}/chroma-manager.conf.template
 %{manager_root}/chroma_ui/templates/*
 %{manager_root}/chroma_ui/static/*
 %{manager_root}/chroma_ui_new/templates/*

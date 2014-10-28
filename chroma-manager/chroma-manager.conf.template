@@ -38,6 +38,27 @@ Listen {{HTTP_FRONTEND_PORT}}
 
 DocumentRoot .
 
+KeepAlive On
+MaxKeepAliveRequests 500
+KeepAliveTimeout 2
+
+# worker MPM
+# StartServers: initial number of server processes to start
+# MaxClients: maximum number of simultaneous client connections
+# MinSpareThreads: minimum number of worker threads which are kept spare
+# MaxSpareThreads: maximum number of worker threads which are kept spare
+# ThreadsPerChild: constant number of worker threads in each server process
+# MaxRequestsPerChild: maximum number of requests a server process serves
+<IfModule worker.c>
+  StartServers 2
+  # MaxClients is calculated at runtime from the available memory
+  MaxClients {{APACHE_MAX_CLIENTS}}
+  MinSpareThreads 1
+  MaxSpareThreads 4
+  ThreadsPerChild 25
+  MaxRequestsPerChild 1000
+</IfModule>
+
 # HTTPS frontend
 NameVirtualHost *:{{HTTPS_FRONTEND_PORT}}
 
@@ -48,6 +69,7 @@ NameVirtualHost *:{{HTTP_API_PORT}}
 # HTTP just to redirect to HTTPS
 NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
 
+Timeout 60
 ProxyTimeout 330
 
 <VirtualHost *:{{HTTP_FRONTEND_PORT}}>
@@ -61,9 +83,9 @@ ProxyTimeout 330
     SSLProxyEngine on
     SSLProtocol all -SSLv2 -SSLv3
     SSLCipherSuite ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:!LOW:!SSLv2:+EXP
-    SSLCertificateFile {{ssl}}/manager.crt
-    SSLCertificateKeyFile {{ssl}}/manager.pem
-    SSLCACertificateFile {{ssl}}/authority.crt
+    SSLCertificateFile {{SSL_PATH}}/manager.crt
+    SSLCertificateKeyFile {{SSL_PATH}}/manager.pem
+    SSLCACertificateFile {{SSL_PATH}}/authority.crt
 
     RedirectMatch permanent ^/$ /ui/
 
@@ -77,7 +99,7 @@ ProxyTimeout 330
     # TODO: put something here to disallow all access other than
     # the whitelisted directories
 
-    Alias /certificate/ {{ssl}}/authority.crt
+    Alias /certificate/ {{SSL_PATH}}/authority.crt
 
     <Location "/favicon.ico">
         SetHandler None
@@ -91,7 +113,7 @@ ProxyTimeout 330
         </Location>
     </IfDefine>
     <IfDefine !ChromaDev>
-        Alias /static {{app}}/static/
+        Alias /static {{APP_PATH}}/static/
 
         <LocationMatch "/static/chroma_ui/styles/imports-.+.css">
             ExpiresActive On
@@ -228,8 +250,8 @@ Alias /repo {{REPO_PATH}}
 </VirtualHost>
 
 <VirtualHost *:{{HTTP_API_PORT}}>
-    WSGIScriptAlias / {{app}}/chroma-manager.wsgi
-    <Directory "{{app}}">
+    WSGIScriptAlias / {{APP_PATH}}/chroma-manager.wsgi
+    <Directory "{{APP_PATH}}">
         AllowOverride All
         Options None
         WSGIApplicationGroup %{GLOBAL}

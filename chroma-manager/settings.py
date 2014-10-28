@@ -24,6 +24,9 @@ import sys
 import os
 import socket
 import logging
+
+from scripts import httpd_settings
+
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 # We require python >= 2.6.5 for http://bugs.python.org/issue4978
@@ -32,6 +35,11 @@ if sys.version_info < (2, 6, 5):
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
+
+populator = httpd_settings.get_dev_httpd_settings if DEBUG else httpd_settings.get_production_httpd_settings
+
+for key, value in populator().items():
+    setattr(sys.modules[__name__], key, value)
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -160,7 +168,7 @@ INSTALLED_APPS = (
     'benchmark'
     )
 
-OPTIONAL_APPS = ['debug_toolbar', 'django_extensions', 'django_coverage', 'django_nose', 'djsupervisor']
+OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose', 'djsupervisor']
 for app in OPTIONAL_APPS:
     import imp
     try:
@@ -180,32 +188,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'middleware.TastypieTransactionMiddleware',
 )
-if 'debug_toolbar' in INSTALLED_APPS:
-    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
-
-
-def custom_show_toolbar(request):
-    return DEBUG
-
-DEBUG_TOOLBAR_CONFIG = {
-    'INTERCEPT_REDIRECTS': False,
-    'SHOW_TOOLBAR_CALLBACK': custom_show_toolbar,
-    'EXTRA_SIGNALS': [],
-    'HIDE_DJANGO_SQL': False,
-    'TAG': 'div',
-    }
-
-DEBUG_TOOLBAR_PANELS = (
-    'debug_toolbar.panels.version.VersionDebugPanel',
-    'debug_toolbar.panels.timer.TimerDebugPanel',
-    'debug_toolbar.panels.settings_vars.SettingsVarsDebugPanel',
-    'debug_toolbar.panels.headers.HeaderDebugPanel',
-    'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
-    'debug_toolbar.panels.template.TemplateDebugPanel',
-    'debug_toolbar.panels.sql.SQLDebugPanel',
-    'debug_toolbar.panels.signals.SignalDebugPanel',
-    'debug_toolbar.panels.logger.LoggingPanel',
-    )
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -316,16 +298,6 @@ DBLOG_HW = 1200000
 # The value at which we stop aging database log entries out to a flat
 # text file
 DBLOG_LW = 1000000
-
-# Internal port, used for inter-service communication
-HTTP_API_PORT = 8001
-# Internal port, used for inter-service communication
-HTTP_AGENT_PORT = 8002
-# Internal port, used for realtime UI clients
-REALTIME_PORT = 8888
-
-HTTP_FRONTEND_PORT = 9000
-HTTPS_FRONTEND_PORT = 8000
 
 # In development, where to serve repos from
 DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules['settings'].__file__)), 'repo')

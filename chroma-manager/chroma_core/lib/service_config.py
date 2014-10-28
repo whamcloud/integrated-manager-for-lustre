@@ -441,7 +441,7 @@ num  target     prot opt source               destination
 
     def _enable_services(self):
         log.info("Enabling daemons")
-        for service in self.CONTROLLED_SERVICES:
+        for service in self.CONTROLLED_SERVICES + ['chroma-max-clients']:
             self.try_shell(['chkconfig', '--add', service])
 
     def _start_services(self):

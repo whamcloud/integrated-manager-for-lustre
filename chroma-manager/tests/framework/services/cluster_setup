@@ -30,6 +30,9 @@ EOC
 yum makecache
 yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm patch httpd-devel
 
+# Turn on worker
+ed -s /etc/sysconfig/httpd <<< $',s/#HTTPD=\/usr\/sbin\/httpd.worker/HTTPD=\/usr\/sbin\/httpd.worker/g\nw'
+
 # Create a user so we can run chroma as non-root
 useradd chromatest
 su chromatest

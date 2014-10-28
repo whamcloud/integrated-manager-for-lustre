@@ -25,13 +25,13 @@
 configuration template, and outputs the configuration on stdout"""
 
 import sys
-from production_settings import production_settings
+from httpd_settings import get_production_httpd_settings
 
 template_file = sys.argv[1]
 
 
 config = open(template_file).read()
-for setting, value in production_settings.items():
-    config = config.replace("{{%s}}" % setting, value)
+for setting, value in get_production_httpd_settings().items():
+    config = config.replace("{{%s}}" % setting, str(value))
 
 print config

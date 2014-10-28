@@ -34,7 +34,7 @@ setup(
     author_email = "hpdd-info@intel.com",
     url = 'http://lustre.intel.com/',
     license = 'Proprietary',
-    description = 'The Intel Manager for Lustre Monitoring and Adminisration Interface',
+    description = 'The Intel Manager for Lustre Monitoring and Administration Interface',
     long_description = open('README.txt').read(),
     packages = find_packages(exclude=excludes) + [''],
     # include_package_data would be far more convenient, but the top-level
@@ -43,7 +43,7 @@ setup(
     # file creation/cleanup in the Makefile) to deal with the fact
     # that setuptools wants to strip the first character off the filename.
     package_data = {
-        '': [".chroma-manager.wsgi", ".production_supervisord.conf"],
+        '': [".chroma-manager.wsgi", ".production_supervisord.conf", ".chroma-manager.conf.template"],
         'chroma_core': ["fixtures/default_power_types.json"],
         'chroma_ui': ["static/js/lib/*.js", "static/js/lib/angular/*.js",
                       "static/js/lib/select-box-it/select-box-it.js",

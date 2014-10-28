@@ -86,8 +86,8 @@ class Command(BaseCommand):
         conf_text = Template(open(DEV_HTTPD_CONF_TEMPLATE).read()).render(Context({
             'var': DEV_HTTPD_DIR,
             'log': SITE_ROOT,
-            'ssl': SITE_ROOT,
-            'app': SITE_ROOT,
+            'SSL_PATH': settings.SSL_PATH,
+            'APP_PATH': settings.APP_PATH,
             'wsgi_path': self._wsgi_path,
             'module_path': self._module_path,
             'REPO_PATH': settings.DEV_REPO_PATH,
