@@ -1,4 +1,5 @@
 from django.utils import unittest
+
 import chroma_agent.chroma_common.lib.shell
 
 
@@ -15,7 +16,14 @@ class CommandCaptureTestCase(unittest.TestCase):
                 if type(result) == str:
                     return result
                 else:
+                    if result[0]:
+                        raise chroma_agent.chroma_common.lib.shell.CommandExecutionError(result[0],
+                                                                                         args,
+                                                                                         result[1],
+                                                                                         result[2])
                     return result[1]
+            else:
+                raise OSError(2, 'No such file or directory', args[0])
 
         self._old_try_run = chroma_agent.chroma_common.lib.shell.try_run
         chroma_agent.chroma_common.lib.shell.try_run = fake_try_run
@@ -29,6 +37,8 @@ class CommandCaptureTestCase(unittest.TestCase):
                     return (0, self.results[tuple(args)], 0)
                 else:
                     return result
+            else:
+                return (2, "", 'No such file or directory')
 
         self._old_run = chroma_agent.chroma_common.lib.shell.run
         chroma_agent.chroma_common.lib.shell.run = fake_run

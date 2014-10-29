@@ -41,8 +41,13 @@ class ExportedZfsDevice(object):
         imported_pools = shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
 
         if self.pool_path not in imported_pools:
-            shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.pool_path])
-            self.pool_imported = True
+            try:
+                shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.pool_path])
+                self.pool_imported = True
+            except shell.CommandExecutionError:
+                return False
+
+        return True
 
     def __exit__(self, type, value, traceback):
         if self.pool_imported:
@@ -77,12 +82,14 @@ class BlockDeviceZfs(BlockDevice):
         '''
         try:
             out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
-        except (shell.CommandExecutionError, OSError):
-            try:
-                with ExportedZfsDevice(self.device_path):
+        except OSError:                                 # zfs not found
+            out = ""
+        except shell.CommandExecutionError:             # device not available.
+            with ExportedZfsDevice(self.device_path) as available:
+                if (available):
                     out = shell.try_run(['zfs', 'get', '-H', '-o', 'value', 'guid', self._device_path])
-            except (shell.CommandExecutionError, OSError):      # Errors or zfs not found.
-                out = ''
+                else:
+                    out = ""
 
         lines = [l for l in out.split("\n") if len(l) > 0]
 
@@ -101,12 +108,14 @@ class BlockDeviceZfs(BlockDevice):
 
             try:
                 ls = shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
-            except (shell.CommandExecutionError, OSError):          # Errors or zfs not found.
-                try:
-                    with ExportedZfsDevice(self.device_path):
+            except OSError:                                         # Zfs not found.
+                return self._zfs_properties
+            except shell.CommandExecutionError:                     # Errors probably not imported.
+                with ExportedZfsDevice(self.device_path) as available:
+                    if available:
                         ls = shell.try_run(["zfs", "get", "-Hp", "-o", "property,value", "all", self._device_path])
-                except (shell.CommandExecutionError, OSError):      # Errors or zfs not found.
-                    return self._zfs_properties
+                    else:
+                        ls = ""
 
             for line in ls.split("\n"):
                 try:

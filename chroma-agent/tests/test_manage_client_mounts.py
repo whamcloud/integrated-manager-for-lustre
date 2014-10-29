@@ -18,6 +18,8 @@ class TestClientMountManagement(CommandCaptureTestCase):
     @patch('chroma_agent.action_plugins.manage_client_mounts.delete_fstab_entry')
     @patch('chroma_agent.action_plugins.manage_client_mounts.create_fstab_entry')
     def test_mount_lustre_filesystem(self, create, delete):
+        self.results = {('/bin/mount', '/mnt/lustre_clients/foobar'): (0, "", "")}
+
         from chroma_agent.action_plugins.manage_client_mounts import mount_lustre_filesystem
 
         with patch('os.makedirs') as makedirs:
@@ -38,6 +40,8 @@ class TestClientMountManagement(CommandCaptureTestCase):
 
     @patch('chroma_agent.action_plugins.manage_client_mounts.delete_fstab_entry')
     def test_unmount_lustre_filesystem(self, *patches):
+        self.results = {('/bin/umount', '/mnt/lustre_clients/foobar'): (0, "", "")}
+
         from chroma_agent.action_plugins.manage_client_mounts import unmount_lustre_filesystem
 
         unmount_lustre_filesystem(self.mountspec, self.mountpoint)

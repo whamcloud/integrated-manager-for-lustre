@@ -26,7 +26,7 @@ import errno
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.plugin_manager import DevicePlugin
-from chroma_agent.utils import BlkId
+from chroma_agent import utils
 from chroma_agent import config
 import chroma_agent.lib.normalize_device_path as ndp
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
@@ -112,7 +112,7 @@ class BlockDevices(DeviceHelper):
 
         # Build this map to retrieve fstype in _device_node
         self._major_minor_to_fstype = {}
-        for blkid_dev in BlkId().itervalues():
+        for blkid_dev in utils.BlkId().itervalues():
             major_minor = self._dev_major_minor(blkid_dev['path'])
             self._major_minor_to_fstype[major_minor] = blkid_dev['type']
 

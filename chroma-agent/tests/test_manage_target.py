@@ -8,48 +8,72 @@ from django.utils import unittest
 
 class TestWriteconfTarget(CommandCaptureTestCase):
     def test_mdt_tunefs(self):
+        run_args = ['tunefs.lustre', '--mdt', '/dev/foo']
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
                             target_types=['mdt'])
-        self.assertRan(['tunefs.lustre', '--mdt', '/dev/foo'])
+        self.assertRan(run_args)
 
     def test_mgs_tunefs(self):
+        run_args = ["tunefs.lustre", "--mgs", "/dev/foo"]
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
                             target_types=['mgs'])
-        self.assertRan(["tunefs.lustre", "--mgs", "/dev/foo"])
+        self.assertRan(run_args)
 
     def test_ost_tunefs(self):
+        run_args = ["tunefs.lustre", "--ost", "/dev/foo"]
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
                             target_types=['ost'])
-        self.assertRan(["tunefs.lustre", "--ost", "/dev/foo"])
+        self.assertRan(run_args)
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case
     def test_tuple_opts(self):
+        run_args = ["tunefs.lustre", "--mgs", "--mdt", "/dev/foo"]
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
                             target_types=['mgs', 'mdt'])
-        self.assertRan(["tunefs.lustre", "--mgs", "--mdt", "/dev/foo"])
+        self.assertRan(run_args)
 
     def test_dict_opts(self):
+        run_args = ["tunefs.lustre", "--param", "foo=bar", "--param", "baz=qux thud", "/dev/foo"]
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
             param={'foo': 'bar', 'baz': 'qux thud'})
-        self.assertRan(["tunefs.lustre", "--param", "foo=bar", "--param", "baz=qux thud", "/dev/foo"])
+        self.assertRan(run_args)
 
     def test_flag_opts(self):
+        run_args = ["tunefs.lustre", "--dryrun", "/dev/foo"]
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
             dryrun=True)
-        self.assertRan(["tunefs.lustre", "--dryrun", "/dev/foo"])
+        self.assertRan(run_args)
 
     def test_other_opts(self):
+        run_args = ["tunefs.lustre", "--index=42", "--mountfsoptions=-x 30 --y --z=83", "/dev/foo"]
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
             index='42', mountfsoptions='-x 30 --y --z=83')
-        self.assertRan(["tunefs.lustre", "--index=42", "--mountfsoptions=-x 30 --y --z=83", "/dev/foo"])
+        self.assertRan(run_args)
 
     def test_mgsnode_multiple_nids(self):
+        run_args = ["tunefs.lustre", "--erase-params", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1", "--writeconf", "/dev/foo"]
+        self.results = {tuple(run_args): (0, "", "")}
+
         writeconf_target(device='/dev/foo',
                          writeconf = True,
                          erase_params = True,
                          mgsnode = [['1.2.3.4@tcp', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
-        self.assertRan(["tunefs.lustre", "--erase-params", "--mgsnode=1.2.3.4@tcp,4.3.2.1@tcp1", "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1", "--writeconf", "/dev/foo"])
+        self.assertRan(run_args)
 
     def test_unknown_opt(self):
         self.assertRaises(TypeError, writeconf_target, unknown='whatever')
@@ -73,167 +97,224 @@ class TestFormatTarget(CommandCaptureTestCase):
 
         assert "Unknown device type %s" % block_device.device_type
 
+    def _setup_run_exceptions(self, block_device, run_args):
+        self._run_args = run_args
+
+        self.results = {("dumpe2fs", "-h", "/dev/foo"): (0, "Inode size: 1024\nInode count: 1024\n", ""),
+                            ("blkid", "-p", "-o", "value", "-s", "TYPE", "/dev/foo"): (0, "%s\n" % block_device.preferred_fstype, ""),
+                            ("blkid", "-p", "-o", "value", "-s", "UUID", "/dev/foo"): (0, "123456789\n", ""),
+                            ("zfs", "get", "-H", "-o", "value", "guid", "lustre1"): (0, "9845118046416187754", 0),
+                            ("modprobe", "osd_%s" % block_device.preferred_fstype): (0, "", ""),
+                            (tuple(run_args)): (0, "", "")}
+
     def test_mdt_mkfs(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--mdt",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MDT0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MDT0000",
                           backfstype = block_device.preferred_fstype,
                           target_types=['mdt'])
-            self.assertRan(["mkfs.lustre",
-                            "--mdt",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "MDT0000")])
+
+            self.assertRan(self._run_args)
 
     def test_mgs_mkfs(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--mgs",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MGS0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MGS0000",
                           backfstype = block_device.preferred_fstype,
                           target_types=['mgs'])
-            self.assertRan(["mkfs.lustre",
-                            "--mgs",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "MGS0000")])
+
+            self.assertRan(self._run_args)
 
     def test_ost_mkfs(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--ost",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MDT0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MDT0000",
                           backfstype = block_device.preferred_fstype,
                           target_types=['ost'])
-            self.assertRan(["mkfs.lustre",
-                            "--ost",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "MDT0000")])
+
+            self.assertRan(self._run_args)
 
     def test_single_mgs_one_nid(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--ost",
+                                        "--mgsnode=1.2.3.4@tcp",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "OST0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "OST0000",
                           backfstype = block_device.preferred_fstype,
                           target_types=['ost'],
                           mgsnode=[['1.2.3.4@tcp']])
-            self.assertRan(["mkfs.lustre",
-                            "--ost",
-                            "--mgsnode=1.2.3.4@tcp",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "OST0000")])
+
+            self.assertRan(self._run_args)
 
     def test_mgs_pair_one_nid(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre", "--ost",
+                                        "--mgsnode=1.2.3.4@tcp",
+                                        "--mgsnode=1.2.3.5@tcp",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "OST0000")])
+
             format_target(device = block_device.device_path,
                           target_types=['ost'],
                           target_name = "OST0000",
                           backfstype = block_device.preferred_fstype,
                           device_type = block_device.device_type,
                           mgsnode=[['1.2.3.4@tcp'], ['1.2.3.5@tcp']])
-            self.assertRan(["mkfs.lustre", "--ost",
-                            "--mgsnode=1.2.3.4@tcp",
-                            "--mgsnode=1.2.3.5@tcp",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "OST0000")])
+
+            self.assertRan(self._run_args)
 
     def test_single_mgs_multiple_nids(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--ost",
+                                        "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "OST0000")])
+
             format_target(device = block_device.device_path,
                           target_types=['ost'],
                           target_name = "OST0000",
                           backfstype = block_device.preferred_fstype,
                           device_type = block_device.device_type,
                           mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1']])
-            self.assertRan(["mkfs.lustre",
-                            "--ost",
-                            "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "OST0000")])
+
+            self.assertRan(self._run_args)
 
     def test_mgs_pair_multiple_nids(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--ost",
+                                        "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
+                                        "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "OST0000")])
+
             format_target(device = block_device.device_path,
                           target_name = "OST0000",
                           backfstype = block_device.preferred_fstype,
                           target_types =['ost'],
                           device_type = block_device.device_type,
                           mgsnode=[['1.2.3.4@tcp0', '4.3.2.1@tcp1'], ['1.2.3.5@tcp0', '4.3.2.2@tcp1']])
-            self.assertRan(["mkfs.lustre",
-                            "--ost",
-                            "--mgsnode=1.2.3.4@tcp0,4.3.2.1@tcp1",
-                            "--mgsnode=1.2.3.5@tcp0,4.3.2.2@tcp1",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "OST0000")])
+
+            self.assertRan(self._run_args)
 
     # this test does double-duty in testing tuple opts and also
     # the multiple target_types special case
     def test_tuple_opts(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--mgs",
+                                        "--mdt", "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MGS0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MGS0000",
                           backfstype = block_device.preferred_fstype,
                           target_types=['mgs', 'mdt'])
-            self.assertRan(["mkfs.lustre",
-                            "--mgs",
-                            "--mdt", "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "MGS0000")])
+
+            self.assertRan(self._run_args)
 
     def test_dict_opts(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--param",
+                                        "foo=bar",
+                                        "--param",
+                                        "baz=qux thud",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MGS0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MGS0000",
                           backfstype = block_device.preferred_fstype,
                           param={'foo': 'bar', 'baz': 'qux thud'})
-            self.assertRan(["mkfs.lustre",
-                            "--param",
-                            "foo=bar",
-                            "--param",
-                            "baz=qux thud",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                           self._mkfs_path(block_device, "MGS0000")])
+
+            self.assertRan(self._run_args)
 
     def test_flag_opts(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--dryrun",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MGS0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MGS0000",
                           backfstype = block_device.preferred_fstype,
                           dryrun=True)
-            self.assertRan(["mkfs.lustre",
-                            "--dryrun",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "MGS0000")])
+
+            self.assertRan(self._run_args)
 
     def test_zero_opt(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--index=0",
+                                        "--mkfsoptions=-x 30 --y --z=83",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MGS0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MGS0000",
                           backfstype = block_device.preferred_fstype,
                           index=0,
                           mkfsoptions='-x 30 --y --z=83')
-            self.assertRan(["mkfs.lustre",
-                            "--index=0",
-                            "--mkfsoptions=-x 30 --y --z=83",
-                            "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "MGS0000")])
+            self.assertRan(self._run_args)
 
     def test_other_opts(self):
         for block_device in self.block_device_list:
+            self._setup_run_exceptions(block_device,
+                                       ["mkfs.lustre",
+                                        "--index=42",
+                                        "--mkfsoptions=-x 30 --y --z=83",
+                                        "--backfstype=%s" % block_device.preferred_fstype,
+                                        self._mkfs_path(block_device, "MGS0000")])
+
             format_target(device = block_device.device_path,
                           device_type = block_device.device_type,
                           target_name = "MGS0000",
                           backfstype = block_device.preferred_fstype,
                           index=42,
                           mkfsoptions='-x 30 --y --z=83')
-            self.assertRan(["mkfs.lustre",
-                            "--index=42",
-                            "--mkfsoptions=-x 30 --y --z=83",
-                             "--backfstype=%s" % block_device.preferred_fstype,
-                            self._mkfs_path(block_device, "MGS0000")])
+
+            self.assertRan(self._run_args)
 
     def test_unknown_opt(self):
         self.assertRaises(TypeError, format_target, unknown='whatever')

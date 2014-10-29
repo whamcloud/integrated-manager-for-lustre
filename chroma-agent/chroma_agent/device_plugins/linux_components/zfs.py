@@ -34,6 +34,7 @@ from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 
 class ZfsDevices(DeviceHelper):
     """Reads zfs pools"""
+    acceptable_health = ['ONLINE', 'DEGRADED']
 
     def __init__(self):
         self._zpools = {}
@@ -53,11 +54,9 @@ class ZfsDevices(DeviceHelper):
 
     def _search_for_active(self, block_devices):
         # First look for active/imported zpools
-        out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid"])
+        out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health"])
 
-        lines = [l for l in out.split("\n") if len(l) > 0]
-
-        for line in lines:
+        for line in filter(None, out.split('\n')):
             self._add_zfs_pool(line, block_devices)
 
     def _search_for_inactive(self, block_devices):
@@ -81,48 +80,64 @@ class ZfsDevices(DeviceHelper):
             else:
                 raise e
 
-        lines = [l for l in out.split("\n") if len(l) > 0]
+        imports = {}
+        pool_name = None
 
-        for line in lines:
+        for line in filter(None, out.split("\n")):
             match = re.match("(\s*)pool: (\S*)", line)
             if match:
-                pool = match.group(2)
+                pool_name = match.group(2)
 
-                with ExportedZfsDevice(pool):
-                    out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid", pool])
-                    self._add_zfs_pool(out, block_devices)
+            match = re.match("(\s*)state: (\S*)", line)
+            if match:
+                if pool_name:
+                    imports[pool_name] = match.group(2)
+                    pool_name = None
+                else:
+                    daemon_log.warning("Found a zpool import state but had no pool_name")
+
+        for pool, state in imports.iteritems():
+            if state in self.acceptable_health:
+                with ExportedZfsDevice(pool) as available:
+                    if available:
+                        out = shell.try_run(["zpool", "list", "-H", "-o", "name,size,guid,health", pool])
+                        self._add_zfs_pool(out, block_devices)
+            else:
+                daemon_log.warning("Not scanning zpool %s because it is %s." % (pool, state))
 
     def _add_zfs_pool(self, line, block_devices):
-        pool, size_str, uuid = line.split()
-        size = self._human_to_bytes(size_str)
+        pool, size_str, uuid, health = line.split()
 
-        drives = [self._dev_major_minor(dp) for dp in self._get_zpool_devices(pool)]
+        if health in self.acceptable_health:
+            size = self._human_to_bytes(size_str)
 
-        # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
-        block_device = "zfspool:%s" % pool
+            drives = [self._dev_major_minor(dp) for dp in self._get_zpool_devices(pool)]
 
-        block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
-                                                          'path': pool,
-                                                          'serial_80': None,
-                                                          'serial_83': None,
-                                                          'size': size,
-                                                          'filesystem_type': None,
-                                                          'parent': None}
+            # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
+            block_device = "zfspool:%s" % pool
 
-        # Do this to cache the device, type see blockdevice and filesystem for info.
-        BlockDevice('zfs', pool)
-        FileSystem('zfs', pool)
+            block_devices.block_device_nodes[block_device] = {'major_minor': block_device,
+                                                              'path': pool,
+                                                              'serial_80': None,
+                                                              'serial_83': None,
+                                                              'size': size,
+                                                              'filesystem_type': None,
+                                                              'parent': None}
 
-        self._zpools[uuid] = {
-            "name": pool,
-            "path": pool,
-            "block_device": block_device,
-            "uuid": uuid,
-            "size": size,
-            "drives": drives,
-            "datasets": self._get_zpool_datasets(pool, drives, block_devices),
-            "zvols": self._get_zpool_zvols(pool, drives, block_devices)
-            }
+            # Do this to cache the device, type see blockdevice and filesystem for info.
+            BlockDevice('zfs', pool)
+            FileSystem('zfs', pool)
+
+            self._zpools[uuid] = {
+                "name": pool,
+                "path": pool,
+                "block_device": block_device,
+                "uuid": uuid,
+                "size": size,
+                "drives": drives,
+                "datasets": self._get_zpool_datasets(pool, drives, block_devices),
+                "zvols": self._get_zpool_zvols(pool, drives, block_devices)
+                }
 
     @property
     def zpools(self):
@@ -176,46 +191,46 @@ class ZfsDevices(DeviceHelper):
         devices = []
 
         for line in lines:
-            device = re.match("\t\s*(\S*)", line).group(1)
+            device = re.match("\s*(\S*)", line).group(1)
             devices += self.find_device_and_children(device)
 
         return devices
 
     def _get_zpool_datasets(self, pool_name, drives, block_devices):
-        out = shell.try_run(['zfs', 'list', '-H', '-o', 'name,guid,avail'])
-        lines = [l for l in out.split("\n") if len(l) > 0]
+        out = shell.try_run(['zfs', 'list', '-H', '-o', 'name,avail,guid'])
 
         zpool_datasets = {}
 
-        for line in lines:
-            name, uuid, size_str = line.split()
-            size = self._human_to_bytes(size_str)
+        if out.strip() != "no datasets available":
+            for line in filter(None, out.split('\n')):
+                name, size_str, uuid = line.split()
+                size = self._human_to_bytes(size_str)
 
-            if name.startswith("%s/" % pool_name):
-                # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
-                major_minor = "zfsset:%s" % (len(self.datasets) + 1)
-                block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
-                                                                  'path': name,
-                                                                  'serial_80': None,
-                                                                  'serial_83': None,
-                                                                  'size': size,
-                                                                  'filesystem_type': None,
-                                                                  'parent': None}
+                if name.startswith("%s/" % pool_name):
+                    # This will need discussion, but for now fabricate a major:minor. Do we ever use them as numbers?
+                    major_minor = "zfsset:%s" % (len(self.datasets) + 1)
+                    block_devices.block_device_nodes[major_minor] = {'major_minor': major_minor,
+                                                                      'path': name,
+                                                                      'serial_80': None,
+                                                                      'serial_83': None,
+                                                                      'size': size,
+                                                                      'filesystem_type': None,
+                                                                      'parent': None}
 
-                # Do this to cache the device, type see blockdevice and filesystem for info.
-                BlockDevice('zfs', name)
-                FileSystem('zfs', name)
+                    # Do this to cache the device, type see blockdevice and filesystem for info.
+                    BlockDevice('zfs', name)
+                    FileSystem('zfs', name)
 
-                zpool_datasets[uuid] = {
-                    "name": name,
-                    "path": name,
-                    "block_device": major_minor,
-                    "uuid": uuid,
-                    "size": size,
-                    "drives": drives
-                }
+                    zpool_datasets[uuid] = {
+                        "name": name,
+                        "path": name,
+                        "block_device": major_minor,
+                        "uuid": uuid,
+                        "size": size,
+                        "drives": drives
+                    }
 
-                daemon_log.debug("zfs mount '%s'" % name)
+                    daemon_log.debug("zfs mount '%s'" % name)
 
         return zpool_datasets
 

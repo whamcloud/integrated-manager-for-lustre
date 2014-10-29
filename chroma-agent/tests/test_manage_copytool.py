@@ -2,7 +2,6 @@ import tempfile
 import shutil
 
 from mock import patch
-from chroma_agent.chroma_common.lib import shell
 from tests.command_capture_testcase import CommandCaptureTestCase
 from chroma_agent.action_plugins.manage_copytool import start_monitored_copytool, stop_monitored_copytool, configure_copytool, unconfigure_copytool, update_copytool, list_copytools, copytool_vars, _copytool_vars
 
@@ -50,46 +49,56 @@ class TestCopytoolManagement(CommandCaptureTestCase):
                                        self.ct_arguments)
 
     def test_start_monitored_copytool(self):
+        run_args = [['/sbin/start', 'copytool-monitor',
+                     'id=%s' % self.ct_id],
+                    ['/sbin/start', 'copytool',
+                     'ct_arguments=%s' % self.ct_vars['ct_arguments'],
+                     'ct_path=%s' % self.ct_bin_path,
+                     'id=%s' % self.ct_id],
+                    ['/sbin/status', 'copytool',
+                     'id=%s' % self.ct_id],
+                    ['/sbin/status', 'copytool-monitor',
+                                 'id=%s' % self.ct_id]]
+
+        self.results = {}
+
+        for run_arg in run_args:
+            self.results[tuple(run_arg)] = (0, "", "")
+
         start_monitored_copytool(self.ct_id)
-        self.assertRan(['/sbin/start', 'copytool-monitor',
-                        'id=%s' % self.ct_id])
 
-        self.assertRan(['/sbin/start', 'copytool',
-                        'ct_arguments=%s' % self.ct_vars['ct_arguments'],
-                        'ct_path=%s' % self.ct_bin_path,
-                        'id=%s' % self.ct_id])
-
-        self.assertRan(['/sbin/status', 'copytool',
-                        'id=%s' % self.ct_id])
+        for run_arg in run_args:
+            self.assertRan(run_arg)
 
     def test_stop_monitored_copytool(self):
-        stop_monitored_copytool(self.ct_id)
-        self.assertRan(['/sbin/stop', 'copytool',
-                        'id=%s' % self.ct_id])
+        run_args = [['/sbin/stop', 'copytool',
+                     'id=%s' % self.ct_id],
+                    ['/sbin/stop', 'copytool-monitor',
+                     'id=%s' % self.ct_id]]
 
-        self.assertRan(['/sbin/stop', 'copytool-monitor',
-                        'id=%s' % self.ct_id])
+        for run_arg in run_args:
+            self.results[tuple(run_arg)] = (0, "", "")
+
+        stop_monitored_copytool(self.ct_id)
+
+        for run_arg in run_args:
+            self.assertRan(run_arg)
 
     def test_start_should_be_idempotent(self):
-        from chroma_agent.chroma_common.lib.shell import CommandExecutionError
+        run_args = [['/sbin/restart', 'copytool-monitor', 'id=%s' % self.ct_id],
+                    ['/sbin/status', 'copytool-monitor', 'id=%s' % self.ct_id],
+                    ['/sbin/status', 'copytool', 'id=%s' % self.ct_id],
+                    ['/sbin/start', 'copytool', u'ct_arguments=--quiet --update-interval 5 --event-fifo /var/spool/lhsmtool_foo-testfs-1-0-events --archive 1 -p /archive/testfs /mnt/testfs', u'ct_path=/usr/sbin/lhsmtool_foo', 'id=%s' % self.ct_id]]
 
-        real_try_run = shell.try_run
+        self.results = {('/sbin/start', 'copytool-monitor', 'id=%s' % self.ct_id): (1, '/sbin/start', 'Job is already running')}
 
-        def fake_try_run(*args):
-            if args[0][0] == '/sbin/start':
-                raise CommandExecutionError(1, args[0],
-                                            '', 'Job is already running')
-            else:
-                real_try_run(*args)
+        for run_arg in run_args:
+            self.results[tuple(run_arg)] = (0, "", "")
 
-        with patch('chroma_agent.chroma_common.lib.shell.try_run', fake_try_run):
-            start_monitored_copytool(self.ct_id)
-            self.assertRan(['/sbin/restart', 'copytool-monitor',
-                            'id=%s' % self.ct_id])
-            self.assertRan(['/sbin/restart', 'copytool',
-                            'ct_arguments=%s' % self.ct_vars['ct_arguments'],
-                            'ct_path=%s' % self.ct_bin_path,
-                            'id=%s' % self.ct_id])
+        start_monitored_copytool(self.ct_id)
+
+        for run_arg in run_args:
+            self.assertRan(run_arg)
 
     def test_stop_should_be_idempotent(self):
         from chroma_agent.chroma_common.lib.shell import CommandExecutionError
