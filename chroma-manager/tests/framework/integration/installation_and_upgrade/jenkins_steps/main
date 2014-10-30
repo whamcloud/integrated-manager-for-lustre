@@ -9,7 +9,7 @@ SLAVE=${slave:?"Need to set slave"}
 cd $WORKSPACE
 
 set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api token in the console logs.
-curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$CURRENT_IEEL_VERSION.tar.gz"
+curl -f -k -o ieel-$CURRENT_IEEL_VERSION-current.tar.gz -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$CURRENT_IEEL_VERSION.tar.gz"
 set -x
 
 sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json
