@@ -25,21 +25,17 @@
 
   angular.module('server')
     .controller('ServerStatusStepCtrl', ['$scope', '$stepInstance', 'OVERRIDE_BUTTON_TYPES', 'data',
-      function ServerStatusStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data) {
+      'naturalSortFilter', 'pdshFilter',
+      function ServerStatusStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data, naturalSortFilter,
+                                     pdshFilter) {
         $scope.serverStatus = {
           pdsh: ((data.server && data.server.pdsh) || null),
-          /**
-           * Used by filters to determine the context.
-           * @param {Object} item
-           * @returns {String}
-           */
-          getHostPath: function getHostPath (item) {
-            return item.address;
-          },
+
           /**
            * Update hostnames.
            * @param {String} pdsh
            * @param {Array} hostnames
+           * @param {Object} hostnamesHash
            */
           pdshUpdate: function pdshUpdate (pdsh, hostnames, hostnamesHash) {
             if (hostnames) {
@@ -67,7 +63,19 @@
 
         var off = data.statusSpark.onValue('pipeline', function assignToScope (response) {
           $scope.serverStatus.isValid = response.body.isValid;
-          $scope.serverStatus.status = response.body.objects;
+          $scope.serverStatus.status = naturalSortFilter(
+            pdshFilter(response.body.objects, $scope.serverStatus.hostnamesHash, comparator),
+            comparator
+          );
+
+          /**
+           * Defines the property to look at for host name comparison.
+           * @param {Object} obj
+           * @returns {String}
+           */
+          function comparator (obj) {
+            return obj.address;
+          }
         });
       }])
       .factory('serverStatusStep', ['OVERRIDE_BUTTON_TYPES', function serverStatusStepFactory (OVERRIDE_BUTTON_TYPES) {

@@ -49,9 +49,6 @@ angular.module('filters').filter('naturalSort', [function naturalSort () {
    * @returns {String|Number}
    */
   function naturalSortAlgorithm (a, b) {
-    // Split the strings into two components from left to right. The first
-    // component contains ascii while the second part contains numbers.
-    // Once split we can sort the first part by string and second by Number.
     var componentsInA = splitStringIntoComponents(getStringToSort(a));
     var componentsInB = splitStringIntoComponents(getStringToSort(b));
 

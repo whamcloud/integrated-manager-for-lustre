@@ -32,10 +32,6 @@ describe('Server Status Step', function () {
       serverStatus = $scope.serverStatus;
     }));
 
-    it('should get the host path', function () {
-      expect(serverStatus.getHostPath({ address: 'foo' })).toEqual('foo');
-    });
-
     it('should set the pdsh expression on the scope', function () {
       expect(serverStatus.pdsh).toEqual(data.server.pdsh);
     });
@@ -78,13 +74,39 @@ describe('Server Status Step', function () {
     it('should set the status on pipeline value', function () {
       var handler = data.statusSpark.onValue.mostRecentCall.args[1];
 
+      serverStatus.pdshUpdate(
+        'test[001-0011].localdomain',
+        [
+          { address: 'test001.localdomain'},
+          { address: 'test0011.localdomain'},
+          { address: 'test003.localdomain' },
+          { address: 'test005.localdomain' }
+        ],
+        { 'test001.localdomain': 1,
+          'test0011.localdomain': 1,
+          'test003.localdomain': 1,
+          'test005.localdomain': 1
+        }
+      );
+
       handler({
         body: {
-          objects: [{ foo: 'bar' }]
+          objects: [
+            { address: 'test001.localdomain'},
+            { address: 'test0011.localdomain'},
+            { address: 'test003.localdomain' },
+            { address: 'test0015.localdomain' },
+            { address: 'test005.localdomain' }
+          ]
         }
       });
 
-      expect(serverStatus.status).toEqual([{ foo: 'bar' }]);
+      expect(serverStatus.status).toEqual([
+        { address: 'test001.localdomain'},
+        { address: 'test003.localdomain' },
+        { address: 'test005.localdomain' },
+        { address: 'test0011.localdomain'}
+      ]);
     });
   });
 
