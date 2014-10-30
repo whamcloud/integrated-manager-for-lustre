@@ -18,7 +18,7 @@ rm -rfv $PWD/coverage_reports/.coverage*
 mkdir -p $PWD/test_reports
 mkdir -p $PWD/coverage_reports
 
-ARCHIVE_NAME=ieel-$IEEL_VERSION.tar.gz
+ARCHIVE_NAME=ieel-$IEEL_VERSION-current.tar.gz
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 USE_FENCE_XVM=false
@@ -89,7 +89,7 @@ yum -y update
 # Install from the installation package
 cd /tmp
 tar xzvf $ARCHIVE_NAME
-cd $(basename $ARCHIVE_NAME .tar.gz)
+cd $(basename $ARCHIVE_NAME -current.tar.gz)
 
 echo \"First without access to YUM repos\"
 
@@ -135,7 +135,7 @@ fi
 rm -f /etc/yum.repos.d/epel.repo
 
 if $RHEL; then
-    release=\$(lsb_release -sr)
+    release=\$(lsb_release -sr || sed -n -e '1s/.* release \(.*\) .*/\1/p' /etc/issue)
     yum-config-manager --disable  rhel-6-server-optional-rpms,RHEL-\$release-optional-x86_64
     # let's also remove ann local RH optional repo
     ed <<\"EOF\" /etc/yum.repos.d/cobbler-config.repo
