@@ -314,8 +314,8 @@ describe('action dropdown directive', function () {
         managed: false,
         name: 'default',
         resource_uri: '/api/server_profile/default/',
-        ui_description: 'This is the default profile.',
-        ui_name: 'Default Profile',
+        ui_description: 'An unconfigured server',
+        ui_name: 'Unconfigured Server',
         user_selectable: false,
         worker: false
       },
