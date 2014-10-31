@@ -40,7 +40,12 @@ pdsh -l root -R ssh -S -w $(spacelist_to_commalist $CHROMA_MANAGER ${STORAGE_APP
 if [ ! -f /etc/yum.repos.d/cobbler-config.repo.orig ]; then
     cp /etc/yum.repos.d/cobbler-config.repo{,.orig}
 fi
-curl -o /etc/yum.repos.d/cobbler-config.repo 'http://10.14.80.6/cblr/svc/op/yum/profile/IML_test-rhel6.6-x86_64'
+if $RHEL; then
+    OS=rhel
+else
+    OS=el
+fi
+curl -o /etc/yum.repos.d/cobbler-config.repo \"http://10.14.80.6/cblr/svc/op/yum/profile/IML_test-\${OS}6.6-x86_64\"
 yum-config-manager --disable EPEL-6-x86_64
 rpm -qa | sort >/tmp/before_upgrade
 yum -y upgrade
