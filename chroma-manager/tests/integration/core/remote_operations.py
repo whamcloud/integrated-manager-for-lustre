@@ -7,6 +7,7 @@ import paramiko
 import re
 
 from testconfig import config
+from tests.integration.core.constants import MEGABYTE
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
 from tests.integration.core.utility_testcase import RemoteCommandResult
@@ -548,7 +549,7 @@ class RealRemoteOperations(RemoteOperations):
             client_address,
             "dd if=/dev/zero of=/mnt/%s/exercisetest.dat bs=1000 count=%s" % (
                 filesystem['name'],
-                min((bytes_free * 0.4), 512000) / 1000
+                min((bytes_free * 0.4), MEGABYTE * 32) / 1000
             )
         )
 
