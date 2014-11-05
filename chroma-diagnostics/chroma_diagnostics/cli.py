@@ -279,14 +279,14 @@ def main():
 
     if save_command_output('chroma-config-validate', ['chroma-config',
                                                       'validate'], output_directory):
-        log.info("Validated Intel Manager for Lustre® installation")
+        log.info("Validated Intel Manager for Lustre installation")
     elif args.verbose > 0:
-        log.info("Failed to run Intel Manager for Lustre® installation validation")
+        log.info("Failed to run Intel Manager for Lustre installation validation")
 
     if save_command_output('finger-print', ['rpm', '-V', ] + PACKAGES, output_directory):
-        log.info("Finger printed Intel Manager for Lustre® installation")
+        log.info("Finger printed Intel Manager for Lustre installation")
     elif args.verbose > 0:
-        log.info("Failed to finger print Intel Manager for Lustre® installation")
+        log.info("Failed to finger print Intel Manager for Lustre installation")
 
     if save_command_output('ps', ['ps', '-ef', '--forest'], output_directory):
         log.info("Listed running processes")
@@ -335,7 +335,7 @@ def main():
     log.info("Size:  %s" % run_command_output_piped(['du', '-h', archive_path]).stdout.read().strip())
 
     log.info(u"\nThe diagnostic report tar.lzma file can be "
-             u"sent to Intel Manager for Lustre® Support for analysis.")
+             u"sent to Intel Manager for Lustre Support for analysis.")
 
 
 if __name__ == "__main__":
