@@ -28,6 +28,9 @@
       'naturalSortFilter', 'pdshFilter',
       function ServerStatusStepCtrl ($scope, $stepInstance, OVERRIDE_BUTTON_TYPES, data, naturalSortFilter,
                                      pdshFilter) {
+
+        var matchingSpaces = / /g;
+
         $scope.serverStatus = {
           pdsh: ((data.server && data.server.pdsh) || null),
 
@@ -58,6 +61,14 @@
            */
           close: function close () {
             $scope.$emit('addServerModal::closeModal');
+          },
+          /**
+           * Convert the check to something that maps back to a help property
+           * @param {String} key
+           * @returns {string}
+           */
+          convertToHelp: function convertToHelp (key) {
+            return key.toLowerCase().replace(matchingSpaces, '_');
           }
         };
 

@@ -298,9 +298,10 @@ describe('add server modal ctrl', function () {
         body: {
           objects: [
             {
-              field1: 'value1',
+              field1: true,
               address: 'address1',
-              key_with_underscore: 'underscore_value'
+              key_with_underscore: false,
+              field2: null
             }
           ]
         }
@@ -347,24 +348,26 @@ describe('add server modal ctrl', function () {
         response = spark.addPipe.mostRecentCall.args[0](data);
       });
 
-      it('should indicate that the response is valid', function () {
-        expect(response.body.isValid).toEqual(true);
+      it('should indicate that the response is invalid', function () {
+        expect(response.body.isValid).toEqual(false);
       });
 
       it('should have an updated response value', function () {
         expect(response).toEqual({
           body: {
             objects: [{
-              field1: 'value1',
+              field1: true,
               address: 'address1',
-              key_with_underscore: 'underscore_value',
+              key_with_underscore: false,
+              field2: null,
               fields: {
-                Field1: 'value1',
-                'Key with underscore': 'underscore_value'
+                Field1: true,
+                'Key with underscore': false,
+                Field2: null
               },
-              invalid: false
+              invalid: true
             }],
-            isValid: true
+            isValid: false
           }
         });
       });

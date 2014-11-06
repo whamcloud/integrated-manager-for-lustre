@@ -290,6 +290,13 @@ class TestHostAddValidations(JobTestCase):
         for result in failed_results:
             self.expected_result[unicode(result)] = False
 
+    def _inject_unknown(self, unknown_tests):
+        for test in unknown_tests:
+            self.mock_servers['test-server']['tests'][test] = None
+
+        for result in unknown_tests:
+            self.expected_result[unicode(result)] = None
+
     def test_host_no_problems(self):
         self.assertEqual(self.expected_result,
                          JobSchedulerClient.test_host_contact('test-server'))
@@ -348,8 +355,21 @@ class TestHostAddValidations(JobTestCase):
         self.assertEqual(self.expected_result,
                          JobSchedulerClient.test_host_contact('test-server'))
 
+    def test_yum_unknown_repo_config(self):
+        # Expect yum_valid_repos to be unknown
+        self._inject_unknown(['yum_valid_repos'])
+
+        self.assertEqual(self.expected_result,
+                         JobSchedulerClient.test_host_contact('test-server'))
+
     def test_yum_update_failure(self):
         # Expect yum_can_update to fail
         self._inject_failures(['yum_can_update'])
+        self.assertEqual(self.expected_result,
+                         JobSchedulerClient.test_host_contact('test-server'))
+
+    def test_yum_update_unknown(self):
+        # Expect yum_can_update to be unknown
+        self._inject_unknown(['yum_can_update'])
         self.assertEqual(self.expected_result,
                          JobSchedulerClient.test_host_contact('test-server'))

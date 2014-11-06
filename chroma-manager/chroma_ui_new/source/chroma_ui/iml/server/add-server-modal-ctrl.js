@@ -193,7 +193,7 @@
                 return obj;
               }, {});
 
-              status.invalid = _.contains(status, false);
+              status.invalid = _.contains(status, false) || _.contains(status, null);
 
               isValid = isValid && !status.invalid;
             });

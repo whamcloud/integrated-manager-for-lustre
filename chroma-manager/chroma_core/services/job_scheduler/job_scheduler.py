@@ -987,33 +987,48 @@ class JobScheduler(object):
             return False, False
 
     def _test_yum_sanity(self, agent_ssh, auth_args, address):
-        epel_detected = False
+        pid_check = "[ -e /var/run/yum.pid ]"
+        pass_epel_check = True
         can_update = False
 
         try:
             # Check for the presence of EPEL
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
-                                             "rpm -q epel-release || yum info python-fedora-django")
-            if rc == 0:
+            check_for_epel = """
+if rpm -q epel-release;
+  then exit 5;
+elif %s;
+  then exit 10;
+elif yum info python-fedora-django;
+ then exit 5;
+fi
+""" % pid_check
+
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_for_epel)
+            if rc == 5:
                 log.error("Failed configuration check on '%s': EPEL repository detected in yum configuration" % address)
-                epel_detected = True
+                pass_epel_check = False
+            elif rc == 10:
+                pass_epel_check = None
+
         except AgentException:
             log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
             return False, False
 
         try:
             # Check to see if yum can or ever has gotten OS repo metadata
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
-                                             "yum info ElectricFence")
-            if rc == 0:
+            check_yum = "if %s; then exit 10; elif yum info ElectricFence; then exit 5; fi" % pid_check
+            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_yum)
+            if rc == 5:
                 can_update = True
+            elif rc == 10:
+                can_update = None
             else:
                 log.error("Failed configuration check on '%s': Unable to access any yum mirrors" % address)
         except AgentException:
             log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
             return False, False
 
-        return not epel_detected, can_update
+        return pass_epel_check, can_update
 
     def _test_openssl(self, agent_ssh, auth_args, address):
         try:
@@ -1293,12 +1308,12 @@ class JobScheduler(object):
 
             with transaction.commit_on_success():
                 command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
-                    [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), target.id, 'mounted') for target in targets],
+                    [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), x.id, 'mounted') for x in targets],
                     command_description)
 
         self.progress.advance()
 
-        return [target.id for target in targets], command.id
+        return [x.id for x in targets], command.id
 
     def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
         """

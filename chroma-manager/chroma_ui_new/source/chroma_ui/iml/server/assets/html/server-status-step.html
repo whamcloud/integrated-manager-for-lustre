@@ -29,7 +29,9 @@
     <iml-popover title="Status for {{ status.address }}" placement="bottom">
       <ul class="well">
         <li ng-repeat="(key, value) in status.fields">
-          <i ng-class="{ 'fa-times-circle': !value, 'fa-check-circle': value }" class="fa"></i> {{ key }}
+          <a tooltip="{{ serverStatus.convertToHelp(key) | insertHelp }}">
+            <i ng-class="{ 'fa-times-circle': value == false, 'fa-check-circle': value, 'fa-question-circle': value === null }" class="fa"></i> {{ key }}
+          </a>
         </li>
       </ul>
     </iml-popover>

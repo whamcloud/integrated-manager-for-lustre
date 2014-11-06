@@ -32,6 +32,10 @@ describe('Server Status Step', function () {
       serverStatus = $scope.serverStatus;
     }));
 
+    it('should convert a readable name to a help property', function () {
+      expect(serverStatus.convertToHelp('Hostname valid')).toEqual('hostname_valid');
+    });
+
     it('should set the pdsh expression on the scope', function () {
       expect(serverStatus.pdsh).toEqual(data.server.pdsh);
     });
