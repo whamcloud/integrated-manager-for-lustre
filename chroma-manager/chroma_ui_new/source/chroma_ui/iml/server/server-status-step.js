@@ -93,8 +93,8 @@
         return {
           templateUrl: 'iml/server/assets/html/server-status-step.html',
           controller: 'ServerStatusStepCtrl',
-          transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'openCommandModal',
-            function transition ($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal) {
+          transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'waitForCommandCompletion',
+            function transition ($transition, data, createOrUpdateHostsThen, hostProfile, waitForCommandCompletion) {
               var step;
 
               if ($transition.action === 'previous') {
@@ -102,21 +102,10 @@
               } else {
                 step = $transition.steps.selectServerProfileStep;
 
-                var hostsPromise = createOrUpdateHostsThen(data.server, data.serverSpark);
-
-                if ($transition.action === OVERRIDE_BUTTON_TYPES.PROCEED)
-                  hostsPromise.then(function startCommand (response) {
-                    if (_.compact(response.body.errors).length)
-                      throw new Error(JSON.stringify(response.body.errors));
-
-                    var commands = _(response.body.objects).pluck('command').compact().value();
-
-                    if (commands.length)
-                      openCommandModal({
-                        body: {
-                          objects: commands
-                        }
-                      });
+                var hostsPromise = createOrUpdateHostsThen(data.server, data.serverSpark)
+                  .then(waitForCommandCompletion($transition.action === OVERRIDE_BUTTON_TYPES.PROCEED))
+                  .catch(function throwError (response) {
+                    throw response.error;
                   });
 
                 data.hostProfileSpark = hostsPromise.then(function getHostProfileSpark (response) {

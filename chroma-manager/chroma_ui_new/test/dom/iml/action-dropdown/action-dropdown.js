@@ -1,7 +1,7 @@
 describe('action dropdown directive', function () {
   'use strict';
 
-  var handleAction, openCommandModal;
+  var handleAction, openCommandModal, createCommandSpark;
 
   beforeEach(module('action-dropdown-module', 'templates', 'ui.bootstrap.dropdown', 'pasvaz.bindonce',
     function ($provide) {
@@ -15,6 +15,12 @@ describe('action dropdown directive', function () {
 
       $provide.value('handleAction', handleAction);
       $provide.value('openCommandModal', openCommandModal);
+
+      createCommandSpark = jasmine.createSpy('createCommandSpark')
+        .andReturn({
+          end: jasmine.createSpy('end')
+        });
+      $provide.value('createCommandSpark', createCommandSpark);
     }));
 
   var $scope, gen;

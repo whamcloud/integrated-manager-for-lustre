@@ -43,20 +43,28 @@ class Servers(BaseView):
         for host in host_list:
             host_name = host['address']
 
+            # Step 1
             self.add_server_button.click()
             add_server_modal.wait_for_modal()
             add_server_modal.enter_address(host_name)
             add_server_modal.submit_address()
+
+            # Step 2
             add_server_modal.wait_for_proceed_enabled()
             add_server_modal.proceed_button.click()
-
             command_modal.wait_for_modal()
             command_modal.wait_for_close_button_to_be_clickable()
             command_modal.close_button.click()
             command_modal.wait_for_modal_remove()
 
+            # Step 3
             add_server_modal.select_profile()
             add_server_modal.submit_profile()
+            command_modal.wait_for_modal()
+            command_modal.wait_for_close_button_to_be_clickable()
+            command_modal.close_button.click()
+            command_modal.wait_for_modal_remove()
+
             add_server_modal.wait_for_modal_remove()
 
             wait_for_commands_to_finish(self.driver, self.long_wait)

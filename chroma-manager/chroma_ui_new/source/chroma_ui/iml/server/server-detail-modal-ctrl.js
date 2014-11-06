@@ -23,8 +23,12 @@
   'use strict';
 
   angular.module('server').controller('ServerDetailModalCtrl',
-    ['$scope', '$modalInstance', 'item', 'itemScope',
-      function ServerDetailModalCtrl ($scope, $modalInstance, item, itemScope) {
+    ['$scope', '$modalInstance', 'item', 'itemScope', 'serverSpark',
+      'selectedServers', 'overrideActionClick',
+      function ServerDetailModalCtrl ($scope, $modalInstance, item, itemScope, serverSpark,
+                                      selectedServers, overrideActionClick) {
+
+        var spark = serverSpark();
 
         $scope.serverDetailModal = {
           jobMonitorSpark: itemScope.jobMonitorSpark,
@@ -59,9 +63,17 @@
                 item.address + ' before it was removed.'
             }
           ],
+          overrideActionClick: overrideActionClick(spark),
           currentItem: null,
           removed: false
         };
+
+        spark.onValue('data', function handler (response) {
+          if ('error' in response)
+            throw response.error;
+
+          selectedServers.addNewServers(response.body.objects);
+        });
       }]).factory('openServerDetailModal', ['$modal',
       function openServerDetailModalFactory ($modal) {
 

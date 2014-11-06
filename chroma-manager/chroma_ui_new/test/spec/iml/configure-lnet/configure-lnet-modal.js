@@ -1,13 +1,20 @@
 describe('Configure LNet modal', function () {
   'use strict';
 
-  beforeEach(module('configure-lnet-module', 'dataFixtures'));
+  var createCommandSpark;
+  beforeEach(module('configure-lnet-module', 'dataFixtures', function ($provide) {
+    createCommandSpark = jasmine.createSpy('createCommandSpark')
+      .andReturn({
+        end: jasmine.createSpy('end')
+      });
+    $provide.value('createCommandSpark', createCommandSpark);
+  }));
 
   describe('Controller', function () {
     var $modalInstance, $scope, networkInterfaceSpark, hostSpark,
       requestSocket, openCommandModal, configureLnet, deferred, networkInterfaceResponse;
 
-    beforeEach(inject(function ($rootScope, $controller, $q, networkInterfaceDataFixtures) {
+    beforeEach(inject(function ($rootScope, $controller, networkInterfaceDataFixtures, $q) {
       networkInterfaceResponse = _.cloneDeep(networkInterfaceDataFixtures[0].in);
 
       $scope = $rootScope.$new();
@@ -36,7 +43,10 @@ describe('Configure LNet modal', function () {
 
       spyOn($scope, '$on').andCallThrough();
 
-      openCommandModal = jasmine.createSpy('openCommandModal');
+      openCommandModal = jasmine.createSpy('openCommandModal')
+        .andReturn({
+          result: $q.when()
+        });
 
       $controller('ConfigureLnetModalCtrl', {
         $scope: $scope,
@@ -113,14 +123,20 @@ describe('Configure LNet modal', function () {
         expect($modalInstance.close).toHaveBeenCalledOnce();
       });
 
-      it('should open the command modal', function () {
-        expect(openCommandModal).toHaveBeenCalledOnceWith({
-          body: {
-            objects: [{
-              id: 10
-            }]
-          }
+      it('should open the command modal with the spark', function () {
+        expect(openCommandModal).toHaveBeenCalledOnceWith(createCommandSpark.plan());
+      });
+
+      it('should call createCommandSpark with the last response', function () {
+        expect(createCommandSpark).toHaveBeenCalledOnceWith([{id: 10}]);
+      });
+
+      it('should end the spark after the modal closes', function () {
+        openCommandModal.plan().result.then(function whenModalClosed () {
+          expect(createCommandSpark.plan().end).toHaveBeenCalledOnce();
         });
+
+        $scope.$digest();
       });
 
       it('should end the spark', function () {

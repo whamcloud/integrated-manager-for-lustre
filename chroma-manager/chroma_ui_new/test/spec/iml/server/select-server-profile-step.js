@@ -311,11 +311,21 @@ describe('select server profile', function () {
   describe('selectServerProfileStep', function () {
     var $q, $scope, $transition, data, requestSocket, hostProfileData, profile, selectServerProfileStep,
       spark, postPromise;
+    var waitForCommandCompletion, OVERRIDE_BUTTON_TYPES;
 
     beforeEach(inject(function (_selectServerProfileStep_, _$rootScope_, _$q_) {
       $scope = _$rootScope_.$new();
       selectServerProfileStep = _selectServerProfileStep_;
       $q = _$q_;
+
+      waitForCommandCompletion = jasmine.createSpy('waitForCommandCompletion')
+        .andReturn($q.when('transition_end'));
+
+      OVERRIDE_BUTTON_TYPES = {
+        OVERRIDE: 'override',
+        PROCEED: 'proceed',
+        PROCEED_SKIP: 'proceed and skip'
+      };
     }));
 
     it('should contain the appropriate properties', function () {
@@ -328,7 +338,13 @@ describe('select server profile', function () {
 
     describe('invoking the transition', function () {
       beforeEach(function () {
-        postPromise = $q.when('transition_end');
+        postPromise = $q.when({
+          body: {
+            commands: [
+              {id: 1}
+            ]
+          }
+        });
         spark = {
           sendPost: jasmine.createSpy('sendPost').andReturn(postPromise),
           end: jasmine.createSpy('end')
@@ -380,7 +396,8 @@ describe('select server profile', function () {
           $transition.action = 'end';
 
           result = selectServerProfileStep.transition[selectServerProfileStep.transition.length - 1](
-            $transition, data, requestSocket, hostProfileData, profile);
+            $transition, data, requestSocket, hostProfileData, profile, $q, waitForCommandCompletion,
+            OVERRIDE_BUTTON_TYPES);
 
           data.serverSpark.onceValue.mostRecentCall.args[1]({
             body: {
@@ -417,6 +434,10 @@ describe('select server profile', function () {
               ]
             }
           }, true);
+        });
+
+        it('should call waitForCommandCompletion', function () {
+          expect(waitForCommandCompletion).toHaveBeenCalledWith(false);
         });
 
         it('should call $transition.end', function () {

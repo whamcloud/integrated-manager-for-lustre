@@ -144,8 +144,10 @@
         return {
           templateUrl: 'iml/server/assets/html/select-server-profile-step.html',
           controller: 'SelectServerProfileStepCtrl',
-          transition: ['$transition', 'data', 'requestSocket', 'hostProfileData', 'profile',
-            function transition ($transition, data, requestSocket, hostProfileData, profile) {
+          transition: ['$transition', 'data', 'requestSocket', 'hostProfileData', 'profile', '$q',
+            'waitForCommandCompletion', 'OVERRIDE_BUTTON_TYPES',
+            function transition ($transition, data, requestSocket, hostProfileData, profile, $q,
+                                 waitForCommandCompletion, OVERRIDE_BUTTON_TYPES) {
               if ($transition.action === 'previous')
                 return {
                   step: $transition.steps.serverStatusStep,
@@ -170,22 +172,34 @@
                     return server && server.server_profile && server.server_profile.initial_state === 'unconfigured';
                   });
 
-                var hostProfile = spark.sendPost('/host_profile', {
-                  json: { objects: objects }
-                }, true)
-                  .catch(function throwError (response) {
-                    throw response.error;
-                  });
+                var promise;
+                if (objects.length > 0) {
+                  promise = spark.sendPost('/host_profile', {
+                    json: { objects: objects }
+                  }, true)
+                    .then(function transformResponse (response) {
+                      return {
+                        body: {
+                          objects: response.body.commands.map(function mapCommands (currentCommand) {
+                            return {command: currentCommand};
+                          })
+                        }
+                      };
+                    })
+                    .then(waitForCommandCompletion($transition.action === OVERRIDE_BUTTON_TYPES.PROCEED))
+                    .catch(function throwError (response) {
+                      throw response.error;
+                    });
+                } else {
+                  promise = $q.when();
+                }
 
-                //@TODO: The backend should return a command as the result of POSTing here.
-                //@TODO: Put open command modal here when that occurs.
-
-                hostProfile
-                  .then($transition.end)
+                promise.then($transition.end)
                   .finally(function snuffSpark () {
                     spark.end();
                   });
               });
+
             }
           ]
         };

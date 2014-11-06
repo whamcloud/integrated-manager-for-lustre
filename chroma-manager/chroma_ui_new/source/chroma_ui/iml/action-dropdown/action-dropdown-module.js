@@ -20,9 +20,9 @@
 // express and approved by Intel in writing.
 
 
-angular.module('action-dropdown-module', ['socket-module'])
-  .directive('actionDropdown', ['$q', 'handleAction', 'openCommandModal',
-    function actionDropdown ($q, handleAction, openCommandModal) {
+angular.module('action-dropdown-module', ['socket-module', 'command'])
+  .directive('actionDropdown', ['$q', 'handleAction', 'openCommandModal', 'createCommandSpark',
+    function actionDropdown ($q, handleAction, openCommandModal, createCommandSpark) {
       'use strict';
 
       return {
@@ -83,13 +83,14 @@ angular.module('action-dropdown-module', ['socket-module'])
           function runHandleAction (record, action) {
             return handleAction(record, action)
               .then(function mightOpenCommandModal (data) {
-                if (data)
-                  return openCommandModal({
-                    body: {
-                      objects: [data.body.command || data.body]
-                    }
-                  })
-                  .result;
+                if (!data)
+                  return;
+
+                var spark = createCommandSpark([data.body.command || data.body]);
+                return openCommandModal(spark)
+                  .result.then(function endSpark () {
+                    spark.end();
+                  });
               });
           }
         }

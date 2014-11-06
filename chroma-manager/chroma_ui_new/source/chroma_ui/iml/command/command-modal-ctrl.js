@@ -25,13 +25,6 @@ angular.module('command')
     function CommandModalCtrl ($scope, $modalInstance, commands) {
       'use strict';
 
-      /**
-       * Destroys the scope.
-       */
-      $scope.$on('$destroy', function onDestroy () {
-        commands.end();
-      });
-
       $scope.commandModal = {
         accordion0: true,
         /**
@@ -53,7 +46,7 @@ angular.module('command')
   .factory('openCommandModal', ['$modal', function openCommandModalFactory ($modal) {
     'use strict';
 
-    return function openCommandModal (commandList) {
+    return function openCommandModal (spark) {
 
       return $modal.open({
         templateUrl: 'iml/command/assets/html/command-modal.html',
@@ -63,24 +56,9 @@ angular.module('command')
         resolve: {
           /**
            * Resolves a spark representing the set of provided commands
-           * @param {Function} requestSocket
-           * @param {Function} commandTransform
            * @returns {Object}
            */
-          commands: ['requestSocket', 'commandTransform', function getCommand (requestSocket, commandTransform) {
-            var spark = requestSocket();
-
-            spark.setLastData(commandList);
-            spark.addPipe(commandTransform);
-
-            var options = {
-              qs: {
-                id__in: _.pluck(commandList.body.objects, 'id')
-              }
-            };
-
-            spark.sendGet('/command', options);
-
+          commands: [function getCommand () {
             return spark;
           }]
         }

@@ -82,7 +82,7 @@ describe('command modal', function () {
   });
 
   describe('open command modal', function () {
-    var $modal, openCommandModal, commands;
+    var $modal, openCommandModal, spark;
 
     beforeEach(module(function ($provide) {
       $modal = {
@@ -93,18 +93,15 @@ describe('command modal', function () {
     }));
 
     beforeEach(inject(function (_openCommandModal_) {
-      commands = {
-        body: {
-          objects: [
-            { id : '1' },
-            { id : '2' },
-            { id : '3' }
-          ]
-        }
+
+      spark = {
+        setLastData: jasmine.createSpy('setLastData'),
+        addPipe: jasmine.createSpy('addPipe'),
+        sendGet: jasmine.createSpy('sendGet')
       };
 
       openCommandModal = _openCommandModal_;
-      openCommandModal(commands);
+      openCommandModal(spark);
     }));
 
     it('should be a function', function () {
@@ -118,45 +115,21 @@ describe('command modal', function () {
         windowClass: 'command-modal',
         backdropClass : 'command-modal-backdrop',
         resolve: {
-          commands: ['requestSocket', 'commandTransform', jasmine.any(Function)]
+          commands: [jasmine.any(Function)]
         }
       });
     });
 
     describe('commands', function () {
-      var requestSocket, commandTransform, handle, spark;
+      var handle, commandSpark;
 
       beforeEach(function () {
-        requestSocket = jasmine.createSpy('requestSocket').andReturn({
-          setLastData: jasmine.createSpy('setLastData'),
-          addPipe: jasmine.createSpy('addPipe'),
-          sendGet: jasmine.createSpy('sendGet')
-        });
-
-        commandTransform = jasmine.createSpy('commandTransform');
-
-        handle = $modal.open.mostRecentCall.args[0].resolve.commands[2];
-        spark = handle(requestSocket, commandTransform);
+        handle = $modal.open.mostRecentCall.args[0].resolve.commands[0];
+        commandSpark = handle();
       });
 
       it('should provide a command spark', function () {
-        expect(spark).toEqual(requestSocket.plan());
-      });
-
-      it('should set lastData', function () {
-        expect(spark.setLastData).toHaveBeenCalledOnceWith(commands);
-      });
-
-      it('should add a pipe', function () {
-        expect(spark.addPipe).toHaveBeenCalledOnceWith(commandTransform);
-      });
-
-      it('should get the commands', function () {
-        expect(spark.sendGet).toHaveBeenCalledOnceWith('/command', {
-          qs: {
-            id__in: ['1', '2', '3']
-          }
-        });
+        expect(commandSpark).toEqual(spark);
       });
     });
   });
@@ -184,16 +157,6 @@ describe('command modal', function () {
         commands: commands
       });
     }));
-
-    it('should listen for destroy', function () {
-      expect($scope.$on).toHaveBeenCalledOnceWith('$destroy', jasmine.any(Function));
-    });
-
-    it('should end the command', function () {
-      $scope.$on.mostRecentCall.args[1]();
-
-      expect(commands.end).toHaveBeenCalledOnce();
-    });
 
     it('should open the first accordion', function () {
       expect($scope.commandModal.accordion0).toBe(true);

@@ -25,9 +25,10 @@
 
   angular.module('configure-lnet-module')
     .controller('ConfigureLnetModalCtrl', ['$scope', '$modalInstance', 'networkInterfaceSpark',
-      'hostSpark', 'throwIfError', 'requestSocket', 'openCommandModal', 'LNET_OPTIONS',
+      'hostSpark', 'throwIfError', 'requestSocket', 'openCommandModal', 'LNET_OPTIONS', 'createCommandSpark',
       function ConfigureLnetModalCtrl ($scope, $modalInstance, networkInterfaceSpark, hostSpark,
-                                       throwIfError, requestSocket, openCommandModal, LNET_OPTIONS) {
+                                       throwIfError, requestSocket, openCommandModal, LNET_OPTIONS,
+                                       createCommandSpark) {
         $scope.configureLnet = {
           options: LNET_OPTIONS,
           /**
@@ -50,11 +51,13 @@
                 return data;
               })
               .then(function (data) {
-                if (!skip)
-                  openCommandModal({
-                    body: {
-                      objects: [data.body.command]
-                    }
+                if (skip || data == null)
+                  return;
+
+                var spark = createCommandSpark([data.body.command]);
+                openCommandModal(spark)
+                  .result.then(function endSpark () {
+                    spark.end();
                   });
               })
               .finally(function () {

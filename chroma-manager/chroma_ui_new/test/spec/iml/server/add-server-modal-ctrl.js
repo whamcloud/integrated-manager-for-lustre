@@ -211,6 +211,8 @@ describe('add server modal ctrl', function () {
         controller: 'AddServerModalCtrl',
         windowClass: 'add-server-modal',
         backdropClass : 'add-server-modal-backdrop',
+        backdrop: 'static',
+        keyboard: 'false',
         resolve: {
           serverSpark: jasmine.any(Function),
           server: jasmine.any(Function),

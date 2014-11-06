@@ -25,12 +25,14 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
   .controller('ServerCtrl', ['$scope', '$q', '$modal', 'pdshParser', 'pdshFilter', 'naturalSortFilter',
     'serverSpark', 'serverActions', 'selectedServers', 'openCommandModal',
     'jobMonitorSpark', 'alertMonitorSpark', 'openLnetModal', 'openAddServerModal',
-    'ADD_SERVER_STEPS', 'openServerDetailModal',
+    'ADD_SERVER_STEPS', 'openServerDetailModal', 'createCommandSpark', 'overrideActionClick',
     function ServerCtrl ($scope, $q,  $modal, pdshParser, pdshFilter, naturalSortFilter,
                          serverSpark, serverActions, selectedServers, openCommandModal,
                          jobMonitorSpark, alertMonitorSpark, openLnetModal, openAddServerModal,
-                         ADD_SERVER_STEPS, openServerDetailModal) {
+                         ADD_SERVER_STEPS, openServerDetailModal, createCommandSpark, overrideActionClick) {
       'use strict';
+
+      var spark = serverSpark();
 
       $scope.server = {
         jobMonitorSpark: jobMonitorSpark,
@@ -95,6 +97,8 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
         /**
          * Called when the pdsh expression is updated.
          * @param {String} expression pdsh expression
+         * @param {Array} hostnames
+         * @param {Object} hostnamesHash
          */
         pdshUpdate: function pdshUpdate (expression, hostnames, hostnamesHash) {
           if (hostnames != null) {
@@ -219,36 +223,19 @@ angular.module('server', ['pdsh-parser-module', 'pdsh-module', 'filters',
           modalInstance.result.then(function handler (data) {
             $scope.server.setEditable(false);
 
-            if (data != null)
-              openCommandModal({
-                body: {
-                  objects: [data]
-                }
+            if (data == null)
+              return;
+
+            var commandSpark = createCommandSpark([data]);
+            openCommandModal(commandSpark)
+              .result.then(function endSpark () {
+                commandSpark.end();
               });
           });
         },
-        overrideActionClick: function overrideActionClick (record, action) {
-          var notRemoving = (action.state && action.state !== 'removed') && action.verb !== 'Force Remove';
-          var openForDeploy = record.state === 'undeployed';
-          var openForConfigure = (record.server_profile && record.server_profile.initial_state === 'unconfigured');
-
-          if ((openForDeploy || openForConfigure) && notRemoving) {
-            var step;
-            if (record.install_method !== 'existing_keys_choice')
-              step = ADD_SERVER_STEPS.ADD;
-            else if (openForDeploy)
-              step = ADD_SERVER_STEPS.STATUS;
-            else
-              step = ADD_SERVER_STEPS.SELECT_PROFILE;
-
-            return openAddServerModal(spark, record, step).result;
-          } else {
-            return $q.when('fallback');
-          }
-        }
+        overrideActionClick: overrideActionClick(spark)
       };
 
-      var spark = serverSpark();
       spark.onValue('data', function handler (response) {
         if ('error' in response)
           throw response.error;

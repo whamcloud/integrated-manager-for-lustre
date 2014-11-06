@@ -125,14 +125,14 @@ describe('Server Status Step', function () {
       expect(serverStatusStep).toEqual({
         templateUrl: 'iml/server/assets/html/server-status-step.html',
         controller: 'ServerStatusStepCtrl',
-        transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'openCommandModal',
+        transition: ['$transition', 'data', 'createOrUpdateHostsThen', 'hostProfile', 'waitForCommandCompletion',
           jasmine.any(Function)]
       });
     });
 
     describe('transitions', function () {
       var $q, $rootScope, $transition, data, createOrUpdateHostsThen, hostProfile, createHostsDeferred,
-        openCommandModal, openCommandModalDeferred, transition;
+        openCommandModal, openCommandModalDeferred, transition, waitForCommandCompletion, OVERRIDE_BUTTON_TYPES;
 
       beforeEach(inject(function (_$q_, _$rootScope_) {
         $q = _$q_;
@@ -149,6 +149,15 @@ describe('Server Status Step', function () {
           flint: {},
           server: {},
           serverSpark: {}
+        };
+
+        waitForCommandCompletion = jasmine.createSpy('waitForCommandCompletion')
+          .andReturn($q.when());
+
+        OVERRIDE_BUTTON_TYPES = {
+          OVERRIDE: 'override',
+          PROCEED: 'proceed',
+          PROCEED_SKIP: 'proceed and skip'
         };
 
         createHostsDeferred = $q.defer();
@@ -193,7 +202,7 @@ describe('Server Status Step', function () {
         beforeEach(function () {
           $transition.action = 'proceed and skip';
 
-          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal);
+          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, waitForCommandCompletion);
 
           createHostsDeferred.resolve({
             body: {
@@ -203,8 +212,8 @@ describe('Server Status Step', function () {
           $rootScope.$digest();
         });
 
-        it('should not open the command modal', function () {
-          expect(openCommandModal).not.toHaveBeenCalled();
+        it('should call waitForCommandCompletion', function () {
+          expect(waitForCommandCompletion).toHaveBeenCalledWith(false);
         });
       });
 
@@ -214,7 +223,7 @@ describe('Server Status Step', function () {
         beforeEach(function () {
           $transition.action = 'proceed';
 
-          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, openCommandModal);
+          result = transition($transition, data, createOrUpdateHostsThen, hostProfile, waitForCommandCompletion);
 
           createHostsDeferred.resolve({
             body: {
@@ -230,11 +239,7 @@ describe('Server Status Step', function () {
         });
 
         it('should open the command modal', function () {
-          expect(openCommandModal).toHaveBeenCalledOnceWith({
-            body: {
-              objects: [{id: 1}]
-            }
-          });
+          expect(waitForCommandCompletion).toHaveBeenCalledOnceWith(true);
         });
 
         it('should create a host profile spark', function () {

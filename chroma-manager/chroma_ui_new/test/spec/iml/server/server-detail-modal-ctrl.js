@@ -4,7 +4,7 @@ describe('server detail modal controller', function () {
   describe('controller', function () {
     beforeEach(module('server'));
 
-    var $scope, $modalInstance, item, itemScope, myServer;
+    var $scope, $modalInstance, item, itemScope, myServer, overrideActionClick, serverSpark, selectedServers;
 
     beforeEach(inject(function ($rootScope, $controller) {
       $scope = $rootScope.$new();
@@ -32,11 +32,26 @@ describe('server detail modal controller', function () {
         alertMonitorSpark: jasmine.createSpy('alertMonitorSpark')
       };
 
+      overrideActionClick = jasmine.createSpy('overrideActionClick')
+        .andReturn(jasmine.createSpy('overrideActionClickService'));
+
+      serverSpark = jasmine.createSpy('serverSpark')
+        .andReturn({
+          onValue: jasmine.createSpy('onValue')
+        });
+
+      selectedServers = {
+        addNewServers: jasmine.createSpy('addNewServers')
+      };
+
       $controller('ServerDetailModalCtrl', {
         $scope: $scope,
         $modalInstance: $modalInstance,
         item: item,
-        itemScope: itemScope
+        itemScope: itemScope,
+        serverSpark: serverSpark,
+        selectedServers: selectedServers,
+        overrideActionClick: overrideActionClick
       });
 
       myServer = $scope.serverDetailModal.item;
@@ -104,7 +119,38 @@ describe('server detail modal controller', function () {
       it('should set teh currentItem to item', function () {
         expect($scope.serverDetailModal.currentItem).toEqual(item);
       });
+    });
 
+    describe('overrideActionClick', function () {
+      it('should call overrideActionClick', function () {
+        expect(overrideActionClick).toHaveBeenCalledWith(jasmine.any(Object));
+      });
+
+      it('should return the overrideActionClick service', function () {
+        expect($scope.serverDetailModal.overrideActionClick).toEqual(overrideActionClick.plan());
+      });
+    });
+
+    describe('server spark', function () {
+      it('should invoke the server spark', function () {
+        expect(serverSpark).toHaveBeenCalledOnce();
+      });
+
+      it('should call addNewServers when new data arrives on the spark', function () {
+        expect(serverSpark.plan().onValue).toHaveBeenCalledOnceWith('data', jasmine.any(Function));
+      });
+
+      it('should call selectedServers.addNewServers when new data arrives on the spark', function () {
+        serverSpark.plan().onValue.mostRecentCall.args[1]({
+          body: {
+            objects: [
+              {id: 1}
+            ]
+          }
+        });
+
+        expect(selectedServers.addNewServers).toHaveBeenCalledOnceWith([{id: 1}]);
+      });
     });
   });
 

@@ -21,8 +21,8 @@
 
 
 angular.module('command')
-  .controller('CommandMonitorCtrl', ['$scope', 'commandMonitor',  'openCommandModal',
-    function CommandMonitorCtrl ($scope, commandMonitor, openCommandModal) {
+  .controller('CommandMonitorCtrl', ['$scope', 'commandMonitor', 'openCommandModal', 'createCommandSpark',
+    function CommandMonitorCtrl ($scope, commandMonitor, openCommandModal, createCommandSpark) {
       'use strict';
 
       /**
@@ -37,7 +37,11 @@ angular.module('command')
          * Opens the command modal with pending data.
          */
         showPending: function showPending () {
-          openCommandModal(this.lastResponse);
+          var spark = createCommandSpark(this.lastResponse);
+          openCommandModal(spark)
+            .result.then(function endSpark () {
+              spark.end();
+            });
         }
       };
 

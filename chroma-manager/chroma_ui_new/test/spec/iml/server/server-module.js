@@ -4,9 +4,16 @@ describe('Server module', function() {
   var $scope, pdshParser, pdshFilter, naturalSortFilter,
     server, $modal, serverSpark,  openCommandModal,
     selectedServers, serverActions, jobMonitorSpark,
-    alertMonitorSpark, openLnetModal, openAddServerModal, openServerDetailModal;
+    alertMonitorSpark, openLnetModal, openAddServerModal, openServerDetailModal,
+    createCommandSpark, overrideActionClick;
 
-  beforeEach(module('server'));
+  beforeEach(module('server', 'command', function ($provide) {
+    createCommandSpark = jasmine.createSpy('createCommandSpark')
+      .andReturn({
+        end: jasmine.createSpy('end')
+      });
+    $provide.value('createCommandSpark', createCommandSpark);
+  }));
 
   beforeEach(inject(function ($rootScope, $controller, $q) {
     $scope = $rootScope.$new();
@@ -34,7 +41,10 @@ describe('Server module', function() {
       value: 'Install Updates'
     }];
 
-    openCommandModal = jasmine.createSpy('openCommandModal');
+    openCommandModal = jasmine.createSpy('openCommandModal')
+      .andReturn({
+        result: $q.when()
+      });
 
     openServerDetailModal = jasmine.createSpy('openServerDetailModal');
 
@@ -60,6 +70,9 @@ describe('Server module', function() {
       end: jasmine.createSpy('end')
     };
 
+    overrideActionClick = jasmine.createSpy('overrideActionClick')
+      .andReturn(jasmine.createSpy('overrideActionClickService'));
+
     $scope.$on = jasmine.createSpy('$on');
 
     $controller('ServerCtrl', {
@@ -77,7 +90,9 @@ describe('Server module', function() {
       alertMonitorSpark: alertMonitorSpark,
       openLnetModal: openLnetModal,
       openAddServerModal: openAddServerModal,
-      openServerDetailModal: openServerDetailModal
+      openServerDetailModal: openServerDetailModal,
+      createCommandSpark: createCommandSpark,
+      overrideActionClick: overrideActionClick
     });
 
     server = $scope.server;
@@ -210,6 +225,16 @@ describe('Server module', function() {
       });
     });
 
+    describe('overrideActionClick', function () {
+      it('should call overrideActionClick', function () {
+        expect(overrideActionClick).toHaveBeenCalledWith(jasmine.any(Object));
+      });
+
+      it('should return the overrideActionClick service', function () {
+        expect(server.overrideActionClick).toEqual(overrideActionClick.plan());
+      });
+    });
+
     describe('running an action', function () {
       var handler;
 
@@ -251,50 +276,27 @@ describe('Server module', function() {
         expect(server.editable).toBe(false);
       });
 
-      it('should open the command modal', function () {
-        handler({ foo: 'bar' });
+      describe('openCommandModal', function () {
+        beforeEach(function () {
+          handler({ foo: 'bar' });
+        });
 
-        expect(openCommandModal).toHaveBeenCalledOnceWith({
-          body: {
-            objects: [{ foo: 'bar' }]
-          }
+        it('should open the command modal with the spark', function () {
+          expect(openCommandModal).toHaveBeenCalledOnceWith(createCommandSpark.plan());
+        });
+
+        it('should call createCommandSpark', function () {
+          expect(createCommandSpark).toHaveBeenCalledWith([{ foo: 'bar' }]);
+        });
+
+        it('should end the spark after the modal closes', function () {
+          openCommandModal.plan().result.then(function whenModalClosed () {
+            expect(createCommandSpark.plan().end).toHaveBeenCalled();
+          });
+
+          $scope.$digest();
         });
       });
-    });
-  });
-
-  describe('override action click', function () {
-    var record, action;
-
-    beforeEach(function () {
-      record = {
-        state: 'undeployed',
-        install_method: 'root_password'
-      };
-
-      action = {
-        state: 'deployed'
-      };
-    });
-
-    it('should be a function', function () {
-      expect(server.overrideActionClick).toEqual(jasmine.any(Function));
-    });
-
-    it('should fallback without an action state', function () {
-      server.overrideActionClick(record, {}).then(function (resp) {
-        expect(resp).toEqual('fallback');
-      });
-
-      $scope.$digest();
-    });
-
-    it('should open the add server modal when needed', function () {
-      server.overrideActionClick(record, action).then(function () {
-        expect(openAddServerModal).toHaveBeenCalledOnceWith(record);
-      });
-
-      $scope.$digest();
     });
   });
 

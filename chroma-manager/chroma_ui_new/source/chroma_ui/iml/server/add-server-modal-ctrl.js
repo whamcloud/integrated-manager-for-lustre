@@ -124,6 +124,8 @@
           templateUrl: 'iml/server/assets/html/add-server-modal.html',
           controller: 'AddServerModalCtrl',
           backdropClass: 'add-server-modal-backdrop',
+          backdrop: 'static',
+          keyboard: 'false',
           windowClass: 'add-server-modal',
           resolve: {
             serverSpark: function getServerSpark () {

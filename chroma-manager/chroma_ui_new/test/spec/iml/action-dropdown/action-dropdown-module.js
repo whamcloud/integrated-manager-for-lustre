@@ -23,17 +23,30 @@ describe('action dropdown module', function () {
 describe('action dropdown directive', function () {
   'use strict';
 
-  var element, handleAction, openCommandModal, $scope, node, deferred, handleActionDefer;
+  var element, handleAction, openCommandModal, $scope, node, deferred, handleActionDefer,
+    createCommandSpark;
   beforeEach(module('action-dropdown-module', 'templates', function ($provide) {
-    openCommandModal = jasmine.createSpy('openCommandModal').andReturn({result: 'result'});
     handleAction = jasmine.createSpy('handleAction');
 
-    $provide.value('openCommandModal', openCommandModal);
     $provide.value('handleAction', handleAction);
 
     $provide.decorator('handleAction', function ($q, $delegate) {
       handleActionDefer = $q.defer();
       return $delegate.andReturn(handleActionDefer.promise);
+    });
+
+    createCommandSpark = jasmine.createSpy('createCommandSpark')
+      .andReturn({
+        end: jasmine.createSpy('end')
+      });
+    $provide.value('createCommandSpark', createCommandSpark);
+
+    openCommandModal = jasmine.createSpy('openCommandModal');
+    $provide.value('openCommandModal', openCommandModal);
+    $provide.decorator('openCommandModal', function ($q, $delegate) {
+      return $delegate.andReturn({
+        result: $q.when()
+      });
     });
   }));
 
@@ -71,11 +84,19 @@ describe('action dropdown directive', function () {
         });
 
         it('should open the command modal', function () {
-          expect(openCommandModal).toHaveBeenCalledWith({
-            body: {
-              objects: ['command']
-            }
+          expect(openCommandModal).toHaveBeenCalledOnceWith(createCommandSpark.plan());
+        });
+
+        it('should call createCommandSpark', function () {
+          expect(createCommandSpark).toHaveBeenCalledOnceWith(['command']);
+        });
+
+        it('should end the spark after the modal closes', function () {
+          openCommandModal.plan().result.then(function whenModalClosed () {
+            expect(createCommandSpark.plan().end).toHaveBeenCalledOnce();
           });
+
+          $scope.$digest();
         });
 
         it('should have its flag set to false', function () {
@@ -158,11 +179,19 @@ describe('action dropdown directive', function () {
       });
 
       it('should open the command modal', function () {
-        expect(openCommandModal).toHaveBeenCalledWith({
-          body: {
-            objects: ['command']
-          }
+        expect(openCommandModal).toHaveBeenCalledOnceWith(createCommandSpark.plan());
+      });
+
+      it('should call createCommandSpark', function () {
+        expect(createCommandSpark).toHaveBeenCalledOnceWith(['command']);
+      });
+
+      it('should end the spark after the modal closes', function () {
+        openCommandModal.plan().result.then(function whenModalClosed () {
+          expect(createCommandSpark.plan().end).toHaveBeenCalledOnce();
         });
+
+        $scope.$digest();
       });
 
       it('should have its flag set to false', function () {
