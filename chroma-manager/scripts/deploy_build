@@ -27,7 +27,7 @@ BUILDER_URL=https://jenkins.iml.intel.com:8080
 BUILD_JOB=${BUILD_JOB:-chroma-blessed}
 BUILD_NUMBER=${BUILD_NUMBER:-lastSuccessfulBuild}
 BUILD_TARGET=${BUILD_TARGET:-"arch=x86_64,distro=el6.4"}
-BUNDLE_TARBALL=${BUNDLE_TARBALL:-ieel-1.0.2.tar.gz}
+BUNDLE_TARBALL=${BUNDLE_TARBALL:-ieel-2.0.1.2.tar.gz}
 BUILD_META_CHANGES=
 
 usage()

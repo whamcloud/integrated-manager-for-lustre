@@ -18,7 +18,7 @@ rm -rfv $PWD/coverage_reports/.coverage*
 mkdir -p $PWD/test_reports
 mkdir -p $PWD/coverage_reports
 
-ARCHIVE_NAME=ieel-2.0.1.1.tar.gz
+ARCHIVE_NAME=ieel-2.0.1.2.tar.gz
 CLUSTER_CONFIG=${CLUSTER_CONFIG:-"$(ls $PWD/shared_storage_configuration_cluster_cfg.json)"}
 CHROMA_DIR=${CHROMA_DIR:-"$PWD/chroma/"}
 USE_FENCE_XVM=false
@@ -118,9 +118,9 @@ fi
 if [ -z "$JENKINS_PULL" ]; then
     JENKINS_PULL="2cf9b55238c654b00bc37a6e8ccc4caf"
 fi
-# first fetch and install chroma 2.0.2.0
+# first fetch and install chroma 2.1.1.1 (ieel 2.0.1.1)
 BUILD_JOB=chroma-blessed
-BUILD_NUM=62
+BUILD_NUM=89
 IEEL_FROM_VERSION=$(curl -s -k -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/api/xml?xpath=*/artifact/fileName&wrapper=foo" | sed -e 's/.*>\(ieel-.*gz\)<.*/\1/')
 curl -k -O -u "jenkins-pull:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=el6.4/artifact/chroma-bundles/$IEEL_FROM_VERSION"
 
