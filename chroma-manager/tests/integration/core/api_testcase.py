@@ -189,7 +189,7 @@ class ApiTestCase(UtilityTestCase):
     @property
     def config_servers(self):
         return [s for s in config['lustre_servers']
-                if not 'worker' in s.get('profile', "")]
+                if 'worker' not in s.get('profile', "")]
 
     @property
     def config_workers(self):
@@ -215,7 +215,12 @@ class ApiTestCase(UtilityTestCase):
 
     def supervisor_controlled_processes_running(self):
         # Use the api to verify the processes controlled by supervisor are all in a RUNNING state
-        response = self.chroma_manager.get('/api/system_status/')
+        try:
+            response = self.chroma_manager.get('/api/system_status/')
+        except requests.ConnectionError:
+            logger.warning("Connection error trying to connect to the manager")
+            return False
+
         self.assertEqual(response.successful, True, response.text)
         system_status = response.json
         non_running_processes = []
@@ -479,7 +484,7 @@ class ApiTestCase(UtilityTestCase):
 
         :return: hash of the api
         '''
-        if ApiTestCase._chroma_manager_api == None:
+        if ApiTestCase._chroma_manager_api is None:
             ApiTestCase._chroma_manager_api = self.get_json_by_uri("/api/")
 
         return ApiTestCase._chroma_manager_api
