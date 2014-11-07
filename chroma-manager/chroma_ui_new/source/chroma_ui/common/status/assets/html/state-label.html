@@ -1,0 +1,8 @@
+<span class="state-label" ng-show="recordState.showLabel() === true">
+    <strong>
+      <ng-pluralize count="recordState.getAlerts().length"
+                    when="{'0': 'No Alerts',
+               '1': '1 Alert',
+               'other': '{} Alerts'}"></ng-pluralize>
+    </strong>
+</span>

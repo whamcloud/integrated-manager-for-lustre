@@ -1,20 +1,19 @@
-<span class="record-state">
-  <i class="fa fa-check-circle" ng-show="!recordState.isInErrorState()"
-     tooltip="{{recordState.getTooltipMessage()}}" tooltip-placement="right"></i>
-  <i class="fa fa-exclamation-circle activate-popover" ng-show="recordState.isInErrorState()"
-    tooltip="{{recordState.getTooltipMessage()}}" tooltip-placement="right"></i>
-  <iml-popover placement="bottom" title="Alerts" work="recordState.work(actions)" on-toggle="recordState.onToggle(state)">
-    <ul>
-      <li ng-repeat="alert in recordState.getAlerts()">{{alert}}</li>
-      <li ng-repeat="alert in recordState.getMessageDifference()"><s>{{alert}}</s></li>
-    </ul>
-  </iml-popover>
-  <span class="state-label" ng-show="recordState.showLabel() === true">
-      <strong>
-        <ng-pluralize count="recordState.getAlerts().length"
-          when="{'0': 'No Alerts',
-                 '1': '1 Alert',
-                 'other': '{} Alerts'}"></ng-pluralize>
-      </strong>
+<span>
+  <span class="record-state" ng-if="!recordState.isInErrorState()">
+    <i class="fa fa-check-circle" tooltip="{{recordState.getTooltipMessage()}}" tooltip-placement="right"></i>
+    <span ng-include="'common/status/assets/html/state-label.html'"></span>
+  </span>
+
+  <span class="record-state" ng-if="recordState.isInErrorState()">
+     <i class="fa fa-exclamation-circle activate-popover" tooltip="{{recordState.getTooltipMessage()}}"
+        tooltip-placement="right"></i>
+    <iml-popover placement="bottom" title="Alerts" work="recordState.work(actions)"
+                 on-toggle="recordState.onToggle(state)">
+      <ul>
+        <li ng-repeat="alert in recordState.getAlerts()">{{alert}}</li>
+        <li ng-repeat="alert in recordState.getMessageDifference()"><s>{{alert}}</s></li>
+      </ul>
+    </iml-popover>
+    <span ng-include="'common/status/assets/html/state-label.html'"></span>
   </span>
 </span>

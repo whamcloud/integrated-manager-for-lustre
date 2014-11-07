@@ -1,6 +1,5 @@
-<span class="job-status">
-  <i class="fa fa-lock activate-popover" ng-show="jobStatus.shouldShowLockIcon() === true"
-tooltip="{{jobStatus.getLockTooltipMessage()}}" tooltip-placement="right"></i>
+<span class="job-status" ng-if="jobStatus.shouldShowLockIcon() === true">
+  <i class="fa fa-lock activate-popover" tooltip="{{jobStatus.getLockTooltipMessage()}}" tooltip-placement="right"></i>
   <iml-popover placement="bottom" title="Job Operations" on-toggle="jobStatus.onToggle(state)">
     <accordion close-others="jobStatus.closeOthers">
       <accordion-group heading="Write Operations" ng-if="jobStatus.getWriteMessages().length > 0 ||
