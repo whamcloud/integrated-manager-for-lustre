@@ -33,7 +33,9 @@ from chroma_agent.utils import Mounts
 from chroma_agent import version as agent_version
 from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 import chroma_agent.lib.normalize_device_path as ndp
+
 
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
@@ -47,6 +49,7 @@ VersionInfo = namedtuple('VersionInfo', ['epoch', 'version', 'release', 'arch'])
 REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
 
+@exceptionSandBox(console_log, None)
 def scan_packages():
     """
     Interrogate the packages available from configured repositories, and the installation
@@ -108,6 +111,7 @@ def scan_packages():
     return repo_packages
 
 
+@exceptionSandBox(console_log, {})
 class LustrePlugin(DevicePlugin):
     def _scan_mounts(self):
         mounts = {}

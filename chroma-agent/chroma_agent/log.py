@@ -23,8 +23,10 @@
 import logging
 from logging.handlers import SysLogHandler
 import os
+import sys
 
 from chroma_agent.chroma_common.lib import shell
+from chroma_agent.chroma_common.lib.exception_sandbox import ExceptionSandBox
 
 # This log is for messages about the internal machinations of our
 # daemon and messaging systems, the user would only be interested
@@ -44,14 +46,16 @@ console_log = logging.getLogger('console')
 # but for today this achieves what we want, and has no debt.
 shell.set_logger(console_log)
 
-if os.path.exists("/tmp/chroma-agent-debug"):
+if os.path.exists("/tmp/chroma-agent-debug") or 'nosetests' in sys.argv[0]:
     daemon_log.setLevel(logging.DEBUG)
     copytool_log.setLevel(logging.DEBUG)
     console_log.setLevel(logging.DEBUG)
+    ExceptionSandBox.enable_debug(True)                 # Not an obvious place to do this, but easy to find
 else:
     daemon_log.setLevel(logging.WARN)
     copytool_log.setLevel(logging.WARN)
     console_log.setLevel(logging.WARN)
+    ExceptionSandBox.enable_debug(False)                # Not an obvious place to do this, but easy to find
 
 agent_loggers = [daemon_log, console_log, copytool_log]
 

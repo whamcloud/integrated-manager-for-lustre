@@ -30,6 +30,7 @@ from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log, console_log
 from chroma_agent import config
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
 def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
@@ -133,6 +134,7 @@ def get_resource_location(resource_name):
     return None
 
 
+@exceptionSandBox(console_log, None)
 def get_resource_locations():
     # FIXME: this may break on non-english systems or new versions of pacemaker
     """Parse `crm_mon -1` to identify where (if anywhere)

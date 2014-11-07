@@ -26,6 +26,7 @@ import re
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
 class EMCPower(DeviceHelper):
@@ -37,6 +38,7 @@ class EMCPower(DeviceHelper):
     def all(self):
         return self.emcpowers
 
+    @exceptionSandBox(console_log, [])
     def _get_emcpower(self):
         try:
             devs = []

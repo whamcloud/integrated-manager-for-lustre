@@ -154,6 +154,7 @@ def wait(timeout=float('inf'), count=None, minwait=0.1, maxwait=1.0):
         time.sleep(min(minwait, maxwait, remaining))
         minwait *= 2
 
+
 def ReadServerURI(uri):
     scheme, netloc = urlparse(config.get('settings', 'server')['url'])[:2]
 

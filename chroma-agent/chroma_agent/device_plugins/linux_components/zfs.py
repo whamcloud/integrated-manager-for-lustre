@@ -30,6 +30,7 @@ from chroma_agent.log import daemon_log
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.chroma_common.blockdevices.blockdevice_zfs import ExportedZfsDevice
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
 class ZfsDevices(DeviceHelper):
@@ -39,12 +40,14 @@ class ZfsDevices(DeviceHelper):
     def __init__(self):
         self._zpools = {}
 
+    @exceptionSandBox(daemon_log, [])
     def quick_scan(self):
         try:
             return shell.try_run(["zpool", "list", "-H", "-o", "name"]).split("\n")
         except (IOError, OSError):
             return []
 
+    @exceptionSandBox(daemon_log, None)
     def full_scan(self, block_devices):
         try:
             self._search_for_active(block_devices)
@@ -140,10 +143,12 @@ class ZfsDevices(DeviceHelper):
                 }
 
     @property
+    @exceptionSandBox(daemon_log, {})
     def zpools(self):
         return self._zpools
 
     @property
+    @exceptionSandBox(daemon_log, {})
     def datasets(self):
         datasets = {}
 
@@ -153,6 +158,7 @@ class ZfsDevices(DeviceHelper):
         return datasets
 
     @property
+    @exceptionSandBox(daemon_log, {})
     def zvols(self):
         zvols = {}
 

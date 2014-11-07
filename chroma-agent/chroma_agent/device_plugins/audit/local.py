@@ -23,6 +23,8 @@
 import chroma_agent.device_plugins.audit
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
+from chroma_agent.log import console_log
 
 
 class LocalAudit(BaseAudit, FileSystemMixin):
@@ -77,6 +79,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
 
         return {'raw': agg_raw}
 
+    @exceptionSandBox(console_log, {})
     def properties(self):
         """Returns merged properties suitable for host validation."""
         return dict(item for cls in self.audit_classes() for item in cls().properties().items())

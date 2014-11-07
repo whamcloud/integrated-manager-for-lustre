@@ -24,6 +24,7 @@ import re
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_components.device_helper import DeviceHelper
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
 class MdRaid(DeviceHelper):
@@ -35,6 +36,7 @@ class MdRaid(DeviceHelper):
     def all(self):
         return self.mds
 
+    @exceptionSandBox(console_log, [])
     def _get_md(self):
         try:
             matches = re.finditer("^(md\d+) : active", open('/proc/mdstat').read().strip(), flags = re.MULTILINE)

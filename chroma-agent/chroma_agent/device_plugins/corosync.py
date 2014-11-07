@@ -28,6 +28,7 @@ from dateutil.parser import parse
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
+from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 
 
 try:
@@ -119,6 +120,7 @@ class CorosyncPlugin(DevicePlugin):
     def start_session(self):
         return self.update_session()
 
+    @exceptionSandBox(daemon_log, None)
     def update_session(self):
         """Respond to poll.  Only return if has valid data"""
 
