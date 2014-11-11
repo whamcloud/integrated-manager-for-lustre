@@ -9,7 +9,7 @@ describe('Job Status directive', function () {
     $timeout = _$timeout_;
 
     // Create an instance of the element
-    element = '<job-status record-id="host/6" job-spark="spark"></job-status>';
+    element = '<div><job-status record-id="host/6" job-spark="spark"></job-status></div>';
 
     $scope = $rootScope.$new();
 
@@ -27,12 +27,31 @@ describe('Job Status directive', function () {
     getPopover = function getPopover () {
       return node.find('i ~ .popover');
     };
-
-    i = node.find('i');
   }));
 
   describe('toggling', function () {
     beforeEach(function() {
+      var response = {
+        body: {
+          objects: [
+            {
+              write_locks: [
+                {
+                  locked_item_uri: 'host/6'
+                }
+              ],
+              description: 'write lock description'
+            }
+          ]
+        }
+      };
+
+      var handler = $scope.$$childHead.jobSpark.onValue.mostRecentCall.args[1];
+      handler(response);
+
+      $scope.$digest();
+
+      i = node.find('i');
       i.trigger('click');
       $timeout.flush();
     });
