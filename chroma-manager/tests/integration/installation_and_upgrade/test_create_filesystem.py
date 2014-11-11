@@ -58,26 +58,22 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
 
         self.assertGreaterEqual(len(config['lustre_servers']), 4)
 
-        self.hosts = self.add_hosts([
+        hosts = self.add_hosts([
             config['lustre_servers'][0]['address'],
             config['lustre_servers'][1]['address'],
-            config['lustre_servers'][2]['address'],
-            config['lustre_servers'][3]['address']
         ])
 
-        volumes = self.get_shared_volumes(required_hosts = 4)
-        self.assertGreaterEqual(len(volumes), 4)
+        volumes = self.get_usable_volumes()
+        self.assertGreaterEqual(len(volumes), 3)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]
-        ost1_volume = volumes[2]
-        ost2_volume = volumes[3]
-        self.set_volume_mounts(mgt_volume, self.hosts[0]['id'], self.hosts[1]['id'])
-        self.set_volume_mounts(mdt_volume, self.hosts[1]['id'], self.hosts[0]['id'])
-        self.set_volume_mounts(ost1_volume, self.hosts[2]['id'], self.hosts[3]['id'])
-        self.set_volume_mounts(ost2_volume, self.hosts[3]['id'], self.hosts[2]['id'])
+        ost_volume = volumes[2]
+        self.set_volume_mounts(mgt_volume, hosts[0]['id'], hosts[1]['id'])
+        self.set_volume_mounts(mdt_volume, hosts[1]['id'], hosts[0]['id'])
+        self.set_volume_mounts(ost_volume, hosts[0]['id'], hosts[1]['id'])
 
-        self.filesystem_id = self.create_filesystem({
+        filesystem_id = self.create_filesystem({
             'name': self.fs_name,
             'mgt': {'volume_id': mgt_volume['id']},
             'mdt': {
@@ -86,33 +82,74 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
 
             },
             'osts': [{
-                'volume_id': ost1_volume['id'],
-                'conf_params': {}
-            }, {
-                'volume_id': ost2_volume['id'],
+                'volume_id': ost_volume['id'],
                 'conf_params': {}
             }],
             'conf_params': {}
         })
 
-        self._exercise_simple(self.filesystem_id)
+        self._exercise_simple(filesystem_id)
 
         self.assertTrue(self.get_filesystem_by_name(self.fs_name)['name'] == self.fs_name)
 
 
+def my_setUp(self):
+    # connect the remote operations but otherwise...
+    if config.get('simulator', False):
+        self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
+    else:
+        self.remote_operations = RealRemoteOperations(self)
+
+    # Enable agent debugging
+    self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
+
+    self.wait_until_true(self.supervisor_controlled_processes_running)
+    self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
+
+
+class TestAddHost(TestCreateFilesystem):
+    def setUp(self):
+        my_setUp(self)
+
+    def test_add_host(self):
+        """ Test that a host and OST can be added to a filesystem"""
+
+        volumes = self.get_usable_volumes()
+        filesystem_id = self.get_filesystem_by_name(self.fs_name)['id']
+        filesystem_uri = "/api/filesystem/%s/" % filesystem_id
+
+        new_hosts = self.add_hosts([
+            config['lustre_servers'][2]['address'],
+            config['lustre_servers'][3]['address']
+        ])
+
+        new_volumes = [v for v in self.get_usable_volumes() if v not in volumes]
+        self.assertGreaterEqual(len(new_volumes), 1)
+
+        ost_volume = new_volumes[0]
+
+        self.set_volume_mounts(ost_volume, new_hosts[0]['id'], new_hosts[1]['id'])
+
+        # add the new volume to the existing filesystem
+        response = self.chroma_manager.post("/api/target/", body = {
+            'volume_id': ost_volume['id'],
+            'kind': 'OST',
+            'filesystem_id': filesystem_id
+        })
+        self.assertEqual(response.status_code, 202, response.text)
+        target_uri = response.json['target']['resource_uri']
+        create_command = response.json['command']['id']
+        self.wait_for_command(self.chroma_manager, create_command)
+
+        self.assertState(target_uri, 'mounted')
+        self.assertState(filesystem_uri, 'available')
+
+        self.assertEqual(len(self.chroma_manager.get("/api/filesystem/").json['objects'][0]['osts']), 2)
+
+
 class TestExistsFilesystem(TestCreateFilesystem):
     def setUp(self):
-        # connect the remote operations but otherwise...
-        if config.get('simulator', False):
-            self.remote_operations = SimulatorRemoteOperations(self, self.simulator)
-        else:
-            self.remote_operations = RealRemoteOperations(self)
-
-        # Enable agent debugging
-        self.remote_operations.enable_agent_debug(self.TEST_SERVERS)
-
-        self.wait_until_true(self.supervisor_controlled_processes_running)
-        self.initial_supervisor_controlled_process_start_times = self.get_supervisor_controlled_process_start_times()
+        my_setUp(self)
 
     def test_exists(self):
         self.assertTrue(self.get_filesystem_by_name(self.fs_name)['name'] == self.fs_name)
