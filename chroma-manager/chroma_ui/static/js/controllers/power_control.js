@@ -29,7 +29,7 @@
     pageTitle.set('Configuration - Power Control');
 
     $scope.powerCtrl = {
-      hosts: hostModel.query(),
+      hosts: hostModel.query({ limit: 0 }),
       powerControlDevices: PowerControlDeviceModel.query({order_by: 'name'}),
       /**
        * Indicates whether or not any of the instantiated devices are IPMI.
@@ -57,7 +57,7 @@
       },
       /**
        * @description Instantiates the and opens create pdu dialog.
-       * @param{[PowerControlDeviceModel]} devices
+       * @param {[PowerControlDeviceModel]} devices
        * @param {PowerControlDeviceModel} [device]
        * @param {boolean} [ipmi]
        */
