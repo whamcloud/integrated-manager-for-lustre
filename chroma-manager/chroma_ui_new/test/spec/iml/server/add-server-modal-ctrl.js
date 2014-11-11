@@ -267,7 +267,8 @@ describe('add server modal ctrl', function () {
     it('should call spark.sendGet', function () {
       expect(spark.sendGet).toHaveBeenCalledOnceWith('/host_profile', {
         qs: {
-          id__in: ['1', '2']
+          id__in: ['1', '2'],
+          limit: 0
         }
       });
     });

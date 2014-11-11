@@ -147,7 +147,8 @@
 
         spark.sendGet('/host_profile', {
           qs: {
-            id__in: _.pluck(hosts, 'id')
+            id__in: _.pluck(hosts, 'id'),
+            limit: 0
           }
         });
 
