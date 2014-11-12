@@ -1,5 +1,5 @@
 {
-  "ui_name": "Monitored storage server",
+  "ui_name": "Monitored Storage Server",
   "managed": false,
   "worker": false,
   "name": "base_monitored",

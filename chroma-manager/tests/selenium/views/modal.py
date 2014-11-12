@@ -95,7 +95,7 @@ class AddServerModal(Modal):
         self.driver.find_element_by_css_selector(self.SUCCESS_BUTTON).click()
         self.wait_for_angular()
 
-    def select_profile(self, profile_text='Managed storage server'):
+    def select_profile(self, profile_text='Managed Storage Server'):
         self.wait_for_angular()
         profile_select = FancySelect(self.driver, self.SELECT_SERVER_PROFILE_STEP)
         profile_select.select_option(profile_text)

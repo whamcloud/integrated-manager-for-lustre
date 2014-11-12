@@ -1,5 +1,5 @@
 {
-  "ui_name": "Managed storage server", 
+  "ui_name": "Managed Storage Server",
   "managed": true,
   "worker": false,
   "name": "base_managed", 
@@ -17,6 +17,6 @@
     ]
   },
   "validation": [
-    {"test": "zfs_installed == False", "description": "ZFS is installed but is unsupported by the Managed storage server profile"}
+    {"test": "zfs_installed == False", "description": "ZFS is installed but is unsupported by the Managed Storage Server profile"}
   ]
 }
