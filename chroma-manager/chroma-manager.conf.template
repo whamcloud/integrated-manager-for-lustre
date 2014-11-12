@@ -21,6 +21,7 @@ LoadModule status_module {{module_path}}mod_status.so
 LoadModule deflate_module {{module_path}}mod_deflate.so
 # load this from homedir in dev
 LoadModule proxy_wstunnel_module {{var}}/mod_proxy_wstunnel.so
+LoadModule env_module {{module_path}}mod_env.so
 ExtendedStatus on
 
 
@@ -147,6 +148,7 @@ ProxyTimeout 330
         AddOutputFilterByType DEFLATE text/html
     </Location>
     <Location /api/>
+        SetEnv proxy-nokeepalive 1
         ProxyPass http://localhost:{{HTTP_API_PORT}}/api/
         ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
     </Location>

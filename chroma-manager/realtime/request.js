@@ -39,7 +39,6 @@ module.exports = function requestFactory (conf, requestModule, logger, Q, jsonMa
   var defaultRequest = requestModule.defaults({
     json: true,
     strictSSL: false,
-    forever: true,
     useQuerystring: true,
     timeout: 60000, // 1 minute
     pool: {
