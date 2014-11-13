@@ -82,7 +82,7 @@ describe('Command monitor controller', function () {
       });
 
       it('should call createCommandSpark with the last response', function () {
-        expect(createCommandSpark).toHaveBeenCalledOnceWith(lastResponse);
+        expect(createCommandSpark).toHaveBeenCalledOnceWith(lastResponse.body.objects);
       });
 
       it('should end the spark after the modal closes', function () {

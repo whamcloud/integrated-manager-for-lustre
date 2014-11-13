@@ -21,8 +21,9 @@
 
 'use strict';
 
-module.exports = function routesFactory (wildcardRoutes, srcmapReverseRoutes) {
+module.exports = function routesFactory (testHostRoute, srcmapReverseRoutes, wildcardRoutes) {
   return function routes () {
+    testHostRoute();
     srcmapReverseRoutes();
     //These should always be last.
     wildcardRoutes();

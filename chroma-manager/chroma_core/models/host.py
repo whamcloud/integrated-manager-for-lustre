@@ -47,7 +47,6 @@ from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
 from chroma_help.help import help_text
-
 import settings
 
 

@@ -38,11 +38,20 @@ def create_host(self, *args, **kwargs):
     from chroma_core.models import ManagedHost
     from django.db.models import Q
     host_id, command_id = old_create_host(self, *args, **kwargs)
+    from chroma_core.lib.cache import ObjectCache
+
+    # Give the thing some properties.
+    host = ObjectCache.get_by_id(ManagedHost, host_id)
+    host.properties = json.dumps({'zfs_installed': False})
+    host.save()
+    ObjectCache.update(host)
+
     added_host = ManagedHost.objects.get(id=host_id)
     for host in ManagedHost.objects.filter(~Q(id=host_id)):
         added_host.ha_cluster_peers.add(host)
 
     return host_id, command_id
+
 
 JobScheduler.create_host = create_host
 
@@ -56,16 +65,39 @@ JobScheduler.create_host_ssh = create_host_ssh
 
 
 def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
+    from chroma_core.models import StepResult, TestHostConnectionJob, Command, TestHostConnectionStep
+
     ok = address in MockAgentRpc.mock_servers
-    return {
+
+    result = {
         'address': address,
         'resolve': ok,
         'ping': ok,
         'auth': ok,
-        'agent': ok,
+        'hostname_valid': ok,
+        'fqdn_resolves': ok,
+        'fqdn_matches': ok,
         'reverse_resolve': ok,
-        'reverse_ping': ok
+        'reverse_ping': ok,
+        'yum_valid_repos': ok,
+        'yum_can_update': ok,
+        'openssl': ok,
     }
+
+    command = Command.objects.create(message="Mock Test Host Contact", complete=True)
+    job = TestHostConnectionJob.objects.create(state='complete', address=address, root_pw=None, pkey=None, pkey_pw=None)
+
+    command.jobs.add(job)
+    StepResult.objects.create(job = job,
+                              backtrace = "an error",
+                              step_klass = TestHostConnectionStep,
+                              args = {'address': address, 'credentials_key': 1},
+                              step_index = 0,
+                              step_count = 1,
+                              state = 'complete',
+                              result = json.dumps(result))
+
+    return command.id
 
 JobScheduler.test_host_contact = test_host_contact
 

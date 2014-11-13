@@ -225,8 +225,9 @@ class JobSchedulerClient(object):
 
     @classmethod
     def test_host_contact(cls, address, root_pw=None, pkey=None, pkey_pw=None):
-        return JobSchedulerRpc().test_host_contact(
-            address, root_pw, pkey, pkey_pw)
+        command_id = JobSchedulerRpc().test_host_contact(address, root_pw, pkey, pkey_pw)
+
+        return Command.objects.get(pk = command_id)
 
     @classmethod
     def create_filesystem(cls, fs_data):

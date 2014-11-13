@@ -5,7 +5,6 @@ from testconfig import config
 from tests.integration.core.api_testcase_with_test_reset import ApiTestCaseWithTestReset
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
 
-
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
@@ -76,17 +75,35 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     '/api/test_host/',
                     body = {
                         'address': host_address,
-                        'server_profile': profile['resource_uri']
+                        'server_profile': profile['resource_uri']       # Not required for current versions - but needed for old versions in upgrade testing
                     }
                 )
                 self.assertEqual(response.successful, True, response.text)
-                if not config.get('ssh_config', None):
-                    self.assertTrue(response.json['ping'])
-                    self.assertTrue(response.json['resolve'])
 
-                self.assertTrue(response.json['auth'])
-                self.assertTrue(response.json['reverse_ping'])
-                self.assertTrue(response.json['reverse_resolve'])
+                # If the manager return some commands then this is a 2.2 or later manager (should be a better way of knowing versions!
+                if 'objects' in response.json:
+                    command_id = response.json['objects'][0]['id']
+
+                    self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
+
+                    results = {}
+
+                    for job in response.json['objects'][0]['jobs']:
+                        response = self.chroma_manager.get(job)
+                        self.assertEqual(response.successful, True, response.text)
+
+                        results = dict(results.items() + response.json['step_results'].items())
+                else:
+                    results = {"": response.json}
+
+                for result in results.values():
+                    if not config.get('ssh_config', None):
+                        self.assertTrue(result['ping'])
+                        self.assertTrue(result['resolve'])
+
+                    self.assertTrue(result['auth'])
+                    self.assertTrue(result['reverse_ping'])
+                    self.assertTrue(result['reverse_resolve'])
 
                 response = self.chroma_manager.post(
                     '/api/host/',

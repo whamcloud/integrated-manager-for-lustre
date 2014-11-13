@@ -20,23 +20,4 @@
 # express and approved by Intel in writing.
 
 
-from jobs import *
-from host import *
-from host_jobs import *
-from target import *
-from filesystem import *
-from conf_param import *
-from storage_plugin import *
-from alert import *
-from event import *
-from log import *
-from registration_token import *
-from stats import *
-from ha_cluster import *
-from power_control import *
-from bundle import *
-from server_profile import *
-from package import *
-from user_profile import *
-from copytool import *
-from client_mount import *
+from test_host_contact import *

@@ -4,6 +4,8 @@
 # ========================================================
 
 import mock
+import json
+
 from chroma_core.lib.util import chroma_settings
 
 
@@ -23,8 +25,26 @@ def patch_test_host_contact_task(context, result_attrs = {}):
     if not 'old_test_host_contact' in context:
         context.old_test_host_contact = JobSchedulerClient.test_host_contact
 
+    def mock_test_host_contact(address, root_pw, pkey, pkey_pw):
+        from chroma_core.models import Command, Job, StepResult
+        from chroma_core.models import TestHostConnectionStep
+
+        command = Command.objects.create(message="Mock Test Host Contact", complete=True)
+        job = Job.objects.create(state='complete')
+        command.jobs.add(job)
+        StepResult.objects.create(job = job,
+                                  backtrace = "an error",
+                                  step_klass = TestHostConnectionStep,
+                                  args = {'address': address, 'credentials_key': 1},
+                                  step_index = 0,
+                                  step_count = 1,
+                                  state = 'complete',
+                                  result = json.dumps(dict([('address', address)] + result.items())))
+
+        return command
+
     result = dict(defaults.items() + result_attrs.items())
-    JobSchedulerClient.test_host_contact = mock.Mock(side_effect = lambda address, root_pw, pkey, pkey_pw: dict([('address', address)] + result.items()))
+    JobSchedulerClient.test_host_contact = mock.Mock(side_effect = mock_test_host_contact)
 
 
 def before_all(context):

@@ -1,8 +1,7 @@
 'use strict';
 
-var srcmapReverseRoutesFactory = require('../../routes/srcmap-reverse-routes-factory');
+var srcmapReverseRoutesFactory = require('../../../routes/srcmap-reverse-routes-factory');
 var Q = require('q');
-var _ = require('lodash');
 
 describe('srcmap-reverse reverse in realtime', function () {
   var handler, srcmapReverseRoutes, router, request, logger, srcmapReverse, promisedFile, req, resp, conf;

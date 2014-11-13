@@ -71,13 +71,16 @@ class TestHostResource(ChromaApiTestCase):
         validations = [{'test': 'variable1 == 1', 'description': 'variable1 should equal 1'},
                        {'test': 'variable2 == 2', 'description': 'variable2 should equal 2'}]
 
-        with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact', mock.Mock()):
+        with mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact', mock.Mock()) as thc:
+            def test_host_contact(*args, **kwargs):
+                return Command.objects.create(message="No-op", complete=True)
+            thc.side_effect = test_host_contact
+
             # Test a single post.
             for key in MockAgentRpc.mock_servers:
                 response = self.api_client.post('/api/test_host/', data={'address': [key]})
                 self.assertHttpAccepted(response)
                 content = json.loads(response.content)
-                self.assertEqual(content['errors'], [None])
                 self.assertEqual(len(content['objects']), 1)
 
             # The code below should work but needs implementation of bulk post which comes later
@@ -175,7 +178,7 @@ class TestHostResource(ChromaApiTestCase):
             response = self.api_client.put('/api/host_profile/{0}/'.format(hosts[0].id), data={'profile': 'test_profile'})
             self.assertHttpAccepted(response)
             content = json.loads(response.content)
-            self.assertEqual(len(content['commands']), 2)
+            self.assertEqual(len(content['objects']), 2)
             self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
             shp.assert_called_once_with(hosts[0].id, u"test_profile")
             ccs.assert_called_once_with([(hosts[0], u'configured')])
@@ -191,7 +194,7 @@ class TestHostResource(ChromaApiTestCase):
             content = json.loads(response.content)
 
             # 3 commands because host[0] is already in the correct state so just needs the profile changed, host[1] needs profile and state changed.
-            self.assertEqual(len(content['commands']), 3)
+            self.assertEqual(len(content['objects']), 3)
             self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
             self.assertEqual(shp.call_count, 2)
             self.assertEqual(ccs.call_count, 1)
@@ -204,7 +207,7 @@ class TestHostResource(ChromaApiTestCase):
             self.assertHttpAccepted(response)
             content = json.loads(response.content)
 
-            self.assertEqual(len(content['commands']), 0)
+            self.assertEqual(len(content['objects']), 0)
             self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
             self.assertEqual(shp.called, False)
             self.assertEqual(ccs.called, False)
@@ -295,6 +298,10 @@ class TestCreateHostAPI(ChromaApiTestCase):
     def _test_host_contact_ssh_auth(self, accept):
         """Test POST to /api/test_host/ results in jobschedulerclient call."""
         with mock.patch("chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.test_host_contact", mock.Mock()) as thc:
+            def test_host_contact(*args, **kwargs):
+                return Command.objects.create(message="No-op", complete=True)
+            thc.side_effect = test_host_contact
+
             api_resp = self.api_client.post("/api/test_host/", data=self.input_data)
 
             if accept:

@@ -340,7 +340,7 @@ describe('select server profile', function () {
       beforeEach(function () {
         postPromise = $q.when({
           body: {
-            commands: [
+            objects: [
               {id: 1}
             ]
           }

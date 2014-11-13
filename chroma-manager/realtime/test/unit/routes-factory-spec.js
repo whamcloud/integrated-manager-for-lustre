@@ -3,14 +3,16 @@
 var routesFactory = require('../../routes/routes-factory');
 
 describe('routes', function () {
-  var routes, wildcardRoutes, srcmapReverseRoutes;
+  var routes, wildcardRoutes, srcmapReverseRoutes, testHostRoute;
 
   beforeEach(function () {
     wildcardRoutes = jasmine.createSpy('wildcardRoutes');
 
     srcmapReverseRoutes = jasmine.createSpy('srcmapReverseRoutes');
 
-    routes = routesFactory(wildcardRoutes, srcmapReverseRoutes)();
+    testHostRoute = jasmine.createSpy('testHostRoute');
+
+    routes = routesFactory(testHostRoute, srcmapReverseRoutes, wildcardRoutes)();
   });
 
   it('should invoke the wildcardRoutes', function () {
@@ -19,5 +21,9 @@ describe('routes', function () {
 
   it('should invoke the srcmapReverseRoutes', function () {
     expect(srcmapReverseRoutes).toHaveBeenCalledOnce();
+  });
+
+  it('should invoke the testHostRoute', function () {
+    expect(testHostRoute).toHaveBeenCalledOnce();
   });
 });

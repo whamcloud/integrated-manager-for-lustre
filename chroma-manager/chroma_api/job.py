@@ -19,6 +19,7 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
+import json
 
 from django.contrib.contenttypes.models import ContentType
 from tastypie.resources import ModelResource, Resource
@@ -26,6 +27,7 @@ from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
 from tastypie.validation import Validation
 
+from chroma_api.step import StepResource
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_core.models import Job, StateLock
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
@@ -128,13 +130,12 @@ class JobResource(ModelResource):
     steps = fields.ToManyField('chroma_api.step.StepResource',
             lambda bundle: bundle.obj.stepresult_set.all(), null = True,
             help_text = "Steps executed within this job")
+    step_results = fields.DictField(help_text = "List of step results")
     class_name = fields.CharField(help_text = "Internal class name of job")
 
     available_transitions = fields.DictField()
 
     def _dehydrate_locks(self, bundle, write):
-        import json
-
         if bundle.obj.locks_json:
             locks = json.loads(bundle.obj.locks_json)
             locks = [StateLock.from_dict(bundle.obj, lock) for lock in locks if lock['write'] == write]
@@ -144,7 +145,6 @@ class JobResource(ModelResource):
             return []
 
     def dehydrate_wait_for(self, bundle):
-        import json
         if not bundle.obj.wait_for_json:
             return []
         else:
@@ -166,6 +166,13 @@ class JobResource(ModelResource):
             return []
         elif job.cancellable:
             return [{'state': 'cancelled', 'label': 'Cancel'}]
+
+    def dehydrate_step_results(self, bundle):
+        result = {}
+
+        for step_result in bundle.obj.stepresult_set.all():
+            result[StepResource().get_resource_uri(step_result)] = json.loads(step_result.result) if step_result.result else None
+        return result
 
     def dehydrate_description(self, bundle):
         return bundle.obj.downcast().description()

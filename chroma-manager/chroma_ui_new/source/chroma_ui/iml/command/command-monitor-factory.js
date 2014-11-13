@@ -37,7 +37,7 @@ angular.module('command')
          * Opens the command modal with pending data.
          */
         showPending: function showPending () {
-          var spark = createCommandSpark(this.lastResponse);
+          var spark = createCommandSpark(this.lastResponse.body.objects);
           openCommandModal(spark)
             .result.then(function endSpark () {
               spark.end();

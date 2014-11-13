@@ -37,10 +37,7 @@ class TestSshAuth(ChromaIntegrationTestCase):
         """
         server_config_1 = config['lustre_servers'][0]
 
-        profile = self.get_host_profile(server_config_1['address'])
-
         body = {
-            'server_profile': profile['resource_uri'],
             'address': server_config_1['address']
         }
 
@@ -49,7 +46,26 @@ class TestSshAuth(ChromaIntegrationTestCase):
 
         body.update(extra_params)
 
-        return self.chroma_manager.post('/api/test_host/', body=body)
+        response = self.chroma_manager.post('/api/test_host/', body=body)
+
+        self.assertEqual(response.successful, True, response.text)
+        command_id = response.json['objects'][0]['id']
+
+        self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
+
+        results = {}
+
+        for job in response.json['objects'][0]['jobs']:
+            response = self.chroma_manager.get(job)
+            self.assertEqual(response.successful, True, response.text)
+
+            results = dict(results.items() + response.json['step_results'].items())
+
+        # We have a result for each host, but as we have posted 1 host then 1 result
+        self.assertEqual(len(results), 1)
+
+        # As we have 1 result just return that result
+        return results.values()[0]
 
     @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_public_private_key(self):
@@ -58,32 +74,32 @@ class TestSshAuth(ChromaIntegrationTestCase):
         This is how all current ssh authentication works.  This will no
         """
 
-        response = self._post_to_test_host({})
+        result = self._post_to_test_host({})
 
-        self.assertTrue(response.json['auth'])
+        self.assertTrue(result['auth'])
 
     @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_root_password(self):
         """Passing a root password with effect a root/pw based auth"""
 
-        response = self._post_to_test_host(lambda server_config: {'root_pw': server_config['root_password']})
+        result = self._post_to_test_host(lambda server_config: {'root_pw': server_config['root_password']})
 
-        self.assertTrue(response.json['auth'])
+        self.assertTrue(result['auth'])
 
     @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_entered_private_key(self):
         """Test user can submit a private key to authenticate"""
 
-        response = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY FROM_CONFIG"})
+        result = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY FROM_CONFIG"})
 
-        self.assertTrue(response.json['auth'])
+        self.assertTrue(result['auth'])
 
     @skipIf(config.get('simulator'), "Requires HYD-1889")
     def test_entered_private_key_with_passphrase(self):
         """Test user can submit an enc private key and passphrase to auth"""
 
-        response = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY_FROM_CONFIG",
+        result = self._post_to_test_host({'private_key': "REPLACE_WITH_PRIVATE_KEY_FROM_CONFIG",
                                             'private_key_passphrase': "REPLACE_WITH_PRIVATE_KEY "
                                                                       "PASSPHRASE_FROM_CONFIG"})
 
-        self.assertTrue(response.json['auth'])
+        self.assertTrue(result['auth'])

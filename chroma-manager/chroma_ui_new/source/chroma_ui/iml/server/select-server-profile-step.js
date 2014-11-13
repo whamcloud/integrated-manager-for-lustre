@@ -180,7 +180,7 @@
                     .then(function transformResponse (response) {
                       return {
                         body: {
-                          objects: response.body.commands.map(function mapCommands (currentCommand) {
+                          objects: response.body.objects.map(function mapCommands (currentCommand) {
                             return {command: currentCommand};
                           })
                         }

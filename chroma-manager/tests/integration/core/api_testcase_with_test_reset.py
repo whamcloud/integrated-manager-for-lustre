@@ -106,7 +106,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             profiles = " ".join([line for line in installer_contents.split("\n")
                                  if 'profile' in line])
             logger.debug("Found these profiles: %s" % profiles)
-            # FIXME: For some reason, doing this correctly randomly fails
+            # FIXME: For some reason, doing this currently randomly fails
             # on the EFS tests. For the moment, just hard-code the list.
             # Leaving the previous debug code in for data collection.
             if not profiles:

@@ -1,6 +1,6 @@
 'use strict';
 
-var wildcardRoutesFactory = require('../../routes/wildcard-routes-factory');
+var wildcardRoutesFactory = require('../../../routes/wildcard-routes-factory');
 var errorSerializer = require('bunyan').stdSerializers.err;
 
 describe('wildcard routes', function () {

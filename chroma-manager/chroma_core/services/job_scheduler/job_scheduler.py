@@ -21,12 +21,9 @@
 
 
 import json
-import socket
-import subprocess
 import threading
 import sys
 import traceback
-import urlparse
 from django.core.exceptions import ObjectDoesNotExist
 
 import os
@@ -36,7 +33,6 @@ from collections import defaultdict
 import Queue
 import dateutil.parser
 from copy import deepcopy
-from paramiko import SSHException, AuthenticationException
 from chroma_core.lib.util import all_subclasses
 
 
@@ -61,7 +57,6 @@ from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemo
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
 import chroma_core.lib.conf_param
-import settings
 
 log = log_register(__name__.split('.')[-1])
 
@@ -243,10 +238,11 @@ class JobProgress(threading.Thread, Queue.Queue):
             result.backtrace = backtrace
             result.save()
 
-    def _step_success(self, job_id):
+    def _step_success(self, job_id, step_result):
         result = self._job_to_result[job_id]
         with transaction.commit_on_success():
             result.state = 'success'
+            result.result = json.dumps(step_result)
             result.save()
 
 
@@ -325,10 +321,10 @@ class RunJobThread(threading.Thread):
                     _disable_database()
 
                 log.debug("Job %d running step %d" % (self.job.id, step_index))
-                step.run(args)
-                log.debug("Job %d step %d successful" % (self.job.id, step_index))
+                result = step.run(args)
+                log.debug("Job %d step %d successful result %s" % (self.job.id, step_index, result))
 
-                self._job_progress.step_success(self.job.id)
+                self._job_progress.step_success(self.job.id, result)
             except AgentException, e:
                 log.error("Job %d step %d encountered an agent error: %s" % (self.job.id, step_index, e.backtrace))
 
@@ -925,194 +921,19 @@ class JobScheduler(object):
                 self._drain_notification_buffer()
                 self._run_next()
 
-    def _test_hostname(self, agent_ssh, auth_args, address, resolved_address):
-        try:
-            # Check that the system hostname:
-            # a) resolves
-            # b) does not resolve to a loopback address
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
-                                             "python -c 'import socket; print socket.gethostbyname(socket.gethostname())'")
-            hostname_resolution = out.rstrip()
-        except AgentException:
-            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-        else:
-            if rc != 0:
-                log.error("Failed configuration check on '%s': hostname does not resolve (%s)" % (address, err))
-                return False, False, False
-            if hostname_resolution.startswith('127'):
-                log.error("Failed configuration check on '%s': hostname resolves to a loopback address (%s)" % (address, hostname_resolution))
-                return False, False, False
-
-        try:
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
-                                             "python -c 'import socket; print socket.getfqdn()'")
-            assert rc == 0, "failed to get fqdn on %s: %s" % (address, err)
-            fqdn = out.rstrip()
-        except (AssertionError, AgentException):
-            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False, False, False
-
-        try:
-            resolved_fqdn = socket.gethostbyname(fqdn)
-        except socket.gaierror:
-            log.error("Failed configuration check on '%s': can't resolve self-reported fqdn '%s'" % (address, fqdn))
-            return True, False, False
-
-        if resolved_fqdn != resolved_address:
-            log.error("Failed configuration check on '%s': self-reported fqdn resolution '%s' doesn't match address resolution" % (address, fqdn))
-            return True, True, False
-
-        # Everything's OK (we hope!)
-        return True, True, True
-
-    def _test_reverse_ping(self, agent_ssh, auth_args, address, manager_hostname):
-        try:
-            # Test resolution/ping from server back to manager
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args,
-                                             "ping -c 1 %s" % manager_hostname)
-        except AgentException:
-            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False, False
-
-        if rc == 0:
-            # Can resolve, can ping
-            return True, True
-        elif rc == 1:
-            # Can resolve, cannot ping
-            log.error("Failed configuration check on '%s': Can't ping %s" % (address, manager_hostname))
-            return True, False
-        else:
-            # Cannot resolve, cannot ping
-            log.error("Failed configuration check on '%s': Can't resolve %s" % (address, manager_hostname))
-            return False, False
-
-    def _test_yum_sanity(self, agent_ssh, auth_args, address):
-        pid_check = "[ -e /var/run/yum.pid ]"
-        pass_epel_check = True
-        can_update = False
-
-        try:
-            # Check for the presence of EPEL
-            check_for_epel = """
-if rpm -q epel-release;
-  then exit 5;
-elif %s;
-  then exit 10;
-elif yum info python-fedora-django;
- then exit 5;
-fi
-""" % pid_check
-
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_for_epel)
-            if rc == 5:
-                log.error("Failed configuration check on '%s': EPEL repository detected in yum configuration" % address)
-                pass_epel_check = False
-            elif rc == 10:
-                pass_epel_check = None
-
-        except AgentException:
-            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False, False
-
-        try:
-            # Check to see if yum can or ever has gotten OS repo metadata
-            check_yum = "if %s; then exit 10; elif yum info ElectricFence; then exit 5; fi" % pid_check
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, check_yum)
-            if rc == 5:
-                can_update = True
-            elif rc == 10:
-                can_update = None
-            else:
-                log.error("Failed configuration check on '%s': Unable to access any yum mirrors" % address)
-        except AgentException:
-            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False, False
-
-        return pass_epel_check, can_update
-
-    def _test_openssl(self, agent_ssh, auth_args, address):
-        try:
-            rc, out, err = self._try_ssh_cmd(agent_ssh, auth_args, "openssl version -a")
-        except AgentException:
-            log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
-            return False
-        return not (rc or err)
-
-    def _try_ssh_cmd(self, agent_ssh, auth_args, cmd):
-        try:
-            return agent_ssh.ssh(cmd, auth_args = auth_args)
-        except (AuthenticationException, SSHException):
-            raise
-        except Exception, e:
-            # Re-raise wrapped in an AgentException
-            raise AgentException("Unhandled exception: %s" % e)
-
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
-        """Test that a host at this address can be created
+        with self._lock:
+            with transaction.commit_on_success():
+                command = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs([{"class_name": "TestHostConnectionJob",
+                                                                                                 "args": {"address": address,
+                                                                                                          "root_pw": root_pw,
+                                                                                                          "pkey": pkey,
+                                                                                                          "pkey_pw": pkey_pw}}],
+                                                                                               "Testing Connection To Host %s" % address)
 
-        See create_host_ssh for explanation of parameters
+        self.progress.advance()
 
-        TODO: Break this method up, normalize the checks
-
-        Use threaded timeouts on possible long running commands.  The idea is
-        that if the command takes longer than the timeout, you might get a
-        false negative - the command didn't fail, we just cut it short.
-        Not sure this is an issue in practice, so going to stop here no ticket.
-        """
-        from chroma_core.services.job_scheduler.agent_rpc import AgentSsh
-
-        agent_ssh = AgentSsh(address, timeout=5)
-        user, hostname, port = agent_ssh.ssh_params()
-
-        auth_args = agent_ssh.construct_ssh_auth_args(root_pw, pkey, pkey_pw)
-
-        try:
-            resolved_address = socket.gethostbyname(hostname)
-        except socket.gaierror:
-            resolve = False
-            ping = False
-        else:
-            resolve = True
-            ping = (0 == subprocess.call(['ping', '-c 1', resolved_address]))
-
-        manager_hostname = urlparse.urlparse(settings.SERVER_HTTP_URL).hostname
-
-        auth = False
-        reverse_resolve = False
-        reverse_ping = False
-        hostname_valid = False
-        fqdn_resolves = False
-        fqdn_matches = False
-        yum_valid_repos = False
-        yum_can_update = False
-        openssl = False
-
-        if resolve and ping:
-            try:
-                reverse_resolve, reverse_ping = self._test_reverse_ping(agent_ssh, auth_args, address, manager_hostname)
-                hostname_valid, fqdn_resolves, fqdn_matches = self._test_hostname(agent_ssh, auth_args, address, resolved_address)
-                yum_valid_repos, yum_can_update = self._test_yum_sanity(agent_ssh, auth_args, address)
-                openssl = self._test_openssl(agent_ssh, auth_args, address)
-            except (AuthenticationException, SSHException):
-                #  No auth methods available, or wrong creds
-                auth = False
-            else:
-                auth = True
-
-        return {
-            'address': address,
-            'resolve': resolve,
-            'ping': ping,
-            'auth': auth,
-            'hostname_valid': hostname_valid,
-            'fqdn_resolves': fqdn_resolves,
-            'fqdn_matches': fqdn_matches,
-            'reverse_resolve': reverse_resolve,
-            'reverse_ping': reverse_ping,
-            'yum_valid_repos': yum_valid_repos,
-            'yum_can_update': yum_can_update,
-            'openssl': openssl,
-        }
+        return command
 
     @classmethod
     def order_targets(cls, targets_data):

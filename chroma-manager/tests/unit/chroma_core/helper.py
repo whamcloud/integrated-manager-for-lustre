@@ -372,6 +372,14 @@ class MockAgentRpc(object):
         raise AgentException(fqdn, "cmd", {'foo': 'bar'}, "Fake backtrace")
 
     @classmethod
+    def get_session_id(cls, fqdn):
+        return [ord(c) for c in fqdn]   # A sum of the characters is unique for each fqdn.
+
+    @classmethod
+    def await_restart(cls, fqdn, timeout, old_session_id):
+        pass
+
+    @classmethod
     def call(cls, fqdn, cmd, args, cancel_event):
         from chroma_core.services.job_scheduler import job_scheduler
         import django.db
@@ -417,15 +425,8 @@ class MockAgentRpc(object):
         elif cmd == "device_plugin":
             # Only returns nid info today.
             return create_synthetic_device_info(host, mock_server, args['plugin'])
-        elif cmd == 'host_properties':
-            return {
-                'time': datetime.datetime.utcnow().isoformat() + "Z",
-                'fqdn': mock_server['fqdn'],
-                'nodename': mock_server['nodename'],
-                'capabilities': cls.capabilities,
-                'selinux_enabled': cls.selinux_enabled,
-                'agent_version': cls.version,
-            }
+        elif cmd == 'set_profile':
+            return None
         elif cmd == 'format_target':
             inode_size = None
             if 'mkfsoptions' in args:
@@ -500,22 +501,10 @@ class MockAgentRpc(object):
             result = ((0 if mock_server['tests']['reverse_resolve'] else 2) +
                       (0 if mock_server['tests']['reverse_ping'] else 1))
             return result
-        elif 'rpm -q epel-release' in cmd:
-            result = mock_server['tests']['yum_valid_repos']
-            if result:
-                return 1
-            elif result is None:
-                return 10
-            else:
-                return 5
-        elif 'yum info ElectricFence' in cmd:
-            result = mock_server['tests']['yum_can_update']
-            if result:
-                return 5
-            elif result is None:
-                return 10
-            else:
-                return 1
+        elif 'python-fedora-django' in cmd:
+            return 0 if mock_server['tests']['yum_valid_repos'] else 1
+        elif 'ElectricFence' in cmd:
+            return 0 if mock_server['tests']['yum_can_update'] else 1
 
 
 class MockAgentSsh(object):

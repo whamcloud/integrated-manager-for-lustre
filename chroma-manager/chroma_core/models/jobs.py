@@ -533,6 +533,9 @@ class StepResult(models.Model):
     modified_at = models.DateTimeField(auto_now = True)
     created_at = models.DateTimeField(auto_now_add = True)
 
+    result = models.TextField(null = True,
+                              help_text = "Arbitrary result data.")
+
     def step_klass_name(self):
         """Template helper"""
         return self.step_klass.__name__

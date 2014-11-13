@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 
+import json
 from itertools import product
 from functools import partial
 from argparse import REMAINDER, SUPPRESS
@@ -311,6 +312,8 @@ class ServerHandler(Handler):
         super(ServerHandler, self).list(ns, endpoint, **kwargs)
 
     def test_host(self, ns, endpoint=None, **kwargs):
+        from chroma_core.models import Job, StepResult
+
         failure_text = {
             'auth': "The manager was unable to login to %s on your behalf",
             'agent': "The manager was unable to invoke the agent on %s",
@@ -324,7 +327,13 @@ class ServerHandler(Handler):
             'yum_valid_repos': "The yum configuration on %s contains invalid repository entries (e.g. EPEL)",
             'yum_can_update': "Unable to verify that %s is able to access any yum mirrors for vendor packages"
         }
-        test_results = self.api.endpoints['test_host'].create(**kwargs)
+
+        commands = self.api.endpoints['test_host'].create(**kwargs)
+
+        job = Job.objects.filter(command__pk = commands['objects'][0]['id'])[0]
+        step_result = StepResult.objects.filter(job__pk = job.id)[0]
+        test_results = json.loads(step_result.result)
+
         if not all(test_results.values()):
             failures = []
             for failkey in [k for k, v in test_results.items() if not v]:

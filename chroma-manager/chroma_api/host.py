@@ -19,11 +19,9 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-from threading import Thread
-
 from collections import defaultdict
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.services.rpc import RpcError, RpcTimeout
+from chroma_core.services.rpc import RpcError
 from chroma_core.services import log_register
 from tastypie.validation import Validation
 import simplejson as json
@@ -339,31 +337,13 @@ class HostTestResource(Resource):
         params = _host_params(bundle.data)
         address = params.pop('address')
         bulk = isinstance(address, list)
-        objects, errors, threads = [], [], []
 
-        def test_host_contact(address):
-            try:
-                objects.append(JobSchedulerClient.test_host_contact(address=address, **params))
-                errors.append(None)
-            except RpcTimeout as exc:
-                objects.append({})
-                errors.append({'error': str(exc)})
+        commands = []
 
         for address in (address if bulk else [address]):
-            thread = Thread(target = test_host_contact,
-                            args = (address, ))
-            thread.start()
-            threads.append(thread)
+            commands.append(JobSchedulerClient.test_host_contact(address=address, **params))
 
-        for thread in threads:
-            thread.join()
-
-        if bulk:
-            raise custom_response(self, request, http.HttpAccepted, {'objects': objects, 'errors': errors})
-        result, = objects
-        if result:
-            raise custom_response(self, request, http.HttpAccepted, result)
-        raise custom_response(self, request, http.HttpBadRequest, {'address': ["Cannot contact host at this address:"]})
+        raise custom_response(self, request, http.HttpAccepted, {'objects': map(dehydrate_command, commands)})
 
 
 class HostProfileResource(Resource):
@@ -438,9 +418,9 @@ class HostProfileResource(Resource):
         for data in bundle.data['objects']:
             commands += self._set_profile(data['host'], data['profile'])
 
-        raise custom_response(self, request, http.HttpAccepted, {'commands': map(dehydrate_command, commands)})
+        raise custom_response(self, request, http.HttpAccepted, {'objects': map(dehydrate_command, commands)})
 
     def obj_update(self, bundle, request, pk=None):
         commands = self._set_profile(pk, bundle.data['profile'])
 
-        raise custom_response(self, request, http.HttpAccepted, {'commands': map(dehydrate_command, commands)})
+        raise custom_response(self, request, http.HttpAccepted, {'objects': map(dehydrate_command, commands)})
