@@ -1,8 +1,8 @@
 include ../include/Makefile.lustre_build_meta
 
 override REPO          := $(dir $(patsubst %/,%,$(REPO)))/repo-sles-server
-RELEASE_POSTFIX        := .gfb555be_default$(UNDERSCORE_RELEASE_POSTFIX)
-KERNEL_ARCH            = g6806719.x86_64
+RELEASE_POSTFIX        := _default$(UNDERSCORE_RELEASE_POSTFIX)
+KERNEL_ARCH            = x86_64
 KERNEL_RELEASE         = 3.0.101-0.35_lustre
 KERNEL_RELEASE_MANGLED = $(subst -,_,$(KERNEL_RELEASE))
 CHROMA_EXTERNALS_SUBDIR := lustre

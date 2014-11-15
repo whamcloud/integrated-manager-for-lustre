@@ -2,22 +2,21 @@
 include $(CURDIR)/$(dir $(lastword $(MAKEFILE_LIST)))/Makefile.jenkins_meta
 
 # Define the job/build that should be used for Lustre packages
-#JENKINS_JOB_NAME		:= lustre-b_ieel2_0
-#JENKINS_BUILD_NUMBER	:= 92
-JENKINS_JOB_NAME		:= lustre-b_ieel-reviews
-JENKINS_BUILD_NUMBER	:= 733
-LUSTRE_RELEASE			:= 2.5.25
+JENKINS_JOB_NAME		:= lustre-b_ieel2_0
+JENKINS_BUILD_NUMBER	:= 107
+#JENKINS_JOB_NAME		:= lustre-b_ieel-reviews
+#JENKINS_BUILD_NUMBER	:= 733
+LUSTRE_RELEASE			:= 2.5.27
 EL_KERNEL_RELEASE = 2.6.32-431.29.2.el6
-LUSTRE_EL_KERNEL_RELEASE = $(EL_KERNEL_RELEASE)_lustre.ga637590.x86_64
+LUSTRE_EL_KERNEL_RELEASE = $(EL_KERNEL_RELEASE)_lustre.x86_64
 
 # The SHA1 of the Lustre tree release
-RELEASE_SHA1 := g1acbec3
+RELEASE_SHA1 :=
 
-# TODO: these need to be set only if $(RELEASE_SHA1) has a value
-# until then, if there is no $(RELEASE_SHA1 value above, set these to empty
+ifneq ($(strip $(RELEASE_SHA1)),)
 UNDERSCORE_RELEASE_POSTFIX	:= _$(RELEASE_SHA1)
 DOT_RELEASE_POSTFIX		:= .$(RELEASE_SHA1)
+endif
 
 EL_KERNEL_RELEASE_MANGLED = $(subst -,_,$(EL_KERNEL_RELEASE))
 LUSTRE_EL_KERNEL_RELEASE_MANGLED = $(subst -,_,$(LUSTRE_EL_KERNEL_RELEASE))
-
