@@ -62,9 +62,9 @@
         var throttleParseExpression = _.throttle(function throttleInputAndDigest () {
           parseExpressionForValidity(pdshExpression);
 
-          if (!scope.$root.$$phase)
-            scope.$parent.$digest();
-        }, 500);
+          if (!scope.$root.$$phase) scope.$parent.$digest();
+
+        }, 400);
 
         if (!scope.pdshInitial)
           scope.pdshInitial = '';
