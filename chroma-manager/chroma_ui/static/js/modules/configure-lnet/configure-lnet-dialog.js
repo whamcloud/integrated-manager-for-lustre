@@ -70,10 +70,10 @@
 
       angular.extend($scope.configureLnetCtrl, {
         hostName: host.nodename,
-        memberOfActiveFilesystem: host.member_of_available_filesystem
+        memberOfActiveFilesystem: host.member_of_active_filesystem
       });
 
-      if (host.member_of_available_filesystem === true)
+      if (host.member_of_active_filesystem === true)
         $scope.configureLnetCtrl.networkInterfaces = angular.copy(networkInterfaces);
     });
 

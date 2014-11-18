@@ -42,7 +42,7 @@ angular.module('server').factory('serverSpark', ['requestSocket', 'CACHE_INITIAL
 
       spark.sendGet('/host', {
         jsonMask: 'objects(id,address,available_actions,boot_time,fqdn,immutable_state,install_method,label,\
-locks,member_of_available_filesystem,nids,nodename,resource_uri,server_profile,state)',
+locks,member_of_active_filesystem,nids,nodename,resource_uri,server_profile,state)',
         qs: {
           limit: 0
         }

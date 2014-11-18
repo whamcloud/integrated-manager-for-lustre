@@ -46,7 +46,7 @@ describe('server spark', function () {
   it('should send the request', function () {
     expect(spark.sendGet).toHaveBeenCalledOnceWith('/host', {
       jsonMask : 'objects(id,address,available_actions,boot_time,fqdn,immutable_state,install_method,label,locks\
-,member_of_available_filesystem,nids,nodename,resource_uri,server_profile,state)',
+,member_of_active_filesystem,nids,nodename,resource_uri,server_profile,state)',
       qs: {
         limit: 0
       }

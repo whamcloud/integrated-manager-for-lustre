@@ -327,7 +327,7 @@ describe('action dropdown directive', function () {
         read: [],
         write: []
       },
-      member_of_available_filesystem: false,
+      member_of_active_filesystem: false,
       needs_fence_reconfiguration: false,
       needs_update: false,
       nids: [],

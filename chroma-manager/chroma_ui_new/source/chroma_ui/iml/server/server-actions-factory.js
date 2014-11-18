@@ -72,7 +72,7 @@ angular.module('server').factory('serverActions', [function serverActionsFactory
         }, this);
       },
       isDisabled: function isDisabled (host) {
-        return host.member_of_available_filesystem && !host.immutable_state;
+        return host.member_of_active_filesystem && !host.immutable_state;
       }
     }
   ];

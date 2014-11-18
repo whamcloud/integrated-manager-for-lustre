@@ -6,7 +6,7 @@
   <div ng-if="configureLnet.message" class="alert alert-info">
     {{ configureLnet.message }} <i class="fa fa-spinner fa-spin"></i>
   </div>
-  <div ng-if="configureLnet.host.member_of_available_filesystem" class="alert alert-info">
+  <div ng-if="configureLnet.host.member_of_active_filesystem" class="alert alert-info">
     <i class="fa fa-info-sign"></i> To edit this NID configuration, ensure this host is not a member of an active file system.
   </div>
   <div ng-if="!configureLnet.resolved" class="well loading">
@@ -25,8 +25,8 @@
         <tr ng-repeat="networkInterface in configureLnet.networkInterfaces | orderBy:'name' track by networkInterface.id">
           <td>{{ networkInterface.name }}</td>
           <td>{{ networkInterface.inet4_address }}</td>
-          <td ng-if="configureLnet.host.member_of_available_filesystem">{{ networkInterface.nid.lnd_network }}</td>
-          <td ng-if="!configureLnet.host.member_of_available_filesystem" ng-class="configureLnet.getDiff(networkInterface).type">
+          <td ng-if="configureLnet.host.member_of_active_filesystem">{{ networkInterface.nid.lnd_network }}</td>
+          <td ng-if="!configureLnet.host.member_of_active_filesystem" ng-class="configureLnet.getDiff(networkInterface).type">
             <select
               ng-model="networkInterface.nid.lnd_network"
               ng-change="configureLnet.onChange(networkInterface)"
@@ -42,7 +42,7 @@
   </div>
 </div>
 <div class="modal-footer">
-  <div class="save-button btn-group" dropdown ng-if="!configureLnet.host.member_of_available_filesystem">
+  <div class="save-button btn-group" dropdown ng-if="!configureLnet.host.member_of_active_filesystem">
     <button type="button" ng-click="configureLnet.save()" class="btn btn-success" ng-disabled="configureLnet.message">Save <i class="fa" ng-class="{'fa-spinner fa-spin': configureLnet.message, 'fa-check-circle-o': !configureLnet.message }"></i></button>
     <button type="button" class="btn btn-success dropdown-toggle" ng-disabled="configureLnet.message">
       <span class="caret"></span>
