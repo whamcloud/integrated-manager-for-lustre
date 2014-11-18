@@ -47,6 +47,8 @@ class UtilityTestCase(TestCase):
         Sends a command over ssh to a remote machine and returns the stdout,
         stderr, and exit status. It will verify that the exit status of the
         command matches expected_return_code unless expected_return_code=None.
+
+        FIXME: Extreme redundancy with _ssh_address in RealRemoteOperations.
         """
         logger.debug("remote_command[%s]: %s" % (server, command))
         ssh = paramiko.SSHClient()
@@ -57,11 +59,11 @@ class UtilityTestCase(TestCase):
         channel = transport.open_session()
         channel.settimeout(timeout)
         channel.exec_command(command)
-        stdout = channel.makefile('rb')
-        stderr = channel.makefile_stderr()
         exit_status = channel.recv_exit_status()
+        stdout = channel.makefile('rb').read()
+        stderr = channel.makefile_stderr('rb').read()
         if expected_return_code is not None:
-            self.assertEqual(exit_status, expected_return_code, stderr.read())
+            self.assertEqual(exit_status, expected_return_code, stderr)
         return RemoteCommandResult(exit_status, stdout, stderr)
 
     def wait_until_true(self, lambda_expression, timeout=TEST_TIMEOUT):

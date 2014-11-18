@@ -162,7 +162,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
                 target_host_config['address'],
                 'mount'
             )
-            if re.search("on %s" % target_config['mount_path'], result.stdout.read()):
+            if re.search("on %s" % target_config['mount_path'], result.stdout):
                 self.remote_command(
                     target_host_config['address'],
                     "umount %s" % target_config['mount_path'],
@@ -172,7 +172,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
                     'mount'
                 )
                 self.assertNotRegexpMatches(
-                    result.stdout.read(),
+                    result.stdout,
                     "on %s" % target_config['mount_path']
                 )
 

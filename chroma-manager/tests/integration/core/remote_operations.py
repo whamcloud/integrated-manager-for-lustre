@@ -309,11 +309,12 @@ class RealRemoteOperations(RemoteOperations):
             stdin.write(buffer)
             stdin.flush()
             stdin.channel.shutdown_write()
-        stdout = channel.makefile('rb')
-        stderr = channel.makefile_stderr()
-        exit_status = channel.recv_exit_status()
+        exit_status = channel.recv_exit_status()  # Blocks until command succeeds
+        stdout = channel.makefile('rb').read()  # Be sure to read before the channel closes
+        stderr = channel.makefile_stderr('rb').read()
+        channel.close()
         if expected_return_code is not None:
-            self._test_case.assertEqual(exit_status, expected_return_code, stderr.read())
+            self._test_case.assertEqual(exit_status, expected_return_code, "stdout: '%s' stderr: '%s'" % (stdout, stderr))
         return RemoteCommandResult(exit_status, stdout, stderr)
 
     def _ssh_fqdn(self, fqdn, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
@@ -360,7 +361,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def read_proc(self, address, path):
         result = self._ssh_address(address, "cat %s" % path)
-        return result.stdout.read().strip()
+        return result.stdout.strip()
 
     def backup_cib(self, server):
         backup = "/tmp/cib-backup-%s.xml" % server['nodename']
@@ -372,7 +373,7 @@ class RealRemoteOperations(RemoteOperations):
 
         with open(backup, "w") as f:
             f.write(self._ssh_fqdn(server['fqdn'],
-                    "cibadmin --query").stdout.read())
+                    "cibadmin --query").stdout)
 
         return running_targets
 
@@ -385,7 +386,7 @@ class RealRemoteOperations(RemoteOperations):
         # get the current admin_epoch
         current_cib = xml.fromstring(
             self._ssh_fqdn(server['fqdn'],
-                           "cibadmin --query").stdout.read())
+                           "cibadmin --query").stdout)
 
         new_cib.set('admin_epoch', str(int(current_cib.get('admin_epoch')) + 1))
         new_cib.set('epoch', "0")
@@ -428,7 +429,7 @@ class RealRemoteOperations(RemoteOperations):
             'mount'
         )
         self._test_case.assertRegexpMatches(
-            result.stdout.read(),
+            result.stdout,
             "%s on /mnt/%s " % (filesystem['mount_path'], filesystem['name'])
         )
 
@@ -440,7 +441,7 @@ class RealRemoteOperations(RemoteOperations):
             client,
             'mount'
         )
-        if re.search(" on /mnt/%s " % filesystem_name, result.stdout.read()):
+        if re.search(" on /mnt/%s " % filesystem_name, result.stdout):
             logger.debug("Unmounting %s" % filesystem_name)
             self._ssh_address(
                 client,
@@ -450,7 +451,7 @@ class RealRemoteOperations(RemoteOperations):
             client,
             'mount'
         )
-        mount_output = result.stdout.read()
+        mount_output = result.stdout
         logger.debug("`Mount`: %s" % mount_output)
         self._test_case.assertNotRegexpMatches(
             mount_output,
@@ -469,7 +470,7 @@ class RealRemoteOperations(RemoteOperations):
             'crm_resource -r %s -W' % ha_label,
             timeout = 30  # shorter timeout since shouldnt take long and increases turnaround when there is a problem
         )
-        resource_status = result.stdout.read()
+        resource_status = result.stdout
 
         # Sometimes crm_resource -W gives a false positive when it is repetitively
         # trying to restart a resource over and over. Lets also check the failcount
@@ -479,7 +480,7 @@ class RealRemoteOperations(RemoteOperations):
             'crm_attribute -t status -n fail-count-%s -N %s -G -d 0' % (ha_label, host['nodename'])
         )
         self._test_case.assertRegexpMatches(
-            result.stdout.read(),
+            result.stdout,
             'value=0'
         )
 
@@ -511,7 +512,7 @@ class RealRemoteOperations(RemoteOperations):
                 host['address'],
                 'cibadmin --query'
             )
-            configuration = xml.fromstring(result.stdout.read())
+            configuration = xml.fromstring(result.stdout)
 
             self._test_case.assertTrue(
                 host_has_location(
@@ -589,7 +590,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def host_up_secs(self, address):
         result = self._ssh_address(address, "cat /proc/uptime")
-        secs_up = result.stdout.read().split()[0]
+        secs_up = result.stdout.split()[0]
         return secs_up
 
     def _host_of_server(self, server):
@@ -611,7 +612,7 @@ class RealRemoteOperations(RemoteOperations):
                 reset_cmd,
                 ssh_key_file = server_config.get('ssh_key_file', None)
             )
-            node_status = result.stdout.read()
+            node_status = result.stdout
             if re.search('was reset', node_status):
                 logger.info("%s reset successfully" % fqdn)
         else:
@@ -652,7 +653,7 @@ class RealRemoteOperations(RemoteOperations):
             boot_server['host'],
             boot_server['start_command']
         )
-        node_status = result.stdout.read()
+        node_status = result.stdout
         if re.search('started', node_status):
             logger.info("%s started successfully" % fqdn)
 
@@ -675,10 +676,10 @@ class RealRemoteOperations(RemoteOperations):
                         monitor_server['address'],
                         "crm_mon -1"
                     )
-                    node_status = result.stdout.read()
+                    node_status = result.stdout
 
                     logger.info("Response running crm_mon -1 on %s:  %s" % (boot_server['nodename'], node_status))
-                    err = result.stderr.read()
+                    err = result.stderr
                     if err:
                         logger.error("    result.stderr:  %s" % err)
                     if re.search('Online: \[.* %s .*\]' % boot_server['nodename'], node_status):
@@ -694,7 +695,7 @@ class RealRemoteOperations(RemoteOperations):
                         boot_server['host'],
                         boot_server['status_command']
                     )
-                    node_status = result.stdout.read()
+                    node_status = result.stdout
                     if re.search('running', node_status):
                         logger.info("%s seems to be running, but unresponsive" % boot_fqdn)
                         self.kill_server(boot_fqdn)
@@ -710,7 +711,7 @@ class RealRemoteOperations(RemoteOperations):
                 monitor_server['address'],
                 "crm_mon -1"
             )
-            self._test_case.assertRegexpMatches(result.stdout.read(),
+            self._test_case.assertRegexpMatches(result.stdout,
                                                 'Online: \[.* %s .*\]' %
                                                 boot_server['nodename'])
 
@@ -731,7 +732,7 @@ class RealRemoteOperations(RemoteOperations):
                     'mount'
                 )
                 self._test_case.assertNotRegexpMatches(
-                    result.stdout.read(),
+                    result.stdout,
                     " type lustre"
                 )
 
@@ -757,7 +758,7 @@ class RealRemoteOperations(RemoteOperations):
             server['address'],
             'crm_resource -L'
         )
-        crm_resources = result.stdout.read().split('\n')
+        crm_resources = result.stdout.split('\n')
         targets = []
         for r in crm_resources:
             if not re.search('chroma:Target', r):
@@ -776,7 +777,7 @@ class RealRemoteOperations(RemoteOperations):
             "crm_resource -r %s -W" % target
 
         )
-        return re.search('is running', result.stdout.read())
+        return re.search('is running', result.stdout)
 
     def get_fence_nodes_list(self, address):
         result = self._ssh_address(address, "fence_chroma -o list")
@@ -784,7 +785,7 @@ class RealRemoteOperations(RemoteOperations):
         # host1,\n
         # host2,\n
         # ...
-        return [name[:-2] for name in result.stdout.readlines()]
+        return filter(None, result.stdout.split(',\n'))
 
     def remove_config(self, server_list):
         """
@@ -900,7 +901,7 @@ EOF
                         fi
                         ''', None
                     )
-                    logger.info(result.stderr.read())
+                    logger.info(result.stderr)
                     self._test_case.assertEqual(result.exit_status, 0)
                 else:
                     crm_targets = self.get_pacemaker_targets(server)
@@ -968,8 +969,8 @@ EOF
 
     def get_iptables_rules(self, server):
         rules = []
-        for line in self._ssh_address(server['address'],
-                                      "iptables -L INPUT -nv").stdout.readlines()[2:]:
+        for line in filter(None, self._ssh_address(server['address'],
+                                      "iptables -L INPUT -nv").stdout.split('\n'))[2:]:
             logger.info(line.rstrip())
             rule = {}
             try:
@@ -989,7 +990,7 @@ EOF
     def get_corosync_port(self, server):
         mcastport = None
         for line in self._ssh_address(server['address'],
-                                      "cat /etc/corosync/corosync.conf || true").stdout.readlines():
+                                      "cat /etc/corosync/corosync.conf || true").stdout.split('\n'):
             match = re.match("\s*mcastport:\s*(\d+)", line)
             if match:
                 mcastport = match.group(1)
@@ -1000,12 +1001,12 @@ EOF
     def grep_file(self, server, string, file):
         result = self._ssh_address(server['address'],
                                    "grep -e \"%s\" %s || true" %
-                                   (string, file)).stdout.read()
+                                   (string, file)).stdout
         return result
 
     def get_file_content(self, server, file):
         result = self._ssh_address(server['address'], "cat \"%s\" || true" %
-                                                      file).stdout.read()
+                                                      file).stdout
         return result
 
     def del_firewall_rule(self, server, port, proto):
@@ -1034,13 +1035,13 @@ iptables -I INPUT -p udp --dport 4321 -j ACCEPT
 omping -T %s -c %s %s
 iptables -D INPUT -p udp --dport 4321 -j ACCEPT""" % (timeout, count,
                               " ".join([s['nodename'] for s in servers])))
-        return r.stdout.read()
+        return r.stdout
 
     def yum_update(self, server):
         self._ssh_address(server['address'], "yum -y update")
 
     def default_boot_kernel_path(self, server):
         r = self._ssh_address(server['address'], "grubby --default-kernel")
-        stdout = r.stdout.read().rstrip()
+        stdout = r.stdout.rstrip()
 
         return stdout

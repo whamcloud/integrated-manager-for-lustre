@@ -40,7 +40,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                 expected_return_code = None
             )
             if not result.exit_status == 0:
-                logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.exit_status, result.stdout.read(), result.stderr.read()))
+                logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.exit_status, result.stdout, result.stderr))
 
             # Wait for all of the chroma manager services to stop
             running_time = 0
@@ -76,7 +76,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                     chroma_manager['address'],
                     "cat config_setup.log"
                 )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout.read())
+                self.assertEqual(0, chroma_config_exit_status, "chroma-config setup failed: '%s'" % result.stdout)
 
             # Register the default bundles and profile again
             result = self.remote_command(
@@ -90,15 +90,15 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                     chroma_manager['address'],
                     "cat config_bundle.log"
                 )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout.read())
+                self.assertEqual(0, chroma_config_exit_status, "chroma-config bundle register failed: '%s'" % result.stdout)
 
             result = self.remote_command(
                 chroma_manager['address'],
                 "ls /tmp/ieel-*/",
                 expected_return_code = None
             )
-            installer_contents = result.stdout.read()
-            self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr.read()))
+            installer_contents = result.stdout
+            self.assertEqual(0, result.exit_status, "Could not find installer! Expected the installer to be in /tmp/. \n'%s' '%s'" % (installer_contents, result.stderr))
 
             logger.debug("Installer contents: %s" % installer_contents)
 
@@ -106,13 +106,6 @@ class ApiTestCaseWithTestReset(ApiTestCase):
             profiles = " ".join([line for line in installer_contents.split("\n")
                                  if 'profile' in line])
             logger.debug("Found these profiles: %s" % profiles)
-            # FIXME: For some reason, doing this currently randomly fails
-            # on the EFS tests. For the moment, just hard-code the list.
-            # Leaving the previous debug code in for data collection.
-            if not profiles:
-                profiles = "base_managed.profile base_monitored.profile posix_copytool_worker.profile robinhood_server.profile"
-                logger.error("bug: TEI-1479")
-                logger.error("Had to provide hard coded profiles: %s" % profiles)
             result = self.remote_command(
                 chroma_manager['address'],
                 "for profile_pat in %s; do chroma-config profile register /tmp/ieel-*/$profile_pat; done &> config_profile.log" % profiles,
@@ -124,7 +117,7 @@ class ApiTestCaseWithTestReset(ApiTestCase):
                     chroma_manager['address'],
                     "cat config_profile.log"
                 )
-                self.assertEqual(0, chroma_config_exit_status, "chroma-config profile register failed: '%s'" % result.stdout.read())
+                self.assertEqual(0, chroma_config_exit_status, "chroma-config profile register failed: '%s'" % result.stdout)
 
     def graceful_teardown(self, chroma_manager):
         """

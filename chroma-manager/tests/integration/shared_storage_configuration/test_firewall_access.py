@@ -52,7 +52,7 @@ class TestFirewall(ChromaIntegrationTestCase):
         self.hosts = self.add_hosts([s['address'] for s in self.TEST_SERVERS])
 
         volumes = self.get_shared_volumes(required_hosts = 4)
-        self.assertGreaterEqual(len(volumes), 4)
+        self.assertGreaterEqual(len(volumes), 4, volumes)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]

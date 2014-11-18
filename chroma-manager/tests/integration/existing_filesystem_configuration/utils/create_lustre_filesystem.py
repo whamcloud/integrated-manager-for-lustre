@@ -48,7 +48,7 @@ class CreateLustreFilesystem(UtilityTestCase):
             for command in TestBlockDevice.all_clear_device_commands(server['device_paths']):
                 result = self.remote_command(server['address'],
                                              command)
-                logger.info("clear command:%s  output:\n %s" % (command, result.stdout.read()))
+                logger.info("clear command:%s  output:\n %s" % (command, result.stdout))
 
             self.dd_devices(server['address'])
 
@@ -197,19 +197,19 @@ class CreateLustreFilesystem(UtilityTestCase):
         for command in block_device.install_packages_commands:
             result = self.remote_command(target['primary_server'],
                                          command)
-            logger.info("install blockdevice packages command output:\n %s" % result.stdout.read())
+            logger.info("install blockdevice packages command output:\n %s" % result.stdout)
 
         for command in block_device.prepare_device_commands:
             result = self.remote_command(target['primary_server'],
                                          command)
-            logger.info("prepare output:\n %s" % result.stdout.read())
+            logger.info("prepare output:\n %s" % result.stdout)
 
         filesystem = TestFileSystem(block_device.preferred_fstype, block_device.device_path)
 
         for command in filesystem.install_packages_commands:
             result = self.remote_command(target['primary_server'],
                                          command)
-            logger.info("install filesystem packages command output:\n %s" % result.stdout.read())
+            logger.info("install filesystem packages command output:\n %s" % result.stdout)
 
         result = self.remote_command(target['primary_server'],
                                      filesystem.mkfs_command(target_type,
@@ -218,7 +218,7 @@ class CreateLustreFilesystem(UtilityTestCase):
                                                              mgs_ip,
                                                              mkfs_options))
 
-        logger.info("mkfs.lustre output:\n %s" % result.stdout.read())
+        logger.info("mkfs.lustre output:\n %s" % result.stdout)
 
         self.rename_device(device_path, filesystem.mount_path)
         self.used_devices.append(filesystem.mount_path)

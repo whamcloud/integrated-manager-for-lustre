@@ -137,7 +137,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                         print 'run:', cmd
                         result = self.remote_command(host_address, cmd, expected_return_code=None)
                         print 'exit_status:', result.exit_status
-                        print 'stdout', result.stdout.read()
+                        print 'stdout', result.stdout
                 raise
 
         # Verify there are now n hosts in the database.

@@ -59,7 +59,7 @@ class TestAlerting(ChromaIntegrationTestCase):
             self.wait_for_assert(lambda: self.assertHasAlert(mgt['resource_uri'], of_severity='ERROR'))
         except AssertionError:
             if hasattr(result, 'stdout'):
-                print result.stdout.read()  # command exit_status was already checked, but display output anyway
+                print result.stdout  # command exit_status was already checked, but display output anyway
             raise
         self.wait_for_assert(lambda: self.assertState(mgt['resource_uri'], 'unmounted'))
         target_offline_alert = self.get_alert(mgt['resource_uri'], alert_type="TargetOfflineAlert")
