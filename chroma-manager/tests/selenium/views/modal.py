@@ -20,7 +20,13 @@ class Modal(BaseView):
         return self.driver.find_element_by_css_selector(self.MODAL_BACKDROP)
 
     def wait_for_modal(self, wait=wait_time['medium']):
-        return WebDriverWait(self, wait).until(lambda modal: modal.modal)
+        def wait_on_modal(modal):
+            try:
+                return modal.modal
+            except StaleElementReferenceException:
+                return False
+
+        return WebDriverWait(self, wait).until(wait_on_modal, "Modal not found.")
 
     def wait_for_modal_remove(self):
         def is_removed(obj, prop_name):
@@ -64,6 +70,41 @@ class ConfirmActionModal(Modal):
         return self.driver.find_element_by_css_selector(self.CONFIRM_BUTTON)
 
 
+class ExceptionModal(Modal):
+
+    NEW_EXCEPTION_CLASS = '.exception-modal'
+    OLD_EXCEPTION_CLASS = '.exception-dialog'
+    MODAL = '%s,%s' % (NEW_EXCEPTION_CLASS, OLD_EXCEPTION_CLASS)
+    EXCEPTION_MESSAGE_CLASS = 'li:nth-of-type(3) pre'
+    EXCEPTION_MESSAGE = '%(new_modal)s %(message)s, %(old_modal)s %(message)s' % {'new_modal': NEW_EXCEPTION_CLASS,
+                                                                                  'old_modal': OLD_EXCEPTION_CLASS,
+                                                                                  'message': EXCEPTION_MESSAGE_CLASS}
+    STACK_TRACE_CLASS = 'li:nth-of-type(4) pre'
+    STACK_TRACE = '%(new_modal)s %(message)s, %(old_modal)s %(message)s' % {'new_modal': NEW_EXCEPTION_CLASS,
+                                                                            'old_modal': OLD_EXCEPTION_CLASS,
+                                                                            'message': STACK_TRACE_CLASS}
+
+    @property
+    def exception_message(self):
+        try:
+            return self.driver.find_element_by_css_selector(self.EXCEPTION_MESSAGE).text
+        except NoSuchElementException:
+            return None
+
+    @property
+    def stack_trace(self):
+        try:
+            return self.driver.find_element_by_css_selector(self.STACK_TRACE).text
+        except NoSuchElementException:
+            return None
+
+    def is_open(self):
+        try:
+            return self.modal.is_displayed()
+        except NoSuchElementException:
+            return False
+
+
 class AddServerModal(Modal):
     MODAL = '.add-server-modal'
     MODAL_BACKDROP = '.add-server-modal-backdrop'
@@ -73,6 +114,7 @@ class AddServerModal(Modal):
     PROCEED_BUTTON = '%s .proceed button' % MODAL
     HOST_ADDRESS_TEXT = '%s .pdsh-input input' % MODAL
     SUCCESS_BUTTON = '%s .btn-success' % MODAL
+    TITLE = '%s .modal-title' % MODAL
 
     @property
     def override_button(self):
@@ -82,6 +124,21 @@ class AddServerModal(Modal):
     def proceed_button(self):
         return self.driver.find_element_by_css_selector(self.PROCEED_BUTTON)
 
+    @property
+    def title(self):
+        return self.driver.find_element_by_css_selector(self.TITLE)
+
+    def wait_for_title(self, title):
+        def wait_on_title(add_server_modal):
+            try:
+                return add_server_modal.title.text == title
+            except StaleElementReferenceException:
+                return False
+
+        return WebDriverWait(self, self.medium_wait).until(
+            wait_on_title,
+            "Modal not found.")
+
     def wait_for_proceed_enabled(self):
         def wait_for_enabled(add_server_modal):
             try:
@@ -89,11 +146,17 @@ class AddServerModal(Modal):
             except StaleElementReferenceException:
                 return False
 
-        return WebDriverWait(self, self.medium_wait).until(wait_for_enabled)
+        return WebDriverWait(self, self.medium_wait).until(wait_for_enabled,
+                                                           "Modal timed out waiting for step to finish.")
 
     def submit_address(self):
         self.driver.find_element_by_css_selector(self.SUCCESS_BUTTON).click()
         self.wait_for_angular()
+
+    def wait_for_profile_select(self):
+        fancy_select = FancySelect(self.driver, self.SELECT_SERVER_PROFILE_STEP)
+
+        return fancy_select.wait_for_profiles(self)
 
     def select_profile(self, profile_text='Managed Storage Server'):
         self.wait_for_angular()

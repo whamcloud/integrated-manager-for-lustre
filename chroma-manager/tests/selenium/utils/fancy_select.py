@@ -1,3 +1,5 @@
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.webdriver.support.wait import WebDriverWait
 
 
 class FancySelect(object):
@@ -31,3 +33,14 @@ class FancySelect(object):
                       if option.find_element_by_class_name(self.TEXT_CLASS).text == option_text)
 
         option.click()
+
+    def wait_for_profiles(self, container):
+        def wait_on_profiles(modal):
+            try:
+                return len(self.options) > 0
+            except StaleElementReferenceException:
+                return False
+
+        return WebDriverWait(container, container.medium_wait).until(
+            wait_on_profiles,
+            "Select Server Profile options not available.")

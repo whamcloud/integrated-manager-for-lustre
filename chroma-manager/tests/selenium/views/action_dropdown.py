@@ -67,4 +67,4 @@ class ActionDropdown(BaseView):
             except StaleElementReferenceException:
                 return False
 
-        WebDriverWait(self, self.short_wait).until_not(wait_for_remove)
+        WebDriverWait(self, self.short_wait).until_not(wait_for_remove, "Action drop down was not removed.")

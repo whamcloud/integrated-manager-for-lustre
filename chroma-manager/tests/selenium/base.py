@@ -180,6 +180,7 @@ class SeleniumBaseTestCase(TestCase):
         self.addCleanup(self.stop_driver)
         self.addCleanup(self._capture_browser_log)
         self.addCleanup(self._take_screenshot_on_failure)
+        self.addCleanup(self._capture_exception_modal_message)
 
         self.driver.set_window_size(1024, 768)
         self.driver.set_script_timeout(90)
@@ -334,6 +335,14 @@ class SeleniumBaseTestCase(TestCase):
 
             self.log.info("Saving screen shot to %s", filename)
             self.driver.get_screenshot_as_file(filename)
+
+    def _capture_exception_modal_message(self):
+        from tests.selenium.views.modal import ExceptionModal
+        exception_modal = ExceptionModal(self.driver)
+
+        if exception_modal.is_open():
+            self.log.error("Exception: %s", exception_modal.exception_message)
+            self.log.error("Client Stack Trace: %s", exception_modal.stack_trace)
 
     def _capture_chromedriver_log(self):
         chromedriver_log = open(os.path.join(os.path.sep, 'tmp', 'chromedriver.log'), 'r')

@@ -108,7 +108,14 @@ class Login(BaseView):
         self.log.debug("Logging out")
         self.logout_button.click()
 
-        WebDriverWait(self, self.short_wait).until(lambda login: login.username.get_attribute("value") == "")
+        def wait_on_username(login):
+            try:
+                return login.username.get_attribute("value") == ""
+            except StaleElementReferenceException:
+                return False
+
+        WebDriverWait(self, self.short_wait).until(wait_on_username,
+                                                   "Login screen still not visible after %s seconds" % self.short_wait)
 
         # Page should be reloaded, make sure it is usable.
         self._reset_ui(True)

@@ -46,10 +46,12 @@ class Servers(BaseView):
             # Step 1
             self.add_server_button.click()
             add_server_modal.wait_for_modal()
+            add_server_modal.wait_for_title('Add Server - Add New Servers')
             add_server_modal.enter_address(host_name)
             add_server_modal.submit_address()
 
             # Step 2
+            add_server_modal.wait_for_title('Add Server - Check Server Status')
             add_server_modal.wait_for_proceed_enabled()
             add_server_modal.proceed_button.click()
             command_modal.wait_for_modal()
@@ -58,6 +60,8 @@ class Servers(BaseView):
             command_modal.wait_for_modal_remove()
 
             # Step 3
+            add_server_modal.wait_for_title('Add Server - Add Server Profiles')
+            add_server_modal.wait_for_profile_select()
             add_server_modal.select_profile()
             add_server_modal.submit_profile()
             command_modal.wait_for_modal()
