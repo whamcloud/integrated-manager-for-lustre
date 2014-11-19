@@ -9,6 +9,41 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
     TEST_SERVERS = config['lustre_servers'][0:4]
     fs_name = "testfs"
 
+    def add_hosts(self, addresses):
+        # Override add hosts functionality for older apis
+
+        # if the host_profile api endpoint exists or using simulator, can use current logic
+        response = self.chroma_manager.get('/api/host_profile/')
+        if response.successful or hasattr(self, 'simulator'):
+            super(TestCreateFilesystem, self).add_hosts()
+        else:
+            # otherwise we need to use the old way of adding hosts
+            host_create_command_ids = []
+            for host_address in addresses:
+                profile = self.get_host_profile(host_address)
+                response = self.chroma_manager.post(
+                    '/api/test_host/',
+                    body = {
+                        'address': host_address,
+                        'server_profile': profile['resource_uri']
+                    }
+                )
+                self.assertTrue(response.successful, response.text)
+                response = self.chroma_manager.post(
+                    '/api/host/',
+                    body = {
+                        'address': host_address,
+                        'server_profile': profile['resource_uri']
+                    }
+                )
+                self.assertTrue(response.successful, response.text)
+                host_create_command_ids.append(response.json['command']['id'])
+            self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=1200)
+            new_hosts = self.get_hosts(addresses)
+            self.assertEqual(len(new_hosts), len(addresses), "Hosts found: '%s'" % new_hosts)
+            self.remote_operations.sync_disks(new_hosts)
+            return new_hosts
+
     def _exercise_simple(self, fs_id):
         filesystem = self.get_filesystem(fs_id)
         client = config['lustre_clients'][0]['address']

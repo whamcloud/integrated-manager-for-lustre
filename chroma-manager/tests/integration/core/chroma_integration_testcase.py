@@ -4,7 +4,6 @@ from collections import namedtuple
 from testconfig import config
 from tests.integration.core.api_testcase_with_test_reset import ApiTestCaseWithTestReset
 from tests.integration.core.constants import LONG_TEST_TIMEOUT
-from tests.chroma_common.lib.name_value_list import NameValueList
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
@@ -34,139 +33,141 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         except IndexError:
             raise RuntimeError("No host in config with address %s" % address)
 
-    def add_hosts(self, addresses):
-        """
-        Add a list of lustre servers to chroma and ensure lnet is started.
-        """
-
-        response = self.chroma_manager.get(
-            '/api/host/',
+    def validate_hosts(self, addresses, auth_type='existing_keys_choice'):
+        """Verify server checks pass for provided addresses"""
+        response = self.chroma_manager.post(
+            '/api/test_host/',
+            body = {
+                'objects': [{'address': address, 'auth_type': auth_type} for address in addresses]
+            }
         )
         self.assertEqual(response.successful, True, response.text)
-        pre_existing_hosts = response.json['objects']
 
+        for object in response.json['objects']:
+            self.wait_for_command(self.chroma_manager, object['command']['id'])
+            for job in object['command']['jobs']:
+                response = self.chroma_manager.get(job)
+                self.assertTrue(response.successful, response.text)
+                host_info = response.json['step_results'].values()[0]
+                address = host_info.pop('address')
+                for server_validation, result in host_info.iteritems():
+                    self.assertTrue(result, "Expected %s to be true for %s, but instead found %s. JSON for host: %s" % (server_validation, address, result, response))
+
+    def deploy_agents(self, addresses, auth_type='existing_keys_choice'):
+        """Deploy the agent to the addresses provided"""
+        response = self.chroma_manager.post(
+            '/api/host/',
+            body = {
+                'objects': [{
+                                'address': address,
+                                'auth_type': auth_type,
+                                'server_profile': '/api/server_profile/default/'
+                            } for address in addresses]
+            }
+        )
+        self.assertEqual(response.successful, True, response.text)
+
+        command_ids = []
+        for object in response.json['objects']:
+            host = object['command_and_host']['host']
+            host_address = [host['address']][0]
+            self.assertTrue(host['id'])
+            self.assertTrue(host_address)
+            command_ids.append(object['command_and_host']['command']['id'])
+
+            response = self.chroma_manager.get(
+                '/api/host/%s/' % host['id'],
+            )
+            self.assertEqual(response.successful, True, response.text)
+            host = response.json
+            self.assertEqual(host['address'], host_address)
+
+        # Wait for deployment to complete
+        self.wait_for_commands(self.chroma_manager, command_ids)
+
+    def set_host_profiles(self, hosts):
+        # Set the profile for each new host
+        response = self.chroma_manager.post(
+            '/api/host_profile/',
+            body = {
+                'objects': [{'host': h['id'], 'profile': self.get_host_profile(h['address'])['name']} for h in hosts]
+            }
+        )
+        self.assertEqual(response.successful, True, response.text)
+        # Wait for the server to be set up with the new server profile
+        # Rather a long timeout because this may be installing packages, including Lustre and a new kernel
+        command_ids = []
+        for object in response.json['objects']:
+            for command in object['commands']:
+                command_ids.append(command['id'])
+        self.wait_for_commands(self.chroma_manager, command_ids, timeout=1200)
+
+    def register_simulated_hosts(self, addresses):
         host_create_command_ids = {}
         for host_address in addresses:
+            # Find the fqdn for the host
+            fqdn = None
+            for lustre_server in config['lustre_servers']:
+                if lustre_server['address'] == host_address:
+                    fqdn = lustre_server['fqdn']
+            self.assertTrue(fqdn, "Could not find lustre_server in config with address %s" % host_address)
+
+            # POST to the /registration_token/ REST API resource to acquire
+            # permission to add a server
             profile = self.get_host_profile(host_address)
+            response = self.chroma_manager.post(
+                '/api/registration_token/',
+                body={
+                    'credits': 1,
+                    'profile': profile['resource_uri']
+                }
+            )
+            self.assertTrue(response.successful, response.text)
+            token = response.json
 
-            if hasattr(self, 'simulator'):
-                # FIXME: should look up fqdn from address rather than
-                # assuming they are the same.  note that address is
-                # not meaningful to the simulator ('address' is shorthand
-                # for 'ssh address').
-                fqdn = host_address
+            # Pass our token to the simulator to register a server
+            registration_result = self.simulator.register(fqdn, token['secret'])
+            host_create_command_ids[host_address] = registration_result['command_id']
+            self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
 
-                # POST to the /registration_token/ REST API resource to acquire
-                # permission to add a server
-                response = self.chroma_manager.post(
-                    '/api/registration_token/',
-                    body={
-                        'credits': 1,
-                        'profile': profile['resource_uri']
-                    }
-                )
-                self.assertTrue(response.successful, response.text)
-                token = response.json
+    def add_hosts(self, addresses, auth_type='existing_keys_choice'):
+        """
+        Add a list of lustre servers to chroma and ensure lnet ends in the correct state.
+        """
+        if hasattr(self, 'simulator'):
+            self.register_simulated_hosts(addresses)
+        else:
+            self.validate_hosts(addresses, auth_type)
+            self.deploy_agents(addresses, auth_type)
+            self.set_host_profiles(self.get_hosts(addresses))
 
-                # Pass our token to the simulator to register a server
-                registration_result = self.simulator.register(fqdn, token['secret'])
-                host_create_command_ids[host_address] = registration_result['command_id']
-            else:
-                response = self.chroma_manager.post(
-                    '/api/test_host/',
-                    body = {
-                        'address': host_address,
-                        'server_profile': profile['resource_uri']       # Not required for current versions - but needed for old versions in upgrade testing
-                    }
-                )
-                self.assertEqual(response.successful, True, response.text)
-
-                # If the manager return some commands then this is a 2.2 or later manager (should be a better way of knowing versions!
-                if 'id' in response.json:
-                    command_id = response.json['id']
-
-                    self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
-
-                    results = []
-
-                    for job in response.json['jobs']:
-                        response = self.chroma_manager.get(job)
-                        self.assertEqual(response.successful, True, response.text)
-
-                        for item in response.json['step_results'].items():
-                            results.append(NameValueList(item[1]['status']))
-                else:
-                    results = [response.json]
-
-                for result in results:
-                    if not config.get('ssh_config', None):
-                        self.assertTrue(result['ping'])
-                        self.assertTrue(result['resolve'])
-
-                    self.assertTrue(result['auth'])
-                    self.assertTrue(result['reverse_ping'])
-                    self.assertTrue(result['reverse_resolve'])
-
-                response = self.chroma_manager.post(
-                    '/api/host/',
-                    body={
-                        'address': host_address,
-                        'server_profile': profile['resource_uri']
-                    }
-                )
-                self.assertEqual(response.successful, True, response.text)
-                host_id = response.json['host']['id']
-                host_create_command_ids[host_address] = response.json['command']['id']
-                self.assertTrue(host_id)
-
-                response = self.chroma_manager.get(
-                    '/api/host/%s/' % host_id,
-                )
-                self.assertEqual(response.successful, True, response.text)
-                host = response.json
-                self.assertEqual(host['address'], host_address)
-
-        # Wait for the host setup to complete
-        # Rather a long timeout because this may include installing Lustre and rebooting
-        # Capture the rpm state if host setup fails
-        for host_address, command_id in host_create_command_ids.items():
-            try:
-                self.wait_for_command(self.chroma_manager, command_id, timeout=1200)
-            except AssertionError:
-                # Debugging added for HYD-2849, must not impact normal exception handling
-                if not hasattr(self, 'simulator'):
-                    for cmd in ('rpm -qa', 'rpm -Va'):
-                        print 'run:', cmd
-                        result = self.remote_command(host_address, cmd, expected_return_code=None)
-                        print 'exit_status:', result.exit_status
-                        print 'stdout', result.stdout
-                raise
-
-        # Verify there are now n hosts in the database.
-        response = self.chroma_manager.get(
-            '/api/host/',
-        )
-        self.assertEqual(response.successful, True, response.text)
-        hosts = response.json['objects']
-        self.assertEqual(len(addresses), len(hosts) - len(pre_existing_hosts))
-
-        new_hosts = [h for h in hosts if h['id'] not in [s['id'] for s in pre_existing_hosts]]
-
+        # Verify the new hosts are now in the database and in the correct lnet state
+        new_hosts = self.get_hosts(addresses)
+        self.assertEqual(len(new_hosts), len(addresses), new_hosts)
         for host in new_hosts:
-            self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'])
-
-        response = self.chroma_manager.get(
-            '/api/host/',
-        )
-        self.assertEqual(response.successful, True, response.text)
-        hosts = response.json['objects']
-
-        new_hosts = [h for h in hosts if h['id'] not in [s['id'] for s in pre_existing_hosts]]
+            if self.get_host_profile(host['address'])['name'] == 'base_managed':
+                self.assertEqual(host['state'], 'lnet_up', host)
+            else:
+                self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'], host)
 
         # Make sure the agent config is flushed to disk
         self.remote_operations.sync_disks(new_hosts)
 
         return new_hosts
+
+    def get_hosts(self, addresses=None):
+        """
+        Get the hosts from the api for all or subset of hosts.
+
+        Keyword arguments:
+        addresses: If provided, limit results to addresses specified.
+        """
+        response = self.chroma_manager.get('/api/host/')
+        self.assertEqual(response.successful, True, response.text)
+        hosts = response.json['objects']
+        if addresses:
+            hosts = [h for h in hosts if h['address'] in addresses]
+        return hosts
 
     def create_filesystem_simple(self, name = 'testfs', hsm = False):
         """
