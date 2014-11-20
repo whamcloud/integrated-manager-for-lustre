@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import os
+import re
+import subprocess
+from distutils import spawn
+import sys
+import time
+
+modified = re.compile('^(?:M|A)(\s+)(?P<name>.*)')
+
+def main(msg_file):
+    chroma_externals_modified = False
+
+    p = subprocess.Popen(['git', 'status', '--porcelain'], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    for line in out.splitlines():
+        match = modified.match(line)
+        if match:
+            chroma_externals_modified = chroma_externals_modified | (match.group('name') == 'chroma-externals')
+
+    if chroma_externals_modified:
+        with open(msg_file, 'r') as f:
+            lines = f.readlines()
+
+        message = '# WARNING *** this patch modifies the chroma-externals reference are you sure this is intended *** WARNING'
+
+        if lines[0] != message:
+            lines = [message, "\n", "\n"] + lines
+
+        with open(msg_file, 'w') as f:
+            f.writelines(lines)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1])

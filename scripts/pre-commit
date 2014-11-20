@@ -252,6 +252,10 @@ def main(all_files, exclude = []):
             if match:
                 files.append(os.path.join(git_root, match.group('name')))
 
+                if match.group('name') == 'chroma-externals':
+                    print "WARNING:\n"\
+                          "WARNING: This patch modifies the chroma-externals reference are you sure this is intended\n"\
+                          "WARNING:"
     result = 0
 
     for project_dir in DJANGO_PROJECTS:
