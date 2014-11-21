@@ -47,10 +47,9 @@ chown chromatest.chromatest ~chromatest/.ssh/*
 chmod 600 ~chromatest/.ssh/*
 EOF
 
-tar -czf ../chroma.tgz ./chroma/
-scp ../chroma.tgz chromatest@$TEST_RUNNER:~
-tar -czf ../pip_cache.tgz ../pip_cache/
-scp ../pip_cache.tgz chromatest@$TEST_RUNNER:~
+# Copy the repo to the test node (don't want to have to clone every test run - impacts Gerrit)
+# We exclude chroma-externals and copy just what we need to reduce the io load on our builders.
+(tar -czf - --exclude='chroma/chroma-externals*' .; tar -czf - $(sed -e 's|^|chroma/chroma-externals/|' < chroma/chroma-manager/tests/framework/gui/test_dependencies)) | ssh chromatest@$TEST_RUNNER "mkdir -p chroma_test_env; cd chroma_test_env; tar -xizf -"
 
 ssh chromatest@$TEST_RUNNER <<"EOF"
 set -ex
@@ -66,30 +65,12 @@ unzip chromedriver_linux64.zip -d $HOME/bin/
 wget -O $HOME/bin/selenium-server-standalone.jar https://selenium-release.storage.googleapis.com/2.40/selenium-server-standalone-2.40.0.jar
 
 # Set up the virtualenv to run the tests in
-tar -xzf ~/pip_cache.tgz
-mkdir chroma_test_env
 cd chroma_test_env
 virtualenv --no-site-packages .
 source bin/activate
-tar -xzf ~/chroma.tgz
 cd chroma/chroma-manager
 
-# Install pip-based requirements
-make requirements
-
-# Remove requirements not compatible with python 2.7,
-# not needed for running the tests anyways
-for package in importlib greenlet gevent psycopg2 pygraphviz; do
-  sed -i "s/^.*$package.*$//g" requirements.txt
-done
-
-# Install the remaining pip requirements
-if ! python tests/utils/pip_install_requirements.py $(pwd)/../chroma-externals; then
-  rc=${PIPESTATUS[0]}
-  echo "failed to install Python requirements from $(pwd)/../chroma-externals:"
-  ls -l $(pwd)/../chroma-externals
-  exit $rc
-fi
+python tests/utils/pip_install_requirements.py ../chroma-externals/ ../chroma-externals/*.tar.gz
 
 # Install npm-based requirements
 cd ui-modules/node/ziplocker

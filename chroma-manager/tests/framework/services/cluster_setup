@@ -102,15 +102,14 @@ local   all         chroma                            trust' /var/lib/pgsql/data
 service postgresql restart
 EOF
 
+# Copy the repo to the test node (don't want to have to clone every test run - impacts Gerrit)
+# We exclude chroma-externals and copy just what we need to reduce the io load on our builders.
 virtualenv --relocatable .
-tar -czf ../chroma_test_env.tgz .
-scp ../chroma_test_env.tgz chromatest@$CHROMA_MANAGER:~
+(tar -czf - --exclude='chroma/chroma-externals*' .; tar -czf - $(sed -e 's|^|chroma/chroma-externals/|' < chroma/chroma-manager/tests/framework/services/test_dependencies)) | ssh chromatest@$CHROMA_MANAGER "mkdir -p chroma_test_env; cd chroma_test_env; tar -xizf -"
 
 ssh chromatest@$CHROMA_MANAGER <<EOF
 set -ex
-mkdir -p chroma_test_env
 cd chroma_test_env
-tar -xzf ~/chroma_test_env.tgz
 virtualenv --no-site-packages .
 source bin/activate
 cd chroma/chroma-manager/
