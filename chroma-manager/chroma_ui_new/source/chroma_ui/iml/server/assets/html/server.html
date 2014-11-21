@@ -20,9 +20,9 @@
           </div>
           <pdsh pdsh-change="server.pdshUpdate(pdsh, hostnames, hostnamesHash)"></pdsh>
         </div>
-        <button class="btn btn-info btn-sm" ng-model="server.pdshFuzzy" btn-checkbox>
+        <button class="btn btn-info btn-sm fuzzy-filter" ng-model="server.pdshFuzzy" btn-checkbox>
          <span ng-if="server.pdshFuzzy">
-            <i class="fa fa-check"></i> Fuzzy
+            Fuzzy
           </span>
           <span ng-if="!server.pdshFuzzy">
             Standard
