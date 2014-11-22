@@ -23,6 +23,7 @@
 import re
 import os
 import heapq
+from collections import defaultdict
 from tablib.packages import yaml
 
 from chroma_agent.utils import Mounts
@@ -396,6 +397,7 @@ class ObdfilterAudit(TargetAudit):
             'tot_granted': 'tot_granted',
             'tot_pending': 'tot_pending'
         })
+        self.job_stat_last_snapshot_time = defaultdict(int)
 
     def read_brw_stats(self, target):
         """Return a dict representation of an OST's brw_stats histograms."""
@@ -470,13 +472,76 @@ class ObdfilterAudit(TargetAudit):
 
         return histograms
 
-    def read_job_stats(self, target):
-        path = self.abs(os.path.join(self.target_root, target, 'job_stats'))
+    def _read_job_stats_yaml_file(self, target_name):
+        """Given a path to a yaml file, read the file into a dict and return a value
+
+        return values will be an list or None.
+        If an list, it will hold the parsed stats as a list from the job_stats file, could be an empty list
+        If None, callers can conclude job stats is not turned on.
+
+        The main value of splitting this is so it can be mocked out in tests.
+
+        :param path  Full path to the yaml file (i.e. /proc/fs/lustre/obdfilter/lustre-OST0000/job_stats)
+
+        Sample Code showing the output when job stats is cleared.
+        $ lctl set_param obdfilter.*.job_stats=clear
+        >>> from tablib.packages import yaml
+        >>> f = open('/proc/fs/lustre/obdfilter/ldiskfs-OST0001/job_stats')
+        >>> d = yaml.load(f)
+        >>> d.items()
+        [('job_stats', None)]
+
+        """
+        path = self.abs(os.path.join(self.target_root, target_name, 'job_stats'))
         try:
-            stats = yaml.load(open(path))['job_stats'] or []
+            with open(path) as yaml_file:
+                read_dict = yaml.load(yaml_file)
         except IOError:
+            # If job stats is NOT turned on, the file will not exist
+            return None
+        else:
+            # job stats output should always have this key, but it will return None when there are not stats
+            # Instead this method should return [].  None means job stats is not turned on.
+            return read_dict.get("job_stats") or []
+
+    def read_job_stats(self, target_name):
+        """Try to read and return the contents of /proc/fs/lustre/obdfilter/<target>/job_stats
+
+        Attempt to read the proc file, parse, and find up to the top few jobs in the report
+        ranked by "write sum" + "read.sum"
+
+        Only return newly found job stats as determined by snapshot time provided by Lustre in the job_stats proc file.
+        In an active system, this ought to give meaning results, while in a quiet system, the top X stats may
+        all be zero, or some other equal value from sample to sample, and therefore be supressed.
+
+        If Job stats is not turned on, there will be no proc file path, and this method will return [] as if no stats
+        are found.
+        """
+
+        stats = self._read_job_stats_yaml_file(target_name)
+
+        if not stats:
+            # stats is None when job stats is disabled, or [] if enabled but empty
+            # currently no reason it differentiate, so return as if empty
             return []
-        return heapq.nlargest(JOB_STATS_LIMIT, stats, key=lambda stat: stat['read']['sum'] + stat['write']['sum'])
+
+        #  Initialize this dict in preparation to collect just these latest snapshot times as seen in this stats sample
+        latest_job_stat_snapshot_times = defaultdict(int)
+
+        stats_to_return = []
+        for stat in stats:
+            #  Record that we know about this stat
+            latest_job_stat_snapshot_times[stat['job_id']] = stat['snapshot_time']
+
+            #  if we knew about this last run, and the time is new, then report it
+            if self.job_stat_last_snapshot_time[stat['job_id']] < stat['snapshot_time']:
+                stats_to_return.append(stat)
+
+        #  The local dict will have all the current times for jobs we are tracking, so update the instance copy.
+        self.job_stat_last_snapshot_time = latest_job_stat_snapshot_times
+
+        #  Get the top few job stats based on read+write sum.
+        return heapq.nlargest(JOB_STATS_LIMIT, stats_to_return, key=lambda stat: stat['read']['sum'] + stat['write']['sum'])
 
     def _gather_raw_metrics(self):
         metrics = self.raw_metrics['lustre']
