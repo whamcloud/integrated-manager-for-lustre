@@ -86,7 +86,7 @@ class Volumes(DatatableView):
         debug_info = []
         for tr in self.rows:
             row_volume_name = tr.find_elements_by_tag_name('td')[0].text
-            primary_select = SelectBoxIt(self.driver, tr.find_elements_by_class_name(SelectBoxIt.CONTAINER_CLASS)[0])
+            primary_select = SelectBoxIt(self.driver, tr.find_elements_by_css_selector(SelectBoxIt.CONTAINER_SELECTOR)[0])
             options_text = primary_select.get_options_text()
             debug_info.append((row_volume_name, options_text))
 
