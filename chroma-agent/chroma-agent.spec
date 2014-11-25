@@ -38,7 +38,7 @@ Summary: Management functionality layer.
 Group: System/Utility
 Conflicts: sysklogd
 Obsoletes: pacemaker-iml <= 1.1.7-6.wc2.el6 pacemaker-iml-cluster-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-libs <= 1.1.7-6.wc2.el6 pacemaker-iml-cli <= 1.1.7-6.wc2.el6
-Requires: %{name} = %{version}-%{release} rsyslog pcs pacemaker > 1.1.7-6.wc2.el6 python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket yum-utils system-config-firewall-base
+Requires: %{name} = %{version}-%{release} rsyslog pcs pacemaker > 1.1.7-6.wc2.el6 python-dateutil >= 1.5 libxml2-python python-netaddr python-ethtool python-jinja2 pcapy python-impacket yum-utils system-config-firewall-base ed
 Requires: fence-agents-iml > 3.1.5-25.wc1.el6.2
 %description management
 This package layers on management capabilities for Intel Manager for Lustre Agent.
