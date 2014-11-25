@@ -152,7 +152,7 @@ def find_unused_port(ring0, timeout = 10):
     from random import choice
 
     dest_addr = ring0.mcastaddr
-    ports = range(1, 65535, 2)
+    ports = range(32767, 65535, 2)
 
     iptables("add", "INPUT", ["4", "-m", "state", "--state", "NEW", "-m", "tcp",
              "-p", "tcp", "-d", ring0.mcastaddr, "-j", "ACCEPT"])
