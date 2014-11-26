@@ -76,11 +76,24 @@ class SelectBoxIt(object):
         return self.open_and_close(lambda: self.selected_option.text)
 
     def select_option(self, option_text):
+        """Selects an option in the Select Box.
+
+        :param option_text: string
+        :raises: RuntimeError
+        """
         self.click_select()
 
-        option = next(option for option in self.options if option.text == option_text)
+        try:
+            option = next(option for option in self.options if option.text == option_text)
+            option.click()
 
-        option.click()
+        except StopIteration:
+
+            texts = [element.text for element in self.options]
+
+            msg = '### Select box contains: [{0}], we wanted: [{1}]'.format(' '.join(texts), option_text)
+
+            raise RuntimeError(msg)
 
     def is_disabled(self):
         try:
