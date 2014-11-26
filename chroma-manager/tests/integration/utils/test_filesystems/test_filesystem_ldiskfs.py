@@ -31,7 +31,7 @@ class TestFileSystemLdiskfs(TestFileSystem):
 
     def mkfs_command(self, type, index, fsname, mgs_ip, additional_options):
         return 'mkfs.lustre --backfstype=ldiskfs %s %s --fsname=%s %s %s' % (" ".join(additional_options),
-                                                                             "--index=%s" % index if index is not None else "",
+                                                                             "--index=%s" % index,
                                                                              fsname,
                                                                              "--mgsnode=%s@tcp0" % mgs_ip if mgs_ip else "",
                                                                              self._device_path)

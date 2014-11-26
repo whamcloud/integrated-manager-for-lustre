@@ -99,7 +99,7 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         self.configure_target_device(self.mgt,
                                      'mgt',
-                                     None,
+                                     0,
                                      None,
                                      ['--reformat',
                                       '--mdt' if combined_mgt_mdt else '',
