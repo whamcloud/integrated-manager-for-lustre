@@ -40,7 +40,7 @@ module.exports = function requestFactory (conf, requestModule, logger, Q, jsonMa
     json: true,
     strictSSL: false,
     useQuerystring: true,
-    timeout: 60000, // 1 minute
+    timeout: 325000, // 5 minutes 25 seconds.
     pool: {
       maxSockets: 20
     }
