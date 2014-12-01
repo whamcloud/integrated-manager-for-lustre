@@ -142,7 +142,16 @@ fi
 
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
+import sys
+from scripts.httpd_settings import get_production_httpd_settings
 LOG_LEVEL = logging.DEBUG
+DEBUG = True
+TEMPLATE_DEBUG = False
+LOG_PATH = \"/var/log/chroma\"
+CRYPTO_FOLDER = \"/var/lib/chroma\"
+STORAGE_PLUGIN_DEBUG = False
+for key, value in get_production_httpd_settings().items():
+    setattr(sys.modules[__name__], key, value)
 EOF1
 
 mkdir -p /usr/share/chroma-manager/tests/framework/gui/"
