@@ -5,6 +5,10 @@ import requests
 from urlparse import urljoin, urlparse
 
 
+from testconfig import config
+from tests.utils.check_server_host import check_nodes_status
+
+
 class HttpRequests(object):
     def __init__(self, server_http_url = '', *args, **kwargs):
         self.server_http_url = server_http_url
@@ -13,66 +17,51 @@ class HttpRequests(object):
                                 "Content-type": "application/json"}
         self.session.verify = False
 
+    def _action(self, callable, url, **kwargs):
+        try:
+            return HttpResponse(callable(urljoin(self.server_http_url, url), **kwargs))
+        except requests.ConnectionError as e:
+            check_nodes_status(config)
+
+            raise e
+
+    def _send_action(self, callable, url, body, **kwargs):
+        if body and 'data' not in kwargs:
+            kwargs['data'] = json.dumps(body)
+
+        return(self._action(callable, url, **kwargs))
+
     def get(self, url, **kwargs):
         if 'data' in kwargs:
             kwargs['params'] = kwargs['data']
             del kwargs['data']
-        response = self.session.get(
-            urljoin(self.server_http_url, url),
-            **kwargs
-        )
 
-        return HttpResponse(response)
+        return(self._action(self.session.get,
+                            url,
+                            **kwargs))
 
-    def post(self, url, body = None, **kwargs):
-        if body and 'data' not in kwargs:
-            kwargs['data'] = json.dumps(body)
+    def post(self, url, body=None, **kwargs):
+        return(self._send_action(self.session.post,
+                                 url,
+                                 body,
+                                 **kwargs))
 
-        response = self.session.post(
-            urljoin(self.server_http_url, url),
-            **kwargs
-        )
+    def put(self, url, body=None, **kwargs):
+        return(self._send_action(self.session.put,
+                                 url,
+                                 body,
+                                 **kwargs))
 
-        return HttpResponse(response)
-
-    def put(self, url, body = None, **kwargs):
-        if body and 'data' not in kwargs:
-            kwargs['data'] = json.dumps(body)
-
-        response = self.session.put(
-            urljoin(self.server_http_url, url),
-            **kwargs
-        )
-
-        return HttpResponse(response)
-
-    def patch(self, url, body = None, **kwargs):
-        if body and 'data' not in kwargs:
-            kwargs['data'] = json.dumps(body)
-
-        response = self.session.patch(
-            urljoin(self.server_http_url, url),
-            **kwargs
-        )
-
-        return HttpResponse(response)
+    def patch(self, url, body=None, **kwargs):
+        return(self._send_action(self.session.patch,
+                                 url,
+                                 body,
+                                 **kwargs))
 
     def delete(self, url, **kwargs):
-        response = self.session.delete(
-            urljoin(self.server_http_url, url),
-            **kwargs
-        )
-
-        return HttpResponse(response)
-
-    def request(self, method, url, **kwargs):
-        response = self.session.request(
-            method,
-            urljoin(self.server_http_url, url),
-            **kwargs
-        )
-
-        return HttpResponse(response)
+        return(self._action(self.session.delete,
+                            url,
+                            **kwargs))
 
 
 # FIXME: in python-requests >= 1.0.x this class is redundant
