@@ -95,7 +95,8 @@ def enter_text_for_element(driver, selector_or_element, text_value):
     element.send_keys(text_value)
     WebDriverWait(driver, wait_time['medium']).until(
         lambda driver: element.get_attribute('value') == text_value,
-        "Expected the text '%s' to be entered into the element, but instead found the text '%s'" % (text_value, element.get_attribute('value'))
+        "Expected the text {0} to be entered into the element in under {1} seconds, but instead found the text {2}"
+        .format(text_value, wait_time['medium'], element.get_attribute('value'))
     )
 
 

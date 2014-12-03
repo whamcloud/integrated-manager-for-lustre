@@ -150,16 +150,49 @@ class TestUsers(SeleniumBaseTestCase):
         self.navigation.go('Configure', 'Users')
         self.delete_user(superuser)
 
-    def test_adding_filesystem_user(self):
-        """Test that fs users can edit themselves and whatnot"""
-        fsuser = self.users['fsuser']
-        self.add_user(fsuser)
-        with wrapped_login(self, fsuser.username):
-            self.edit_user_password(fsuser)
-            self.edit_user_details(fsuser)
-            self.edit_alert_subscriptions(fsuser)
+    def del_user(self, user):
+        """Delete a user"""
         self.navigation.go('Configure', 'Users')
-        self.delete_user(fsuser)
+        self.delete_user(user)
+
+    def create_and_destroy_user(self, user):
+        """HOF. Creates a user.
+
+        :param user: object
+        :returns function:
+        """
+        self.add_user(user)
+
+        def create_and_destroy_user_inner(fn):
+            """HOF INNER, after running fn, it deletes the user.
+
+            :param fn: function
+            """
+            with wrapped_login(self, user.username):
+                fn(user)
+            self.del_user(user)
+
+        return create_and_destroy_user_inner
+
+    def test_adding_filesystem_user(self):
+        """Test that fs users can be added"""
+        create_destroy_user_and = self.create_and_destroy_user(self.users['fsuser'])
+        create_destroy_user_and(self.verify_user)
+
+    def test_edit_filesystem_user_password(self):
+        """Test that fs users can edit password"""
+        create_destroy_user_and = self.create_and_destroy_user(self.users['fsuser'])
+        create_destroy_user_and(self.edit_user_password)
+
+    def test_edit_filesystem_user_details(self):
+        """Test that fs users can edit user details"""
+        create_destroy_user_and = self.create_and_destroy_user(self.users['fsuser'])
+        create_destroy_user_and(self.edit_user_details)
+
+    def test_edit_filesystem_user_alert_subscriptions(self):
+        """Test that fs users can edit alert subscriptions"""
+        create_destroy_user_and = self.create_and_destroy_user(self.users['fsuser'])
+        create_destroy_user_and(self.edit_alert_subscriptions)
 
     def test_resetting_eula(self):
         """Tests that resetting the eula will make the eula appear on next superuser login"""
@@ -213,9 +246,7 @@ class TestUsers(SeleniumBaseTestCase):
         target_host_row = self.user_page.locate_user(verify_user.username)
         fields = target_host_row.find_elements_by_tag_name("td")
         # username | full_name | email | roles
-        self.assertEqual(fields[1].text,
-                         " ".join([verify_user.first_name,
-                                   verify_user.last_name]).strip())
+        self.assertEqual(fields[1].text, " ".join([verify_user.first_name, verify_user.last_name]).strip())
         self.assertEqual(fields[2].text, verify_user.email)
 
     def verify_user(self, user):

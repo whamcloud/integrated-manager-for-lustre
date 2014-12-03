@@ -9,6 +9,8 @@ from tests.selenium.utils.element import (
     wait_for_element_by_xpath
 )
 
+from tests.selenium.utils.constants import wait_time
+
 
 def open_and_save_account(tab_type="details"):
     def decorator(func):
@@ -19,12 +21,15 @@ def open_and_save_account(tab_type="details"):
             save_button = getattr(self, "save_%s_button" % tab_type)
 
             self.open_account_dialog()
+            wait_for_element_by_css_selector(self.driver, tab, wait_time['medium'])
             self.driver.find_element_by_css_selector(tab).click()
 
             val = func(*args, **kwargs)
 
             # Click save button
+            wait_for_element_by_css_selector(self.driver, save_button, wait_time['medium'])
             self.driver.find_element_by_css_selector(save_button).click()
+
             # Click close button
             self.close_account_dialog()
             self.quiesce()
@@ -98,6 +103,7 @@ class Users(DatatableView):
         wait_for_element_by_css_selector(self.driver, self.user_detail, self.medium_wait)
 
     def close_account_dialog(self):
+        wait_for_element_by_css_selector(self.driver, self.close_account_dialog_button, wait_time['medium'])
         # Click the close button
         self.driver.find_element_by_css_selector(self.close_account_dialog_button).click()
         # Wait for the account dialog to no longer be visible
