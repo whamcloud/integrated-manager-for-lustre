@@ -1,9 +1,9 @@
 space :=
 space +=
 SCM_COMMIT_NUMBER	:= $(shell git rev-list HEAD | wc -l)
-BUILD_TAG			?= non-jenkins-build
+BUILD_TAG		?= non-jenkins-build
 JENKINS_BUILD_TAG	:= $(shell echo jenkins-$(JOB_NAME)-$(BUILD_NUMBER) | sed -e 's/arch=[^,-]*,\?-\?//' -e 's/distro=[^,-]*,\?-\?//' -e 's,[/-],_,g')
-SCM_DESCRIPTION		:= $(subst -,$(space),$(shell msg=$$(git log -n 1 --abbrev-commit); if echo "$$msg" | grep -q "^    Create-Tag:"; then echo "$$msg" | sed -ne '/^    Create-Tag:/s/RC[0-9]*//;s/^.*: *v//p'; echo "0"; echo "$$msg" | sed -ne '1s/commit /g/p'; fi))
+SCM_DESCRIPTION		:= $(shell msg=$$(git log -n 1 --abbrev-commit); if echo "$$msg" | grep -q "^    Create-Tag:"; then echo "$$msg" | sed -ne '/^    Create-Tag:/s/RC[0-9]*//;s/^.*: *v//p'; fi)
 ifeq ($(strip $(SCM_DESCRIPTION)),)
 SCM_DESCRIPTION		:= $(subst -,$(space),$(shell set -x; git describe --match v[0-9]* | sed -e 's/^v//' -e 's/RC[0-9]*//'))
 endif
@@ -15,7 +15,7 @@ SHORT_PRODUCT_NAME	:= iml
 
 # Stable variable names exported to packaging and code
 BUILD_NUMBER		:= $(SCM_COMMIT_NUMBER)
-VERSION				:= $(subst $(space),-,$(SCM_DESCRIPTION))
+VERSION			:= $(subst $(space),-,$(SCM_DESCRIPTION))
 PACKAGE_VERSION		:= $(word 1, $(SCM_DESCRIPTION))
 PACKAGE_RELEASE		:= $(subst $(space),.,$(wordlist 2, 10, $(SCM_DESCRIPTION)))
 ifeq ($(strip $(PACKAGE_RELEASE)),)
