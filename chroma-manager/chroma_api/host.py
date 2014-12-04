@@ -393,7 +393,10 @@ class HostProfileResource(Resource):
         host = ManagedHost.objects.get(pk=host_id)
 
         if host.server_profile.name != profile:
-            commands.append(JobSchedulerClient.set_host_profile(host.id, server_profile.id))
+            command = JobSchedulerClient.set_host_profile(host.id, server_profile.id)
+
+            if command:
+                commands.append(command)
 
             if server_profile.initial_state in host.get_available_states(host.state):
                 commands.append(Command.set_state([(host, server_profile.initial_state)]))

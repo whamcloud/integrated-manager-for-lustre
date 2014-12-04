@@ -117,6 +117,9 @@ help_text = {
     'remote_diff': 'This row has changed remotely. Click to set value to %(remote)s.',
     'configure_lnet': 'Configure LNet on this host.',
     'enable_lnet': 'Enable LNet on this host.',
+    'change_host_profile': 'Changing host %s to profile %s',
+    'change_host_state': 'Changing host %s to state %s',
+
     'configure_lnet_not_allowed': 'LNet can only be configured in managed mode.',
 
     'start_mdt': 'Start the metadata target (MDT).',

@@ -293,6 +293,31 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         else:
             LNetOfflineAlert.notify(self, self.state != 'lnet_up')
 
+    def set_profile(self, server_profile_id):
+        '''
+        Set the profile for the given host to the given profile. If the host is configured
+        this includes updating the manager view and making the appropriate changes to the host.
+
+        Otherwise it is just a case of recording the new host.
+
+        :param server_profile_id:
+        :return: List of commands required to do the job.
+        '''
+
+        server_profile = ServerProfile.objects.get(pk=server_profile_id)
+
+        # We need fully working host to change the profile, the initial profile will be set when the host is
+        # configured, once until that occurs just remember what it wants.
+        if self.state in ['unconfigured', 'undeployed']:
+            self.server_profile = server_profile
+            self.save()
+
+            return []
+        else:
+            return [{"class_name": "SetHostProfileJob",
+                     "args": {"host": self,
+                              "server_profile": server_profile}}]
+
 
 class Volume(models.Model):
     storage_resource = models.ForeignKey(
@@ -987,7 +1012,9 @@ class SetupHostJob(StateChangeJob):
         '''
         self._so_cache = self.managed_host = ObjectCache.update(self.managed_host)
 
-        steps = [(ConfigureNTPStep, {'host': self.managed_host}),
+        steps = [(SetHostProfileStep, {'host': self.managed_host,
+                                       'server_profile': self.managed_host.server_profile}),
+                 (ConfigureNTPStep, {'host': self.managed_host}),
                  (ConfigureRsyslogStep, {'host': self.managed_host})]
 
         if self.managed_host.is_lustre_server:
@@ -1116,7 +1143,7 @@ class SetHostProfileStep(Step):
         error = self.invoke_agent(host, 'set_profile', {"profile_name": server_profile.name})
 
         if error:
-            raise AgentException(error)
+            raise AgentException(host.fqdn, error, kwargs, "")
 
         host.server_profile = server_profile
         host.immutable_state = not server_profile.managed

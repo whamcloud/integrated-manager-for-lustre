@@ -163,6 +163,21 @@ class FakeServer(Persisted):
 
         return nids
 
+    def set_profile(self, profile_name):
+        with self._lock:
+            self.state['profile_name'] = profile_name
+            self.save()
+
+        return None
+
+    def restart_agent(self):
+        log.debug("restart agent %s" % self.fqdn)
+        server = self.servers[self.fqdn]
+
+        if server.running:
+            server.shutdown_agent()
+        server.start_agent()
+
     def scan_packages(self):
         packages = {}
         for package, available_version in self._simulator.available_packages(self.node_type).items():

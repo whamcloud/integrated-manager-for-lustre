@@ -7,6 +7,8 @@ from django.utils.unittest.case import TestCase
 
 from chroma_agent.action_plugins import agent_updates
 from chroma_agent.device_plugins import lustre
+from chroma_agent import config
+from chroma_agent.chroma_common.lib.shell import CommandExecutionError
 
 
 class TestManageUpdates(TestCase):
@@ -119,3 +121,55 @@ lustre-backend-fs
                     mock.call(['yum', 'install', '-y', '--enablerepo=myrepo', 'foo'])
                 ]
             )
+
+    def test_set_profile_success(self):
+        self.mock_read_uri_result = None
+
+        def mock_try_run(args):
+            if args == ['yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management']:
+                return ""
+            if args == ['yum', 'remove', '-y', '--enablerepo=iml-agent', 'chroma-agent-management']:
+                return ""
+            else:
+                raise CommandExecutionError(1, args, "Bad command stdout", "Bad command stderr")
+
+        def mock_ReadServerURI(args):
+            return self.mock_read_uri_result
+
+        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=mock_try_run) as mtr:
+            with patch('chroma_agent.utils.ReadServerURI', side_effect=mock_ReadServerURI):
+                config.update('settings', 'profile', {'managed': False})
+
+                # Go from managed = False to managed = True
+                self.mock_read_uri_result = {'objects': [{'managed': True}]}
+                self.assertEqual(agent_updates.set_profile('test_profile'), None)
+                self.assertListEqual(list(mtr.call_args_list[0][0][0]), ['yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'])
+
+                # Go from managed = True to managed = False
+                mtr.reset_mock()
+                self.mock_read_uri_result = {'objects': [{'managed': False}]}
+                self.assertEqual(agent_updates.set_profile('test_profile'), None)
+                self.assertListEqual(list(mtr.call_args_list[0][0][0]), ['yum', 'remove', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'])
+
+                # Go from managed = False to managed = False
+                mtr.reset_mock()
+                self.assertEqual(agent_updates.set_profile('test_profile'), None)
+                self.assertEqual(mtr.call_count, 0)
+
+    def test_set_profile_fail(self):
+        self.mock_read_uri_result = None
+
+        def mock_try_run(args):
+            raise CommandExecutionError(1, args, "Bad command stdout", "Bad command stderr")
+
+        def mock_ReadServerURI(args):
+            return self.mock_read_uri_result
+
+        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=mock_try_run) as mtr:
+            with patch('chroma_agent.utils.ReadServerURI', side_effect=mock_ReadServerURI):
+                config.update('settings', 'profile', {'managed': False})
+
+                # Go from managed = False to managed = True, but it will fail.
+                self.mock_read_uri_result = {'objects': [{'managed': True}]}
+                self.assertEqual(agent_updates.set_profile('test_profile'), 'Unable to set profile because yum returned Bad command stdout')
+                self.assertEqual(mtr.call_count, 3)     # 3 because it will try the yum command 3 times.

@@ -31,7 +31,7 @@ from chroma_agent.device_plugins import lustre
 from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
-from chroma_agent.utils import ReadServerURI
+from chroma_agent import utils
 
 
 REPO_CONTENT = """
@@ -85,7 +85,18 @@ def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates
     elif action == 'query':
         cmd = ['repoquery'] + repo_arg + list(packages)
 
-    return shell.try_run(cmd)
+    # This is a poor solution for HYD-3855 but not one that carries any known cost.
+    # We sometimes see intermittent failures in test, and possibly out of test, that occur
+    # 1 in 50 (estimate) times. yum commands are idempotent and so trying the command three
+    # times has no downside and changes the estimated chance of fail to 1 in 12500.
+    for hyd_3885 in range(2, -1, -1):
+        try:
+            return shell.try_run(cmd)
+        except shell.CommandExecutionError as cee:
+            daemon_log.info("HYD-3885 Retrying yum command '%s'" % " ".join(cmd))
+            if hyd_3885 == 0:
+                daemon_log.info("HYD-3885 Retry yum command failed '%s'" % " ".join(cmd))
+                raise cee                       # Out of retries so raise for the caller..
 
 
 def set_profile(profile_name):
@@ -99,7 +110,7 @@ def set_profile(profile_name):
     host_uri = 'api/server_profile/?name=%s' % profile_name
 
     try:
-        new_profile = ReadServerURI(host_uri)['objects'][0]
+        new_profile = utils.ReadServerURI(host_uri)['objects'][0]
     except IndexError:
         return "Unable to read profile %s from the manager" % profile_name
 

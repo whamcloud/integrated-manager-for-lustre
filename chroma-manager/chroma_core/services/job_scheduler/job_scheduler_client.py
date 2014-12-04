@@ -265,7 +265,7 @@ class JobSchedulerClient(object):
         '''
         command_id = JobSchedulerRpc().set_host_profile(host_id, server_profile_id)
 
-        return Command.objects.get(pk = command_id)
+        return Command.objects.filter(pk = command_id) if command_id else None
 
     @classmethod
     def create_targets(cls, targets_data):

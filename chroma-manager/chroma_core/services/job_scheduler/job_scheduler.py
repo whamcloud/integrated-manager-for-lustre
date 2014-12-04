@@ -56,6 +56,8 @@ from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
+from chroma_help.help import help_text
+
 import chroma_core.lib.conf_param
 
 log = log_register(__name__.split('.')[-1])
@@ -673,7 +675,7 @@ class JobScheduler(object):
                     job = GetLNetStateJob(host = changed_item)
                     if not command:
                         command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
-                    CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
+                    self.CommandPlan.add_jobs([job], command)
 
             if 'ha_cluster_peers' in updated_attrs:
                 try:
@@ -688,7 +690,7 @@ class JobScheduler(object):
                 job = ConfigureHostFencingJob(host = changed_item)
                 if not command:
                     command = Command.objects.create(message = "Configuring fencing agent on %s" % changed_item)
-                CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
+                self.CommandPlan.add_jobs([job], command)
 
         if isinstance(changed_item, ManagedTarget):
             # See if any MGS conf params need applying
@@ -703,7 +705,7 @@ class JobScheduler(object):
                     if DepCache().get(job).satisfied():
                         if not command:
                             command = Command.objects.create(message = "Updating configuration parameters on %s" % mgs)
-                        CommandPlan(self._lock_cache, self._job_collection).add_jobs([job], command)
+                        self.CommandPlan.add_jobs([job], command)
 
             # Update TargetFailoverAlert from .active_mount
             from chroma_core.models import TargetFailoverAlert
@@ -736,7 +738,7 @@ class JobScheduler(object):
     def set_state(self, object_ids, message, run):
         with self._lock:
             with transaction.commit_on_success():
-                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(object_ids, message)
+                command = self.CommandPlan.command_set_state(object_ids, message)
             if run:
                 self.progress.advance()
         return command.id
@@ -822,7 +824,7 @@ class JobScheduler(object):
     @transaction.commit_on_success
     def run_jobs(self, job_dicts, message):
         with self._lock:
-            result = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs(job_dicts, message)
+            result = self.CommandPlan.command_run_jobs(job_dicts, message)
             self.progress.advance()
             return result
 
@@ -1088,7 +1090,7 @@ class JobScheduler(object):
                 ObjectCache.add(ManagedTargetMount, mount)
 
             with transaction.commit_on_success():
-                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                command = self.CommandPlan.command_set_state(
                     [(ContentType.objects.get_for_model(fs).natural_key(), fs.id, 'available')],
                     "Creating filesystem %s" % fs_data['name'])
 
@@ -1128,7 +1130,7 @@ class JobScheduler(object):
                 command_description = "Creating %s targets" % len(targets)
 
             with transaction.commit_on_success():
-                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                command = self.CommandPlan.command_set_state(
                     [(ContentType.objects.get_for_model(ManagedTarget).natural_key(), x.id, 'mounted') for x in targets],
                     command_description)
 
@@ -1188,7 +1190,7 @@ class JobScheduler(object):
                 ObjectCache.add(ManagedHost, host)
 
             with transaction.commit_on_success():
-                command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                command = self.CommandPlan.command_set_state(
                     [(ContentType.objects.get_for_model(host).natural_key(), host.id, host.server_profile.initial_state)],
                     "Setting up host %s" % host)
 
@@ -1207,25 +1209,28 @@ class JobScheduler(object):
 
     def set_host_profile(self, host_id, server_profile_id):
         '''
-        Set the profile for the given host to the given profile, this includes updating the manager view
-        and making the appropriate changes to the host.
+        Set the profile for the given host to the given profile.
+
         :param host_id:
         :param server_profile_id:
-        :return: Command for the host job.
+        :return: Command for the host job or None if no commands were created.
         '''
 
         with self._lock:
             with transaction.commit_on_success():
                 server_profile = ServerProfile.objects.get(pk=server_profile_id)
-
                 host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
 
-                command = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs([{"class_name": "SetHostProfileJob",
-                                                                                                 "args": {"host": host,
-                                                                                                          "server_profile": server_profile}}],
-                                                                                               "Changing Host Profile %s" % host.fqdn)
+                commands_required = host.set_profile(server_profile_id)
 
-        self.progress.advance()
+                if commands_required:
+                    command = self.CommandPlan.command_run_jobs(commands_required,
+                                                                help_text['change_host_profile'] % (host.fqdn, server_profile.ui_name))
+                else:
+                    command = None
+
+        if command:
+            self.progress.advance()
 
         return command
 
@@ -1262,7 +1267,7 @@ class JobScheduler(object):
                     ObjectCache.add(ManagedHost, host)
 
                     with transaction.commit_on_success():
-                        command = CommandPlan(self._lock_cache, self._job_collection).command_set_state(
+                        command = self.CommandPlan.command_set_state(
                             [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
                             "Setting up host %s" % host)
 
@@ -1464,7 +1469,7 @@ class JobScheduler(object):
 
             with transaction.commit_on_success():
                 command = Command.objects.create(message = "Configuring NIDS for hosts")
-                CommandPlan(self._lock_cache, self._job_collection).add_jobs(jobs, command)
+                self.CommandPlan.add_jobs(jobs, command)
 
         self.progress.advance()
 
@@ -1492,3 +1497,7 @@ class JobScheduler(object):
             return command.id
         else:
             return None
+
+    @property
+    def CommandPlan(self):
+        return CommandPlan(self._lock_cache, self._job_collection)

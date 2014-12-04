@@ -8,6 +8,7 @@ from dateutil import tz
 from collections import defaultdict
 from tastypie.serializers import Serializer
 import mock
+import json
 
 from chroma_core.models import Volume, VolumeNode, ManagedHost, LogMessage, LNetConfiguration
 from chroma_core.models import NetworkInterface, Nid, ManagedTarget, Bundle, Command, ServerProfile
@@ -347,6 +348,14 @@ class MockAgentRpc(object):
         pass
 
     @classmethod
+    def await_restart(cls, fqdn, timeout, old_session_id=None):
+        pass
+
+    @classmethod
+    def get_session_id(cls, fqdn):
+        return sum(bytearray(str(fqdn)))
+
+    @classmethod
     def clear_calls(cls):
         cls.calls = []
 
@@ -495,8 +504,10 @@ class MockAgentRpc(object):
                 return '127.0.0.1'
             else:
                 return mock_server['address']
+        elif 'print os.uname()[1]' in cmd:
+            return '%s\n%s' % (mock_server['nodename'], mock_server['fqdn'])
         elif 'socket.getfqdn()' in cmd:
-            return mock_server['self_fqdn']
+            return mock_server['fqdn']
         elif 'ping' in cmd:
             result = ((0 if mock_server['tests']['reverse_resolve'] else 2) +
                       (0 if mock_server['tests']['reverse_ping'] else 1))
@@ -505,6 +516,9 @@ class MockAgentRpc(object):
             return 0 if mock_server['tests']['yum_valid_repos'] else 1
         elif 'ElectricFence' in cmd:
             return 0 if mock_server['tests']['yum_can_update'] else 1
+        elif 'curl -k https' in cmd:
+            return json.dumps({'host_id': host.id,
+                               'command_id': 0})
 
 
 class MockAgentSsh(object):
