@@ -1,16 +1,31 @@
+import mock
 import itertools
 import time
 import contextlib
 import operator
 from datetime import datetime, timedelta
+
 from django.utils.timezone import utc
 from django.test import TestCase
 from django.db import connection
+from django.utils.unittest import skipIf
+
 from chroma_core.models import Point, Stats
+from chroma_core.models.stats import total_seconds
+from chroma_core.lib.util import chroma_settings
+
+settings = chroma_settings()
+
 
 id = 0
 now = datetime.now(utc)
-points = [Point(now + timedelta(seconds=n * 10), float(n), 1) for n in xrange(100)]
+
+number_of_points = Stats[-1].step / Stats[0].step + 1   # Plus one gives us now to 1 day in future (fences and fence posts)
+
+# Generate a spread of points the will generate a record in at least every sample.
+points = [Point(now + timedelta(seconds=Stats[0].step * n), float(n), 1) for n in xrange(0, number_of_points)]
+
+epoch = datetime.fromtimestamp(0, utc)
 
 
 @contextlib.contextmanager
@@ -30,14 +45,16 @@ class TestModels(TestCase):
     "Test Point and Sample interfaces."
 
     def setUp(self):
-        Stats.delete(id)
+        Stats.delete_all()
         connection.use_debug_cursor = True
         connection.cursor().execute('SET enable_seqscan = off')
+        self.preserve_stats_wipe = settings.STATS_SIMPLE_WIPE
 
     def tearDown(self):
         connection.cursor().execute('SET enable_seqscan = on')
         connection.use_debug_cursor = False
-        Stats.delete(id)
+        Stats.delete_all()
+        settings.STATS_SIMPLE_WIPE = self.preserve_stats_wipe
 
     def test_point(self):
         self.assertEqual(Point(now, 0.0, 0).mean, 0)
@@ -51,28 +68,80 @@ class TestModels(TestCase):
         self.assertEqual(point, (points[1].dt, 1.0, 10))
         self.assertEqual(point.mean, 0.1)
 
-    def test_sample(self):
+    def test_sample_select(self):
         model = Stats[0]
         with assertQueries('SELECT', 'SELECT', 'SELECT'):
             point = model.latest(id)
             self.assertEqual(point, model.latest(id))
             start = model.start(id)
         self.assertEqual(point.timestamp, 0)
-        self.assertGreater(point.dt - start, timedelta(days=1))
+        self.assertEqual(point.dt - start, model.expiration_time)
+
+    def test_sample_expire(self):
+        model = Stats[0]
+        settings.STATS_SIMPLE_WIPE = False
+
+        model.objects.all().delete()
+
         with assertQueries('INSERT', 'SELECT'):
-            model.insert({id: points[:3]})
+            model.insert({id: points})
             point = model.latest(id)
             model.cache.clear()
             self.assertEqual(point, model.latest(id))
-        self.assertEqual(point, points[2])
+        self.assertEqual(point, points[-1])
         floor = model.floor(point.dt)
         self.assertLessEqual(floor, point.dt)
-        self.assertFalse(floor.microsecond)
+        self.assertEqual(floor.microsecond, 0)
+
         with assertQueries('SELECT', 'DELETE', 'SELECT'):
             model.expire([id])
-            self.assertListEqual(list(model.select(id)), points[:3])
-        self.assertEqual(len(list(model.reduce(points[:3]))), 3)
-        self.assertLess(len(list(Stats[1].reduce(points[:3]))), 3)
+            self.assertListEqual(list(model.select(id)), points)
+
+        self.assertEqual(len(list(model.reduce(points))), len(points))
+        self.assertLess(len(list(Stats[1].reduce(points))), len(points))
+
+        with assertQueries('DELETE'):
+            model.delete(id=id)
+        self.assertListEqual(list(model.select(id)), [])
+        self.assertTrue(Stats[-1].start(id))
+
+    def test_sample_simple_wipe(self):
+        model = Stats[0]
+        settings.STATS_SIMPLE_WIPE = True
+
+        model.objects.all().delete()
+
+        with assertQueries('INSERT', 'SELECT'):
+            model.insert({id: points})
+            point = model.latest(id)
+            model.cache.clear()
+            self.assertEqual(point, model.latest(id))
+        self.assertEqual(point, points[-1])
+        floor = model.floor(point.dt)
+        self.assertLessEqual(floor, point.dt)
+        self.assertEqual(floor.microsecond, 0)
+
+        # Check it tries to expire something
+        model.next_flush_orphans_time = epoch
+        with assertQueries('DELETE', 'SELECT'):
+            model.expire([id])
+            self.assertListEqual(list(model.select(id)), points)
+
+        # Now it should not expire because time has not passed.
+        with assertQueries():
+            model.expire([id])
+
+        self.assertEqual(len(list(model.reduce(points))), len(points))
+        self.assertLess(len(list(Stats[1].reduce(points))), len(points))
+
+        # Insert and old record, and check it is deleted.
+        model.insert({id: [Point(epoch, 1, 1)]})
+        model.next_flush_orphans_time = epoch
+        self.assertListEqual(list(model.select(id)), [Point(epoch, 1, 1)] + points)
+        with assertQueries('DELETE', 'SELECT'):
+            model.expire([id])
+            self.assertListEqual(list(model.select(id)), points)
+
         with assertQueries('DELETE'):
             model.delete(id=id)
         self.assertListEqual(list(model.select(id)), [])
@@ -89,8 +158,8 @@ class TestModels(TestCase):
         self.assertGreater(point, points[-2])
         self.assertLessEqual(point, points[-1])
         count = len(points) + 1
-        for offset in {'hours': 1}, {'days': 10}, {'days': 100}, {'days': 10000}:
-            timestamps = map(operator.attrgetter('timestamp'), Stats.select(id, point.dt - timedelta(**offset), point.dt))
+        for stat in Stats[:-1]:
+            timestamps = map(operator.attrgetter('timestamp'), Stats.select(id, point.dt - (stat.expiration_time - timedelta(seconds=stat.step)), point.dt))
             self.assertLess(len(timestamps), count)
             count = len(timestamps)
             steps = set(y - x for x, y in zip(timestamps, timestamps[1:]))
@@ -103,10 +172,78 @@ class TestModels(TestCase):
             self.assertEqual(point[1:], (1.0, 10))
         selection = list(Stats.select(id, now - timedelta(seconds=30), now + timedelta(seconds=30), fixed=3))
         self.assertEqual(len(selection), 3)
-        self.assertEqual(sum(point.len for point in selection), 3)
+
+        # This result of this can vary depending on how settings is configured, if we have only 1 day of 10 seconds then we get a different
+        # answer to if we have more than a day. So copy with both configurations. If Stats[0] is now then it using the 60 second roll up and
+        # so len = 6 (6 times 10) otherwise we get 3 (the 3 after 'now' because all dates are in the future)
+        if Stats[0].start(id) < now:
+            self.assertEqual(sum(point.len for point in selection), 3)
+        else:
+            self.assertEqual(sum(point.len for point in selection), 6)
+
         self.assertEqual(selection[0].len, 0)
         point, = Stats.select(id, now, now + timedelta(seconds=5), fixed=1)
         with assertQueries(*['DELETE'] * 5):
             Stats.delete(id)
         for model in Stats:
             self.assertListEqual(list(model.select(id)), [])
+
+
+@skipIf(True, "Monster Data Tests Not Normally Run")
+class TestMonsterData(TestCase):
+    def setUp(self):
+        Stats.delete_all()
+        self.preserve_stats_wipe = settings.STATS_SIMPLE_WIPE
+
+    def tearDown(self):
+        Stats.delete_all()
+        settings.STATS_SIMPLE_WIPE = self.preserve_stats_wipe
+
+    def _test_monster_data(self, simple_wipe, ids_to_create = 500, job_stats_to_create = 50, days = 365 * 10):
+        '''
+        Push 10 years worth of data through that stats system for 550 (50 of which are jobstats) ids.
+        '''
+
+        date = start_time = datetime.now(utc)
+        end_date = now + timedelta(days=days)
+
+        settings.STATS_SIMPLE_WIPE = simple_wipe
+        first_job_stat = ids_to_create + 1
+        iterations_completed = 0
+
+        with mock.patch('chroma_core.models.stats.datetime') as dt:
+            while date < end_date:
+                data = []
+
+                for id in xrange(0, ids_to_create):
+                    data.append((id, date, id))
+
+                for id in xrange(0, job_stats_to_create):
+                    data.append((first_job_stat + id, date, id))
+
+                dt.now.return_value = date
+                Stats.insert(data)
+
+                date += timedelta(seconds=10)
+                first_job_stat += 1
+                iterations_completed += 1
+
+        end_time = datetime.now(utc)
+
+        print "Time to run test_monster_data %s, time per 10 second step %s, wipe=%s" % (end_time - start_time,
+                                                                                         (end_time - start_time) / iterations_completed,
+                                                                                         settings.STATS_SIMPLE_WIPE)
+
+        # This test fails if we are not using SIMPLE_WIPE and we have job_stats, so don't run the test
+        # in that case.
+        if settings.STATS_SIMPLE_WIPE or job_stats_to_create == 0:
+            for stat in Stats:
+                actual_records = stat.objects.count()
+                max_expected_records = ids_to_create * total_seconds(stat.expiration_time + stat.flush_orphans_interval) / stat.step
+                self.assertLess(actual_records, max_expected_records)
+
+    def test_monster_data_simple_wipe(self):
+        self._test_monster_data(True, 20, 20, 2)
+
+    def test_monster_data_selective_wipe(self):
+        self._test_monster_data(False, 20, 20, 2)

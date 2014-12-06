@@ -271,6 +271,15 @@ STORAGE_PLUGIN_DEBUG_PLUGINS = []
 
 STORAGE_PLUGIN_ENABLE_STATS = True
 
+# Control of the statistics storage
+STATS_SIMPLE_WIPE = True                    # True means we simple delete everything that is older than the expiration, data not rolled up is lost.
+STATS_10_SECOND_EXPIRATION = {'days': 1}    # Expiration must be multiple of 10 seconds.
+STATS_1_MINUTE_EXPIRATION = {'days': 3}     # Expiration must be multiple of 1 minute.
+STATS_5_MINUTE_EXPIRATION = {'days': 7}     # Expiration must be multiple of 5 minute.
+STATS_1_HOUR_EXPIRATION = {'days': 30}      # Expiration must be multiple of 1 hour.
+STATS_1_DAY_EXPIRATION = {'weeks': 10000}   # Expiration must be multiple of 1 day
+STATS_FLUSH_RATE = 20                       # Flush 20 times per expiration interval - for 10 seconds sample flush every 1day/20.
+
 # When agent sends VPD 0x80 and 0x83 serial numbers, which do we prefer to use
 # for the canonical device serial on the manager?  Favorite first.
 SERIAL_PREFERENCE = ['serial_83', 'serial_80']

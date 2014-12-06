@@ -30,6 +30,9 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.utils.timezone import utc
+from chroma_core.lib.util import chroma_settings
+
+settings = chroma_settings()
 
 
 __all__ = 'Point', 'Series', 'Stats'
@@ -39,11 +42,24 @@ def total_seconds(td):
     "Return timedelta.total_seconds (builtin in 2.7)"
     return (td.days * 24 * 60 * 60) + td.seconds + (td.microseconds * 1e-6)
 
-ROWS = 1000  # sample size multiplier for total number of rows
-SAMPLES = {'seconds': 10}, {'minutes': 1}, {'minutes': 5}, {'hours': 1}, {'days': 1}
-SAMPLES = tuple(int(total_seconds(timedelta(**SAMPLE))) for SAMPLE in SAMPLES)
-for div, mod in map(divmod, SAMPLES[1:], SAMPLES[:-1]):
-    assert div > 1 and mod == 0, SAMPLES
+
+class SampleInfo(object):
+    def __init__(self, sample_rate, expiration_time):
+        self.sample_rate = int(total_seconds(timedelta(**sample_rate)))
+        self.expiration_time = timedelta(**expiration_time)
+
+SAMPLES = [SampleInfo({'seconds': 10}, settings.STATS_10_SECOND_EXPIRATION),
+           SampleInfo({'minutes': 1}, settings.STATS_1_MINUTE_EXPIRATION),
+           SampleInfo({'minutes': 5}, settings.STATS_5_MINUTE_EXPIRATION),
+           SampleInfo({'hours': 1}, settings.STATS_1_HOUR_EXPIRATION),
+           SampleInfo({'days': 1}, settings.STATS_1_DAY_EXPIRATION)]
+
+
+def div_samplerate(x, y):
+    div, mod = divmod(x.sample_rate, y.sample_rate)
+    assert div > 1 and mod == 0
+
+    return div
 
 
 def timestamp(dt):
@@ -126,10 +142,10 @@ class Series(models.Model):
 class Sample(models.Model):
     """Abstract model for Sample tables.
     Only used for query generation.
-    Subclasses require 'step', 'expiration', and 'cache' attributes.
+    Subclasses require 'step', 'expiration_time', and 'cache' attributes.
     """
     id = models.IntegerField(primary_key=True)  # for django only, not really the primary key
-    dt = models.DateTimeField()
+    dt = models.DateTimeField(db_index=True)
     sum = models.FloatField()
     len = models.IntegerField()
 
@@ -146,7 +162,7 @@ class Sample(models.Model):
     def start(cls, id):
         "Return earliest datetime that should be stored for series."
         try:
-            return cls.latest(id).dt - cls.expiration
+            return cls.latest(id).dt - cls.expiration_time
         except OverflowError:
             return epoch
 
@@ -156,9 +172,9 @@ class Sample(models.Model):
         return dt - timedelta(seconds=timestamp(dt) % cls.step, microseconds=dt.microsecond)
 
     @classmethod
-    def reduce(cls, points):
+    def reduce(cls, points_to_reduce):
         "Generate points grouped and summed by sample size."
-        for dt, points in itertools.groupby(points, key=lambda point: cls.floor(point.dt)):
+        for dt, points in itertools.groupby(points_to_reduce, key=lambda point: cls.floor(point.dt)):
             yield Point(dt, *sum(points, Point.zero)[1:])
 
     @classmethod
@@ -184,19 +200,31 @@ class Sample(models.Model):
 
     @classmethod
     def expire(cls, ids):
-        "Delete earliest points from multiple series."
-        if ids:
-            cls.delete(id__in=ids, dt__lt=min(map(cls.start, ids)))
+        if settings.STATS_SIMPLE_WIPE:
+            "We also have a general flush added in for 2.2 which just clears everything old every so often!"
+            now = datetime.now(utc)
+            if now > cls.next_flush_orphans_time:
+                cls.delete(dt__lt=now - cls.expiration_time)
+                cls.next_flush_orphans_time = now + cls.flush_orphans_interval
+        else:
+            "Delete earliest points from multiple series."
+            if ids:
+                cls.delete(id__in=ids, dt__lt=min(map(cls.start, ids)))
 
 
 class Stats(list):
     "Primary interface to all sample models."
-    def __init__(self, samples, rows):
-        maxlen = max(map(operator.floordiv, samples[1:], samples[:-1]))
+    def __init__(self, samples):
+        maxlen = max(map(div_samplerate, samples[1:], samples[:-1]))
         for sample in samples:
             cache = Cache(functools.partial(collections.deque, maxlen=maxlen))
-            namespace = {'__module__': 'chroma_core.models', 'step': sample, 'expiration': timedelta(seconds=rows * sample * sample), 'cache': cache}
-            self.append(type('Sample_{0:d}'.format(sample), (Sample,), namespace))
+            namespace = {'__module__': 'chroma_core.models',
+                         'step': sample.sample_rate,
+                         'expiration_time': sample.expiration_time,
+                         'next_flush_orphans_time': epoch,
+                         'flush_orphans_interval': sample.expiration_time / settings.STATS_FLUSH_RATE,
+                         'cache': cache}
+            self.append(type('Sample_{0:d}'.format(sample.sample_rate), (Sample,), namespace))
 
     def insert(self, samples):
         "Bulk insert new samples (id, dt, value).  Skip and return outdated samples."
@@ -254,11 +282,17 @@ class Stats(list):
     def latest(self, id):
         "Return most recent data point."
         point = self[0].latest(id)
-        return Point(self[0].floor(point.dt), *point[1:])
+        return Point(self[0].floor(point.dt), point.sum, point.len)
 
     def delete(self, id):
         "Delete all stored points for a series."
         for model in self:
             model.delete(id=id)
 
-Stats = Stats(SAMPLES, ROWS)
+    def delete_all(self):
+        "Delete all stored points for a series."
+        for model in self:
+            model.delete(id__gte=0)
+
+
+Stats = Stats(SAMPLES)
