@@ -89,7 +89,7 @@ def _run(arg_list):
 
     # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
     # to poll the thread_state.teardown event as well as the completion of the subprocess.
-    # This is done to allow cancelation of subprocesses
+    # This is done to allow cancellation of subprocesses
     rc = None
     min_wait = 1.0E-3
     max_wait = 1.0
