@@ -54,12 +54,15 @@ FILE_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
 STDOUT_FORMAT = '[%(asctime)s: %(levelname)s/%(name)s] %(message)s'
 
 
-def _add_file_handler(logger, filename=None):
+def _add_file_handler(logger, filename=None, use_formatter=True):
     if not _has_handler(logger, WatchedFileHandler):
         if filename is None:
             filename = _log_filename
         handler = WatchedFileHandler(filename)
-        handler.setFormatter(logging.Formatter(FILE_FORMAT))
+
+        if use_formatter:
+            handler.setFormatter(logging.Formatter(FILE_FORMAT))
+
         logger.addHandler(handler)
 
 
@@ -123,7 +126,7 @@ def log_disable_stdout():
                 logger.removeHandler(handler)
 
 
-def custom_log_register(log_name, filename=None):
+def custom_log_register(log_name, filename=None, use_formatter=True):
     """Create another custom log handler to an optional file
 
     logger can have a file handler, or no handler at all.  In the second case
@@ -150,7 +153,7 @@ def custom_log_register(log_name, filename=None):
         # NB: this will fail if the permissions prevent opening the file.
         # Generally just make sure the user (process) creating the file is
         # the same one that will write to it.
-        _add_file_handler(logger, filename)
+        _add_file_handler(logger, filename, use_formatter)
 
     _loggers.add(logger)
     return logger

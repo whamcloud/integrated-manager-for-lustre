@@ -124,8 +124,10 @@ fi
 cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
 import sys
+import settings
 from scripts.httpd_settings import get_production_httpd_settings
 LOG_LEVEL = logging.DEBUG
+MIDDLEWARE_CLASSES = settings.MIDDLEWARE_CLASSES + ('tests.request_logging_middleware.RequestLoggingMiddleware',)
 DEBUG = True
 TEMPLATE_DEBUG = False
 LOG_PATH = \"/var/log/chroma\"
@@ -137,6 +139,7 @@ EOF1
 
 mkdir -p /usr/share/chroma-manager/tests/framework/gui/"
 
+scp -r chroma/chroma-manager/tests/request_logging_middleware.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/request_logging_middleware.py
 scp -r chroma/chroma-manager/tests/framework/gui/mock_agent root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/framework/gui/mock_agent
 scp -r chroma/chroma-manager/tests/unit/ root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/unit
 scp chroma/chroma-manager/tests/__init__.py root@$CHROMA_MANAGER:/usr/share/chroma-manager/tests/__init__.py
