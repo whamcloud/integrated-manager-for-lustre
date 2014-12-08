@@ -67,6 +67,20 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
         self.assertEqual(metrics['lnet']['recv_count'], 156747)
         self.assertEqual(len(metrics['target']), 7)
 
+    def test_default_stats(self):
+        """
+        Test that default values are provided for certain stats used by the UI.
+        """
+        self.test_root = os.path.join(self.tests,
+                                      "data/lustre_versions/2.5.0/oss")
+        self.setUp()
+        audit = LocalAudit()
+        metrics = audit.metrics()['raw']['lustre']
+        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['read_bytes']['units'], "bytes")
+        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['read_bytes']['sum'], 0)
+        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['write_bytes']['count'], 0)
+        self.assertEqual(metrics['target']['lustre-OST0000']['stats']['write_bytes']['sum'], 0)
+
 
 class TestPathologicalUseCases(PatchedContextTestCase):
     # AKA: The world will always build a better idiot! ;)

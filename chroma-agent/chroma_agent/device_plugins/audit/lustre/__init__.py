@@ -197,13 +197,24 @@ class TargetAudit(LustreAudit):
             'filesfree': 'filesfree',
             'num_exports': 'num_exports'
         }
+        self.metric_defaults_map = {
+            'read_bytes': dict(count = 0, units = "bytes", min = 0, max = 0, sum = 0),
+            'write_bytes': dict(count = 0, units = "bytes", min = 0, max = 0, sum = 0),
+        }
 
         self.raw_metrics['lustre']['target'] = {}
 
     def read_stats(self, target):
         """Returns a dict containing target stats."""
         path = os.path.join(self.target_root, target, "stats")
-        return self.stats_dict_from_file(path)
+        stats = self.stats_dict_from_file(path)
+
+        # Check for missing stats that need default values.
+        for stat, default in self.metric_defaults_map.items():
+            if stat not in stats:
+                stats[stat] = default
+
+        return stats
 
     def read_int_metric(self, target, metric):
         """Given a target name and simple int metric name, returns the
