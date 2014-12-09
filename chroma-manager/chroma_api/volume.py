@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from chroma_core.models import Volume, ManagedFilesystem, HaCluster
+from chroma_core.models import Volume, ManagedFilesystem, HaCluster, ManagedHost
 
 from tastypie.resources import ModelResource
 from tastypie.exceptions import ImmediateHttpResponse
@@ -200,7 +200,7 @@ class VolumeResource(ModelResource):
     def obj_update(self, bundle, request, **kwargs):
         # FIXME: I'm not exactly sure how cached cached_object_get is -- should
         # we be explicitly getting a fresh one?  I'm just following what the ModelResource
-        # obj_udpate does - jcs
+        # obj_update does - jcs
         bundle.obj = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
         volume = bundle.data
 
@@ -217,7 +217,11 @@ class VolumeResource(ModelResource):
 
         # Sanity-check the primary/failover relationships and save if OK
         if not any(host_ids.issubset(host.id for host in cluster.peers) for cluster in HaCluster.all_clusters()):
-            raise ImmediateHttpResponse(response = HttpBadRequest("Attempt to set primary/secondary VolumeNodes across HA clusters for Volume %s" % lun.id))
+            error_msg = "Attempt to set primary/secondary VolumeNodes across HA clusters for Volume %s:%s\n" % (lun.id, lun.label)
+            error_msg += "\nVolume Node Hosts %s\n" % ", ".join([str(host) for host in ManagedHost.objects.filter(id__in = host_ids)])
+            error_msg += "\nKnown HA Clusters %s\n" % ", ".join(["(%s)" % ", ".join([str(host) for host in cluster.peers]) for cluster in HaCluster.all_clusters()])
+
+            raise ImmediateHttpResponse(response = HttpBadRequest(error_msg))
         # Apply use,primary values from the request
         for node in volume['nodes']:
             lun.volumenode_set.filter(id=node['id']).update(primary=node['primary'], use=node['use'])
