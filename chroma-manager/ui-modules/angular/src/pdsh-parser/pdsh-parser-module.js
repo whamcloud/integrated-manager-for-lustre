@@ -58,7 +58,7 @@
 
       /**
        * The pdshParser function returned to the client receives an expression to be parsed.
-       * @param {String} expression
+       * @param {String} expression The expression must be trimmed of white space.
        * @return {Array}
        */
       return function pdshParser (expression) {
@@ -83,10 +83,8 @@
       /**
        * Parses an expression
        * @param {String} expression
-       * @param {Object} expansionCollection
-       * @param {Array} errorCollection
        */
-      function parseExpression (expression, expansionCollection, errorCollection) {
+      function parseExpression (expression) {
         var isValid = isExpressionValid(expression);
         var allExpressions = splitExpressions(expression, isInsideBraces);
         var notAboveCap = isNotAboveCap(isValid, allExpressions);

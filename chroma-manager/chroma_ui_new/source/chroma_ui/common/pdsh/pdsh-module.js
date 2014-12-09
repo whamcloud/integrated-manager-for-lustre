@@ -123,7 +123,7 @@
             if (pdshExpression == null)
               return;
 
-            parsedExpression = pdshParser(pdshExpression);
+            parsedExpression = pdshParser(pdshExpression.replace(' ', ''));
             errorMessages = [];
 
             if ('errors' in parsedExpression && pdshExpression.length > 0) {
