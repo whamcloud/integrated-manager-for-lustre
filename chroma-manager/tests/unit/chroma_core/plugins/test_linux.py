@@ -138,3 +138,16 @@ class LinuxPluginTestCase(TestCase):
         self._start_session_with_data(host2, "HYD-1969-mds01.json")
 
         self.assertEqual(Volume.objects.filter(label="3690b11c00006c68d000007ea5158674f").count(), 1)
+
+    def test_HYD_3659(self):
+        """
+        A removable device with a partition should be culled without an exception.
+        """
+        # Create entries for the device/partition
+        host1 = synthetic_host('mds00', storage_resource=True)
+        self._start_session_with_data(host1, "HYD-3659.json")
+        self.assertEqual(Volume.objects.count(), 1)
+
+        # Restart the session with no devices (should trigger a cull)
+        self._start_session_with_data(host1, "NoDevices.json")
+        self.assertEqual(Volume.objects.count(), 0)

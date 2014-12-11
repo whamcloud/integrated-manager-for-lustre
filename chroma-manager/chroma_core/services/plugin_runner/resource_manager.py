@@ -713,8 +713,8 @@ class ResourceManager(object):
 
             ancestor_weights = [json.loads(w['value']) for w in attr_model_class.objects.filter(
                 resource__in = weight_resource_ids, key = 'weight').values('value')]
-            weight = reduce(lambda x, y: x + y, ancestor_weights)
-            weights[volume_node] = weight
+            vol_weight = reduce(lambda x, y: x + y, ancestor_weights)
+            weights[volume_node] = vol_weight
 
         log.info("affinity_weights: %s" % weights)
 
@@ -1079,24 +1079,44 @@ class ResourceManager(object):
             else:
                 reported_global_resources.append(session.local_id_to_global_id[r._handle])
 
-        lost_resources = StorageResourceRecord.objects.filter(
-                ~Q(pk__in = reported_scoped_resources),
-                storage_id_scope = session.scannable_id)
-        for r in lost_resources:
+        # This generator re-runs the query on every loop iteration in order
+        # to handle situations where resources returned by the query are
+        # deleted as dependents of prior resources (HYD-3659).
+        def iterate_lost_resources(query):
+            loops_remaining = len(query())
+            while loops_remaining:
+                loops_remaining -= 1
+                rs = query()
+                if len(rs):
+                    yield rs[0]
+                else:
+                    raise StopIteration()
+
+            # If the list of lost items grew, don't continue looping.
+            # Just bail out and the next scan will get them.
+            if loops_remaining <= 0:
+                raise StopIteration()
+
+        # Look for scoped resources which were at some point reported by
+        # this scannable_id, but are missing this time around.
+        lost_scoped_resources = lambda: StorageResourceRecord.objects.filter(
+                  ~Q(pk__in = reported_scoped_resources),
+                  storage_id_scope = session.scannable_id)
+        for r in iterate_lost_resources(lost_scoped_resources):
             self._delete_resource(r)
 
         # Look for globalid resources which were at some point reported by
-        # this scannable_id, but are missing this time around
-        forgotten_global_resources = StorageResourceRecord.objects.filter(
-                ~Q(pk__in = reported_global_resources),
-                reported_by = session.scannable_id)
-        for reportee in forgotten_global_resources:
+        # this scannable_id, but are missing this time around.
+        lost_global_resources = lambda: StorageResourceRecord.objects.filter(
+                    ~Q(pk__in = reported_global_resources),
+                    reported_by = session.scannable_id)
+        for reportee in iterate_lost_resources(lost_global_resources):
             reportee.reported_by.remove(session.scannable_id)
             if not reportee.reported_by.count():
                 self._delete_resource(reportee)
 
     def _delete_resource(self, resource_record):
-        log.info("ResourceManager._cull_resource '%s'" % resource_record.pk)
+        log.info("ResourceManager._delete_resource '%s'" % resource_record.pk)
 
         ordered_for_deletion = []
         phase1_ordered_dependencies = []
