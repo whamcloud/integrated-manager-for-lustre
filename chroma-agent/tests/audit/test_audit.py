@@ -6,6 +6,7 @@ from chroma_agent.device_plugins.audit.node import NodeAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit
 
 from tests.test_utils import PatchedContextTestCase
+from tests.test_utils import patch_run
 
 
 class TestAuditScanner(PatchedContextTestCase):
@@ -33,4 +34,8 @@ class TestLocalAudit(PatchedContextTestCase):
         self.assertEqual(self.audit.audit_classes(), [LnetAudit, MdtAudit, MgsAudit, NodeAudit])
 
     def test_properties(self):
-        self.assertEqual(self.audit.properties(), {'zfs_installed': False})
+        with patch_run(['which', 'zfs'], 0, "/sbin/zfs", ""):
+            self.assertEqual(self.audit.properties(), {'zfs_installed': True})
+
+        with patch_run(['which', 'zfs'], 1, "", "which: no zfs in (/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin)"):
+            self.assertEqual(self.audit.properties(), {'zfs_installed': False})

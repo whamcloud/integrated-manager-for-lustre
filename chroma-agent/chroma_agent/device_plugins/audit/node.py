@@ -72,7 +72,7 @@ class NodeAudit(BaseAudit, FileSystemMixin):
 
         If the fetched property is expensive to compute, it should be cached / updated less frequently.
         """
-        rc, stdout, stderr = shell.run(['which', '-i', 'zfs'])
+        rc, stdout, stderr = shell.run(['which', 'zfs'])
         return {
             'zfs_installed': not rc,
         }
