@@ -157,6 +157,7 @@ _.extend(addServerModal, {
     fancySelect.selectOption();
   },
   submitProfile: function submitProfile () {
+    addServerModal.overrideButton.click();
     addServerModal.proceedButton.click();
   }
 });

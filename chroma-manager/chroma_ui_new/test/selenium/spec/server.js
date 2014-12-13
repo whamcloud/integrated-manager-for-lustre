@@ -24,14 +24,8 @@ describe('server screen', function () {
       server.waitForServerTable();
     });
 
-    describe('start lnet', function () {
-      beforeEach(function () {
-        server.startLnetAll();
-      });
-
-      it('should result in two servers in lnet up state', function () {
-        expect(server.lnetState.count()).toBe(2);
-      });
+    it('should result in two servers in lnet up state', function () {
+      expect(server.lnetState.count()).toBe(2);
     });
 
     [
