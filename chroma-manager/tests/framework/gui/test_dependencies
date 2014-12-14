@@ -1,6 +1,7 @@
 nose-*.tar.gz
 Django-*.tar.gz
 selenium-*.tar.gz
+selenium-server-standalone-*.jar
 ziplocker
 socket-router
 srcmap-reverse

@@ -61,8 +61,8 @@ LATEST_CHROMEDRIVER_RELEASE=$(curl -f http://chromedriver.storage.googleapis.com
 wget http://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER_RELEASE/chromedriver_linux64.zip
 unzip chromedriver_linux64.zip -d $HOME/bin/
 
-# Download Selenium jar
-wget -O $HOME/bin/selenium-server-standalone.jar https://selenium-release.storage.googleapis.com/2.40/selenium-server-standalone-2.40.0.jar
+# Install Selenium
+cp chroma_test_env/chroma/chroma-externals/selenium-server-standalone-*.jar $HOME/bin/selenium-server-standalone.jar
 
 # Set up the virtualenv to run the tests in
 cd chroma_test_env
