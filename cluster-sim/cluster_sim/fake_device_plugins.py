@@ -176,6 +176,7 @@ class BaseFakeLustrePlugin(DevicePlugin):
             },
             'packages': packages,
             'mounts': mounts,
+            "properties": {'zfs_installed': False},
             'started_at': datetime.datetime.utcnow().isoformat() + 'Z',
             'agent_version': 'dummy'
         }

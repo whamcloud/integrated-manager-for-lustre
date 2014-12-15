@@ -7,7 +7,6 @@ from django.db.models import Q
 from tests.unit.chroma_core.helper import MockAgentRpc
 from tests.unit.chroma_core.helper import MockAgentSsh
 from chroma_core.models import Nid
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.models import ManagedHost
 from chroma_core.services.http_agent import ValidatedClientView
@@ -39,42 +38,23 @@ MockAgentRpc.mock_servers['kp-ss-storage-appliance-2']['device-plugin'] = json.l
 [f for f in ManagedHost._meta.fields if f.name == 'corosync_reported_up'][0].default = True
 
 
-def _fixup_host_settings(host_id):
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+
+
+# Whenever the host is saved set the properties and make sure the clusters are in place.
+# This isn't efficient because it does it every save, but I don't think that matters for
+# the mock
+@receiver(pre_save, sender=ManagedHost)
+def fixup_host_settings_during_create(**kwargs):
+    host = kwargs['instance']
+
     # Give the thing some properties.
-    host = ObjectCache.get_by_id(ManagedHost, host_id)
     host.properties = json.dumps({'zfs_installed': False})
-    host.save()
-    ObjectCache.update(host)
 
-    added_host = ManagedHost.objects.get(id=host_id)
-    for host in ManagedHost.objects.filter(~Q(id=host_id)):
-        added_host.ha_cluster_peers.add(host)
-
-
-old_create_host = JobScheduler.create_host
-
-
-def create_host(self, *args, **kwargs):
-    host_id, command_id = old_create_host(self, *args, **kwargs)
-
-    _fixup_host_settings(host_id)
-
-    return host_id, command_id
-
-
-JobScheduler.create_host = create_host
-
-old_create_host_ssh = JobScheduler.create_host_ssh
-
-
-def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
-    host_id, command_id = old_create_host_ssh(self, address, profile, root_pw, pkey, pkey_pw)
-
-    _fixup_host_settings(host_id)
-
-    return host_id, command_id
-
-JobScheduler.create_host_ssh = create_host_ssh
+    if host.id:
+        for clustered_host in ManagedHost.objects.filter(~Q(id=host.id)):
+            host.ha_cluster_peers.add(clustered_host)
 
 
 def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):

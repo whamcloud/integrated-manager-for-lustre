@@ -385,14 +385,6 @@ class MockAgentRpc(object):
         raise AgentException(fqdn, "cmd", {'foo': 'bar'}, "Fake backtrace")
 
     @classmethod
-    def get_session_id(cls, fqdn):
-        return [ord(c) for c in fqdn]   # A sum of the characters is unique for each fqdn.
-
-    @classmethod
-    def await_restart(cls, fqdn, timeout, old_session_id):
-        pass
-
-    @classmethod
     def call(cls, fqdn, cmd, args, cancel_event):
         from chroma_core.services.job_scheduler import job_scheduler
         import django.db
