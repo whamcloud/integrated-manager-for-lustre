@@ -7,6 +7,7 @@
     },
     "provision": true,
     "failover_is_configured": false,
+    "test_ha": true,
     "reset": true,
     "test_runners": [
         {
@@ -75,31 +76,46 @@
         "targets": {
             "MGS": {
                 "kind": "MGT",
+                "index": 0,
                 "primary_server": "hydra-2-efs-mgs-mds",
                 "mount_path": "/mnt/mdt"
             },
             "efs-MDT0000": {
+                "index": 0,
                 "kind": "MDT",
                 "primary_server": "hydra-2-efs-mgs-mds",
                 "mount_path": "/mnt/mdt"
+
             },
             "efs-OST0000": {
                 "kind": "OST",
+                "index": 0,
+                "failover_mode": "servicenode",
+                "mount_server": "primary_server",
                 "primary_server": "hydra-2-efs-oss1",
                 "mount_path": "/mnt/ost0"
             },
             "efs-OST0001": {
                 "kind": "OST",
+                "index": 1,
+                "failover_mode": "servicenode",
+                "mount_server": "secondary_server",
                 "primary_server": "hydra-2-efs-oss1",
                 "mount_path": "/mnt/ost1"
             },
             "efs-OST0002": {
                 "kind": "OST",
+                "index": 2,
+                "failover_mode": "failnode",
+                "mount_server": "primary_server",
                 "primary_server": "hydra-2-efs-oss2",
                 "mount_path": "/mnt/ost2"
             },
             "efs-OST0003": {
                 "kind": "OST",
+                "index": 3,
+                "failover_mode": "failnode",
+                "mount_server": "secondary_server",
                 "primary_server": "hydra-2-efs-oss2",
                 "mount_path": "/mnt/ost3"
             }

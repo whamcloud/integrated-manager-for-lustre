@@ -32,3 +32,7 @@ class TestBlockDeviceLinux(TestBlockDevice):
     @property
     def preferred_fstype(self):
         return 'ldiskfs'
+
+    @property
+    def device_path(self):
+        return self._device_path

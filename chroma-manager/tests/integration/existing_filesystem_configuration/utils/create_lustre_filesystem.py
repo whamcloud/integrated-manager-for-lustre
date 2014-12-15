@@ -21,6 +21,8 @@ class CreateLustreFilesystem(UtilityTestCase):
     def setUp(self):
         super(CreateLustreFilesystem, self).setUp()
 
+        self._setup_ha_config()
+
         self.fsname = config['filesystem']['name']
 
         self.mgts = self.get_targets_by_kind('MGT')
@@ -36,6 +38,27 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         self._clear_current_target_devices()
 
+    def _setup_ha_config(self):
+        '''
+        This routine changes the config so that HA nodes etc are provided. Simplistically it just sets the failover node
+        to be something. Also if lvm then it turns off all the HA stuff. This is a fixup until we have HA provided as input.
+        The input presumably being created by the provisioner.
+        '''
+        is_lvm = any(server['device_type'] == 'lvm' for server in config['lustre_servers'])
+
+        if config['test_ha'] and not is_lvm:
+            # Go through and find a secondary for each server, all storage is shared so any will do.
+            # This loop gives a really bad distribution, but we only use a few servers so it achieves what we need today.
+            for target in config['filesystem']['targets'].values():
+                target['secondary_server'] = next(server['fqdn'] for server in config['lustre_servers'] if server['fqdn'] != target['primary_server'])
+        else:
+            config['test_ha'] = False                           # Deals is is_lvm = True
+
+            for target in config['filesystem']['targets'].values():
+                for key in ['mount_server', 'secondary_server', 'failover_mode']:
+                    if key in target:
+                        del target[key]
+
     def _clear_current_target_devices(self):
         for server in config['lustre_servers']:
             self.remote_command(
@@ -45,10 +68,9 @@ class CreateLustreFilesystem(UtilityTestCase):
 
             self.umount_devices(server['address'])
 
-            for command in TestBlockDevice.all_clear_device_commands(server['device_paths']):
-                result = self.remote_command(server['address'],
-                                             command)
-                logger.info("clear command:%s  output:\n %s" % (command, result.stdout))
+            self._execute_commands(TestBlockDevice.all_clear_device_commands(server['device_paths']),
+                                   server['address'],
+                                   'clear command')
 
             self.dd_devices(server['address'])
 
@@ -94,38 +116,46 @@ class CreateLustreFilesystem(UtilityTestCase):
         with open(filename, 'w') as outfile:
             json.dump(config, outfile, indent = 2, separators=(',', ': '))
 
+    def _execute_commands(self, commands, target, debug_message):
+        for command in commands:
+            result = self.remote_command(target, command)
+            logger.info("%s command %s output:\n %s" % (debug_message, command, result.stdout))
+
     def create_lustre_filesystem_for_test(self):
         combined_mgt_mdt = self.mgt['primary_server'] == self.mdt['primary_server'] and self.mgt['mount_path'] == self.mdt['mount_path']
 
+        if not combined_mgt_mdt:
+            # TODO: Create the separate MDT
+            raise RuntimeError("Separate MGT and MDT configuration not implemented yet.")
+
         self.configure_target_device(self.mgt,
                                      'mgt',
-                                     0,
+                                     self.fsname,
                                      None,
                                      ['--reformat',
                                       '--mdt' if combined_mgt_mdt else '',
                                       '--mgs'])
 
         try:
-            mgs_ip = self.get_lustre_server_by_name(self.mgt['primary_server'])['ip_address']
+            mgs_nids = [self.get_lustre_server_by_name(self.mgt['primary_server'])['ip_address']]
+
+            if 'secondary_server' in self.mgt:
+                mgs_nids.append(self.get_lustre_server_by_name(self.mgt['secondary_server'])['ip_address'])
         except:
             raise RuntimeError("Could not get 'ip_address' for %s" %
                                self.mgt['primary_server'])
 
-        if not combined_mgt_mdt:
-            # TODO: Create the separate MDT
-            raise RuntimeError("Separate MGT and MDT configuration not implemented yet.")
-
-        for index, ost in enumerate(self.osts):
+        for ost in self.osts:
             self.configure_target_device(ost,
                                          'ost',
-                                         index,
-                                         mgs_ip,
+                                         self.fsname,
+                                         mgs_nids,
                                          ['--reformat', '--ost'])
 
         for server in config['lustre_servers']:
             self.remote_command(
                 server['address'],
-                'sync; sync'
+                'partprobe; sync; sync'
             )
 
         self._save_modified_config()
@@ -168,54 +198,87 @@ class CreateLustreFilesystem(UtilityTestCase):
         for lustre_server in config['lustre_servers']:
             lustre_server['device_paths'] = [device if device != device_old_path else device_new_path for device in lustre_server['device_paths']]
 
-    def mount_target(self, target, device):
+    def mount_target(self, block_device, target, device):
+        # If failnode was used, then we must mount the primary before mounting the secondary, so if the secondary is the target mount mount
+        # and umount the primary.
+        #
+        # When this routine is called the target must be accessible from the primary_target
+        if (target.get('failover_mode') == 'failnode') and (target.get('mount_server') == 'secondary_server'):
+            self.remote_command(
+                target['primary_server'],
+                'mkdir -p %s' % target['mount_path']
+            )
+            self.remote_command(
+                target['primary_server'],
+                'mount -t lustre %s %s' % (device, target['mount_path'])
+            )
+            self.remote_command(
+                target['primary_server'],
+                'umount %s' % target['mount_path']
+            )
+
+        target_server = target[target.get('mount_server', 'primary_server')]
+
+        # If we are going to mount on the secondary the move the block device from the primary to the secondary.
+        if target.get('mount_server') == 'secondary_server':
+            self._execute_commands(block_device.release_commands,
+                                   target['primary_server'],
+                                   'Release device')
+            self._execute_commands(block_device.capture_commands,
+                                   target['secondary_server'],
+                                   'Capture device')
+
         self.remote_command(
-            target['primary_server'],
+            target_server,
             'mkdir -p %s' % target['mount_path']
         )
         self.remote_command(
-            target['primary_server'],
+            target_server,
             'mount -t lustre %s %s' % (device, target['mount_path'])
         )
         self.remote_command(
-            target['primary_server'],
+            target_server,
             "echo '%s   %s  lustre  defaults,_netdev    0 0' >> /etc/fstab" % (device, target['mount_path'])
         )
 
     def configure_target_device(self,
                                 target,
                                 target_type,
-                                index,
-                                mgs_ip,
+                                fsname,
+                                mgs_nids,
                                 mkfs_options):
 
-        device_path = self.get_unused_device(target['primary_server'])
-        device_type = self.get_lustre_server_by_name(target['primary_server'])['device_type']
+        targets = {'primary_server': target['primary_server']}
+
+        if 'secondary_server' in target:
+            targets['secondary_server'] = target['secondary_server']
+
+        device_path = self.get_unused_device(targets['primary_server'])
+        device_type = self.get_lustre_server_by_name(targets['primary_server'])['device_type']
 
         block_device = TestBlockDevice(device_type, device_path)
 
-        for command in block_device.install_packages_commands:
-            result = self.remote_command(target['primary_server'],
-                                         command)
-            logger.info("install blockdevice packages command output:\n %s" % result.stdout)
+        for targ in targets.values():
+            self._execute_commands(block_device.install_packages_commands,
+                                   targ,
+                                   'install blockdevice packages')
 
-        for command in block_device.prepare_device_commands:
-            result = self.remote_command(target['primary_server'],
-                                         command)
-            logger.info("prepare output:\n %s" % result.stdout)
+        self._execute_commands(block_device.prepare_device_commands,
+                               targets['primary_server'],
+                               'prepare device')
 
         filesystem = TestFileSystem(block_device.preferred_fstype, block_device.device_path)
 
-        for command in filesystem.install_packages_commands:
-            result = self.remote_command(target['primary_server'],
-                                         command)
-            logger.info("install filesystem packages command output:\n %s" % result.stdout)
+        for targ in targets.values():
+            self._execute_commands(filesystem.install_packages_commands,
+                                   targ,
+                                   'install filesystem packages')
 
-        result = self.remote_command(target['primary_server'],
-                                     filesystem.mkfs_command(target_type,
-                                                             index,
-                                                             self.fsname,
-                                                             mgs_ip,
+        result = self.remote_command(targets['primary_server'],
+                                     filesystem.mkfs_command(target,
+                                                             target_type,
+                                                             fsname,
+                                                             mgs_nids,
                                                              mkfs_options))
 
         logger.info("mkfs.lustre output:\n %s" % result.stdout)
@@ -223,6 +286,6 @@ class CreateLustreFilesystem(UtilityTestCase):
         self.rename_device(device_path, filesystem.mount_path)
         self.used_devices.append(filesystem.mount_path)
 
-        self.mount_target(target, filesystem.mount_path)
+        self.mount_target(block_device, target, filesystem.mount_path)
 
         return filesystem.mount_path

@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 import re
+import threading
 
 from collections import defaultdict
 
@@ -33,25 +34,32 @@ class ExportedZfsDevice(object):
     The code imports in read only mode and then exports the device whilst the enclosed code can then operate on the device as if
     it was locally active.
     '''
+    import_lock = threading.RLock()
+
     def __init__(self, device_path):
         self.pool_path = device_path.split('/')[0]
-        self.pool_imported = False
+        self.lock_acquired = False
 
     def __enter__(self):
         imported_pools = shell.try_run(["zpool", "list", "-H", "-o", "name"]).split('\n')
 
         if self.pool_path not in imported_pools:
             try:
+                self.lock_acquired = ExportedZfsDevice.import_lock.acquire()
                 shell.try_run(['zpool', 'import', '-f', '-o', 'readonly=on', self.pool_path])
-                self.pool_imported = True
             except shell.CommandExecutionError:
+                if self.lock_acquired:
+                    ExportedZfsDevice.import_lock.release()
+                    self.lock_acquired = False
                 return False
 
         return True
 
     def __exit__(self, type, value, traceback):
-        if self.pool_imported:
+        if self.lock_acquired:
             shell.try_run(['zpool', 'export', self.pool_path])
+            ExportedZfsDevice.import_lock.release()
+            self.lock_acquired = False
 
 
 class BlockDeviceZfs(BlockDevice):
@@ -149,15 +157,10 @@ class BlockDeviceZfs(BlockDevice):
 
         params = defaultdict(list)
 
-        # The split for multiple properties seems to be inconsistant so create a look up table for the split.
-        property_splitters = defaultdict(lambda: "")
-        property_splitters['failover.node'] = ':'
-        property_splitters['mgsnode'] = ':'
-
         for prop in zfs_properties:
             if prop.startswith('lustre:'):
                 lustre_property = prop.split(':')[1]
-                params[lustre_property].extend(re.split(property_splitters[lustre_property], zfs_properties[prop]))
+                params[lustre_property].extend(re.split(BlockDeviceZfs.lustre_property_delimiters[lustre_property], zfs_properties[prop]))
 
         if name.find("ffff") != -1:
             log.info("Device %s reported an unregistered lustre target and so will not be reported" % device['path'])

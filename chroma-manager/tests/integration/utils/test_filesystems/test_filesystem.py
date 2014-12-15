@@ -46,7 +46,22 @@ class TestFileSystem(object):
     def __init__(self, fstype, device_path):
         self._device_path = device_path
 
-    def mkfs_command(self, type, index, fsname, mgs_ip, additional_options):
+    def _mgsnode_parameter(self, mgs_nids):
+        if mgs_nids:
+            return "--mgsnode=%s@tcp0" % "@tcp0:".join(mgs_nids)
+        else:
+            return ""
+
+    def _failover_parameter(self, targets):
+        if 'secondary_server' in targets:
+            if targets.get('failover_mode', 'failnode') == 'failnode':
+                return '--failnode %s ' % targets['secondary_server']
+            else:
+                return '--servicenode %s --servicenode %s' % (targets['primary_server'], targets['secondary_server'])
+        else:
+            return ''
+
+    def mkfs_command(self, targets, type, fsname, mgs_nids, additional_options):
         raise Exception.Unimplemented("Unimplemented method - mkfs_command in class %s" % type(self))
 
     @property

@@ -30,16 +30,19 @@ class TestFileSystemZfs(TestFileSystem):
         super(TestFileSystemZfs, self).__init__(fstype, device_path)
         self._mount_path = None
 
-    def mkfs_command(self, type, index, fsname, mgs_ip, additional_options):
+    def mkfs_command(self, targets, type, fsname, mgs_nids, additional_options):
+        index = targets.get('index')
+
         self._mount_path = "%s/%s%s" % (self._device_path,
                                         type,
                                         "_index%s" % index)
 
-        return 'mkfs.lustre --backfstype=zfs %s %s --fsname=%s %s %s' % (" ".join(additional_options),
-                                                                         "--index=%s" % index,
-                                                                         fsname,
-                                                                         "--mgsnode=%s@tcp0" % mgs_ip if mgs_ip else "",
-                                                                         self.mount_path)
+        return 'mkfs.lustre --backfstype=zfs %s %s %s --fsname=%s %s %s' % (" ".join(additional_options),
+                                                                            self._failover_parameter(targets),
+                                                                            "--index=%s" % index,
+                                                                            fsname,
+                                                                            self._mgsnode_parameter(mgs_nids),
+                                                                            self.mount_path)
 
     @property
     def install_packages_commands(cls):

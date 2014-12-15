@@ -20,7 +20,7 @@
 # express and approved by Intel in writing.
 
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 _cached_device_types = {}
 
@@ -30,6 +30,12 @@ class BlockDevice(object):
         This class really really really needs to be in a common place to all code
         so that its functionality can be used in all components. Then we could pass
         it around as a class and not as a hash of its values. """
+
+    # The split for multiple properties in the lustre configuration storage seems to be inconsistent
+    # so create a look up table for the splitters.
+    lustre_property_delimiters = defaultdict(lambda: "")
+    lustre_property_delimiters['failover.node'] = ':'
+    lustre_property_delimiters['mgsnode'] = ':'
 
     class UnknownBlockDevice(KeyError):
         pass

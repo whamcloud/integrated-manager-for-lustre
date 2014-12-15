@@ -46,6 +46,8 @@ fi
 
 echo "Begin running tests..."
 
+scp $CLUSTER_CONFIG root@$TEST_RUNNER:/root/cluster_cfg.json
+
 ssh root@$TEST_RUNNER "exec 2>&1; set -xe
 cd /usr/share/chroma-manager/
 unset http_proxy; unset https_proxy

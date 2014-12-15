@@ -97,12 +97,37 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
 
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
-            target_host_config = self.get_host_config(target_config['primary_server'])
+
+            target_has_secondary = target_config.get('secondary_server') != None
+            failover_is_failnode = target_config.get('failover_mode', 'failnode') == 'failnode'
+            mounted_on_secondary = target_config.get('mount_server') == 'secondary_server'
+
+            # Allow for special HYD-3807 case
+            is_HYD3807 = target_has_secondary and failover_is_failnode and mounted_on_secondary
+
+            # If service node used then the primary is the mounted server, or if is HYD-3807 we will only have found the mounted server
+            if is_HYD3807 or (target_config.get('failover_mode') == 'servicenode'):
+                target_host_config = self.get_host_config(target_config[target_config.get('mount_server', 'primary_server')])
+            else:
+                target_host_config = self.get_host_config(target_config['primary_server'])
+
             self.assertEqual(target_config['kind'], target['kind'])
             self.assertEqual(target_host_config['fqdn'], target['primary_server_name'])
             self.assertEqual(target_host_config['fqdn'], target['active_host_name'])
             self.assertTrue(target['immutable_state'])
             self.assertEqual('mounted', target['state'])
+
+            if (not is_HYD3807) and target_has_secondary:
+                # If service node used then the secondary is the not mounted server
+                if target_config.get('failover_mode') == 'servicenode':
+                    if (target_config.get('mount_server') == 'secondary_server'):
+                        target_host_config = self.get_host_config(target_config['primary_server'])
+                    else:
+                        target_host_config = self.get_host_config(target_config['secondary_server'])
+                else:
+                    target_host_config = self.get_host_config(target_config['secondary_server'])
+
+                self.assertEqual(target_host_config['fqdn'], target['failover_server_name'])
 
         # Verify filesystem is available
         filesystems = self._filesystems
@@ -157,7 +182,7 @@ class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
         # Verify detects target unmount.
         for target in targets:
             target_config = config['filesystem']['targets'][target['name']]
-            target_host_config = self.get_host_config(target_config['primary_server'])
+            target_host_config = self.get_host_config(target_config[target_config.get('mount_server', 'primary_server')])
             result = self.remote_command(
                 target_host_config['address'],
                 'mount'

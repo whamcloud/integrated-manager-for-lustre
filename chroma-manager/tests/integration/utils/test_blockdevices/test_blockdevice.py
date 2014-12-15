@@ -51,9 +51,6 @@ class TestBlockDevice(object):
     def preferred_fstype(self):
         raise Exception.Unimplemented("Unimplemented property - preferred_fstype in class %s" % type(self))
 
-    def prepare_device(self):
-        raise Exception.Unimplemented("Unimplemented method - prepare_device in class %s" % type(self))
-
     @property
     def device_path(self):
         return self._device_path
@@ -77,4 +74,12 @@ class TestBlockDevice(object):
 
     @property
     def install_packages_commands(self):
+        return []
+
+    @property
+    def release_commands(self):
+        return []
+
+    @property
+    def capture_commands(self):
         return []

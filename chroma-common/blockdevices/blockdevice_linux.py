@@ -212,12 +212,11 @@ class BlockDeviceLinux(BlockDevice):
         params_re = re.search("Parameters:\\ ([^\n]+)\n", tunefs_text)
         if params_re:
             # Dictionary of parameter name to list of instance values
-            params = {}
+            params = defaultdict(list)
+
             # FIXME: naive parse: can these lines be quoted/escaped/have spaces?
-            for param, value in [t.split('=') for t in params_re.group(1).split()]:
-                if not param in params:
-                    params[param] = []
-                params[param].append(value)
+            for lustre_property, value in [t.split('=') for t in params_re.group(1).split()]:
+                params[lustre_property].extend(re.split(BlockDeviceLinux.lustre_property_delimiters[lustre_property], value))
         else:
             params = {}
 
