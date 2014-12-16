@@ -231,7 +231,7 @@ dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
 class TestMdtMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
+        self.test_root = os.path.join(tests, "data/lustre_versions/2.5.0/mds")
         super(TestMdtMetrics, self).setUp()
 
         self.audit = MdtAudit()
@@ -241,24 +241,13 @@ class TestMdtMetrics(CommandCaptureTestCase, PatchedContextTestCase):
         self.metrics = self.audit.metrics()['raw']['lustre']['target']
 
     def test_get_client_count(self):
-        tests = os.path.join(os.path.dirname(__file__), '..')
-        test_root = os.path.join(tests, "data/lustre_versions/2.5.0/mdt/proc/fs/lustre/mdt/lustre-MDT0000/exports")
-
-        # This mungling of files etc is needed until http://review.whamcloud.com/#/c/13091/ is landed.
-        # I will rebase http://review.whamcloud.com/#/c/13091/ on master once this patch lands and land
-        # http://review.whamcloud.com/#/c/13091/ after we release 2.2 (Chris)
-        for file in ['0@lo/uuid', '192.168.120.164@tcp/uuid']:
-            target_file = os.path.join(test_root, file)
-            self.add_command(('cat', target_file), stdout = "\n".join(FileSystemMixin().read_lines(target_file)))
-
-        client_count = self.audit.get_client_count(test_root, "lustre-MDT0000-target")
-        self.assertEqual(client_count, 1)
+        self.assertEqual(self.metrics['lustre-MDT0000']['client_count'], 2)
 
     def test_mdt_stats_list(self):
         """Test that a representative sample of mdt stats is collected."""
         stats_list = "req_waittime req_qdepth req_active req_timeout reqbuf_avail mds_getattr mds_connect mds_getstatus mds_statfs mds_sync mds_getxattr open close unlink mkdir rmdir getxattr".split()
         for stat in stats_list:
-            assert stat in self.metrics['lustre-MDT0000']['stats'].keys()
+            assert stat in self.metrics['lustre-MDT0000']['stats'].keys(), "%s is missing" % stat
 
     def test_mdt_stats_vals(self):
         """Test that the mdt stats contain the correct values."""
@@ -272,7 +261,7 @@ class TestMdtMetrics(CommandCaptureTestCase, PatchedContextTestCase):
         """Test that the mdt simple integer metrics are collected."""
         int_list = "client_count kbytestotal kbytesfree filestotal filesfree".split()
         for metric in int_list:
-            assert metric in self.metrics['lustre-MDT0000'].keys()
+            assert metric in self.metrics['lustre-MDT0000'].keys(), "%s is missing" % metric
 
     def test_mdt_filesfree(self):
         """Test that mdt int metrics are sane."""

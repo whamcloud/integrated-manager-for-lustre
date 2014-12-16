@@ -1,0 +1,7 @@
+snapshot_time             1314641958.945888 secs.usecs
+open                      52028 samples [reqs]
+close                     52028 samples [reqs]
+unlink                    50254 samples [reqs]
+mkdir                     7 samples [reqs]
+rmdir                     7 samples [reqs]
+getxattr                  31 samples [reqs]

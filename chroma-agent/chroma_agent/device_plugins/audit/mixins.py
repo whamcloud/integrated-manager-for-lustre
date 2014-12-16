@@ -74,3 +74,7 @@ class FileSystemMixin(object):
     def read_int(self, filename):
         """Read one line from a file and return it as an int."""
         return int(self.read_string(filename))
+
+    def walk(self, path):
+        """Walk the supplied path. This wrapper enables simpler unit tests."""
+        return os.walk(self.abs(path))

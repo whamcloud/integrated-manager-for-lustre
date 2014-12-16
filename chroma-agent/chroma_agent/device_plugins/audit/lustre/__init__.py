@@ -26,7 +26,6 @@ import heapq
 from collections import defaultdict
 
 from tablib.packages import yaml
-from chroma_agent.chroma_common.lib import shell
 from chroma_agent.utils import Mounts
 from chroma_agent.device_plugins.audit import BaseAudit
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
@@ -339,7 +338,7 @@ class MdtAudit(TargetAudit):
             stats.update(self.stats_dict_from_file(path))
         return stats
 
-    def get_client_count(self, rootdir, target):
+    def get_client_count(self, target):
         """The target is expected to be of the format $fs_name-MDTXXXX.  example
            lustre-MDT0000.  The directory passed is expected to have a set of
            subdirs, one per remote nid and one for the local nid.  In each of
@@ -355,11 +354,12 @@ class MdtAudit(TargetAudit):
           clients."""
         count = 0
         fs_name = target[:target.rfind("MDT")]
-        for subdir, dirs, files in os.walk(rootdir):
+        rootdir = os.path.join(self.target_root, "mdt", target, "exports")
+        for subdir, dirs, files in self.walk(rootdir):
             for f in files:
                 if f == "uuid":
-                    stdout = shell.try_run(["cat", subdir + '/' + f])
-                    for line in [l.strip() for l in stdout.strip().split("\n")]:
+                    uuid = os.path.join(rootdir, os.path.basename(subdir), f)
+                    for line in self.read_lines(uuid):
                         if line and line.find(fs_name + "MDT") < 0:
                             count = count + 1
         return count
@@ -367,12 +367,8 @@ class MdtAudit(TargetAudit):
     def _gather_raw_metrics(self):
         for mdt in [dev for dev in self.devices() if dev['type'] == 'mdt']:
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
-            # calculate the client_count by walking /proc/fs/lustre/mdt/<target>/exports. for all directores
-            # look at the entries in the uuid file and add up the client count as described in the comment
-            # on get_client_count().
-            client_count = self.get_client_count("/proc/fs/lustre/mdt/%s/exports/" % mdt['name'], mdt['name'])
             try:
-                self.raw_metrics['lustre']['target'][mdt['name']]['client_count'] = client_count
+                self.raw_metrics['lustre']['target'][mdt['name']]['client_count'] = self.get_client_count(mdt['name'])
             except KeyError:
                 pass
             self.raw_metrics['lustre']['target'][mdt['name']]['stats'] = self.read_stats(mdt['name'])
