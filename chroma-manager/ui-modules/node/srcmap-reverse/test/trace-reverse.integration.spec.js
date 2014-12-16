@@ -1,24 +1,16 @@
 /* jshint node:true */
+
+
 'use strict';
 
 var srcmapRev = require('../index');
 var promisedFile = require('promised-file');
 
-
 describe('srcmap-reverse integration test', function () {
-
-  var builtFilesPath;
-  var sourceMapPath;
-  var reversedTraceShortPathsFilePath;
-  var sourceMap;
-  var traceFilePath;
-  var trace;
-  var actual;
-  var expected;
+  var sourceMap, trace, actual, expected;
 
   beforeEach(function getSourceMapFile (done) {
-    builtFilesPath = __dirname + '/';
-    sourceMapPath = builtFilesPath + '*.map.txt';
+    var sourceMapPath = __dirname + '/*.map.txt';
 
     promisedFile.getFile(sourceMapPath)
       .then(function assignSourceMapFromFile (file) {
@@ -29,18 +21,18 @@ describe('srcmap-reverse integration test', function () {
   });
 
   beforeEach(function getTrace (done) {
-    traceFilePath = __dirname + '/trace.txt';
+    var traceFilePath = __dirname + '/trace.txt';
 
     promisedFile.getFile(traceFilePath)
       .then(function assignTrace (traceFileContents) {
         trace = traceFileContents;
-        done()
+        done();
       });
 
   });
 
   beforeEach(function getExpectedFile (done) {
-    reversedTraceShortPathsFilePath = __dirname + '/reversed-trace-short-paths.txt';
+    var reversedTraceShortPathsFilePath = __dirname + '/reversed-trace.txt';
 
     promisedFile.getFile(reversedTraceShortPathsFilePath)
       .then(function assignExpectedFromFile (contents) {

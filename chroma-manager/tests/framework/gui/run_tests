@@ -27,9 +27,9 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
 ./node_modules/karma/bin/karma start --browsers Chrome,Firefox --singleRun true --reporters dots,junit
 mv test-results.xml \$HOME/test_reports/karma-test-results-new-ui.xml
 
-# Run Sourcemap Generation Integration Test(s)
-cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new
-./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=srcmap-generation-results
+# Run gulp Test(s)
+cd \$HOME/chroma_test_env/chroma/chroma-manager/chroma_ui_new/gulp
+./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=gulp
 
 # Run ziplocker tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/ziplocker

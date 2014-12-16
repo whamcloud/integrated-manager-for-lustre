@@ -10,7 +10,6 @@ include chroma_core/bin/storage-daemon
 include chroma_core/bin/chroma-config
 include chroma_ui/templates/*
 include chroma_ui/templates/new/*
-include chroma_ui_new/templates/chroma_ui/*
 include tests/sample_data/*
 include tests/integration/run_tests
 include tests/integration/*/*.json
@@ -18,7 +17,6 @@ graft realtime
 graft licenses
 graft polymorphic
 graft chroma_ui/static
-graft chroma_ui_new/static
 graft chroma_help/static
 global-exclude .*.swp
 global-exclude local_settings.py*

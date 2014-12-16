@@ -94,6 +94,8 @@ cd ../chroma_ui
 ../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
 cd ../chroma_ui_new
 ../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../chroma-externals/'
+cd gulp
+../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../chroma-externals/'
 
 # Configure VNC server
 cd ~

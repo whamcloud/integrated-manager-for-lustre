@@ -38,9 +38,6 @@ clean_uncommitted_artifacts()
            # nuke these by hand
            rm -f chroma-manager/production_version.py*
            rm -f chroma-manager/scm_version.py*
-           rm -rf chroma-manager/chroma_ui_new/node_modules/
-           rm -rf chroma-manager/realtime/node_modules/
-           rm -rf chroma-manager/ui-modules/node/ziplocker/node_modules/
         else
             git clean -dfx $subdir
         fi

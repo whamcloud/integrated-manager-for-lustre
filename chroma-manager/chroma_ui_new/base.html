@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-  <base href="/ui_new/" />
+  <base href="/ui/" />
 
   <title>Intel&reg; Manager for Lustre* software{% block title %}{% endblock %}</title>
 
@@ -30,8 +30,6 @@
     // arbitrary.
     window.SERVER_TIME_DIFF = new Date(('{{server_time|safe}}' + '+00:00').split(' ').join('T')) - new Date();
   </script>
-  <!-- inject:mode -->
-  <!-- endinject -->
 </head>
 <body ng-app="iml">
 {% block content %}{% endblock %}

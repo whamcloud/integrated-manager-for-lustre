@@ -140,13 +140,6 @@ ProxyTimeout 330
 
         AddOutputFilterByType DEFLATE text/html
     </Location>
-    <Location /ui_new/>
-        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
-        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/ui_new/
-        ProxyPass http://localhost:{{HTTP_API_PORT}}/ui_new/
-
-        AddOutputFilterByType DEFLATE text/html
-    </Location>
     <Location /api/>
         SetEnv proxy-nokeepalive 1
         ProxyPass http://localhost:{{HTTP_API_PORT}}/api/

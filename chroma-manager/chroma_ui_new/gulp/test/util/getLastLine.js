@@ -74,7 +74,7 @@ function getLast (file) {
 }
 
 if (require.main === module)
-  getLastLine(__dirname + '/../../static/chroma_ui/built-*.js')
+  getLastLine(__dirname + './../../../../chroma_ui/static/chroma_ui/built-*.js')
     .done(_.partial(console.log, '### last line: \n\t%s'));
 
 module.exports = getLastLine;

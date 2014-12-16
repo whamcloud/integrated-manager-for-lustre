@@ -31,13 +31,12 @@
     IS_RELEASE: window.IS_RELEASE,
     ALLOW_ANONYMOUS_READ: window.ALLOW_ANONYMOUS_READ,
     SERVER_TIME_DIFF: window.SERVER_TIME_DIFF,
-    MODE: window.mode,
     VERSION: window.VERSION,
     BUILD: window.BUILD,
     BASE: '%s//%s'.sprintf(window.location.protocol, window.location.hostname),
     API: '%s//%s:%s/api/'
       .sprintf(window.location.protocol, window.location.hostname, window.location.port),
-    get RUNTIME_VERSION () {
+    get RUNTIME_VERSION() {
       if (this.IS_RELEASE)
         return this.VERSION;
       else

@@ -20,30 +20,26 @@
 // express and approved by Intel in writing.
 
 
-/* jshint node:true */
 'use strict';
 
+var smc;
 var sm = require('source-map');
 var SourceMapConsumer = sm.SourceMapConsumer;
-var smc;
 var buildTraceCollection = require('./build-trace-collection');
 
 module.exports = {
   reverseSourceMap: reverseSourceMap,
   buildTraceCollection: buildTraceCollection,
   flattenTraceCollection: flattenTraceCollection,
-  stripLongPaths: stripLongPaths,
   execute: execute
 };
 
 function execute (trace, sourceMap) {
-  return stripLongPaths(
-    flattenTraceCollection(
-      buildTraceCollection(trace)
-        .map(function reverseLine (traceLine) {
-          return reverseSourceMap(traceLine, sourceMap);
-        })
-    )
+  return flattenTraceCollection(
+    buildTraceCollection(trace)
+      .map(function reverseLine (traceLine) {
+        return reverseSourceMap(traceLine, sourceMap);
+      })
   );
 }
 
@@ -110,31 +106,4 @@ function prepareForDisplay (trace) {
     });
 
   return result;
-}
-
-/**
- * Loops over a collection and calls the stripLong function, then rejoins with a newline char.
- * @param {String} trace
- * @returns {String}
- */
-function stripLongPaths (trace) {
-  return trace.split('\n').map(stripLong).join('\n');
-
-  /**
-   * Returns a new line w/o the long path.
-   * @param {String} line
-   * @returns {String}
-   */
-  function stripLong (line) {
-    var splitVal = 'chroma_ui_new/';
-    var newline;
-    var arr;
-
-    arr = line.split(splitVal);
-
-    if(arr[1])
-      newline = arr[0].split('/')[0] + arr[1];
-
-    return newline;
-  }
 }

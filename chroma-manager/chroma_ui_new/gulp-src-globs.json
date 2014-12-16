@@ -32,5 +32,20 @@
       "source/chroma_ui/**/*.less"
     ],
     "imports": "source/chroma_ui/styles/imports.less"
+  },
+  "assets": {
+    "fonts": "source/chroma_ui/bower_components/font-awesome/**/*.{woff,ttf,svg}",
+    "images": "source/chroma_ui/**/*.{png,ico}"
+  },
+  "templates": {
+    "django": {
+      "base": "base.html"
+    },
+    "angular": {
+      "source": [
+        "source/chroma_ui/**/*.html",
+        "!source/chroma_ui/bower_components/**/*.html"
+      ]
+    }
   }
 }

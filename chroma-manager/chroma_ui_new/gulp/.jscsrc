@@ -36,12 +36,6 @@
     "<",
     "<="
   ],
-  "requireSpacesInConditionalExpression": {
-    "afterTest": true,
-    "beforeConsequent": true,
-    "afterConsequent": true,
-    "beforeAlternate": true
-  },
   "requireSpaceAfterBinaryOperators": [
     "+",
     "/",
@@ -56,14 +50,12 @@
     "<",
     "<="
   ],
-  "disallowSpaceAfterObjectKeys": true,
-  "disallowSpaceBeforePostfixUnaryOperators": [
-    "++",
-    "--"
-  ],
-  "disallowSpaceBeforeBinaryOperators": [
-    ","
-  ],
+  "requireSpacesInConditionalExpression": {
+    "afterTest": true,
+    "beforeConsequent": true,
+    "afterConsequent": true,
+    "beforeAlternate": true
+  },
   "disallowSpaceAfterPrefixUnaryOperators": [
     "++",
     "--",
@@ -72,6 +64,14 @@
     "~",
     "!"
   ],
+  "disallowSpaceBeforePostfixUnaryOperators": [
+    "++",
+    "--"
+  ],
+  "disallowSpaceBeforeBinaryOperators": [
+    ","
+  ],
+  "disallowSpaceAfterObjectKeys": true,
   "disallowKeywords": [
     "with"
   ],

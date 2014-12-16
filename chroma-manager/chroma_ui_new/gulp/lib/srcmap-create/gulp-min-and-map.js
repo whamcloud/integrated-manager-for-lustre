@@ -49,7 +49,7 @@ module.exports = function gulpMinAndMap (fileName) {
       output: { beautify: false },
       mangle: false,
       sourceMapIncludeSources: true,
-      sourceRoot: '/source/'
+      sourceRoot: '/static/'
     });
 
     concatVinyl = new File({

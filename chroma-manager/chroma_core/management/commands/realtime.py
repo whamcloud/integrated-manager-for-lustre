@@ -67,7 +67,7 @@ class Command(BaseCommand):
             "PRIMUS_PORT": settings.REALTIME_PORT,
             "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
             "MODE": mode,
-            "SOURCE_MAP_DIR": os.path.join(SITE_ROOT, "chroma_ui_new", "static", "chroma_ui", "built*.map")
+            "SOURCE_MAP_DIR": os.path.join(SITE_ROOT, "chroma_ui", "static", "chroma_ui", "built*.map")
         }
 
         json.dump(conf, open(CONF, 'w'), indent=2)

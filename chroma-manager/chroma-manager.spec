@@ -279,8 +279,6 @@ fi
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/chroma_ui/templates/*
 %{manager_root}/chroma_ui/static/*
-%{manager_root}/chroma_ui_new/templates/*
-%{manager_root}/chroma_ui_new/static/*
 %{manager_root}/realtime/*
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*

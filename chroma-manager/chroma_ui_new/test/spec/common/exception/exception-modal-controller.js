@@ -1,7 +1,7 @@
 describe('Exception modal controller', function () {
   'use strict';
 
-  var $scope, createController, getMessage, plainError, responseError, MODE,
+  var $scope, createController, getMessage, plainError, responseError,
     stackTraceContainsLineNumber, sendStackTraceToRealTime, deferred,
     $rootScope, socket, spark;
 
@@ -22,8 +22,6 @@ describe('Exception modal controller', function () {
     plainError = new Error('Error');
 
     responseError = new Error('Response Error');
-
-    MODE = 'production';
 
     responseError.response = {
       status: 500,
@@ -47,7 +45,6 @@ describe('Exception modal controller', function () {
     createController = function createController(deps) {
       deps = _.extend({
         $scope: $scope,
-        MODE: MODE,
         sendStackTraceToRealTime: sendStackTraceToRealTime,
         stackTraceContainsLineNumber: stackTraceContainsLineNumber
       }, deps);
@@ -158,8 +155,6 @@ describe('Exception modal controller', function () {
 
   describe('stack trace format from server', function () {
     beforeEach(function () {
-      MODE = 'production';
-
       plainError.statusCode = '400';
 
       createController({
@@ -170,32 +165,9 @@ describe('Exception modal controller', function () {
 
     it('should add the status code to the output', function () {
       expect(getMessage('Status Code')).toEqual({
-        name : 'Status Code',
-        value : '400'
+        name: 'Status Code',
+        value: '400'
       });
-    });
-
-    it('should not call sendStackTraceToRealTime', function () {
-      expect(sendStackTraceToRealTime).not.toHaveBeenCalled();
-    });
-
-    it('should have a loadingStack value of undefined', function () {
-      expect($scope.exceptionModal.loadingStack).toEqual(undefined);
-    });
-  });
-
-  describe('stack trace format in development mode', function () {
-    beforeEach(function () {
-      MODE = 'development';
-
-      createController({
-        cause: 'fooz',
-        exception: plainError
-      });
-    });
-
-    it('should not call stackTraceContainsLineNumber', function () {
-      expect(stackTraceContainsLineNumber).not.toHaveBeenCalled();
     });
 
     it('should not call sendStackTraceToRealTime', function () {
@@ -209,8 +181,6 @@ describe('Exception modal controller', function () {
 
   describe('stack trace format in production mode', function () {
     beforeEach(function () {
-      MODE = 'production';
-
       createController({
         cause: 'fooz',
         exception: plainError

@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  function ExceptionModalCtrl ($scope, $document, $parse, exception, MODE, stackTraceContainsLineNumber,
+  function ExceptionModalCtrl ($scope, $document, $parse, exception, stackTraceContainsLineNumber,
                                sendStackTraceToRealTime) {
 
     $scope.exceptionModal = {
@@ -54,7 +54,7 @@
       .add({name: 'stack', alias: 'Client Stack Trace', transform: lookupAnd(multiLineTrim)})
       .get();
 
-    if (!exception.statusCode && MODE === 'production' && stackTraceContainsLineNumber(exception)) {
+    if (!exception.statusCode && stackTraceContainsLineNumber(exception)) {
       $scope.exceptionModal.loadingStack = true;
       sendStackTraceToRealTime(exception).then(function updateData (newException) {
         $scope.exceptionModal.loadingStack = false;
@@ -103,7 +103,7 @@
   }
 
   angular.module('exception')
-    .controller('ExceptionModalCtrl', ['$scope', '$document', '$parse', 'exception', 'MODE',
+    .controller('ExceptionModalCtrl', ['$scope', '$document', '$parse', 'exception',
       'stackTraceContainsLineNumber', 'sendStackTraceToRealTime', ExceptionModalCtrl])
     .factory('stackTraceContainsLineNumber', [function stackTraceContainsLineNumbers () {
       var regex = /^.+\:\d+\:\d+.*$/;

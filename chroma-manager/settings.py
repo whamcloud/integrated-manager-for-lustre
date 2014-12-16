@@ -164,7 +164,6 @@ INSTALLED_APPS = (
     'tastypie',
     'chroma_core',
     'chroma_api',
-    'chroma_ui_new',
     'chroma_ui',
     'chroma_help',
     'benchmark'

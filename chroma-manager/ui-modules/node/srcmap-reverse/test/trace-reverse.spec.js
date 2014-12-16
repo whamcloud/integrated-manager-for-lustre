@@ -11,8 +11,6 @@ describe('srcmap-reverse unit test', function () {
   var traceFilePath;
   var reversedTraceFilePath;
   var reversedTraceFileContents;
-  var reversedTraceShortPathsFilePath;
-  var reversedTraceShortPathsFileContents;
   var sourceMap;
   var traceCollection;
   var expectedFinalOutput;
@@ -51,17 +49,6 @@ describe('srcmap-reverse unit test', function () {
 
   });
 
-  beforeEach(function (done) {
-    reversedTraceShortPathsFilePath = __dirname + '/reversed-trace-short-paths.txt';
-
-    promisedFile.getFile(reversedTraceShortPathsFilePath)
-      .then(function assignReversedTraceShortPathsFileContents (contents) {
-        reversedTraceShortPathsFileContents = contents;
-        done();
-      });
-
-  });
-
   beforeEach(function () {
     expectedFinalOutput = reversedTraceFileContents;
   });
@@ -89,19 +76,5 @@ describe('srcmap-reverse unit test', function () {
     actual = srcmapRev.flattenTraceCollection(reversedCollection);
 
     expect(actual).toBe(expectedFinalOutput);
-  });
-
-  it('should strip the long paths.', function () {
-    var actual;
-    var reversedCollection;
-
-    // reverse every line in traceCollection
-    reversedCollection = traceCollection.map(function (traceLine) {
-      return srcmapRev.reverseSourceMap(traceLine, sourceMap);
-    });
-
-    actual = srcmapRev.stripLongPaths(srcmapRev.flattenTraceCollection(reversedCollection));
-
-    expect(actual).toBe(reversedTraceShortPathsFileContents);
   });
 });

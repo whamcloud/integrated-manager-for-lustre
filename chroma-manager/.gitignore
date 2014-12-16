@@ -8,4 +8,5 @@ dist
 set_state.prof
 *.crt
 *.pem
+*.stamp
 chroma_ui/templates/new/*

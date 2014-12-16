@@ -1,6 +1,6 @@
 module.exports = {
   // An array of filename globs, relative to current dir.
-  specs: ['./test/integration/*-spec.js'],
+  specs: ['./test/*-spec.js'],
   // If true, display suite and spec names.
   isVerbose: true,
   // If true, print colors to the terminal.

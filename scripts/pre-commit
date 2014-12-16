@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 from distutils import spawn
+from functools import partial
 import sys
 
 modified = re.compile('^(?:M|A)(\s+)(?P<name>.*)')
@@ -117,34 +118,39 @@ CHECKS = [
 
 DJANGO_PROJECTS = ['chroma-manager']
 
-local_node_modules_dir = 'chroma-manager/chroma_ui_new/node_modules'
+local_node_modules_dir = 'chroma-manager/chroma_ui_new/gulp/node_modules'
 
 jshint_bin_dir = local_node_modules_dir + '/gulp-jshint/node_modules/jshint/bin'
+
+JS_QUALITY_FILES = {
+    'match_files': [
+        '.*/chroma_ui_new/.*\.js$',
+        '.*/chroma_ui/static/js/.+/[^/]+\.js$',
+        '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
+        '.*/chroma_ui/static/js/app.js$',
+        '.*/chroma_ui/static/js/constants.js$',
+        '.*/realtime/.*\.js$',
+        '.*/ui-modules/.*\.js$'
+    ],
+    'ignore_files': [
+        '.*/chroma_ui/static/js/lib/.*',
+        '.*/chroma_ui_new/source/chroma_ui/bower_components/.*',
+        '.*/chroma_ui_new/source/chroma_ui/vendor/.*',
+        '.*/chroma_ui_new/karma.*\.conf\.js',
+        '.*/chroma_ui_new/test/matchers/matchers\.js',
+        '.*/chroma-manager/chroma_ui_new/node_modules/.*',
+        '.*/chroma-manager/chroma_ui_new/gulp/node_modules/.*',
+        '.*/chroma-manager/chroma_ui_new/test/data-fixtures/.*'
+    ]
+
+}
 
 JS_HINT_CHECK = {
         'output': 'Running JSHint...',
         'command': jshint_bin_dir + '/jshint %s',
-        'match_files': [
-            '.*/chroma_ui_new/.*\.js$',
-            '.*/chroma_ui/static/js/.+/[^/]+\.js$',
-            '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
-            '.*/chroma_ui/static/js/app.js$',
-            '.*/chroma_ui/static/js/constants.js$',
-            '.*/realtime/.*\.js$',
-            '.*/ui-modules/.*\.js$'
-        ],
-        'ignore_files': [
-            '.*/chroma_ui/static/js/lib/.*',
-            '.*/chroma_ui_new/source/chroma_ui/bower_components/.*',
-            '.*/chroma_ui_new/source/chroma_ui/vendor/.*',
-            '.*/chroma_ui_new/karma.*\.conf\.js',
-            '.*/chroma_ui_new/Gruntfile.js',
-            '.*/chroma_ui_new/test/matchers/matchers\.js',
-            '.*/chroma-manager/chroma_ui_new/node_modules/.*',
-            '.*/chroma-manager/chroma_ui_new/test/data-fixtures/.*'
-        ],
         'print_filename': True,
     }
+JS_HINT_CHECK.update(JS_QUALITY_FILES)
 
 jscs_bin_dir = local_node_modules_dir + '/gulp-jscs/node_modules/jscs/bin'
 
@@ -153,28 +159,10 @@ jscs_command = '%s/%s/jscs' % (os.path.dirname(os.path.dirname(os.path.realpath(
 JS_CS_CHECK = {
         'output': 'Running JSCS...',
         'command': jscs_command + ' %s -r inline',
-        'match_files': [
-            '.*/chroma_ui_new/.*\.js$',
-            '.*/chroma_ui/static/js/.+/[^/]+\.js$',
-            '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
-            '.*/chroma_ui/static/js/app.js$',
-            '.*/chroma_ui/static/js/constants.js$',
-            '.*/realtime/.*\.js$',
-            '.*/ui-modules/.*\.js$'
-        ],
-        'ignore_files': [
-            '.*/chroma_ui/static/js/lib/.*',
-            '.*/chroma_ui_new/source/chroma_ui/bower_components/.*',
-            '.*/chroma_ui_new/source/chroma_ui/vendor/.*',
-            '.*/chroma_ui_new/karma.*\.conf\.js',
-            '.*/chroma_ui_new/Gruntfile.js',
-            '.*/chroma_ui_new/test/matchers/matchers\.js',
-            '.*/chroma-manager/chroma_ui_new/node_modules/.*',
-            '.*/chroma-manager/chroma_ui_new/test/data-fixtures/.*'
-        ],
         'print_filename': False,
         'use_dirname_cwd': True
     }
+JS_CS_CHECK.update(JS_QUALITY_FILES)
 
 SEMVER_CHECK = {
         'output': 'Running SEMVER CHECK...',
@@ -217,13 +205,13 @@ def check_files(files, check):
     for file_name in files:
         if not 'match_files' in check or matches_file(file_name, check['match_files']):
             if not 'ignore_files' in check or not matches_file(file_name, check['ignore_files']):
-                if 'use_dirname_cwd' in check and check['use_dirname_cwd'] == True:
-                    process = subprocess.Popen(check['command'] % file_name,
-                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
-                                               cwd=os.path.dirname(file_name))
+                popen = partial(subprocess.Popen, check['command'] % file_name,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+                if check.get('use_dirname_cwd', None):
+                    process = popen(cwd=os.path.dirname(file_name))
                 else:
-                    process = subprocess.Popen(check['command'] % file_name,
-                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                    process = popen()
                 out, err = process.communicate()
                 if out or err:
                     if check['print_filename']:

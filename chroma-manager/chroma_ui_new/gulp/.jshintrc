@@ -1,24 +1,21 @@
 {
+  "node": true,
+
   "globals": {
-    "angular": false,
-    "_": false,
-    "module": false,
-    "inject": false,
+    "describe": false,
+    "beforeEach": false,
+    "afterEach": false,
     "jasmine": false,
     "spyOn": false,
     "it": false,
+    "pit": false,
     "console": false,
-    "describe": false,
     "expect": false,
-    "beforeEach": false,
-    "afterEach": false,
-    "mock": false,
-    "Mock": false,
-    "Timecop": false,
     "waits": false,
     "waitsFor": false,
     "runs": false
   },
+
   "bitwise": true,
   "curly": false,
   "eqeqeq": true,
@@ -35,13 +32,9 @@
   "unused": true,
   "strict": true,
   "trailing": true,
-  "maxcomplexity": 6,
+  "maxcomplexity": 5,
   "maxlen": 120,
-
-
+  "expr": true,
   "eqnull": true,
-  "multistr": true,
-
-  "browser": true,
-  "jquery": true
+  "multistr": true
 }

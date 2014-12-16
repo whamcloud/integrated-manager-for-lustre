@@ -1,7 +1,7 @@
 /* jshint node:true */
 'use strict';
 
-var getLastLine = require('./getLastLine');
+var getLastLine = require('./util/getLastLine');
 var execFile = require('child_process').execFile;
 var path = require('path');
 
@@ -20,41 +20,34 @@ describe('Javascript Srcmaps', function desc () {
   });
 
   describe('after being built', function () {
-    var gulpFile;
-    var gulpTask;
-    var gulpTimeout;
+    var gulpFile, gulpTask, gulpTimeout;
 
     // Running the gulp file like '$ gulp build'.
     // Note, the 'done' function in the callback allows for asynchronicity.
     beforeEach(function asyncGulpBuild (done) {
+      gulpFile = path.resolve(__dirname + '/../node_modules/.bin/gulp');
 
-      gulpFile = path.resolve(__dirname + '/../../node_modules/.bin/gulp');
-      gulpTask = 'build';
+      gulpTask = 'default';
       gulpTimeout = 600000;
 
-      execFile(gulpFile, [gulpTask], {timeout: gulpTimeout}, function handler (error, stdout) {
+      execFile(gulpFile, [gulpTask, '--env', 'production'], {timeout: gulpTimeout}, function handler (error, stdout) {
 
         if (stdout) console.log('\n### stdout: \n', stdout);
 
         if (error) throw error;
 
         done();
-
       });
-
     });
 
     it('should have src map url at the bottom of the built file.', function srcMapCheck (done) {
-      var staticDir = __dirname + '/../../static/chroma_ui/';
+      var staticDir = __dirname + '/../../../chroma_ui/static/chroma_ui/';
 
       getLastLine(staticDir + 'built-*.js')
         .then(function runExpectation (line) {
           expect(line).toContain('//# sourceMappingURL');
         })
         .done(done);
-
     });
-
   });
-
 });
