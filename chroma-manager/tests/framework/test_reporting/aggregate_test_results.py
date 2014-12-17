@@ -34,8 +34,8 @@ if __name__ == '__main__':
     password = sys.argv[3]
     build_job_name = sys.argv[4]
     build_job_build_number = int(sys.argv[5])
-    valid_test_jobs = sys.argv[6].split()
-    required_tests = sys.argv[7].split()
+    valid_test_jobs = set(sys.argv[6].split())
+    required_tests = set(sys.argv[7].split())
 
     # Fetch the downstream build info from jenkins
     req = Requester(username, password, baseurl=jenkins_url, ssl_verify=False)
@@ -85,6 +85,7 @@ if __name__ == '__main__':
     # Gather test and coverage reports from test jobs
     mkdir_p('coverage_files')
     mkdir_p('test_reports')
+    mkdir_p('linking_artifacts')
 
     for test_run in test_runs:
         artifacts = test_run.get_artifact_dict()
@@ -94,15 +95,21 @@ if __name__ == '__main__':
             coverage_report.save('coverage_files/.coverage.%s' % test_run.job.name)
 
         test_reports = [v for k, v in artifacts.iteritems() if re.match(".*test.*.xml", k)]
+        logging.info("Found the following reports for %s: '%s'" % (test_run.name, [r.filename for r in test_reports]))
         mkdir_p("test_reports/%s" % os.path.normpath(test_run.name))
         for test_report in test_reports:
             test_report.save_to_dir("test_reports/%s/" % os.path.normpath(test_run.name))
 
+        # Also download the test_info.txt for each so we still get a link even if no
+        # report was generated in the run.
+        if 'test_info.txt' in artifacts:
+            artifacts['test_info.txt'].save('linking_artifacts/%s_test_info.txt' % test_run.name)
+
     # Ensure all of the jobs required to be run to land are passing
     logging.info("Requiring these tests: '%s'" % required_tests)
-    optional_tests = set(valid_test_jobs).difference(set(required_tests))
-    missing_tests = [t.job.name for t in test_runs if not os.listdir("test_reports/%s" % t.name)]
-    missing_tests = set(missing_tests).difference(set(optional_tests))
+    found_tests = set([t.job.name for t in test_runs if os.listdir("test_reports/%s" % t.name)])
+    logging.info("Found these tests: '%s'" % found_tests)
+    missing_tests = required_tests.difference(found_tests)
     if missing_tests:
         print "MISSING TEST RESULTS! Did not find an expected test report for these tests: '%s'." % ', '.join(missing_tests)
         exit(1)
