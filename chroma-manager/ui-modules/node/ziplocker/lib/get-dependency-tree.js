@@ -10,28 +10,36 @@
  * @param {Function} resolveFromFs
  * @param {Function} resolveFromRegistry
  * @param {Function} resolveFromGithub
+ * @param {Object} _
  * @returns {Function}
  */
 exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, semver,
-                                                     config, resolveFromFs, resolveFromRegistry, resolveFromGithub) {
+                                                     config, resolveFromFs, resolveFromRegistry, resolveFromGithub, _) {
+  var root;
+
+  var SEP = '/';
+
   /**
    * Responsible for building out the tree recursively using promises.
    * @returns {Promise}
    */
   return function getTree () {
-    return buildTree(packageJson, {}, true);
+    root = {};
+
+    return buildTree(packageJson, root, '', true);
   };
 
   /**
    * Recursively builds a dependency tree
    * @param {Object} packageJson package.json type data describing the dependencies.
    * @param {Object} tree The tree or branch of the tree being built.
-   * @param {Boolean} useDevDependencies Should devDependencies be spidered?
+   * @param {String} path The computed path.
+   * @param {Boolean} [useDevDependencies] Should devDependencies be spidered?
    * @returns {Promise}
    */
-  function buildTree (packageJson, tree, useDevDependencies) {
+  function buildTree (packageJson, tree, path, useDevDependencies) {
     var devDepsPromise = (useDevDependencies ?
-      buildDependencies(config.DEP_TYPES.DEV, packageJson, tree) :
+      buildDependencies(config.DEP_TYPES.DEV, packageJson, tree, path) :
       Promise.resolve());
 
     var optionalDeps = packageJson[config.DEP_TYPES.OPTIONAL];
@@ -45,13 +53,13 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
       });
 
     return Promise.all([
-      buildDependencies(config.DEP_TYPES.DEPS, packageJson, tree),
-      buildDependencies(config.DEP_TYPES.OPTIONAL, packageJson, tree),
+      buildDependencies(config.DEP_TYPES.DEPS, packageJson, tree, path),
+      buildDependencies(config.DEP_TYPES.OPTIONAL, packageJson, tree, path),
       devDepsPromise
     ])
-    .then(function returnTree () {
-      return tree;
-    });
+      .then(function returnTree () {
+        return tree;
+      });
   }
 
   /**
@@ -59,13 +67,32 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
    * @param {DEP_TYPES} type
    * @param {Object} packageJson package.json type data describing the dependencies.
    * @param {Object} tree The tree or branch of the tree being built.
+   * @param {String} path The computed path.
    * @returns {Promise}
    */
-  function buildDependencies (type, packageJson, tree) {
+  function buildDependencies (type, packageJson, tree, path) {
     if (!packageJson[type])
       return Promise.resolve();
 
+    if (path !== '')
+      path += SEP;
+
+    path += type + SEP;
+
     var dependencyPromises = Object.keys(packageJson[type])
+      .filter(function removeCircular (dependency) {
+        var subPath = _.subPath(SEP, path, dependency);
+
+        if (subPath == null) return true;
+
+        var module = _.pluckPathSep(SEP, subPath, root);
+        var satisfied = semver.satisfies(module.version, packageJson[type][dependency]);
+
+        if (satisfied)
+          log.write('circular dependency', log.green(dependency), 'ignored');
+
+        return !satisfied;
+      })
       .map(function getDependencies (dependency) {
         var dependencyValue = packageJson[type][dependency];
 
@@ -85,7 +112,7 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
 
           log.write('resolved', log.green(type), dependency, 'to', obj.value);
 
-          return buildTree(obj.response, tree[type][dependency]);
+          return buildTree(obj.response, tree[type][dependency], path + dependency);
         });
       });
 

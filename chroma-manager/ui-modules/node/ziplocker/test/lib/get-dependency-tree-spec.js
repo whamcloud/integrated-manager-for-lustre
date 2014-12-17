@@ -4,6 +4,7 @@ var getDependencyTree = require('../../lib/get-dependency-tree').wiretree;
 var Promise = require('promise');
 var semver = require('semver');
 var config = require('../../index').get('config');
+var _ = require('lodash-mixins');
 
 describe('dependency tree', function () {
   var packageJson, promise, log, resolveFromFs, resolveFromRegistry, resolveFromGithub;
@@ -83,7 +84,7 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
     };
 
     var dependencyTree = getDependencyTree(packageJson, Promise, log, semver, config,
-      resolveFromFs, resolveFromRegistry, resolveFromGithub);
+      resolveFromFs, resolveFromRegistry, resolveFromGithub, _);
     promise = dependencyTree();
   });
 

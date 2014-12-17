@@ -14,7 +14,8 @@
     "waits": false,
     "waitsFor": false,
     "runs": false,
-    "element": false
+    "element": false,
+    "Promise": true
   },
 
   "bitwise": true,

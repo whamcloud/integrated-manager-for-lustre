@@ -7,10 +7,10 @@
  * @param {Function} fsThen
  * @param {Function} getDependencyTree
  * @param {Object} log
- * @param {Function} isEqual
+ * @param {Object} _
  * @returns {Object}
  */
-exports.wiretree = function ziplockJsonModule (process, config, fsThen, getDependencyTree, log, isEqual) {
+exports.wiretree = function ziplockJsonModule (process, config, fsThen, getDependencyTree, log, _) {
   return {
     writeFile: writeFile,
     readFile: readFile
@@ -25,7 +25,7 @@ exports.wiretree = function ziplockJsonModule (process, config, fsThen, getDepen
       .then(JSON.parse)
       .then(function diffZiplockTrees (originalTree) {
         return getDependencyTree().then(function logTree (tree) {
-          if (config.askQuestions && !isEqual(originalTree, tree)) {
+          if (config.askQuestions && !_.isEqual(originalTree, tree)) {
             log.diffObjects(tree, originalTree);
             return log.question.yesOrNo('The local tree has changed. Do you wish to continue (y, n):  ')
               .then(function handleAnswer (wishToContinue) {

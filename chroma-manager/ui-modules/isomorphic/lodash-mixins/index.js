@@ -161,16 +161,63 @@
       return !item;
     },
     /**
+     * Curried. Returns the index of the first matching
+     * search occurrence.
+     * @param {String} sep
+     * @param {String} path
+     * @param {*} search
+     */
+    pathPointer: _.curry(function inPath (sep, path, search) {
+      var foundAt = -1;
+
+      path.split(sep).some(function findMatch (item, index) {
+        var match = (item === search);
+
+        if (match)
+          foundAt = index;
+
+        return match;
+      });
+
+      return foundAt;
+    }),
+    /**
+     * Curried. Gets the subpath of the first matching
+     * search occurrence.
+     * @param {String} sep
+     * @param {String} path
+     * @param {*} search
+     */
+    subPath: _.curry(function subPath (sep, path, search) {
+      var pointer = _.pathPointer(sep, path, search);
+
+      if (pointer === -1)
+        return;
+
+      return path.split(sep).slice(0, pointer + 1).join(sep);
+    }),
+    /**
+     * Curried. Plucks the path from the given item.
+     * Splits on the given sep.
+     * @param {String} sep
+     * @param {String} path
+     * @param {Array|Object} item
+     * @returns {*} The item at the end of the path.
+     */
+    pluckPathSep: _.curry(function pluckPathSep (sep, path, item) {
+      return path.split(sep)
+        .reduce(function iteratePath (pointer, part) {
+          return pointer[part];
+        }, item);
+    }),
+    /**
      * Curried. Plucks the path from the given item.
      * @param {String} path
      * @param {Array|Object} item
      * @returns {*} The item at the end of the path.
      */
     pluckPath: _.curry(function pluckPath (path, item) {
-      return path.split('.')
-        .reduce(function iteratePath (pointer, part) {
-          return pointer[part];
-        }, item);
+      return _.pluckPathSep('.', path, item);
     }),
     /**
      * Given a collection and some properties,

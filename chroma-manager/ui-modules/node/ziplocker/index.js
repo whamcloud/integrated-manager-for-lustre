@@ -31,7 +31,7 @@ function createWiretree () {
     semver: 'semver',
     chalk: 'chalk',
     'unfunk-diff': 'unfunkDiff',
-    'lodash.isequal': 'isEqual',
+    'lodash-mixins': '_',
     configulator: 'configulator'
   };
 

@@ -1,7 +1,7 @@
 'use strict';
 
 var ziplockJsonModule = require('../../lib/ziplock-json').wiretree;
-var isEqual = require('lodash.isequal');
+var _ = require('lodash-mixins');
 var path = require('path');
 var Promise = require('promise');
 
@@ -40,7 +40,7 @@ describe('ziplock JSON', function () {
       exit: jasmine.createSpy('exit')
     };
 
-    ziplockJson = ziplockJsonModule(process, config, fsThen, getDependencyTree, log, isEqual);
+    ziplockJson = ziplockJsonModule(process, config, fsThen, getDependencyTree, log, _);
   });
 
   pit('should read a file', function () {
