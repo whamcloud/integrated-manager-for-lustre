@@ -29,7 +29,7 @@ class LocalAudit(BaseAudit, FileSystemMixin):
     def __init__(self, **kwargs):
         super(LocalAudit, self).__init__(**kwargs)
 
-    # FIXME: This probably ought to be a memoized property, but I'm lazy.
+    # FIXME: This probably ought to be a memorized property, but I'm lazy.
     def audit_classes(self):
         if not hasattr(self, 'audit_classes_list'):
             self.audit_classes_list = chroma_agent.device_plugins.audit.local_audit_classes()

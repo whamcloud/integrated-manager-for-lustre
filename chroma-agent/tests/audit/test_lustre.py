@@ -2,7 +2,7 @@ import tempfile
 import os
 import shutil
 import chroma_agent.device_plugins.audit.lustre
-from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MdsAudit, MgsAudit, ObdfilterAudit, LustreAudit, ClientAudit
+from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, LustreAudit
 
 from tests.test_utils import PatchedContextTestCase
 
@@ -114,72 +114,3 @@ class TestLustreAuditBadHealth(PatchedContextTestCase):
 
     def tearDown(self):
         shutil.rmtree(self.test_root)
-
-
-class TestMdtAudit(PatchedContextTestCase):
-    def setUp(self):
-        tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        super(TestMdtAudit, self).setUp()
-        self.audit = MdtAudit()
-
-    def test_audit_is_available(self):
-        assert MdtAudit.is_available()
-
-
-class TestMdsAudit(PatchedContextTestCase):
-    """Test MDS audit for 1.8.x filesystems; unused on 2.x filesystems"""
-    def test_audit_is_available(self):
-        """Test that MDS audits happen for 1.8.x audits."""
-        tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/1.8.7.80/mds_mgs")
-        super(TestMdsAudit, self).setUp()
-        self.assertTrue(MdsAudit.is_available())
-
-    def test_mdd_obd_skipped(self):
-        """Test that the mdd_obd device is skipped for 2.x audits (HYD-437)"""
-        tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        super(TestMdsAudit, self).setUp()
-        self.assertFalse(MdsAudit.is_available())
-
-
-class TestLnetAudit(PatchedContextTestCase):
-    def setUp(self):
-        tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
-        super(TestLnetAudit, self).setUp()
-        self.audit = LnetAudit()
-
-    def test_audit_is_available(self):
-        assert LnetAudit.is_available()
-
-
-class TestObdfilterAudit(PatchedContextTestCase):
-    def setUp(self):
-        tests = os.path.join(os.path.dirname(__file__), '..')
-        self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/oss")
-        super(TestObdfilterAudit, self).setUp()
-        self.audit = ObdfilterAudit()
-
-    def test_audit_is_available(self):
-        assert ObdfilterAudit.is_available()
-
-
-class TestClientAudit(PatchedContextTestCase):
-    def setUp(self):
-        self.test_root = tempfile.mkdtemp()
-        super(TestClientAudit, self).setUp()
-        os.makedirs(os.path.join(self.test_root, "proc"))
-        with open(os.path.join(self.test_root, "proc/mounts"), "w+") as f:
-            f.write("10.0.0.129@tcp:/testfs /mnt/lustre_clients/testfs lustre rw 0 0\n")
-        self.audit = ClientAudit()
-
-    def test_audit_is_available(self):
-        assert ClientAudit.is_available()
-
-    def test_gathered_mount_list(self):
-        actual_list = self.audit.metrics()['raw']['lustre_client_mounts']
-        expected_list = [dict(mountspec = '10.0.0.129@tcp:/testfs',
-                              mountpoint = '/mnt/lustre_clients/testfs')]
-        self.assertEqual(actual_list, expected_list)

@@ -114,6 +114,11 @@ class UpdateScan(object):
         except KeyError:
             client_mounts = []
 
+        # If lustre_client_mounts is None then nothing changed since the last update and so we can just return.
+        # Not the same as [] empty list which means no mounts
+        if client_mounts == None:
+            return
+
         expected_fs_mounts = LustreClientMount.objects.select_related('filesystem').filter(host = self.host)
         actual_fs_mounts = [m['mountspec'].split(':/')[1] for m in client_mounts]
 
@@ -149,6 +154,11 @@ class UpdateScan(object):
                                                        actual_mount['mountpoint'])
 
     def update_target_mounts(self):
+        # If mounts is None then nothing changed since the last update and so we can just return.
+        # Not the same as [] empty list which means no mounts
+        if self.host_data['mounts'] == None:
+            return
+
         # Loop over all mountables we expected on this host, whether they
         # were actually seen in the results or not.
         mounted_uuids = dict([(m['fs_uuid'], m) for m in self.host_data['mounts']])
@@ -191,14 +201,24 @@ class UpdateScan(object):
                 TargetRecoveryAlert.notify(target_mount.target, recovering)
 
     def update_resource_locations(self):
+        # If resource_locations is None then nothing changed since the last update and so we can just return.
+        # Not the same as [] empty list which means no resource_locations
         if self.host_data['resource_locations'] == None:
-            # None here means that it was not possible to obtain a
+            return
+
+        if 'crm_mon_error' in self.host_data['resource_locations']:
+            # Means that it was not possible to obtain a
             # list from corosync: corosync may well be absent if
             # we're monitoring a non-chroma-managed monitor-only
             # system.  But if there are managed mounts
             # then this is a problem.
+            crm_mon_error = self.host_data['resource_locations']['crm_mon_error']
             if ManagedTarget.objects.filter(immutable_state = False, managedtargetmount__host = self.host).count():
-                log.error("Got no resource_locations from host %s, but there are chroma-configured mounts on that server!" % self.host)
+                log.error("Got no resource_locations from host %s, but there are chroma-configured mounts on that server!\n"\
+                          "crm_mon returned rc=%s,stdout=%s,stderr=%s" % (self.host,
+                                                                          crm_mon_error['rc'],
+                                                                          crm_mon_error['stdout'],
+                                                                          crm_mon_error['stderr']))
             return
 
         for resource_name, node_name in self.host_data['resource_locations'].items():
