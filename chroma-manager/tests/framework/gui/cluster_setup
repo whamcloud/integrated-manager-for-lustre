@@ -62,7 +62,13 @@ wget http://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER_RELEASE/chr
 unzip chromedriver_linux64.zip -d $HOME/bin/
 
 # Install Selenium
-cp chroma_test_env/chroma/chroma-externals/selenium-server-standalone-*.jar $HOME/bin/selenium-server-standalone.jar
+selenium_filename="selenium-server-standalone-*.jar"
+num_matching_files=$(find chroma_test_env/chroma/chroma-externals/ -maxdepth 1 -name "$selenium_filename" | wc -l)
+if [ $num_matching_files != 1 ]; then
+    echo "Expected to find exactly 1 match for $selenium_filename in chroma-externals, but found $num_matching_files"
+    ls chroma_test_env/chroma/chroma-externals/$selenium_filename
+fi
+cp chroma_test_env/chroma/chroma-externals/$selenium_filename $HOME/bin/selenium-server-standalone.jar
 
 # Set up the virtualenv to run the tests in
 cd chroma_test_env
