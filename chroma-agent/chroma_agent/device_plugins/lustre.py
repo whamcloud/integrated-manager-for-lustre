@@ -31,7 +31,8 @@ from chroma_agent.log import daemon_log
 from chroma_agent.log import console_log
 from chroma_agent.utils import Mounts
 from chroma_agent import version as agent_version
-from chroma_agent.plugin_manager import DevicePlugin, ActionPluginManager
+from chroma_agent.plugin_manager import DevicePlugin
+from chroma_agent import plugin_manager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 import chroma_agent.lib.normalize_device_path as ndp
@@ -41,7 +42,7 @@ from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
 from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 
 # FIXME: weird naming, 'LocalAudit' is the class that fetches stats
-from chroma_agent.device_plugins.audit.local import LocalAudit
+from chroma_agent.device_plugins.audit import local
 
 
 VersionInfo = namedtuple('VersionInfo', ['epoch', 'version', 'release', 'arch'])
@@ -111,8 +112,20 @@ def scan_packages():
     return repo_packages
 
 
-@exceptionSandBox(console_log, {})
 class LustrePlugin(DevicePlugin):
+    FAILSAFEDUPDATE = 60                # We always send an update every 60 cycles (60*10)seconds - 10 minutes.
+    delta_fields = ['capabilities', 'properties', 'mounts', 'packages', 'resource_locations']
+
+    def __init__(self, session):
+        self.reset_state()
+        super(LustrePlugin, self).__init__(session)
+
+    def reset_state(self):
+        self._mount_cache = defaultdict(dict)
+        self.last_result = defaultdict(lambda: None)
+        self.safety_send = 0
+
+    @exceptionSandBox(console_log, {})
     def _scan_mounts(self):
         mounts = {}
 
@@ -174,12 +187,12 @@ class LustrePlugin(DevicePlugin):
 
     def _scan(self, initial=False):
         started_at = datetime.datetime.utcnow().isoformat() + "Z"
-        audit = LocalAudit()
+        audit = local.LocalAudit()
 
         # Only set resource_locations if we have the management package
         try:
-            from chroma_agent.action_plugins.manage_targets import get_resource_locations
-            resource_locations = get_resource_locations()
+            from chroma_agent.action_plugins import manage_targets
+            resource_locations = manage_targets.get_resource_locations()
         except ImportError:
             resource_locations = None
 
@@ -195,7 +208,7 @@ class LustrePlugin(DevicePlugin):
         return {
             "started_at": started_at,
             "agent_version": agent_version(),
-            "capabilities": ActionPluginManager().capabilities,
+            "capabilities": plugin_manager.ActionPluginManager().capabilities,
             "metrics": audit.metrics(),
             "properties": audit.properties(),
             "mounts": mounts,
@@ -204,9 +217,22 @@ class LustrePlugin(DevicePlugin):
         }
 
     def start_session(self):
-        self._mount_cache = defaultdict(dict)
+        self.reset_state()
 
         return self._scan(initial=True)
 
     def update_session(self):
-        return self._scan()
+        new_result = self._scan()
+
+        if self.safety_send < LustrePlugin.FAILSAFEDUPDATE:
+            self.safety_send += 1
+
+            for key in LustrePlugin.delta_fields:
+                if new_result[key] == self.last_result[key]:        # If the result is not new then don't send it.
+                    new_result[key] = None
+                else:
+                    self.last_result[key] = new_result[key]
+        else:
+            self.safety_send = 0
+
+        return new_result

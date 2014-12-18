@@ -143,7 +143,9 @@ def get_resource_locations():
     rc, lines_text, stderr = shell.run(["crm_mon", "-1", "-r"])
     if rc != 0:
         # Pacemaker not running, or no resources configured yet
-        return None
+        return {"crm_mon_error": {"rc": rc,
+                                  "stdout": lines_text,
+                                  "stderr": stderr}}
 
     locations = {}
     before_resources = True
