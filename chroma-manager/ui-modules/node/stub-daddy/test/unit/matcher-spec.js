@@ -7,7 +7,7 @@ var configulator = require('configulator');
 var requestMatcherModule = require('../../matcher').wiretree;
 var configModule =  require('../../config').wiretree;
 var modelsModule = require('../../models').wiretree;
-var assign = require('lodash.assign');
+var _ = require('lodash');
 
 describe('test matcher module', function () {
 
@@ -57,8 +57,8 @@ describe('test matcher module', function () {
   });
 
   it('should match with required properties and NO extra properties in incoming request', function () {
-    incomingRequest.data = assign({}, registeredRequest.data);
-    incomingRequest.headers = assign({}, registeredRequest.headers);
+    incomingRequest.data = _.assign({}, registeredRequest.data);
+    incomingRequest.headers = _.assign({}, registeredRequest.headers);
 
     var result = requestMatcher(incomingRequest, registeredRequest);
 

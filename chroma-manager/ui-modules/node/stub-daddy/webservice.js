@@ -177,20 +177,21 @@ exports.wiretree = function webServiceModule(router, requestStore, mockStatus, c
 
     /**
      * Stops the service
-     * @param {Function} onClose
      */
-    stopService: function stopService(onClose) {
-      server.close(onClose);
+    stopService: function stopService () {
+      return new Promise(function handler (resolve) {
+        server.close(resolve);
 
-      logger.info('Service stopping...');
+        logger.info('Service stopping...');
 
-      if (sockets.length > 0)
-        logger.debug('Destroying ' + sockets.length + ' remaining socket connections.');
+        if (sockets.length > 0)
+          logger.debug('Destroying ' + sockets.length + ' remaining socket connections.');
 
-      // Make sure all sockets have been closed
-      while (sockets.length > 0) {
-        sockets.shift().destroy();
-      }
+        // Make sure all sockets have been closed
+        while (sockets.length > 0) {
+          sockets.shift().destroy();
+        }
+      });
     },
 
     /**

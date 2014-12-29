@@ -5,7 +5,7 @@ var url = require('url');
 var webserviceModule = require('../../webservice').wiretree;
 var configulator = require('configulator');
 var configModule = require('../../config').wiretree;
-var merge = require('lodash.merge');
+var _ = require('lodash');
 var Promise = require('promise');
 
 describe('webservice module', function () {
@@ -94,7 +94,7 @@ describe('webservice module', function () {
   });
 
   afterEach(function() {
-    var clone = merge({}, assignments);
+    var clone = _.merge({}, assignments);
     Object.keys(clone).forEach(function clearAssignments(key) {
       delete assignments[key];
     });
@@ -273,15 +273,13 @@ describe('webservice module', function () {
 
     assertWebServiceState(assignments, true);
 
-    describe('Stop the webservice and verify the onStopService callback is executed', function() {
-      var onStopService;
+    describe('Stop the webservice and verify the server stops', function() {
       beforeEach(function() {
-        onStopService = jasmine.createSpy('onStopService');
-        assignments.webservice.stopService(onStopService);
+        assignments.webservice.stopService();
       });
 
       it('should call server.close with the onStopService callback', function() {
-        expect(assignments.server.close).toHaveBeenCalledWith(onStopService);
+        expect(assignments.server.close).toHaveBeenCalledWith(jasmine.any(Function));
       });
 
       it('should call socket.destroy', function() {

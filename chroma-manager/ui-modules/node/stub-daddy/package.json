@@ -2,7 +2,8 @@
   "name": "stub-daddy",
   "author": "Will Johnson",
   "description": "Stub API service used for integration testing.",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "private": true,
   "dependencies": {
     "bunyan": "0.23.1",
     "configulator": "1.0.0",
@@ -14,8 +15,7 @@
   "devDependencies": {
     "dotty": "0.0.2",
     "glob": "4.0.2",
-    "lodash.assign": "2.4.1",
-    "lodash.merge": "2.4.1",
+    "lodash": "2.4.1",
     "minijasminenodewrap": "1.0.1",
     "request-then": "0.0.1"
   },
@@ -25,6 +25,8 @@
     "integration": "mjnw test/integration/*-spec.js",
     "unit": "mjnw test/unit/*-spec.js",
     "cover": "cover",
+    "ziplock": "../ziplocker/bin/ziplocker --overrides.ziplockDir='../../../../chroma-externals/'",
+    "zipdev": "../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'",
     "jenkins": "mjnw --reportType=junit --JUnitReportSavePath=./ --JUnitReportFilePrefix=stub-daddy-results"
   },
   "preferGlobal": true,

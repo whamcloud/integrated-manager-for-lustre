@@ -1,9 +1,6 @@
-#! /usr/bin/env node
-/*jshint node: true*/
 'use strict';
 
 var Wiretree = require('wiretree');
-var argv = require('yargs').argv;
 var url = require('url');
 var http = require('http');
 var https = require('https');
@@ -15,20 +12,12 @@ var configulator = require('configulator');
 var fs = require('fs');
 var Promise = require('promise');
 
-if (require.main === module) {
-  var wireTree = createWireTree();
-  var webService = wireTree.get('webService');
-  webService.startService(argv);
-} else {
-  module.exports = createWireTree;
-}
-
 /**
- * Creates the wire tree
+ * Creates the wiretree
  * @param {String} [protocol]
- * @returns {Wiretree}
+ * @returns {Object}
  */
-function createWireTree (protocol) {
+module.exports = function createWireTree (protocol) {
   var wireTree = new Wiretree(__dirname);
 
   wireTree.add(url, 'url');
@@ -63,6 +52,9 @@ function createWireTree (protocol) {
 
   wireTree.add(request, 'request');
 
-  return wireTree;
-}
+  return {
+    config: wireTree.get('config'),
+    webService: wireTree.get('webService')
+  };
+};
 

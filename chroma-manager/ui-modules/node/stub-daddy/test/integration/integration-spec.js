@@ -1,6 +1,6 @@
 'use strict';
 
-var merge = require('lodash.merge');
+var _ = require('lodash');
 var request = require('request-then');
 var format = require('util').format;
 var fixtures = require('../fixtures/standard-fixtures');
@@ -16,8 +16,8 @@ var wireTreeModule = require('../../index');
      */
     beforeEach(function (done) {
       var wireTree = wireTreeModule(protocol);
-      config = wireTree.get('config');
-      webService = wireTree.get('webService');
+      config = wireTree.config;
+      webService = wireTree.webService;
 
       var url = format.bind(null, '%s://localhost:%s/%s', config.requestProtocol, config.port);
       makeRequestAndExpect = makeRequestAndExpectWrap(url);
@@ -30,7 +30,7 @@ var wireTreeModule = require('../../index');
      */
     afterEach(function (done) {
       webService.flush();
-      webService.stopService(done);
+      webService.stopService().done(done);
     });
 
     describe('register mock api by calling /api/mock', function () {
@@ -49,7 +49,7 @@ var wireTreeModule = require('../../index');
 
 
       it('should fail if incorrect json is sent on the request', function (done) {
-        var requestOptions = merge({}, fixtures.integration.registerMockRequests
+        var requestOptions = _.merge({}, fixtures.integration.registerMockRequests
           [fixtures.integration.registerMockRequests.length - 1].json);
 
         requestOptions.body = JSON.stringify(requestOptions.json) + '}[';
@@ -60,7 +60,7 @@ var wireTreeModule = require('../../index');
     });
 
     describe('register a GET mock API and verify response', function () {
-      var requestOptions = merge({}, fixtures.integration.registerSuccessfulMockRequest.json);
+      var requestOptions = _.merge({}, fixtures.integration.registerSuccessfulMockRequest.json);
       var shouldMessage = format.bind(null, 'should call mocked API from mock service %s');
       var options = [
         {
@@ -127,7 +127,7 @@ var wireTreeModule = require('../../index');
 
     describe('request to mock API methods', function () {
       var methods = ['POST', 'PUT', 'PATCH'];
-      var requestOptions = merge({}, fixtures.integration.registerSuccessfulMockPOSTRequest.json);
+      var requestOptions = _.merge({}, fixtures.integration.registerSuccessfulMockPOSTRequest.json);
       var options = [
         {
           options: {
@@ -215,7 +215,7 @@ var wireTreeModule = require('../../index');
       var requestOptions, callOptions;
 
       beforeEach(function () {
-        requestOptions = merge({}, fixtures.integration.registerRequestForExpireFunctionality.json);
+        requestOptions = _.merge({}, fixtures.integration.registerRequestForExpireFunctionality.json);
         callOptions = {
           path: requestOptions.json.request.url.substr(1),
           headers: requestOptions.json.request.headers,
@@ -263,7 +263,7 @@ var wireTreeModule = require('../../index');
       var requestOptions, callOptions;
 
       beforeEach(function () {
-        requestOptions = merge({}, fixtures.integration.registerRequestForMockState.json);
+        requestOptions = _.merge({}, fixtures.integration.registerRequestForMockState.json);
         callOptions = {
           path: requestOptions.json.request.url.substr(1),
           headers: requestOptions.json.request.headers,
@@ -448,7 +448,7 @@ var wireTreeModule = require('../../index');
             return makeRequestAndExpect(callOptions, 404);
           })
           .then(function afterCallingTheMockTwice() {
-            var unregisteredCallOptions = merge({}, callOptions, {
+            var unregisteredCallOptions = _.merge({}, callOptions, {
               path: 'user/unregistered/method'
             });
             return makeRequestAndExpect(unregisteredCallOptions, 404);
@@ -529,7 +529,7 @@ function makeRequestAndExpectWrap (url) {
     if (!options)
       throw new Error('Options is required to make a request.');
 
-    options = merge({}, options, {
+    options = _.merge({}, options, {
       uri: url(options.path),
       strictSSL: false
     });
