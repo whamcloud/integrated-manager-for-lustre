@@ -1,7 +1,6 @@
-/*jshint node: true*/
 'use strict';
 
-module.exports = {
+var fixtures = {
   integration: {
     registerMockRequests: [
       {
@@ -271,3 +270,23 @@ module.exports = {
     }
   }
 };
+deepFreeze(fixtures);
+
+module.exports = fixtures;
+
+/**
+ * Freezes an object and it's properties
+ * recursively.
+ * @param {Object|Array} obj
+ */
+function deepFreeze (obj) {
+  Object.freeze(obj);
+
+  Object.keys(obj)
+    .filter(function removeNonObjects (key) {
+      return (typeof obj[key] === 'object');
+    })
+    .forEach(function freezeProps (key) {
+      deepFreeze(obj[key]);
+    });
+}

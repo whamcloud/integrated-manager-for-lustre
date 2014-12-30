@@ -28,7 +28,7 @@ if (require.main === module) {
  * @param {String} [protocol]
  * @returns {Wiretree}
  */
-function createWireTree(protocol) {
+function createWireTree (protocol) {
   var wireTree = new Wiretree(__dirname);
 
   wireTree.add(url, 'url');
