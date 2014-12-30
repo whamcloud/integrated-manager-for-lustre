@@ -6,6 +6,7 @@ ziplocker
 socket-router
 srcmap-reverse
 stub-daddy
+stub-daddy-client
 realtime
 chroma_ui
 chroma_ui_new

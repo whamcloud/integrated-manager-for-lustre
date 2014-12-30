@@ -54,7 +54,8 @@ module.exports = function createWireTree (protocol) {
 
   return {
     config: wireTree.get('config'),
-    webService: wireTree.get('webService')
+    webService: wireTree.get('webService'),
+    validator: wireTree.get('registerApiValidator')
   };
 };
 

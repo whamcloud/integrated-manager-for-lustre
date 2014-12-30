@@ -1,0 +1,24 @@
+{
+  "name": "stub-daddy-client",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Node.js client interface to stub-daddy.",
+  "main": "lib/client.js",
+  "scripts": {
+    "test": "mjnw",
+    "cover": "cover",
+    "ziplock": "../ziplocker/bin/ziplocker --overrides.ziplockDir='../../../../chroma-externals/'",
+    "zipdev": "../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'"
+  },
+  "author": "IML Team",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "2.4.1",
+    "request-then": "1.1.0"
+  },
+  "devDependencies": {
+    "minijasminenodewrap": "1.0.1",
+    "promise-it": "file://../promise-it",
+    "stub-daddy": "file://../stub-daddy"
+  }
+}

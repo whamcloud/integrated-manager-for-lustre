@@ -31,6 +31,36 @@ global.ipit = function ipit (desc, func) {
 };
 
 /**
+ * Waits for promise to resolve before calling done.
+ * @param {Function} func
+ * @returns {Object}
+ */
+global.pbeforeEach = function beforeEach (func) {
+  return global.beforeEach(getWaiter(func));
+};
+
+/**
+ * Waits for promise to resolve before calling done.
+ * @param {Function} func
+ * @returns {Object}
+ */
+global.pafterEach = function beforeEach (func) {
+  return global.afterEach(getWaiter(func));
+};
+
+/**
+ * HOF. Allows equal expectation to take on a more
+ * fluent interface.
+ * @param {*} expected
+ * @returns {Function}
+ */
+global.expectToEqual = function expectToEqualWrap (expected) {
+  return function expectToEqual (val) {
+    expect(val).toEqual(expected);
+  };
+};
+
+/**
  * HOF that waits for the promise to finish.
  * @param {Function} func
  * @returns {Function}
