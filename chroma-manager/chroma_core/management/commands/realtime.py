@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,26 +23,16 @@
 import os
 import settings
 import json
-
-from optparse import make_option
-import logging
+import glob
 
 from django.core.management.commands.runserver import Command as BaseCommand
 
 
 class Command(BaseCommand):
     """
-    Setup node realtime module
+    Setup realtime module
     """
     help = """Generates a conf.json file and starts the realtime module."""
-    args = 'type'
-
-    option_list = BaseCommand.option_list + (
-        make_option('--type',
-                    action='store',
-                    default='prod',
-                    help='The type of environment the realtime module is starting in.'),
-    )
 
     def handle(self, *args, **kwargs):
         """
@@ -55,22 +45,22 @@ class Command(BaseCommand):
         from chroma_core.lib.util import site_dir
 
         SITE_ROOT = site_dir()
-        REALTIME_DIR = os.path.join(SITE_ROOT, "realtime")
+        REALTIME_DIR = os.path.join(SITE_ROOT, 'ui-modules', 'node', 'realtime')
         CONF = os.path.join(REALTIME_DIR, "conf.json")
 
-        if settings.LOG_LEVEL == logging.DEBUG or settings.DEBUG:
-            mode = 'DEV'
-        else:
-            mode = 'PROD'
-
         conf = {
-            "PRIMUS_PORT": settings.REALTIME_PORT,
-            "SERVER_HTTP_URL": settings.SERVER_HTTP_URL,
-            "MODE": mode,
-            "SOURCE_MAP_DIR": os.path.join(SITE_ROOT, "chroma_ui", "static", "chroma_ui", "built*.map")
+            "LOG_PATH": SITE_ROOT if not len(settings.LOG_PATH) else settings.LOG_PATH,
+            "REALTIME_PORT": settings.REALTIME_PORT,
+            "SERVER_HTTP_URL": settings.SERVER_HTTP_URL
         }
+
+        source_map_glob = os.path.join(SITE_ROOT, "chroma_ui", "static", "chroma_ui", "built*.map")
+        source_map_paths = glob.glob(source_map_glob)
+
+        if source_map_paths:
+            conf["SOURCE_MAP_PATH"] = source_map_paths[0]
 
         json.dump(conf, open(CONF, 'w'), indent=2)
 
-        cmdline = ["node", REALTIME_DIR]
+        cmdline = ["node", REALTIME_DIR + '/server.js']
         print " ".join(cmdline)

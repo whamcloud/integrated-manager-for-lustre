@@ -63,16 +63,10 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/isomorphic/obj
 JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
 mv obj-results.xml \$HOME/test_reports/
 
-# Run realtime module tests (new ui)
-cd \$HOME/chroma_test_env/chroma/chroma-manager
-cat << EOF > ./realtime/conf.json
-{
-  "SERVER_HTTP_URL": "https://$CHROMA_MANAGER/",
-  "PRIMUS_PORT": 8888
-}
-EOF
-cd \$HOME/chroma_test_env/chroma/chroma-manager/realtime
-./node_modules/.bin/jasmine-node --verbose --captureExceptions --junitreport --output \$HOME/test_reports/ ./test/ || true
+# Run realtime service tests
+cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/realtime/
+JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=test RUNNER=CI ./node_modules/.bin/jasmine
+mv realtime-results.xml \$HOME/test_reports/
 
 # Run view-server service tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/view-server/
@@ -104,7 +98,7 @@ mv test-results.xml \$HOME/test_reports/karma-test-results-old-ui.xml
 
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=39
+NUM_EXPECTED_TEST_REPORTS=15
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."

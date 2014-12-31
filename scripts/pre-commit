@@ -126,7 +126,6 @@ JS_QUALITY_FILES = {
         '.*/chroma_ui/test/spec/.+/[^/]+\.js$',
         '.*/chroma_ui/static/js/app.js$',
         '.*/chroma_ui/static/js/constants.js$',
-        '.*/realtime/.*\.js$',
         '.*/ui-modules/.*\.js$'
     ],
     'ignore_files': [

@@ -20,14 +20,6 @@
 // express and approved by Intel in writing.
 
 'use strict';
+var dirp = require('dirp');
 
-module.exports = {
-  collectMap: require('./collect-map'),
-  every: require('./every'),
-  flatPluckPath: require('./flat-pluck-path'),
-  pluckValues: require('./pluck-values'),
-  some: require('./some'),
-  sortBy: require('./sort-by'),
-  unchangedFilter: require('./unchanged-filter'),
-  zipObject: require('./zip-object')
-};
+module.exports = dirp(__dirname);

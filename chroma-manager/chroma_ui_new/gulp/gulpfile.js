@@ -21,7 +21,6 @@ var rev = require('gulp-rev');
 var sourcemaps = require('gulp-sourcemaps');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
-var gulpPrimus = require('./lib/gulp-primus');
 var iifeWrap = require('./lib/gulp-iife-wrap');
 var annotate = require('./lib/gulp-annotate');
 var ngAnnotate = require('gulp-ng-annotate');
@@ -35,15 +34,6 @@ var fp = require('fp');
 var writeToDest = fp.curry(2, gulp.dest)(fp.__, { cwd: '../../chroma_ui' });
 var writeToStatic = writeToDest.bind(null, 'static/chroma_ui');
 var getSource = fp.curry(2, gulp.src)(fp.__, { cwd: '../' });
-
-function buildPrimusClient () {
-  return gulpPrimus().on('error', function handleError (error) {
-      /* jshint validthis: true */
-      console.error(error);
-      this.emit('end');
-    }
-  );
-}
 
 function buildJs () {
   return getSource(files.js.source)
@@ -101,22 +91,19 @@ function injectFiles (jsStream, lessStream) {
     .pipe(plumber.stop());
 }
 
-var sources = ['**/primus-client/*.js']
-  .concat(files.js.source);
-var orderJsFiles = order.bind(null, sources, { base: '../' });
+var orderJsFiles = order.bind(null, files.js.source, { base: '../' });
 
 gulp.task('clean', function clean (cb) {
   del(['../../chroma_ui/static/chroma_ui/**/*'], { force: true }, cb);
 });
 
 gulp.task('dev', ['clean'], function devTask () {
-  var primusClientStream = buildPrimusClient();
   var jsStream = buildJs();
   var templatesStream = buildTemplates();
   var lessStream = buildLess();
   var assetsStream = buildAssets();
 
-  var merged = mergeStream(primusClientStream, jsStream, templatesStream);
+  var merged = mergeStream(jsStream, templatesStream);
 
   var statics = mergeStream(
     merged.pipe(clone()),
@@ -134,7 +121,6 @@ gulp.task('dev', ['clean'], function devTask () {
 });
 
 gulp.task('prod', ['clean'], function prodTask () {
-  var primusClientStream = buildPrimusClient();
   var jsStream = buildJs();
   var templatesStream = buildTemplates();
   var assetsStream = buildAssets();
@@ -145,7 +131,7 @@ gulp.task('prod', ['clean'], function prodTask () {
     .pipe(csso())
     .pipe(plumber.stop());
 
-  var merged = mergeStream(primusClientStream, jsStream, templatesStream)
+  var merged = mergeStream(jsStream, templatesStream)
     .pipe(plumber())
     .pipe(orderJsFiles())
     .pipe(sourcemaps.init())

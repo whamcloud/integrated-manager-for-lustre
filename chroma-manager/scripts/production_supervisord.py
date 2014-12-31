@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -35,10 +35,10 @@ config.readfp(open(base_config_file, 'r'))
 # Remove the nginx section, it is run as a separate init script in production
 config.remove_section('program:nginx')
 
-# Replace the primus section argument to indicate it's running in production
-command = config.get('program:primus', 'command')
-new_command = command.replace('--type=dev', '--type=prod')
-config.set('program:primus', 'command', new_command)
+# Add production NODE_ENV
+env = config.get('program:realtime', 'environment')
+env = env + ',NODE_ENV="production"'
+config.set('program:realtime', 'environment', env)
 
 # Add production NODE_ENV
 env = config.get('program:view_server', 'environment')

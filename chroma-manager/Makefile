@@ -81,10 +81,10 @@ ziplocker.stamp: ui-modules/node/ziplocker/ziplock.json $(NPM)
 	./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 	touch $@
 
-realtime.stamp: realtime/ziplock.json ziplocker.stamp $(NPM)
+realtime.stamp: ui-modules/node/realtime/ziplock.json ziplocker.stamp $(NPM)
 	@echo "Setting up realtime module"; \
-	cd realtime && \
-	../ui-modules/node/ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../chroma-externals/'
+	cd ui-modules/node/realtime && \
+	../ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../../../chroma-externals/'
 	touch $@
 
 view-server.stamp: ui-modules/node/view-server/ziplock.json ziplocker.stamp $(NPM)

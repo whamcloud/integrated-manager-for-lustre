@@ -2,7 +2,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -77,18 +77,21 @@ setup(
                         "static/webhelp/*.png", "static/webhelp/*.swf"],
         'polymorphic': ["COPYING"],
         'tests': ["integration/run_tests", "integration/*/*.json", "sample_data/*"],
-        'realtime': [
-            "resources/*.js",
-            "routes/*.js",
-            "*.js"
-        ] + [sub(r'^realtime/', '', x) for x in findall('realtime/node_modules')],
         'ui-modules': [
             "node/view-server/*.js",
             "node/view-server/lib/*.js",
             "node/view-server/middleware/*.js",
             "node/view-server/routes/*.js",
             "node/view-server/package.json",
+            "node/realtime/*.js",
+            "node/realtime/request/*.js",
+            "node/realtime/reverse-source-map/*.js",
+            "node/realtime/socket-router/*.js",
+            "node/realtime/socket-router/middleware/*.js",
+            "node/realtime/socket-router/routes/*.js",
+            "node/realtime/package.json"
         ] + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node/view-server/node_modules')]
+          + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node/realtime/node_modules')]
     },
     scripts = ["chroma-host-discover"],
     entry_points = {

@@ -87,7 +87,7 @@ ui-modules/node/dirp/
 ui-modules/node/req/
 ui-modules/isomorphic/fp/
 ui-modules/isomorphic/obj/
-realtime/
+ui-modules/node/realtime/
 ui-modules/node/view-server/
 chroma_ui/
 chroma_ui_new

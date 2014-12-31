@@ -5,7 +5,12 @@
   "main": "index.js",
   "author": "IML Team",
   "license": "MIT",
+  "scripts": {
+    "ziplock": "../../../ui-modules/node/ziplocker/bin/ziplocker --overrides.ziplockDir='../../../../chroma-externals/'",
+    "zipdev": "../../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'"
+  },
   "dependencies": {
-    "lodash-mixins": "file://../../isomorphic/lodash-mixins"
+    "lodash-mixins": "file:../../isomorphic/lodash-mixins",
+    "dirp": "file:../dirp"
   }
 }

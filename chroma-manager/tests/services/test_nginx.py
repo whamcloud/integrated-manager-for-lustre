@@ -82,10 +82,10 @@ class TestInsecureUrls(NginxTestCase):
         response = requests.get(without_slash, verify=False, allow_redirects=False)
         self.assertEqual(response.status_code, 301)
 
-    def test_primus(self):
-        """Test primus path sends upgrade header"""
+    def test_socketio(self):
+        """Test socket.io path sends upgrade header"""
         with HttpListener(settings.REALTIME_PORT) as listener:
-            uri = "https://localhost:%s/primus/" % settings.HTTPS_FRONTEND_PORT
+            uri = "https://localhost:%s/socket.io/" % settings.HTTPS_FRONTEND_PORT
             requests.get(uri, verify=False, allow_redirects=False)
             self.assertEqual(listener.last_request.headers.getheader('Connection'), 'upgrade')
 

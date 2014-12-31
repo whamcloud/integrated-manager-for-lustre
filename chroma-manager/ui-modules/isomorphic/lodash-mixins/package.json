@@ -1,6 +1,6 @@
 {
   "name": "lodash-mixins",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Mixins for Lo-Dash we find useful.",
   "main": "index.js",
   "scripts": {

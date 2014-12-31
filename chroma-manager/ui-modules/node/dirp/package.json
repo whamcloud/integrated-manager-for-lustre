@@ -10,7 +10,7 @@
     "file loader"
   ],
   "dependencies": {
-    "lodash-mixins": "file://../../isomorphic/lodash-mixins"
+    "lodash-mixins": "file:../../isomorphic/lodash-mixins"
   },
   "devDependencies": {
     "jasmine": "2.3.1",
