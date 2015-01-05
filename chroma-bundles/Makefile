@@ -24,7 +24,7 @@ clean install:: subdirs
 package: subdirs $(PROFILES) lesskey.out EULA.txt
 	tar  --transform 's|$(WORKDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)|' \
 		$(foreach subdir,$(SUBDIRS),--transform 's|$(shell echo $(subdir)/*.tar.gz)|$(notdir $(shell echo $(subdir)/*.tar.gz))|') \
-		--transform 's|$(HADOOPDIR)|hadoop|' \
+		--transform 's|$(HADOOPDIR)|$(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION)/hadoop|' \
 		--show-transformed-names \
 		-C ../ \
 	    -czvf $(SHORT_ARCHIVE_NAME)-$(ARCHIVE_VERSION).tar.gz $(WORKDIR)/create_installer $(WORKDIR)/install $(WORKDIR)/lesskey.out $(WORKDIR)/EULA.txt $(foreach profile,$(PROFILES),$(WORKDIR)/$(profile)) $(foreach subdir,$(SUBDIRS),$(WORKDIR)/$(shell echo $(subdir)/*.tar.gz)) $(TOP)/../$(HADOOPDIR)/*
