@@ -33,6 +33,7 @@ from chroma_core.services.http_agent import HttpAgentRpc
 from chroma_core.services.http_agent.queues import AgentTxQueue
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.rpc import RpcTimeout
+from chroma_core.chroma_common.lib.util import ExpiringList
 import settings
 
 
@@ -107,6 +108,7 @@ class AgentRpcMessenger(object):
 
         # FQDN to session
         self._sessions = {}
+        self._cancelled_rpcs = ExpiringList(10 * 60)
 
         self._action_runner_rx_queue = AgentRxQueue(AgentRpcMessenger.PLUGIN_NAME)
         self._action_runner_rx_queue.purge()
@@ -242,13 +244,20 @@ class AgentRpcMessenger(object):
                 elif fqdn in self._sessions:
                     log.info("AgentRpcMessenger.on_rx: good session %s/%s" % (fqdn, session_id))
                     # Find this RPC and complete it
-                    rpc = self._session_rpcs[session_id][rpc_response['id']]
-                    del self._session_rpcs[session_id][rpc_response['id']]
-                    rpc.exception = rpc_response['exception']
-                    rpc.result = rpc_response['result']
-                    rpc.subprocesses = rpc_response['subprocesses']
-                    log.info("AgentRpcMessenger.on_rx: completing rpc %s" % rpc.id)
-                    rpc.complete.set()
+                    try:
+                        rpc = self._session_rpcs[session_id][rpc_response['id']]
+                    except KeyError:
+                        if rpc_response['id'] in self._cancelled_rpcs:
+                            log.debug("Response received from a cancelled RPC (id: %s)", rpc_response['id'])
+                        else:
+                            log.error("Response received from UNKNOWN RPC of (id: %s)", rpc_response['id'])
+                    else:
+                        del self._session_rpcs[session_id][rpc_response['id']]
+                        rpc.exception = rpc_response['exception']
+                        rpc.result = rpc_response['result']
+                        rpc.subprocesses = rpc_response['subprocesses']
+                        log.info("AgentRpcMessenger.on_rx: completing rpc %s" % rpc.id)
+                        rpc.complete.set()
                 else:
                     log.info("AgentRpcMessenger.on_rx: unknown session %s/%s" % (fqdn, session_id))
                     # A session I never heard of?
@@ -308,6 +317,7 @@ class AgentRpcMessenger(object):
         while True:
             if cancel_event.is_set():
                 self._send_cancellation(rpc)
+                self._cancelled_rpcs.append(rpc.id)
                 raise AgentCancellation()
             else:
                 rpc.complete.wait(timeout = 1.0)

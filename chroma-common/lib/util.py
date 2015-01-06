@@ -26,3 +26,39 @@
 #
 # from chroma_core
 # import chroma_core.chroma-common.lib.utils
+
+import time
+from collections import MutableSequence, namedtuple
+
+ExpiringValue = namedtuple('ExpiringValue', ['value', 'expiry'])
+
+
+class ExpiringList(MutableSequence):
+    """Special implementation of a python list which
+     invalidate its elements after a specified 'grace_period'
+    """
+
+    def __init__(self, grace_period):
+        self._container = list()
+        self.grace_period = grace_period
+
+    def __len__(self):
+        return len([x for x in self])
+
+    def __delitem__(self, index):
+        del self._container[index]
+
+    def __setitem__(self, index, value):
+        self.insert(index, value)
+
+    def __str__(self):
+        return str([x for x in self])
+
+    def __getitem__(self, index):
+        cur_time = time.time()
+        if cur_time > self._container[index].expiry:
+            self._container = [x for x in self._container if x.expiry >= cur_time]
+        return self._container[index].value
+
+    def insert(self, index, value):
+        self._container.insert(index, ExpiringValue(value, time.time() + self.grace_period))
