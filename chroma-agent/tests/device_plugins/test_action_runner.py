@@ -1,13 +1,17 @@
 import time
+from collections import namedtuple
+import threading
+import mock
+
+from django.utils import unittest
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.device_plugins.action_runner import ActionRunnerPlugin, CallbackAfterResponse
 from chroma_agent.plugin_manager import ActionPluginManager, DevicePlugin
-from django.utils import unittest
-import mock
 
 
 ACTION_ONE_RETVAL = 'action_one_return'
+ACTION_TWO_RETVAL = 'action_two_return'
 
 
 subprocesses = {
@@ -28,11 +32,11 @@ def action_one(arg1):
 def action_two(arg1):
     """An action which invokes subprocess_one and subprocess_two"""
 
-    assert arg1 == "arg1_test"
+    assert arg1 == "arg2_test"
     stdout = shell.try_run(['subprocess_one', 'subprocess_one_arg'])
     assert stdout == 'subprocess_one_stdout'
     shell.try_run(['subprocess_two', 'subprocess_two_arg'])
-    return ACTION_ONE_RETVAL
+    return ACTION_TWO_RETVAL
 
 
 def action_three():
@@ -56,27 +60,36 @@ ACTIONS = [action_one, action_two, action_three, action_four]
 class ActionTestCase(unittest.TestCase):
     MOCK_SUBPROCESSES = None
 
+    SendMessageParams = namedtuple('SendMessageParams', ['body', 'callback'])
+
+    def mock_send_message(self, body, callback = None):
+        self.mock_send_message_lock.acquire()
+        self.mock_send_message_call_args_list.append(self.SendMessageParams(body, callback))
+        self.mock_send_message_call_count += 1
+        self.mock_send_message_lock.release()
+
     def setUp(self):
         # Register some testing actions
         self.action_plugins = ActionPluginManager()
         for action in ACTIONS:
             self.action_plugins.commands[action.__name__] = action
 
-        # Intercept messages sent
-        self.old_send_message = DevicePlugin.send_message
-        DevicePlugin.send_message = mock.Mock()
+        # Intercept messages sent with a thread safe mock
+        mock.patch('chroma_agent.plugin_manager.DevicePlugin.send_message', self.mock_send_message).start()
+        self.mock_send_message_lock = threading.Lock()
+        self.mock_send_message_call_count = 0
+        self.mock_send_message_call_args_list = []
 
         # Intercept subprocess invocations
         if self.MOCK_SUBPROCESSES:
-            self.old_run = shell._run
-            shell._run = mock.Mock(side_effect = lambda args: self.MOCK_SUBPROCESSES[tuple(args)]())
+            mock.patch('chroma_agent.chroma_common.lib.shell._run', side_effect = lambda args: self.MOCK_SUBPROCESSES[tuple(args)]()).start()
+
+        # Guaranteed cleanup with unittest2
+        self.addCleanup(mock.patch.stopall)
 
     def tearDown(self):
         for action in ACTIONS:
             del ActionPluginManager.commands[action.__name__]
-
-        if self.MOCK_SUBPROCESSES:
-            shell._run = self.old_run
 
 
 class TestActionPluginManager(ActionTestCase):
@@ -109,11 +122,7 @@ class ActionRunnerPluginTestCase(ActionTestCase):
         # counter for generating deterministic action IDs
         self._id_counter = 0
 
-        # Intercept messages sent
-        self.old_send_message = DevicePlugin.send_message
-        DevicePlugin.send_message = mock.Mock()
-
-        # ActionRunner tries to do acces self._session._client.action_plugins
+        # ActionRunner tries to do access self._session._client.action_plugins
         # to get at ActionPluginManager
         self.client = mock.Mock()
         self.client.action_plugins = self.action_plugins
@@ -121,11 +130,6 @@ class ActionRunnerPluginTestCase(ActionTestCase):
         self.session._client = self.client
 
         self.action_runner = ActionRunnerPlugin(self.session)
-
-    def tearDown(self):
-        super(ActionRunnerPluginTestCase, self).tearDown()
-
-        DevicePlugin.send_message = self.old_send_message
 
     def _run_action(self, action, args):
         """
@@ -142,24 +146,18 @@ class ActionRunnerPluginTestCase(ActionTestCase):
         return id
 
     def _get_responses(self, count):
-        # The ActionRunnerPlugin will run the action in a thread, and call send_message when
-        # it completes
-        # NB: when polling a Mock() from another thread, we rely on call_count being set before call_args_list: it
-        # is safe to poll on call_args_list and then assume call_count is set, but not vice versa.
+        # The ActionRunnerPlugin will run the action in a thread, and call send_message when it completes
         TIMEOUT = 2
         i = 0
-        while True:
-            if len(DevicePlugin.send_message.call_args_list) >= count:
-                break
-            else:
-                time.sleep(1)
-                i += 1
+        while self.mock_send_message_call_count < count:
+            time.sleep(1)
+            i += 1
 
             if i > TIMEOUT:
                 raise AssertionError("Timed out after %ss waiting for %s responses (got %s)" % (TIMEOUT, count, DevicePlugin.send_message.call_count))
 
-        self.assertEqual(DevicePlugin.send_message.call_count, count)
-        return [args[0][0] for args in DevicePlugin.send_message.call_args_list]
+        self.assertEqual(self.mock_send_message_call_count, count)
+        return [args.body for args in self.mock_send_message_call_args_list]
 
 
 class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
@@ -192,7 +190,7 @@ class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
         Test running an action which experiences an error in a subprocess
         """
 
-        id = self._run_action('action_two', {'arg1': 'arg1_test'})
+        id = self._run_action('action_two', {'arg1': 'arg2_test'})
         response = self._get_responses(1)[0]
         self.assertEqual(response['id'], id)
         self.assertIsNone(response['result'])
@@ -212,46 +210,54 @@ class TestActionRunnerPlugin(ActionRunnerPluginTestCase):
             },
             ])
 
-    def test_two_actions(self):
+    def test_1000_actions(self):
         """
-        Test running two actions, checking that their 'subprocesses' output is separated
+        Test running 10000 actions, checking that their 'subprocesses' output is separated
         """
-        id_1 = self._run_action('action_one', {'arg1': 'arg1_test'})
-        id_2 = self._run_action('action_two', {'arg1': 'arg1_test'})
-        responses = self._get_responses(2)
-        response_1 = [r for r in responses if r['id'] == id_1][0]
-        response_2 = [r for r in responses if r['id'] == id_2][0]
+        actions = 1000
+        ids = {}
 
-        self.assertDictEqual(response_1, {
-            'type': 'ACTION_COMPLETE',
-            'id': id_1,
-            'result': ACTION_ONE_RETVAL,
-            'exception': None,
-            'subprocesses': [{
-                             'args': ['subprocess_one', 'subprocess_one_arg'],
-                             'stdout': 'subprocess_one_stdout',
-                             'stderr': 'subprocess_one_stderr',
-                             'rc': 0
-                         }]
-        })
+        for action in xrange(0, actions):
+            if action & 1:
+                ids[action] = self._run_action('action_one', {'arg1': 'arg1_test'})
+            else:
+                ids[action] = self._run_action('action_two', {'arg1': 'arg2_test'})
 
-        self.assertEqual(response_2['id'], id_2)
-        self.assertIsNone(response_2['result'])
-        self.assertIsNotNone(response_2['exception'])
-        self.assertListEqual(response_2['subprocesses'], [
-            {
-                'args': ['subprocess_one', 'subprocess_one_arg'],
-                'stdout': 'subprocess_one_stdout',
-                'stderr': 'subprocess_one_stderr',
-                'rc': 0
-            },
-            {
-                'args': ['subprocess_two', 'subprocess_two_arg'],
-                'stdout': 'subprocess_two_stdout',
-                'stderr': 'subprocess_two_stderr',
-                'rc': -1
-            },
-            ])
+        responses = self._get_responses(actions)
+
+        for action in xrange(0, actions):
+            response = next(r for r in responses if r['id'] == ids[action])
+
+            if action & 1:
+                self.assertDictEqual(response, {
+                    'type': 'ACTION_COMPLETE',
+                    'id': ids[action],
+                    'result': ACTION_ONE_RETVAL,
+                    'exception': None,
+                    'subprocesses': [{
+                                     'args': ['subprocess_one', 'subprocess_one_arg'],
+                                     'stdout': 'subprocess_one_stdout',
+                                     'stderr': 'subprocess_one_stderr',
+                                     'rc': 0
+                                 }]
+                })
+            else:
+                self.assertIsNone(response['result'])
+                self.assertIsNotNone(response['exception'])
+                self.assertListEqual(response['subprocesses'], [
+                    {
+                        'args': ['subprocess_one', 'subprocess_one_arg'],
+                        'stdout': 'subprocess_one_stdout',
+                        'stderr': 'subprocess_one_stderr',
+                        'rc': 0
+                    },
+                    {
+                        'args': ['subprocess_two', 'subprocess_two_arg'],
+                        'stdout': 'subprocess_two_stdout',
+                        'stderr': 'subprocess_two_stderr',
+                        'rc': -1
+                    },
+                    ])
 
 
 class TestActionRunnerPluginCancellation(ActionRunnerPluginTestCase):
@@ -268,7 +274,7 @@ class TestActionRunnerPluginCancellation(ActionRunnerPluginTestCase):
         # The main test here is that we actually return rather than blocking indefinitely
 
         # No messages should have been sent during teardown
-        self.assertEqual(DevicePlugin.send_message.call_count, 0)
+        self.assertEqual(self.mock_send_message_call_count, 0)
 
     def test_cancellation(self):
         """Test that sending a cancellation message for a running action interrupts
@@ -291,7 +297,7 @@ class TestActionRunnerPluginCancellation(ActionRunnerPluginTestCase):
         self.assertFalse(thread.is_alive())
 
         # No messages should have been sent during cancellation
-        self.assertEqual(DevicePlugin.send_message.call_count, 0)
+        self.assertEqual(self.mock_send_message_call_count, 0)
 
 
 class TestCallbackAfterResponse(ActionRunnerPluginTestCase):
@@ -303,18 +309,15 @@ class TestCallbackAfterResponse(ActionRunnerPluginTestCase):
 
         TIMEOUT = 2
         i = 0
-        while True:
-            if DevicePlugin.send_message.call_args is not None:
-                break
-            else:
-                time.sleep(1)
-                i += 1
+        while self.mock_send_message_call_count == 0:
+            time.sleep(1)
+            i += 1
 
             if i > TIMEOUT:
                 raise AssertionError("Timed out after %ss waiting for responses (got %s)" % (TIMEOUT, DevicePlugin.send_message.call_count))
 
-        self.assertEqual(DevicePlugin.send_message.call_count, 1)
-        return DevicePlugin.send_message.call_args[0][0], DevicePlugin.send_message.call_args[0][1]
+        self.assertEqual(self.mock_send_message_call_count, 1)
+        return self.mock_send_message_call_args_list[0]
 
     def test_passthrough(self):
         """Test that when an action raises an CallbackAfterResponse, the
@@ -323,5 +326,5 @@ class TestCallbackAfterResponse(ActionRunnerPluginTestCase):
 
         self._run_action('action_four', {})
 
-        response, callback = self._get_response_and_callback()
-        self.assertEqual(callback(), 'action_four_called_back')
+        response_and_callback = self._get_response_and_callback()
+        self.assertEqual(response_and_callback.callback(), 'action_four_called_back')
