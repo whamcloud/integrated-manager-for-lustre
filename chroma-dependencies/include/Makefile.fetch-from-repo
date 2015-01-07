@@ -65,5 +65,22 @@ $(REPO)/%.rpm: $(CHROMA_EXTERNALS_DIR)%.rpm
 	ln $^ $(REPO)/
 
 $(CHROMA_EXTERNALS_DIR)%.rpm:
+	set -x; \
+	name=$(notdir $@); \
+	if [ x$(JENKINS_ROOT_URL) != x ]; then \
+	    arch=$${name%%.rpm}; \
+	    arch=$${arch##*.}; \
+	    if [ $$arch = src ]; then \
+	        rpmsdir=SRPMS; \
+	        rpmtype="src"; \
+	    else \
+	        rpmsdir=RPMS/$$arch; \
+	        rpmtype="bin "; \
+	    fi; \
+	    src=$(SRC_REPO)/$$rpmsdir/$$name; \
+	else \
+	    rpmtype="bin "; \
+	    src=$(SRC_REPO)/$$name; \
+	fi; \
 	CACHE="$${CACHE:-$(CHROMA_EXTERNALS_DIR)}" . ../include/cache.sh; \
-	cache_populate -t "RPM v3.0 bin " $(SRC_REPO)/$(notdir $@)
+	cache_populate -t "RPM v3.0 $$rpmtype" $$src

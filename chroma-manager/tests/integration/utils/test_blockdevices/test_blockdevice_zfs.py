@@ -47,7 +47,7 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def clear_device_commands(cls, device_paths):
         return ["if zpool list %s; then zpool destroy %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
                                                                               TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths] + \
-               ["yum remove -y zfs spl",
+               ["yum remove -y zfs spl lustre-osd-zfs*",
                 "if [ -e /etc/zfs ]; then rm -rf /etc/zfs; else exit 0; fi"]
 
     @property

@@ -3,7 +3,7 @@ include ../include/Makefile.lustre_build_meta
 ZFS_RELEASE		:= 0.6.3-1.1
 
 CHROMA_EXTERNALS_SUBDIR := zfs
-SRC_REPO		:= $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_BUILD_NUMBER)/arch=x86_64,build_type=server,distro=el6,ib_stack=inkernel/artifact/artifacts/RPMS/x86_64
+SRC_REPO		:= $(JENKINS_ROOT_URL)/job/$(JENKINS_JOB_NAME)/$(JENKINS_BUILD_NUMBER)/arch=x86_64,build_type=server,distro=$(EL_BUILDER_DISTRO),ib_stack=inkernel/artifact/artifacts
 ALL_RPMS		:= zfs-$(ZFS_RELEASE).el6.x86_64.rpm \
 			   zfs-$(ZFS_RELEASE).el6.src.rpm \
 			   kmod-zfs-$(LUSTRE_EL_KERNEL_RELEASE)-$(ZFS_RELEASE).el6.x86_64.rpm \
