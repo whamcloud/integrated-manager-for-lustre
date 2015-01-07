@@ -32,7 +32,7 @@ class PipInstallRequirements(object):
         build_dir = os.path.join(virtual_env, 'build')
         print "BUILD_DIR=%s" % build_dir
 
-        for package in packages_to_install:
+        for package in self.packages_to_install:
             package = package.strip()
             if package and not package[0] == '#':
                 if re.match("https?://", package):
@@ -64,7 +64,5 @@ class PipInstallRequirements(object):
 
 
 if __name__ == '__main__':
-    pip_packages_dir = sys.argv[1]
-    packages_to_install = sys.argv[2:]
-    installer = PipInstallRequirements(pip_packages_dir, packages_to_install)
+    installer = PipInstallRequirements(sys.argv[1], sys.argv[2:])
     installer.install()
