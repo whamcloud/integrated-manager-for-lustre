@@ -9,7 +9,7 @@ SCM_DESCRIPTION		:= $(subst -,$(space),$(shell set -x; git describe --match v[0-
 endif
 ARCHIVE_NAME		:= Intel Enterprise Edition for Lustre Software
 SHORT_ARCHIVE_NAME	:= ieel
-ARCHIVE_VERSION		:= 2.0.2.0
+ARCHIVE_VERSION		:= 2.0.2.1
 PRODUCT_NAME		:= Intel Manager for Lustre
 SHORT_PRODUCT_NAME	:= iml
 
