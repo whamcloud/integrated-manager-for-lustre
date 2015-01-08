@@ -367,7 +367,7 @@ class MdtAudit(TargetAudit):
     def _gather_raw_metrics(self):
         for mdt in [dev for dev in self.devices() if dev['type'] == 'mdt']:
             self.raw_metrics['lustre']['target'][mdt['name']] = self.read_int_metrics(mdt['name'])
-            # calculate the client_count by walking /proc/fs/lustre/mdt/<target>/exports. for all directories
+            # calculate the client_count by walking /proc/fs/lustre/mdt/<target>/exports. for all directores
             # look at the entries in the uuid file and add up the client count as described in the comment
             # on get_client_count().
             client_count = self.get_client_count("/proc/fs/lustre/mdt/%s/exports/" % mdt['name'], mdt['name'])
