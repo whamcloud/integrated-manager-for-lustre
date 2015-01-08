@@ -1,6 +1,7 @@
 include ../include/Makefile.lustre_build_meta
 
-LOCATION := http://downloads.sourceforge.net/project/robinhood/robinhood/2.5.3/robinhood-2.5.3.tar.gz
+VERSION=2.5.4
+LOCATION := http://downloads.sourceforge.net/project/robinhood/robinhood/$(VERSION)/robinhood-$(VERSION).tar.gz
 REQUIREMENT :=
 INSTALL_PKGS := robinhood-lhsm robinhood-adm robinhood-webgui
 TARBALL_NOT_PYTHON := TRUE
