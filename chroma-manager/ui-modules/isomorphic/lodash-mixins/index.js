@@ -153,6 +153,45 @@
       return _.pick(obj, sel);
     }),
     /**
+     * Curried. Given properties, picks them out of the object and checks their values
+     * against the supplied value. Uses indexOf for comparison.
+     * @param {Function|String|String[]} properties
+     * @param {*} value
+     * @param {Object} obj
+     * @returns {Boolean}
+     */
+    checkObjForValue: _.curry(function checkObjForValue (properties, value, obj) {
+      return _(obj)
+          .pick(properties)
+          .values()
+          .indexOf(value) !== -1;
+    }),
+    /**
+     * Curried. Given properties iterates either objs or values
+     * depending on which on is an array.
+     * Checks that either some of the values or some of the objs
+     * match.
+     * @param {Function|String|String[]} properties
+     * @param {Object|Object[]} objs
+     * @param {*|*[]} values
+     * @returns {Boolean}
+     */
+    checkCollForValue: _.curry(function (properties, objs, values) {
+      var check = _.checkObjForValue(properties);
+
+      var arr;
+      if (Array.isArray(values)) {
+        arr = values;
+        check = _.unary(_.partialRight(check, objs));
+      } else {
+        arr = objs;
+        check = check(values);
+      }
+
+      return arr
+        .some(check);
+    }),
+    /**
      * Inverts the item.
      * @param {*} item
      * @returns {Boolean}

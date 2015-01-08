@@ -98,14 +98,17 @@ angular.module('server')
       return function createHostProfiles (serverSpark, profile, showCommands) {
         var spark = requestSocket();
 
-        var findInProfiles = _.findInCollection(['address'], profile.hosts);
+        var wasServerSpecified = _.partialRight(
+          _.checkCollForValue(['fqdn', 'nodename', 'address']),
+          _.pluck(profile.hosts, 'address')
+        );
 
         var createHostProfilesPromise = serverSpark.onceValueThen('data')
           .then(_.pluckPath('body.objects'))
           .then(_.ffilter(function limitToUnconfigured (server) {
             return server.server_profile && server.server_profile.initial_state === 'unconfigured';
           }))
-          .then(_.ffilter(findInProfiles))
+          .then(_.ffilter(wasServerSpecified))
           .then(_.fmap(function (server) {
             return {
               host: server.id,

@@ -43,26 +43,31 @@ angular.module('server')
         .catch(throwResponseError)
         .then(_.pluckPath('body.objects'))
         .then(function handleResponse (servers) {
-          var findByAddress = _.findInCollection(['address']);
+          var checkCollForAddress = _.checkCollForValue(['fqdn', 'nodename', 'address']);
+          var getAddress = _.property('address');
 
           var toPost = objects
-            .filter(_.compose(_.inverse, findByAddress(servers)))
+            .filter(_.compose(_.inverse, checkCollForAddress(servers), getAddress))
             .map(addDefaultProfile);
 
           var toPostPromise = hostWorkerThen(spark, 'sendPost', toPost);
 
           var undeployedServers = _.where(servers, { state: 'undeployed' });
           var toPut = _.difference(objects, toPost)
-            .filter(findByAddress(undeployedServers))
+			.filter(_.compose(checkCollForAddress(undeployedServers), getAddress))
             .map(addDefaultProfile);
 
           var toPutPromise = hostWorkerThen(spark, 'sendPut', toPut);
 
-          var leftovers = _.difference(objects, toPut, toPost);
+          var leftoverAddresses = _(objects)
+            .difference(toPut, toPost)
+            .pluck('address')
+            .value();
+
           var unchangedServers = {
             body: {
               objects: servers
-                .filter(findByAddress(leftovers))
+                .filter(_.unary(_.partialRight(checkCollForAddress, leftoverAddresses)))
                 .map(function buildResponse (server) {
                   return {
                     command_and_host: {
