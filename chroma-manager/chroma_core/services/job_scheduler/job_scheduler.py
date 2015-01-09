@@ -1022,7 +1022,10 @@ class JobScheduler(object):
             raise
         except Exception, e:
             # Re-raise wrapped in an AgentException
-            raise AgentException("Unhandled exception: %s" % e)
+            raise AgentException(agent_ssh.address,
+                                 "Unhandled exception: %s" % e,
+                                 ", ".join(auth_args),
+                                 '\n'.join(traceback.format_exception(*(sys.exc_info()))))
 
     def test_host_contact(self, address, root_pw=None, pkey=None, pkey_pw=None):
         """Test that a host at this address can be created
