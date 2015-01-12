@@ -298,23 +298,35 @@ class RealRemoteOperations(RemoteOperations):
 
         logger.info("SSH address = %s, args = %s" % (address, args))
 
+        # Create ssh connection
         ssh.connect(address, **args)
         transport = ssh.get_transport()
         transport.set_keepalive(20)
         channel = transport.open_session()
         channel.settimeout(timeout)
+
+        # Actually execute the command
         channel.exec_command(command)
         if buffer:
             stdin = channel.makefile('wb')
             stdin.write(buffer)
             stdin.flush()
             stdin.channel.shutdown_write()
-        exit_status = channel.recv_exit_status()  # Blocks until command succeeds
-        stdout = channel.makefile('rb').read()  # Be sure to read before the channel closes
+
+        # Store results. This needs to happen in this order. If recv_exit_status is
+        # read first, it can block indefinitely due to paramiko bug #448. The read on
+        # the stdout will wait until the command finishes, so its not necessary to have
+        # recv_exit_status to block on it first. Closing the channel must come last,
+        # or else reading from stdout/stderr will return an empty string.
+        stdout = channel.makefile('rb').read()
         stderr = channel.makefile_stderr('rb').read()
+        exit_status = channel.recv_exit_status()
         channel.close()
+
+        # Verify we recieved the correct exit status if one was specified.
         if expected_return_code is not None:
             self._test_case.assertEqual(exit_status, expected_return_code, "stdout: '%s' stderr: '%s'" % (stdout, stderr))
+
         return RemoteCommandResult(exit_status, stdout, stderr)
 
     def _ssh_fqdn(self, fqdn, command, expected_return_code=0, timeout=TEST_TIMEOUT, buffer=None):
