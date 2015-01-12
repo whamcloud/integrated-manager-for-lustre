@@ -52,7 +52,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 host_info = response.json['step_results'].values()[0]
                 address = host_info.pop('address')
                 for server_validation, result in host_info.iteritems():
-                    self.assertTrue(result, "Expected %s to be true for %s, but instead found %s. JSON for host: %s" % (server_validation, address, result, response))
+                    self.assertTrue(result, "Expected %s to be true for %s, but instead found %s. JSON for host: %s" % (server_validation, address, result, response.json))
 
     def deploy_agents(self, addresses, auth_type='existing_keys_choice'):
         """Deploy the agent to the addresses provided"""
@@ -60,10 +60,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             '/api/host/',
             body = {
                 'objects': [{
-                                'address': address,
-                                'auth_type': auth_type,
-                                'server_profile': '/api/server_profile/default/'
-                            } for address in addresses]
+                    'address': address,
+                    'auth_type': auth_type,
+                    'server_profile': '/api/server_profile/default/'
+                } for address in addresses]
             }
         )
         self.assertEqual(response.successful, True, response.text)
