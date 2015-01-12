@@ -22,7 +22,6 @@
 
 import os
 from tempfile import mkstemp
-from time import sleep
 
 from chroma_agent.chroma_common.lib import shell
 
@@ -71,25 +70,34 @@ def configure_ntp(ntp_server):
     os.rename(tmp_name, NTP_FILE)
 
     if ntp_server:
-        # If we have a server, sync time to it now before letting ntpd take over
-        shell.try_run(['service', 'ntpd', 'stop'])
-
-        timeout = 300
-        sleep_time = 5
+        timeout = 6
         while timeout > 0:
-            rc, stdout, stderr = shell.run(['service', 'ntpdate', 'restart'])
+            # This rather strange code is a result of HYD-3988. The segfault SEEMS to be isolated to the case where
+            # 'service ntpdate restart' is run by shell._run . If as is the case here 'service ntpdate restart' runs
+            # whilst shell._run is executing then the segfault does not occur.
+            # This is evidenced by the fact that the code below runs 'service ntpdate restart' in 1 minute and then
+            # runs another command to detect that it was run. This doesn't cause a segfault. At some point once the
+            # root cause is resolved the patch should be reverted back to some reasonable code.
+            tmp_f, tmp_name = mkstemp(dir = '/root')
+            os.write(tmp_f, "service ntpd stop\nservice ntpdate restart\nservice ntpd start\nrm -f %s" % tmp_name)
+            os.close(tmp_f)
+
+            # So run the service commands via the file above in 1 min - then wait for the command to finish by looking
+            # for the self deleting file to exit. Not the action runner process will timeout these commands should they
+            # hang
+            shell.try_run(['at', '-M', 'now', '+0', 'min', '-f', tmp_name])
+            shell.try_run(['bash', '-c', 'while [ -f %s ]; do echo *; sleep 1; done' % tmp_name])
+
+            rc, stdout, stderr = shell.run(['service', 'ntpdate', 'status'])
+
             if rc == 0:
                 break
             else:
-                sleep(sleep_time)
-                timeout -= sleep_time
+                timeout -= 1
 
         # did we time out?
-        if timeout < 1:
+        if timeout <= 0:
             raise RuntimeError("Timed out waiting for time sync from the Chroma Manager.  You could try waiting a few minutes and clicking \"Set up server\" for this server")
-
-        # signal the process
-        shell.try_run(['service', 'ntpd', 'start'])
     else:
         # With no server, just restart ntpd, don't worry about the sync
         shell.try_run(['service', 'ntpd', 'restart'])
