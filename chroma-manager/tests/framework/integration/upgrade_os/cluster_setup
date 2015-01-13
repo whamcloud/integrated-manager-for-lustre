@@ -89,6 +89,7 @@ if [ ${PIPESTATUS[0]} != 0 ]; then
     exit 1
 fi
 
+source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/enable_kernels_repo.sh ${WORKERS[@]} $CLIENT_1
 source $CHROMA_DIR/chroma-manager/tests/framework/integration/utils/install_client.sh
 
 # Install and setup integration tests on integration test runner
