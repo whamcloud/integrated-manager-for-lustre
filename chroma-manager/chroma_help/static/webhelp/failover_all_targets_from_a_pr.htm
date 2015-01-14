@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>High-availability file system support</title>
+   <title>Failover all targets from a primary to a secondary server</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
-   <meta name="keywords" content="corosync,pacemaker,STONITH" />
+   <meta name="keywords" content="" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="Intel® Manager for Lustre* software includes several capabilities for configuring and managing highly-available Lustre* file systems.&nbsp;" />
+   <meta name="description" content="Warning: After you have created a Lustre file system using Intel® Manager for Lustre software, you should not make any configuration changes outside of Intel® Manager for..." />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -45,18 +45,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "pre-requisites_to_creating_a_l.htm",
-   prevP: "a_caution_about_reconfiguring_.htm",
-   currP: "ha_and_failover_support_provid.htm",
+   nextP: "decommissioning_a_server_for_a.htm",
+   prevP: "perform_a_manual_failback.htm",
+   currP: "failover_all_targets_from_a_pr.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "High-availability file system support",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - High-availability file system support",
-   sharesubject: "Intel® Manager for Lustre* - High-availability file system support",
+   titleP: "Failover all targets from a primary to a secondary server",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Failover all targets from a primary to a secondary server",
+   sharesubject: "Intel® Manager for Lustre* software - Failover all targets from a primary to a secondary server",
    simplesubject: "Documentation%20Feedback",
-   mailid: "HA_and_failover_support_provid",
-   mailpath: "Creating a new Lustre file system &gt; High-availability file system support /",
+   mailid: "Failover_all_targets_from_a_pr",
+   mailpath: "Performing maintenance for HA file systems &gt; Failover all targets from a primary to a secondary server /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - High-availability file system support").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Failover all targets from a primary to a secondary server").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }
@@ -126,7 +126,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <script type="text/javascript" src="hmtopic.js"></script>
 
    <script type="text/javascript">
-     HMSyncTOC("index.html", "ha_and_failover_support_provid.htm");
+     HMSyncTOC("index.html", "failover_all_targets_from_a_pr.htm");
    </script>
    <script type="text/javascript" src="highlight.js"></script>
    <script type="text/javascript">
@@ -139,20 +139,20 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 	<ul class="social-buttons">
 	<li>
 		<div class="fb-button">
-		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?ha_and_failover_support_provid.htm"
+		<iframe src="https://www.facebook.com/plugins/like.php?href=http://www.ec-software.com/help/index.html?failover_all_targets_from_a_pr.htm"
         scrolling="no" frameborder="0"
         style="border:none; width:300px; height:26px"></iframe>
 		</div>
 	</li>
 	<li>
 	<div class="twitter-button">
-		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?ha_and_failover_support_provid.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
+		<a id="tweetthis" href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.ec-software.com/help/index.html?failover_all_targets_from_a_pr.htm" data-via=""><%BTNTEXT_SHARETWEET%</a>
 		<script>(function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}})(document,"script","twitter-wjs");</script>
 	</div>
 	</li>
 	<li>
 		<div class="googleplusone-button">
-                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?ha_and_failover_support_provid.htm"></g:plusone>
+                <g:plusone size="medium" count="false" href="http://www.ec-software.com/help/index.html?failover_all_targets_from_a_pr.htm"></g:plusone>
                 </div>
 		<script type="text/javascript">
 		window.___gcfg = {lang: 'en-US'};
@@ -161,7 +161,7 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
                 
 	</li> 
 	<li>
-		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?ha_and_failover_support_provid.htm"></script></div>
+		<div class="linkedin-button"><script type="IN/Share" data-url="http://www.ec-software.com/help/index.html?failover_all_targets_from_a_pr.htm"></script></div>
 	</li>
 	<li>
 		<div id="mailthisbutton"><a href="mailto:?body=http://www.ec-software.com/help/index.html%3F<%HREF_CURRENT_PAGE%" class="sbutton">
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>High-availability file system support</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Failover all targets from a primary to a secondary server</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">High-availability file system support</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Failover all targets from a primary to a secondary server</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -192,13 +192,9 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p class="p_BodyText"><span class="f_BodyText">Intel® Manager for Lustre* software includes several capabilities for configuring and managing highly-available Lustre* file systems. </span></p>
-<p class="p_BodyText"><span class="f_BodyText">Generally, high availability (HA) means that the file system has a degree of fault tolerance and data integrity protection. The key components of this solution are the software components Corosync and Pacemaker. Corosync is responsible for maintaining intra-cluster control and heartbeat communications, and Pacemaker is responsible for managing HA resources (e.g., Lustre* targets).</span></p>
-<p class="p_BodyText"><span class="f_BodyText">To support automatic server failover, each HA server must have a dedicated crossover connection to the other server that will be its HA peer. &nbsp;During file system creation, each HA server is designated as a primary server for one or more targets, and as a failover, peer server for its peer server's targets. This crossover connection is configured as a redundant Corosync communications interface in order to reduce the likelihood of false failover events. &nbsp;Intel® Manager for Lustre* software uses a managed server profile to automatically configure Corosync Pacemaker. The managed server profile is used to configure primary and failover servers. </span></p>
-<p class="p_BodyText"><span class="f_BodyText">Physically, HA peer servers must be cabled to provide equal access to the pool of storage targets allocated to those peers. For example: server 1 and server 2 are cabled as HA peers. Targets A and B have been configured with server 1 as their primary server and server 2 as their failover server. Targets C and D have been configured with server 2 as their primary server and server 1 as their failover server. If server 1 becomes unavailable, server 2 must have access to the block storage devices underlying targets A and B in order to mount them and make them available to Lustre clients. The end result is that server 1 is powered off and server 2 is now exporting targets A, B, C, and D to Lustre clients. </span></p>
-<p class="p_BodyText"><span class="f_BodyText">To support HA failover, each HA server must be able to automatically power-off its peer server if a failover is required. The process of powering off a faulty server is known as STONITH or &quot;node fencing&quot; (also called &quot;server fencing&quot;), and ensures that a shared storage device is not mounted by more than one server at a time. Lustre includes protection against multiple simultaneous device mounts, but automatically powering off the faulty server ensures that failover works properly. Intel® Manager for Lustre* software supports the use of remotely-operable Power Distribution Units (PDUs) for this purpose. See Add power distribution units and Assign PDU outlets to servers. &nbsp;Alternative to the configuration of PDUs, Intel® Manager for Lustre* software also supports the Intelligent Management Platform Interface (IPMI) and associating baseboard management controllers (BMCs) with servers, to support server monitoring and control.</span></p>
-<p class="p_BodyText"><span class="f_BodyText">To create a new Lustre file system, begin with Add storage servers. </span></p>
-
+<p style="line-height: 1.10; margin: 0px 0px 8px 0px;"><span style="font-weight: bold;">Warning</span>: After you have created a Lustre file system using Intel® Manager for Lustre software, you should not make any configuration changes outside of Intel® Manager for Lustre software, to file system servers, their respective targets, or network connectivity. &nbsp;Doing so will likely defeat the ability of Intel® Manager for Lustre software to monitor or manage the file system, and will make all or portions of the file system unavailable to clients.</p>
+<p style="line-height: 1.10; margin: 0px 0px 8px 0px;">To manually failover all targets from a primary to secondary server, &nbsp;perform these steps: </p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span>At the menu bar, click the <span style="font-weight: bold;">Configuration</span> drop-down menu and click <span style="font-weight: bold;">Server</span>.</p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 0px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span>For the primary server on which you want to perform maintenance, click the Actions drop-down and select <span style="font-weight: bold;">Power-Off</span>. This will switch power off for this server. Any targets running on the primary server will be failed-over to the secondary server. Non-HA-capable targets (targets not supported by a secondary server) will be unavailable until power for the server is switched on again. This button is visible only if PDUs have been added and outlets assigned to servers.</p>
 <!--ZOOMSTOP-->
 
 </div> <!-- idcontent -->

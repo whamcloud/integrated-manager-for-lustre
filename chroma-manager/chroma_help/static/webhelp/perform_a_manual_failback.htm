@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Perform a manual server failback</title>
+   <title>Perform a single target failback from secondary to primary server</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="failback, perform manual,object storage server (OSS),object storage server (OSS) perform manual failback,object storage target (OST)" />
@@ -45,18 +45,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "decommissioning_a_server_for_a.htm",
+   nextP: "failover_all_targets_from_a_pr.htm",
    prevP: "perform_a_manual_failover.htm",
    currP: "perform_a_manual_failback.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Perform a manual server failback",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Perform a manual server failback",
-   sharesubject: "Intel® Manager for Lustre* software - Perform a manual server failback",
+   titleP: "Perform a single target failback from secondary to primary server",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Perform a single target failback from secondary to primary server",
+   sharesubject: "Intel® Manager for Lustre* software - Perform a single target failback from secondary to primary server",
    simplesubject: "Documentation%20Feedback",
    mailid: "Perform_a_manual_failback",
-   mailpath: "File system maintenance &gt; Perform a manual server failback /",
+   mailpath: "Performing maintenance for HA file systems &gt; Perform a single target failback from secondary to primary server /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,7 +113,7 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Perform a manual server failback").text();
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Perform a single target failback from secondary to primary server").text();
 window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Perform a manual server failback</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Perform a single target failback from secondary to primary server</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Perform a manual server failback</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Perform a single target failback from secondary to primary server</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">

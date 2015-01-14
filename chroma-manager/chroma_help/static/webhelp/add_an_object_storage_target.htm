@@ -1,13 +1,13 @@
 ﻿<!DOCTYPE HTML>
 <html>
 <head>
-   <title>Add an object storage target</title>
+   <title>Add an object storage target to a managed file system</title>
    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
    <meta name="generator" content="Help &amp; Manual" />
    <meta name="keywords" content="" />
    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
    <meta http-equiv="content-language" content="en-us" />
-   <meta name="description" content="Enter topic text here." />
+   <meta name="description" content="To add another object storage target: At the menu bar, click the Configuration drop-down menu and click File Systems. In the file system table displayed, click on the file..." />
    <meta http-equiv="Content-Style-Type" content="text/css" />
    <link type="text/css" href="default.css" rel="stylesheet" />
    <link id="tabscheme" type="text/css" href="hm_topic.css" rel="stylesheet" />   
@@ -45,18 +45,18 @@ var hmHeaderTopic = true;
 // General topic variables
 var tVars = {
    hmHelpPage: "index.html",
-   nextP: "add_an_object_storage_server.htm",
-   prevP: "replace_a_failed_secondary_ser.htm",
+   nextP: "starting_or_stopping_a_file_sy.htm",
+   prevP: "increasing_the_file_systems_ca.htm",
    currP: "add_an_object_storage_target.htm",
    defP: "intel_manager_for_lustre.htm",
    mailUrl: "",
    mailUrlQuery: "",
-   titleP: "Add an object storage target",
-   mailsubject: "Feedback on: Intel® Manager for Lustre* - Add an object storage target",
-   sharesubject: "Intel® Manager for Lustre* - Add an object storage target",
+   titleP: "Add an object storage target to a managed file system",
+   mailsubject: "Feedback on: Intel® Manager for Lustre* software - Add an object storage target to a managed file system",
+   sharesubject: "Intel® Manager for Lustre* software - Add an object storage target to a managed file system",
    simplesubject: "Documentation%20Feedback",
-   mailid: "Add_an_object_storage_target",
-   mailpath: "File system maintenance &gt; Add an object storage target /",
+   mailid: "Add_an_Object_Storage_Target",
+   mailpath: "Performing maintenance for HA file systems &gt; Add an object storage target to a managed file system /",
    mailbody: "Dear Support Staff,",
    fbtype: false,
    header: true,
@@ -113,8 +113,8 @@ $(document).ready(function() {
 var doc = document;  
 try {
 if (parent.hmWebHelp.navWidth != null) doc = parent.document;
-doc.title = $("<div/>").html("Intel® Manager for Lustre* - Add an object storage target").text();
-window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre*").text();}
+doc.title = $("<div/>").html("Intel® Manager for Lustre* software - Add an object storage target to a managed file system").text();
+window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for Lustre* software").text();}
 } catch(err) {}
 });
 }
@@ -173,13 +173,13 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 
 
 <ul id="topictabs" class="tabs">
-<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Add an object storage target</span></a></li>
+<li id="indextab" class="hmtabs"><a href="#" id="indextablink" class="current"><span>Add an object storage target to a managed file system</span></a></li>
 </ul>
 <div id="hmbox">
 <div id="hmheader">
 <div id="hmheadercontents">
  
-<h1 class="p_Heading1"><span class="f_Heading1">Add an object storage target</span></h1>
+<h1 class="p_Heading1"><span class="f_Heading1">Add an object storage target to a managed file system</span></h1>
 
 </div>
 <div id="atocIcon" class="navdivs">
@@ -192,7 +192,8 @@ window.onunload = function() {doc.title = $("<div/>").html("Intel® Manager for 
 <div id="unclicker"></div>
 
 <!--ZOOMRESTART-->
-<p>Enter topic text here.</p>
+<p class="p_BodyText"><span class="f_BodyText">To add another object storage target:</span></p>
+<p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">1.</span><span class="f_BodyText">At the menu bar, click the </span><span class="f_BodyText" style="font-weight: bold;">Configuration</span><span class="f_BodyText"> drop-down menu and click</span><span class="f_BodyText"> </span><span class="f_BodyText" style="font-weight: bold;">File Systems</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">2.</span><span class="f_BodyText">In the file system table displayed, </span><span class="f_BodyText" style="font-style: italic;">click on the file system name</span><span class="f_BodyText"> to display the file system page.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">3.</span><span class="f_BodyText">Under </span><span class="f_BodyText" style="font-style: italic;">Object Storage Targets</span><span class="f_BodyText">, click </span><span class="f_BodyText" style="font-weight: bold;">+ Create new OST</span><span class="f_BodyText">.</span></p><p style="text-align: left; line-height: 1.10; padding: 0px 0px 0px 18px; margin: 0px 0px 8px 14px;"><span style="font-size:12pt; font-family: 'Calibri';color:#000000;display:inline-block;width:18px;margin-left:-18px">4.</span><span class="f_BodyText">Each available target device is displayed, with its Capacity, Type, HA-status, and server pair, if configured. Select the OST or OSTs to be added and click </span><span class="f_BodyText" style="font-weight: bold;">OK</span><span class="f_BodyText">. The new OSTs will be displayed in the table of OSTs for the file system. </span></p><p class="p_BodyText"><span class="f_BodyText" style="font-weight: bold;">Note</span><span class="f_BodyText">: Intel® Manager for Lustre* software will automatically assign OST indices in a distributed fashion across servers to permit striping. </span></p>
 
 <!--ZOOMSTOP-->
 
