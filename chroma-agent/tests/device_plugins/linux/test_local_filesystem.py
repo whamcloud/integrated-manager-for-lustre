@@ -4,7 +4,7 @@ import mock
 from chroma_agent.device_plugins.linux import LocalFilesystems
 from tests.test_utils import patch_open
 from tests.device_plugins.linux.test_linux import MockDmsetupTable, DummyDataTestCase
-from tests.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestNonLocalLvmComponents(DummyDataTestCase):
@@ -51,14 +51,18 @@ class TestLocalFilesystem(CommandCaptureTestCase):
         }
         block_devices.path_to_major_minor = dev_major_minor
 
-        self.add_command(("blkid", "-U", "0420214e-b193-49f0-8b40-a04b7baabbbe"), stdout="/dev/sdb2\n")
+        self.add_commands(CommandCaptureCommand(("blkid", "-U", "0420214e-b193-49f0-8b40-a04b7baabbbe"), stdout="/dev/sdb2\n"),
+                          CommandCaptureCommand(("blkid", "-U", "notaval-iduu-idand-sowi-llnotbefound"), rc=2))
 
         with patch_open({
             '/etc/fstab': """/dev/mapper/vg_regalmds00-lv_lustre63 / ext4 defaults 1 1
 UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
+UUID=notaval-iduu-idand-sowi-llnotbefound swap swap defaults 0 0
 """,
             '/proc/mounts': ""
         }):
             result = LocalFilesystems(block_devices).all()
             self.assertEqual(result, {"1:2": ("/", "ext4"),
                                       "3:4": ("swap", 'swap')})
+
+        self.assertRanAllCommandsInOrder()

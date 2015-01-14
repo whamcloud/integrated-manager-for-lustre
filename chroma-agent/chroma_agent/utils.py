@@ -25,6 +25,7 @@ import re
 
 from chroma_agent.lib.shell import AgentShell
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
+from chroma_agent.log import console_log
 
 
 class Mounts(FileSystemMixin):
@@ -58,9 +59,13 @@ class Fstab(object):
 
                 uuid_match = re.match("UUID=([\w-]+)$", device)
                 if uuid_match:
-                    # Resolve UUID to device node path
-                    uuid = uuid_match.group(1)
-                    device = AgentShell.try_run(['blkid', '-U', uuid]).strip()
+                    try:
+                        # Resolve UUID to device node path
+                        uuid = uuid_match.group(1)
+                        device = AgentShell.try_run(['blkid', '-U', uuid]).strip()
+                    except AgentShell.CommandExecutionError:       # Sometimes it does not resolve, drop this device.
+                        console_log.warning("fstab contained UUID %s but blkid was unable to interrogate the device." % uuid)
+                        continue
 
                 self.fstab.append((device, mntpnt, fstype))
             except ValueError:
