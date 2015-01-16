@@ -110,7 +110,7 @@ STATICFILES_DIRS = ()
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # Make this unique, and don't share it with anybody.
@@ -120,7 +120,7 @@ SECRET_KEY = '(rpb*-5f69cv=zc#$-bed7^_&8f)ve4dt4chacg$r^89)+%2i*'
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
+    # 'django.template.loaders.eggs.Loader',
 )
 
 from django.conf import global_settings
@@ -168,7 +168,7 @@ INSTALLED_APPS = (
     'chroma_ui',
     'chroma_help',
     'benchmark'
-    )
+)
 
 OPTIONAL_APPS = ['django_extensions', 'django_coverage', 'django_nose', 'djsupervisor']
 for app in OPTIONAL_APPS:
@@ -232,9 +232,9 @@ LUSTRE_MKFS_OPTIONS_MGS = None
 JOURNAL_SIZE = "2048"
 
 CELERY_ROUTES = (
-        {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
-        {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
-        )
+    {"chroma_core.tasks.mail_alerts": {"queue": "periodic"}},
+    {"chroma_core.tasks.send_alerts_email": {"queue": "jobs"}},
+)
 
 CELERY_TRACK_STARTED = True
 CELERY_DISABLE_RATE_LIMITS = True
@@ -318,7 +318,7 @@ DEV_REPO_PATH = os.path.join(os.path.dirname(os.path.abspath(sys.modules['settin
 SERVER_HTTP_URL = "https://%s:%s/" % (socket.getfqdn(), HTTPS_FRONTEND_PORT)
 
 # Supported power control agents
-SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_ipmilan', 'fence_virsh']
+SUPPORTED_FENCE_AGENTS = ['fence_apc', 'fence_apc_snmp', 'fence_ipmilan', 'fence_virsh']
 
 # How long to wait for a storage server to reboot after installing a new kernel
 INSTALLATION_REBOOT_TIMEOUT = 300

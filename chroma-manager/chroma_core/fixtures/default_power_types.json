@@ -80,6 +80,14 @@
         "default_password": "apc"
     },
     {
+        "agent": "fence_apc_snmp",
+        "make": "APC",
+        "model": "8941",
+        "max_outlets": 24,
+        "default_username": "apc",
+        "default_password": "apc"
+    },
+    {
         "agent": "fence_ipmilan",
         "make": "IPMI",
         "model": "1.5 (LAN)",

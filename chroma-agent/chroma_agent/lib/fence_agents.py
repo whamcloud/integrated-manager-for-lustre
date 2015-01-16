@@ -56,6 +56,12 @@ class fence_apc(FenceAgent):
         self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-p', password]
 
 
+class fence_apc_snmp(FenceAgent):
+    def __init__(self, agent, login, password, ipaddr, plug, ipport=161):
+        self.plug = plug
+        self.base_cmd = [agent, '-a', ipaddr, '-u', str(ipport), '-l', login, '-p', password]
+
+
 class fence_virsh(FenceAgent):
     def __init__(self, agent, login, plug, ipaddr, ipport=22, password=None, identity_file="%s/.ssh/id_rsa" % expanduser("~")):
         self.plug = plug
