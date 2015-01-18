@@ -12,8 +12,7 @@ class TestBlockDeviceZFS(CommandCaptureTestCase):
         self.assertEqual('zfs', self.blockdevice.filesystem_type)
 
     def test_uuid(self):
-        self.results = {
-            ('zfs', 'get', '-H', '-o', 'value', 'guid', 'zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0'): (0, '169883839435093209\n', 0)}
+        self.add_command(('zfs', 'get', '-H', '-o', 'value', 'guid', 'zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0'), stdout='169883839435093209\n')
 
         self.assertEqual('169883839435093209', self.blockdevice.uuid)
 
@@ -21,9 +20,8 @@ class TestBlockDeviceZFS(CommandCaptureTestCase):
         self.assertEqual('zfs', self.blockdevice.preferred_fstype)
 
     def test_property_values(self):
-        self.results = {
-            ("zfs", "get", "-Hp", "-o", "property,value", "all", "zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0"):
-                """type	filesystem
+        self.add_command(("zfs", "get", "-Hp", "-o", "property,value", "all", "zfs_pool_devdiskbyidscsi0QEMU_QEMU_HARDDISK_WDWMAP3333333/ost_index0"),
+                stdout = """type	filesystem
 garbageline followed by blank line
 
 creation	1412156944
@@ -84,7 +82,7 @@ lustre:version	1
 lustre:fsname	efs
 lustre:index	0
 lustre:svname	efs-MDT0000
-lustre:flags	37"""}
+lustre:flags	37""")
 
         zfs_properties = self.blockdevice.zfs_properties()
 

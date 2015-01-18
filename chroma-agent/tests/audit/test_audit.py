@@ -6,7 +6,7 @@ from chroma_agent.device_plugins.audit.node import NodeAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit
 
 from tests.test_utils import PatchedContextTestCase
-from tests.test_utils import patch_run
+from tests.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestAuditScanner(PatchedContextTestCase):
@@ -33,9 +33,16 @@ class TestLocalAudit(PatchedContextTestCase):
         """LocalAudit.audit_classes() should return a list of classes."""
         self.assertEqual(self.audit.audit_classes(), [LnetAudit, MdtAudit, MgsAudit, NodeAudit])
 
-    def test_properties(self):
-        with patch_run(['which', 'zfs'], 0, "/sbin/zfs", ""):
-            self.assertEqual(self.audit.properties(), {'zfs_installed': True})
 
-        with patch_run(['which', 'zfs'], 1, "", "which: no zfs in (/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin)"):
-            self.assertEqual(self.audit.properties(), {'zfs_installed': False})
+class TestLocalAuditProperties(CommandCaptureTestCase):
+    def setUp(self):
+        super(TestLocalAuditProperties, self).setUp()
+        self.node_audit = NodeAudit()
+
+    def test_zfs_property_installed(self):
+        self.add_command(('which', 'zfs'), stdout="/sbin/zfs")
+        self.assertEqual(self.node_audit.properties(), {'zfs_installed': True})
+
+    def test_zfs_property_not_installed(self):
+        self.add_command(('which', 'zfs'), rc=1, stderr="which: no zfs in (/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin)")
+        self.assertEqual(self.node_audit.properties(), {'zfs_installed': False})

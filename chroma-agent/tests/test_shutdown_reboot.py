@@ -7,26 +7,25 @@ from .test_manage_target import CommandCaptureTestCase
 class TestServerShutdownAndReboot(CommandCaptureTestCase):
     @patch('os._exit')
     def test_server_shutdown(self, os__exit):
-        run_args = ['shutdown', '-H', 'now']
-        self.results = {tuple(run_args): (0, "", "")}
+        run_args = ('shutdown', '-H', 'now')
+        self.add_command(run_args)
 
         try:
             shutdown_server()
         except CallbackAfterResponse, e:
             e.callback()
-        self.assertRan(run_args)
+        self.assertRanAllCommandsInOrder()
 
         self.assertTrue(os__exit.called)
 
     @patch('os._exit')
     def test_server_reboot(self, os__exit):
-        run_args = ['shutdown', '-r', 'now']
-        self.results = {tuple(run_args): (0, "", "")}
+        run_args = ('shutdown', '-r', 'now')
+        self.add_command(run_args)
 
         try:
             reboot_server()
         except CallbackAfterResponse, e:
             e.callback()
-        self.assertRan(run_args)
-
+        self.assertRanAllCommandsInOrder()
         self.assertTrue(os__exit.called)

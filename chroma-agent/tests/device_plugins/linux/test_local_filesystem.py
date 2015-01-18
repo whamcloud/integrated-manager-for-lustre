@@ -2,8 +2,9 @@ import json
 
 import mock
 from chroma_agent.device_plugins.linux import LocalFilesystems
-from tests.test_utils import patch_open, patch_run
-from tests.device_plugins.linux.test_linux import LinuxAgentTests, MockDmsetupTable, DummyDataTestCase
+from tests.test_utils import patch_open
+from tests.device_plugins.linux.test_linux import MockDmsetupTable, DummyDataTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase
 
 
 class TestNonLocalLvmComponents(DummyDataTestCase):
@@ -20,7 +21,7 @@ class TestNonLocalLvmComponents(DummyDataTestCase):
         self.assertDictEqual(actual_vgs, expected_vgs)
 
 
-class TestLocalFilesystem(LinuxAgentTests):
+class TestLocalFilesystem(CommandCaptureTestCase):
     def test_HYD_1968(self):
         """Reproducer for HYD-1968, check that local filesystems are reported correctly even when they are
            specified in fstab by UUID rather than device path"""
@@ -49,6 +50,8 @@ class TestLocalFilesystem(LinuxAgentTests):
                     'parent': None},
         }
 
+        self.add_command(("blkid", "-U", "0420214e-b193-49f0-8b40-a04b7baabbbe"), stdout="/dev/sdb2\n")
+
         with patch_open({
             '/etc/fstab': """/dev/mapper/vg_regalmds00-lv_lustre63 / ext4 defaults 1 1
 UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
@@ -56,9 +59,8 @@ UUID=0420214e-b193-49f0-8b40-a04b7baabbbe swap swap defaults 0 0
             '/proc/mounts': ""
         }):
             with mock.patch("chroma_agent.device_plugins.linux.DeviceHelper._dev_major_minor", side_effect=dev_major_minor):
-                with patch_run(["blkid", "-U", "0420214e-b193-49f0-8b40-a04b7baabbbe"], rc=0, stdout="/dev/sdb2\n"):
-                    result = LocalFilesystems(block_devices).all()
-                    self.assertEqual(result, {
-                        "1:2": ("/", "ext4"),
-                        "3:4": ("swap", 'swap')
-                    })
+                result = LocalFilesystems(block_devices).all()
+                self.assertEqual(result, {
+                    "1:2": ("/", "ext4"),
+                    "3:4": ("swap", 'swap')
+                })

@@ -2,15 +2,14 @@ import logging
 import datetime
 import simplejson as json
 
-from django.utils import unittest
 
 from chroma_agent.device_plugins.corosync import CorosyncPlugin
-from tests.test_utils import patch_run
+from tests.command_capture_testcase import CommandCaptureTestCase
 
 log = logging.getLogger(__name__)
 
 ONLINE, OFFLINE = 'true', 'false'
-CMD = ['crm_mon', '--one-shot', '--as-xml']
+CMD = ('crm_mon', '--one-shot', '--as-xml')
 
 
 class patch_timezone(object):
@@ -30,7 +29,7 @@ class patch_timezone(object):
         tzlocal._dst_offset = self._old_dst_offset
 
 
-class TestCorosync(unittest.TestCase):
+class TestCorosync(CommandCaptureTestCase):
     """Assert interfacing with corosync works correctly.
 
     If the host is up and corosync is responding, then a block of node -> attrs
@@ -87,27 +86,27 @@ class TestCorosync(unittest.TestCase):
           </resources>
         </crm_mon>""" % (feed_local_datetime,)
 
+        self.add_command(CMD, stdout=crm_one_shot_xml)
+
         with patch_timezone(feed_tz):
-            with patch_run(expected_args=CMD, stdout=crm_one_shot_xml):
+            plugin = CorosyncPlugin(None)
+            result_dict = plugin.start_session()
 
-                plugin = CorosyncPlugin(None)
-                result_dict = plugin.start_session()
+            #  Check it's serializable.
+            try:
+                json.dumps(result_dict)
+            except TypeError:
+                self.fail("payload from plugin can't be serialized")
 
-                #  Check it's serializable.
-                try:
-                    json.dumps(result_dict)
-                except TypeError:
-                    self.fail("payload from plugin can't be serialized")
+            def check_node(node_name, expected_status):
+                tm = result_dict['datetime']
+                self.assertEqual(tm, feed_utc_datetime)
+                node_record = result_dict['nodes'][node_name]
+                self.assertEqual(node_record['name'], node_name)
+                self.assertEqual(node_record['online'], expected_status)
 
-                def check_node(node_name, expected_status):
-                    tm = result_dict['datetime']
-                    self.assertEqual(tm, feed_utc_datetime)
-                    node_record = result_dict['nodes'][node_name]
-                    self.assertEqual(node_record['name'], node_name)
-                    self.assertEqual(node_record['online'], expected_status)
-
-                check_node('storage0.node', ONLINE)
-                check_node('storage1.node', OFFLINE)
+            check_node('storage0.node', ONLINE)
+            check_node('storage1.node', OFFLINE)
 
     def test_corosync_down(self):
         """Corosync is not running - attempt was tried, but failed.
@@ -121,13 +120,14 @@ class TestCorosync(unittest.TestCase):
         crm_corosync_down = """
 Connection to cluster failed: connection failed"""
 
-        with patch_run(expected_args=CMD, rc=10, stdout=crm_corosync_down):
-            plugin = CorosyncPlugin(None)
-            result_dict = plugin.start_session()
+        self.add_command(CMD, rc=10, stdout=crm_corosync_down)
 
-            self.assertTrue(isinstance(result_dict['nodes'], dict))
-            self.assertEqual(len(result_dict['nodes']), 0)
-            self.assertEqual(result_dict['datetime'], '')
+        plugin = CorosyncPlugin(None)
+        result_dict = plugin.start_session()
+
+        self.assertTrue(isinstance(result_dict['nodes'], dict))
+        self.assertEqual(len(result_dict['nodes']), 0)
+        self.assertEqual(result_dict['datetime'], '')
 
     def test_corosync_causes_session_to_reestablish(self):
         """Connecting to crm_mon fails
@@ -144,7 +144,8 @@ Connection to cluster failed: connection failed"""
         """
 
         #  Simulate crm_mon returning an unexcepted error code
-        with patch_run(expected_args=CMD, rc=107):
-            plugin = CorosyncPlugin(None)
-            result_dict = plugin.start_session()
-            self.assertTrue(result_dict is None)
+        self.add_command(CMD, rc=107)
+
+        plugin = CorosyncPlugin(None)
+        result_dict = plugin.start_session()
+        self.assertTrue(result_dict is None)

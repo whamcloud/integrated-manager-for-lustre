@@ -2,7 +2,7 @@ import tempfile
 import shutil
 
 from mock import patch
-from tests.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 from chroma_agent.action_plugins.manage_copytool import start_monitored_copytool, stop_monitored_copytool, configure_copytool, unconfigure_copytool, update_copytool, list_copytools, copytool_vars, _copytool_vars
 
 
@@ -35,7 +35,7 @@ class TestCopytoolManagement(CommandCaptureTestCase):
         self.addCleanup(patch.stopall)
 
     def tearDown(self):
-        super(TestCopytoolManagement, self).setUp()
+        super(TestCopytoolManagement, self).tearDown()
 
         shutil.rmtree(self.mock_config.path)
 
@@ -49,65 +49,44 @@ class TestCopytoolManagement(CommandCaptureTestCase):
                                        self.ct_arguments)
 
     def test_start_monitored_copytool(self):
-        run_args = [['/sbin/start', 'copytool-monitor',
-                     'id=%s' % self.ct_id],
-                    ['/sbin/start', 'copytool',
-                     'ct_arguments=%s' % self.ct_vars['ct_arguments'],
-                     'ct_path=%s' % self.ct_bin_path,
-                     'id=%s' % self.ct_id],
-                    ['/sbin/status', 'copytool',
-                     'id=%s' % self.ct_id],
-                    ['/sbin/status', 'copytool-monitor',
-                                 'id=%s' % self.ct_id]]
-
-        self.results = {}
-
-        for run_arg in run_args:
-            self.results[tuple(run_arg)] = (0, "", "")
+        self.add_commands(CommandCaptureCommand(('/sbin/start', 'copytool-monitor', 'id=%s' % self.ct_id)),
+                          CommandCaptureCommand(('/sbin/status', 'copytool-monitor', 'id=%s' % self.ct_id)),
+                          CommandCaptureCommand(('/sbin/start', 'copytool', 'ct_arguments=%s' % self.ct_vars['ct_arguments'], 'ct_path=%s' % self.ct_bin_path, 'id=%s' % self.ct_id)),
+                          CommandCaptureCommand(('/sbin/status', 'copytool', 'id=%s' % self.ct_id)))
 
         start_monitored_copytool(self.ct_id)
 
-        for run_arg in run_args:
-            self.assertRan(run_arg)
+        self.assertRanAllCommandsInOrder()
 
     def test_stop_monitored_copytool(self):
-        run_args = [['/sbin/stop', 'copytool',
-                     'id=%s' % self.ct_id],
-                    ['/sbin/stop', 'copytool-monitor',
-                     'id=%s' % self.ct_id]]
+        run_args = [('/sbin/stop', 'copytool', 'id=%s' % self.ct_id),
+                    ('/sbin/stop', 'copytool-monitor', 'id=%s' % self.ct_id)]
 
         for run_arg in run_args:
-            self.results[tuple(run_arg)] = (0, "", "")
+            self.add_command(tuple(run_arg))
 
         stop_monitored_copytool(self.ct_id)
 
-        for run_arg in run_args:
-            self.assertRan(run_arg)
+        self.assertRanAllCommandsInOrder()
 
     def test_start_should_be_idempotent(self):
-        run_args = [['/sbin/restart', 'copytool-monitor', 'id=%s' % self.ct_id],
-                    ['/sbin/status', 'copytool-monitor', 'id=%s' % self.ct_id],
-                    ['/sbin/status', 'copytool', 'id=%s' % self.ct_id],
-                    ['/sbin/start', 'copytool', u'ct_arguments=--quiet --update-interval 5 --event-fifo /var/spool/lhsmtool_foo-testfs-1-0-events --archive 1 -p /archive/testfs /mnt/testfs', u'ct_path=/usr/sbin/lhsmtool_foo', 'id=%s' % self.ct_id]]
-
-        self.results = {('/sbin/start', 'copytool-monitor', 'id=%s' % self.ct_id): (1, '/sbin/start', 'Job is already running')}
-
-        for run_arg in run_args:
-            self.results[tuple(run_arg)] = (0, "", "")
+        self.add_commands(CommandCaptureCommand(('/sbin/start', 'copytool-monitor', 'id=%s' % self.ct_id), rc=1, stdout='/sbin/start', stderr='Job is already running'),
+                          CommandCaptureCommand(('/sbin/restart', 'copytool-monitor', 'id=%s' % self.ct_id)),
+                          CommandCaptureCommand(('/sbin/status', 'copytool-monitor', 'id=%s' % self.ct_id)),
+                          CommandCaptureCommand(('/sbin/start', 'copytool', u'ct_arguments=--quiet --update-interval 5 --event-fifo /var/spool/lhsmtool_foo-testfs-1-0-events --archive 1 -p /archive/testfs /mnt/testfs', u'ct_path=/usr/sbin/lhsmtool_foo', 'id=%s' % self.ct_id)),
+                          CommandCaptureCommand(('/sbin/status', 'copytool', 'id=%s' % self.ct_id)))
 
         start_monitored_copytool(self.ct_id)
 
-        for run_arg in run_args:
-            self.assertRan(run_arg)
+        self.assertRanAllCommandsInOrder()
 
     def test_stop_should_be_idempotent(self):
-        from chroma_agent.chroma_common.lib.shell import CommandExecutionError
+        self.add_commands(CommandCaptureCommand(('/sbin/stop', 'copytool', 'id=%s' % self.ct_id), rc=1, stderr='Unknown instance'),
+                          CommandCaptureCommand(('/sbin/stop', 'copytool-monitor', 'id=%s' % self.ct_id), rc=1, stderr='Unknown instance'))
 
-        def raise_error(obj):
-            raise CommandExecutionError(1, [], '', 'Unknown instance')
+        stop_monitored_copytool(self.ct_id)
 
-        with patch('chroma_agent.chroma_common.lib.shell.try_run', side_effect=raise_error):
-            stop_monitored_copytool(self.ct_id)
+        self.assertRanAllCommandsInOrder()
 
     def test_configure_should_be_idempotent(self):
         expected_kwargs = dict(

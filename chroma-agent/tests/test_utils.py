@@ -1,25 +1,9 @@
 import StringIO
+
 from django.utils import unittest
 from chroma_agent.utils import BlkId, Fstab, Mounts
 import mock
-
-
-def patch_shell(args_to_result):
-    def fake_shell(args):
-        return args_to_result[tuple(args)]
-
-    return mock.patch('chroma_agent.chroma_common.lib.shell.try_run', fake_shell)
-
-
-def patch_run(expected_args=None, rc=0, stdout='', stderr=''):
-    def fake_shell(args):
-        if args == expected_args:
-            return rc, stdout, stderr
-        else:
-            raise RuntimeError("Unexpected args:  %s got %s " %
-                                           (repr(expected_args), repr(args)))
-
-    return mock.patch('chroma_agent.chroma_common.lib.shell.run', fake_shell)
+from tests.command_capture_testcase import CommandCaptureTestCase
 
 
 def patch_open(path_to_result):
@@ -31,17 +15,15 @@ def patch_open(path_to_result):
     return mock.patch('__builtin__.open', fake_open, create = True)
 
 
-class TestBlkId(unittest.TestCase):
+class TestBlkId(CommandCaptureTestCase):
     def test_load(self):
-        command_to_result = {
-            ('blkid', '-s', 'UUID', '-s', 'TYPE'): """/dev/sda1: UUID="d546845f-481f-48f8-a998-8a81adcdb53d" TYPE="ext3"
+        self.add_command(('blkid', '-s', 'UUID', '-s', 'TYPE'), stdout="""/dev/sda1: UUID="d546845f-481f-48f8-a998-8a81adcdb53d" TYPE="ext3"
 /dev/sda2: UUID="V229Xn-n1BI-b9J0-tchM-YRfi-9mTz-SMEE5P" TYPE="LVM2_member"
 /dev/mapper/LustreVG-root: UUID="9503858f-5ea9-44b6-b690-f473def07a3d" TYPE="ext3"
 /dev/mapper/LustreVG-swap: UUID="c334dbab-3121-41c3-ae2b-1d7ab26f5329" TYPE="swap"
 /dev/mapper/LustreVG-usr: UUID="9bc9c040-fc00-4cf3-a073-7096c12a8f17" TYPE="ext3"
 /dev/mapper/LustreVG-var: UUID="f9093f90-534c-4c61-a49e-b7cadd32fb90" TYPE="ext3"
-"""
-        }
+""")
 
         expected_result = [{'path': '/dev/sda1', 'uuid': 'd546845f-481f-48f8-a998-8a81adcdb53d', 'type': 'ext3'},
                            {'path': '/dev/sda2', 'uuid': 'V229Xn-n1BI-b9J0-tchM-YRfi-9mTz-SMEE5P', 'type': 'LVM2_member'},
@@ -50,26 +32,24 @@ class TestBlkId(unittest.TestCase):
                            {'path': '/dev/mapper/LustreVG-usr', 'uuid': '9bc9c040-fc00-4cf3-a073-7096c12a8f17', 'type': 'ext3'},
                            {'path': '/dev/mapper/LustreVG-var', 'uuid': 'f9093f90-534c-4c61-a49e-b7cadd32fb90', 'type': 'ext3'}]
 
-        with patch_shell(command_to_result):
-            result = BlkId().values()
-            self.assertListEqual(sorted(expected_result), sorted(result))
+        result = BlkId().values()
+        self.assertListEqual(sorted(expected_result), sorted(result))
 
     def test_HYD_1958(self):
         """Reproducer for HYD-1958.  Feed BlkId the result from that bug and check it processes it correctly.
         Checks that BlkId copes with presence of filesystems which do not have a UUID."""
 
-        command_to_result = {
-            (
+        self.add_command((
                 "blkid",
                 "-s",
                 "UUID",
                 "-s",
                 "TYPE"
-            ): """/dev/mapper/vg_regalmds00-lv_lustre63: UUID="e4b74ffe-0456-4495-91cd-1b38c0fa070c" TYPE="ext4"
+            ), stdout="""/dev/mapper/vg_regalmds00-lv_lustre63: UUID="e4b74ffe-0456-4495-91cd-1b38c0fa070c" TYPE="ext4"
 /dev/loop0: TYPE="iso9660"
 /dev/sda1: UUID="c9e08e31-b3ce-42b4-ba88-c0a8ca3e46ae" TYPE="ext4"
 """
-        }
+            )
 
         expected_result = [
             {
@@ -89,30 +69,26 @@ class TestBlkId(unittest.TestCase):
             }
         ]
 
-        with patch_shell(command_to_result):
-            result = BlkId().values()
-            self.assertListEqual(expected_result, result)
+        result = BlkId().values()
+        self.assertListEqual(expected_result, result)
 
     def test_parse_intolerance(self):
         """
         Check that the BlkId parser raises an exception if it sees something it doesn't understand
         """
-        command_to_result = {
-            (
+        self.add_command((
                 "blkid",
                 "-s",
                 "UUID",
                 "-s",
                 "TYPE"
-            ): """/dev/mapper/vg_regalmds00-lv_lustre63: UUID="e4b74ffe-0456-4495-91cd-1b38c0fa070c" TYPE="ext4"
+        ), stdout="""/dev/mapper/vg_regalmds00-lv_lustre63: UUID="e4b74ffe-0456-4495-91cd-1b38c0fa070c" TYPE="ext4"
 /dev/loop0: TYPE="iso9660" JUNK="trash"
 /dev/sda1: UUID="c9e08e31-b3ce-42b4-ba88-c0a8ca3e46ae" TYPE="ext4"
-"""
-        }
+""")
 
-        with patch_shell(command_to_result):
-            with self.assertRaises(RuntimeError):
-                BlkId()
+        with self.assertRaises(RuntimeError):
+            BlkId()
 
 
 class TestFstab(unittest.TestCase):
@@ -188,9 +164,9 @@ class TestMounts(unittest.TestCase):
 
 
 class PatchedContextTestCase(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super(PatchedContextTestCase, self).__init__(*args, **kwargs)
-        self.test_root = None
+    def __init__(self, methodName):
+        super(PatchedContextTestCase, self).__init__(methodName)
+        self._test_root = None
 
     def _find_subclasses(self, klass):
         """Introspectively find all descendents of a class"""
@@ -200,18 +176,24 @@ class PatchedContextTestCase(unittest.TestCase):
             subclasses.extend(self._find_subclasses(subclass))
         return subclasses
 
-    def setUp(self):
-        if not self.test_root:
-            return
+    @property
+    def test_root(self):
+        return self._test_root
+
+    @test_root.setter
+    def test_root(self, value):
+        assert self._test_root == None, "test_root can only be set once per test"
+
+        self._test_root = value
 
         from chroma_agent.device_plugins.audit import BaseAudit
         for subclass in self._find_subclasses(BaseAudit):
-            mock.patch.object(subclass, 'fscontext', self.test_root).start()
+            mock.patch.object(subclass, 'fscontext', self._test_root).start()
 
         # These classes aren't reliably detected for patching.
         from chroma_agent.device_plugins.audit.node import NodeAudit
-        mock.patch.object(NodeAudit, 'fscontext', self.test_root).start()
+        mock.patch.object(NodeAudit, 'fscontext', self._test_root).start()
         from chroma_agent.utils import Mounts
-        mock.patch.object(Mounts, 'fscontext', self.test_root).start()
+        mock.patch.object(Mounts, 'fscontext', self._test_root).start()
 
         self.addCleanup(mock.patch.stopall)

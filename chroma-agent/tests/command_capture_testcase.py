@@ -1,51 +1,79 @@
+import mock
+from collections import namedtuple
 from django.utils import unittest
 
 import chroma_agent.chroma_common.lib.shell
 
+CommandCaptureCommand = namedtuple("CommandCaptureCommand", ["args", "rc", "stdout", "stderr"])
+CommandCaptureCommand.__new__.__defaults__ = ([], 0, '', '')
+
 
 class CommandCaptureTestCase(unittest.TestCase):
-    results = {}
-
     def setUp(self):
-        self._command_history = []
+        self._commands = []
+        self._commands_history = []
 
         def fake_try_run(args):
-            self._command_history.append(args)
-            if tuple(args) in self.results:
-                result = self.results[tuple(args)]
+            args = tuple(args)
+            self._commands_history.append(args)
+
+            try:
+                result = self._get_command(args)
                 if type(result) == str:
                     return result
                 else:
-                    if result[0]:
-                        raise chroma_agent.chroma_common.lib.shell.CommandExecutionError(result[0],
+                    if result.rc:
+                        raise chroma_agent.chroma_common.lib.shell.CommandExecutionError(result.rc,
                                                                                          args,
-                                                                                         result[1],
-                                                                                         result[2])
-                    return result[1]
-            else:
+                                                                                         result.stdout,
+                                                                                         result.stderr)
+                    return result.stdout
+            except KeyError:
                 raise OSError(2, 'No such file or directory', args[0])
 
-        self._old_try_run = chroma_agent.chroma_common.lib.shell.try_run
-        chroma_agent.chroma_common.lib.shell.try_run = fake_try_run
+        assert 'fake' not in str(chroma_agent.chroma_common.lib.shell.try_run)
+        mock.patch('chroma_agent.chroma_common.lib.shell.try_run', fake_try_run).start()
 
         def fake_run(args):
-            self._command_history.append(args)
-            if tuple(args) in self.results:
-                result = self.results[tuple(args)]
+            args = tuple(args)
+            self._commands_history.append(args)
 
-                if type(result) == str:
-                    return (0, self.results[tuple(args)], 0)
-                else:
-                    return result
-            else:
+            try:
+                result = self._get_command(args)
+
+                return result.rc, result.stdout, result.stderr
+            except KeyError:
                 return (2, "", 'No such file or directory')
 
-        self._old_run = chroma_agent.chroma_common.lib.shell.run
-        chroma_agent.chroma_common.lib.shell.run = fake_run
+        mock.patch('chroma_agent.chroma_common.lib.shell.run', fake_run).start()
 
-    def assertRan(self, command):
-        self.assertIn(command, self._command_history)
+        self.addCleanup(mock.patch.stopall)
 
-    def tearDown(self):
-        chroma_agent.chroma_common.lib.shell.try_run = self._old_try_run
-        chroma_agent.chroma_common.lib.shell.run = self._old_run
+    def _get_command(self, args):
+        for command in self._commands:
+            if command.args == args:
+                return command
+
+        raise KeyError
+
+    def assertRanCommand(self, args):
+        self._get_command(args)
+
+    def assertRanAllCommandsInOrder(self):
+        self.assertEqual(len(self._commands), len(self._commands_history))
+
+        for ran, expected_args in zip(self._commands, self._commands_history):
+            self.assertEqual(ran.args, expected_args)
+
+    def assertRanAllCommands(self):
+        self.assertEqual(len(self._commands), len(self._commands_history))
+
+        for args in self._commands_history:
+            self.assertRanCommand(args)
+
+    def add_commands(self, *commands):
+        for command in commands:
+            self._commands.append(command)
+
+    def add_command(self, args, rc = 0, stdout = "", stderr = ""):
+        self.add_commands(CommandCaptureCommand(args, rc, stdout, stderr))

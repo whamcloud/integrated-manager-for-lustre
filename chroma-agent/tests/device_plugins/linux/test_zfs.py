@@ -3,7 +3,7 @@ from mock import patch
 from chroma_agent.device_plugins.linux import ZfsDevices
 from chroma_agent.device_plugins.linux import BlockDevices
 from tests.device_plugins.linux.test_linux import LinuxAgentTests
-from tests.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 
 class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
@@ -72,17 +72,16 @@ class TestZfs(LinuxAgentTests, CommandCaptureTestCase):
         return zfs_devices
 
     def test_imported_zfs(self):
-        self.results = {
-            ("zpool", "list", "-H", "-o", "name,size,guid,health"): (0, """
+        self.add_commands(CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health"), stdout="""
     zfsPool1        1T    1234567890ABCDE    ONLINE
-    zfsPool2        1G    111111111111111    OFFLINE\n""", ""),
-            ("zfs", "list", "-H", "-o", "name,avail,guid"): (0, """
+    zfsPool2        1G    111111111111111    OFFLINE\n"""),
+                          CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""
     zfsPool1        1T    1234567890ABCDE
     zfsPool1/mgt    1T    ABCDEF123456789
     zfsPool1/mgs    1T    AAAAAAAAAAAAAAA
     zfsPool2        1G    111111111111111
-    zfsPool2/mgt    1G    222222222222222\n""", ""),
-            ("zpool", "status", "zfsPool1"): (0, """ pool: zpool1
+    zfsPool2/mgt    1G    222222222222222\n"""),
+                          CommandCaptureCommand(("zpool", "status", "zfsPool1"), stdout=""" pool: zpool1
  state: ONLINE
   scan: none requested
 config:
@@ -92,8 +91,7 @@ config:
 	  scsi-SCSI_DISK_1  ONLINE       0     0     0
 
 errors: No known data errors)"""),
-            ("zpool", "import"): (1, "", "")
-        }
+                          CommandCaptureCommand(("zpool", "import"), rc=1))
 
         zfs_devices = self._setup_zfs_devices()
 
@@ -102,15 +100,16 @@ errors: No known data errors)"""),
         self.assertEqual(zfs_devices.zvols, self.zfs_results['zvols'])
 
     def test_export_zfs(self):
-        self.results = {
-            ("zpool", "list", "-H", "-o", "name,size,guid,health"): (0, "", ""),
-            ("zpool", "list", "-H", "-o", "name,size,guid,health", "zfsPool1"): (0, """
-    zfsPool1        1T    1234567890ABCDE    ONLINE\n""", ""),
-            ("zfs", "list", "-H", "-o", "name,avail,guid"): (0, """
+        self.add_commands(
+            CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health")),
+            CommandCaptureCommand(("zpool", "list", "-H", "-o", "name,size,guid,health", "zfsPool1"),
+                                  stdout="""
+    zfsPool1        1T    1234567890ABCDE    ONLINE\n"""),
+            CommandCaptureCommand(("zfs", "list", "-H", "-o", "name,avail,guid"), stdout="""
     zfsPool1        1T    1234567890ABCDE
     zfsPool1/mgt    1T    ABCDEF123456789
-    zfsPool1/mgs    1T    AAAAAAAAAAAAAAA\n""", ""),
-            ("zpool", "status", "zfsPool1"): (0, """ pool: zpool1
+    zfsPool1/mgs    1T    AAAAAAAAAAAAAAA\n"""),
+            CommandCaptureCommand(("zpool", "status", "zfsPool1"), stdout=""" pool: zpool1
  state: ONLINE
   scan: none requested
 config:
@@ -120,7 +119,7 @@ config:
 	  scsi-SCSI_DISK_1  ONLINE       0     0     0
 
 errors: No known data errors)"""),
-            ("zpool", "import"): (0, """pool: zfsPool1
+            CommandCaptureCommand(("zpool", "import"), stdout="""pool: zfsPool1
      id: 1234567890ABCDE
   state: ONLINE
  action: The pool can be imported using its name or numeric identifier.
@@ -145,12 +144,11 @@ errors: No known data errors)"""),
  config:
 
 	zfsPool3  ONLINE
-	  scsi-SCSI_DISK_3  ONLINE""", ""),
-            ("zpool", "list", "-H", "-o", "name"): (0, "", ""),
-            ("zpool", "import", "-f", "-o", "readonly=on", "zfsPool1"): (0, "", ""),
-            ("zpool", "export", "zfsPool1"): (0, "", ""),
-            ("zpool", "import", "-f", "-o", "readonly=on", "zfsPool3"): (1, "", "cannot import 'zfsPool3': no such pool available")
-        }
+	  scsi-SCSI_DISK_3  ONLINE"""),
+            CommandCaptureCommand(("zpool", "list", "-H", "-o", "name")),
+            CommandCaptureCommand(("zpool", "import", "-f", "-o", "readonly=on", "zfsPool1")),
+            CommandCaptureCommand(("zpool", "export", "zfsPool1")),
+            CommandCaptureCommand(("zpool", "import", "-f", "-o", "readonly=on", "zfsPool3"), rc=1, stderr="cannot import 'zfsPool3': no such pool available"))
 
         zfs_devices = self._setup_zfs_devices()
 

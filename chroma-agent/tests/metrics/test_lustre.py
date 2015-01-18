@@ -6,13 +6,13 @@ from chroma_agent.device_plugins.audit.local import LocalAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, DISABLE_BRW_STATS
 
 from tests.test_utils import PatchedContextTestCase
-from tests.test_utils import patch_run
+from tests.command_capture_testcase import CommandCaptureTestCase
 
-CMD = ["lctl", "get_param", "lov.lustre-*.target_obd"]
+CMD = ("lctl", "get_param", "lov.lustre-*.target_obd")
 lctl_output = "lov.lustre-MDT0000-mdtlov.target_obd=\n0: lustre-OST0000_UUID INACTIVE\n1: lustre-OST0001_UUID INACTIVE\n2: lustre-OST0002_UUID ACTIVE\n3: lustre-OST0003_UUID ACTIVE\n"
 
 
-class TestLocalLustreMetrics(PatchedContextTestCase):
+class TestLocalLustreMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def setUp(self):
         self.tests = os.path.join(os.path.dirname(__file__), '..')
         super(TestLocalLustreMetrics, self).setUp()
@@ -21,10 +21,12 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
         """Test that the various MGS/MDS metrics are collected and aggregated."""
         self.test_root = os.path.join(self.tests,
                                      "data/lustre_versions/2.0.66/mds_mgs")
-        self.setUp()
+
         audit = LocalAudit()
-        with patch_run(expected_args=CMD, stdout=lctl_output):
-            metrics = audit.metrics()['raw']['lustre']
+
+        self.add_command(CMD, stdout=lctl_output)
+
+        metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-MDT0000']['filesfree'], 511954)
         self.assertEqual(metrics['target']['MGS']['num_exports'], 4)
         self.assertEqual(metrics['lnet']['send_count'], 218887)
@@ -33,10 +35,12 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
         """Test that the HSM metrics are collected and aggregated."""
         self.test_root = os.path.join(self.tests,
                                      "data/lustre_versions/2.5.0/mds")
-        self.setUp()
+
         audit = LocalAudit()
-        with patch_run(expected_args=CMD, stdout=lctl_output):
-            metrics = audit.metrics()['raw']['lustre']['target']['lustre-MDT0000']['hsm']
+
+        self.add_command(CMD, stdout=lctl_output)
+
+        metrics = audit.metrics()['raw']['lustre']['target']['lustre-MDT0000']['hsm']
         self.assertEqual(metrics['agents']['idle'], 1)
         self.assertEqual(metrics['agents']['busy'], 1)
         self.assertEqual(metrics['agents']['total'], 2)
@@ -50,7 +54,7 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
         """Test that the various OSS metrics are collected and aggregated."""
         self.test_root = os.path.join(self.tests,
                                       "data/lustre_versions/2.0.66/oss")
-        self.setUp()
+
         audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 127575)
@@ -60,7 +64,7 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
         """Test that the various OSS metrics are collected and aggregated (2.4+)."""
         self.test_root = os.path.join(self.tests,
                                       "data/lustre_versions/2.5.0/oss")
-        self.setUp()
+
         audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-OST0000']['filesfree'], 524040)
@@ -73,7 +77,7 @@ class TestLocalLustreMetrics(PatchedContextTestCase):
         """
         self.test_root = os.path.join(self.tests,
                                       "data/lustre_versions/2.5.0/oss")
-        self.setUp()
+
         audit = LocalAudit()
         metrics = audit.metrics()['raw']['lustre']
         self.assertEqual(metrics['target']['lustre-OST0000']['stats']['read_bytes']['units'], "bytes")
@@ -223,14 +227,17 @@ dm_mod 75539 2 dm_mirror,dm_log, Live 0xffffffffa0000000
         shutil.rmtree(self.test_root)
 
 
-class TestMdtMetrics(PatchedContextTestCase):
+class TestMdtMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def setUp(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         self.test_root = os.path.join(tests, "data/lustre_versions/2.0.66/mds_mgs")
         super(TestMdtMetrics, self).setUp()
+
         self.audit = MdtAudit()
-        with patch_run(expected_args=CMD, stdout=lctl_output):
-            self.metrics = self.audit.metrics()['raw']['lustre']['target']
+
+        self.add_command(CMD, stdout=lctl_output)
+
+        self.metrics = self.audit.metrics()['raw']['lustre']['target']
 
     def test_get_client_count(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
