@@ -30,8 +30,9 @@ for pkg in e2fsprogs-devel libcom_err-devel kernel-headers kernel-devel; do
 done
 
 yum -y install lustre-modules-[0-9]*.rpm lustre-[0-9]*.rpm \
-       lustre-osd-ldiskfs-[0-9]*.rpm e2fsprogs-[0-9]*.rpm $PKGS \
-       e2fsprogs-libs-[0-9]*.rpm libcom_err-[0-9]*.rpm libss-[0-9]*.rpm
+       lustre-osd-ldiskfs-[0-9]*.rpm lustre-osd-ldiskfs-mount-[0-9]*.rpm \
+       e2fsprogs-[0-9]*.rpm $PKGS e2fsprogs-libs-[0-9]*.rpm \
+       libcom_err-[0-9]*.rpm libss-[0-9]*.rpm
 
 echo "You need to reboot to activate the Lustre kernel"
 
@@ -57,7 +58,7 @@ _rpmdir=\$(rpm --eval %_rpmdir)
 yum -y install dkms-*.el6.noarch.rpm \
                zfs-dkms-*.noarch.rpm spl-dkms-*.noarch.rpm \
                lustre-dkms-*.noarch.rpm lustre-osd-zfs-[0-9]*.rpm \
-               lustre-[0-9]*.rpm \
+               lustre-osd-zfs-mount-[0-9]*.rpm lustre-[0-9]*.rpm \
                kernel-devel-\$(uname -r) kernel-headers-\$(uname -r) \
                \$_rpmdir/x86_64/spl-$ZFS_VERSION.el6.x86_64.rpm \
                \$_rpmdir/x86_64/libnvpair1-$ZFS_VERSION.el6.x86_64.rpm \
