@@ -1,15 +1,19 @@
+import os
+import mock
+
+from chroma_agent.device_plugins import lustre
+from tests.command_capture_testcase import CommandCaptureTestCase
 from django.utils import unittest
-from mock import patch
 
 from chroma_agent.device_plugins.lustre import LustrePlugin
 
 
 class MockLocalAudit():
     def metrics(self):
-        return {'metrics': TestLustreScan.values['metrics']}
+        return {'metrics': TestLustreAudit.values['metrics']}
 
     def properties(self):
-        return {'properties': TestLustreScan.values['properties']}
+        return {'properties': TestLustreAudit.values['properties']}
 
 
 class MockActionPluginManager():
@@ -17,43 +21,43 @@ class MockActionPluginManager():
     pass
 
 
-class TestLustreScan(unittest.TestCase):
+class TestLustreAudit(unittest.TestCase):
     def mock_capabilities(self):
-        return {'capabilities': TestLustreScan.values['capabilities']}
+        return {'capabilities': TestLustreAudit.values['capabilities']}
 
     def mock_get_resource_locations(self):
-        return {'resource locations': TestLustreScan.values['resource_locations']}
+        return {'resource locations': TestLustreAudit.values['resource_locations']}
 
     def mock_scan_mounts(self):
-        return {'scan_mounts': TestLustreScan.values['scan_mounts']}
+        return {'scan_mounts': TestLustreAudit.values['scan_mounts']}
 
     def mock_scan_packages(self):
-        return {'scan_packages': TestLustreScan.values['scan_packages']}
+        return {'scan_packages': TestLustreAudit.values['scan_packages']}
 
     def setUp(self):
-        self.addCleanup(patch.stopall)
+        self.addCleanup(mock.patch.stopall)
 
-        TestLustreScan.values = {'capabilities': True,
+        TestLustreAudit.values = {'capabilities': True,
                                  'resource_locations': True,
                                  'scan_mounts': True,
                                  'scan_packages': True,
                                  'metrics': True,
                                  'properties': True}
 
-        patch('chroma_agent.plugin_manager.ActionPluginManager',
-              MockActionPluginManager).start()
+        mock.patch('chroma_agent.plugin_manager.ActionPluginManager',
+                   MockActionPluginManager).start()
 
-        patch('chroma_agent.action_plugins.manage_targets.get_resource_locations',
-              self.mock_get_resource_locations).start()
+        mock.patch('chroma_agent.action_plugins.manage_targets.get_resource_locations',
+                   self.mock_get_resource_locations).start()
 
-        patch('chroma_agent.device_plugins.audit.local.LocalAudit',
-              MockLocalAudit).start()
+        mock.patch('chroma_agent.device_plugins.audit.local.LocalAudit',
+                   MockLocalAudit).start()
 
-        patch('chroma_agent.device_plugins.lustre.LustrePlugin._scan_mounts',
-              self.mock_scan_mounts).start()
+        mock.patch('chroma_agent.device_plugins.lustre.LustrePlugin._scan_mounts',
+                   self.mock_scan_mounts).start()
 
-        patch('chroma_agent.device_plugins.lustre.scan_packages',
-              self.mock_scan_packages).start()
+        mock.patch('chroma_agent.device_plugins.lustre.scan_packages',
+                   self.mock_scan_packages).start()
 
         self.lustre_plugin = LustrePlugin(None)
 
@@ -76,8 +80,8 @@ class TestLustreScan(unittest.TestCase):
     def test_audit_delta_no_match(self):
         result_all = self.lustre_plugin.update_session()
 
-        for key in TestLustreScan.values:
-            TestLustreScan.values[key] = not TestLustreScan.values[key]
+        for key in TestLustreAudit.values:
+            TestLustreAudit.values[key] = not TestLustreAudit.values[key]
 
         result_match = self.lustre_plugin.update_session()
 
@@ -100,3 +104,26 @@ class TestLustreScan(unittest.TestCase):
                 self.assertGreater(result_none[key], result_all[key])
             else:
                 self.assertEqual(result_all[key], result_none[key])
+
+
+class TestLustreScanPackages(CommandCaptureTestCase):
+    '''
+    This is a very incomplete test of the scan packages. But is at least some test that I added, it ensures the expected commands are run
+    and does a loose check of the scanning of the repo file.
+    '''
+    def test_scan_packages(self):
+        repo_list = ['lustre-client', 'lustre', 'iml-agent', 'e2fsprogs', 'robinhood']
+        lustre.REPO_PATH = os.path.join(os.path.dirname(__file__), '../data/device_plugins/lustre/Intel-Lustre-Agent.repo')
+
+        lustre.rpm_lib = mock.Mock()
+
+        self.add_command(('yum', 'clean', 'all', '--enablerepo=*'))
+
+        for repo in repo_list:
+            self.add_command(('repoquery', '--disablerepo=*', '--enablerepo=%s' % repo, '-a', '--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}'))
+
+        scanned_packages = lustre.scan_packages()
+
+        self.assertEqual(scanned_packages.keys(), repo_list)
+
+        self.assertRanAllCommandsInOrder()

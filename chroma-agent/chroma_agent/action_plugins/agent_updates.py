@@ -32,7 +32,7 @@ from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
 from chroma_agent import utils
-
+from chroma_agent.lib.yum_utils import yum_util, yum_check_update
 
 REPO_CONTENT = """
 [Intel Lustre Manager]
@@ -57,46 +57,6 @@ def configure_repo(remote_url, repo_path=REPO_PATH):
 def unconfigure_repo(repo_path=REPO_PATH):
     if os.path.exists(repo_path):
         os.remove(repo_path)
-
-
-def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates=False):
-
-    if fromrepo and enablerepo:
-        raise ValueError("Cannot provide fromrepo and enablerepo simultaneously")
-
-    repo_arg = []
-    if fromrepo:
-        repo_arg = ['--disablerepo=*', '--enablerepo=%s' % ','.join(fromrepo)]
-    elif enablerepo:
-        repo_arg = ['--enablerepo=%s' % ','.join(enablerepo)]
-    if narrow_updates and action == 'query':
-        repo_arg.extend(['--pkgnarrow=updates', '-a'])
-
-    if action == 'clean':
-        cmd = ['yum', 'clean', 'all']
-    elif action == 'install':
-        cmd = ['yum', 'install', '-y'] + repo_arg + list(packages)
-    elif action == 'remove':
-        cmd = ['yum', 'remove', '-y'] + repo_arg + list(packages)
-    elif action == 'update':
-        cmd = ['yum', 'update', '-y'] + repo_arg + list(packages)
-    elif action == 'requires':
-        cmd = ['repoquery', '--requires'] + repo_arg + list(packages)
-    elif action == 'query':
-        cmd = ['repoquery'] + repo_arg + list(packages)
-
-    # This is a poor solution for HYD-3855 but not one that carries any known cost.
-    # We sometimes see intermittent failures in test, and possibly out of test, that occur
-    # 1 in 50 (estimate) times. yum commands are idempotent and so trying the command three
-    # times has no downside and changes the estimated chance of fail to 1 in 12500.
-    for hyd_3885 in range(2, -1, -1):
-        try:
-            return shell.try_run(cmd)
-        except shell.CommandExecutionError as cee:
-            daemon_log.info("HYD-3885 Retrying yum command '%s'" % " ".join(cmd))
-            if hyd_3885 == 0:
-                daemon_log.info("HYD-3885 Retry yum command failed '%s'" % " ".join(cmd))
-                raise cee                       # Out of retries so raise for the caller..
 
 
 def set_profile(profile_name):
@@ -158,7 +118,7 @@ def update_packages(repos, packages):
              given by the lustre device plugin
     """
 
-    shell.try_run(['yum', 'clean', 'all'])
+    yum_util('clean')
 
     updates_stdout = yum_util('query', fromrepo=repos, narrow_updates=True)
     update_packages = updates_stdout.strip().split("\n")
@@ -200,6 +160,9 @@ def install_packages(repos, packages, force_dependencies=False):
                                if more recent versions are available.
     :return: A package report of the format given by the lustre device plugin
     """
+
+    yum_util('clean')
+
     if force_dependencies:
         out = yum_util('requires', enablerepo=repos, packages=packages)
         force_installs = []
@@ -212,6 +175,14 @@ def install_packages(repos, packages, force_dependencies=False):
         yum_util('install', packages=force_installs, enablerepo=repos)
 
     yum_util('install', enablerepo=repos, packages=packages)
+
+    # So now we have installed the packages requested, we will also make sure that any installed packages we
+    # have that are already installed are updated to our presumably better versions.
+    update_packages = yum_check_update(repos)
+
+    if update_packages:
+        daemon_log.debug("The following packages need update after we installed IML packages %s" % update_packages)
+        yum_util('update', packages=update_packages, enablerepo=repos)
 
     return lustre.scan_packages()
 

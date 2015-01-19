@@ -4,6 +4,7 @@ import os
 import shutil
 from chroma_agent.device_plugins.audit.local import LocalAudit
 from chroma_agent.device_plugins.audit.lustre import LnetAudit, MdtAudit, MgsAudit, ObdfilterAudit, DISABLE_BRW_STATS
+from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
 
 from tests.test_utils import PatchedContextTestCase
 from tests.command_capture_testcase import CommandCaptureTestCase
@@ -242,6 +243,14 @@ class TestMdtMetrics(CommandCaptureTestCase, PatchedContextTestCase):
     def test_get_client_count(self):
         tests = os.path.join(os.path.dirname(__file__), '..')
         test_root = os.path.join(tests, "data/lustre_versions/2.5.0/mdt/proc/fs/lustre/mdt/lustre-MDT0000/exports")
+
+        # This mungling of files etc is needed until http://review.whamcloud.com/#/c/13091/ is landed.
+        # I will rebase http://review.whamcloud.com/#/c/13091/ on master once this patch lands and land
+        # http://review.whamcloud.com/#/c/13091/ after we release 2.2 (Chris)
+        for file in ['0@lo/uuid', '192.168.120.164@tcp/uuid']:
+            target_file = os.path.join(test_root, file)
+            self.add_command(('cat', target_file), stdout = "\n".join(FileSystemMixin().read_lines(target_file)))
+
         client_count = self.audit.get_client_count(test_root, "lustre-MDT0000-target")
         self.assertEqual(client_count, 1)
 

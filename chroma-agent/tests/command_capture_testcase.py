@@ -10,8 +10,7 @@ CommandCaptureCommand.__new__.__defaults__ = ([], 0, '', '')
 
 class CommandCaptureTestCase(unittest.TestCase):
     def setUp(self):
-        self._commands = []
-        self._commands_history = []
+        self.reset_command_capture()
 
         def fake_try_run(args):
             args = tuple(args)
@@ -50,6 +49,11 @@ class CommandCaptureTestCase(unittest.TestCase):
         self.addCleanup(mock.patch.stopall)
 
     def _get_command(self, args):
+        '''
+        return the command whose args match those given.
+        :param args: Tuple of the arguments of the command
+        :return: The command requested or raise a KeyError
+        '''
         for command in self._commands:
             if command.args == args:
                 return command
@@ -57,23 +61,65 @@ class CommandCaptureTestCase(unittest.TestCase):
         raise KeyError
 
     def assertRanCommand(self, args):
+        '''
+        assert that the command made up of the args passed was executed.
+        :param args: Tuple of the arguments of the command
+        '''
         self._get_command(args)
 
     def assertRanAllCommandsInOrder(self):
+        '''
+        assert that all the commands expected were run in the order expected.
+        '''
         self.assertEqual(len(self._commands), len(self._commands_history))
 
         for ran, expected_args in zip(self._commands, self._commands_history):
             self.assertEqual(ran.args, expected_args)
 
     def assertRanAllCommands(self):
+        '''
+        assert that all the commands expected were run, the order is not important.
+        '''
         self.assertEqual(len(self._commands), len(self._commands_history))
 
         for args in self._commands_history:
             self.assertRanCommand(args)
 
     def add_commands(self, *commands):
+        '''
+        Add a list of command that is expected to be run.
+        :param *commands: CommandCaptureCommand args of commands to be run
+        :return: No return value
+        '''
         for command in commands:
             self._commands.append(command)
 
     def add_command(self, args, rc = 0, stdout = "", stderr = ""):
+        '''
+        Add a single command that is expected to be run.
+        :param args: Tuple of the arguments of the command
+        :param rc: return of the command
+        :param stdout: stdout for the command
+        :param stderr: stderr for the command
+        :return: No return value
+        '''
         self.add_commands(CommandCaptureCommand(args, rc, stdout, stderr))
+
+    @property
+    def commands_ran_count(self):
+        return len(self._commands_history)
+
+    def reset_command_capture(self):
+        '''
+        Reset the command capture to the initialized state.
+        :return: None
+        '''
+        self._commands = []
+        self.reset_command_capture_logs()
+
+    def reset_command_capture_logs(self):
+        '''
+        Reset the command capture logs to the initialized state.
+        :return: None
+        '''
+        self._commands_history = []

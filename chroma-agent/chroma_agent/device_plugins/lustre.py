@@ -36,6 +36,7 @@ from chroma_agent import plugin_manager
 from chroma_agent.device_plugins.linux import LinuxDevicePlugin
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 import chroma_agent.lib.normalize_device_path as ndp
+from chroma_agent.lib.yum_utils import yum_util
 
 
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
@@ -49,6 +50,13 @@ VersionInfo = namedtuple('VersionInfo', ['epoch', 'version', 'release', 'arch'])
 
 REPO_PATH = "/etc/yum.repos.d/Intel-Lustre-Agent.repo"
 
+# import so that this module can be imported in pure python environments as well as on Linux.
+# Doing it this way means that rpm_lib can mocked.
+try:
+    import rpm as rpm_lib
+except:
+    rpm_lib = None
+
 
 @exceptionSandBox(console_log, None)
 def scan_packages():
@@ -56,10 +64,6 @@ def scan_packages():
     Interrogate the packages available from configured repositories, and the installation
     status of those packages.
     """
-
-    # Local import so that this module can be imported in pure python
-    # environments as well as on Linux.
-    import rpm
 
     # Look up what repos are configured
     # =================================
@@ -73,10 +77,11 @@ def scan_packages():
 
     # For all repos, enumerate packages in the repo
     # =============================================
-    shell.try_run(["yum", "--disablerepo=*", "--enablerepo=%s" % ",".join(repo_names), "clean", "all"])
+    yum_util('clean')
+
     for repo_name, packages in repo_packages.items():
         try:
-            stdout = shell.try_run(["repoquery", "--repoid=%s" % repo_name, "-a", "--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}"])
+            stdout = yum_util('repoquery', fromrepo = [repo_name])
 
             # Returning nothing means the package was not found at all and so we have no data to deliver back.
             if stdout:
@@ -97,7 +102,7 @@ def scan_packages():
 
     # For all packages named in the repos, get installed version if it is installed
     # =============================================================================
-    ts = rpm.TransactionSet()
+    ts = rpm_lib.TransactionSet()
     for repo_name, packages in repo_packages.items():
         for package_name, package_data in packages.items():
             headers = ts.dbMatch('name', package_name)
