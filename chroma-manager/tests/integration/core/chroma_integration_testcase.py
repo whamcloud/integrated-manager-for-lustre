@@ -265,7 +265,7 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertTrue(response.successful, response.text)
         return response.json['client_mount']
 
-    def get_shared_volumes(self, required_hosts = 2):
+    def get_shared_volumes(self, required_hosts):
         """
         Return a list of shared storage volumes (have a primary and secondary node)
         """
@@ -281,6 +281,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 ha_volumes.append(v)
 
         return ha_volumes
+
+    def wait_for_shared_volumes(self, expected_volumes, required_hosts):
+        self.wait_until_true(lambda: len(self.get_shared_volumes(required_hosts)) >= expected_volumes)
+
+        return self.get_shared_volumes(required_hosts)
 
     def get_usable_volumes(self):
         response = self.chroma_manager.get(

@@ -22,8 +22,7 @@ class TestYumUpdate(TestCreateFilesystem):
             config['lustre_servers'][3]['address']
         ])
 
-        volumes = self.get_shared_volumes(required_hosts = 4)
-        self.assertGreaterEqual(len(volumes), 4)
+        volumes = self.wait_for_shared_volumes(4, 4)
 
         mgt_volume = volumes[0]
         mdt_volume = volumes[1]

@@ -23,8 +23,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
 
         # Count how many of the reported Luns are ready for our test
         # (i.e. they have both a primary and a failover node)
-        ha_volumes = self.get_shared_volumes(required_hosts = 4)
-        self.assertGreaterEqual(len(ha_volumes), 4)
+        ha_volumes = self.wait_for_shared_volumes(4, 4)
 
         mgt_volume = ha_volumes[0]
         mdt_volume = ha_volumes[1]
@@ -270,9 +269,9 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
         host_1 = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
         host_2 = self.add_hosts([self.TEST_SERVERS[1]['address']])[0]
 
-        # Set volume mounts
-        ha_volumes = self.get_shared_volumes()
-        self.assertGreaterEqual(len(ha_volumes), 4)
+        # Wait for the host to have reported the volumes and discovered HA configuration.
+        ha_volumes = self.wait_for_shared_volumes(4, 2)
+
         self.set_volume_mounts(ha_volumes[0], host_1['id'], host_2['id'])
         self.set_volume_mounts(ha_volumes[1], host_1['id'], host_2['id'])
         self.set_volume_mounts(ha_volumes[2], host_2['id'], host_1['id'])

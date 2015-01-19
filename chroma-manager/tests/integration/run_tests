@@ -24,7 +24,7 @@ do
             export CONFIG_FILE="$OPTARG"
             num_opts=`expr $num_opts + 2`
             ;;
-        x) 
+        x)
             export XML_REPORT="$OPTARG"
             num_opts=`expr $num_opts + 2`
             ;;
