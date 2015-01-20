@@ -21,6 +21,9 @@
 
 
 import json
+import time
+import re
+
 from urlparse import urljoin
 
 from chroma_cli.exceptions import InvalidApiResource, UnsupportedFormat, NotFound, TooManyMatches, BadRequest, InternalError, UnauthorizedRequest, AuthenticationFailure, ApiConnectionError
@@ -163,9 +166,18 @@ class CommandMonitor(object):
         self.cmd = cmd
 
     def update(self, pause=1):
-        import time
         time.sleep(pause)
         self.cmd = self.api.endpoints['command'].show(self.cmd['id'])
+
+    def wait_complete(self):
+        '''
+        Wait for the cmd to actually complete. Upon completion return the command object
+        :return: The command object of the completed command.
+        '''
+        while not self.completed:
+            self.update()
+
+        return self.cmd
 
     @property
     def status(self):
@@ -185,7 +197,6 @@ class CommandMonitor(object):
     @property
     def incomplete_jobs(self):
         def _job_id(j_uri):
-            import re
             m = re.search(r"(\d+)/?$", j_uri)
             if m:
                 return m.group(1)
@@ -240,7 +251,6 @@ class ApiHandle(object):
         if not base_uri:
             return None
 
-        import re
         if not re.search(r"^http(s)?://", base_uri):
             base_uri = "https://" + base_uri
         if not re.search(r"/api(/?)$", base_uri):
@@ -445,6 +455,5 @@ class ApiEndpoint(object):
         Expose a "raw" get() with no error handling or decoding.
         """
         if not uri:
-            from urlparse import urljoin
             uri = urljoin(self.api_handle.base_url, self.uri)
         return self.api_handle.api_client.get(uri, **kwargs)

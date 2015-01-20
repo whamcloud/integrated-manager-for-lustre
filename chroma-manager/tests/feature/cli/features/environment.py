@@ -7,30 +7,35 @@ import mock
 import json
 
 from chroma_core.lib.util import chroma_settings
+from chroma_core.chroma_common.lib.name_value_list import NameValueList
 
 
 def patch_test_host_contact_task(context, result_attrs = {}):
     from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
-    defaults = {
-        'resolve': True,
-        'ping': True,
-        'auth': True,
-        'agent': True,
-        'reverse_resolve': True,
-        'reverse_ping': True,
-    }
+    status = NameValueList([{'resolve': True},
+                            {'ping': True},
+                            {'auth': True},
+                            {'hostname_valid': True},
+                            {'fqdn_resolves': True},
+                            {'fqdn_matches': True},
+                            {'reverse_resolve': True},
+                            {'reverse_ping': True},
+                            {'yum_valid_repos': True},
+                            {'yum_can_update': True},
+                            {'openssl': True}])
+
+    status.add(result_attrs)
 
     # Don't overwrite the original reference!
     if not 'old_test_host_contact' in context:
         context.old_test_host_contact = JobSchedulerClient.test_host_contact
 
     def mock_test_host_contact(address, root_pw, pkey, pkey_pw):
-        from chroma_core.models import Command, Job, StepResult
-        from chroma_core.models import TestHostConnectionStep
+        from chroma_core.models import StepResult, TestHostConnectionJob, Command, TestHostConnectionStep
 
         command = Command.objects.create(message="Mock Test Host Contact", complete=True)
-        job = Job.objects.create(state='complete')
+        job = TestHostConnectionJob.objects.create(state='complete', address=address, root_pw=None, pkey=None, pkey_pw=None)
         command.jobs.add(job)
         StepResult.objects.create(job = job,
                                   backtrace = "an error",
@@ -39,11 +44,12 @@ def patch_test_host_contact_task(context, result_attrs = {}):
                                   step_index = 0,
                                   step_count = 1,
                                   state = 'complete',
-                                  result = json.dumps(dict([('address', address)] + result.items())))
+                                  result = json.dumps({'address': address,
+                                                       'status': status.collection(),
+                                                       'valid': True}))
 
         return command
 
-    result = dict(defaults.items() + result_attrs.items())
     JobSchedulerClient.test_host_contact = mock.Mock(side_effect = mock_test_host_contact)
 
 

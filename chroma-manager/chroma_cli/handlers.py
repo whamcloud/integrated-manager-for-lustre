@@ -20,12 +20,12 @@
 # express and approved by Intel in writing.
 
 
-import json
 from itertools import product
 from functools import partial
 from argparse import REMAINDER, SUPPRESS
 
 from chroma_cli.output import StandardFormatter
+from chroma_cli.api import CommandMonitor
 from chroma_cli.exceptions import InvalidVolumeNode, TooManyMatches, BadUserInput, NotFound, StateChangeConfirmationRequired, JobConfirmationRequired, InvalidStateChange, InvalidJobError, ReformatVolumesConfirmationRequired
 
 
@@ -312,8 +312,6 @@ class ServerHandler(Handler):
         super(ServerHandler, self).list(ns, endpoint, **kwargs)
 
     def test_host(self, ns, endpoint=None, **kwargs):
-        from chroma_core.models import Job, StepResult
-
         failure_text = {
             'auth': "The manager was unable to login to %s on your behalf",
             'agent': "The manager was unable to invoke the agent on %s",
@@ -325,20 +323,31 @@ class ServerHandler(Handler):
             'fqdn_resolves': "The self-reported fqdn on %s does not resolve on the manager",
             'fqdn_matches': "The self-reported fqdn on %s does not resolve to the same address as the hostname supplied via CLI",
             'yum_valid_repos': "The yum configuration on %s contains invalid repository entries (e.g. EPEL)",
-            'yum_can_update': "Unable to verify that %s is able to access any yum mirrors for vendor packages"
+            'yum_can_update': "Unable to verify that %s is able to access any yum mirrors for vendor packages",
+            'openssl': "Unable to verify that OpenSSL is working as expected for %s"
         }
 
-        content = self.api.endpoints['test_host'].create(**kwargs)
+        command = self.api.endpoints['test_host'].create(**kwargs)
+        self.output.command(command)
 
-        job = Job.objects.filter(command__pk = content['id'])[0]
-        step_result = StepResult.objects.filter(job__pk = job.id)[0]
-        test_results = json.loads(step_result.result)
+        # Actually the command above may just return if the user used nowait so we need to make sure that the command has really
+        # completed and if not wait for it to complete.
+        command = CommandMonitor(self.api, command).wait_complete()
 
-        if not all(test_results.values()):
-            failures = []
-            for failkey in [k for k, v in test_results.items() if not v]:
-                failures.append(failure_text[failkey] % test_results['address'])
-            message = "Failed sanity checks (use --force to add anyway):"
+        if command['cancelled']:
+            raise BadUserInput("\nTest host connection command cancelled for %s" % kwargs['address'])
+        elif command['errored']:
+            raise BadUserInput("\nTest host connection command errored for %s" % kwargs['address'])
+
+        job = self.api.endpoints['job'].get_decoded(command['jobs'][0])
+        step_result = job['step_results'].values()[0]
+
+        failures = []
+        for failkey in [result['name'] for result in step_result['status'] if not result['value']]:
+            failures.append(failure_text[failkey] % step_result['address'])
+
+        if failures:
+            message = "Failed sanity checks (use --force to add anyway): "
             raise BadUserInput("\n".join([message] + failures))
 
     def add(self, ns):
