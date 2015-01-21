@@ -79,7 +79,7 @@ class TestHostResource(ChromaApiTestCase):
             host.save()
 
         with create_host_ssh_patch:
-            response = self.api_client.put(self.RESOURCE_PATH, data={'objects': [{'host': host.id,
+            response = self.api_client.put(self.RESOURCE_PATH, data={'objects': [{'address': host.address,
                                                                                   'server_profile': '/api/server_profile/test_profile/'} for host in ManagedHost.objects.all()]})
 
         self.assertHttpAccepted(response)

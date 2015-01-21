@@ -249,8 +249,8 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation)
 
         def _update_action(self, data, request, **kwargs):
             # For simplicity lets fake the kwargs if we can, this is for when we are working from objects
-            if 'host' in data:
-                host = ManagedHost.objects.get(id = data['host'])
+            if 'address' in data:
+                host = ManagedHost.objects.get(address = data['address'])
             elif 'pk' in kwargs:
                 host = self.cached_obj_get(request = request, **self.remove_api_resource_names(kwargs))
             else:

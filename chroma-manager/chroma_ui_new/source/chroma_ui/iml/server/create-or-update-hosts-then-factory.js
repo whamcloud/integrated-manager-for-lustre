@@ -47,16 +47,14 @@ angular.module('server')
 
           var toPost = objects
             .filter(_.compose(_.inverse, findByAddress(servers)))
-            .map(function addDefaultProfile (object) {
-              object.server_profile = defaultProfileResourceUri;
-              return object;
-            });
+            .map(addDefaultProfile);
 
           var toPostPromise = hostWorkerThen(spark, 'sendPost', toPost);
 
           var undeployedServers = _.where(servers, { state: 'undeployed' });
           var toPut = _.difference(objects, toPost)
-            .filter(findByAddress(undeployedServers));
+            .filter(findByAddress(undeployedServers))
+            .map(addDefaultProfile);
 
           var toPutPromise = hostWorkerThen(spark, 'sendPut', toPut);
 
@@ -96,6 +94,17 @@ angular.module('server')
           spark.end();
         });
     };
+
+    /**
+     * Add the default server profile
+     * when "adding" a host.
+     * @param {Object} server
+     * @returns {Object}
+     */
+    function addDefaultProfile (server) {
+      server.server_profile = defaultProfileResourceUri;
+      return server;
+    }
 
     /**
      * Creates or updates servers.

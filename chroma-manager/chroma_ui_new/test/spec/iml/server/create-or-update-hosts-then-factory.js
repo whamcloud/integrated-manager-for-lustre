@@ -158,8 +158,15 @@ describe('create or update hosts then', function () {
       expect(requestSocket.plan().sendPut).toHaveBeenCalledOnceWith('/host', {
         json: {
           objects: [
-            { auth_type : 'existing_keys_choice', address : 'storage0.localdomain' },
-            { auth_type : 'existing_keys_choice', address : 'storage1.localdomain' }
+            {
+              auth_type: 'existing_keys_choice',
+              address: 'storage0.localdomain',
+              server_profile: '/api/server_profile/default/'
+            },
+            { auth_type: 'existing_keys_choice',
+              address: 'storage1.localdomain',
+              server_profile: '/api/server_profile/default/'
+            }
           ]
         }
       }, true);
@@ -228,7 +235,11 @@ describe('create or update hosts then', function () {
       expect(requestSocket.plan().sendPut).toHaveBeenCalledOnceWith('/host', {
         json: {
           objects: [
-            { auth_type : 'existing_keys_choice', address : 'storage0.localdomain' }
+            {
+              auth_type: 'existing_keys_choice',
+              address: 'storage0.localdomain',
+              server_profile: '/api/server_profile/default/'
+            }
           ]
         }
       }, true);
