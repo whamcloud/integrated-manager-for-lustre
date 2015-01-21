@@ -237,7 +237,7 @@ def unconfigure_pacemaker():
 
 
 def _unconfigure_fencing():
-    cibadmin(["--delete", "--obj_type", "resources", "-X",
+    cibadmin(["--delete", "-o", "resources", "-X",
               "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
 
 
@@ -262,9 +262,9 @@ def delete_node(nodename):
         if name == nodename:
             break
     shell.try_run(['crm_node', '--force', '-R', node_id])
-    cibadmin(["--delete", "--obj_type", "nodes", "-X",
+    cibadmin(["--delete", "-o", "nodes", "-X",
               "<node uname=\"%s\"/>" % nodename])
-    cibadmin(["--delete", "--obj_type", "nodes", "--crm_xml",
+    cibadmin(["--delete", "-o", "nodes", "--crm_xml",
               "<node_state uname=\"%s\"/>" % nodename])
 
 
