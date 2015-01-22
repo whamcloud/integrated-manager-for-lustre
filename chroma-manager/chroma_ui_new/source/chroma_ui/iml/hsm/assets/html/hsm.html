@@ -1,7 +1,6 @@
 <h3 class="page-header"><i class="fa fa-files-o"></i> HSM</h3>
 <div class="container container-full">
-  <div ng-controller="HsmCtrl" class="with-transitions">
-
+  <div class="with-transitions">
     <div class="controls">
       Displaying HSM information for:
       <select ng-model="hsm.selectedFileSystem" ng-options="f.label for f in hsm.fileSystems.objects track by f.id" ng-change="onFileSystemSelection()">
