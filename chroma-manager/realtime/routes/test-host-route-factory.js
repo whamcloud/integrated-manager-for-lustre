@@ -27,6 +27,42 @@ module.exports = function testHostRouteFactory (router, request, loop, logger, Q
 
   return function testHostRoute () {
     /**
+     * Given some command info, asks for a newer representation of the command.
+     * @param {Object} headers
+     * @param {Array} ids
+     * @returns {Object}
+     */
+    var askAgain = _.curry(function askAgain (headers, ids) {
+      return request.get('/command', {
+        qs: {
+          id__in: ids,
+          limit: 0
+        },
+        headers: headers
+      });
+    });
+
+    /**
+     * Returns jobs if the command has finished,
+     * otherwise undefined
+     * @param {Object} headers
+     * @param {Boolean} finished
+     * @param {Array} jobIds
+     * @returns {Object|undefined}
+     */
+    var getJobsOrUndefined = _.curry(function getJobsOrUndefined (headers, finished, jobIds) {
+      if (finished)
+        return request.get('/job', {
+          jsonMask: 'objects(step_results,steps)',
+          qs: {
+            id__in: jobIds,
+            limit: 0
+          },
+          headers: headers
+        });
+    });
+
+    /**
      * Handles any posts to /test_host.
      * @param {Object} req
      * @param {Object} resp
@@ -38,6 +74,8 @@ module.exports = function testHostRouteFactory (router, request, loop, logger, Q
 
       var cached, pendingCommandPromise;
 
+      var headers = req.data.headers || {};
+
       var ifExists = _.if(_.exists);
 
       var finish = loop(function handler (next) {
@@ -45,7 +83,7 @@ module.exports = function testHostRouteFactory (router, request, loop, logger, Q
 
         if (pendingCommandPromise)
           objectsPromise = pendingCommandPromise
-            .then(askAgain);
+            .then(askAgain(headers));
         else
           objectsPromise = request.post('/test_host', req.data)
             .then(_.unwrapResponse(_.fmapProp('command')));
@@ -69,7 +107,7 @@ module.exports = function testHostRouteFactory (router, request, loop, logger, Q
           .then(_.fmap(extractIds));
 
         Q.all([isCommandFinishedPromise, jobIds])
-          .spread(getJobsOrUndefined)
+          .spread(getJobsOrUndefined(headers))
           .then(ifExists(_.unwrapResponse(_.fmap(function (job) {
             return job.step_results[job.steps[0]];
           }))))
@@ -94,38 +132,6 @@ module.exports = function testHostRouteFactory (router, request, loop, logger, Q
       });
     });
   };
-
-  /**
-   * Given some command info, asks for a newer representation of the command.
-   * @param {Array} ids
-   * @returns {Object}
-   */
-  function askAgain (ids) {
-    return request.get('/command', {
-      qs: {
-        id__in: ids,
-        limit: 0
-      }
-    });
-  }
-
-  /**
-   * Returns jobs if the command has finished,
-   * otherwise undefined
-   * @param {Boolean} finished
-   * @param {Array} jobIds
-   * @returns {Object|undefined}
-   */
-  function getJobsOrUndefined (finished, jobIds) {
-    if (finished)
-      return request.get('/job', {
-        jsonMask: 'objects(step_results,steps)',
-        qs: {
-          id__in: jobIds,
-          limit: 0
-        }
-      });
-  }
 
   /**
    * Pulls the job id from a resource uri.

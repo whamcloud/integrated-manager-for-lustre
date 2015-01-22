@@ -204,7 +204,7 @@
        */
       function reconnectedListener () {
         if (lastSend)
-          spark.send.apply(spark, lastSend);
+          extendedSpark.send.apply(extendedSpark, lastSend);
       }
 
       return extendedSpark;

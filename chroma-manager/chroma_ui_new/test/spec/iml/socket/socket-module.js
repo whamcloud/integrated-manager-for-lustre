@@ -82,6 +82,26 @@ describe('socket module', function () {
         expect(extendedSpark.setLastData).toEqual(jasmine.any(Function));
       });
 
+      it('should re-call send on reconnection', function () {
+        var reconnectHandler = primus.plan().on.calls[0].args[1];
+
+        extendedSpark.send('req', { path: '/host' });
+
+        reconnectHandler();
+
+        expect(spark.send).toHaveBeenCalledTwiceWith('req', {
+          path : '/host',
+          options: {
+            headers: {
+              Cookie: 'csrftoken=yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT; sessionid=2fb9a3dced966d0b5b1e844d8d033d2e; \
+HTTP_USER_AGENT: chrome;',
+              'X-CSRFToken': 'yGNhGrc6arLkQkMFHMAPbnFlCqHk0lGT',
+              'User-Agent': 'chrome'
+            }
+          }
+        }, undefined);
+      });
+
       describe('on', function () {
         var off, handler;
 

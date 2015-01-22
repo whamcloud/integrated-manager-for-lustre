@@ -230,7 +230,8 @@ describe('test host route ', function () {
             qs: {
               id__in: [ '1', '2', '3' ],
               limit: 0
-            }
+            },
+            headers: req.data.headers
           });
 
           done();
