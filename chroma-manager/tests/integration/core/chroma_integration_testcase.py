@@ -106,6 +106,20 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         except AssertionError as e:
             # Debugging added for HYD-2849, must not impact normal exception handling
             check_nodes_status(config)
+            # HYD-4050: spin here so that somebody can inspect if we hit this bug
+            for command_id in command_ids:
+                command = self.get_json_by_uri('/api/command/%s/' % command_id)
+                for job_uri in command['jobs']:
+                    job = self.get_json_by_uri(job_uri)
+                    job_steps = [self.get_json_by_uri(s) for s in job['steps']]
+                    if job['errored']:
+                        for step in job_steps:
+                            if step['state'] == 'failed' and \
+                               step['console'].find("is no initramfs"):
+                                print "Waiting for developer inspection dueo to HYD-4050.  DO NOT ABORT THIS TEST.  NOTIFY DEVELOPER ASSIGNED TO HYD-4050."
+                                import time
+                                while True:
+                                    time.sleep(86400)
             raise e
 
     def register_simulated_hosts(self, addresses):
