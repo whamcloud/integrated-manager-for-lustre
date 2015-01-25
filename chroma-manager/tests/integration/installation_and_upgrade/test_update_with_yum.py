@@ -1,6 +1,6 @@
-
-
 from testconfig import config
+
+from tests.integration.core.constants import UPDATE_TEST_TIMEOUT
 from tests.integration.installation_and_upgrade.test_create_filesystem \
     import TestCreateFilesystem, my_setUp
 
@@ -107,9 +107,11 @@ class TestYumUpdate(TestCreateFilesystem):
         # With the list of hosts, check the success of the upgrade, no need to actually check in parallel we will
         # just sit waiting for the longest to completed.
         for host in hosts:
-            # doing updates can include a reboot of the storage server so
-            # give it some extra time
-            self.wait_for_command(self.chroma_manager, command[host['id']]['id'], timeout=900)
+            # doing updates can include a reboot of the storage server,
+            # and perhaps RHN/proxy slowness, so give it some extra time
+            # Also note that IML is internally updating nodes in the same
+            # HA pair in serial, so the timeout needs to be 2x.
+            self.wait_for_command(self.chroma_manager, command[host['id']]['id'], timeout=UPDATE_TEST_TIMEOUT)
             self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
                                                              of_type='UpdatesAvailableAlert'))
 
