@@ -462,6 +462,8 @@ class MockAgentRpc(object):
             return {'label': label}
         elif cmd == 'detect_scan':
             return mock_server['detect-scan']
+        elif cmd == 'install_packages':
+            return {'scan_packages': None}
         elif cmd == 'register_server':
             api_client = TestApiClient()
             old_is_authenticated = CsrfAuthentication.is_authenticated

@@ -52,8 +52,31 @@ sslclientcert = /var/lib/chroma/self.crt
 chroma-agent-management-99.01-3061.noarch
 """),
                           CommandCaptureCommand(('repoquery', '--requires', 'mypackage')),
-                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'chroma-agent-99.01-3061.noarch', 'chroma-agent-management-99.01-3061.noarch')))
-        agent_updates.update_packages(['myrepo'], ['mypackage'])
+                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'chroma-agent-99.01-3061.noarch', 'chroma-agent-management-99.01-3061.noarch')),
+                          CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
+
+        def isfile(arg):
+            return True
+
+        with patch('os.path.isfile', side_effect=isfile):
+            self.assertTrue('scan_packages' in agent_updates.update_packages(['myrepo'], ['mypackage']))
+
+        self.assertRanAllCommandsInOrder()
+
+    def test_update_packages_hyd_4050(self):
+        self.add_commands(CommandCaptureCommand(('yum', 'clean', 'all', '--enablerepo=*')),
+                          CommandCaptureCommand(('repoquery', '--disablerepo=*', '--enablerepo=myrepo', '--pkgnarrow=updates', '-a'), stdout="""chroma-agent-99.01-3061.noarch
+chroma-agent-management-99.01-3061.noarch
+"""),
+                          CommandCaptureCommand(('repoquery', '--requires', 'mypackage')),
+                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'chroma-agent-99.01-3061.noarch', 'chroma-agent-management-99.01-3061.noarch')),
+                          CommandCaptureCommand(('grubby', '--default-kernel'), rc=1))
+
+        def isfile(arg):
+            return False
+
+        with patch('os.path.isfile', side_effect=isfile):
+            self.assertTrue('error' in agent_updates.update_packages(['myrepo'], ['mypackage']))
 
         self.assertRanAllCommandsInOrder()
 
@@ -63,9 +86,14 @@ chroma-agent-management-99.01-3061.noarch
                           CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
 jasper-libs.x86_64                                                                             1.900.1-16.el6_6.3                                                                             myrepo
 """),
-                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'jasper-libs.x86_64')))
+                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'jasper-libs.x86_64')),
+                          CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
-        agent_updates.install_packages(['myrepo'], ['foo', 'bar'])
+        def isfile(arg):
+            return True
+
+        with patch('os.path.isfile', side_effect=isfile):
+            self.assertEqual(agent_updates.install_packages(['myrepo'], ['foo', 'bar']), {'scan_packages': {}})
 
         self.assertRanAllCommandsInOrder()
 
@@ -108,16 +136,48 @@ yum >= 3.2.29
 /bin/sh
 kernel = 2.6.32-279.14.1.el6_lustre
 lustre-backend-fs
-
         """),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'kernel-2.6.32-279.14.1.el6_lustre')),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo')),
                           CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo'), stdout="""
 jasper-libs.x86_64                                                                             1.900.1-16.el6_6.3                                                                             myrepo
 """),
-                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'jasper-libs.x86_64')))
+                          CommandCaptureCommand(('yum', 'update', '-y', '--enablerepo=myrepo', 'jasper-libs.x86_64')),
+                          CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
 
-        agent_updates.install_packages(['myrepo'], ['foo'], force_dependencies=True)
+        def isfile(arg):
+            return True
+
+        with patch('os.path.isfile', side_effect=isfile):
+            self.assertEqual(agent_updates.install_packages(['myrepo'], ['foo'], force_dependencies=True), {'scan_packages': {}})
+
+        self.assertRanAllCommandsInOrder()
+
+    def test_install_packages_hyd_4050_grubby(self):
+        self.add_commands(CommandCaptureCommand(('yum', 'clean', 'all', '--enablerepo=*')),
+                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo')),
+                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('grubby', '--default-kernel'), rc=1))
+
+        def isfile(arg):
+            return True
+
+        with patch('os.path.isfile', side_effect=isfile):
+            self.assertTrue('error' in agent_updates.install_packages(['myrepo'], ['foo']))
+
+        self.assertRanAllCommandsInOrder()
+
+    def test_install_packages_4050_initramfs(self):
+        self.add_commands(CommandCaptureCommand(('yum', 'clean', 'all', '--enablerepo=*')),
+                          CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=myrepo', 'foo')),
+                          CommandCaptureCommand(('yum', 'check-update', '-q', '--disablerepo=*', '--enablerepo=myrepo')),
+                          CommandCaptureCommand(('grubby', '--default-kernel'), stdout='/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64'))
+
+        def isfile(arg):
+            return False
+
+        with patch('os.path.isfile', side_effect=isfile):
+            self.assertTrue('error' in agent_updates.install_packages(['myrepo'], ['foo']))
 
         self.assertRanAllCommandsInOrder()
 

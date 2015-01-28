@@ -967,19 +967,23 @@ class InstallPackagesStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import package
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
         host = kwargs['host']
         packages = kwargs['packages']
         repos = kwargs['repos']
 
-        package_report = self.invoke_agent(host, 'install_packages', {
+        result = self.invoke_agent(host, 'install_packages', {
             'repos': repos,
             'packages': packages,
             'force_dependencies': True
         })
 
-        if package_report:
-            updates_available = package.update(host, package_report)
+        if 'error' in result:
+            self.log(result['error'])
+            raise AgentException(host.fqdn, "InstallPackages", kwargs, result['error'])
+        elif result['scan_packages']:
+            updates_available = package.update(host, result['scan_packages'])
             UpdatesAvailableAlert.notify(host, updates_available)
 
 
@@ -1675,18 +1679,35 @@ class RemoveUnconfiguredHostJob(StateChangeJob):
 
 
 class UpdatePackagesStep(RebootIfNeededStep):
+    # REMEMBER: This runs against the old agent and so any API changes need to be compatible with
+    # all agents that we might want to upgrade from. Forget this at your peril.
     # Require database because we update package records
     database = True
 
     def run(self, kwargs):
         from chroma_core.models import package
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
         host = kwargs['host']
-        package_report = self.invoke_agent(host, 'update_packages', {
+        result = self.invoke_agent(host, 'update_packages', {
             'repos': kwargs['bundles'],
             'packages': kwargs['packages']
         })
+
+        # Pre. 2.2 may return just None.
+        if result is None:
+            result = {'scan_packages': None}
+
+        if 'error' in result:
+            self.log(result['error'])
+            raise AgentException(host.fqdn, "InstallPackages", kwargs, result['error'])
+        else:
+            # Pre. 2.2 may return just return the scan_packages without the error/scan_packages encoding.
+            if 'scan_packages' in result:
+                package_report = result['scan_packages']
+            else:
+                package_report = result
 
         if package_report:
             package.update(host, package_report)

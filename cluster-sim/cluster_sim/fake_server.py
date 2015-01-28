@@ -202,7 +202,7 @@ class FakeServer(Persisted):
 
         self.save()
 
-        return self.scan_packages()
+        return {'scan_packages': self.scan_packages()}
 
     def get_package_version(self, package):
         return self.state['packages'][package]

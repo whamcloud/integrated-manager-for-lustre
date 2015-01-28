@@ -144,7 +144,12 @@ def update_packages(repos, packages):
 
     yum_util('update', packages=update_packages, enablerepo=repos)
 
-    return lustre.scan_packages()
+    error = _check_HYD4050()
+
+    if error:
+        return {"error": error}
+
+    return {'scan_packages': lustre.scan_packages()}
 
 
 def install_packages(repos, packages, force_dependencies=False):
@@ -184,7 +189,40 @@ def install_packages(repos, packages, force_dependencies=False):
         daemon_log.debug("The following packages need update after we installed IML packages %s" % update_packages)
         yum_util('update', packages=update_packages, enablerepo=repos)
 
-    return lustre.scan_packages()
+    error = _check_HYD4050()
+
+    if error:
+        return {"error": error}
+
+    return {"scan_packages": lustre.scan_packages()}
+
+
+def _check_HYD4050():
+    '''
+    HYD-4050 means that kernels are not installed with a default kernel or the initramfs isn't present.
+
+    This function checks for these cases and returns an error message if a problem exists.
+
+    return: None if everything is OK, error message if not.
+    '''
+
+    #  Make sure that there is an initramfs for the booting kernel
+    try:
+        default_kernel = shell.try_run(["grubby", "--default-kernel"]).strip()
+    except shell.CommandExecutionError:
+        return ("Unable to determine your default kernel.  "
+                "This node may not boot successfully until grub "
+                "is fixed to have a default kernel to boot.")
+
+    default_kernel_version = default_kernel[default_kernel.find("-") + 1:]
+    initramfs = "/boot/initramfs-%s.img" % default_kernel_version
+
+    if not os.path.isfile(initramfs):
+        return ("There is no initramfs (%s) for the default kernel (%s).  "
+                "This node may not boot successfully until an initramfs "
+                "is created." % (initramfs, default_kernel_version))
+
+    return None
 
 
 def kernel_status():
