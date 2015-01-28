@@ -23,17 +23,13 @@
 import os
 import re
 import json
-import socket
 
 from chroma_agent import config
 from chroma_agent.config_store import ConfigKeyExistsError
-from chroma_agent.utils import ReadServerURI
 
 
-def get_api_profile():
-    host_uri = 'api/host/?fqdn=%s' % socket.getfqdn()
-
-    profile = ReadServerURI(host_uri)['objects'][0]['server_profile']
+def set_profile(profile_json):
+    profile = json.loads(profile_json)
 
     try:
         config.set('settings', 'profile', profile)
@@ -91,9 +87,5 @@ def convert_agent_config():
     # < 2.1.0.0
     _convert_agentstore_config()
 
-    # and make sure we have a profile
-    if 'profile' not in config.sections:
-        get_api_profile()
 
-
-ACTIONS = [set_server_url, set_agent_config, get_api_profile, get_agent_config, reset_agent_config, convert_agent_config]
+ACTIONS = [set_server_url, set_agent_config, set_profile, get_agent_config, reset_agent_config, convert_agent_config]

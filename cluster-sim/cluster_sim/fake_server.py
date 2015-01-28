@@ -163,9 +163,9 @@ class FakeServer(Persisted):
 
         return nids
 
-    def set_profile(self, profile_name):
+    def update_profile(self, profile):
         with self._lock:
-            self.state['profile_name'] = profile_name
+            self.state['profile_name'] = profile['name']
             self.save()
 
         return None

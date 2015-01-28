@@ -370,6 +370,7 @@ reg_url = "{reg_url}"
 cert_str = '''{cert_str}'''
 repo_url = "{repo_url}"
 repo_packages = "{repo_packages}"
+profile_json = '{profile_json}'
 
 REPO_CONTENT = \"\"\"{repos}\"\"\"
 
@@ -455,7 +456,7 @@ def install_agent():
 
 def configure_server():
     launch_command('chroma-agent set_server_url --url %s' % base_url + 'agent/')
-    launch_command('chroma-agent get_api_profile')
+    launch_command("chroma-agent set_profile --profile_json '%s'" % profile_json)
 
 
 def start_agent():
@@ -564,9 +565,10 @@ proxy=_none_
     cert_str = open(crypto.AUTHORITY_CERT_FILE).read()
 
     repo_packages = 'chroma-agent chroma-diagnostics'
+    server_profile = ServerProfile.objects.get(name = request.REQUEST['profile_name'])
 
     try:
-        if ServerProfile.objects.get(name = request.REQUEST['profile_name']).managed:
+        if server_profile.managed:
             repo_packages += ' chroma-agent-management'
     except (ServerProfile.DoesNotExist, KeyError) as e:
         if type(e) is KeyError:
@@ -577,11 +579,15 @@ proxy=_none_
         return HttpResponse(status = 400, content = err)
 
     server_epoch_seconds = time.time()
+
+    profile_json = json.dumps(server_profile.as_dict)
+
     script_formatted = setup_script_template.format(reg_url = reg_url, cert_str = cert_str,
         repo_url= repo_url, base_url = base_url,
         repos = repos, repo_names = ",".join(repo_names),
         server_epoch_seconds = server_epoch_seconds,
-        repo_packages = repo_packages)
+        repo_packages = repo_packages,
+        profile_json = profile_json)
 
     return HttpResponse(status = 201, content = script_formatted)
 

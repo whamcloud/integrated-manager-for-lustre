@@ -71,6 +71,15 @@ class ServerProfile(models.Model):
         """
         return self.pk
 
+    @property
+    def as_dict(self):
+        result = {}
+
+        for field in self._meta.fields:
+            result[field.name] = getattr(self, field.name)
+
+        return result
+
     class Meta:
         app_label = 'chroma_core'
         unique_together = (('name',))

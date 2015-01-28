@@ -182,47 +182,32 @@ jasper-libs.x86_64                                                              
         self.assertRanAllCommandsInOrder()
 
     def test_set_profile_success(self):
-        self.mock_read_uri_result = None
+        config.update('settings', 'profile', {'managed': False})
 
-        def mock_ReadServerURI(args):
-            return self.mock_read_uri_result
+        # Go from managed = False to managed = True
+        self.add_command(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
+        self.assertEqual(agent_updates.update_profile({'managed': True}), None)
+        self.assertRanAllCommandsInOrder()
 
-        with patch('chroma_agent.utils.ReadServerURI', side_effect=mock_ReadServerURI):
-            config.update('settings', 'profile', {'managed': False})
+        # Go from managed = True to managed = False
+        self.reset_command_capture()
+        self.add_command(('yum', 'remove', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
+        self.assertEqual(agent_updates.update_profile({'managed': False}), None)
+        self.assertRanAllCommandsInOrder()
 
-            # Go from managed = False to managed = True
-            self.add_command(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
-            self.mock_read_uri_result = {'objects': [{'managed': True}]}
-            self.assertEqual(agent_updates.set_profile('test_profile'), None)
-            self.assertRanAllCommandsInOrder()
-
-            # Go from managed = True to managed = False
-            self.reset_command_capture()
-            self.add_command(('yum', 'remove', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
-            self.mock_read_uri_result = {'objects': [{'managed': False}]}
-            self.assertEqual(agent_updates.set_profile('test_profile'), None)
-            self.assertRanAllCommandsInOrder()
-
-            # Go from managed = False to managed = False
-            self.reset_command_capture()
-            self.assertEqual(agent_updates.set_profile('test_profile'), None)
-            self.assertRanAllCommandsInOrder()
+        # Go from managed = False to managed = False
+        self.reset_command_capture()
+        self.assertEqual(agent_updates.update_profile({'managed': False}), None)
+        self.assertRanAllCommandsInOrder()
 
     def test_set_profile_fail(self):
-        self.mock_read_uri_result = None
-
         # Three times because yum will try three times.
         self.add_commands(CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"),
                           CommandCaptureCommand(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'), rc=1, stdout="Bad command stdout", stderr="Bad command stderr"))
 
-        def mock_ReadServerURI(args):
-            return self.mock_read_uri_result
+        config.update('settings', 'profile', {'managed': False})
 
-        with patch('chroma_agent.utils.ReadServerURI', side_effect=mock_ReadServerURI):
-            config.update('settings', 'profile', {'managed': False})
-
-            # Go from managed = False to managed = True, but it will fail.
-            self.mock_read_uri_result = {'objects': [{'managed': True}]}
-            self.assertEqual(agent_updates.set_profile('test_profile'), 'Unable to set profile because yum returned Bad command stdout')
-            self.assertRanAllCommandsInOrder()
+        # Go from managed = False to managed = True, but it will fail.
+        self.assertEqual(agent_updates.update_profile({'managed': True}), 'Unable to set profile because yum returned Bad command stdout')
+        self.assertRanAllCommandsInOrder()

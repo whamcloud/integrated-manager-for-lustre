@@ -31,7 +31,6 @@ from chroma_agent.device_plugins import lustre
 from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
-from chroma_agent import utils
 from chroma_agent.lib.yum_utils import yum_util, yum_check_update
 
 REPO_CONTENT = """
@@ -59,20 +58,13 @@ def unconfigure_repo(repo_path=REPO_PATH):
         os.remove(repo_path)
 
 
-def set_profile(profile_name):
+def update_profile(profile):
     '''
     Sets the profile to the profile_name by fetching the profile from the manager
     :param profile_name:
     :return: None is OK else an error String
     '''
     old_profile = config.get('settings', 'profile')
-
-    host_uri = 'api/server_profile/?name=%s' % profile_name
-
-    try:
-        new_profile = utils.ReadServerURI(host_uri)['objects'][0]
-    except IndexError:
-        return "Unable to read profile %s from the manager" % profile_name
 
     '''
     This is an incomplete solution but the incompleteness is at the bottom of the stack and we need this as a fix up
@@ -89,8 +81,8 @@ def set_profile(profile_name):
     not bad and doesn't have bad knock on effects.
     '''
 
-    if old_profile['managed'] != new_profile['managed']:
-        if new_profile['managed']:
+    if old_profile['managed'] != profile['managed']:
+        if profile['managed']:
             action = 'install'
         else:
             action = 'remove'
@@ -100,7 +92,7 @@ def set_profile(profile_name):
         except shell.CommandExecutionError as cee:
             return "Unable to set profile because yum returned %s" % cee.stdout
 
-    config.update('settings', 'profile', new_profile)
+    config.update('settings', 'profile', profile)
 
     return None
 
@@ -267,5 +259,5 @@ def restart_agent():
     raise CallbackAfterResponse(None, _shutdown)
 
 
-ACTIONS = [configure_repo, unconfigure_repo, update_packages, install_packages, kernel_status, restart_agent, set_profile]
+ACTIONS = [configure_repo, unconfigure_repo, update_packages, install_packages, kernel_status, restart_agent, update_profile]
 CAPABILITIES = ['manage_updates']

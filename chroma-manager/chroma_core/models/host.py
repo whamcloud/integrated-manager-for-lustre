@@ -1144,10 +1144,11 @@ class SetHostProfileStep(Step):
         host = kwargs['host']
         server_profile = kwargs['server_profile']
 
-        error = self.invoke_agent(host, 'set_profile', {"profile_name": server_profile.name})
+        error = self.invoke_agent(host, 'update_profile', {"profile": server_profile.as_dict})
 
         if error:
-            raise AgentException(host.fqdn, error, kwargs, "")
+            self.log(error)
+            raise AgentException(host.fqdn, "SetHostProfileStep", kwargs, error)
 
         host.server_profile = server_profile
         host.immutable_state = not server_profile.managed

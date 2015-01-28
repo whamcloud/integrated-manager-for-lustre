@@ -24,13 +24,9 @@ from collections import defaultdict
 import re
 import time
 import itertools
-from urlparse import urlparse
 
-from chroma_agent.crypto import Crypto
-from chroma_agent.agent_client import CryptoClient
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.device_plugins.audit.mixins import FileSystemMixin
-from chroma_agent import config
 
 
 class Mounts(FileSystemMixin):
@@ -153,11 +149,3 @@ def wait(timeout=float('inf'), count=None, minwait=0.1, maxwait=1.0):
             break
         time.sleep(min(minwait, maxwait, remaining))
         minwait *= 2
-
-
-def ReadServerURI(uri):
-    scheme, netloc = urlparse(config.get('settings', 'server')['url'])[:2]
-
-    client = CryptoClient('%s://%s/%s' % (scheme, netloc, uri), Crypto(config.path))
-
-    return client.get()
