@@ -78,8 +78,8 @@ if config.get('lustre_servers'):
         if start_command and start_command.startswith("virsh start"):
             # until the provisioner is giving us an idempotent start
             # command adjust them so they are so
-            server['start_command'] = '[ "$(virsh domstate %s)" = "running" ] || %s' % \
-                (server['nodename'], start_command)
+            server['start_command'] = '%s || [ "$(virsh domstate %s)" = "running" ]' % \
+                (start_command, server['nodename'])
             # and until the server is providing a reset command
             # create our own
             server['reset_command'] = \
