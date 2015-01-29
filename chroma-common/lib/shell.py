@@ -161,3 +161,17 @@ def try_run(arg_list):
         raise CommandExecutionError(rc, arg_list, stdout, stderr)
 
     return stdout
+
+
+def run_canned_error_message(arg_list):
+    '''
+    Run a shell command return None is successful, or User Error message if not
+    :param args:
+    :return: None if successful or canned user error message
+    '''
+    rc, stdout, stderr = run(arg_list)
+
+    if rc != 0:
+        return "Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr)
+
+    return None

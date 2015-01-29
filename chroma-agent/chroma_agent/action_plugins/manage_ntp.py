@@ -24,13 +24,24 @@ import os
 from tempfile import mkstemp
 
 from chroma_agent.chroma_common.lib import shell
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
 
 
 def unconfigure_ntp():
-    configure_ntp(ntp_server = "")
+    '''
+    Unconfigure the ntp client
+
+    Return: Value using simple return protocol
+    '''
+    return configure_ntp(ntp_server = "")
 
 
 def configure_ntp(ntp_server):
+    '''
+    Configure the ntp client
+
+    Return: Value using simple return protocol
+    '''
     added_server = False
     PRECHROMA_NTP_FILE = '/etc/ntp.conf.pre-chroma'
     NTP_FILE = '/etc/ntp.conf'
@@ -97,10 +108,15 @@ def configure_ntp(ntp_server):
 
         # did we time out?
         if timeout <= 0:
-            raise RuntimeError("Timed out waiting for time sync from the Chroma Manager.  You could try waiting a few minutes and clicking \"Set up server\" for this server")
+            return agent_error("Timed out waiting for time sync from the Chroma Manager.  You could try waiting a few minutes and clicking \"Set up server\" for this server")
     else:
         # With no server, just restart ntpd, don't worry about the sync
-        shell.try_run(['service', 'ntpd', 'restart'])
+        error = shell.run_canned_error_message(['service', 'ntpd', 'restart'])
+
+        if error:
+            return agent_error(error)
+
+    return agent_result_ok
 
 
 ACTIONS = [configure_ntp, unconfigure_ntp]

@@ -161,17 +161,17 @@ class PurgeFilesystemStep(Step):
         # Whether the MGS was officially up or not, try stopping it (idempotent so will
         # succeed either way
         if initial_mgs_state in ['mounted', 'unmounted']:
-            self.invoke_agent(host, "stop_target", {'ha_label': mgs.ha_label})
+            self.invoke_agent_expect_result(host, "stop_target", {'ha_label': mgs.ha_label})
         self.invoke_agent(host, "purge_configuration", {
             'device': mgs_device_path,
             'filesystem_name': fs.name
         })
 
         if initial_mgs_state == 'mounted':
-            result = self.invoke_agent(host, "start_target", {'ha_label': mgs.ha_label})
+            result = self.invoke_agent_expect_result(host, "start_target", {'ha_label': mgs.ha_label})
             # Update active_mount because it won't necessarily start the same place it was started to
             # begin with
-            mgs.update_active_mount(result['location'])
+            mgs.update_active_mount(result)
 
 
 class RemoveFilesystemJob(StateChangeJob):

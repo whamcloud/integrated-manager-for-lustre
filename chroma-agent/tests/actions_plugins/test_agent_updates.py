@@ -8,6 +8,7 @@ from chroma_agent.action_plugins import agent_updates
 from chroma_agent.device_plugins import lustre
 from chroma_agent import config
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok, agent_error
 
 
 class TestManageUpdates(CommandCaptureTestCase):
@@ -59,7 +60,7 @@ chroma-agent-management-99.01-3061.noarch
             return True
 
         with patch('os.path.isfile', side_effect=isfile):
-            self.assertTrue('scan_packages' in agent_updates.update_packages(['myrepo'], ['mypackage']))
+            self.assertEqual(agent_updates.update_packages(['myrepo'], ['mypackage']), agent_result({}))
 
         self.assertRanAllCommandsInOrder()
 
@@ -93,7 +94,7 @@ jasper-libs.x86_64                                                              
             return True
 
         with patch('os.path.isfile', side_effect=isfile):
-            self.assertEqual(agent_updates.install_packages(['myrepo'], ['foo', 'bar']), {'scan_packages': {}})
+            self.assertEqual(agent_updates.install_packages(['myrepo'], ['foo', 'bar']), agent_result({}))
 
         self.assertRanAllCommandsInOrder()
 
@@ -149,7 +150,7 @@ jasper-libs.x86_64                                                              
             return True
 
         with patch('os.path.isfile', side_effect=isfile):
-            self.assertEqual(agent_updates.install_packages(['myrepo'], ['foo'], force_dependencies=True), {'scan_packages': {}})
+            self.assertEqual(agent_updates.install_packages(['myrepo'], ['foo'], force_dependencies=True), agent_result({}))
 
         self.assertRanAllCommandsInOrder()
 
@@ -186,18 +187,18 @@ jasper-libs.x86_64                                                              
 
         # Go from managed = False to managed = True
         self.add_command(('yum', 'install', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
-        self.assertEqual(agent_updates.update_profile({'managed': True}), None)
+        self.assertEqual(agent_updates.update_profile({'managed': True}), agent_result_ok)
         self.assertRanAllCommandsInOrder()
 
         # Go from managed = True to managed = False
         self.reset_command_capture()
         self.add_command(('yum', 'remove', '-y', '--enablerepo=iml-agent', 'chroma-agent-management'))
-        self.assertEqual(agent_updates.update_profile({'managed': False}), None)
+        self.assertEqual(agent_updates.update_profile({'managed': False}), agent_result_ok)
         self.assertRanAllCommandsInOrder()
 
         # Go from managed = False to managed = False
         self.reset_command_capture()
-        self.assertEqual(agent_updates.update_profile({'managed': False}), None)
+        self.assertEqual(agent_updates.update_profile({'managed': False}), agent_result_ok)
         self.assertRanAllCommandsInOrder()
 
     def test_set_profile_fail(self):
@@ -209,5 +210,5 @@ jasper-libs.x86_64                                                              
         config.update('settings', 'profile', {'managed': False})
 
         # Go from managed = False to managed = True, but it will fail.
-        self.assertEqual(agent_updates.update_profile({'managed': True}), 'Unable to set profile because yum returned Bad command stdout')
+        self.assertEqual(agent_updates.update_profile({'managed': True}), agent_error('Unable to set profile because yum returned Bad command stdout'))
         self.assertRanAllCommandsInOrder()

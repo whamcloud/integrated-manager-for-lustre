@@ -35,7 +35,7 @@ class TestEvents(ChromaIntegrationTestCase):
 
 
 class TestAlerting(ChromaIntegrationTestCase):
-    def wait_alerts(self, count, **filters):
+    def _wait_alerts(self, count, **filters):
         "Wait and assert correct number of matching alerts."
         for index in wait(timeout=TEST_TIMEOUT):
             alerts = self.get_list("/api/alert/", filters)
@@ -49,7 +49,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         fs = self.get_json_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]
 
-        self.wait_alerts(0, active=True, severity='ERROR')
+        self._wait_alerts(0, active=True, severity='ERROR')
 
         mgt = fs['mgt']
 
@@ -107,7 +107,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         for target in self.get_list("/api/target/"):
             self.remote_operations.stop_target(host['fqdn'], target['ha_label'])
         self.remote_operations.stop_lnet(host['fqdn'])
-        self.wait_alerts(4, active=True)
+        self._wait_alerts(4, active=True)
 
         # Remove everything
         self.graceful_teardown(self.chroma_manager)

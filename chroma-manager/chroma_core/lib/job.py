@@ -20,8 +20,10 @@
 # express and approved by Intel in writing.
 
 
-from chroma_core.services import log_register
 import django.db.models
+
+from chroma_core.services import log_register
+from chroma_core.chroma_common.lib.agent_rpc import agent_result
 
 job_log = log_register('job')
 
@@ -190,6 +192,36 @@ class Step(object):
         except AgentException as e:
             self._log_subprocesses(e.subprocesses)
             raise
+
+    def invoke_agent_expect_result(self, host, command, args = {}):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        result = self.invoke_agent(host, command, args)
+
+        # This case is to deal with upgrades, once every installation is using the new protocol then we should not allow this.
+        # Once everything is 3.0 or later we will also have version information in the wrapper header.
+        if (result == None) or \
+                ((type(result) == dict) and ('error' not in result) and ('result' not in result)):
+            job_log.info("Invalid result %s fixed up on called to %s with args %s" % (result, command, args))
+
+            # Prior to 3.0 update_packages returned {'update_packages': data} so fix this up. This code is here so that all
+            # of the legacy fixups are in one place and can easily be removed.
+            if command == 'update_packages' and 'scan_packages' in result:
+                result = agent_result(result['scan_packages'])
+            else:
+                result = agent_result(result)
+
+        if type(result) != dict:
+            raise AgentException(host.fqdn, command, args, "Expected a dictionary but got a %s when calling %s" % (type(result), command))
+
+        if ('error' not in result) and ('result' not in result):
+            raise AgentException(host.fqdn, command, args, "Expected a dictionary with 'error' or 'result' in keys but got %s when calling %s" % (result, command))
+
+        if 'error' in result:
+            self.log(result['error'])
+            raise AgentException(host.fqdn, command, args, result['error'])
+
+        return result['result']
 
 
 class IdempotentStep(Step):

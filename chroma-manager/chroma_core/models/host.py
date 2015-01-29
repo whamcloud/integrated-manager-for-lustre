@@ -579,7 +579,8 @@ class ConfigureCorosyncStep(Step):
         if not host.immutable_state:
             # Empty dict if no host-side config.
             config = self.invoke_agent(host, "host_corosync_config")
-            self.invoke_agent(host, "configure_corosync", config)
+
+            self.invoke_agent_expect_result(host, "configure_corosync", config)
 
 
 class ConfigureRsyslogStep(Step):
@@ -603,7 +604,7 @@ class ConfigureNTPStep(Step):
 
         host = kwargs['host']
         if not host.immutable_state:
-            self.invoke_agent(host, "configure_ntp", {'ntp_server': ntp_server})
+            self.invoke_agent_expect_result(host, "configure_ntp", {'ntp_server': ntp_server})
 
 
 class UnconfigurePacemakerStep(Step):
@@ -621,7 +622,7 @@ class UnconfigureCorosyncStep(Step):
     def run(self, kwargs):
         host = kwargs['host']
         if not host.immutable_state:
-            self.invoke_agent(host, "unconfigure_corosync")
+            self.invoke_agent_expect_result(host, "unconfigure_corosync")
 
 
 class UnconfigureRsyslogStep(Step):
@@ -639,7 +640,7 @@ class UnconfigureNTPStep(Step):
     def run(self, kwargs):
         host = kwargs['host']
         if not host.immutable_state:
-            self.invoke_agent(host, "unconfigure_ntp")
+            self.invoke_agent_expect_result(host, "unconfigure_ntp")
 
 
 class GetLNetStateStep(Step):
@@ -1002,23 +1003,19 @@ class InstallPackagesStep(Step):
 
     def run(self, kwargs):
         from chroma_core.models import package
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
         host = kwargs['host']
         packages = kwargs['packages']
         repos = kwargs['repos']
 
-        result = self.invoke_agent(host, 'install_packages', {
-            'repos': repos,
-            'packages': packages,
-            'force_dependencies': True
-        })
+        package_report = self.invoke_agent_expect_result(host,
+                                                         'install_packages',
+                                                         {'repos': repos,
+                                                          'packages': packages,
+                                                          'force_dependencies': True})
 
-        if 'error' in result:
-            self.log(result['error'])
-            raise AgentException(host.fqdn, "InstallPackages", kwargs, result['error'])
-        elif result['scan_packages']:
-            updates_available = package.update(host, result['scan_packages'])
+        if package_report:
+            updates_available = package.update(host, package_report)
             UpdatesAvailableAlert.notify(host, updates_available)
 
 
@@ -1175,16 +1172,12 @@ class SetHostProfileStep(Step):
         return True
 
     def run(self, kwargs):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc, AgentException
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
         host = kwargs['host']
         server_profile = kwargs['server_profile']
 
-        error = self.invoke_agent(host, 'update_profile', {"profile": server_profile.as_dict})
-
-        if error:
-            self.log(error)
-            raise AgentException(host.fqdn, "SetHostProfileStep", kwargs, error)
+        self.invoke_agent_expect_result(host, 'update_profile', {"profile": server_profile.as_dict})
 
         host.server_profile = server_profile
         host.immutable_state = not server_profile.managed
@@ -1724,27 +1717,12 @@ class UpdatePackagesStep(RebootIfNeededStep):
     def run(self, kwargs):
         from chroma_core.models import package
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
 
         host = kwargs['host']
-        result = self.invoke_agent(host, 'update_packages', {
-            'repos': kwargs['bundles'],
-            'packages': kwargs['packages']
-        })
-
-        # Pre. 2.2 may return just None.
-        if result is None:
-            result = {'scan_packages': None}
-
-        if 'error' in result:
-            self.log(result['error'])
-            raise AgentException(host.fqdn, "InstallPackages", kwargs, result['error'])
-        else:
-            # Pre. 2.2 may return just return the scan_packages without the error/scan_packages encoding.
-            if 'scan_packages' in result:
-                package_report = result['scan_packages']
-            else:
-                package_report = result
+        package_report = self.invoke_agent_expect_result(host,
+                                                         'update_packages',
+                                                         {'repos': kwargs['bundles'],
+                                                          'packages': kwargs['packages']})
 
         if package_report:
             package.update(host, package_report)

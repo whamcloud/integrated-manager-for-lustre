@@ -733,7 +733,7 @@ class ConfigurePacemakerStep(Step):
 
         assert(volume_node is not None)
 
-        self.invoke_agent(host, "configure_target_ha", {
+        self.invoke_agent_expect_result(host, "configure_target_ha", {
             'device': volume_node.path,
             'ha_label': target.ha_label,
             'uuid': target.uuid,
@@ -748,7 +748,7 @@ class UnconfigurePacemakerStep(Step):
         target = kwargs['target']
         target_mount = kwargs['target_mount']
 
-        self.invoke_agent(kwargs['host'], "unconfigure_target_ha",
+        self.invoke_agent_expect_result(kwargs['host'], "unconfigure_target_ha",
                           {'ha_label': target.ha_label,
                            'uuid': target.uuid,
                            'primary': target_mount.primary})
@@ -880,8 +880,9 @@ class MountStep(Step):
     def run(self, kwargs):
         target = kwargs['target']
 
-        result = self.invoke_agent(kwargs['host'], "start_target", {'ha_label': target.ha_label})
-        target.update_active_mount(result['location'])
+        result = self.invoke_agent_expect_result(kwargs['host'], "start_target", {'ha_label': target.ha_label})
+
+        target.update_active_mount(result)
 
 
 class StartTargetJob(StateChangeJob):
@@ -922,7 +923,7 @@ class UnmountStep(Step):
     def run(self, kwargs):
         target = kwargs['target']
 
-        self.invoke_agent(kwargs['host'], "stop_target", {'ha_label': target.ha_label})
+        self.invoke_agent_expect_result(kwargs['host'], "stop_target", {'ha_label': target.ha_label})
         target.active_mount = None
 
 
@@ -1194,7 +1195,7 @@ class FailbackTargetStep(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        self.invoke_agent(kwargs['host'], "failback_target", {'ha_label': kwargs['target'].ha_label})
+        self.invoke_agent_expect_result(kwargs['host'], "failback_target", {'ha_label': kwargs['target'].ha_label})
         target.active_mount = kwargs['primary_mount']
 
 
@@ -1251,7 +1252,7 @@ class FailoverTargetStep(Step):
 
     def run(self, kwargs):
         target = kwargs['target']
-        self.invoke_agent(kwargs['host'], "failover_target", {'ha_label': kwargs['target'].ha_label})
+        self.invoke_agent_expect_result(kwargs['host'], "failover_target", {'ha_label': kwargs['target'].ha_label})
         target.active_mount = kwargs['secondary_mount']
 
 

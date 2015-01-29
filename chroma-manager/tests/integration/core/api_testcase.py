@@ -301,7 +301,7 @@ class ApiTestCase(UtilityTestCase):
                 self._print_command(self.wait_for_command(chroma_manager, command_id, timeout=timeout, verify_successful=verify_successful, test_for_eventual_completion=False),
                                     "COMPLETED %s SECONDS AFTER TIMEOUT" % int(time.time() - retry_time))
         else:
-            logger.debug("command complete: %s" % self.get_json_by_uri('/api/command/%s/' % command_id))
+            logger.debug("command complete: %s" % command)
 
         self.assertTrue(command_complete, command)
         if verify_successful and (command['errored'] or command['cancelled']):

@@ -6,6 +6,7 @@ from tests.unit.chroma_core.helper import synthetic_host, log
 
 from chroma_core.models.power_control import PowerControlDevice
 from chroma_core.models.host import RemoveHostJob
+from chroma_core.chroma_common.lib.agent_rpc import agent_result_ok
 
 
 class PowerControlResourceTestCase(ChromaApiTestCase):
@@ -314,12 +315,12 @@ class IpmiResourceTests(PowerControlResourceTestCase):
                                       device = self.ipmi['resource_uri'],
                                       identifier = '1')
 
-    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify')
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify', new = mock.Mock())
     @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new = mock.Mock(), create = True)
     @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new = mock.Mock())
-    @mock.patch("chroma_core.lib.job.Step.invoke_agent")
+    @mock.patch("chroma_core.lib.job.Step.invoke_agent", new = mock.Mock(return_value = agent_result_ok))
     @remove_host_resources_patch
-    def test_removed_host_deletes_bmc(self, notify, remove):
+    def test_removed_host_deletes_bmc(self):
         bmc = self._create_power_outlet(host = self.host['resource_uri'],
                                         device = self.ipmi['resource_uri'],
                                         identifier = 'localhost')

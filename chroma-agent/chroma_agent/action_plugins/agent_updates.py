@@ -32,6 +32,8 @@ from chroma_agent.log import daemon_log
 from chroma_agent import config
 from chroma_agent.crypto import Crypto
 from chroma_agent.lib.yum_utils import yum_util, yum_check_update
+from chroma_agent.device_plugins.lustre import REPO_PATH
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_error, agent_result_ok
 
 REPO_CONTENT = """
 [Intel Lustre Manager]
@@ -44,8 +46,6 @@ sslcacert = {1}
 sslclientkey = {2}
 sslclientcert = {3}
 """
-
-from chroma_agent.device_plugins.lustre import REPO_PATH
 
 
 def configure_repo(remote_url, repo_path=REPO_PATH):
@@ -62,7 +62,7 @@ def update_profile(profile):
     '''
     Sets the profile to the profile_name by fetching the profile from the manager
     :param profile_name:
-    :return: None is OK else an error String
+    :return: error or result OK
     '''
     old_profile = config.get('settings', 'profile')
 
@@ -90,11 +90,11 @@ def update_profile(profile):
         try:
             yum_util(action, enablerepo=["iml-agent"], packages=['chroma-agent-management'])
         except shell.CommandExecutionError as cee:
-            return "Unable to set profile because yum returned %s" % cee.stdout
+            return agent_error("Unable to set profile because yum returned %s" % cee.stdout)
 
     config.update('settings', 'profile', profile)
 
-    return None
+    return agent_result_ok
 
 
 def update_packages(repos, packages):
@@ -139,9 +139,9 @@ def update_packages(repos, packages):
     error = _check_HYD4050()
 
     if error:
-        return {"error": error}
+        return agent_error(error)
 
-    return {'scan_packages': lustre.scan_packages()}
+    return agent_result(lustre.scan_packages())
 
 
 def install_packages(repos, packages, force_dependencies=False):
@@ -184,9 +184,9 @@ def install_packages(repos, packages, force_dependencies=False):
     error = _check_HYD4050()
 
     if error:
-        return {"error": error}
+        return agent_error(error)
 
-    return {"scan_packages": lustre.scan_packages()}
+    return agent_result(lustre.scan_packages())
 
 
 def _check_HYD4050():

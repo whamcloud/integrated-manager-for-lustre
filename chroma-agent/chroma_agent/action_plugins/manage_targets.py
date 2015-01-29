@@ -24,6 +24,7 @@ import errno
 import os
 import re
 import tempfile
+import time
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.chroma_common.filesystems.filesystem import FileSystem
@@ -31,6 +32,7 @@ from chroma_agent.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_agent.log import daemon_log, console_log
 from chroma_agent import config
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result, agent_result_ok
 
 
 def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
@@ -296,11 +298,15 @@ def register_target(target_name, device_path, mount_point, backfstype):
 
 
 def unconfigure_target_ha(primary, ha_label, uuid):
+    '''
+    Unconfigure the target high availability
+
+    Return: Value using simple return protocol
+    '''
     from chroma_agent.lib.pacemaker import cibadmin
 
     if get_resource_location(ha_label):
-        raise RuntimeError("cannot unconfigure-ha: %s is still running " %
-                           ha_label)
+        return "cannot unconfigure-ha: %s is still running " % ha_label
 
     if primary:
         rc, stdout, stderr = cibadmin(["-D", "-X",
@@ -310,13 +316,14 @@ def unconfigure_target_ha(primary, ha_label, uuid):
                                        ha_label])
 
         if rc != 0 and rc != 234:
-            raise RuntimeError("Error %s trying to cleanup resource %s" % (rc,
-                               ha_label))
+            return agent_error("Error %s trying to cleanup resource %s" % (rc, ha_label))
 
     else:
         rc, stdout, stderr = cibadmin(["-D", "-X",
                                        "<rsc_location id=\"%s-secondary\">" %
                                        ha_label])
+
+    return agent_result_ok
 
 
 def unconfigure_target_store(uuid):
@@ -342,6 +349,11 @@ def configure_target_store(device, uuid, mount_point, backfstype, target_name):
 
 
 def configure_target_ha(primary, device, ha_label, uuid, mount_point):
+    '''
+    Configure the target high availability
+
+    Return: Value using simple return protocol
+    '''
     from chroma_agent.action_plugins.manage_corosync import cibadmin
 
     if primary:
@@ -351,9 +363,9 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
         if rc == 0:
             info = _get_target_config(stdout.rstrip("\n"))
             if info['bdev'] == device and info['mntpt'] == mount_point:
-                return
+                return agent_result_ok
             else:
-                raise RuntimeError("A resource with the name %s already exists" % ha_label)
+                return agent_error("A resource with the name %s already exists" % ha_label)
 
         tmp_f, tmp_name = tempfile.mkstemp()
         os.write(tmp_f, "<primitive class=\"ocf\" provider=\"chroma\" type=\"Target\" id=\"%s\">\
@@ -385,9 +397,11 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
                                     ha_label, score)])
 
     if rc == 76:
-        raise RuntimeError("A constraint with the name %s-%s already exists" % (ha_label, preference))
+        return agent_error("A constraint with the name %s-%s already exists" % (ha_label, preference))
 
     _mkdir_p_concurrent(mount_point)
+
+    return agent_result_ok
 
 
 def _get_nvpairid_from_xml(xml_string):
@@ -437,13 +451,20 @@ def unmount_target(uuid):
 
 
 def start_target(ha_label):
-    from time import sleep
+    '''
+    Start the high availability target
+
+    Return: Value using simple return protocol
+    '''
     # HYD-1989: brute force, try up to 3 times to start the target
     i = 0
     while True:
         i += 1
-        shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-                       '-m', '-v', 'Started'])
+
+        error = shell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Started'])
+
+        if error:
+            return agent_error(error)
 
         # now wait for it to start
         timeout = 100
@@ -452,11 +473,11 @@ def start_target(ha_label):
             if get_resource_location(ha_label):
                 break
 
-            sleep(1)
+            time.sleep(1)
             n += 1
 
         # and make sure it didn't start but (the RA) fail(ed)
-        stdout = shell.try_run(['crm_mon', '-1'])
+        rc, stdout, stderr = shell.run(['crm_mon', '-1'])
 
         failed = True
         for line in stdout.split("\n"):
@@ -466,28 +487,33 @@ def start_target(ha_label):
 
         if failed:
             # try to leave things in a sane state for a failed mount
-            shell.try_run(['crm_resource', '-r', ha_label, '-p',
-                           'target-role', '-m', '-v', 'Stopped'])
+            error = shell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
+
+            if error:
+                return agent_error(error)
+
             if i < 4:
                 console_log.info("failed to start target %s" % ha_label)
             else:
-                raise RuntimeError("failed to start target %s" % ha_label)
+                return agent_error("Failed to start target %s" % ha_label)
 
         else:
             location = get_resource_location(ha_label)
             if not location:
-                raise RuntimeError("Started %s but now can't locate it!" % ha_label)
-            return {'location': location}
+                return agent_error("Started %s but now can't locate it!" % ha_label)
+            return agent_result(location)
 
 
 def stop_target(ha_label):
-    _stop_target(ha_label)
+    '''
+    Start the high availability target
 
+    Return: Value using simple return protocol
+    '''
+    error = shell.run_canned_error_message(['crm_resource', '-r', ha_label, '-p', 'target-role', '-m', '-v', 'Stopped'])
 
-def _stop_target(ha_label):
-    from time import sleep
-    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-                  '-m', '-v', 'Stopped'])
+    if error:
+        return agent_error(error)
 
     # now wait for it to stop
     timeout = 100
@@ -495,25 +521,26 @@ def _stop_target(ha_label):
     while n < timeout:
         if not get_resource_location(ha_label):
             break
-        sleep(1)
+        time.sleep(1)
         n += 1
 
     if n == timeout:
-        raise RuntimeError("failed to stop target %s" % ha_label)
+        return agent_error("failed to stop target %s" % ha_label)
+
+    return agent_result_ok
 
 
 # common plumbing for failover/failback
 def _move_target(target_label, dest_node):
-    from time import sleep
     arg_list = ["crm_resource", "--resource", target_label, "--move", "--node", dest_node]
     rc, stdout, stderr = shell.run(arg_list)
 
     if rc != 0:
-        raise RuntimeError("Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr))
+        return "Error (%s) running '%s': '%s' '%s'" % (rc, " ".join(arg_list), stdout, stderr)
 
     if stderr.find("%s is already active on %s\n" %
                    (target_label, dest_node)) > -1:
-        return
+        return None
 
     # now wait for it to complete its move
     timeout = 100
@@ -523,17 +550,19 @@ def _move_target(target_label, dest_node):
         if get_resource_location(target_label) == dest_node:
             migrated = True
             break
-        sleep(1)
+        time.sleep(1)
         n += 1
 
     # now delete the constraint that crm_resource --move created
     shell.try_run(["crm_resource", "--resource", target_label, "--un-move",
                    "--node", dest_node])
     if not migrated:
-        raise RuntimeError("failed to fail back target %s" % target_label)
+        return "Failed to fail back target %s" % target_label
+
+    return None
 
 
-def find_resource_constraint(ha_label, disp):
+def _find_resource_constraint(ha_label, disp):
     stdout = shell.try_run(["crm_resource", "-r", ha_label, "-a"])
 
     for line in stdout.rstrip().split("\n"):
@@ -545,27 +574,40 @@ def find_resource_constraint(ha_label, disp):
     return None
 
 
+def _failoverback_target(ha_label, destination):
+    """
+    Fail a target over to the  destination node
+
+    Return: Value using simple return protocol
+    """
+    node = _find_resource_constraint(ha_label, destination)
+    if not node:
+        return agent_error("Unable to find the %s server for '%s'" % (destination, ha_label))
+
+    error = _move_target(ha_label, node)
+
+    if error:
+        return agent_error(error)
+
+    return agent_result_ok
+
+
 def failover_target(ha_label):
     """
     Fail a target over to its secondary node
-    """
-    node = find_resource_constraint(ha_label, "secondary")
-    if not node:
-        raise RuntimeError("Unable to find the secondary server for '%s'" %
-                           ha_label)
 
-    return _move_target(ha_label, node)
+    Return: Value using simple return protocol
+    """
+    return _failoverback_target(ha_label, "secondary")
 
 
 def failback_target(ha_label):
     """
     Fail a target back to its primary node
+
+    Return: None if OK, else return an Error string
     """
-    node = find_resource_constraint(ha_label, "primary")
-    if not node:
-        raise RuntimeError("Unable to find the primary server for '%s'" %
-                           ha_label)
-    return _move_target(ha_label, node)
+    return _failoverback_target(ha_label, "primary")
 
 
 def _get_target_config(uuid):
@@ -579,31 +621,6 @@ def _get_target_config(uuid):
         config.update('targets', uuid, info)
 
     return info
-
-
-# FIXME: these appear to be unused, remove?
-#def migrate_target(ha_label, node):
-#    # a migration scores at 500 to force it higher than stickiness
-#    score = 500
-#    shell.try_run(["crm", "configure", "location", "%s-migrated" % ha_label, ha_label, "%s:" % score, "%s" % node])
-#
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Stopped'])
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Started'])
-#
-#
-#def unmigrate_target(ha_label):
-#    from time import sleep
-#
-#    # just remove the migration constraint
-#    shell.try_run(['crm', 'configure', 'delete', '%s-migrated' % ha_label])
-#    sleep(1)
-#
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Stopped'])
-#    shell.try_run(['crm_resource', '-r', ha_label, '-p', 'target-role',
-#                   '-m', '-v', 'Started'])
 
 
 def target_running(uuid):
@@ -644,7 +661,7 @@ def clear_targets(force = False):
 
     for resource, attrs in _query_ha_targets().items():
         console_log.info("Stopping %s" % resource)
-        _stop_target(attrs['ha_label'])
+        stop_target(attrs['ha_label'])
         console_log.info("Unconfiguring %s" % resource)
         unconfigure_target_ha(True, attrs['ha_label'], attrs['uuid'])
 
@@ -673,5 +690,4 @@ ACTIONS = [purge_configuration, register_target, configure_target_ha,
            start_target, stop_target, format_target, check_block_device,
            writeconf_target, failback_target,
            failover_target, target_running,
-           #migrate_target, unmigrate_target,
            clear_targets, configure_target_store, unconfigure_target_store]

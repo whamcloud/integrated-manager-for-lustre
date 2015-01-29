@@ -37,6 +37,7 @@ from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
 from chroma_agent.log import daemon_log
 from ConfigParser import SafeConfigParser, Error as ConfigError
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
 
 # The window of time in which we count resource monitor failures
 RSRC_FAIL_WINDOW = "20m"
@@ -46,6 +47,11 @@ RSRC_FAIL_MIGRATION_COUNT = "3"
 
 
 def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = None, mcast_port = None):
+    '''
+    Configure the corosync application.
+
+    Return: Value using simple return protocol
+    '''
     from chroma_agent.lib.corosync import CorosyncRingInterface, get_ring0, generate_ring1_network, detect_ring1, render_config, write_config_to_file
 
     ring0 = get_ring0()
@@ -63,7 +69,7 @@ def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = 
         ring1 = detect_ring1(ring0, ring1_ipaddr, ring1_prefix)
 
     if not ring1:
-        raise RuntimeError("Failed to detect ring1 interface")
+        return agent_error("Failed to detect ring1 interface")
 
     interfaces = [ring0, ring1]
     interfaces[0].mcastport = interfaces[1].mcastport
@@ -78,6 +84,8 @@ def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = 
     unconfigure_pacemaker()
     shell.try_run(['/sbin/service', 'corosync', 'restart'])
     shell.try_run(['/sbin/chkconfig', 'corosync', 'on'])
+
+    return agent_result_ok
 
 
 def get_cluster_size():
@@ -204,6 +212,12 @@ def set_node_online(node):
 
 
 def unconfigure_corosync():
+    '''
+    Unconfigure the corosync application.
+
+    Return: Value using simple return protocol
+    '''
+
     shell.try_run(['service', 'corosync', 'stop'])
     shell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
     mcastport = None
@@ -215,17 +229,19 @@ def unconfigure_corosync():
                 mcastport = match.group(1)
                 break
     if mcastport is None:
-        raise RuntimeError("Failed to find mcastport in corosync.conf")
+        return agent_error("Failed to find mcastport in corosync.conf")
 
     try:
         remove("/etc/corosync/corosync.conf")
     except OSError, e:
         if e.errno != errno.ENOENT:
-            raise RuntimeError("Failed to remove corosync.conf")
+            return agent_error("Failed to remove corosync.conf")
     except:
-        raise RuntimeError("Failed to remove corosync.conf")
+        return agent_error("Failed to remove corosync.conf")
 
     del_firewall_rule(mcastport, "udp", "corosync")
+
+    return agent_result_ok
 
 
 def pacemaker_running():

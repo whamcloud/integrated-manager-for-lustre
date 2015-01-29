@@ -37,6 +37,7 @@ from cluster_sim.log import log
 from cluster_sim.utils import Persisted, perturb
 from cluster_sim.fake_action_plugins import FakeActionPlugins
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
 
 # Simulated duration, in seconds, from the time a server shutdown is issued
 # until it's stopped. When simulating a shutdown, it will always take at
@@ -168,7 +169,7 @@ class FakeServer(Persisted):
             self.state['profile_name'] = profile['name']
             self.save()
 
-        return None
+        return agent_result_ok
 
     def restart_agent(self):
         log.debug("restart agent %s" % self.fqdn)
@@ -202,7 +203,7 @@ class FakeServer(Persisted):
 
         self.save()
 
-        return {'scan_packages': self.scan_packages()}
+        return agent_result(self.scan_packages())
 
     def get_package_version(self, package):
         return self.state['packages'][package]
@@ -702,10 +703,10 @@ class FakeServer(Persisted):
         return {'label': label}
 
     def configure_target_ha(self, primary, device, ha_label, uuid, mount_point):
-        self._cluster.configure(self.nodename, device, ha_label, uuid, primary, mount_point)
+        return agent_result(self._cluster.configure(self.nodename, device, ha_label, uuid, primary, mount_point))
 
     def unconfigure_target_ha(self, primary, ha_label, uuid):
-        self._cluster.unconfigure(self.nodename, ha_label, primary)
+        return agent_result(self._cluster.unconfigure(self.nodename, ha_label, primary))
 
     def purge_configuration(self, device, filesystem_name):
         serial = self._devices.get_by_path(self.fqdn, device)['serial_80']
@@ -714,10 +715,12 @@ class FakeServer(Persisted):
 
     def start_target(self, ha_label):
         resource = self._cluster.start(ha_label)
-        return {'location': resource['started_on']}
+        return agent_result(resource['started_on'])
 
     def stop_target(self, ha_label):
-        return self._cluster.stop(ha_label)
+        self._cluster.stop(ha_label)
+
+        return agent_result_ok
 
     @property
     def _targets_started_here(self):

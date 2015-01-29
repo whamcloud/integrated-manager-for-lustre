@@ -17,8 +17,8 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.models import StorageResourceRecord
 from chroma_core.services.log import log_register
+from chroma_core.chroma_common.lib.agent_rpc import agent_result, agent_result_ok
 from tests.unit.chroma_api.tastypie_test import TestApiClient
-
 
 log = log_register('test_helper')
 
@@ -434,8 +434,6 @@ class MockAgentRpc(object):
         elif cmd == "device_plugin":
             # Only returns nid info today.
             return create_synthetic_device_info(host, mock_server, args['plugin'])
-        elif cmd == 'set_profile':
-            return None
         elif cmd == 'format_target':
             inode_size = None
             if 'mkfsoptions' in args:
@@ -454,11 +452,11 @@ class MockAgentRpc(object):
         elif cmd == 'stop_target':
             ha_label = args['ha_label']
             target = ManagedTarget.objects.get(ha_label = ha_label)
-            return
+            return agent_result_ok
         elif cmd == 'start_target':
             ha_label = args['ha_label']
             target = ManagedTarget.objects.get(ha_label = ha_label)
-            return {'location': target.primary_host.nodename}
+            return agent_result(target.primary_host.nodename)
         elif cmd == 'register_target':
             # Assume mount paths are "/mnt/testfs-OST0001" style
             mount_point = args['mount_point']
@@ -467,7 +465,7 @@ class MockAgentRpc(object):
         elif cmd == 'detect_scan':
             return mock_server['detect-scan']
         elif cmd == 'install_packages':
-            return {'scan_packages': None}
+            return agent_result(None)
         elif cmd == 'register_server':
             api_client = TestApiClient()
             old_is_authenticated = CsrfAuthentication.is_authenticated
@@ -521,6 +519,23 @@ class MockAgentRpc(object):
         elif 'curl -k https' in cmd:
             return json.dumps({'host_id': host.id,
                                'command_id': 0})
+        elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
+                     'configure_rsyslog', 'unconfigure_rsyslog',
+                     'configure_target_store', 'unconfigure_target_store',
+                     'start_lnet', 'stop_lnet', 'unload_lnet', 'unconfigure_lnet',
+                     'deregister_server', 'restart_agent',
+                     'install_packages', 'shutdown_server',
+                     'host_corosync_config', 'check_block_device',
+                     'set_conf_param', 'purge_configuration']:
+            return None
+        elif cmd in ['configure_target_ha', 'unconfigure_target_ha',
+                     'configure_corosync', 'unconfigure_corosync',
+                     'configure_ntp', 'unconfigure_ntp',
+                     'set_profile', 'update_profile',
+                     'failover_target', 'failback_target']:
+            return agent_result_ok
+        else:
+            assert False, "The %s command is not in the known list for MockAgentRpc. Please add it then when people modify it a simple text search will let them know to change it here as well." % cmd
 
 
 class MockAgentSsh(object):

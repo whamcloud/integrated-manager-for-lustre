@@ -27,6 +27,7 @@ from chroma_agent.lib.pacemaker import PacemakerConfigurationError
 from chroma_agent.device_plugins.action_runner import CallbackAfterResponse
 from cluster_sim.log import log
 from cluster_sim.fake_device_plugins import FakeDevicePlugins
+from chroma_agent.chroma_common.lib.agent_rpc import agent_result_ok
 
 
 class FakeActionPlugins():
@@ -64,10 +65,10 @@ class FakeActionPlugins():
                         data[plugin] = klass(None).start_session()
                     return data
 
-            elif cmd == 'configure_rsyslog':
+            elif cmd in ['configure_rsyslog', 'unconfigure_rsyslog']:
                 return
-            elif cmd == 'configure_ntp':
-                return
+            elif cmd in ['configure_ntp', 'unconfigure_ntp']:
+                return agent_result_ok
             elif cmd == 'deregister_server':
                 sim = self._simulator
                 server = self._server
@@ -106,19 +107,16 @@ class FakeActionPlugins():
                     server.shutdown(simulate_shutdown=True, reboot=True)
 
                 raise CallbackAfterResponse(None, _restart)
-            elif cmd == 'unconfigure_ntp':
-                return
-            elif cmd == 'unconfigure_rsyslog':
-                return
             elif cmd == 'failover_target':
-                return self._server._cluster.failover(kwargs['ha_label'])
+                self._server._cluster.failover(kwargs['ha_label'])
+                return agent_result_ok
             elif cmd == 'failback_target':
-                rc = self._server._cluster.failback(kwargs['ha_label'])
-                return rc
+                self._server._cluster.failback(kwargs['ha_label'])
+                return agent_result_ok
             elif cmd == 'set_conf_param':
                 self._server.set_conf_param(kwargs['key'], kwargs.get('value', None))
             elif cmd in ['configure_corosync', 'unconfigure_corosync']:
-                return
+                return agent_result_ok
             elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
                          'enable_pacemaker']:
                 return
