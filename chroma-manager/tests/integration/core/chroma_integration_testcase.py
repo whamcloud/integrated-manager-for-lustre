@@ -268,6 +268,22 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
 
         return filesystem_id
 
+    def stop_filesystem(self, filesystem_id):
+        response = self.chroma_manager.put(
+            '/api/filesystem/%s/' % filesystem_id,
+            body = {'state': 'stopped'}
+        )
+        self.assertTrue(response.successful, response.text)
+        self.wait_for_command(self.chroma_manager, response.json['command']['id'])
+
+    def start_filesystem(self, filesystem_id):
+        response = self.chroma_manager.put(
+            '/api/filesystem/%s/' % filesystem_id,
+            body = {'state': 'available'}
+        )
+        self.assertTrue(response.successful, response.text)
+        self.wait_for_command(self.chroma_manager, response.json['command']['id'])
+
     def create_client_mount(self, host_uri, filesystem_uri, mountpoint):
         # Normally this is done as part of copytool creation, but we need
         # to give the test harness some way of doing it via API.

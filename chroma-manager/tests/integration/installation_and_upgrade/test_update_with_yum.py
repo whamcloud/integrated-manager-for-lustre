@@ -60,6 +60,7 @@ class TestYumUpdate(TestCreateFilesystem):
 
         self.assertGreaterEqual(len(config['lustre_servers']), 4)
 
+        # get a list of hosts
         response = self.chroma_manager.get(
             '/api/host/',
         )
@@ -67,10 +68,7 @@ class TestYumUpdate(TestCreateFilesystem):
         hosts = response.json['objects']
         self.assertEqual(len(hosts), len(self.TEST_SERVERS))
 
-        # get a list of hosts
-        command = {}
-
-        # With the list of hosts, start the upgrade
+        # Ensure that IML notices its storage servers needs upgraded
         for host in hosts:
             # wait for an upgrade available alert
             self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'],
@@ -91,6 +89,14 @@ class TestYumUpdate(TestCreateFilesystem):
             # The needs_update flag should be set on the host
             self.assertEqual(self.get_json_by_uri(host['resource_uri'])['needs_update'], True)
 
+        # Stop the filesystem. Currently the GUI forces you to stop the filesystem before
+        # the buttons to install updates is available as we don't do a kind "rolling upgrade".
+        filesystem = self.get_filesystem_by_name(self.fs_name)
+        self.stop_filesystem(filesystem['id'])
+
+        # With the list of hosts, start the upgrade
+        command = {}
+        for host in hosts:
             # We send a command to update the storage servers with new packages
             # =================================================================
             command[host['id']] = self.chroma_manager.post("/api/command/", body={
@@ -107,7 +113,11 @@ class TestYumUpdate(TestCreateFilesystem):
             self.wait_for_assert(lambda: self.assertNoAlerts(host['resource_uri'],
                                                              of_type='UpdatesAvailableAlert'))
 
+        # Fully update all installed packages on the server
         for server in self.TEST_SERVERS:
             self.remote_operations.yum_update(server)
             kernel = self.remote_operations.default_boot_kernel_path(server)
             self.assertGreaterEqual(kernel.find("_lustre"), 7)
+
+        # Start the filesystem back up
+        self.start_filesystem(filesystem['id'])
