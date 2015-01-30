@@ -86,8 +86,15 @@ class Migration(SchemaMigration):
         #
         # If it turns out that we have never had a host but we have add a configurelnetjob then this code will fail
         # I could add an assert but it will throw an error on its own.
-        if (ManagedHost.objects.get_query_set_with_deleted().count() > 0):
-          host_id = ManagedHost.objects.get_query_set_with_deleted().all()[0].id
+        #
+        # We must not use the ManagedHost objects directly because they will change in later versions and not match the
+        # database as it is today.
+        # [0][0] because db.execute(...) will return a list of rows where each row is a tuple. So [0][0] gives us
+        # the first value from the first row, and the only value we have is the id. So the id from the first row.
+        managed_host_rows = db.execute('select id from chroma_core_managedhost limit 1')
+
+        if len(managed_host_rows) > 0:
+          host_id = managed_host_rows[0][0]
         else:
           host_id = 0
 
