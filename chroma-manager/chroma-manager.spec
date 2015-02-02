@@ -54,7 +54,7 @@ Requires: policycoreutils-python
 Requires: python-gevent >= 1.0.1
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6.2
 Requires: system-config-firewall-base
-Requires: nodejs >= 0.10.30-1
+Requires: nodejs >= 0.10.33-1
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
 Obsoletes: nodejs-active-x-obfuscator
