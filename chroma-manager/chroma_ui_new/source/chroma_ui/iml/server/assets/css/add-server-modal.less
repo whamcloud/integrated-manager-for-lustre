@@ -1,6 +1,16 @@
 .add-server-modal {
   .close {
-    margin-top: 0px;
+    margin-top: 0;
+
+    &[disabled]:hover,
+    &[disabled]:focus {
+      opacity: .2;
+    }
+
+    &[disabled] i {
+      color: @gray-darker;
+      cursor: default;
+    }
   }
 
   .item-help {

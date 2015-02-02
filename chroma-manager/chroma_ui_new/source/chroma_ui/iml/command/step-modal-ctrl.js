@@ -84,6 +84,7 @@ angular.module('command')
         templateUrl: 'iml/command/assets/html/step-modal.html',
         controller: 'StepModalCtrl',
         windowClass: 'step-modal',
+        backdrop: 'static',
         resolve: {
           /**
            * Resolves to a job spark.

@@ -141,6 +141,7 @@ describe('step modal', function () {
         templateUrl: 'iml/command/assets/html/step-modal.html',
         controller: 'StepModalCtrl',
         windowClass: 'step-modal',
+        backdrop: 'static',
         resolve: {
           job: ['requestSocket', jasmine.any(Function)],
           steps: ['requestSocket', jasmine.any(Function)]

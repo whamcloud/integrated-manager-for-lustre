@@ -251,6 +251,7 @@
       return function openLnetModal (host) {
         return $modal.open({
           templateUrl: 'iml/configure-lnet/assets/html/configure-lnet-modal.html',
+          backdrop: 'static',
           controller: 'ConfigureLnetModalCtrl',
           windowClass: 'configure-lnet-modal',
           resolve: {

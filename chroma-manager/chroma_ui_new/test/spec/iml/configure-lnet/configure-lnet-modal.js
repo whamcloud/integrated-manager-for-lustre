@@ -260,6 +260,7 @@ describe('Configure LNet modal', function () {
         templateUrl: 'iml/configure-lnet/assets/html/configure-lnet-modal.html',
         controller: 'ConfigureLnetModalCtrl',
         windowClass: 'configure-lnet-modal',
+        backdrop: 'static',
         resolve: {
           hostSpark: jasmine.any(Array),
           networkInterfaceSpark: jasmine.any(Array)
