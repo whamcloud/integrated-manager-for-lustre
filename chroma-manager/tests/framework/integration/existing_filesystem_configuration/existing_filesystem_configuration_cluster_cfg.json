@@ -11,13 +11,13 @@
     "reset": true,
     "test_runners": [
         {
-            "distro": "el6.5",
+            "distro": "TEST_DISTRIBUTION",
             "repos": ["chroma"]
         }
     ],
     "chroma_managers": [
         {
-            "distro": "el6.5",
+            "distro": "TEST_DISTRIBUTION",
             "selinux_enabled": true,
             "firewall_enabled": true,
             "repos": ["chroma"],
@@ -29,7 +29,7 @@
     ],
     "lustre_servers": [
         {
-            "distro": "el6.5",
+            "distro": "TEST_DISTRIBUTION",
             "selinux_enabled": false,
             "firewall_enabled": false,
             "root_password": "lustre",
@@ -37,7 +37,7 @@
             "repos": ["chroma"]
         },
         {
-            "distro": "el6.5",
+            "distro": "TEST_DISTRIBUTION",
             "selinux_enabled": false,
             "firewall_enabled": false,
             "root_password": "lustre",
@@ -45,7 +45,7 @@
             "repos": ["chroma"]
         },
         {
-            "distro": "el6.5",
+            "distro": "TEST_DISTRIBUTION",
             "selinux_enabled": false,
             "firewall_enabled": false,
             "root_password": "lustre",
@@ -53,7 +53,7 @@
             "repos": ["chroma"]
         },
         {
-            "distro": "el6.5",
+            "distro": "TEST_DISTRIBUTION",
             "selinux_enabled": false,
             "firewall_enabled": false,
             "root_password": "lustre",
@@ -64,7 +64,7 @@
     "lustre_clients": [
         {
             "address": "hydra-2-efs-client-1",
-            "distro": "el6.5"
+            "distro": "TEST_DISTRIBUTION"
         }
     ],
     "hosts": {

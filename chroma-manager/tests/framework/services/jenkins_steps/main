@@ -15,6 +15,7 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 BUILD_JOB_NAME=${BUILD_JOB_NAME:?"Need to set BUILD_JOB_NAME"}
 BUILD_JOB_BUILD_NUMBER=${BUILD_JOB_BUILD_NUMBER:?"Need to set BUILD_JOB_BUILD_NUMBER"}
 WORKSPACE=${WORKSPACE:?"Need to set WORKSPACE"}
+TEST_DISTRIBUTION=${TEST_DISTRIBUTION:-"el6.6"}
 
 # Get the chroma-externals repo as pip is going to need it
 . scripts/update_chroma-externals.sh
@@ -28,7 +29,10 @@ trap "sed -i 's/provision\":true/provision\":false/g' provisioner_output.json
 cat provisioner_output.json | $PROVISIONER" EXIT
 
 cd $WORKSPACE/chroma_test_env
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/services/services_cluster_config.json
+sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
+       -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" \
+       -e "s/TEST_DISTRIBUTION/${TEST_DISTRIBUTION}/g" \
+       chroma/chroma-manager/tests/framework/services/services_cluster_config.json
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/services/services_cluster_config.json provisioner_input.json
 cat provisioner_input.json
 cat provisioner_input.json | $PROVISIONER > provisioner_output.json
