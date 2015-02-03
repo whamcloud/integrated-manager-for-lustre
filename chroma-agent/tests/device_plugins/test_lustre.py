@@ -117,7 +117,7 @@ class TestLustreScanPackages(CommandCaptureTestCase):
 
         lustre.rpm_lib = mock.Mock()
 
-        self.add_command(('yum', 'clean', 'all', '--enablerepo=*'))
+        self.add_command(('yum', 'clean', 'all', '--disablerepo=*', '--enablerepo=lustre-client,lustre,iml-agent,e2fsprogs,robinhood'))
 
         for repo in repo_list:
             self.add_command(('repoquery', '--disablerepo=*', '--enablerepo=%s' % repo, '-a', '--qf=%{EPOCH} %{NAME} %{VERSION} %{RELEASE} %{ARCH}'))

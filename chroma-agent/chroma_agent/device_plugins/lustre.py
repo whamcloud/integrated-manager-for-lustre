@@ -77,7 +77,7 @@ def scan_packages():
 
     # For all repos, enumerate packages in the repo
     # =============================================
-    yum_util('clean')
+    yum_util('clean', fromrepo = [repo for repo in repo_packages])
 
     for repo_name, packages in repo_packages.items():
         try:
