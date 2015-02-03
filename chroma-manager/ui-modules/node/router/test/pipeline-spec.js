@@ -24,4 +24,14 @@ describe('pipeline', function () {
 
     expect(pipe).toHaveBeenCalledOnceWith(request, response, jasmine.any(Function));
   });
+
+  it('should handle extra args', function () {
+    var spy = jasmine.createSpy('spy');
+
+    pipeline([function (request, response, next) {
+      next(request, response, {c: 'd'});
+    }, spy], request, response);
+
+    expect(spy).toHaveBeenCalledOnceWith(request, response, {c: 'd'}, jasmine.any(Function));
+  });
 });

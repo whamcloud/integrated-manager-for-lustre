@@ -19,7 +19,22 @@
 // otherwise. Any license under such intellectual property rights must be
 // express and approved by Intel in writing.
 
-
 'use strict';
 
-module.exports = require('./lib/router');
+var _ = require('lodash');
+
+/**
+ * When called, recursively iterates the pipeline.
+ */
+module.exports = function next () {
+  var args = [].slice.call(arguments, 0);
+  var pipeline = args.shift();
+
+  if (pipeline.length === 0)
+    return;
+
+  var pipe = pipeline[0];
+  var nextPipe = _.partial(next, pipeline.slice(1));
+
+  pipe.apply(null, args.concat(nextPipe));
+};

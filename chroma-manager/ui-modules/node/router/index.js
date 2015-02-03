@@ -21,20 +21,4 @@
 
 'use strict';
 
-var _ = require('lodash');
-
-/**
- * When called, recursively iterates the pipeline.
- * @param {Array} pipeline
- * @param {Object} request
- * @param {Object} response
- */
-module.exports = function next (pipeline, request, response) {
-  if (pipeline.length === 0)
-    return;
-
-  var pipe = pipeline[0];
-  var nextPipe = _.partial(next, pipeline.slice(1));
-
-  pipe(request, response, nextPipe);
-};
+module.exports = require('./lib/get-router');

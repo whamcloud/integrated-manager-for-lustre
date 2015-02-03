@@ -82,7 +82,7 @@ python tests/utils/pip_install_requirements.py ../chroma-externals/ ../chroma-ex
 cd ui-modules/node/ziplocker
 cp -r ../../../../chroma-externals/ziplocker/node_modules/ ./node_modules/
 ./bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
-cd ../socket-router/
+cd ../router/
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../srcmap-reverse
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'

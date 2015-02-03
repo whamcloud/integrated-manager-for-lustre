@@ -3,7 +3,7 @@ Django-*.tar.gz
 selenium-*.tar.gz
 selenium-server-standalone-*.jar
 ziplocker
-socket-router
+router
 srcmap-reverse
 stub-daddy
 stub-daddy-client
