@@ -113,6 +113,8 @@ fi
 
 %post management
 chkconfig rsyslog on
+chkconfig atd on
+service atd start
 if [ $1 -lt 2 ]; then
     # install
     # open ports in the firewall for access to Lustre
