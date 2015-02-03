@@ -9,7 +9,10 @@ set +x  # DONT REMOVE/COMMENT or you will risk exposing the jenkins-pull api tok
 curl -f -k -O -u $JENKINS_USER:$JENKINS_PULL "$JOB_URL/chroma-bundles/ieel-$IEEL_VERSION.tar.gz"
 set -x
 
-sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json
+sed -i -e "s/BUILD_JOB_NAME/${BUILD_JOB_NAME}/g" \
+       -e "s/BUILD_JOB_BUILD_NUMBER/${BUILD_JOB_BUILD_NUMBER}/g" \
+       -e "s/TEST_DISTRIBUTION/${TEST_DISTRIBUTION}/g" \
+       chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json
 
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/test_json2provisioner_json.py chroma/chroma-manager/tests/framework/integration/shared_storage_configuration/full_cluster/shared_storage_configuration_cluster_cfg.json provisioner_input.json
 
