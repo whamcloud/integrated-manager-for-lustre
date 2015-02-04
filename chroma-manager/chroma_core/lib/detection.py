@@ -77,17 +77,17 @@ class DetectScan(object):
         for fs in self.discovered_filesystems:
             for t in ManagedMgs.objects.filter(managedfilesystem = fs).all():
                 if not self.learn_primary_target(t):
-                    self.log("Found no primary mount point for MGS target %s" % t)
+                    self.log(help_text["found_not_primary_mount_point_for_MGS_target"] % t)
                     t.mark_deleted()
 
             for klass in [ManagedMdt, ManagedOst]:
                 for t in klass.objects.filter(filesystem = fs).all():
                     if not self.learn_primary_target(t):
-                        self.log("Found no primary mount point for target %s" % t)
+                        self.log(help_text["found_no_primary_mount_point_for_target"] % t)
                         t.mark_deleted()
 
         if not self.created_filesystems:
-            self.log("Discovered no new filesystems")
+            self.log(help_text["discovered_no_new_filesystem"])
         else:
             # Remove any Filesystems with zero MDTs or zero OSTs, or set state
             # of a valid filesystem
@@ -95,13 +95,13 @@ class DetectScan(object):
                 mdt_count = ManagedMdt.objects.filter(filesystem = fs).count()
                 ost_count = ManagedOst.objects.filter(filesystem = fs).count()
                 if not mdt_count:
-                    self.log("Found no MDTs for filesystem %s" % fs.name)
+                    self.log(help_text["found_not_TYPE_for_filesystem"] % ("MDT", fs.name))
                     fs.mark_deleted()
                 elif not ost_count:
-                    self.log("Found no OSTs for filesystem %s" % fs.name)
+                    self.log(help_text["found_not_TYPE_for_filesystem"] % ("OST", fs.name))
                     fs.mark_deleted()
                 else:
-                    self.log("Discovered filesystem %s with %s MDTs and %s OSTs" % (
+                    self.log(help_text["discovered_filesystem_with_n_MDTs_and_n_OSTs"] % (
                       fs.name, mdt_count, ost_count))
 
                     if set([t.state for t in fs.get_targets()]) == set(['mounted']):
