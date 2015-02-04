@@ -150,6 +150,8 @@ help_text = {
     'make_file_system_unavailable': 'Make this file system unavailable.',
     'deploy_agent': 'Deploy agent to host.',
     'detect_targets': 'Scan for Lustre targets',
+    'discovered_target': 'Discovered %s \'%s\' on server %s',
+    'discovered_no_new_target': "Discovered no new %ss",
     'update_devices': 'Update device info.',
     'update_packages': 'Update packages.',
     'update_nids': 'Update NIDs.',

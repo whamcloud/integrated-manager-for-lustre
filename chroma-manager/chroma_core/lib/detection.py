@@ -29,6 +29,7 @@ from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.host import ManagedHost, VolumeNode
 from chroma_core.models.target import ManagedMgs, ManagedTargetMount, ManagedTarget, FilesystemMember, ManagedMdt, ManagedOst
 from chroma_core.lib.cache import ObjectCache
+from chroma_help.help import help_text
 import re
 
 
@@ -40,6 +41,7 @@ class DetectScan(object):
         self.created_filesystems = []
         self.discovered_filesystems = set()
         self.created_mgts = []
+        self.created_targets = []
         self.step = step
 
     def log(self, message):
@@ -84,31 +86,42 @@ class DetectScan(object):
                         self.log("Found no primary mount point for target %s" % t)
                         t.mark_deleted()
 
-        for mgt in self.created_mgts:
-            self.log("Discovered MGT on server %s" % (mgt.primary_server()))
-            ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
-
-        # Remove any Filesystems with zero MDTs or zero OSTs, or set state
-        # of a valid filesystem
-        for fs in self.created_filesystems:
-            mdt_count = ManagedMdt.objects.filter(filesystem = fs).count()
-            ost_count = ManagedOst.objects.filter(filesystem = fs).count()
-            if not mdt_count:
-                self.log("Found no MDTs for filesystem %s" % fs.name)
-                fs.mark_deleted()
-            elif not ost_count:
-                self.log("Found no OSTs for filesystem %s" % fs.name)
-                fs.mark_deleted()
-            else:
-                self.log("Discovered filesystem %s with %s MDTs and %s OSTs" % (
-                  fs.name, mdt_count, ost_count))
-
-                if set([t.state for t in fs.get_targets()]) == set(['mounted']):
-                    fs.state = 'available'
-                fs.save()
-
         if not self.created_filesystems:
             self.log("Discovered no new filesystems")
+        else:
+            # Remove any Filesystems with zero MDTs or zero OSTs, or set state
+            # of a valid filesystem
+            for fs in self.created_filesystems:
+                mdt_count = ManagedMdt.objects.filter(filesystem = fs).count()
+                ost_count = ManagedOst.objects.filter(filesystem = fs).count()
+                if not mdt_count:
+                    self.log("Found no MDTs for filesystem %s" % fs.name)
+                    fs.mark_deleted()
+                elif not ost_count:
+                    self.log("Found no OSTs for filesystem %s" % fs.name)
+                    fs.mark_deleted()
+                else:
+                    self.log("Discovered filesystem %s with %s MDTs and %s OSTs" % (
+                      fs.name, mdt_count, ost_count))
+
+                    if set([t.state for t in fs.get_targets()]) == set(['mounted']):
+                        fs.state = 'available'
+                    fs.save()
+
+        if not self.created_mgts:
+            self.log(help_text['discovered_no_new_target'] % ManagedMgs().target_type().upper())
+        else:
+            for mgt in self.created_mgts:
+                self.log(help_text['discovered_target'] % (mgt.target_type().upper(), mgt.name, mgt.primary_server()))
+                ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
+
+        # Bit of additional complication so we can print really cracking messages, and detailed messages.
+        for target in [ManagedMdt(), ManagedOst()]:
+            if target.target_type() not in [target.target_type() for target in self.created_targets]:
+                self.log(help_text['discovered_no_new_target'] % target.target_type().upper())
+
+        for target in self.created_targets:
+            self.log(help_text['discovered_target'] % (target.target_type().upper(), target.name, target.primary_server()))
 
     def _nids_to_mgs(self, host, nid_strings):
         '''
@@ -352,6 +365,7 @@ class DetectScan(object):
                     log.info("%s %s %s" % (mgs.id, name, device_node_paths))
                     log.info("Learned %s %s" % (klass.__name__, name))
                     self._learn_event(host, target)
+                    self.created_targets.append(target)
                     ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
 
     def _learn_event(self, host, learned_item):

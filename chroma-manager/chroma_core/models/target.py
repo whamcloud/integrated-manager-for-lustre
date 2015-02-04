@@ -327,7 +327,7 @@ class ManagedTarget(StatefulObject):
 
         return target, target_mounts
 
-    def target_type(cls):
+    def target_type(self):
         raise "Unimplemented method 'target_type'"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
@@ -351,7 +351,7 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
             available_states = list(set(available_states) ^ set(['forgotten']))
             return available_states
 
-    def target_type(cls):
+    def target_type(self):
         return "ost"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
@@ -380,7 +380,7 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
 
             return available_states
 
-    def target_type(cls):
+    def target_type(self):
         return "mdt"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
@@ -455,7 +455,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
             p.version = version
             p.save()
 
-    def target_type(cls):
+    def target_type(self):
         return "mgs"
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
