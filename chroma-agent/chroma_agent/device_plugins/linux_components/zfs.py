@@ -43,7 +43,7 @@ class ZfsDevices(DeviceHelper):
     @exceptionSandBox(daemon_log, [])
     def quick_scan(self):
         try:
-            return shell.try_run(["zpool", "list", "-H", "-o", "name"]).split("\n")
+            return shell.try_run(['zfs', 'list', '-H', '-o', 'name,guid']).split("\n")
         except (IOError, OSError):
             return []
 
