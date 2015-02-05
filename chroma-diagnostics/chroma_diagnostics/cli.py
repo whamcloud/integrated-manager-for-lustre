@@ -193,7 +193,7 @@ def export_postgres_chroma_db(parent_directory):
     cmd_export = ['pg_dump', '-U', 'chroma', '-F', 'p', '-Z', '9', '-w', '-f', output_path]
 
     #  ... while excluding tables
-    cmd_export += ['-T %s' % table_name for table_name in EXCLUDED_TABLES]
+    cmd_export += sum([['-T', table_name] for table_name in EXCLUDED_TABLES], [])
 
     # ... the IML database
     cmd_export += ['chroma']
