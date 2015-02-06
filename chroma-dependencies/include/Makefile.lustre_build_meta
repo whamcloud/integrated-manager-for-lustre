@@ -3,13 +3,13 @@ include $(CURDIR)/$(dir $(lastword $(MAKEFILE_LIST)))/Makefile.jenkins_meta
 
 # Define the job/build that should be used for Lustre packages
 JENKINS_JOB_NAME	:= lustre-b_ieel2_0
-JENKINS_BUILD_NUMBER	:= 119
+JENKINS_BUILD_NUMBER	:= 128
 #JENKINS_JOB_NAME	:= lustre-b_ieel-reviews
 #JENKINS_BUILD_NUMBER	:= 733
-LUSTRE_RELEASE		:= 2.5.29
+LUSTRE_RELEASE		:= 2.5.30
 
 EL_BUILDER_DISTRO	 = el6.6
-EL_KERNEL_RELEASE 	 = 2.6.32-504.3.3.el6
+EL_KERNEL_RELEASE 	 = 2.6.32-504.8.1.el6
 LUSTRE_EL_KERNEL_RELEASE = $(EL_KERNEL_RELEASE)_lustre.x86_64
 
 SLES_KERNEL_RELEASE 	 = 3.0.101-0.46
