@@ -64,7 +64,7 @@ def get_ring0():
     server_url = config.get('settings', 'server')['url']
     manager_address = socket.gethostbyname(urlparse(server_url).hostname)
     out = shell.try_run(['/sbin/ip', 'route', 'get', manager_address])
-    match = re.search(r'dev\s+(\w+)', out)
+    match = re.search(r'dev\s+([^\s]+)', out)
     if match:
         manager_dev = match.groups()[0]
     else:

@@ -40,7 +40,7 @@ class NetworkInterface():
     once parsed the results can be accessed using named properties.
     '''
     def __init__(self, ifconfig_lines):
-        match_values = ['(?P<interface>^[a-zA-Z0-9:]+)(.*)Link encap:(.*).*',
+        match_values = ['(?P<interface>^[^\s]+)(.*)Link encap:(.*).*',
                         '(.*)Link encap:(?P<type>[^\s]*).*(HWaddr )(?P<mac_address>[^\s]*).*',
                         '.*(inet addr:)(?P<inet4_addr>[^\s]*).*',
                         '.*(inet6 addr: )(?P<inet6_addr>[^\s\/]*/(?P<prefixlen>[\d]*)).*',

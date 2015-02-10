@@ -16,7 +16,7 @@ class TestLinuxNetwork(unittest.TestCase):
         collisions:0 txqueuelen:0
         RX bytes:314203 (306.8 KiB)  TX bytes:129834 (126.7 KiB)
 
-eth0    Link encap:Ethernet  HWaddr 4C:00:10:AC:61:E1
+eth0.1.1?1b34*430    Link encap:Ethernet  HWaddr 4C:00:10:AC:61:E1
         inet6 addr: fe80::4e00:10ff:feac:61e1/64 Scope:Link
         UP BROADCAST RUNNING SLAVE MULTICAST  MTU:1500 Metric:1
         RX packets:1581 errors:0 dropped:0 overruns:0 frame:0

@@ -45,13 +45,13 @@ class TestConfigureCorosync(unittest.TestCase):
         from chroma_agent.lib.corosync import CorosyncRingInterface
 
         def get_ring0():
-            return CorosyncRingInterface('eth0')
+            return CorosyncRingInterface('eth0.1.1?1b34*430')
         patcher = mock.patch('chroma_agent.lib.corosync.get_ring0', get_ring0)
         patcher.start()
 
         self.interfaces = {
-                'eth0': {
-                    'device': 'eth0',
+                'eth0.1.1?1b34*430': {
+                    'device': 'eth0.1.1?1b34*430',
                     'mac_address': 'de:ad:be:ef:ca:fe',
                     'ipv4_address': '192.168.1.1',
                     'ipv4_netmask': '255.255.255.0',
