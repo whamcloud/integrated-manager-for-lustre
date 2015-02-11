@@ -184,6 +184,10 @@ class PacemakerConfig(object):
         return self.root.find('configuration')
 
     @property
+    def crm_config(self):
+        return self.configuration.find('crm_config')
+
+    @property
     def nodes(self):
         nodes = []
         for node in self.configuration.find('nodes'):
@@ -237,6 +241,34 @@ class PacemakerConfig(object):
     @property
     def is_dc(self):
         return self.dc == self.get_node(socket.gethostname()).name
+
+    @property
+    def stonith_enabled(self):
+        '''
+        :return: True if stonith is enabled in the bootstrap options
+        '''
+        cib_bootstrap_options = self.get_propertyset('cib-bootstrap-options')
+
+        return cib_bootstrap_options.get('stonith-enabled') == 'true'
+
+    def create_update_properyset(self, propertyset_name, properties):
+        nvpairs = ""
+
+        for key, value in properties.items():
+            nvpairs += '<nvpair id="%s-%s" name="%s" value="%s"/>\n' % (propertyset_name, key, key, value)
+
+        cibadmin(["--modify", "--allow-create", "-o", "crm_config", "-X",
+                  '<cluster_property_set id="%s">\n%s' % (propertyset_name, nvpairs)])
+
+    def get_propertyset(self, propertyset_name):
+        result = {}
+
+        for propertyset in self.crm_config:
+            if propertyset.attrib['id'] == propertyset_name:
+                for value_pair in propertyset:
+                    result[value_pair.attrib['name']] = value_pair.attrib['value']
+
+        return result
 
 
 def cibadmin(command_args, timeout = 120):

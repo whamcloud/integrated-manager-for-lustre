@@ -25,11 +25,18 @@ Corosync verification
 """
 
 from netaddr import IPNetwork
+import socket
+from os import remove
+import errno
+import re
+import json
+import time
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
 from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
 from chroma_agent.log import daemon_log
+from ConfigParser import SafeConfigParser, Error as ConfigError
 
 # The window of time in which we count resource monitor failures
 RSRC_FAIL_WINDOW = "20m"
@@ -97,6 +104,10 @@ def enable_pacemaker():
 
 
 def configure_pacemaker():
+    '''
+    Configure pacemaker
+    :return: Error string on failure, None on success
+    '''
     # Corosync needs to be running for pacemaker -- if it's not, make
     # an attempt to get it going.
     if shell.run(['/sbin/service', 'corosync', 'status'])[0]:
@@ -106,11 +117,26 @@ def configure_pacemaker():
     enable_pacemaker()
     shell.try_run(['/sbin/service', 'pacemaker', 'restart'])
 
+    _configure_pacemaker()
+
+    # Now check that pacemaker is configured, by looking for our configuration flag.
+    # Allow 1 minute - if nothing then return an error.
+    for timeout in range(0, 60):
+        if PacemakerConfig().stonith_enabled:
+            return None
+        time.sleep(1)
+
+    return "pacemaker_configuration_failed"
+
+
+def _configure_pacemaker():
     pc = PacemakerConfig()
 
     if not pc.is_dc:
         daemon_log.info("Skipping (global) pacemaker configuration because I am not the DC")
         return
+
+    daemon_log.info("Configuring (global) pacemaker configuration because I am the DC")
 
     # ignoring quorum should only be done on clusters of 2
     if len(pc.nodes) > 2:
@@ -133,13 +159,11 @@ def configure_pacemaker():
         else:
             raise
 
-    cibadmin(["--modify", "--allow-create", "-o", "crm_config", "-X",
-              '''<cluster_property_set id="cib-bootstrap-options">
-<nvpair id="cib-bootstrap-options-no-quorum-policy" name="no-quorum-policy" value="%s"/>
-<nvpair id="cib-bootstrap-options-symmetric-cluster" name="symmetric-cluster" value="true"/>
-<nvpair id="cib-bootstrap-options-cluster-infrastructure" name="cluster-infrastructure" value="openais"/>
-<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"/>
-</cluster_property_set>''' % no_quorum_policy])
+    pc.create_update_properyset("cib-bootstrap-options",
+                                {"no-quorum-policy": no_quorum_policy,
+                                 "symmetric-cluster": "true",
+                                 "cluster-infrastructure": "openais",
+                                 "stonith-enabled": "true"})
 
     def set_rsc_default(name, value):
         shell.try_run(["crm_attribute", "--type", "rsc_defaults",
@@ -148,11 +172,12 @@ def configure_pacemaker():
     set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW)
     set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
 
+    # Finally mark who configured it.
+    pc.create_update_properyset("intel_manager_for_lustre_configuration",
+                                {"configured_by": socket.gethostname()})
+
 
 def configure_fencing(agents):
-    import socket
-    from chroma_agent.lib.pacemaker import PacemakerConfig
-
     pc = PacemakerConfig()
     node = pc.get_node(socket.gethostname())
 
@@ -160,7 +185,6 @@ def configure_fencing(agents):
 
     if isinstance(agents, basestring):
         # For CLI debugging
-        import json
         agents = json.loads(agents)
 
     for idx, agent in enumerate(agents):
@@ -168,26 +192,18 @@ def configure_fencing(agents):
 
 
 def set_node_standby(node):
-    from chroma_agent.lib.pacemaker import PacemakerConfig
-
     pc = PacemakerConfig()
     node = pc.get_node(node)
     node.enable_standby()
 
 
 def set_node_online(node):
-    from chroma_agent.lib.pacemaker import PacemakerConfig
-
     pc = PacemakerConfig()
     node = pc.get_node(node)
     node.disable_standby()
 
 
 def unconfigure_corosync():
-    from os import remove
-    import errno
-    import re
-
     shell.try_run(['service', 'corosync', 'stop'])
     shell.try_run(['/sbin/chkconfig', 'corosync', 'off'])
     mcastport = None
@@ -286,7 +302,6 @@ def host_corosync_config():
     ring1_ipaddr = 10.42.42.10
     ring1_netmask = 255.255.0.0
     """
-    from ConfigParser import SafeConfigParser, Error as ConfigError
     config_file = "/etc/chroma.cfg"
 
     parser = SafeConfigParser()

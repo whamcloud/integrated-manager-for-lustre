@@ -139,6 +139,8 @@ help_text = {
     'volume_status_configured-noha': 'This volume is ready to be used as a Lustre target, but is not configured for high availability.',
     'volume_status_unconfigured': 'This volume cannot be used as a Lustre target until a primary server is selected.',
 
+    'pacemaker_configuration_failed': 'Pacemaker configuration failed',
+
     'no_dismiss_message_alert': 'This alert relates to an active problem. When the problem is fixed you may dismiss.',
     'no_dismiss_message_command': 'This command is incomplete. When it has completed you may dismiss.',
     'copyright_year': '2014',

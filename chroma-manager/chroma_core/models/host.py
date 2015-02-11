@@ -551,7 +551,13 @@ class ConfigurePacemakerStep(Step):
     def run(self, kwargs):
         host = kwargs['host']
         if not host.immutable_state:
-            self.invoke_agent(host, "configure_pacemaker")
+            error = self.invoke_agent(host, "configure_pacemaker")
+
+            if error:
+                from chroma_core.services.job_scheduler.agent_rpc import AgentException
+                error = help_text[error]
+                self.log(error)
+                raise AgentException(host.fqdn, "ConfigurePacemaker", kwargs, error)
 
 
 class ConfigureCorosyncStep(Step):

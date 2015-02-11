@@ -79,10 +79,13 @@ class CommandCaptureTestCase(unittest.TestCase):
     def assertRanAllCommands(self):
         '''
         assert that all the commands expected were run, the order is not important.
+        Some commands may be run more than once.
         '''
-        self.assertEqual(len(self._commands), len(self._commands_history))
+        commands_history = set(self._commands_history)
 
-        for args in self._commands_history:
+        self.assertEqual(len(self._commands), len(commands_history))
+
+        for args in commands_history:
             self.assertRanCommand(args)
 
     def add_commands(self, *commands):
