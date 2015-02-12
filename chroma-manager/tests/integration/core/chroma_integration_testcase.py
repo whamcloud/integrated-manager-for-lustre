@@ -115,8 +115,8 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     if job['errored']:
                         for step in job_steps:
                             if step['state'] == 'failed' and \
-                               step['console'].find("is no initramfs"):
-                                print "Waiting for developer inspection dueo to HYD-4050.  DO NOT ABORT THIS TEST.  NOTIFY DEVELOPER ASSIGNED TO HYD-4050."
+                               step['console'].find("is no initramfs") >= 0:
+                                logger.error("Waiting for developer inspection dueo to HYD-4050.  DO NOT ABORT THIS TEST.  NOTIFY DEVELOPER ASSIGNED TO HYD-4050.")
                                 import time
                                 while True:
                                     time.sleep(86400)
