@@ -25,6 +25,8 @@ from copy import deepcopy
 import subprocess
 import threading
 import os
+import tempfile
+
 
 logger = None
 
@@ -87,32 +89,45 @@ def _run(arg_list):
     Separate the bare inner of running a command, so that tests can
     stub this function while retaining the related behaviour of run()
     """
-    p = subprocess.Popen(arg_list,
-        stdout = subprocess.PIPE,
-        stderr = subprocess.PIPE,
-        close_fds = True)
 
-    # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
-    # to poll the thread_state.teardown event as well as the completion of the subprocess.
-    # This is done to allow cancellation of subprocesses
-    rc = None
-    min_wait = 1.0E-3
-    max_wait = 1.0
-    wait = min_wait
-    while rc is None:
-        rc = p.poll()
-        if rc is None:
-            thread_state.abort.wait(timeout = wait)
-            if thread_state.abort.is_set():
-                if logger:
-                    logger.warning("Teardown: killing subprocess %s (%s)" % (p.pid, arg_list))
-                p.kill()
-                raise SubprocessAborted()
-            elif wait < max_wait:
-                wait *= 2.0
-        else:
-            stdout_buf, stderr_buf = p.communicate()
-            return rc, stdout_buf, stderr_buf
+    """
+    Popen has a limit of 2^16 for the output if you use subprocess.PIPE (as we did recently) so use real files so
+    the output side is effectively limitless
+    """
+    stdout_fd = tempfile.TemporaryFile()
+    stderr_fd = tempfile.TemporaryFile()
+
+    try:
+        p = subprocess.Popen(arg_list,
+                             stdout = stdout_fd,
+                             stderr = stderr_fd,
+                             close_fds = True)
+
+        # Rather than using p.wait(), we do a slightly more involved poll/backoff, in order
+        # to poll the thread_state.teardown event as well as the completion of the subprocess.
+        # This is done to allow cancellation of subprocesses
+        rc = None
+        min_wait = 1.0E-3
+        max_wait = 1.0
+        wait = min_wait
+        while rc is None:
+            rc = p.poll()
+            if rc is None:
+                thread_state.abort.wait(timeout = wait)
+                if thread_state.abort.is_set():
+                    if logger:
+                        logger.warning("Teardown: killing subprocess %s (%s)" % (p.pid, arg_list))
+                    p.kill()
+                    raise SubprocessAborted()
+                elif wait < max_wait:
+                    wait *= 2.0
+            else:
+                stdout_fd.seek(0)
+                stderr_fd.seek(0)
+                return rc, stdout_fd.read(), stderr_fd.read()
+    finally:
+        stdout_fd.close()
+        stderr_fd.close()
 
 
 def run(arg_list):
