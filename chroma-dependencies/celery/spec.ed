@@ -15,8 +15,8 @@ Requires:       python-importlib
 Requires:       python-multiprocessing
 Requires:       python-uuid
 Requires:       python-amqp
-Requires:       python-pytz
 %endif
+Requires:       pytz >= 2011b
 .
 /%setup/a
 rm -f docs/.static/.keep

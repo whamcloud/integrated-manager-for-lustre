@@ -38,7 +38,7 @@ Requires: python-daemon
 Requires: python-requests >= 1.0.0
 Requires: python-celery >= 3.0.11
 Requires: python-amqp
-Requires: python-pytz
+Requires: pytz
 Requires: python-billiard
 Requires: python-networkx
 Requires: python-httpagentparser
