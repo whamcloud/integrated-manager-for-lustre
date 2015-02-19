@@ -4,7 +4,7 @@ from django.test import TestCase
 import mock
 import os
 from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.host import Nid
+from chroma_core.models.lnet_configuration import Nid
 from chroma_core.models.host import ManagedHost, Volume, VolumeNode, DetectTargetsJob
 from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
 from chroma_core.services.job_scheduler.agent_rpc import AgentException

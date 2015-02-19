@@ -4,8 +4,8 @@ import mock
 
 from chroma_api.urls import api
 from chroma_core.models import Bundle, Command
-from chroma_core.models.host import ManagedHost, Nid
-from chroma_core.models.server_profile import ServerProfile, ServerProfileValidation
+from chroma_core.models import ManagedHost, Nid
+from chroma_core.models import ServerProfile, ServerProfileValidation
 from chroma_core.services.job_scheduler import job_scheduler_client
 
 from tests.unit.chroma_core.helper import MockAgentRpc, create_host_ssh_patch, synthetic_host, make_command

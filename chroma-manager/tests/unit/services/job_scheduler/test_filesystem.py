@@ -2,7 +2,7 @@ from itertools import chain
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import dbperf
 from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.host import Nid
+from chroma_core.models.lnet_configuration import Nid
 from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst, ManagedTarget, ManagedTargetMount
 from tests.unit.chroma_core.helper import freshen, synthetic_host
 from django.db import connection

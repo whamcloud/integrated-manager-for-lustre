@@ -4,7 +4,8 @@ from chroma_core.services.plugin_runner.resource_manager import ResourceManager
 from django.db import connection
 from django.db.models.query_utils import Q
 from chroma_core.lib.util import dbperf
-from chroma_core.models.host import Volume, VolumeNode, ManagedHost, LNetConfiguration, Nid
+from chroma_core.models.host import Volume, VolumeNode, ManagedHost
+from chroma_core.models.lnet_configuration import LNetConfiguration, Nid
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
 import mock

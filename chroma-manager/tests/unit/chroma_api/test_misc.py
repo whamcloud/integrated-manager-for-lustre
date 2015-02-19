@@ -1,8 +1,8 @@
 
 import dateutil.parser
-from chroma_core.models.host import ManagedHost, Volume, VolumeNode, ForceRemoveHostJob, StopLNetJob, HostOfflineAlert
-from chroma_core.models.jobs import Command, StepResult
-from chroma_core.models.target import ManagedTarget
+from chroma_core.models import ManagedHost, Volume, VolumeNode, ForceRemoveHostJob, StopLNetJob, HostOfflineAlert
+from chroma_core.models import Command, StepResult
+from chroma_core.models import ManagedTarget
 import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helper import synthetic_host

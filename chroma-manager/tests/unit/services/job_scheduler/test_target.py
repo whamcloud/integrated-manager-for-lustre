@@ -1,6 +1,6 @@
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.target import ManagedTargetMount
-from chroma_core.models.host import Nid
+from chroma_core.models.lnet_configuration import Nid
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
 

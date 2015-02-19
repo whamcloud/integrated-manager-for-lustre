@@ -16,7 +16,7 @@ def load_filesystem_from_json(data):
 
     from chroma_core.lib.cache import ObjectCache
     from chroma_core.models import ManagedHost, ManagedTarget, ManagedTargetMount
-    from chroma_core.models.host import Nid
+    from chroma_core.models import Nid
     from tests.unit.chroma_core.helper import synthetic_host
 
     lookup = defaultdict(dict)
@@ -108,7 +108,7 @@ def step(context, sample_name):
 def step(context, name):
     import os
     import json
-    from chroma_core.models.host import Nid
+    from chroma_core.models import Nid
     from tests.unit.chroma_core.helper import MockAgentRpc
 
     # Skip setup if it was already done in a previous scenario.
