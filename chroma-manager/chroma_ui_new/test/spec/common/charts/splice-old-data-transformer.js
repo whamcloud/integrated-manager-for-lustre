@@ -110,4 +110,34 @@ describe('splice old data transformer', function () {
 
     expect(data[0].values).toEqual([{ x: new Date('12/11/2013') }]);
   });
+
+  it('should splice empty series', function () {
+    var emptySeries = [
+      { key: 'close', values: [{ x: new Date('12/11/2013') }] },
+      { key: 'getattr', values: [{ x: new Date('12/10/2013') }] },
+      { key: 'getxattr', values: [{ x: new Date('12/11/2013') }] },
+      { key: 'link', values: [] },
+      { key: 'mkdir', values: [] },
+      { key: 'mknod', values: [{ x: new Date('12/10/2013 23:59:59') }] },
+      { key: 'open', values: [] },
+      { key: 'rename', values: [{ x: new Date('12/11/2013') }] },
+      { key: 'rmdir', values: [] },
+      { key: 'setattr', values: [] },
+      { key: 'statfs', values: [{ x: new Date('12/11/2013') }] },
+      { key: 'unlink', values: [] }
+    ];
+
+    stream.getter.andReturn(emptySeries);
+
+    getServerMoment.plan().subtract.andReturn(moment('12/11/2013'));
+
+    spliceOldDataTransformer.call(stream, {});
+
+    expect(emptySeries).toEqual([
+      { key: 'close', values: [{ x: new Date('12/11/2013') }] },
+      { key: 'getxattr', values: [{ x: new Date('12/11/2013') }] },
+      { key: 'rename', values: [{ x: new Date('12/11/2013') }] },
+      { key: 'statfs', values: [{ x: new Date('12/11/2013') }] }
+    ]);
+  });
 });

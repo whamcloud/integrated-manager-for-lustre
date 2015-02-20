@@ -36,7 +36,7 @@
       if (!Array.isArray(data))
         throw new Error('Data not in expected format for spliceOldDataTransformer!');
 
-      if(this.unit == null)
+      if (this.unit == null)
         throw new Error(errorString.sprintf('Stream.unit'));
 
       if (this.size == null)
@@ -67,9 +67,13 @@
           deleteSeries.push(index);
       });
 
-      deleteSeries.forEach(function spliceSeries(index) {
-        data.splice(index, 1);
-      });
+      deleteSeries
+        .sort(function numDescending (a, b) {
+          return b - a;
+        })
+        .forEach(function spliceSeries(index) {
+          data.splice(index, 1);
+        });
 
       return resp;
     };
