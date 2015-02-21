@@ -28,7 +28,8 @@ describe('disconnect dialog', function () {
 
   it('should call the dialog with the expected params', function () {
     expect($dialog.dialog).toHaveBeenCalledWith({
-      dialogFade: true,
+      dialogFade: false,
+      backdropFade: false,
       backdropClick: false,
       dialogClass: 'modal disconnect-modal',
       keyboard: false,

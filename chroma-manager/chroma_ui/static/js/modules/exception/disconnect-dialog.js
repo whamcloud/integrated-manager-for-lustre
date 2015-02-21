@@ -39,7 +39,8 @@
     });
 
     var dialog = $dialog.dialog({
-      dialogFade: true,
+      dialogFade: false,
+      backdropFade: false,
       backdropClick: false,
       dialogClass: 'modal disconnect-modal',
       keyboard: false,
