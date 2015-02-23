@@ -14,8 +14,8 @@ Requires:       python-importlib
 %if ! (0%{?fedora} > 13 || 0%{?rhel} > 5)
 Requires:       python-multiprocessing
 Requires:       python-uuid
-Requires:       python-amqp
 %endif
+Requires:       python-amqp
 Requires:       pytz >= 2011b
 .
 /%setup/a

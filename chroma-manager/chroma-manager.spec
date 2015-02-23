@@ -23,7 +23,7 @@ Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
 Requires: mod_wsgi mod_ssl httpd ntp ed
-Requires: mod_proxy_wstunnel
+Requires: mod_proxy_wstunnel >= 0.1-2
 Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse
@@ -33,13 +33,9 @@ Requires: python-dateutil
 Requires: python-ordereddict
 Requires: python-uuid
 Requires: python-paramiko
-Requires: python-kombu >= 2.4.7
+Requires: python-kombu >= 3.0.19
 Requires: python-daemon
 Requires: python-requests >= 1.0.0
-Requires: python-celery >= 3.0.11
-Requires: python-amqp
-Requires: pytz
-Requires: python-billiard
 Requires: python-networkx
 Requires: python-httpagentparser
 Requires: pygobject2
@@ -49,7 +45,7 @@ Requires: rabbitmq-server
 Requires: Django >= 1.4
 Requires: Django-south >= 0.7.4
 Requires: django-tastypie = 0.9.11
-Requires: django-celery >= 3.0.10
+Requires: django-celery >= 3.1.10
 Requires: django-picklefield
 Requires: chroma-manager-libs = %{version}-%{release}
 Requires: chroma-manager-cli = %{version}-%{release}
