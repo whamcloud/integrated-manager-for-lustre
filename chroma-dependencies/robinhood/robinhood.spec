@@ -25,9 +25,6 @@
 # macro for defining dependencies
 
 %define pkg_dependencies       \
-%if %{with lhsm}               \
-BuildRequires: libattr-devel   \
-%endif                         \
 %if %{with lustre}             \
 BuildRequires: libattr-devel   \
 %if %{defined lpackage}        \
@@ -70,6 +67,7 @@ Release: 1%{?config_dependant}%{?db_dependant}%{?dist}
 Summary: Robinhood - Policy engine and accounting tool for large filesystems
 License: CeCILL-C
 Group: Applications/System
+BuildRequires: libattr-devel
 Url: http://robinhood.sourceforge.net
 Source0: robinhood-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -79,7 +77,7 @@ Robinhood is a tool for monitoring and purging file systems. It is designed to
 process all its tasks in parallel, so it is particulary adapted for managing
 large file systems with millions of entries and petabytes of data.
 
-Generated using options:  '--disable-lustre'
+Generated using options:  '--with-purpose=LUSTRE_HSM' '--with-lustre=/scratch/git/chroma/chroma-dependencies/robinhood/lustre'
 
 
 %package adm
@@ -112,9 +110,6 @@ Tools for MDS recovery.
 %endif
 
 
-#summary, description and dependencies of each purpose
-%if %{with lhsm}
-
 %define configure_purpose LUSTRE_HSM
 %define purpose lhsm
 %define purpose_svc robinhood-lhsm
@@ -124,100 +119,20 @@ Tools for MDS recovery.
 Summary: PolicyEngine for Lustre-HSM binding
 Group: Applications/System
 %pkg_dependencies
+BuildRequires: libattr-devel
 Requires: %{name}-adm >= %{version}
+Requires: mysql-server
 
 %description %{purpose}
 Monitor Lustre usage and trigger file migration and purges.
 
-Generated using options:  '--disable-lustre'
-%else
-# backup mode
-%if %{with backup}
-
-%define configure_purpose BACKUP
-%define purpose backup
-%define purpose_svc robinhood-backup
-%define purpose_bin rbh-backup
-
-%package %{purpose}
-Summary: PolicyEngine for filesystem backup to external storage
-Group: Applications/System
-%pkg_dependencies
-Requires: %{name}-adm >= %{version}
-
-%description %{purpose}
-Backup modified files to an external backend.
-
-Generated using options:  '--disable-lustre'
-%else
-# light HSM binding mode (using shook library)
-%if %{with shook}
-
-%define configure_purpose SHOOK
-%define purpose shook
-%define purpose_svc robinhood-shook
-%define purpose_bin rbh-shook
-
-%package %{purpose}
-Summary: PolicyEngine for simple HSM binding
-Group: Applications/System
-%pkg_dependencies
-Requires: %{name}-adm >= %{version}
-BuildRequires: shook-server >= 1.3.5
-Requires: shook-server >= 1.3.5
-
-%description %{purpose}
-Backup modified files to an external backend
-and automatically trigger data restore using
-shook library.
-
-Generated using options:  '--disable-lustre'
-
-%package %{purpose}-annex
-Summary: Annex tools for simple HSM binding
-Group: Applications/System
-%pkg_dependencies
-BuildRequires: shook-server >= 1.3.5
-Requires: shook-server >= 1.3.5
-
-%description %{purpose}-annex
-Annex tools for simple HSM binding.
-Can run on different nodes than robinhood
-daemon.
-
-Generated using options:  '--disable-lustre'
-
-%else
-
-# TMP FS MGR
-
-%define configure_purpose TMP_FS_MGR
-%define purpose tmpfs
-%define purpose_svc robinhood
-%define purpose_bin robinhood
-
-%package %{purpose}
-Summary: Accounting, reporting and purge tool for large filesystems
-Group: Applications/System
-%pkg_dependencies
-Requires: %{name}-adm >= %{version}
-
-%description %{purpose}
-Provides disk space fair-share, accounting, reporting facilities for
-any POSIX filesystem, with extra features for Lustre (OST usage management).
-Possibly trigger purge by LRU when free disk space is low.
-
-Generated using options:  '--disable-lustre'
-
-%endif
-%endif
-%endif
+Generated using options:  '--with-purpose=LUSTRE_HSM' '--with-lustre=$GIT_ROOT/robinhood/lustre'
 
 %prep
 %setup -q -n robinhood-%{version}
 
 %build
-./configure  '--disable-lustre' %{?configure_flags:configure_flags} \
+./configure  '--with-purpose=LUSTRE_HSM' '--with-lustre=%{lustre_source}' %{?configure_flags:configure_flags} \
         --mandir=%{_mandir} \
         --libdir=%{_libdir}
 make
@@ -230,6 +145,7 @@ mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/robinhood.d/%{purpose}/templates
 mkdir -p $RPM_BUILD_ROOT/%{_sysconfdir}/robinhood.d/%{purpose}/includes
 mkdir -p $RPM_BUILD_ROOT/%{_initrddir}
 
+LD_LIBRARY_PATH=%{lustre_source}/lustre/utils \
 $RPM_BUILD_ROOT/%{_prefix}/sbin/%{purpose_bin} -T $RPM_BUILD_ROOT/%{_sysconfdir}/robinhood.d/%{purpose}/templates/%{purpose}_detailed.conf
 
 %if %{defined suse_version}
@@ -239,7 +155,7 @@ install -m 755 scripts/robinhood.init $RPM_BUILD_ROOT/%{_initrddir}/%{purpose_sv
 %endif
 
 mkdir $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig
-install -m 644 scripts/sysconfig_robinhood $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/robinhood
+install -m 644 scripts/sysconfig_robinhood $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/robinhood-lhsm
 
 mkdir -p $RPM_BUILD_ROOT/%{installdir_www}/robinhood
 cp -r web_gui/acct/*	$RPM_BUILD_ROOT/%{installdir_www}/robinhood/.
@@ -274,57 +190,24 @@ fi
 %files adm
 %{_sbindir}/rbh-config
 
-%if %{with recovtools}
-%files recov-tools
-%{_sbindir}/*lovea
-%{_sbindir}/gen_lov_objid
-%{_sbindir}/ost_fids_remap
-%endif
-
-%if %{with shook}
-%files %{purpose}-annex
-%{_sbindir}/%{purpose_bin}-rebind
-%endif
-
 %files webgui
 
 # set apache permissions
 %defattr(750,root,apache)
 %{installdir_www}/robinhood
 
-%files %{purpose}
+%files lhsm
 %defattr(-,root,root,-)
 #%doc README
 #%doc COPYING
 #%doc ChangeLog
 
 # everythink in sbin, except rbh-config which is in adm
-%if %{with shook}
-%exclude %{_sbindir}/%{purpose_bin}-rebind
-%{_sbindir}/%{purpose_bin}-import
-%{_sbindir}/%{purpose_bin}-recov
-%{_sbindir}/%{purpose_bin}-undo-rm
-%endif
-
-%if %{with backup}
-%{_sbindir}/%{purpose_bin}-import
-%{_sbindir}/%{purpose_bin}-recov
-%{_sbindir}/%{purpose_bin}-rebind
-%{_sbindir}/%{purpose_bin}-undo-rm
-%endif
-
 %{_sbindir}/%{purpose_bin}
 %{_sbindir}/*-report
 %{_sbindir}/*-diff
 %{_bindir}/*-du
 %{_bindir}/*-find
-
-%if %{with backup}
-%{_sbindir}/rbhext_*
-%endif
-%if %{with shook}
-%{_sbindir}/rbhext_*
-%endif
 
 %{_mandir}/man1/*
 
@@ -342,10 +225,10 @@ fi
 %changelog
 
 * Mon Dec 08 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.4
-- [lustre] Lustre 2.4+: detect all stripe changes and update the DB accordingly.
+- [lustre] Lustre 2.4+: detect all stripe changes and update the DB accordingly
 - [scan] Prevent from dropping entries from DB when opendir or stat fail.
 - [DB] Optimization to batch more DB requests.
-- [DB] Allow using any MySQL engine (new config parameter: listmanager::mysql::engine).
+- [DB] Allow using any MySQL engine (new config parameter: listmanager::mysql::
 - [rbh-config] Avoid backup_db to lock the whole tables with innodb.
 - [bugfix] Improve robustness to corrupted mtimes.
 - [bugfix] Fix possible crash in db_exec_sql.
@@ -388,6 +271,14 @@ fi
 - backup (feature): allow compressing data in archive.
 - backup (fix): wrong path in archive when robinhood root directory != mount point.
 - backup (fix): fix segfault when importing a single file with a FID-ending name.
+
+* Thu Feb 13 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.0-1
+Summary:
+- filesystem disaster recovery features
+- new namespace management (new DB schema to properly handle hardlinks, renames...)
+- scanning and changelog processing optimizations
+- database optimizations (requests batching)
+- many other changes, improvements and code cleaning...
 
 * Thu Feb 13 2014 Thomas Leibovici <thomas.leibovici@cea.fr> 2.5.0-1
 Summary:
