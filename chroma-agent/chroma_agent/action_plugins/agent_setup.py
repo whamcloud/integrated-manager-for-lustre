@@ -22,7 +22,7 @@
 
 """
 Actions for registration and deregistration of a server (adding and removing
-it from chroma manager)
+it from manager)
 """
 
 import os

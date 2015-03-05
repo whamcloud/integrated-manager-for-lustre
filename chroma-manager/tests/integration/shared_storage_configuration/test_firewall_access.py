@@ -26,7 +26,7 @@ class TestFirewall(ChromaIntegrationTestCase):
         # state can be cleaned up without initializing the DB
         # then we can do a before/after firewall state comparison where
         # before and after are before chroma-config setup and after it
-        # XXX: this assumes there is only one chroma manager
+        # XXX: this assumes there is only one manager
         iml_port_proto_filter = [(80, 'tcp'), (443, 'tcp')]
 
         if chroma_manager.get('ntp_server', "localhost") == "localhost":

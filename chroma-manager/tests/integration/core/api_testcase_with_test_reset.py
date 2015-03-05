@@ -590,7 +590,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
     def reset_cluster(self):
         """
         Will fully wipe a test cluster:
-          - dropping and recreating the chroma manager database
+          - dropping and recreating the manager database
           - unmounting any lustre filesystems from the clients
           - unconfiguring any chroma targets in pacemaker
         """
@@ -607,7 +607,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         for chroma_manager in config['chroma_managers']:
             superuser = [u for u in chroma_manager['users'] if u['super']][0]
 
-            # Stop all chroma manager services
+            # Stop all manager services
             result = self.remote_command(
                 chroma_manager['address'],
                 'chroma-config stop',
@@ -616,7 +616,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
             if not result.exit_status == 0:
                 logger.warn("chroma-config stop failed: rc:%s out:'%s' err:'%s'" % (result.exit_status, result.stdout, result.stderr))
 
-            # Wait for all of the chroma manager services to stop
+            # Wait for all of the manager services to stop
             running_time = 0
             services = ['chroma-supervisor']
             while services and running_time < TEST_TIMEOUT:
@@ -638,7 +638,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
                 'service postgresql stop && rm -fr /var/lib/pgsql/data/*'
             )
 
-            # Run chroma-config setup to recreate the database and start the chroma manager.
+            # Run chroma-config setup to recreate the database and start the manager.
             result = self.remote_command(
                 chroma_manager['address'],
                 "chroma-config setup %s %s %s %s &> config_setup.log" % (superuser['username'], superuser['password'], chroma_manager.get('ntp_server', "localhost"), "--no-dbspace-check"),
@@ -697,7 +697,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
         """
         Removes all filesystems, MGSs, and hosts from chroma via the api.  This is
         not guaranteed to work, and should be done at the end of tests in order to
-        verify that the chroma manager instance was in a nice state, rather than
+        verify that the manager instance was in a nice state, rather than
         in setUp/tearDown hooks to ensure a clean system.
         """
         response = chroma_manager.get(
@@ -799,7 +799,7 @@ class ApiTestCaseWithTestReset(UtilityTestCase):
 
     def assertDatabaseClear(self, chroma_manager = None):
         """
-        Checks that the chroma manager API is now clear of filesystems, targets,
+        Checks that the manager API is now clear of filesystems, targets,
         hosts and volumes.
         """
 

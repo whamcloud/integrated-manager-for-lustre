@@ -238,7 +238,7 @@ class SimulatorCli(object):
 
         parser = argparse.ArgumentParser(description = "Cluster simulator")
         parser.add_argument('--config', required = False, help = "Simulator configuration/state directory", default = "cluster_sim")
-        parser.add_argument('--url', required = False, help = "Chroma manager URL", default = "https://localhost:8000/")
+        parser.add_argument('--url', required = False, help = "Manager URL", default = "https://localhost:8000/")
         subparsers = parser.add_subparsers()
         setup_parser = subparsers.add_parser("setup")
         setup_parser.add_argument('--su_size', required = False, help = "Servers per SU", default = '0')

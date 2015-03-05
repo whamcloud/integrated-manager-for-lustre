@@ -25,9 +25,9 @@ logger.setLevel(logging.DEBUG)
 
 class RemoteOperations(object):
     """
-    Actions occuring 'out of band' with respect to chroma manager, usually
+    Actions occuring 'out of band' with respect to manager, usually
     things which talk directly to a storage server or a lustre client rather
-    than going via the chroma manager API.
+    than going via the manager API.
     """
 
     def _address2server(self, address):

@@ -6,7 +6,7 @@ class FullyResetCluster(ChromaIntegrationTestCase):
     Small convenience utility for completely wiping out a test cluster.
 
     Will fully wipe a test cluster, including dropping and recreating the
-    chroma manager database, unconfiguring and chroma targets in pacemaker,
+    manager database, unconfiguring and chroma targets in pacemaker,
     and erasing any volumes in the config for managed servers.
     """
 

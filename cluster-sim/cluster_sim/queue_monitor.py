@@ -81,7 +81,7 @@ def get_queues(session, url):
 
 
 parser = argparse.ArgumentParser(description="IML Queue Monitor")
-parser.add_argument('--url', required=False, help="Chroma manager URL", default="https://localhost:8000")
+parser.add_argument('--url', required=False, help="Manager URL", default="https://localhost:8000")
 parser.add_argument('--username', required=False, help="REST API username", default='admin')
 parser.add_argument('--password', required=False, help="REST API password", default='lustre')
 parser.add_argument('--colwidth', required=False, help="Width of output columns", default=20)

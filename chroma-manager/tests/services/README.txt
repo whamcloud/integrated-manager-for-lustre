@@ -2,7 +2,7 @@
 /tests/services/
 ================
 
-Tests in this folder are those which run a subset of the chroma manager services and
+Tests in this folder are those which run a subset of the manager services and
 drive them via their external interfaces (i.e. the network).
 
 If your test requires a fully running chroma instance including all the services and

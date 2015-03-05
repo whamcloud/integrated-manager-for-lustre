@@ -13,7 +13,7 @@ MEASURE_COVERAGE=${MEASURE_COVERAGE:-false}
 
 echo "Beginning installation and setup..."
 
-# Install and setup chroma manager
+# Install and setup manager
 ssh root@$CHROMA_MANAGER <<EOF
 set -ex
 # Install non-python/pipable dependencies

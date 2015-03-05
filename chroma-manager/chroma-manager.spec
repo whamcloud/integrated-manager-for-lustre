@@ -123,11 +123,11 @@ This package contains the Chroma CLI which can be used on a Chroma server
 or on a separate node.
 
 %package integration-tests
-Summary: Chroma Manager Integration Tests
+Summary: Intel Manager for Lustre Integration Tests
 Group: Development/Tools
 Requires: python-dateutil python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-django python-ordereddict
 %description integration-tests
-This package contains the Chroma Manager integration tests and scripts and is intended
+This package contains the Intel Manager for Lustre integration tests and scripts and is intended
 to be used by the Chroma test framework.
 
 %package devel

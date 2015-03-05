@@ -163,7 +163,7 @@ class FailoverTestCaseMixin(ChromaIntegrationTestCase):
                     active_host = [h['fqdn'] for h in hosts if h['resource_uri'] == active_host][0]
                 logger.debug("%s: should be running on %s (actual: %s)" % (target['name'], expected_host['fqdn'], active_host))
 
-                # Check chroma manager's view
+                # Check manager's view
                 if assert_true:
                     self.assertEqual(expected_host['resource_uri'], target['active_host'])
                 else:

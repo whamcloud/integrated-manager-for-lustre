@@ -14,7 +14,7 @@
               'host_id': 279
             },
             class_name: 'ForceRemoveHostJob',
-            confirmation: 'The record for the server in Chroma Manager is removed without\n' +
+            confirmation: 'The record for the server in Intel Manager for Lustre is removed without\n' +
               'attempting to contact server.',
             verb: 'Force Remove',
             long_description: null

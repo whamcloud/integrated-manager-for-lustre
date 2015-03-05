@@ -585,7 +585,7 @@ def main():
     parser = argparse.ArgumentParser(description="Simulated benchmarks")
     parser.add_argument('--remote_simulator', required=False, help="Disable built-in simulator (run it separately)", default=False)
     parser.add_argument('--debug', required=False, help="Enable DEBUG-level logs", default=False)
-    parser.add_argument('--url', required=False, help="Chroma manager URL", default="https://localhost:8000")
+    parser.add_argument('--url', required=False, help="Manager URL", default="https://localhost:8000")
     parser.add_argument('--username', required=False, help="REST API username", default='admin')
     parser.add_argument('--password', required=False, help="REST API password", default='lustre')
     parser.add_argument('--servers', help="server count", default=8, type=int)

@@ -66,7 +66,7 @@ echo "+ curl -k -O -u \"${JENKINS_USER}:***********\" \"${JENKINS_URL}job/$BUILD
 curl -k -O -u "${JENKINS_USER}:${JENKINS_PULL}" "${JENKINS_URL}job/$BUILD_JOB/$BUILD_NUM/arch=x86_64,distro=$JENKINS_DISTRO/artifact/chroma-bundles/$IEEL_FROM_ARCHIVE"
 set -x
 
-# Install and setup old chroma manager
+# Install and setup old manager
 scp $IEEL_FROM_ARCHIVE $CHROMA_DIR/chroma-manager/tests/utils/install.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
@@ -142,7 +142,7 @@ unset http_proxy; unset https_proxy
 
 echo "Now upgrade IML..."
 
-# Install and setup new chroma manager
+# Install and setup manager
 scp $ARCHIVE_NAME $CHROMA_DIR/chroma-manager/tests/utils/upgrade.exp root@$CHROMA_MANAGER:/tmp
 ssh root@$CHROMA_MANAGER "#don't do this, it hangs the ssh up, when used with expect, for some reason: exec 2>&1
 set -ex
