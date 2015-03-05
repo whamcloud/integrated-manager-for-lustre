@@ -74,5 +74,5 @@ def send_alerts_email(id):
 
         if settings.EMAIL_HOST and len(alert_messages) > 0:
             message = "New Chroma Alerts:\n" + "\n".join(alert_messages)
-            send_mail('New Chroma Server alerts', message, settings.EMAIL_SENDER,
+            send_mail(settings.EMAIL_SUBJECT_PREFIX, message, settings.EMAIL_SENDER,
                       [user.email])
