@@ -39,7 +39,7 @@ describe('server actions', function () {
       },
       {
         value: 'Re-write Target Configuration',
-        message: 'Updating filesystem NIDs',
+        message: 'Updating file system NIDs',
         tooltip: 'rewrite_target_configuration-tooltip',
         helpTopic: 'rewrite_target_configuration-dialog',
         jobClass: 'UpdateNidsJob',

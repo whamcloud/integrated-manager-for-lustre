@@ -574,7 +574,7 @@ class NidsHandler(Handler):
     intransitive_verbs = ["update"]
 
     def update(self, ns):
-        kwargs = {'message': "Updating filesystem NID configuration",
+        kwargs = {'message': "Updating file system NID configuration",
                   'jobs': [{'class_name': 'UpdateNidsJob', 'args': {}}]}
         self.output(self.api.endpoints['command'].create(**kwargs))
 
