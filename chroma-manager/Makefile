@@ -203,10 +203,10 @@ tarball: version gui.stamp
 	rm -f MANIFEST
 	python scripts/production_supervisord.py supervisord.conf > production_supervisord.conf
 	# workaround setuptools
-	touch .chroma-manager.wsgi
+	touch .chroma-manager.py
 	touch .production_supervisord.conf
 	python setup.py sdist
-	rm -f .chroma-manager.wsgi
+	rm -f .chroma-manager.py
 	rm -f .production_supervisord.conf
 
 rpms: cleandist tarball

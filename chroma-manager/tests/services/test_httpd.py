@@ -15,7 +15,7 @@ from tests.services.supervisor_test_case import SupervisorTestCase
 
 class HttpdTestCase(SupervisorTestCase):
     # Require job_scheduler because it is queried for available_transitions when rendering /ui/
-    SERVICES = ['httpd', 'job_scheduler']
+    SERVICES = ['httpd', 'job_scheduler', 'gunicorn']
 
 
 class TestUi(HttpdTestCase):

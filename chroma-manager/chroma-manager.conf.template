@@ -8,7 +8,6 @@ ErrorLog {{log}}/error_log
 PidFile {{var}}/httpd.pid
 LockFile {{var}}/accept.lock
 
-LoadModule wsgi_module {{wsgi_path}}
 LoadModule proxy_module {{module_path}}mod_proxy.so
 LoadModule proxy_http_module {{module_path}}mod_proxy_http.so
 LoadModule alias_module {{module_path}}mod_alias.so
@@ -27,10 +26,6 @@ ExtendedStatus on
 
 LogFormat "%h %l %u %t \"%r\" %>s %b" common
 CustomLog {{log}}/access_log common
-
-
-
-WSGIPythonPath {{WSGI_PYTHON_PATH}}
 
 Listen {{HTTPS_FRONTEND_PORT}}
 Listen {{HTTP_FRONTEND_PORT}}
@@ -62,10 +57,6 @@ KeepAliveTimeout 2
 
 # HTTPS frontend
 NameVirtualHost *:{{HTTPS_FRONTEND_PORT}}
-
-# chroma_api and chroma_ui
-Listen {{HTTP_API_PORT}}
-NameVirtualHost *:{{HTTP_API_PORT}}
 
 # HTTP just to redirect to HTTPS
 NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
@@ -244,11 +235,3 @@ Alias /repo {{REPO_PATH}}
     </Location>
 </VirtualHost>
 
-<VirtualHost *:{{HTTP_API_PORT}}>
-    WSGIScriptAlias / {{APP_PATH}}/chroma-manager.wsgi
-    <Directory "{{APP_PATH}}">
-        AllowOverride All
-        Options None
-        WSGIApplicationGroup %{GLOBAL}
-    </Directory>
-</VirtualHost>

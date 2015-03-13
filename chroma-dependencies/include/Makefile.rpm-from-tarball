@@ -1,6 +1,8 @@
 TOP ?= $(shell while [[ $$PWD != */chroma-dependencies ]]; do cd ..; done; echo $$PWD)
 include $(TOP)/include/Makefile.meta
 
+CHROMA_EXTERNALS_DIR := $(TOP)/../chroma-externals/$(CHROMA_EXTERNALS_SUBDIR)/
+
 TARBALL_EXT      ?= tar.gz
 USES_DISTUTILS   ?= false
 # there's probably a better way to do this directly in make but I couldn't
@@ -11,7 +13,11 @@ TARBALL_NAME     := $(shell a="$(TARBALL_NAME)"; a=$${a/-$(TARBALL_VERSION)/}; e
 TARBALL          := $(TARBALL_NAME)-$(TARBALL_VERSION).$(TARBALL_EXT)
 # can be overridden in the caller Makefile
 SPECNAME         ?= $(TARBALL_NAME).spec
-REQUIREMENT      ?= $(TARBALL_NAME)==$(TARBALL_VERSION)
+ifeq ($(CHROMA_EXTERNALS_SUBDIR),)
+	REQUIREMENT ?= $(TARBALL_NAME)==$(TARBALL_VERSION)
+else
+	REQUIREMENT ?= file://$(CHROMA_EXTERNALS_DIR)$(TARBALL)
+endif
 
 rpms: $(SPECNAME) $(TARBALL)
 	for dep in $(DEPS); do                 \
@@ -71,14 +77,14 @@ spec.ed:
 	# make an empty one if it doesn't exist already
 	touch spec.ed
 
-$(TOP)/../chroma-externals/$(TARBALL):
-	CACHE="$${CACHE:-$(TOP)/../chroma-externals}" . ../include/cache.sh; \
+$(CHROMA_EXTERNALS_DIR)/$(TARBALL):
+	CACHE="$${CACHE:-$(CHROMA_EXTERNALS_DIR)}" . ../include/cache.sh; \
 	cache_populate $(LOCATION); \
 
 $(TARBALL):
-	ln $(TOP)/../chroma-externals/$(TARBALL) .
+	ln $(CHROMA_EXTERNALS_DIR)/$(TARBALL) .
 
-download: $(TOP)/../chroma-externals/$(TARBALL)
+download: $(CHROMA_EXTERNALS_DIR)/$(TARBALL)
 
 clean:
 	$(MAKE) -f ../include/Makefile.rpmbuild cleanRPMS cleanSRPM \

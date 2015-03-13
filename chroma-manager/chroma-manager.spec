@@ -38,6 +38,7 @@ Requires: python-daemon
 Requires: python-requests >= 1.0.0
 Requires: python-networkx
 Requires: python-httpagentparser
+Requires: python-gunicorn
 Requires: pygobject2
 Requires: postgresql-server
 Requires: python-psycopg2
@@ -132,7 +133,7 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 %build
 %{__python} setup.py build
 # workaround setuptools inanity for top-level datafiles
-cp -a chroma-manager.wsgi build/lib
+cp -a chroma-manager.py build/lib
 cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
 
@@ -275,7 +276,7 @@ fi
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
 %attr(0755,root,root)%{manager_root}/manage.pyc
 %{manager_root}/*.conf
-%{manager_root}/*.wsgi
+%{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template
 %{manager_root}/chroma_ui/templates/*
 %{manager_root}/chroma_ui/static/*

@@ -43,7 +43,7 @@ setup(
     # file creation/cleanup in the Makefile) to deal with the fact
     # that setuptools wants to strip the first character off the filename.
     package_data = {
-        '': [".chroma-manager.wsgi", ".production_supervisord.conf", ".chroma-manager.conf.template"],
+        '': [".chroma-manager.py", ".production_supervisord.conf", ".chroma-manager.conf.template"],
         'chroma_core': ["fixtures/default_power_types.json"],
         'chroma_ui': ["static/js/lib/*.js", "static/js/lib/angular/*.js",
                       "static/js/lib/select-box-it/select-box-it.js",

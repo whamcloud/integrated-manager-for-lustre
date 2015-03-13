@@ -54,6 +54,15 @@ class PipInstallRequirements(object):
                     else:
                         print "Failed to install %s" % package.rsplit('/', 1)[-1]
                         sys.exit(1)
+                elif re.match("file://", package):
+                    path = package.split('file://', 1)[-1]
+                    if os.path.exists(path):
+                        subprocess.check_call(['pip', 'install',
+                                               '--build', build_dir, '--no-index', '--pre',
+                                               package])
+                    else:
+                        print "Failed to install %s" % package.rsplit('/', 1)[-1]
+                        sys.exit(1)
                 else:
                     exit_status = subprocess.call(['pip', 'install',
                                                    '--build', build_dir, '--no-index', '--pre',
