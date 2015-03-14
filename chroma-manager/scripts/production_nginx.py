@@ -21,17 +21,17 @@
 # express and approved by Intel in writing.
 
 
-"""This script substitutes production mode values into the apache
+"""This script substitutes production mode values into the nginx
 configuration template, and outputs the configuration on stdout"""
 
 import sys
-from httpd_settings import get_production_httpd_settings
+from nginx_settings import get_production_nginx_settings
 
 template_file = sys.argv[1]
 
 
 config = open(template_file).read()
-for setting, value in get_production_httpd_settings().items():
+for setting, value in get_production_nginx_settings().items():
     config = config.replace("{{%s}}" % setting, str(value))
 
 print config

@@ -32,8 +32,8 @@ base_config_file = sys.argv[1]
 config = SafeConfigParser()
 config.readfp(open(base_config_file, 'r'))
 
-# Remove the apache section, it is run as a separate init script in production
-config.remove_section('program:httpd')
+# Remove the nginx section, it is run as a separate init script in production
+config.remove_section('program:nginx')
 
 # Replace the primus section argument to indicate it's running in production
 command = config.get('program:primus', 'command')

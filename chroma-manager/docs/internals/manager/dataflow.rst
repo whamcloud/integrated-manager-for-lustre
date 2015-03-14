@@ -13,7 +13,7 @@ Toplevel
 *Arrows mean 'uses' or 'calls out to'*
 
 .. graphviz::
-    
+
     digraph toplevel_dataflow {
         "chroma-manager" -> rabbitmq
         "chroma-manager" -> MySQL
@@ -31,12 +31,12 @@ HTTPS handling
 *Arrows mean 'sends HTTP requests to'*
 
 .. graphviz::
-    
+
     digraph https_dataflow {
-            "Apache (HTTPS)" -> http_agent [label="/agent/"]
-            "Apache (HTTPS)" -> "Apache (chroma_api)" [label="/api/, /ui/"]
-            "chroma-agent" -> "Apache (HTTPS)" [label="client cert"]
-            "Browser (chroma_ui)" -> "Apache (HTTPS)"
+            "Nginx (HTTPS)" -> http_agent [label="/agent/"]
+            "Nginx (HTTPS)" -> "Nginx (chroma_api)" [label="/api/, /ui/"]
+            "chroma-agent" -> "Nginx (HTTPS)" [label="client cert"]
+            "Browser (chroma_ui)" -> "Nginx (HTTPS)"
     }
 
 
@@ -47,12 +47,12 @@ Agent communications
 *Arrows mean 'messages or commands are sent to'*
 
 .. graphviz::
-    
+
     digraph agent_dataflow {
-            "chroma-agent" -> "Apache (HTTPS)"
-            "Apache (HTTPS)" -> http_agent
-            "Apache (HTTPS)" -> "chroma-agent"
-            http_agent -> "Apache (HTTPS)" 
+            "chroma-agent" -> "Nginx (HTTPS)"
+            "Nginx (HTTPS)" -> http_agent
+            "Nginx (HTTPS)" -> "chroma-agent"
+            http_agent -> "Nginx (HTTPS)"
             http_agent -> lustre_audit -> database
             http_agent -> plugin_runner -> database
             http_agent -> syslog -> database
@@ -73,14 +73,14 @@ UI and API
 *Arrows mean 'messages or commands are sent to'*
 
 .. graphviz::
-    
+
     digraph api_dataflow {
-            "Browser (chroma_ui)" -> "Apache (HTTPS)" -> "Apache (chroma_api)"
-            "Apache (chroma_api)" -> "Apache (HTTPS)" -> "Browser (chroma_ui)"
-            "Apache (chroma_api)" -> job_scheduler [label="Commands"]
+            "Browser (chroma_ui)" -> "Nginx (HTTPS)" -> "Nginx (chroma_api)"
+            "Nginx (chroma_api)" -> "Nginx (HTTPS)" -> "Browser (chroma_ui)"
+            "Nginx (chroma_api)" -> job_scheduler [label="Commands"]
             job_scheduler -> database [label="Writing state changes"]
             job_scheduler -> http_agent [label="Running agent operations"]
-            database -> "Apache (chroma_api)" [label="Displaying status"]
+            database -> "Nginx (chroma_api)" [label="Displaying status"]
     }
 
 
@@ -102,7 +102,7 @@ All RPCs and Queues
 
        plugin_runner -> http_agent [label="HttpAgentRpc",color=blue]
        job_scheduler -> http_agent [label="HttpAgentRpc",color=blue]
-       "Apache (chroma_api)" -> job_scheduler [label="JobSchedulerRpc",color=blue]
+       "Nginx (chroma_api)" -> job_scheduler [label="JobSchedulerRpc",color=blue]
        job_scheduler -> plugin_runner [label="AgentDaemonRpcInterface",color=blue]
        job_scheduler -> plugin_runner [label="ScanDaemonRpcInterface",color=blue]
     }

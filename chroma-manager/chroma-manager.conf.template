@@ -1,237 +1,183 @@
+map $ssl_client_s_dn $ssl_client_s_dn_cn {
+    default "";
+    ~/CN=(?<CN>[^/]+) $CN;
+}
 
-<IfDefine ChromaDev>
+server {
+    listen {{HTTP_FRONTEND_PORT}};
+    return 301 https://$host:{{HTTPS_FRONTEND_PORT}}$request_uri;
+}
 
-# In development mode, this file is a standalone apache config, whereas
-# in production mode it is added to the system defaults.
+server {
+    listen {{HTTPS_FRONTEND_PORT}} ssl;
 
-ErrorLog {{log}}/error_log
-PidFile {{var}}/httpd.pid
-LockFile {{var}}/accept.lock
+    proxy_read_timeout 330s;
 
-LoadModule proxy_module {{module_path}}mod_proxy.so
-LoadModule proxy_http_module {{module_path}}mod_proxy_http.so
-LoadModule alias_module {{module_path}}mod_alias.so
-LoadModule authz_host_module {{module_path}}mod_authz_host.so
-LoadModule rewrite_module {{module_path}}mod_rewrite.so
-LoadModule headers_module {{module_path}}mod_headers.so
-LoadModule log_config_module {{module_path}}mod_log_config.so
-LoadModule ssl_module {{module_path}}mod_ssl.so
-LoadModule status_module {{module_path}}mod_status.so
-LoadModule deflate_module {{module_path}}mod_deflate.so
-# load this from homedir in dev
-LoadModule proxy_wstunnel_module {{var}}/mod_proxy_wstunnel.so
-LoadModule env_module {{module_path}}mod_env.so
-ExtendedStatus on
+    include {{APP_PATH}}/mime.types;
 
+    ssl_certificate {{SSL_PATH}}/manager.crt;
+    ssl_certificate_key {{SSL_PATH}}/manager.pem;
+    ssl_trusted_certificate {{SSL_PATH}}/authority.crt;
+    ssl_client_certificate {{SSL_PATH}}/authority.crt;
+    ssl_verify_client optional;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers RC4:HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
 
-LogFormat "%h %l %u %t \"%r\" %>s %b" common
-CustomLog {{log}}/access_log common
+    gzip_comp_level 2;
 
-Listen {{HTTPS_FRONTEND_PORT}}
-Listen {{HTTP_FRONTEND_PORT}}
+    location /certificate/ {
+        return 301 https://$host:{{HTTPS_FRONTEND_PORT}}/certificate;
+    }
 
-</IfDefine>
+    location /certificate {
+        alias {{SSL_PATH}}/authority.crt;
+        types {}
+        default_type application/octet-stream;
+        add_header Content-disposition "attachment; filename=download.cer";
+    }
 
-DocumentRoot .
+    location ~ ^/$ {
+        return 301 https://$host:{{HTTPS_FRONTEND_PORT}}/ui;
+    }
 
-KeepAlive On
-MaxKeepAliveRequests 500
-KeepAliveTimeout 2
+    location ~ /static/chroma_ui/styles/imports-.+\.css {
+        root {{APP_PATH}}/chroma_ui;
+        gzip on;
+        gzip_types text/css;
+        etag on;
 
-# worker MPM
-# StartServers: initial number of server processes to start
-# MaxClients: maximum number of simultaneous client connections
-# MinSpareThreads: minimum number of worker threads which are kept spare
-# MaxSpareThreads: maximum number of worker threads which are kept spare
-# ThreadsPerChild: constant number of worker threads in each server process
-# MaxRequestsPerChild: maximum number of requests a server process serves
-<IfModule worker.c>
-  StartServers 2
-  # MaxClients is calculated at runtime from the available memory
-  MaxClients {{APACHE_MAX_CLIENTS}}
-  MinSpareThreads 1
-  MaxSpareThreads 4
-  ThreadsPerChild 25
-  MaxRequestsPerChild 1000
-</IfModule>
+        expires 1y;
+        add_header Cache-Control "public";
+    }
 
-# HTTPS frontend
-NameVirtualHost *:{{HTTPS_FRONTEND_PORT}}
+    location ~ /static/chroma_ui/built-.+\.js {
+        root {{APP_PATH}}/chroma_ui;
 
-# HTTP just to redirect to HTTPS
-NameVirtualHost *:{{HTTP_FRONTEND_PORT}}
+        gzip on;
+        gzip_types application/x-javascript application/javascript text/javascript application/json;
+        etag on;
 
-Timeout 60
-ProxyTimeout 330
+        expires 1y;
+        add_header Cache-Control "public";
+    }
 
-<VirtualHost *:{{HTTP_FRONTEND_PORT}}>
-    RewriteEngine On
-    RewriteCond %{HTTPS} !=on
-    RewriteRule ^/?(.*) https://%{SERVER_NAME}:{{HTTPS_FRONTEND_PORT}}/$1 [R,L]
-</VirtualHost>
+    location /static/webhelp {
+        root {{APP_PATH}}/chroma_help;
 
-<VirtualHost *:{{HTTPS_FRONTEND_PORT}}>
-    SSLEngine on
-    SSLProxyEngine on
-    SSLProtocol all -SSLv2 -SSLv3
-    SSLCipherSuite ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:!LOW:!SSLv2:+EXP
-    SSLCertificateFile {{SSL_PATH}}/manager.crt
-    SSLCertificateKeyFile {{SSL_PATH}}/manager.pem
-    SSLCACertificateFile {{SSL_PATH}}/authority.crt
+        gzip on;
+        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
 
-    RedirectMatch permanent ^/$ /ui/
+        index help_wrapper.html;
+    }
 
-    <Location /server-status>
-        SetHandler server-status
-        Order deny,allow
-        Deny from all
-        Allow from localhost 127.0.0.1 ::1
-    </Location>
+    location /static {
+        root {{APP_PATH}}/chroma_ui;
 
-    # TODO: put something here to disallow all access other than
-    # the whitelisted directories
+        gzip on;
+        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
+    }
 
-    Alias /certificate/ {{SSL_PATH}}/authority.crt
+    location /ui {
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{HTTP_API_PORT}}/ui;
 
-    <Location "/favicon.ico">
-        SetHandler None
-    </Location>
+        gzip on;
+    }
 
-    <IfDefine ChromaDev>
-        <Location /static/>
-            ProxyPass http://localhost:{{HTTP_API_PORT}}/static/
+    location /api {
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{HTTP_API_PORT}}/api;
+    }
 
-            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript text/javascript
-        </Location>
-    </IfDefine>
-    <IfDefine !ChromaDev>
-        Alias /static {{APP_PATH}}/static/
+    location /primus {
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{REALTIME_PORT}}/primus;
 
-        <LocationMatch "/static/chroma_ui/styles/imports-.+.css">
-            ExpiresActive On
-            ExpiresDefault "access plus 3 years"
-        </LocationMatch>
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
 
-        <LocationMatch "/static/chroma_ui/built-.+.js">
-            ExpiresActive On
-            ExpiresDefault "access plus 3 years"
-        </LocationMatch>
+    location /agent/register {
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/register;
+    }
 
-        <Location "/static">
-            SetHandler None
+    location /agent/setup {
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/setup;
+    }
 
-            AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/x-javascript application/javascript text/javascript
-        </Location>
-    </IfDefine>
+    location /agent/reregister {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
 
-    <Location /ui/>
-        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
-        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/ui/
-        ProxyPass http://localhost:{{HTTP_API_PORT}}/ui/
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
+        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
 
-        AddOutputFilterByType DEFLATE text/html
-    </Location>
-    <Location /api/>
-        SetEnv proxy-nokeepalive 1
-        ProxyPass http://localhost:{{HTTP_API_PORT}}/api/
-        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
-    </Location>
-    <Location /primus/1/websocket/>
-      ProxyPass ws://localhost:{{REALTIME_PORT}}/primus/1/websocket/
-      ProxyPassReverse ws://localhost:{{REALTIME_PORT}}/primus/1/websocket/
-    </Location>
-    <Location /primus/>
-        ProxyPass http://localhost:{{REALTIME_PORT}}/primus/
-        ProxyPassReverse http://localhost:{{REALTIME_PORT}}/primus/
-    </Location>
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/reregister;
+    }
 
-    <Location /agent/register/>
-        ProxyPassReverse http://localhost:{{HTTP_API_PORT}}/api/
-        ProxyPass http://localhost:{{HTTP_AGENT_PORT}}/agent/register/
-    </Location>
+    location /agent/message {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
 
-    <Location /agent/setup/>
-        ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/setup/
-        ProxyPass http://localhost:{{HTTP_AGENT_PORT}}/agent/setup/
-    </Location>
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
+        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
 
-    <Location /agent/reregister/>
-        ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/reregister/
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/message;
+    }
 
-        SSLVerifyClient require
-        RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
-        RewriteRule .* - [E=SSLC_ON:%1]
-        RequestHeader add X-SSL-Client-On %{SSLC_ON}e
+    location /agent/copytool_event {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
 
-        RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
-        RewriteRule .* - [E=SSLC_NAME:%1]
-        RequestHeader add X-SSL-Client-Name %{SSLC_NAME}e
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
+        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
 
-        RewriteCond %{SSL:SSL_CLIENT_M_SERIAL} (.*)
-        RewriteRule .* - [E=SSLC_SERIAL:%1]
-        RequestHeader add X-SSL-Client-Serial %{SSLC_SERIAL}e
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{HTTP_AGENT_PORT}}/agent/copytool_event;
+    }
 
-        RewriteEngine on
-        RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/reregister/ [P,L]
-    </Location>
+    location /repo/ {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
 
-    <Location /agent/message/>
-        ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/message/
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
 
-        SSLVerifyClient require
-        SSLRenegBufferSize 8388608
-        RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
-        RewriteRule .* - [E=SSLC_ON:%1]
-        RequestHeader add X-SSL-Client-On %{SSLC_ON}e
+        autoindex on;
+        alias {{REPO_PATH}}/;
+    }
 
-        RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
-        RewriteRule .* - [E=SSLC_NAME:%1]
-        RequestHeader add X-SSL-Client-Name %{SSLC_NAME}e
-
-        RewriteCond %{SSL:SSL_CLIENT_M_SERIAL} (.*)
-        RewriteRule .* - [E=SSLC_SERIAL:%1]
-        RequestHeader add X-SSL-Client-Serial %{SSLC_SERIAL}e
-
-        RewriteEngine on
-        RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/message/ [P,L]
-    </Location>
-
-    <Location /agent/copytool_event/>
-        ProxyPassReverse http://localhost:{{HTTP_AGENT_PORT}}/agent/copytool_event/
-
-        SSLVerifyClient require
-        SSLRenegBufferSize 8388608
-        RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
-        RewriteRule .* - [E=SSLC_ON:%1]
-        RequestHeader add X-SSL-Client-On %{SSLC_ON}e
-
-        RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
-        RewriteRule .* - [E=SSLC_NAME:%1]
-        RequestHeader add X-SSL-Client-Name %{SSLC_NAME}e
-
-        RewriteCond %{SSL:SSL_CLIENT_M_SERIAL} (.*)
-        RewriteRule .* - [E=SSLC_SERIAL:%1]
-        RequestHeader add X-SSL-Client-Serial %{SSLC_SERIAL}e
-
-        RewriteEngine on
-        RewriteRule ^/(.*)$ http://localhost:{{HTTP_AGENT_PORT}}/agent/copytool_event/ [P,L]
-    </Location>
-
-Alias /repo {{REPO_PATH}}
-    <Location /repo >
-        SSLVerifyClient require
-        RewriteCond %{SSL:SSL_CLIENT_VERIFY} (.*)
-        RewriteRule .* - [E=SSLC_ON:%1]
-        RequestHeader add X-SSL-Client-On %{SSLC_ON}e
-
-        RewriteCond %{SSL:SSL_CLIENT_S_DN_CN} (.*)
-        RewriteRule .* - [E=SSLC_NAME:%1]
-    </Location>
-
-    Alias /client {{REPO_PATH}}/lustre-client
-    <Location /client >
-        SSLVerifyClient none
-        Options +Indexes
-    </Location>
-</VirtualHost>
-
+    location /client/ {
+        autoindex on;
+        alias {{REPO_PATH}}/lustre-client/;
+    }
+}

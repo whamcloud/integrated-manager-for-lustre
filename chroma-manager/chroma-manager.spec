@@ -13,8 +13,7 @@ Release: %{release}
 Source0: %{name}-%{version}.tar.gz
 Source1: chroma-supervisor-init.sh
 Source2: chroma-host-discover-init.sh
-Source3: chroma-max-clients-init.sh
-Source4: logrotate.cfg
+Source3: logrotate.cfg
 License: Proprietary
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -22,8 +21,6 @@ Prefix: %{_prefix}
 Vendor: Intel Corporation <hpdd-info@intel.com>
 Url: http://lustre.intel.com/
 BuildRequires: python-setuptools
-Requires: mod_wsgi mod_ssl httpd ntp ed
-Requires: mod_proxy_wstunnel >= 0.1-2
 Requires: python-setuptools
 Requires: python-prettytable
 Requires: python-dse
@@ -56,8 +53,13 @@ Requires: python-gevent >= 1.0.1
 Requires: fence-agents-iml >= 3.1.5-48.wc1.el6
 Requires: system-config-firewall-base
 Requires: nodejs >= 0.10.33-1
+Requires: nginx >= 1.6.2-1
 Conflicts: chroma-agent
 Requires(post): selinux-policy-targeted
+Obsoletes: httpd
+Obsoletes: mod_proxy_wstunnel
+Obsoletes: mod_wsgi
+Obsoletes: mod_ssl
 Obsoletes: nodejs-active-x-obfuscator
 Obsoletes: nodejs-bunyan
 Obsoletes: nodejs-commander
@@ -126,6 +128,19 @@ Requires: %{name} = %{version}-%{release}
 %description devel
 This package contains the .py files stripped out of the production build.
 
+%pre
+lsof -n -i :443
+if [ $? -eq 0 ]; then
+    echo "To install, port 443 cannot be bound. Do you have Apache running in SSL mode?"
+    exit -1
+fi
+
+lsof -n -i :80
+if [ $? -eq 0 ]; then
+    echo "To install, port 80 cannot be bound. do you have Apache running?"
+    exit -1
+fi
+
 %prep
 %setup -n %{name}-%{version}
 echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
@@ -136,6 +151,7 @@ echo -e "/^DEBUG =/s/= .*$/= False/\nwq" | ed settings.py 2>/dev/null
 cp -a chroma-manager.py build/lib
 cp -a production_supervisord.conf build/lib
 cp -a chroma-manager.conf.template build/lib
+cp -a mime.types build/lib
 
 %install
 %{__python} setup.py install --skip-build --root=%{buildroot}
@@ -143,12 +159,11 @@ install -d -p $RPM_BUILD_ROOT%{manager_root}
 mv $RPM_BUILD_ROOT/%{python_sitelib}/* $RPM_BUILD_ROOT%{manager_root}
 # Do a little dance to get the egg-info in place
 mv $RPM_BUILD_ROOT%{manager_root}/*.egg-info $RPM_BUILD_ROOT/%{python_sitelib}
-mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,httpd/conf}.d
-touch $RPM_BUILD_ROOT/etc/httpd/conf.d/chroma-manager.conf
+mkdir -p $RPM_BUILD_ROOT/etc/{init,logrotate,nginx/conf}.d
+touch $RPM_BUILD_ROOT/etc/nginx/conf.d/chroma-manager.conf
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/init.d/chroma-supervisor
 cp %{SOURCE2} $RPM_BUILD_ROOT/etc/init.d/chroma-host-discover
-cp %{SOURCE3} $RPM_BUILD_ROOT/etc/init.d/chroma-max-clients
-install -m 644 %{SOURCE4} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
+install -m 644 %{SOURCE3} $RPM_BUILD_ROOT/etc/logrotate.d/chroma-manager
 
 # Nuke source code (HYD-1849), but preserve key .py files needed for operation
 preserve_patterns="settings.py manage.py chroma_core/migrations/*.py chroma_core/management/commands/*.py"
@@ -185,35 +200,31 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %post
-ed /etc/httpd/conf.d/wsgi.conf <<EOF 2>/dev/null
-/^#LoadModule /s/^#\(LoadModule wsgi_module modules\/mod_wsgi.so\)/\1/
-w
-q
-EOF
+%{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_nginx.pyc \
+    $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/nginx/conf.d/chroma-manager.conf
 
-%{__python} $RPM_BUILD_ROOT%{manager_root}/scripts/production_httpd.pyc \
-    $RPM_BUILD_ROOT%{manager_root}/chroma-manager.conf.template > /etc/httpd/conf.d/chroma-manager.conf
 
-# Turn on worker
-sed -i 's/^#HTTPD=\/usr\/sbin\/httpd.worker/HTTPD=\/usr\/.\/sbin\/httpd.worker/' /etc/sysconfig/httpd
+# set worker_processes to auto
+sed -i '/^worker_processes /s/^/#/' /etc/nginx/nginx.conf
+sed -i '1 i\worker_processes auto;' /etc/nginx/nginx.conf
 
-# Start apache which should present a helpful setup
+# Start nginx which should present a helpful setup
 # page if the user visits it before configuring Chroma fully
-chkconfig httpd on
+chkconfig nginx on
 
 # Pre-create log files to set permissions
 mkdir -p /var/log/chroma
-chown -R apache:apache /var/log/chroma
+chown -R nginx:nginx /var/log/chroma
 
 # This is required for opening connections between
-# httpd and rabbitmq-server
+# nginx and rabbitmq-server
 setsebool -P httpd_can_network_connect 1 2>/dev/null
 
 # This is required because of bad behaviour in python's 'uuid'
 # module (see HYD-1475)
 setsebool -P httpd_tmp_exec 1 2>/dev/null
 
-# This is required for apache to serve HTTP_API_PORT
+# This is required for nginx to serve HTTP_API_PORT
 semanage port -a -t http_port_t -p tcp 8001
 
 if ! out=$(service iptables status) || [ "$out" = "Table: filter
@@ -244,6 +255,12 @@ service chroma-supervisor stop
 # remove the /static/ dir of files that was created by Django's collectstatic
 rm -rf %{manager_root}/static
 
+if [ $1 -lt 1]; then
+    #reset worker processes
+    sed -i '/^worker_processes auto;/d' /etc/nginx/nginx.conf
+    sed -i '/^#worker_processes /s/^#//' /etc/nginx/nginx.conf
+fi
+
 %postun
 if [ $1 -lt 1 ]; then
     # close previously opened ports in the firewall for access to the manager
@@ -259,25 +276,22 @@ if [ $1 -lt 1 ]; then
     if [ -d /var/lib/chroma ]; then
         rm -rf /var/lib/chroma
     fi
-
-    #Turn off worker
-    sed -i 's/^HTTPD=\/usr\/.\/sbin\/httpd.worker/#HTTPD=\/usr\/sbin\/httpd.worker/' /etc/sysconfig/httpd
 fi
 
 %files -f manager.files
 %defattr(-,root,root)
 %{_bindir}/chroma-host-discover
 %{_bindir}/chroma-config
-%dir %attr(0755,apache,apache)%{manager_root}
-/etc/httpd/conf.d/chroma-manager.conf
+%dir %attr(0755,nginx,nginx)%{manager_root}
+/etc/nginx/conf.d/chroma-manager.conf
 %attr(0755,root,root)/etc/init.d/chroma-supervisor
 %attr(0755,root,root)/etc/init.d/chroma-host-discover
-%attr(0755,root,root)/etc/init.d/chroma-max-clients
 %attr(0644,root,root)/etc/logrotate.d/chroma-manager
 %attr(0755,root,root)%{manager_root}/manage.pyc
 %{manager_root}/*.conf
 %{manager_root}/chroma-manager.py
 %{manager_root}/chroma-manager.conf.template
+%{manager_root}/mime.types
 %{manager_root}/chroma_ui/templates/*
 %{manager_root}/chroma_ui/static/*
 %{manager_root}/realtime/*

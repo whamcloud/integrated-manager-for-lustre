@@ -437,11 +437,11 @@ num  target     prot opt source               destination
         # FIXME: tidy up Crypto, some of its methods are no longer used
         crypto.server_cert
 
-    CONTROLLED_SERVICES = ['chroma-supervisor', 'httpd']
+    CONTROLLED_SERVICES = ['chroma-supervisor', 'nginx']
 
     def _enable_services(self):
         log.info("Enabling daemons")
-        for service in self.CONTROLLED_SERVICES + ['chroma-max-clients']:
+        for service in self.CONTROLLED_SERVICES:
             self.try_shell(['chkconfig', '--add', service])
 
     def _start_services(self):

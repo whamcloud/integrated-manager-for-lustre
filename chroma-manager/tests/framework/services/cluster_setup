@@ -28,10 +28,7 @@ gpgcheck=0
 sslverify=0
 EOC
 yum makecache
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server mod_wsgi mod_ssl telnet python-ethtool erlang-inets npm patch httpd-devel
-
-# Turn on worker
-ed -s /etc/sysconfig/httpd <<< $',s/#HTTPD=\/usr\/sbin\/httpd.worker/HTTPD=\/usr\/sbin\/httpd.worker/g\nw'
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql-server postgresql-devel rabbitmq-server telnet python-ethtool erlang-inets npm patch
 
 # Create a user so we can run chroma as non-root
 useradd chromatest
@@ -87,7 +84,6 @@ done;
 echo "counter: \$COUNTER, trials: \$MAX_TRIALS"
 [[ \$COUNTER -eq \$MAX_TRIALS ]] && { echo "RabbitMQ cannot receive messages!"; exit 1; }
 
-
 # Configure postgres
 chkconfig postgresql on
 service postgresql initdb
@@ -106,6 +102,13 @@ EOF
 # We exclude chroma-externals and copy just what we need to reduce the io load on our builders.
 virtualenv --relocatable .
 (tar -czf - --exclude='chroma/chroma-externals*' .; tar -czf - $(sed -e 's|^|chroma/chroma-externals/|' < chroma/chroma-manager/tests/framework/services/test_dependencies)) | ssh chromatest@$CHROMA_MANAGER "mkdir -p chroma_test_env; cd chroma_test_env; tar -xizf -"
+
+ssh root@$CHROMA_MANAGER <<EOF
+set -ex
+cd /home/chromatest/chroma_test_env/chroma/chroma-dependencies/nginx
+RPM_FILE="\$(make rpm_file)"
+yum localinstall -y "/home/chromatest/chroma_test_env/chroma/chroma-externals/\$RPM_FILE"
+EOF
 
 ssh chromatest@$CHROMA_MANAGER <<EOF
 set -ex

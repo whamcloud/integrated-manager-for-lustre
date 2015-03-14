@@ -1361,7 +1361,7 @@ class DeleteHostStep(Step):
 
         host = kwargs['host']
         # First, cut off any more incoming connections
-        # TODO: populate a CRL and do an apachectl graceful to reread it
+        # TODO: populate a CRL and send a nginx HUP signal to reread it
 
         # Second, terminate any currently open connections and ensure there is nothing in a queue
         # which will be drained into AMQP

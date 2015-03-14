@@ -135,7 +135,7 @@ cat <<\"EOF1\" > /usr/share/chroma-manager/local_settings.py
 import logging
 import sys
 import settings
-from scripts.httpd_settings import get_production_httpd_settings
+from scripts.nginx_settings import get_production_nginx_settings
 LOG_LEVEL = logging.DEBUG
 MIDDLEWARE_CLASSES = settings.MIDDLEWARE_CLASSES + ('tests.request_logging_middleware.RequestLoggingMiddleware',)
 DEBUG = True
@@ -143,7 +143,7 @@ TEMPLATE_DEBUG = False
 LOG_PATH = \"/var/log/chroma\"
 CRYPTO_FOLDER = \"/var/lib/chroma\"
 STORAGE_PLUGIN_DEBUG = False
-for key, value in get_production_httpd_settings().items():
+for key, value in get_production_nginx_settings().items():
     setattr(sys.modules[__name__], key, value)
 EOF1
 

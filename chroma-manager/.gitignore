@@ -10,3 +10,4 @@ set_state.prof
 *.pem
 *.stamp
 chroma_ui/templates/new/*
+dev_nginx

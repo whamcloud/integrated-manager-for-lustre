@@ -68,9 +68,8 @@ logrotate_logs = {
                          'client_errors.log',
                          'realtime.log',
                          ],
-    '/var/log/httpd': ['error_log',
-                       'access_log',
-                       'ssl_error_log',
+    '/var/log/nginx': ['error.log',
+                       'access.log'
                        ],
     '/var/log/': ['messages',
                   'chroma-agent.log',

@@ -25,7 +25,7 @@ import os
 import socket
 import logging
 
-from scripts import httpd_settings
+from scripts import nginx_settings
 
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 
@@ -36,7 +36,7 @@ if sys.version_info < (2, 6, 5):
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
-populator = httpd_settings.get_dev_httpd_settings if DEBUG else httpd_settings.get_production_httpd_settings
+populator = nginx_settings.get_dev_nginx_settings if DEBUG else nginx_settings.get_production_nginx_settings
 
 for key, value in populator().items():
     setattr(sys.modules[__name__], key, value)

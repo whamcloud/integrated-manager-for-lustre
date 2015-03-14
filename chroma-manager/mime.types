@@ -1,0 +1,28 @@
+types {
+  text/html html;
+  text/css css;
+  text/xml xml rss;
+  image/gif gif;
+  image/jpeg jpeg jpg;
+  application/javascript js;
+  application/json json map
+  text/plain txt;
+  text/x-component htc;
+  image/png png;
+  image/x-icon ico;
+  application/x-makeself run;
+  application/x-pilot prc pdb;
+  application/x-rar-compressed rar;
+  application/x-redhat-package-manager rpm;
+  application/x-tcl tcl tk;
+  application/x-x509-ca-cert der pem crt;
+  application/x-xpinstall xpi;
+  application/zip zip;
+  application/octet-stream deb;
+  application/octet-stream bin exe dll;
+  application/octet-stream dmg;
+  application/octet-stream eot;
+  application/octet-stream iso img;
+  application/octet-stream msi msp msm;
+  application/font-woff woff;
+}

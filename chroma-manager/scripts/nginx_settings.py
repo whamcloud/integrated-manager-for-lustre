@@ -25,35 +25,6 @@ import re
 
 SITE_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-
-def calculate_max_clients():
-    def physical_ram_mb():
-        """
-        Calculates the total ram of the system in MB.
-        Sets the number of clients to account for 75% of ram on linux and 50% on any other OS.
-
-        :rtype: int
-        """
-        if platform.system() == 'Linux':
-            meminfo = open('/proc/meminfo').read()
-            matched = re.search(r'^MemTotal:\s+(\d+)', meminfo)
-            if matched:
-                return int(matched.groups()[0]) / 1024
-        elif platform.system() == 'Darwin':
-            meminfo = os.popen("hostinfo").read()
-            matched = re.search(r'Primary memory available:\s+(\d+)', meminfo)
-            if matched:
-                return int(matched.groups()[0]) * 1024
-        else:
-            raise RuntimeError("Unknown platform type %s" % platform.system())
-
-        raise RuntimeError("Unable to determine physical system ram")
-
-    MB_PER_APACHE_PROCESS = 56
-    return int(
-        round(physical_ram_mb() / MB_PER_APACHE_PROCESS * (1.5 if platform.system().lower() == 'linux' else 1.25))
-    )
-
 _settings = {
     'APP_PATH': {
         'dev': SITE_ROOT,
@@ -82,9 +53,6 @@ _settings = {
     'SSL_PATH': {
         'dev': SITE_ROOT,
         'prod': '/var/lib/chroma'
-    },
-    'APACHE_MAX_CLIENTS': {
-        'all': calculate_max_clients
     }
 }
 
@@ -112,9 +80,9 @@ def get_settings_for(mode):
     return out
 
 
-def get_production_httpd_settings():
+def get_production_nginx_settings():
     """
-    Gets production httpd settings.
+    Gets production nginx settings.
 
     :return: Production Settings
     :rtype: dict
@@ -122,9 +90,9 @@ def get_production_httpd_settings():
     return get_settings_for('prod')
 
 
-def get_dev_httpd_settings():
+def get_dev_nginx_settings():
     """
-    Gets development httpd settings.
+    Gets development nginx settings.
 
     :return: Development Settings
     :rtype: dict

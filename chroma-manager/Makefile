@@ -62,7 +62,7 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
-develop: version realtime.stamp dev_httpd/mod_proxy_wstunnel.so
+develop: version realtime.stamp
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
@@ -97,10 +97,6 @@ gui.stamp: $(call find, chroma_ui_new/source, *) chroma_ui_new/base.html chroma_
 	cd chroma_ui_new/gulp && \
 	npm run build
 	touch $@
-
-dev_httpd/mod_proxy_wstunnel.so:
-	mkdir -p dev_httpd
-	$(MAKE) -C ../chroma-dependencies/mod_proxy_wstunnel BUILD_TYPE=DEVEL
 
 nuke_db:
 	@$(ALWAYS_NUKE_DB) && { \
@@ -213,7 +209,7 @@ rpms: cleandist tarball
 	rm -rf _topdir
 	mkdir -p _topdir/{BUILD,S{PEC,OURCE,RPM}S,RPMS/$(ARCH)}
 	cp dist/chroma-manager-$(PACKAGE_VERSION).tar.gz _topdir/SOURCES
-	cp chroma-supervisor-init.sh chroma-host-discover-init.sh chroma-max-clients-init.sh production_supervisord.conf logrotate.cfg _topdir/SOURCES
+	cp chroma-supervisor-init.sh chroma-host-discover-init.sh production_supervisord.conf logrotate.cfg _topdir/SOURCES
 	cp chroma-manager.spec _topdir/SPECS
 	rpmbuild --define "_topdir $$(pwd)/_topdir" \
 		--define "version $(PACKAGE_VERSION)" \

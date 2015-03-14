@@ -12,10 +12,7 @@ class TestStartStop(SupervisorTestCase):
     """
 
     def test_clean_stop(self):
-        # httpd doesn't behave reliably with a fast start/stop (it doesn't like
-        # being stopped before it's fully started), exclude it from this test -- we
-        # are mainly interested in the behaviour of our own code.
-        clean_services = set(self.programs) - set(['httpd', 'celery_periodic', 'celery_jobs'])
+        clean_services = set(self.programs) - set(['celery_periodic', 'celery_jobs'])
 
         for program_name in clean_services:
             self.start(program_name)

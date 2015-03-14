@@ -1,33 +1,32 @@
 
 """
-Tests for the frontend HTTP and HTTPS functionality provided by Apache (httpd)
+Tests for the frontend HTTP and HTTPS functionality provided by nginx
 """
 
 import subprocess
 import tempfile
 import sys
 import requests
-from requests.exceptions import SSLError
 import settings
 from tests.services.http_listener import HttpListener
 from tests.services.supervisor_test_case import SupervisorTestCase
 
 
-class HttpdTestCase(SupervisorTestCase):
+class NginxTestCase(SupervisorTestCase):
     # Require job_scheduler because it is queried for available_transitions when rendering /ui/
-    SERVICES = ['httpd', 'job_scheduler', 'gunicorn']
+    SERVICES = ['nginx', 'gunicorn', 'job_scheduler']
 
 
-class TestUi(HttpdTestCase):
+class TestUi(NginxTestCase):
 
     def test_simple_access(self):
-        """Test passthrough for /ui/ to the WSGI app"""
+        """Test passthrough for /ui/ to gunicorn"""
 
-        response = requests.get("https://localhost:%s/ui/" % settings.HTTPS_FRONTEND_PORT, verify = False)
+        response = requests.get("https://localhost:%s/ui/" % settings.HTTPS_FRONTEND_PORT, verify=False)
         self.assertEqual(response.status_code, 200)
 
 
-class TestInsecureUrls(HttpdTestCase):
+class TestInsecureUrls(NginxTestCase):
     """
     Test the namespaces that do not require SSL client authentication
     """
@@ -37,26 +36,27 @@ class TestInsecureUrls(HttpdTestCase):
            to the HTTPS url"""
 
         response = requests.get("http://localhost:%s/" % settings.HTTP_FRONTEND_PORT,
-            verify = False, allow_redirects = False)
-        self.assertEqual(response.status_code, 302)
+            verify=False, allow_redirects=False)
+        self.assertEqual(response.status_code, 301)
         self.assertEqual(response.headers['location'], "https://localhost:%s/" % settings.HTTPS_FRONTEND_PORT)
 
     def test_missing_slash(self):
         """Test rewriting of HTTP redirects is happening (ProxyPassReverse)"""
 
         without_slash = "https://localhost:%s/api/session" % settings.HTTPS_FRONTEND_PORT
-        response = requests.get(without_slash,
-            verify = False, allow_redirects = False)
+        response = requests.get(without_slash, verify=False, allow_redirects=False)
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response.headers['location'], without_slash + "/")
 
     def test_simple_access(self):
         """Test passthrough for /api/, /static/"""
 
-        response = requests.get("https://localhost:%s/static/images/intel-logo-white-trans-80x31.png" % settings.HTTPS_FRONTEND_PORT, verify = False)
+        response = requests.get(
+            "https://localhost:%s/static/images/intel-logo-white-trans-80x31.png" % settings.HTTPS_FRONTEND_PORT,
+            verify=False)
         self.assertEqual(response.status_code, 200)
 
-        response = requests.get("https://localhost:%s/api/session/" % settings.HTTPS_FRONTEND_PORT, verify = False)
+        response = requests.get("https://localhost:%s/api/session/" % settings.HTTPS_FRONTEND_PORT, verify=False)
         self.assertEqual(response.status_code, 200)
 
     def test_register_access(self):
@@ -64,14 +64,33 @@ class TestInsecureUrls(HttpdTestCase):
 
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
             response = requests.post(
-                "https://localhost:%s/agent/register/" % settings.HTTPS_FRONTEND_PORT,
-                verify = False)
+                "https://localhost:%s/agent/register/" % settings.HTTPS_FRONTEND_PORT, verify=False)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(listener.requests), 1)
             self.assertEqual(listener.last_request.path, "/agent/register/")
 
+    def test_certificate(self):
+        """Test certificate is fetchable"""
+        with open("%s/authority.crt" % settings.APP_PATH, 'r') as cert:
+            text = cert.read()
+            response = requests.get("https://localhost:%s/certificate" % settings.HTTPS_FRONTEND_PORT, verify=False)
+            self.assertEqual(response.text, text)
 
-class TestSecureUrls(HttpdTestCase):
+    def test_certificate_redirect(self):
+        """Test certificate path redirects"""
+        without_slash = "https://localhost:%s/certificate/" % settings.HTTPS_FRONTEND_PORT
+        response = requests.get(without_slash, verify=False, allow_redirects=False)
+        self.assertEqual(response.status_code, 301)
+
+    def test_primus(self):
+        """Test primus path sends upgrade header"""
+        with HttpListener(settings.REALTIME_PORT) as listener:
+            uri = "https://localhost:%s/primus/" % settings.HTTPS_FRONTEND_PORT
+            requests.get(uri, verify=False, allow_redirects=False)
+            self.assertEqual(listener.last_request.headers.getheader('Connection'), 'upgrade')
+
+
+class TestSecureUrls(NginxTestCase):
     """
     Test the namespaces that require SSL client authentication
     """
@@ -79,7 +98,7 @@ class TestSecureUrls(HttpdTestCase):
     # Note that this test replicates a subset of the manager and agent Crypto classes, this
     # is intentional as the unit under test is the HTTPS frontend config, not those classes.
     def _openssl(self, args):
-        p = subprocess.Popen(['openssl'] + args, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        p = subprocess.Popen(['openssl'] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         sys.stdout.write(stdout)
         sys.stdout.write(stderr)
@@ -87,29 +106,33 @@ class TestSecureUrls(HttpdTestCase):
         return p.returncode, stdout, stderr
 
     def _bad_server_credentials(self):
-        server_key = tempfile.NamedTemporaryFile(delete = False)
-        server_cert = tempfile.NamedTemporaryFile(delete = False)
+        server_key = tempfile.NamedTemporaryFile(delete=False)
+        server_cert = tempfile.NamedTemporaryFile(delete=False)
         csr = tempfile.NamedTemporaryFile()
 
         # A private key
         self._openssl(['genrsa', '-out', server_key.name, '2048'])
         # A self signed cert
-        self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority", "-key", server_key.name, "-out", csr.name])
-        self._openssl(["x509", "-req", "-days", "36500", "-signkey", server_key.name, "-out", server_cert.name, "-in", csr.name])
+        self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=x_local_authority",
+                       "-key", server_key.name, "-out", csr.name])
+        self._openssl(["x509", "-req", "-days", "36500", "-signkey", server_key.name,
+                       "-out", server_cert.name, "-in", csr.name])
 
         return server_key.name, server_cert.name
 
     def _client_credentials(self, client_cn, authority_key, authority_cert):
-        client_key = tempfile.NamedTemporaryFile(delete = False)
-        client_cert = tempfile.NamedTemporaryFile(delete = False)
+        client_key = tempfile.NamedTemporaryFile(delete=False)
+        client_cert = tempfile.NamedTemporaryFile(delete=False)
         client_csr = tempfile.NamedTemporaryFile()
 
         # Client key
         self._openssl(['genrsa', '-out', client_key.name, '2048'])
         # Client CSR
-        self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % client_cn, "-key", client_key.name, "-out", client_csr.name])
+        self._openssl(["req", "-new", "-subj", "/C=/ST=/L=/O=/CN=%s" % client_cn,
+                       "-key", client_key.name, "-out", client_csr.name])
         # Generate client cert
-        self._openssl(["x509", "-req", "-days", "36500", "-CAkey", authority_key, "-CA", authority_cert, "-CAcreateserial", "-out", client_cert.name, "-in", client_csr.name])
+        self._openssl(["x509", "-req", "-days", "36500", "-CAkey", authority_key,
+                       "-CA", authority_cert, "-CAcreateserial", "-out", client_cert.name, "-in", client_csr.name])
 
         return client_cert.name, client_key.name
 
@@ -117,10 +140,10 @@ class TestSecureUrls(HttpdTestCase):
         """Check that I'm rejected if I try to connect to the secure namespace without a certificate"""
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
             # Check that we are rejected
-            with self.assertRaises(SSLError):
-                requests.post(
-                    "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT,
-                    verify = False)
+            response = requests.post(
+                "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT, verify=False)
+
+            self.assertEqual(response.status_code, 401)
 
             # And that nothing was proxied to the agent service
             self.assertEqual(len(listener.requests), 0)
@@ -134,11 +157,12 @@ class TestSecureUrls(HttpdTestCase):
 
         with HttpListener(settings.HTTP_AGENT_PORT) as listener:
             # Check that we are rejected
-            with self.assertRaises(SSLError):
-                requests.get(
-                    "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT,
-                    verify = False,
-                    cert = (cert, key))
+            response = requests.get(
+                "https://localhost:%s/agent/message/" % settings.HTTPS_FRONTEND_PORT,
+                verify=False,
+                cert=(cert, key))
+
+            self.assertEqual(response.status_code, 400)
 
             # And that nothing was proxied to the agent service
             self.assertEqual(len(listener.requests), 0)

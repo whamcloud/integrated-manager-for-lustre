@@ -42,9 +42,14 @@ class HttpListenerHandler(BaseHTTPRequestHandler):
     def accept_and_log(self):
         self.server.listener.log_request(self)
         self.send_response(200)
+        self.end_headers()
+        self.wfile.flush()
 
     def do_GET(self):
         self.accept_and_log()
 
     def do_POST(self):
+        length = int(self.headers.getheader('content-length'))
+        self.post_data = self.rfile.read(length)
+
         self.accept_and_log()
