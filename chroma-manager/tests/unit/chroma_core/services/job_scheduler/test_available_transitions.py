@@ -6,6 +6,7 @@ from chroma_core.models import (ManagedMgs, ManagedFilesystem, ManagedOst,
                                 ManagedMdt, RebootHostJob, ShutdownHostJob)
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_core.helper import synthetic_volume, synthetic_host
+from tests.unit.chroma_core.helper import load_default_profile
 
 
 class TestAvailableTransitions(TestCase):
@@ -32,8 +33,10 @@ class TestAvailableTransitions(TestCase):
         self.js = JobScheduler()
         self.volume = synthetic_volume(with_storage=False)
 
-        from tests.unit.chroma_core.helper import load_default_profile
         load_default_profile()
+
+        self.host = synthetic_host()
+        self.assertEqual(self.host.state, 'managed')
 
     def tearDown(self):
 
@@ -128,13 +131,25 @@ class TestAvailableTransitions(TestCase):
         """Test the MDT possible states are correct."""
 
         #  filesystem unformatted states
-        host = synthetic_host()
-
-        self.assertEqual(host.state, 'configured')
-
-        expected_transitions = ['removed', 'lnet_down', 'lnet_up']
-        received_transitions = [t['state'] for t in self._get_transition_states(host)]
+        expected_transitions = ['removed']
+        received_transitions = [t['state'] for t in self._get_transition_states(self.host)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
+
+    def test_lnet_configuration(self):
+        """Test the lnet_configuration possible states are correct."""
+
+        #  lnet configuration states
+        test_transitions = {'unconfigured': ['lnet_down', 'lnet_up'],            # lnet_unloaded is not advertised from unconfigured and so doesn't appear
+                            'lnet_unloaded': ['lnet_down', 'lnet_up'],
+                            'lnet_down': ['lnet_unloaded', 'lnet_up'],
+                            'lnet_up': ['lnet_unloaded', 'lnet_down']}
+
+        for test_state, expected_transitions in test_transitions.items():
+            self.host.lnet_configuration.state = test_state
+            self.host.lnet_configuration.save()
+
+            received_transitions = [t['state'] for t in self._get_transition_states(self.host.lnet_configuration)]
+            self.assertEqual(set(received_transitions), set(expected_transitions))
 
     def test_no_locks_query_count(self):
         """Check that query count to pull in available jobs hasn't changed
@@ -146,11 +161,9 @@ class TestAvailableTransitions(TestCase):
         EXPECTED_QUERIES = 0
 
         #  no jobs locking this object
-        host = synthetic_host()
-
         host_ct_key = ContentType.objects.get_for_model(
-            host.downcast()).natural_key()
-        host_id = host.id
+            self.host.downcast()).natural_key()
+        host_id = self.host.id
 
         #  Loads up the caches
         js = JobScheduler()
@@ -169,19 +182,17 @@ class TestAvailableTransitions(TestCase):
         EXPECTED_QUERIES = 0
 
         #  object to be locked by jobs
-        host = synthetic_host()
-
         host_ct_key = ContentType.objects.get_for_model(
-            host.downcast()).natural_key()
-        host_id = host.id
+            self.host.downcast()).natural_key()
+        host_id = self.host.id
 
         #  create 200 host ups and down jobs in 'pending' default state
         #  key point is they are not in the 'complete' state.
         for job_num in xrange(200):
             if job_num % 2 == 0:
-                RebootHostJob.objects.create(host=host)
+                RebootHostJob.objects.create(host=self.host)
             else:
-                ShutdownHostJob.objects.create(host=host)
+                ShutdownHostJob.objects.create(host=self.host)
 
         #  Loads up the caches, including the _lock_cache while should find
         #  these jobs.
@@ -198,17 +209,15 @@ class TestAvailableTransitions(TestCase):
             "got %s expected %s" % (query_sum, EXPECTED_QUERIES))
 
     def test_managed_target_dne(self):
+        host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
+        host_id = self.host.id
 
-        host = synthetic_host()
-        host_ct_key = ContentType.objects.get_for_model(host.downcast()).natural_key()
-        host_id = host.id
-
-        host.mark_deleted()
+        self.host.mark_deleted()
 
         job_scheduler = JobScheduler()
 
-        avail_trans = job_scheduler.available_transitions([(host_ct_key, host_id), ])[host.id]
+        avail_trans = job_scheduler.available_transitions([(host_ct_key, host_id), ])[host_id]
         self.assertTrue(len(avail_trans) == 0, avail_trans)
-        avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id), ])[host.id]
-        self.assertTrue(host.state, 'configured')
+        avail_jobs = job_scheduler.available_jobs([(host_ct_key, host_id), ])[host_id]
+        self.assertTrue(self.host.state, 'managed')
         self.assertTrue(len(avail_jobs) == 3)   # Three states from configured -> Force Remove. Reboot, Shutdown

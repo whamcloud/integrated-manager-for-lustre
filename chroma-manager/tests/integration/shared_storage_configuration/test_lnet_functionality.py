@@ -57,7 +57,7 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
             self.set_value(nid['resource_uri'], 'lnd_network', lnd_network, False)
 
             # Move to another state
-            self._change_lnet_state(lnetinfo.lnet_configuration['resource_uri'])
+            self._change_lnet_state()
 
             # Check it worked ok.
             self.assertEqual(self.get_json_by_uri(nid['resource_uri'])['lnd_network'], lnd_network)
@@ -73,20 +73,22 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
             # status is updated by the regular polling whilst the lnet state is still being manipulated we can request a change
             # of state below that will be cancelled because it is not needed (validly cancelled) so we will just wait for the
             # last command running to complete before we go further.
-            # The call below makes sure that the last command has completed, without error.
+            # The call below makes sure ththe last command has completed, without error.
             self.wait_last_command_complete()
 
             # Move to another state
-            self._change_lnet_state(self.host['resource_uri'])
+            self._change_lnet_state()
 
             # Ensure that the update worked, we have deleted.
-            self.assertEqual(len(self._get_lnet_info(self.host).nids), len(lnetinfo.nids) - 1)
+            self.assertEqual(len(self._get_lnet_info(self.host).nids),
+                             len(lnetinfo.nids) - 1,
+                             self._get_lnet_info(self.host).nids)
 
             # Now try posting it back.
             self.post_by_uri('/api/nid/', nid)
 
             # Move to another state
-            self._change_lnet_state(lnetinfo.lnet_configuration['resource_uri'])
+            self._change_lnet_state()
 
             # Ensure that the update worked, we have deleted and posted one.
             self.assertEqual(len(self._get_lnet_info(self.host).nids), len(lnetinfo.nids))
@@ -95,44 +97,24 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
 
         # Finally and as much so that we leave everything in a nice state for others. Delete the configuration
         # but do this with lnet_unload.
-        self.set_state(lnetinfo.lnet_configuration['resource_uri'], 'lnet_unloaded')
+        self.set_state(self.host['lnet_configuration'], 'lnet_unloaded')
 
         objects = []
         for interface in lnetinfo.network_interfaces:
-            logger.debug("Setting lnd_network to %s for interface %s" % (lnd_network, interface['name']))
+            logger.debug("Deleting lnd_network for interface %s" % interface['name'])
             objects.append({"lnd_network": -1,
                             "network_interface": interface['resource_uri']})
         self.post_by_uri('/api/nid/', {'objects': objects})
 
         # Because lnet is not loaded we should see 0 nids.
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), 0)
+        self.assertEqual(len(self._get_lnet_info(self.host).nids), 0, self._get_lnet_info(self.host).nids)
 
         # But if lnet is up we should receive 1 nid back - because 1 nid is always reported by lnet.
-        self.set_state(lnetinfo.lnet_configuration['resource_uri'], 'lnet_up')
-        self.assertEqual(len(self._get_lnet_info(self.host).nids), 1)
+        self.set_state(self.host['lnet_configuration'], 'lnet_up')
+        self.assertEqual(len(self._get_lnet_info(self.host).nids), 1, self._get_lnet_info(self.host).nids)
 
-    def test_lnet_states(self):
-        lnetinfo = self._get_lnet_info(self.host)
-
-        # If _get_lnet_info returns None then lnet config is not supported by the version of IML running.
-        if not lnetinfo:
-            return
-
-        # Just check some state changes
-        resource_uris = [lnetinfo.lnet_configuration['resource_uri'], self.host['resource_uri']]
-
-        # Check setting lnet_configuration state and host configuration state reflect however you do it.
-        # This code tests that changing lnet configuration via the host is reflected in the lnet_configuration and
-        # that vice versa is also true.
-        # The inner loop just trys a number of times with each combination.
-        for x in range(0, len(resource_uris)):    # 0 is lnet_configuration, 1 is host
-            for y in [2, 3]:                      # 2 is lnet_configuration, 3 is host
-                for i in range(2):
-                    state = self._change_lnet_state(resource_uris[x])
-                    self.assertEqual(self._get_lnet_info(self.host)[y]['state'], state)
-
-    def _change_lnet_state(self, object_uri):
+    def _change_lnet_state(self):
         state = self.states[self.state_order.next()]
-        self.set_state(object_uri, state)
+        self.set_state(self.host['lnet_configuration'], state)
 
         return state

@@ -28,12 +28,12 @@ from chroma_core.lib.cache import ObjectCache
 
 from django.db import models, transaction
 from chroma_core.lib.job import DependOn, DependAny, DependAll, Step, job_log
-from chroma_core.models.alert import AlertState
-from chroma_core.models.event import AlertEvent
-from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
-from chroma_core.models.host import ManagedHost, VolumeNode, Volume, HostContactAlert
-from chroma_core.models.jobs import StatefulObject
-from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models import AlertState
+from chroma_core.models import AlertEvent
+from chroma_core.models import StateChangeJob, StateLock, AdvertisedJob
+from chroma_core.models import ManagedHost, VolumeNode, Volume, HostContactAlert
+from chroma_core.models import StatefulObject
+from chroma_core.models import DeletableMetaclass, DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_help.help import help_text
 from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_core.chroma_common.filesystems.filesystem import FileSystem
@@ -146,7 +146,7 @@ class ManagedTarget(StatefulObject):
         fail_nids = []
         for secondary_mount in self.managedtargetmount_set.filter(primary = False):
             host = secondary_mount.host
-            failhost_nids = host.lnetconfiguration.get_nids()
+            failhost_nids = host.lnet_configuration.get_nids()
             assert(len(failhost_nids) != 0)
             fail_nids.extend(failhost_nids)
         return fail_nids
@@ -225,11 +225,14 @@ class ManagedTarget(StatefulObject):
 
         deps = []
         if state == 'mounted' and self.active_mount and not self.immutable_state:
+            from chroma_core.models import LNetConfiguration
+
             # Depend on the active mount's host having LNet up, so that if
             # LNet is stopped on that host this target will be stopped first.
             target_mount = self.active_mount
             host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == target_mount.host_id)
-            deps.append(DependOn(host, 'lnet_up', fix_state='unmounted'))
+            lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
+            deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state='unmounted'))
 
             # TODO: also express that this situation may be resolved by migrating
             # the target instead of stopping it.
@@ -244,19 +247,23 @@ class ManagedTarget(StatefulObject):
                                  acceptable_states = filesystem.not_states(['forgotten', 'removed']), fix_state=lambda s: s))
 
         if state not in ['removed', 'forgotten']:
+            from chroma_core.models import LNetConfiguration
+
             target_mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.id)
             for tm in target_mounts:
                 host = ObjectCache.get_by_id(ManagedHost, tm.host_id)
+                lnet_configuration = ObjectCache.get_by_id(LNetConfiguration, host.lnet_configuration.id)
                 if self.immutable_state:
-                    deps.append(DependOn(host, 'lnet_up', acceptable_states = list(set(host.states) - set(['removed', 'forgotten'])), fix_state = 'forgotten'))
+                    deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states = ['unconfigured'], fix_state = 'forgotten'))
                 else:
-                    deps.append(DependOn(host, 'lnet_up', acceptable_states = list(set(host.states) - set(['removed', 'forgotten'])), fix_state = 'removed'))
+                    deps.append(DependOn(lnet_configuration, 'lnet_up', unacceptable_states = ['unconfigured'], fix_state = 'removed'))
 
         return DependAll(deps)
 
     reverse_deps = {
         'ManagedTargetMount': lambda mtm: ObjectCache.mtm_targets(mtm.id),
         'ManagedHost': lambda mh: ObjectCache.host_targets(mh.id),
+        'LNetConfiguration': lambda lc: ObjectCache.host_targets(lc.host.id),
         'ManagedFilesystem': lambda mfs: ObjectCache.fs_targets(mfs.id),
         'Copytool': lambda ct: ObjectCache.client_mount_copytools(ct.id)
     }
@@ -455,7 +462,7 @@ class ManagedMgs(ManagedTarget, MeasuredEntity):
         # filesystem start.
         for target_mount in self.managedtargetmount_set.all().order_by('-primary'):
             host = target_mount.host
-            host_nids.append(tuple(host.lnetconfiguration.get_nids()))
+            host_nids.append(tuple(host.lnet_configuration.get_nids()))
 
         return tuple(host_nids)
 
@@ -797,7 +804,7 @@ class ConfigureTargetJob(StateChangeJob):
         deps = []
 
         prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary is True and mtm.target_id == self.target.id)
-        deps.append(DependOn(prim_mtm.host, 'lnet_up'))
+        deps.append(DependOn(prim_mtm.host.lnet_configuration, 'lnet_up'))
 
         return DependAll(deps)
 
@@ -854,7 +861,7 @@ class RegisterTargetJob(StateChangeJob):
     def get_deps(self):
         deps = []
 
-        deps.append(DependOn(ObjectCache.target_primary_server(self.target), 'lnet_up'))
+        deps.append(DependOn(ObjectCache.target_primary_server(self.target).lnet_configuration, 'lnet_up'))
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should cache filesystem associaton in objectcache
@@ -909,8 +916,10 @@ class StartTargetJob(StateChangeJob):
         # Depend on at least one targetmount having lnet up
         mtms = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target_id == self.target_id)
         for tm in mtms:
-            host = ObjectCache.get_by_id(ManagedHost, tm.host_id)
-            lnet_deps.append(DependOn(host, 'lnet_up', fix_state = 'unmounted'))
+            from chroma_core.models import LNetConfiguration
+
+            lnet_configuration = ObjectCache.get_one(LNetConfiguration, lambda l: l.host_id == tm.host_id)
+            lnet_deps.append(DependOn(lnet_configuration, 'lnet_up', fix_state = 'unmounted'))
         return DependAny(lnet_deps)
 
     def get_steps(self):
@@ -1080,7 +1089,7 @@ class FormatTargetJob(StateChangeJob):
             hosts.add(tm.host)
 
         for host in hosts:
-            deps.append(DependOn(host, 'lnet_up'))
+            deps.append(DependOn(host.lnet_configuration, 'lnet_up'))
 
         if issubclass(self.target.downcast_class, FilesystemMember):
             # FIXME: spurious downcast, should use ObjectCache to remember which targets are in
@@ -1093,7 +1102,7 @@ class FormatTargetJob(StateChangeJob):
                 mgs_hosts.add(tm.host)
 
             for host in mgs_hosts:
-                deps.append(DependOn(host, 'lnet_up'))
+                deps.append(DependOn(host.lnet_configuration, 'lnet_up'))
 
         return DependAll(deps)
 
@@ -1228,7 +1237,7 @@ class FailbackTargetJob(MigrateTargetJob):
     def get_deps(self):
         return DependAll(
             [DependOn(self.target, 'mounted')] +
-            [DependOn(self.target.primary_host, 'lnet_up')]
+            [DependOn(self.target.primary_host.lnet_configuration, 'lnet_up')]
         )
 
     def on_success(self):
@@ -1284,7 +1293,7 @@ class FailoverTargetJob(MigrateTargetJob):
     def get_deps(self):
         return DependAll(
             [DependOn(self.target, 'mounted')] +
-            [DependOn(self.target.failover_hosts[0], 'lnet_up')]
+            [DependOn(self.target.failover_hosts[0].lnet_configuration, 'lnet_up')]
         )
 
     def on_success(self):

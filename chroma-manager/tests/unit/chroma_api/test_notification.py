@@ -19,7 +19,7 @@ class TestNotification(NotificationTestCase):
         """Given notifications of each type, issue a GET request, and check response has all notifications"""
 
         host = synthetic_host()
-        host.state = 'lnet_up'
+        host.state = 'managed'
         host.save()
 
         alert_obj = self.make_host_notification(HostOfflineAlert,

@@ -58,6 +58,7 @@ class DependOn(Dependable):
             stateful_object,
             preferred_state,
             acceptable_states = None,
+            unacceptable_states = None,
             fix_state = None):
         """preferred_state: what we will try to put the dependency into if
            it is not already in one of acceptable_states.
@@ -65,6 +66,10 @@ class DependOn(Dependable):
            dependency can no longer be satisfied."""
 
         assert isinstance(stateful_object, django.db.models.Model)
+        assert (unacceptable_states == None) or (acceptable_states == None)
+
+        if unacceptable_states:
+            acceptable_states = [state for state in stateful_object.states if state not in unacceptable_states]
 
         if not acceptable_states:
             self.acceptable_states = [preferred_state]

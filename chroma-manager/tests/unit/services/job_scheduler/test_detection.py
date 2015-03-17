@@ -3,11 +3,16 @@ import json
 from django.test import TestCase
 import mock
 import os
-from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.lnet_configuration import Nid
-from chroma_core.models.host import ManagedHost, Volume, VolumeNode, DetectTargetsJob
-from chroma_core.models.target import ManagedOst, ManagedTargetMount, ManagedTarget
 from chroma_core.services.job_scheduler.agent_rpc import AgentException
+from chroma_core.models import ManagedFilesystem
+from chroma_core.models import Nid
+from chroma_core.models import ManagedHost
+from chroma_core.models import Volume
+from chroma_core.models import VolumeNode
+from chroma_core.models import DetectTargetsJob
+from chroma_core.models import ManagedOst
+from chroma_core.models import ManagedTargetMount
+from chroma_core.models import ManagedTarget
 from tests.unit.chroma_core.helper import synthetic_host, synchronous_run_job, load_default_profile
 
 

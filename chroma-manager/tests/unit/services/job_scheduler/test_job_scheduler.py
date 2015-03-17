@@ -1,6 +1,7 @@
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import SchedulingError, Job, Command
-from chroma_core.models import ManagedMgs, ManagedHost, ManagedTarget, ManagedTargetMount
+from chroma_core.models import ManagedMgs, ManagedTarget, ManagedTargetMount
+from chroma_core.models import LNetConfiguration
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread, JobScheduler
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 import mock
@@ -12,9 +13,14 @@ from chroma_api.urls import api
 
 
 class TestTransitionsWithCommands(JobTestCaseWithHost):
+    def setUp(self):
+        super(TestTransitionsWithCommands, self).setUp()
+
+        self.lnetconfiguration = self.host.lnet_configuration
+
     def test_onejob(self):
         # Our self.host is initially lnet_up
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+        self.assertEqual(LNetConfiguration.objects.get(pk = self.lnetconfiguration.pk).state, 'lnet_up')
 
         # This tests a state transition which is done by a single job
         command_id = JobSchedulerClient.command_run_jobs([{'class_name': 'UpdateDevicesJob', 'args': {'hosts': [api.get_resource_uri(self.host)]}}], "Test single job action")
@@ -24,18 +30,18 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 1)
 
         # Test that if I try to run the same again I get None
-        command = Command.set_state([(freshen(self.host), 'lnet_up')])
+        command = Command.set_state([(freshen(self.lnetconfiguration), 'lnet_up')])
         self.assertEqual(command, None)
 
     def test_2steps(self):
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+        self.assertEqual(LNetConfiguration.objects.get(pk = self.lnetconfiguration.pk).state, 'lnet_up')
 
         # This tests a state transition which requires two jobs acting on the same object
-        # lnet_up -> lnet_down issues an UnloadLNetJob and a GetLNetStateJob
-        command_id = Command.set_state([(freshen(self.host), 'lnet_down')]).id
+        # lnet_up -> lnet_down issues an StopLNetJob and a UnloadLNetJob
+        command_id = Command.set_state([(freshen(self.lnetconfiguration), 'lnet_unloaded')]).id
         self.drain_progress()
 
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_down')
+        self.assertEqual(LNetConfiguration.objects.get(pk = self.lnetconfiguration.pk).state, 'lnet_unloaded')
         self.assertEqual(Command.objects.get(pk = command_id).complete, True)
         self.assertEqual(Command.objects.get(pk = command_id).jobs.count(), 2)
 
@@ -44,6 +50,7 @@ class TestStateManager(JobTestCaseWithHost):
     def setUp(self):
         super(TestStateManager, self).setUp()
 
+        self.lnetconfiguration = self.host.lnet_configuration
         self._completion_hook_count = 0
         self.job_scheduler.add_completion_hook(self._completion_hook)
 
@@ -103,41 +110,42 @@ class TestStateManager(JobTestCaseWithHost):
     def test_1step(self):
         # Should be a simple one-step operation
         # Our self.host is initially lnet_up
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+        self.assertEqual(LNetConfiguration.objects.get(pk = self.lnetconfiguration.pk).state, 'lnet_up')
 
         # One job
-        self.host = self.set_and_assert_state(self.host, 'lnet_down')
+        self.lnetconfiguration = self.set_and_assert_state(self.lnetconfiguration, 'lnet_down')
 
         # One more job
-        self.host = self.set_and_assert_state(self.host, 'lnet_unloaded')
+        self.lnetconfiguration = self.set_and_assert_state(self.lnetconfiguration, 'lnet_unloaded')
 
     def test_completion_hook(self):
-        self.assertEqual(self.host.state, 'lnet_up')
+        self.assertEqual(self.lnetconfiguration.state, 'lnet_up')
         # This exercises the completion hooks
         for x in range(10):
-            self.host = self.set_and_assert_state(self.host, 'lnet_down')   # 2 _completion_hook_count
-            self.host = self.set_and_assert_state(self.host, 'lnet_up')     # 1 _completion_hook_count difference is because the emulation is not perfect. Should be fixed.
-            self.assertEqual(self._completion_hook_count, ((x + 1) * 3))
+            self.lnetconfiguration = self.set_and_assert_state(self.lnetconfiguration, 'lnet_unloaded')   # +2 _completion_hook_count
+            self.lnetconfiguration = self.set_and_assert_state(self.lnetconfiguration, 'lnet_down')       # +1 _completion_hook_count
+            self.lnetconfiguration = self.set_and_assert_state(self.lnetconfiguration, 'lnet_up')         # +1 _completion_hook_count
+            self.assertEqual(self._completion_hook_count, ((x + 1) * 4))
 
     def test_notification(self):
         """Test that state notifications cause the state of an object to change"""
-        self.host = self.assertState(self.host, 'lnet_up')
+        self.lnetconfiguration = self.assertState(self.lnetconfiguration, 'lnet_up')
         now = django.utils.timezone.now()
-        JobSchedulerClient.notify(freshen(self.host), now, {'state': 'lnet_down'}, ['lnet_up'])
-        self.assertEqual(freshen(self.host).state, 'lnet_down')
+        JobSchedulerClient.notify(freshen(self.lnetconfiguration), now, {'state': 'lnet_down'}, ['lnet_up'])
+        self.assertEqual(freshen(self.lnetconfiguration).state, 'lnet_down')
 
     def test_late_notification(self):
         """Test that notifications are droppped when they are older than
         the last change to an objects state"""
-        self.host = self.assertState(self.host, 'lnet_up')
+        self.lnetconfiguration = self.assertState(self.lnetconfiguration, 'lnet_up')
         awhile_ago = django.utils.timezone.now() - datetime.timedelta(seconds = 120)
-        JobSchedulerClient.notify(freshen(self.host), awhile_ago, {'state': 'lnet_down'}, ['lnet_up'])
-        self.assertEqual(freshen(self.host).state, 'lnet_up')
+        JobSchedulerClient.notify(freshen(self.lnetconfiguration), awhile_ago, {'state': 'lnet_down'}, ['lnet_up'])
+        self.assertEqual(freshen(self.lnetconfiguration).state, 'lnet_up')
 
     def test_buffered_notification(self):
         """Test that notifications for locked items are buffered and
         replayed when the locking Job has completed."""
-        self.host = self.assertState(self.host, 'lnet_up')
+        self.lnetconfiguration = self.assertState(self.lnetconfiguration, 'lnet_up')
 
         # Set boot_time to something that should change.
         now = django.utils.timezone.now()
@@ -161,8 +169,8 @@ class TestStateManager(JobTestCaseWithHost):
 
         # Run any job, doesn't matter -- we just want to ensure that the
         # notification buffer is drained after the job completes.
-        self.host = self.set_and_assert_state(self.host, 'lnet_down')
-        self.assertEqual(self.host.boot_time, later)
+        self.lnetconfiguration = self.set_and_assert_state(self.lnetconfiguration, 'lnet_down')
+        self.assertEqual(freshen(self.host).boot_time, later)
 
         # Just for completeness, check that the notification buffer for this
         # host was completely drained and removed.
@@ -171,16 +179,15 @@ class TestStateManager(JobTestCaseWithHost):
         self.assertEqual([], self.job_scheduler._notification_buffer.notification_keys)
 
     def test_2steps(self):
-        from chroma_core.models import ManagedHost
-        self.assertEqual(ManagedHost.objects.get(pk = self.host.pk).state, 'lnet_up')
+        self.assertEqual(LNetConfiguration.objects.get(pk = self.lnetconfiguration.pk).state, 'lnet_up')
 
         # This tests a state transition which requires two jobs acting on the same object
-        self.host = self.set_and_assert_state(self.host, 'lnet_unloaded')
+        self.lnetconfiguration = self.set_and_assert_state(self.lnetconfiguration, 'lnet_unloaded')
 
     def test_cancel_pending(self):
         """Test cancelling a Job which is in state 'pending'"""
 
-        self.set_state_delayed([(self.host, 'lnet_unloaded')])
+        self.set_state_delayed([(self.host.lnet_configuration, 'lnet_unloaded')])
         pending_jobs = Job.objects.filter(state = 'pending')
 
         # stop lnet, unload lnet
@@ -214,7 +221,7 @@ class TestStateManager(JobTestCaseWithHost):
         a no-op
 
         """
-        self.set_state_delayed([(self.host, 'lnet_down')])
+        self.set_state_delayed([(self.lnetconfiguration, 'lnet_down')])
         job = Job.objects.get(state = 'pending')
 
         # Run, check that it goes to successful state
@@ -250,7 +257,7 @@ class TestStateManager(JobTestCaseWithHost):
         self.job_scheduler._spawn_job = mock.Mock(side_effect=spawn_job)
 
         try:
-            self.set_state_delayed([(self.host, 'lnet_down')])
+            self.set_state_delayed([(self.lnetconfiguration, 'lnet_down')])
             # Start our mock thread 'running'
             self.job_scheduler._run_next()
             job = Job.objects.get(state = 'tasked')

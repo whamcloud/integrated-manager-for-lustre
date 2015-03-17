@@ -59,7 +59,11 @@ help_text = {
     'type': 'The type of storage device.',
     'managed_filesystem': 'This file system is managed by Intel® Manager for Lustre*',
     'monitored_filesystem': 'This file system is monitored and may not be modified within Intel® Manager for Lustre*',
-    'setup_host': 'Setup this host',
+    'setup_monitored_host': 'Setup this monitored host',
+    'setup_managed_host': 'Setup this managed host',
+    'install_packages_on_host_long': 'Install packages on this server',
+    'install_packages_on_host': 'Install packages on server %s',
+    'change_state_of_lnet_to_unconfigured': 'Unconfiguring LNet',
     'reboot_host': 'Initiate a reboot on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has finished rebooting.',
     'shutdown_host': 'Initiate an orderly shutdown on the host. Any HA-capable targets running on the host will be failed over to a peer. Non-HA-capable targets will be unavailable until the host has been restarted.',
     'poweron_host': 'Switch on power to this server.',
@@ -74,6 +78,8 @@ help_text = {
     'root_password_tooltip': 'Use standard password based auth, if you don\'t have SSH keys to use.',
     'another_key_tooltip': 'A private key that is a pair with a public key on this new server, may be used. A passphrase can be supplied for an encrypted private key.',
     'root_password_input_tooltip': 'The password of the root user.',
+    'deploying_host': 'Deploying agent to host %s',
+    'validating_host': 'Validation host configuration %s',
     'private_key_textarea_tooltip': 'The private key for the public key on the servers.',
     'private_key_input_tooltip': 'The passphrase for the private key.',
     'auth': 'Indicates if the manager server was able to connect, via SSH, to the storage server using the supplied authentication credentials.',
@@ -102,6 +108,8 @@ help_text = {
 
     'state_changed': 'Time at which the state last changed, either detected or as a result of user action.',
 
+    'set_host_profile_on': 'Setting host profile on %s',
+
     'status': 'Indicates the status of high availability (HA) configuration for this volume (ha = available for HA, noha = not configured for HA).',
     'status_light': 'Indicates current system health. <br /> Green: The file system is operating normally. <br />  Yellow: The system may be operating in a degraded mode. <br /> Red: This system may be down or is severely degraded. <br /> Click to view all system event and alert status messages. <br /> Count indicates the number of issues causing the status color.',
 
@@ -110,7 +118,8 @@ help_text = {
     'remove_file_system': 'Remove file system. This file system\'s contents will remain intact until its volumes are reused in another file system.',
 
     'lnet_state': 'The status of the LNet networking layer on this server.',
-    'start_lnet': 'Load the LNet kernel module and start the LNet networking layer.',
+    'load_lnet': 'Load the LNet kernel modules.',
+    'start_lnet': 'Start the LNet networking layer.',
     'stop_lnet': 'Shut down the LNet networking layer and stop any targets running on this server.',
     'unload_lnet': 'If LNet is running, stop LNET and unload the LNet kernel module to ensure that it will be reloaded before any targets are started again.',
     'conflict_diff': 'This row has changed from %(initial)s locally and %(remote)s remotely. Click to set value to %(remote)s',

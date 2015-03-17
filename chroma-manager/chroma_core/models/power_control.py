@@ -576,7 +576,7 @@ class ConfigureHostFencingJob(Job):
         return [(ConfigureHostFencingStep, {'host': self.host})]
 
     def get_deps(self):
-        return DependOn(self.host, 'configured', acceptable_states=self.host.not_state('removed'))
+        return DependOn(self.host, 'managed', acceptable_states=self.host.not_state('removed'))
 
     def on_success(self):
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient

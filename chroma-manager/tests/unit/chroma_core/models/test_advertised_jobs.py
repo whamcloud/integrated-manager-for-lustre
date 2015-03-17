@@ -1,13 +1,21 @@
 import mock
 from django.test import TestCase
-from tests.unit.chroma_core.helper import synthetic_host, synthetic_host_optional_profile, load_default_profile
+from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
 from chroma_core.models import FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob, MountLustreFilesystemsJob, UnmountLustreFilesystemsJob
 
 from chroma_core.lib.cache import ObjectCache
 
 
-class TestAdvertisedJobCoverage(TestCase):
+class TestAdvertisedCase(TestCase):
+    normal_host_state = 'managed'
+
+    def set_managed(self, managed):
+        self.host.immutable_state = not managed
+        self.host.server_profile.managed = managed
+
+
+class TestAdvertisedJobCoverage(TestAdvertisedCase):
     def test_all_advertised_jobs_tested(self):
         import inspect
         from chroma_core.models.jobs import AdvertisedJob
@@ -38,7 +46,7 @@ class TestAdvertisedJobCoverage(TestCase):
         self.assertItemsEqual(missing, set())
 
 
-class TestAdvertisedTargetJobs(TestCase):
+class TestAdvertisedTargetJobs(TestAdvertisedCase):
     def setUp(self):
         load_default_profile()
 
@@ -74,14 +82,12 @@ class TestAdvertisedTargetJobs(TestCase):
         self.assertFalse(FailbackTargetJob.can_run(self.target))
 
 
-class TestAdvertisedHostJobs(TestCase):
-    normal_host_state = 'lnet_up'
-
+class TestAdvertisedHostJobs(TestAdvertisedCase):
     def setUp(self):
         load_default_profile()
 
         self.host = synthetic_host()
-        self.host.immutable_state = False
+        self.set_managed(True)
         self.host.state = self.normal_host_state
 
     def test_RebootHostJob(self):
@@ -101,7 +107,7 @@ class TestAdvertisedHostJobs(TestCase):
             klass.notify(self.host, False)
 
         # Monitor-only host
-        self.host.immutable_state = True
+        self.set_managed(False)
         self.assertFalse(RebootHostJob.can_run(self.host))
 
     def test_ShutdownHostJob(self):
@@ -121,14 +127,14 @@ class TestAdvertisedHostJobs(TestCase):
             klass.notify(self.host, False)
 
         # Monitor-only host
-        self.host.immutable_state = True
+        self.set_managed(False)
         self.assertFalse(ShutdownHostJob.can_run(self.host))
 
 
-class TestAdvertisedPowerJobs(TestCase):
+class TestAdvertisedPowerJobs(TestAdvertisedCase):
     def setUp(self):
         self.host = mock.Mock()
-        self.host.immutable_state = False
+        self.set_managed(True)
 
         self.host.outlet_list = [mock.MagicMock(has_power=True),
                                  mock.MagicMock(has_power=True)]
@@ -156,9 +162,9 @@ class TestAdvertisedPowerJobs(TestCase):
         self.assertTrue(PoweronHostJob.can_run(self.host))
 
         # Monitor-only host
-        self.host.immutable_state = True
+        self.set_managed(False)
         self.assertFalse(PoweronHostJob.can_run(self.host))
-        self.host.immutable_state = False
+        self.set_managed(True)
 
         # One outlet off, one unknown
         self.host.outlet_list[1].has_power = None
@@ -178,9 +184,9 @@ class TestAdvertisedPowerJobs(TestCase):
 
     def test_PoweroffHostJob(self):
         # Monitor-only host
-        self.host.immutable_state = True
+        self.set_managed(False)
         self.assertFalse(PowercycleHostJob.can_run(self.host))
-        self.host.immutable_state = False
+        self.set_managed(True)
 
         # Normal situation, all outlets have power
         self.assertTrue(PoweroffHostJob.can_run(self.host))
@@ -211,9 +217,9 @@ class TestAdvertisedPowerJobs(TestCase):
 
     def test_PowercycleHostJob(self):
         # Monitor-only host
-        self.host.immutable_state = True
+        self.set_managed(False)
         self.assertFalse(PowercycleHostJob.can_run(self.host))
-        self.host.immutable_state = False
+        self.set_managed(True)
 
         # Normal situation, all outlets have power
         self.assertTrue(PowercycleHostJob.can_run(self.host))
@@ -243,14 +249,13 @@ class TestAdvertisedPowerJobs(TestCase):
         self.assertFalse(PoweronHostJob.can_run(self.host))
 
 
-class TestClientManagementJobs(TestCase):
-    normal_host_state = 'lnet_up'
-
+class TestClientManagementJobs(TestAdvertisedCase):
     def load_worker_profile(self):
         worker_profile = ServerProfile(name='test_worker_profile',
                                        ui_name='Managed Lustre client',
                                        ui_description='Client available for IML admin tasks',
-                                       managed=True, worker=True)
+                                       managed=True, worker=True,
+                                       initial_state="managed")
         worker_profile.save()
         return worker_profile
 
@@ -278,7 +283,8 @@ class TestClientManagementJobs(TestCase):
         super(TestClientManagementJobs, self).setUp()
 
         load_default_profile()
-        self.worker = synthetic_host_optional_profile(server_profile=self.load_worker_profile())
+        worker_profile = self.load_worker_profile()
+        self.worker = synthetic_host(server_profile=worker_profile.name)
         self.worker.immutable_state = False
         self.worker.state = self.normal_host_state
 

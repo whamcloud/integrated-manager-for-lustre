@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -92,11 +92,10 @@ class LinuxNetwork(Plugin):
 
         inet4_address_to_interface = {}
 
-        ''' Actually I think this deleted here is unnecessary, it is probably the case that this routine
-            could audit each nid against each network interface and work out which ones are now missing
-            but this needs to land and this does work.
-            But it any real work happens on this code, this should be removed.
-        '''
+        # Actually I think this deleted here is unnecessary, it is probably the case that this routine
+        # could audit each nid against each network interface and work out which ones are now missing
+        # but this needs to land and this does work.
+        # But it any real work happens on this code, this should be removed.
         for name in devices['interfaces']['deleted']:
             self.remove_by_attr(HostNetworkInterface,
                                 host_id = host_id,
@@ -115,11 +114,10 @@ class LinuxNetwork(Plugin):
 
             inet4_address_to_interface[iface_resource.name] = iface_resource
 
-        ''' Actually I think this deleted here is unnecessary, it is probably the case that this routine
-            could audit each nid against each network interface and work out which ones are now missing
-            but this needs to land and this does work.
-            But it any real work happens on this code, this should be removed.
-        '''
+        # Actually I think this deleted here is unnecessary, it is probably the case that this routine
+        # could audit each nid against each network interface and work out which ones are now missing
+        # but this needs to land and this does work.
+        # ut it any real work happens on this code, this should be removed.
         for name in devices['lnet']['nids']['deleted']:
             self.remove_by_attr(Nid,
                                 host_id = host_id,

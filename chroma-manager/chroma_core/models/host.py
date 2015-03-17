@@ -27,6 +27,7 @@ import logging
 from django.db import models
 from django.db import transaction
 from django.db import IntegrityError
+from django.utils.timezone import now as tznow
 
 from django.db.models.aggregates import Aggregate, Count
 from django.db.models.sql import aggregates as sql_aggregates
@@ -34,15 +35,16 @@ from django.db.models.sql import aggregates as sql_aggregates
 from django.db.models.query_utils import Q
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.jobs import StateChangeJob
+from chroma_core.models.jobs import StateChangeJob, DeletableStatefulObject
+from chroma_core.models.jobs import NullStateChangeJob
 from chroma_core.models.event import Event
 from chroma_core.models.alert import AlertState
 from chroma_core.models.event import AlertEvent
 from chroma_core.models.server_profile import ServerProfile
-from chroma_core.models.jobs import StatefulObject, Job, AdvertisedJob, StateLock
+from chroma_core.models.jobs import Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import job_log
-from chroma_core.lib.job import DependOn, DependAll, Step
-from chroma_core.models.utils import MeasuredEntity, DeletableDowncastableMetaclass, DeletableMetaclass
+from chroma_core.lib.job import DependOn, DependAll, DependAny, Step
+from chroma_core.models.utils import MeasuredEntity, DeletableMetaclass
 from chroma_help.help import help_text
 import settings
 
@@ -93,17 +95,6 @@ class HostListMixin(Job):
             self._cached_host_ids = self.host_ids
 
         return self._hosts
-
-
-class DeletableStatefulObject(StatefulObject):
-    """Use this class to create your own downcastable classes if you need to override 'save', because
-    using the metaclass directly will override your own save method"""
-    __metaclass__ = DeletableDowncastableMetaclass
-
-    class Meta:
-        abstract = True
-        app_label = 'chroma_core'
-        ordering = ['id']
 
 
 class ClientCertificate(models.Model):
@@ -162,8 +153,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # JSON object of properties suitable for validation
     properties = models.TextField(default='{}')
 
-    # FIXME: HYD-1215: separate the LNET state [unloaded, down, up] from the host state [created, removed]
-    states = ['unconfigured', 'undeployed', 'configured', 'lnet_unloaded', 'lnet_down', 'lnet_up', 'removed']
+    states = ['undeployed', 'unconfigured', 'packages_installed', 'managed', 'monitored', 'removed']
     initial_state = 'unconfigured'
 
     class Meta:
@@ -187,7 +177,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         return self.server_profile.managed
 
     @property
-    def is_monitor_only(self):
+    def is_monitored(self):
         return not self.server_profile.managed
 
     @property
@@ -212,6 +202,15 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         # This host is not related to any available filesystems.
         return False
 
+    @property
+    def lnet_configuration(self):
+        '''
+        This property is purely to placeholder that will be used in a later patch that makes corosync and pacemaker stateful
+        objects. At that point all this items become optional and so we need to deal with the null state.
+        :return:
+        '''
+        return self.lnetconfiguration
+
     def get_label(self):
         """Return the FQDN if it is known, else the address"""
         name = self.fqdn
@@ -232,12 +231,11 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     def get_available_states(self, begin_state):
         if begin_state == 'undeployed':
-            state = getattr(self.server_profile, 'initial_state', 'configured')
-            return [state] if self.install_method != ManagedHost.INSTALL_MANUAL else []
+            return [self.server_profile.initial_state] if self.install_method != ManagedHost.INSTALL_MANUAL else []
 
         if self.immutable_state:
             if begin_state in ['undeployed', 'unconfigured']:
-                return ['removed', 'configured']
+                return ['removed', 'monitored', 'managed']
             else:
                 return ['removed']
         else:
@@ -245,8 +243,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     @classmethod
     def get_by_nid(cls, nid_string):
-        from chroma_core.models.lnet_configuration import Nid
-
         """Resolve a NID string to a ManagedHost (best effort).  Not guaranteed to work:
          * The NID might not exist for any host
          * The NID might exist for multiple hosts
@@ -254,6 +250,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
          Note: this function may return deleted hosts (useful behaviour if you're e.g. resolving
          NID to hostname for historical logs).
         """
+
+        from chroma_core.models import Nid
 
         # Check we at least have a @
         if not "@" in nid_string:
@@ -289,18 +287,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
                 else:
                     # If the hosts with this NID had different FQDNs, refuse to pick one
                     raise ManagedHost.MultipleObjectsReturned()
-
-    def set_state(self, state, intentional = False):
-        """
-        :param intentional: set to true to silence any alerts generated by this transition
-        """
-        from chroma_core.models import LNetOfflineAlert
-
-        super(ManagedHost, self).set_state(state, intentional)
-        if intentional:
-            LNetOfflineAlert.notify_warning(self, self.state != 'lnet_up')
-        else:
-            LNetOfflineAlert.notify(self, self.state != 'lnet_up')
 
     def set_profile(self, server_profile_id):
         '''
@@ -477,14 +463,14 @@ class ConfigurePacemakerStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if not host.immutable_state:
-            error = self.invoke_agent(host, "configure_pacemaker")
 
-            if error:
-                from chroma_core.services.job_scheduler.agent_rpc import AgentException
-                error = help_text[error]
-                self.log(error)
-                raise AgentException(host.fqdn, "ConfigurePacemaker", kwargs, error)
+        error = self.invoke_agent(host, "configure_pacemaker")
+
+        if error:
+            from chroma_core.services.job_scheduler.agent_rpc import AgentException
+            error = help_text[error]
+            self.log(error)
+            raise AgentException(host.fqdn, "ConfigurePacemaker", kwargs, error)
 
 
 class ConfigureCorosyncStep(Step):
@@ -493,11 +479,10 @@ class ConfigureCorosyncStep(Step):
     def run(self, kwargs):
         host = kwargs['host']
 
-        if not host.immutable_state:
-            # Empty dict if no host-side config.
-            config = self.invoke_agent(host, "host_corosync_config")
+        # Empty dict if no host-side config.
+        config = self.invoke_agent(host, "host_corosync_config")
 
-            self.invoke_agent_expect_result(host, "configure_corosync", config)
+        self.invoke_agent_expect_result(host, "configure_corosync", config)
 
 
 class ConfigureRsyslogStep(Step):
@@ -505,8 +490,7 @@ class ConfigureRsyslogStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if not host.immutable_state:
-            self.invoke_agent(host, "configure_rsyslog")
+        self.invoke_agent(host, "configure_rsyslog")
 
 
 class ConfigureNTPStep(Step):
@@ -520,8 +504,7 @@ class ConfigureNTPStep(Step):
             ntp_server = socket.getfqdn()
 
         host = kwargs['host']
-        if not host.immutable_state:
-            self.invoke_agent_expect_result(host, "configure_ntp", {'ntp_server': ntp_server})
+        self.invoke_agent_expect_result(host, "configure_ntp", {'ntp_server': ntp_server})
 
 
 class UnconfigurePacemakerStep(Step):
@@ -529,8 +512,7 @@ class UnconfigurePacemakerStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if not host.immutable_state:
-            self.invoke_agent(host, "unconfigure_pacemaker")
+        self.invoke_agent(host, "unconfigure_pacemaker")
 
 
 class UnconfigureCorosyncStep(Step):
@@ -538,8 +520,7 @@ class UnconfigureCorosyncStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if not host.immutable_state:
-            self.invoke_agent_expect_result(host, "unconfigure_corosync")
+        self.invoke_agent_expect_result(host, "unconfigure_corosync")
 
 
 class UnconfigureRsyslogStep(Step):
@@ -547,8 +528,7 @@ class UnconfigureRsyslogStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if not host.immutable_state:
-            self.invoke_agent(host, "unconfigure_rsyslog")
+        self.invoke_agent(host, "unconfigure_rsyslog")
 
 
 class UnconfigureNTPStep(Step):
@@ -556,70 +536,7 @@ class UnconfigureNTPStep(Step):
 
     def run(self, kwargs):
         host = kwargs['host']
-        if not host.immutable_state:
-            self.invoke_agent_expect_result(host, "unconfigure_ntp")
-
-
-class GetLNetStateStep(Step):
-    idempotent = True
-
-    # FIXME: using database=True to do the alerting update inside .set_state but
-    # should do it in a completion
-    database = True
-
-    def run(self, kwargs):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
-        host = kwargs['host']
-
-        try:
-            lnet_data = self.invoke_agent(host, "device_plugin", {'plugin': 'linux_network'})['linux_network']['lnet']
-            host.set_state(lnet_data['state'])
-            host.save()
-        except TypeError:
-            self.log("Data received from old client. Host %s state cannot be updated until agent is updated" % host)
-        except AgentException as e:
-            self.log("No data for plugin linux_network from host %s due to exception %s" % (host, e))
-
-
-class GetLNetStateJob(Job):
-    host = models.ForeignKey(ManagedHost)
-    requires_confirmation = False
-    verb = "Get LNet state"
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    def create_locks(self):
-        return [StateLock(
-            job = self,
-            locked_item = self.host,
-            write = True
-        )]
-
-    @classmethod
-    def get_args(cls, host):
-        return {'host': host}
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text['lnet_state']
-
-    def description(self):
-        return "Get LNet state for %s" % self.host
-
-    def get_steps(self):
-        return [(GetLNetStateStep, {'host': self.host})]
-
-    def get_deps(self):
-        # This is another piece of  HYD-1215 and test stuff, this just forces the lnet to be loaded if this is
-        # the first time this is called - the configured state doesn't really exist it is really lnet_unloaded.
-        # Of course if the host is not managed we can't depend on it's state - because the would change it's state.
-        if self.host.is_managed and self.host.state == 'configured':
-            return DependOn(self.host, 'lnet_up')
-        else:
-            return super(GetLNetStateJob, self).get_deps()
+        self.invoke_agent_expect_result(host, "unconfigure_ntp")
 
 
 class RemoveServerConfStep(Step):
@@ -678,8 +595,6 @@ class UpdateDevicesStep(Step):
         # This enables services tests to run see - _handle_action_respond in test_agent_rpc.py for more info
         if (plugin_data != {}):
             AgentDaemonRpcInterface().update_host_resources(host.id, plugin_data)
-        else:
-            pass
 
 
 class DeployStep(Step):
@@ -832,24 +747,24 @@ class InstallPackagesStep(Step):
             UpdatesAvailableAlert.notify(host, updates_available)
 
 
-class SetupHostJob(StateChangeJob):
-    state_transition = (ManagedHost, 'unconfigured', 'configured')
+class InstallHostPackagesJob(StateChangeJob):
+    state_transition = (ManagedHost, 'unconfigured', 'packages_installed')
     stateful_object = 'managed_host'
     managed_host = models.ForeignKey(ManagedHost)
-    state_verb = 'Setup server'
+    state_verb = None
 
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 20
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['setup_host']
+        return help_text['install_packages_on_host_long']
 
     def description(self):
-        return "Setup server %s" % self.managed_host
+        return help_text['install_packages_on_host'] % self.managed_host
 
     def get_steps(self):
-
         '''
         This is a workaround for the fact that the object for a stateful object is not updated before the job runs, it
         is a snapshot of the object when the job was requested. This seems wrong to me and something that I will endeavour
@@ -862,24 +777,21 @@ class SetupHostJob(StateChangeJob):
         self._so_cache = self.managed_host = ObjectCache.update(self.managed_host)
 
         steps = [(SetHostProfileStep, {'host': self.managed_host,
-                                       'server_profile': self.managed_host.server_profile}),
-                 (ConfigureNTPStep, {'host': self.managed_host}),
-                 (ConfigureRsyslogStep, {'host': self.managed_host})]
+                                       'server_profile': self.managed_host.server_profile})]
 
         if self.managed_host.is_lustre_server:
             steps.append((LearnDevicesStep, {'host': self.managed_host}))
 
-        if not self.managed_host.is_monitor_only:
-            steps.append((InstallPackagesStep, {
-                'repos': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
-                'host': self.managed_host,
-                'packages': list(self.managed_host.server_profile.packages) + ['chroma-agent-management']
-            }))
-
-            steps.append((RebootIfNeededStep, {
-                'host': self.managed_host,
-                'timeout': settings.INSTALLATION_REBOOT_TIMEOUT
-            }))
+        if self.managed_host.is_managed:
+            steps.extend([
+                (ConfigureNTPStep, {'host': self.managed_host}),
+                (ConfigureRsyslogStep, {'host': self.managed_host}),
+                (InstallPackagesStep, {'repos': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
+                                       'host': self.managed_host,
+                                       'packages': list(self.managed_host.server_profile.packages) + ['chroma-agent-management']}),
+                (RebootIfNeededStep, {'host': self.managed_host,
+                                      'timeout': settings.INSTALLATION_REBOOT_TIMEOUT})
+            ])
 
             if self.managed_host.is_lustre_server:
                 steps.extend([
@@ -889,32 +801,48 @@ class SetupHostJob(StateChangeJob):
 
         return steps
 
+
+class SetupHostJob(NullStateChangeJob):
+    target_object = models.ForeignKey(ManagedHost)
+    state_transition = (ManagedHost, 'packages_installed', 'managed')
+    _long_description = help_text['setup_managed_host']
+    state_verb = 'Setup managed server'
+
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
 
-
-class EnableLNetJob(StateChangeJob):
-    state_transition = (ManagedHost, 'configured', 'lnet_unloaded')
-    stateful_object = 'managed_host'
-    managed_host = models.ForeignKey(ManagedHost)
-    # Hide this transition as it does not actually do
-    # anything (should go away with HYD-1215)
-    state_verb = None
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text['enable_lnet']
+    def get_deps(self):
+        return DependOn(self.target_object.lnet_configuration, 'lnet_up')
 
     def description(self):
-        return "Enable LNet on %s" % self.managed_host
+        return "Setup managed server %s" % self.target_object
 
-    def get_steps(self):
-        return []
+    @classmethod
+    def can_run(cls, host):
+        return host.is_managed
+
+
+class SetupMonitoredHostJob(NullStateChangeJob):
+    target_object = models.ForeignKey(ManagedHost)
+    state_transition = (ManagedHost, 'packages_installed', 'monitored')
+    _long_description = help_text['setup_monitored_host']
+    state_verb = 'Setup monitored server'
 
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
+
+    def get_deps(self):
+        # Moving out of unconfigured will mean that lnet will start monitoring and responding to the state.
+        return DependOn(self.target_object.lnet_configuration, 'lnet_unloaded', unacceptable_states=['unconfigured'])
+
+    def description(self):
+        return "Setup monitored server %s" % self.target_object
+
+    @classmethod
+    def can_run(cls, host):
+        return host.is_monitored
 
 
 class DetectTargetsStep(Step):
@@ -970,13 +898,6 @@ class DetectTargetsJob(HostListMixin):
         return [(UpdateDevicesStep, {'host': host}) for host in self.hosts] + \
                [(DetectTargetsStep, {'host_ids': [h.id for h in self.hosts]})]
 
-    def get_deps(self):
-        deps = []
-        for host in self.hosts:
-            deps.append(DependOn(host, 'lnet_up'))
-
-        return DependAll(deps)
-
 
 class SetHostProfileStep(Step):
     database = True
@@ -986,22 +907,30 @@ class SetHostProfileStep(Step):
 
     def run(self, kwargs):
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
         host = kwargs['host']
         server_profile = kwargs['server_profile']
 
         self.invoke_agent_expect_result(host, 'update_profile', {"profile": server_profile.as_dict})
 
-        host.server_profile = server_profile
-        host.immutable_state = not server_profile.managed
-        host.save()
-        ObjectCache.update(host)
+        JobSchedulerClient.notify(host,
+                                  tznow(),
+                                  {'server_profile_id': server_profile.id})
+
+        JobSchedulerClient.notify(host,
+                                  tznow(),
+                                  {'immutable_state': not server_profile.managed})
 
         # If we have installed any updates at all, then assume it is necessary to restart the agent, as
         # they could be things the agent uses/imports or API changes, specifically to kernel_status() below
         old_session_id = AgentRpc.get_session_id(host.fqdn)
         self.invoke_agent(host, 'restart_agent')
         AgentRpc.await_restart(host.fqdn, timeout=settings.AGENT_RESTART_TIMEOUT, old_session_id=old_session_id)
+
+    @classmethod
+    def describe(cls, kwargs):
+        return help_text["set_host_profile_on"] % kwargs['host']
 
 
 class SetHostProfileJob(Job):
@@ -1010,7 +939,7 @@ class SetHostProfileJob(Job):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text['set_host_profile']
+        return help_text['set_host_profile_on'] % stateful_object
 
     def description(self):
         return "Set profile and update host %s" % self.host.nodename
@@ -1040,10 +969,7 @@ class UpdateDevicesJob(HostListMixin):
         return "Update the device info held for hosts %s" % ",".join([h.fqdn for h in self.hosts])
 
     def get_deps(self):
-        deps = []
-        for host in self.hosts:
-            deps.append(DependOn(host, "lnet_up"))
-        return DependAll(deps)
+        return DependAll(DependOn(host.lnet_configuration, 'lnet_up') for host in self.hosts)
 
     def get_steps(self):
         return [(UpdateDevicesStep, {'host': host})
@@ -1052,33 +978,6 @@ class UpdateDevicesJob(HostListMixin):
     class Meta:
         app_label = 'chroma_core'
         ordering = ['id']
-
-
-class UnloadLNetJob(StateChangeJob):
-    state_transition = (ManagedHost, 'lnet_down', 'lnet_unloaded')
-    stateful_object = 'host'
-    host = models.ForeignKey(ManagedHost)
-    state_verb = 'Unload LNet'
-
-    display_group = Job.JOB_GROUPS.RARE
-    display_order = 110
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["unload_lnet"]
-
-    def description(self):
-        return "Unload LNet module on %s" % self.host
-
-    def get_steps(self):
-        from chroma_core.models.lnet_configuration import UnloadLNetStep
-
-        return [(UnloadLNetStep, {'host': self.host}),
-                (UpdateDevicesStep, {'host': self.host})]
 
 
 class DeleteHostStep(Step):
@@ -1094,7 +993,16 @@ class DeleteHostStep(Step):
         # First, cut off any more incoming connections
         # TODO: populate a CRL and send a nginx HUP signal to reread it
 
-        # Second, terminate any currently open connections and ensure there is nothing in a queue
+        # Delete anything that is dependent on us.
+        for object in host.get_dependent_objects(inclusive=True):
+            # We are allowed to modify state directly because we have locked these objects
+            job_log.info("Deleting dependent %s for host %s" % (object, host))
+            object.cancel_current_operations()
+            object.set_state('removed')
+            object.mark_deleted()
+            object.save()
+
+        # Third, terminate any currently open connections and ensure there is nothing in a queue
         # which will be drained into AMQP
         HttpAgentRpc().remove_host(host.fqdn)
 
@@ -1136,7 +1044,7 @@ class DeleteHostStep(Step):
 
 
 class RemoveHostJob(StateChangeJob):
-    state_transition = (ManagedHost, ['unconfigured', 'configured', 'lnet_up', 'lnet_down', 'lnet_unloaded'], 'removed')
+    state_transition = (ManagedHost, ['unconfigured', 'managed', 'monitored'], 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
@@ -1151,11 +1059,14 @@ class RemoveHostJob(StateChangeJob):
         ordering = ['id']
 
     @classmethod
-    def long_description(cls, stateful_object):
-        if stateful_object.immutable_state:
+    def long_description(cls, host):
+        if host.is_monitored:
             return help_text['remove_monitored_configured_server']
-        else:
+
+        if host.is_managed:
             return help_text['remove_configured_server']
+
+        raise NotImplemented("Host is of unknown configuration")
 
     def get_confirmation_string(self):
         return RemoveHostJob.long_description(self.host)
@@ -1163,41 +1074,35 @@ class RemoveHostJob(StateChangeJob):
     def description(self):
         return "Remove host %s from configuration" % self.host
 
+    def get_deps(self):
+        if self.host.is_monitored:
+            return DependAll()
+
+        if self.host.is_managed:
+            return DependOn(self.host.lnet_configuration, 'unconfigured')
+
+        raise NotImplemented("Host is of unknown configuration")
+
     def get_steps(self):
-        from chroma_core.models.lnet_configuration import UnconfigureLNetStep
+        steps = []
 
-        steps = [(UnconfigureNTPStep, {'host': self.host})]
+        if self.host.is_managed:
+            steps.append((UnconfigureNTPStep, {'host': self.host}))
 
-        if self.host.is_lustre_server:
-            steps.extend([
-                (UnconfigurePacemakerStep, {'host': self.host}),
-                (UnconfigureCorosyncStep, {'host': self.host})
-            ])
+            if self.host.is_lustre_server:
+                steps.extend([
+                    (UnconfigurePacemakerStep, {'host': self.host}),
+                    (UnconfigureCorosyncStep, {'host': self.host})
+                ])
+
+            steps.append((UnconfigureRsyslogStep, {'host': self.host}))
 
         steps.extend([
-            (UnconfigureRsyslogStep, {'host': self.host}),
-            (UnconfigureLNetStep, {'host': self.host}),
             (RemoveServerConfStep, {'host': self.host}),
             (DeleteHostStep, {'host': self.host, 'force': False})
         ])
 
         return steps
-
-
-class DeleteHostDependents(Step):
-    idempotent = True
-    database = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-
-        for object in host.get_dependent_objects(inclusive=True):
-            # We are allowed to modify state directly because we have locked these objects
-            job_log.info("DeleteHostDependents for host %s: %s" % (host, object))
-            object.cancel_current_operations()
-            object.set_state('removed')
-            object.mark_deleted()
-            object.save()
 
 
 class ForceRemoveHostJob(AdvertisedJob):
@@ -1251,11 +1156,11 @@ class ForceRemoveHostJob(AdvertisedJob):
         return "Force remove host %s from configuration" % self.host
 
     def get_deps(self):
-        return DependOn(self.host, 'configured', acceptable_states=self.host.not_state('removed'))
+        return DependAny([DependOn(self.host, 'managed', acceptable_states=self.host.not_state('removed')),
+                          DependOn(self.host, 'monitored', acceptable_states=self.host.not_state('removed'))])
 
     def get_steps(self):
-        return [(DeleteHostDependents, {'host': self.host}),
-                (DeleteHostStep, {'host': self.host, 'force': True})]
+        return [(DeleteHostStep, {'host': self.host, 'force': True})]
 
     @classmethod
     def get_confirmation(cls, instance):
@@ -1295,10 +1200,8 @@ class RebootHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        if host.immutable_state:
-            return False
-
-        return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
+        return (host.is_managed and
+                host.state not in ['removed', 'undeployed', 'unconfigured'] and
                 not AlertState.filter_by_item(host).filter(
                     active = True,
                     alert_type__in = [
@@ -1356,10 +1259,8 @@ class ShutdownHostJob(AdvertisedJob):
 
     @classmethod
     def can_run(cls, host):
-        if host.immutable_state:
-            return False
-
-        return (host.state not in ['removed', 'undeployed', 'unconfigured'] and
+        return (host.is_managed and
+               host.state not in ['removed', 'undeployed', 'unconfigured'] and
                 not AlertState.filter_by_item(host).filter(
                     active = True,
                     alert_type__in = [
@@ -1593,9 +1494,9 @@ class UpdateNidsJob(HostListMixin):
                 target_hosts.add(mtm.host)
 
         return DependAll(
-            [DependOn(host, 'lnet_up') for host in target_primary_hosts]
-            + [DependOn(fs, 'stopped') for fs in filesystems]
-            + [DependOn(t, 'unmounted') for t in targets]
+            [DependOn(host.lnet_configuration, 'lnet_up') for host in target_primary_hosts] +
+            [DependOn(fs, 'stopped') for fs in filesystems] +
+            [DependOn(t, 'unmounted') for t in targets]
         )
 
     def create_locks(self):
@@ -1731,50 +1632,6 @@ class HostRebootEvent(Event):
 
     def message(self):
         return "%s restarted at %s" % (self.host, self.boot_time)
-
-
-class LNetOfflineAlert(AlertState):
-    # LNET being offline is never solely responsible for a filesystem
-    # being unavailable: if a target is offline we will get a separate
-    # ERROR alert for that.  LNET being offline may indicate a configuration
-    # fault, but equally could just indicate that the host hasn't booted up that far yet.
-    default_severity = logging.INFO
-
-    def message(self):
-        return "LNet offline on server %s" % self.alert_item
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    def end_event(self):
-        return AlertEvent(
-            message_str = "LNet started on server '%s'" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.INFO)
-
-
-class LNetNidsChangedAlert(AlertState):
-    # This is WARNING because targets on this host will not work
-    # correctly until it is addressed, but the filesystem may still
-    # be available if a failover server is not in this condition.
-    default_severity = logging.WARNING
-
-    def message(self):
-        msg = "NIDs changed on server %s - see manual for details."
-        return msg % self.alert_item
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    def end_event(self):
-        return AlertEvent(
-            message_str = "LNet NIDs updated for server %s" % self.alert_item,
-            host = self.alert_item,
-            alert = self,
-            severity = logging.INFO)
 
 
 class UpdatesAvailableAlert(AlertState):

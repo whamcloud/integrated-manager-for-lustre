@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -44,7 +44,7 @@ import django.utils.timezone
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command, StateLock, ManagedHost, ManagedMdt, FilesystemMember
-from chroma_core.models import ConfigureLNetJob, GetLNetStateJob, ForceRemoveHostJob
+from chroma_core.models import ConfigureLNetJob
 from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult
 from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
 from chroma_core.models import ManagedTargetMount, VolumeNode, ConfigureHostFencingJob
@@ -661,22 +661,6 @@ class JobScheduler(object):
             if not changed_item.not_deleted:
                 return command
 
-            # This is temporary whilst the host strangely has the lnet state in it, rather than the lnet configuration.
-            # If the host is in an 'lnet state' but not the right one.
-            # It seems odd that one of the from states is 'configured' but I think this just highlights how lnet configuration
-            # is not a 'state' of a host
-            # Search for this comment in _persist_nid_updates - because we have to do this in 2 places to
-            # be sure it hangs together.
-            # We can just set the state of the host, no transition is required. This is not a good thing to do but as an interim
-            # change until we complete dynamic lnet it is OK. This is all link in with  HYD-1215
-            if (changed_item.state in ['configured', 'lnet_unloaded', 'lnet_down', 'lnet_up']) and (changed_item.state != changed_item.lnetconfiguration.state):
-                if (not running_or_failed(GetLNetStateJob, host = changed_item)
-                    and not running_or_failed(ForceRemoveHostJob, host = changed_item)):
-                    job = GetLNetStateJob(host = changed_item)
-                    if not command:
-                        command = Command.objects.create(message = "Getting LNet state for %s" % changed_item)
-                    self.CommandPlan.add_jobs([job], command)
-
             if 'ha_cluster_peers' in updated_attrs:
                 try:
                     AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
@@ -931,7 +915,7 @@ class JobScheduler(object):
                                                                                                           "root_pw": root_pw,
                                                                                                           "pkey": pkey,
                                                                                                           "pkey_pw": pkey_pw}}],
-                                                                                               "Testing Connection To Host %s" % address)
+                                                                                               help_text["validating_host"] % address)
 
         self.progress.advance()
 
@@ -1150,7 +1134,7 @@ class JobScheduler(object):
 
         return [x.id for x in targets], command.id
 
-    def create_host_ssh(self, address, profile, root_pw=None, pkey=None, pkey_pw=None):
+    def create_host_ssh(self, address, profile, target_state, root_pw=None, pkey=None, pkey_pw=None):
         """
         Create a ManagedHost object and deploy the agent to its address using SSH.
 
@@ -1204,7 +1188,7 @@ class JobScheduler(object):
             with transaction.commit_on_success():
                 command = self.CommandPlan.command_set_state(
                     [(ContentType.objects.get_for_model(host).natural_key(), host.id, host.server_profile.initial_state)],
-                    "Setting up host %s" % host)
+                    help_text["deploying_host"] % host)
 
             # Tag the in-memory SSH auth information onto this DeployHostJob instance
             for job_id in self._job_collection._command_to_jobs[command.id]:
@@ -1273,15 +1257,15 @@ class JobScheduler(object):
                         address=address,
                         server_profile=server_profile,
                         install_method = ManagedHost.INSTALL_MANUAL)
-                    lnet_configuration = LNetConfiguration.objects.create(host = host)
+                    lnet_configuration = LNetConfiguration.objects.create(host=host)
 
                     ObjectCache.add(LNetConfiguration, lnet_configuration)
                     ObjectCache.add(ManagedHost, host)
 
                     with transaction.commit_on_success():
                         command = self.CommandPlan.command_set_state(
-                            [(ContentType.objects.get_for_model(host).natural_key(), host.id, 'configured')],
-                            "Setting up host %s" % host)
+                            [(ContentType.objects.get_for_model(host).natural_key(), host.id, server_profile.initial_state)],
+                            help_text["deploying_host"] % host)
 
         self.progress.advance()
 
@@ -1371,9 +1355,11 @@ class JobScheduler(object):
                 # Fetch the last job in a list of jobs that will transition this object from from_state to to_state
                 job_class = stateful_object.get_job_class(from_state, to_state, last_job_in_route=True)
 
-                # NB: a None verb means its an internal
-                # transition that shouldn't be advertised
-                if job_class.state_verb:
+                # Now check that that job can run on this instance of the stateful object. In truth this needs to be expanded
+                # to make sure every job in the route can be run, but that is a bigger step beyond the scope here. And generally
+                # the situation is that it's the final step that is the decider.
+                # NB: a None verb means its an internal transition that shouldn't be advertised
+                if job_class.state_verb and job_class.can_run(stateful_object):
                     log.debug("Adding verb: %s, for job_class: %s" % (job_class.state_verb, job_class))
                     transitions.append({
                         'state': to_state,
@@ -1461,23 +1447,23 @@ class JobScheduler(object):
         # Although this is creating/deleting a NID it actually rewrites the whole NID configuration for the node
         # this is all in here for now, but as we move to dynamic lnet it will probably get it's own file.
         with self._lock:
-            hosts = set()
-            host_nid_data = defaultdict(lambda: {'nid_updates': {}, 'nid_deletes': {}})
+            lnet_configurations = set()
+            lnet_nid_data = defaultdict(lambda: {'nid_updates': {}, 'nid_deletes': {}})
 
             for nid_data in nid_list:
                 network_interface = NetworkInterface.objects.get(id = nid_data['network_interface'])
-                host = ManagedHost.objects.get(id = network_interface.host_id)
-                hosts.add(host)
+                lnet_configuration = LNetConfiguration.objects.get(host = network_interface.host_id)
+                lnet_configurations.add(lnet_configuration)
 
                 if str(nid_data['lnd_network']) == '-1':
-                    host_nid_data[host]['nid_deletes'][network_interface.id] = nid_data
+                    lnet_nid_data[lnet_configuration]['nid_deletes'][network_interface.id] = nid_data
                 else:
-                    host_nid_data[host]['nid_updates'][network_interface.id] = nid_data
+                    lnet_nid_data[lnet_configuration]['nid_updates'][network_interface.id] = nid_data
 
             jobs = []
-            for host in hosts:
-                jobs.append(ConfigureLNetJob(host = host,
-                                             config_changes = json.dumps(host_nid_data[host])))
+            for lnet_configuration in lnet_configurations:
+                jobs.append(ConfigureLNetJob(lnet_configuration = lnet_configuration,
+                                             config_changes = json.dumps(lnet_nid_data[lnet_configuration])))
 
             with transaction.commit_on_success():
                 command = Command.objects.create(message = "Configuring NIDS for hosts")
@@ -1485,7 +1471,7 @@ class JobScheduler(object):
 
         self.progress.advance()
 
-        return host.id, command.id
+        return command.id
 
     def update_lnet_configuration(self, lnet_configuration_list):
         with self._lock:

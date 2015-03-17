@@ -21,11 +21,12 @@
 
 
 import os
+import json
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import console_log
 from chroma_agent.device_plugins.linux_network import LinuxNetworkDevicePlugin
-import json
+from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 
 
 IML_CONFIGURATION_FILE = '/etc/modprobe.d/iml_lnet_module_parameters.conf'
@@ -61,50 +62,66 @@ def _remove_module(name, modules):
         m = modules[name]
     except KeyError:
         # It's not loaded, do nothing.
-        return
+        return None
+
     console_log.info("Removing %d dependents of %s : %s" % (len(m.dependents), name, m.dependents))
     while m.dependents:
-        _remove_module(m.dependents.pop(), modules)
+        error = _remove_module(m.dependents.pop(), modules)
+
+        if error:
+            return error
 
     console_log.info("Removing %s" % name)
-    shell.try_run(['rmmod', name])
+    error = shell.run_canned_error_message(['rmmod', name])
+
+    if error:
+        return error
 
     modules.pop(name)
     for m in modules.values():
         if name in m.dependents:
             m.dependents.remove(name)
 
+    return None
+
 
 def _rmmod(module_name):
-    _remove_module(module_name, _get_loaded_mods())
+    return _remove_module(module_name, _get_loaded_mods())
 
 
 def _rmmod_deps(module_name, excpt=[]):
     deps = [d for d in _get_loaded_mods()[module_name].dependents if d not in excpt]
 
-    [_rmmod(m) for m in deps]
+    for module_name in deps:
+        error = _rmmod(module_name)
+
+        if error:
+            return error
+
+    return None
 
 
 def start_lnet():
     console_log.info("Starting LNet")
-    shell.try_run(["lctl", "net", "up"])
-    # hack for HYD-1263 - Fix or work around LU-1279 - failure trying to mount
+
+    # modprobe lust is a hack for HYD-1263 - Fix or work around LU-1279 - failure trying to mount
     # should be removed when LU-1279 is fixed
-    shell.try_run(["modprobe", "lustre"])
+    return agent_ok_or_error(shell.run_canned_error_message(["lctl", "net", "up"]) or
+                             shell.run_canned_error_message(["modprobe", "lustre"]))
 
 
 def stop_lnet():
     console_log.info("Stopping LNet")
-    _rmmod_deps("lnet", excpt=["ksocklnd", "ko2iblnd"])
-    shell.try_run(["lctl", "net", "down"])
+    return agent_ok_or_error(_rmmod_deps("lnet", excpt=["ksocklnd", "ko2iblnd"]) or
+                             shell.run_canned_error_message(["lctl", "net", "down"]))
 
 
 def load_lnet():
-    shell.try_run(["modprobe", "lnet"])
+    return agent_ok_or_error(shell.run_canned_error_message(["modprobe", "lnet"]))
 
 
 def unload_lnet():
-    _rmmod('lnet')
+    return agent_ok_or_error(_rmmod('lnet'))
 
 
 def configure_lnet(lnet_configuration):

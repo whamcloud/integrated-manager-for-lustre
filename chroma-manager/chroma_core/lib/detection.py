@@ -159,7 +159,7 @@ class DetectScan(object):
                 continue
 
             target_info = next(dev for dev in self.all_hosts_data[tm.host]['local_targets'] if dev['uuid'] == managed_target.uuid)
-            local_nids = set(tm.host.lnetconfiguration.get_nids())
+            local_nids = set(tm.host.lnet_configuration.get_nids())
 
             if not local_nids:
                 raise NoNidsPresent("Host %s has no NIDS!" % tm.host)
@@ -226,7 +226,7 @@ class DetectScan(object):
             target_nids.append(primary_nid)
 
         target_nids = set(normalize_nid(nid) for nid in target_nids)
-        if set(host.lnetconfiguration.get_nids()) & target_nids:
+        if set(host.lnet_configuration.get_nids()) & target_nids:
             return True
         else:
             return False

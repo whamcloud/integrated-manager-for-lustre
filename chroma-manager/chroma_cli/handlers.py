@@ -268,27 +268,10 @@ class ServerHandler(Handler):
     }
     verbs = ["show", "list", "add", "remove"] + job_map.keys()
     contextual_nouns = ["target", "tgt", "mgt", "mdt", "ost", "volume", "vol"]
-    lnet_actions = ["lnet-stop", "lnet-start", "lnet-load", "lnet-unload"]
-
-    @classmethod
-    def contextual_actions(cls):
-        return cls.lnet_actions + super(ServerHandler, cls).contextual_actions()
 
     def __init__(self, *args, **kwargs):
         super(ServerHandler, self).__init__(*args, **kwargs)
         self.api_endpoint = self.api.endpoints['host']
-        for action in self.lnet_actions:
-            # NB: This will break if we ever want to add more secondary
-            # actions with the same verbs to this handler.
-            verb = action.split("-")[1]
-            self.__dict__[verb] = self.set_lnet_state
-
-    def set_lnet_state(self, ns):
-        lnet_state = {'stop': "lnet_down",
-                      'start': "lnet_up",
-                      'unload': "lnet_unloaded",
-                      'load': "lnet_down"}
-        self.change_state(ns.subject, lnet_state[ns.verb], ns.force)
 
     def list(self, ns, endpoint=None, **kwargs):
         try:
@@ -361,6 +344,35 @@ class ServerHandler(Handler):
         if not ns.force:
             self.test_host(ns, **kwargs)
         self.output(self.api_endpoint.create(**kwargs))
+
+
+class LNetConfigurationHandler(Handler):
+    nouns = ['lnet_configuration']
+    verbs = []
+    intransitive_verbs = []
+
+    lnet_actions = ["lnet-stop", "lnet-start", "lnet-load", "lnet-unload"]
+
+    @classmethod
+    def contextual_actions(cls):
+        return cls.lnet_actions + super(LNetConfigurationHandler, cls).contextual_actions()
+
+    def __init__(self, *args, **kwargs):
+        super(LNetConfigurationHandler, self).__init__(*args, **kwargs)
+        self.api_endpoint = self.api.endpoints['lnet_configuration']
+
+        for action in self.lnet_actions:
+            # NB: This will break if we ever want to add more secondary
+            # actions with the same verbs to this handler.
+            verb = action.split("-")[1]
+            self.__dict__[verb] = self.set_lnet_state
+
+    def set_lnet_state(self, ns):
+        lnet_state = {'stop': "lnet_down",
+                      'start': "lnet_up",
+                      'unload': "lnet_unloaded",
+                      'load': "lnet_down"}
+        self.change_state(ns.subject, lnet_state[ns.verb], ns.force)
 
 
 class ServerProfileHandler(Handler):

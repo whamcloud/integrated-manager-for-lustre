@@ -403,7 +403,25 @@ class ApiEndpoint(object):
                             continue
 
                     try:
-                        if query in str(candidates[0][field]):
+                        '''
+                        We may have search on a filter with a reference such as host__fqdn. In this case the attribute will not exist a so
+                        we have to search the nested dictionaries.
+                        lc = {
+                              "id": 1,
+                              "host": {"fqdn": "myserver"}
+                             }
+
+                         Will have it's value in candidates[0]['host']['fqdn']
+                        '''
+                        search_value = candidates[0].all_attributes
+
+                        for sub_field in field.split('__'):
+                            if type(search_value) != dict:      # We didn't get the keys correct so it is a KeyError
+                                raise KeyError
+
+                            search_value = search_value[sub_field]
+
+                        if query in str(search_value):
                             return candidates[0]['resource_uri']
                     except (IndexError, KeyError):
                         continue

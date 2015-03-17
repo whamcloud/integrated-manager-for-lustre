@@ -3,6 +3,7 @@
   "managed": false,
   "worker": false,
   "name": "base_monitored",
+  "initial_state": "monitored",
   "bundles": [
     "iml-agent"
   ],

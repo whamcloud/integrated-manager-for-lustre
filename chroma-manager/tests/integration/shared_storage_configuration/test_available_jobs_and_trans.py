@@ -31,7 +31,7 @@ class TestAvailable(ChromaIntegrationTestCase):
         #  Since no jobs are incomplete (could check it, but na...)
         #  We ought to get some available states, more than 1 at least.
         for trans in host1['available_transitions']:
-            self.assertIn(trans['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded', 'removed'])
+            self.assertIn(trans['state'], ['removed'])
 
     def test_available_jobs(self):
         """Test that hosts job can be looked on the JobScheduler over RPC"""
@@ -64,11 +64,11 @@ class TestAvailable(ChromaIntegrationTestCase):
 
         host = self.add_hosts([server_config_1['address']])[0]
 
-        self.set_state(host['resource_uri'], 'lnet_up')
+        self.set_state(host['lnet_configuration'], 'lnet_up')
 
-        host1 = self.get_list("/api/host/", args={'fqdn': server_config_1['fqdn']})[0]
-        self.assertEqual(host1['state'], 'lnet_up')
+        lnet_configuration = self.get_by_uri(host['lnet_configuration']).json
+        self.assertEqual(lnet_configuration['state'], 'lnet_up')
 
-        returned_job_verbs = [job['verb'] for job in host1['available_actions']]
-        expected_verbs_in_order = ['Reboot', 'Shutdown', 'Stop LNet', 'Unload LNet', 'Remove', 'Force Remove']
+        returned_job_verbs = [job['verb'] for job in lnet_configuration['available_actions']]
+        expected_verbs_in_order = ['Stop LNet', 'Unload LNet']
         self.assertEqual(returned_job_verbs, expected_verbs_in_order)

@@ -269,8 +269,8 @@ class StartStoppedFilesystemJob(FilesystemJob, StateChangeJob):
 
         for t in ObjectCache.get_targets_by_filesystem(self.filesystem_id):
             deps.append(DependOn(t,
-                'mounted',
-                fix_state = 'unavailable'))
+                                 'mounted',
+                                 fix_state = 'unavailable'))
         return DependAll(deps)
 
 

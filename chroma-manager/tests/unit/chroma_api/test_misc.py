@@ -1,6 +1,11 @@
 
 import dateutil.parser
-from chroma_core.models import ManagedHost, Volume, VolumeNode, ForceRemoveHostJob, StopLNetJob, HostOfflineAlert
+from chroma_core.models import ManagedHost
+from chroma_core.models import Volume
+from chroma_core.models import VolumeNode
+from chroma_core.models import ForceRemoveHostJob
+from chroma_core.models import StopLNetJob
+from chroma_core.models import HostOfflineAlert
 from chroma_core.models import Command, StepResult
 from chroma_core.models import ManagedTarget
 import mock
@@ -53,16 +58,9 @@ class TestMisc(ChromaApiTestCase):
         host = synthetic_host('myserver')
         self.create_simple_filesystem(host)
 
-        # This is a temporary addition and makes this test work as before without the object cache being operative.
-        # However it highlights a problem that the host.get_dependent_objects(inclusive=true) doesn't work when
-        # items are in the object cache - which they almost certainly will be on a live system. This is detailed in
-        # HYD-XXXX and should be fixed. For know this test works as well as it ever did prior to HYD-3643
-        from chroma_core.lib.cache import ObjectCache
-        ObjectCache.instance = None
-
         # Create a command/job/step result referencing the host
         command = Command.objects.create(message = "test command", complete = True, errored = True)
-        job = StopLNetJob.objects.create(host = host, state = 'complete', errored = True)
+        job = StopLNetJob.objects.create(lnet_configuration = host.lnet_configuration, state = 'complete', errored = True)
         command.jobs.add(job)
         step_klass, args = job.get_steps()[0]
         StepResult.objects.create(job = job,

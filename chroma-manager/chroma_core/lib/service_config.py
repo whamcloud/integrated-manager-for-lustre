@@ -797,7 +797,7 @@ def register_profile(profile_file):
         "bundles": [],
         "ui_description": "This is the hard coded default profile.",
         "user_selectable": True,
-        "initial_state": "configured",
+        "initial_state": "monitored",
         "packages": {},
         "validation": [],
         "default": False,

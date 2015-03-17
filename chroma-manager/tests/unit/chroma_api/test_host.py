@@ -4,7 +4,8 @@ import mock
 
 from chroma_api.urls import api
 from chroma_core.models import Bundle, Command
-from chroma_core.models import ManagedHost, Nid
+from chroma_core.models import ManagedHost
+from chroma_core.models import Nid
 from chroma_core.models import ServerProfile, ServerProfileValidation
 from chroma_core.services.job_scheduler import job_scheduler_client
 
@@ -117,7 +118,8 @@ class TestHostResource(ChromaApiTestCase):
     @create_host_ssh_patch
     def test_creation_different_profile(self):
         test_sp = ServerProfile(name='test', ui_name='test UI',
-                                ui_description='a test description', managed=False)
+                                ui_description='a test description', managed=False,
+                                initial_state="monitored")
         test_sp.save()
         test_sp.bundles.add(Bundle.objects.get(bundle_name='agent'))
 
@@ -214,7 +216,8 @@ class TestHostResource(ChromaApiTestCase):
                                 ui_name='Not Test Profile',
                                 ui_description='Not Test Profile',
                                 managed=False,
-                                user_selectable=False)
+                                user_selectable=False,
+                                initial_state="monitored")
         profile.save()
         profile.bundles.add(Bundle.objects.get(bundle_name='agent'))
 
@@ -223,7 +226,7 @@ class TestHostResource(ChromaApiTestCase):
                 profile.serverprofilevalidation_set.add(ServerProfileValidation(**validation))
 
         response = self.api_client.post(self.RESOURCE_PATH, data={'objects': [{'address': host_name,
-                                                                                       'server_profile': '/api/server_profile/test_profile_2/'} for host_name in MockAgentRpc.mock_servers]})
+                                                                               'server_profile': '/api/server_profile/test_profile_2/'} for host_name in MockAgentRpc.mock_servers]})
 
         self.assertHttpAccepted(response)
         content = json.loads(response.content)
@@ -321,7 +324,7 @@ class TestHostResource(ChromaApiTestCase):
             self.assertEqual(len(content), 2)
             self.assertEqual(ManagedHost.objects.get(id=hosts[0].id).server_profile.name, 'test_profile')
             shp.assert_called_once_with(hosts[0].id, u"test_profile")
-            ccs.assert_called_once_with([(hosts[0], u'configured')])
+            ccs.assert_called_once_with([(hosts[0], u'managed')])
 
             shp.reset_mock()
             ccs.reset_mock()

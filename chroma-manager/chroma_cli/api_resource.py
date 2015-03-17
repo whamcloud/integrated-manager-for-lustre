@@ -114,6 +114,12 @@ class Host(ApiResource):
         return ",".join(self.all_attributes['nids'])
 
 
+class LnetConfiguration(ApiResource):
+    def __init__(self, *args, **kwargs):
+        super(LnetConfiguration, self).__init__(*args, **kwargs)
+        self.list_columns.extend(['host__fqdn'])
+
+
 class Target(ApiResource):
     def __init__(self, *args, **kwargs):
         super(Target, self).__init__(*args, **kwargs)

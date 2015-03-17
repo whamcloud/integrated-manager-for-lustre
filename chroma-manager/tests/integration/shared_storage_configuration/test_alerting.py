@@ -87,20 +87,20 @@ class TestAlerting(ChromaIntegrationTestCase):
 
         # Check that an alert is raised when lnet unexpectedly goes down
         host = self.get_json_by_uri(host['resource_uri'])
-        self.assertEqual(host['state'], 'lnet_up')
+        self.assertEqual(host['state'], 'managed')
         self.remote_operations.stop_lnet(host['fqdn'])
-        self.wait_for_assert(lambda: self.assertHasAlert(host['resource_uri'], of_severity='INFO'))
-        self.wait_for_assert(lambda: self.assertState(host['resource_uri'], 'lnet_down'))
-        lnet_offline_alert = self.get_alert(host['resource_uri'], alert_type="LNetOfflineAlert")
+        self.wait_for_assert(lambda: self.assertHasAlert(host['lnet_configuration'], of_severity='INFO'))
+        self.wait_for_assert(lambda: self.assertState(host['lnet_configuration'], 'lnet_down'))
+        lnet_offline_alert = self.get_alert(host['lnet_configuration'], alert_type="LNetOfflineAlert")
         self.assertEqual(lnet_offline_alert['severity'], 'INFO')
 
         # Check that alert is dropped when lnet is brought back up
-        self.set_state(host['resource_uri'], 'lnet_up')
-        self.assertNoAlerts(host['resource_uri'], of_severity='ERROR')
+        self.set_state(host['lnet_configuration'], 'lnet_up')
+        self.assertNoAlerts(host['lnet_configuration'], of_severity='ERROR')
 
         # Check that no alert is raised when intentionally stopping lnet
-        self.set_state(host['resource_uri'], 'lnet_down')
-        self.assertNoAlerts(host['resource_uri'], of_severity='ERROR')
+        self.set_state(host['lnet_configuration'], 'lnet_down')
+        self.assertNoAlerts(host['lnet_configuration'], of_severity='ERROR')
 
         # Raise all the alerts we can
         self.set_state("/api/filesystem/%s/" % fs_id, 'available')

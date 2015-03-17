@@ -251,7 +251,7 @@ class JobTestCaseWithHost(JobTestCase):
                 nodename=info['nodename']
             )
             ObjectCache.add(ManagedHost, host)
-            ObjectCache.add(LNetConfiguration, host.lnetconfiguration)
+            ObjectCache.add(LNetConfiguration, host.lnet_configuration)
             self.hosts.append(host)
 
         # Handy if you're only using one

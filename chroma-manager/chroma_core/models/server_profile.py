@@ -50,7 +50,7 @@ class ServerProfile(models.Model):
         help_text = "The bundles specified by this profile"
     )
     user_selectable = models.BooleanField(default=True)
-    initial_state = models.CharField(max_length=32, default='configured')
+    initial_state = models.CharField(max_length=32)
 
     @property
     def packages(self):

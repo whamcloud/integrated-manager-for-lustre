@@ -28,7 +28,7 @@ def load_filesystem_from_json(data):
         nids = [Nid.split_nid_string(n) for n in mock_host_info['nids']]
         host = synthetic_host(mock_host_info['address'], nids=nids, fqdn=mock_host_info['fqdn'], nodename=mock_host_info['nodename'])
         ObjectCache.add(ManagedHost, host)
-        host.state = 'lnet_up'
+        host.state = 'managed'
         host.save()
         lookup['hosts'][host_info['address']] = host
 

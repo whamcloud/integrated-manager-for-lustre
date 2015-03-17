@@ -29,6 +29,7 @@ from django.utils.timezone import now
 
 from picklefield.fields import PickledObjectField
 from polymorphic.models import DowncastMetaclass
+from chroma_core.models.utils import DeletableDowncastableMetaclass
 
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
@@ -336,6 +337,17 @@ class StatefulObject(models.Model):
         pass
 
 
+class DeletableStatefulObject(StatefulObject):
+    """Use this class to create your own downcastable classes if you need to override 'save', because
+    using the metaclass directly will override your own save method"""
+    __metaclass__ = DeletableDowncastableMetaclass
+
+    class Meta:
+        abstract = True
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+
 class StateLock(object):
     def __init__(self, job, locked_item, write, begin_state = None, end_state = None):
         self.job = job
@@ -438,6 +450,11 @@ class Job(models.Model):
 
     def create_locks(self):
         return []
+
+    @classmethod
+    def can_run(cls, instance):
+        """Return True if this Job can be run on the given instance"""
+        return True
 
     def get_deps(self):
         return DependAll()
@@ -587,6 +604,26 @@ class StateChangeJob(Job):
             job_log.info("Job %d: not_deleted=%s" % (self.id, obj.not_deleted))
 
 
+class NullStateChangeJob(StateChangeJob):
+    '''
+    A null state change job is one which the state changes but no actions take place.
+    '''
+    state_transition = (None, None, None)
+    stateful_object = "target_object"
+    _long_description = ""
+    _description = ""
+
+    display_group = Job.JOB_GROUPS.COMMON
+    display_order = 20
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return cls._long_description
+
+
 class AdvertisedJob(Job):
     """A job which is offered for execution in relation to particular objects"""
     class Meta:
@@ -602,11 +639,6 @@ class AdvertisedJob(Job):
     # If False, running this job on N objects is N jobs, if True then running
     # this job on N objects is one job.
     plural = False
-
-    @classmethod
-    def can_run(cls, instance):
-        """Return True if this Job can be run on the given instance"""
-        return True
 
     @classmethod
     def get_args(cls, objects):

@@ -166,12 +166,13 @@ class TestAvailableJobs(TestCase):
 
     def test_object_is_locked(self):
         js = JobScheduler()
-        self._fake_add_lock(js, self.host, 'lnet_down')
-        host_ct_key = ContentType.objects.get_for_model(
-            self.host.downcast()).natural_key()
-        host_id = self.host.id
+        self._fake_add_lock(js, self.host.lnet_configuration, 'lnet_up')
 
-        locks = js.get_locks(host_ct_key, host_id)
+        lnet_configuration_ct_key = ContentType.objects.get_for_model(
+            self.host.lnet_configuration.downcast()).natural_key()
+        lnet_configuration_id = self.host.lnet_configuration.id
+
+        locks = js.get_locks(lnet_configuration_ct_key, lnet_configuration_id)
         self.assertFalse(locks['read'])
         self.assertEqual(2, len(locks['write']))
 

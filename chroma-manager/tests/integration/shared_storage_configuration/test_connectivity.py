@@ -32,8 +32,8 @@ class TestConnectivity(ChromaIntegrationTestCase):
         host = self.add_hosts([self.TEST_SERVERS[0]['address']])[0]
 
         # Initially running a command should work
-        self.set_state(host['resource_uri'], 'lnet_up')
-        self.set_state(host['resource_uri'], 'lnet_down')
+        self.set_state(host['lnet_configuration'], 'lnet_up')
+        self.set_state(host['lnet_configuration'], 'lnet_down')
 
         # Initially there should be no WARNING alerts for lost contact
         alerts = self.get_list("/api/alert/", {'active': True,
@@ -55,7 +55,7 @@ class TestConnectivity(ChromaIntegrationTestCase):
             self.assertRegexpMatches(alerts[0]['message'], "Lost contact with host.*")
 
             # Commands should not work
-            failed_command = self.set_state(host['resource_uri'], 'lnet_up', verify_successful=False)
+            failed_command = self.set_state(host['lnet_configuration'], 'lnet_up', verify_successful=False)
             self.assertTrue(failed_command['errored'], True)
         finally:
             # Leave the failure mode
@@ -73,8 +73,8 @@ class TestConnectivity(ChromaIntegrationTestCase):
         time.sleep(MAX_AGENT_BACKOFF)
 
         # Running a command should work again
-        self.set_state(host['resource_uri'], 'lnet_up')
-        self.set_state(host['resource_uri'], 'lnet_down')
+        self.set_state(host['lnet_configuration'], 'lnet_up')
+        self.set_state(host['lnet_configuration'], 'lnet_down')
 
     def test_cannot_connect(self):
         """

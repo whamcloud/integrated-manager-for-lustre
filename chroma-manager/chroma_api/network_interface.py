@@ -20,21 +20,21 @@
 # express and approved by Intel in writing.
 
 
-from chroma_core.models import NetworkInterface, Nid, LNetConfiguration
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.services import log_register
-from chroma_api.utils import custom_response, dehydrate_command
-from chroma_core.models import Command
 from tastypie.exceptions import NotFound
 from django.core.exceptions import ObjectDoesNotExist
-
 from tastypie.resources import ModelResource
-
 import tastypie.http as http
 from tastypie import fields
 from tastypie.authorization import DjangoAuthorization
-from chroma_api.authentication import AnonymousAuthentication
 from tastypie.constants import ALL_WITH_RELATIONS
+
+from chroma_core.models import NetworkInterface, Nid, LNetConfiguration
+from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_core.services import log_register
+from chroma_api.utils import dehydrate_command
+from chroma_core.models import Command
+from chroma_api.utils import custom_response, StatefulModelResource
+from chroma_api.authentication import AnonymousAuthentication
 
 log = log_register(__name__)
 
@@ -51,7 +51,7 @@ log = log_register(__name__)
 # Put
 # https://localhost:8000/api/lnet_configuration/
 # https://localhost:8000/api/lnet_configuration/1/
-class LNetConfigurationResource(ModelResource):
+class LNetConfigurationResource(StatefulModelResource):
     """
     LNetConfiguration information.
     """
@@ -66,9 +66,13 @@ class LNetConfigurationResource(ModelResource):
         list_allowed_methods = ['get', 'put']
         detail_allowed_methods = ['get', 'put']
         filtering = {'host': ALL_WITH_RELATIONS,
-                     'id': ['exact']}
+                     'id': ['exact'],
+                     'host__fqdn': ['exact', 'startswith']}
 
     def obj_update(self, bundle, request = None, **kwargs):
+        if 'pk' in kwargs:
+            return super(LNetConfigurationResource, self).obj_update(bundle, request, **kwargs)
+
         if 'objects' in bundle.data:
             lnet_configurations_data = bundle.data['objects']
         else:
@@ -139,7 +143,7 @@ class NidResource(ModelResource):
         for nid_data in nids_data:
             nid_data['network_interface'] = NetworkInterfaceResource().get_via_uri(nid_data['network_interface']).id
 
-        host_id, command_id = JobSchedulerClient.update_nids(nids_data)
+        command_id = JobSchedulerClient.update_nids(nids_data)
 
         try:
             command = Command.objects.get(pk = command_id)

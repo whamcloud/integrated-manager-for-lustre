@@ -3,6 +3,7 @@
   "managed": true,
   "worker": true,
   "name": "robinhood_server",
+  "initial_state": "managed",
   "bundles": [
     "iml-agent",
     "lustre-client",

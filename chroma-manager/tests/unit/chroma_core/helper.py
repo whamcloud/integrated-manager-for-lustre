@@ -74,12 +74,14 @@ def synthetic_volume_full(primary_host, *args):
     return volume
 
 
-def synthetic_host_optional_profile(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None, server_profile=None):
+def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None, server_profile = 'test_profile'):
     """
     Create a ManagedHost + paraphernalia, with states set as if configuration happened successfully
 
     :param storage_resource: If true, create a PluginAgentResources (additional overhead, only sometimes required)
     """
+
+    server_profile = ServerProfile.objects.get(name=server_profile)
 
     if address is None:
         address = random_str(postfix=".tld")
@@ -93,8 +95,9 @@ def synthetic_host_optional_profile(address=None, nids = list([]), storage_resou
         address=address,
         fqdn=fqdn,
         nodename=nodename,
-        state='lnet_up' if nids else 'configured',
-        server_profile=server_profile
+        state='managed',
+        server_profile=server_profile,
+        immutable_state=not server_profile.managed if server_profile else False
     )
 
     ObjectCache.add(ManagedHost, host)
@@ -111,19 +114,10 @@ def synthetic_host_optional_profile(address=None, nids = list([]), storage_resou
     return host
 
 
-def synthetic_host(address=None, nids = list([]), storage_resource = False, fqdn = None, nodename = None, server_profile = 'test_profile'):
-
-    server_profile = ServerProfile.objects.get(name=server_profile)
-    return synthetic_host_optional_profile(address,
-                                           nids,
-                                           storage_resource,
-                                           fqdn,
-                                           nodename,
-                                           server_profile)
-
-
 def synthetic_host_create_lnet_configuration(host, nids):
     lnet_configuration, _ = LNetConfiguration.objects.get_or_create(host = host)
+
+    ObjectCache.add(LNetConfiguration, lnet_configuration)
 
     # Now delete any existing nids as we will recreate them if some have been requested.
     Nid.objects.filter(lnet_configuration = lnet_configuration).delete()
@@ -315,7 +309,8 @@ def load_default_profile():
     load_default_bundles()
     default_sp = ServerProfile(name='test_profile', ui_name='Managed storage server',
                                ui_description='A storage server suitable for creating new HA-enabled filesystem targets',
-                               managed=True, default=True)
+                               managed=True, default=True,
+                               initial_state="managed")
     default_sp.bundles.add('lustre')
     default_sp.bundles.add('agent')
     default_sp.bundles.add('agent_dependencies')
@@ -522,13 +517,13 @@ class MockAgentRpc(object):
         elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
                      'configure_rsyslog', 'unconfigure_rsyslog',
                      'configure_target_store', 'unconfigure_target_store',
-                     'start_lnet', 'stop_lnet', 'unload_lnet', 'unconfigure_lnet',
                      'deregister_server', 'restart_agent',
                      'install_packages', 'shutdown_server',
                      'host_corosync_config', 'check_block_device',
                      'set_conf_param', 'purge_configuration']:
             return None
         elif cmd in ['configure_target_ha', 'unconfigure_target_ha',
+                     'start_lnet', 'stop_lnet', 'unload_lnet', 'unconfigure_lnet',
                      'configure_corosync', 'unconfigure_corosync',
                      'configure_ntp', 'unconfigure_ntp',
                      'set_profile', 'update_profile',

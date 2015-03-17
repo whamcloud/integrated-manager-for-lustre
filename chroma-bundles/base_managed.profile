@@ -2,7 +2,8 @@
   "ui_name": "Managed Storage Server",
   "managed": true,
   "worker": false,
-  "name": "base_managed", 
+  "name": "base_managed",
+  "initial_state": "managed",
   "bundles": [
     "iml-agent", 
     "lustre", 

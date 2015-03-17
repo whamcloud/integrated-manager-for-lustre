@@ -2,7 +2,8 @@ from django.test import TestCase
 from chroma_core.models import DeployHostJob
 from chroma_core.models import ManagedHost
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
-from tests.unit.chroma_core.helper import synthetic_host_optional_profile, freshen
+from tests.unit.chroma_core.helper import synthetic_host, freshen
+from tests.unit.chroma_core.helper import load_default_profile
 
 
 class TestDeployHostJob(TestCase):
@@ -11,7 +12,9 @@ class TestDeployHostJob(TestCase):
     def test_host_available_states_undeployed(self):
         """Test that host is set to 'deploy-failed' when Job.on_error is called."""
 
-        host = synthetic_host_optional_profile()
+        load_default_profile()
+
+        host = synthetic_host()
         host.state = 'undeployed'
         host.save()
 
@@ -19,9 +22,9 @@ class TestDeployHostJob(TestCase):
 
         # Check the available states changes depending on how installed.
         for install_method, states in {ManagedHost.INSTALL_MANUAL: [],
-                                       ManagedHost.INSTALL_SSHSKY: ['configured'],
-                                       ManagedHost.INSTALL_SSHPKY: ['configured'],
-                                       ManagedHost.INSTALL_SSHSKY: ['configured']}.items():
+                                       ManagedHost.INSTALL_SSHSKY: ['managed'],
+                                       ManagedHost.INSTALL_SSHPKY: ['managed'],
+                                       ManagedHost.INSTALL_SSHSKY: ['managed']}.items():
             host.install_method = install_method
             self.assertEquals(host.get_available_states('undeployed'), states)
 
@@ -30,7 +33,9 @@ class TestDeployHostJob(TestCase):
 
         job_scheduler = JobScheduler()
 
-        host = synthetic_host_optional_profile()
+        load_default_profile()
+
+        host = synthetic_host()
         host.state = 'undeployed'
         host.save()
 

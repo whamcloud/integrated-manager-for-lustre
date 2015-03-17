@@ -108,7 +108,7 @@ class ChromaApiTestCase(ResourceTestCase):
         return self.deserialize(response)
 
     def create_simple_filesystem(self, host):
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, ManagedTargetMount
         self.mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(host).id, name = "MGS")
         self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
         ObjectCache.add(ManagedFilesystem, self.fs)
@@ -118,6 +118,9 @@ class ChromaApiTestCase(ResourceTestCase):
         self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem = self.fs)
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.mdt.id))
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id = self.ost.id))
+        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id = self.mgt.id))
+        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id = self.mdt.id))
+        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id = self.ost.id))
 
     def api_get_list(self, uri):
         response = self.api_client.get(uri)

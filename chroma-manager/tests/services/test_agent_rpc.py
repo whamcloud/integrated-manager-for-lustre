@@ -127,19 +127,19 @@ class TestAgentRpc(SupervisorTestCase, AgentHttpClient):
 
     def _request_action(self, state = 'lnet_up'):
         # Start a job which should generate an action
-        command_id = JobSchedulerClient.command_set_state([(self.host.content_type.natural_key(), self.host.id, state)], "Test")
+        command_id = JobSchedulerClient.command_set_state([(self.host.lnet_configuration.content_type.natural_key(), self.host.lnet_configuration.id, state)], "Test")
         command = self._get_command(command_id)
         self.assertEqual(len(command.jobs.all()), 1)
         self.last_action = time.time()
 
-        # This have to be hardcoded and kept up to data, a bit crappy, but at least they are in one place and asserts when it
-        # doesn't know what to do.
-        # This is basically describing the messages that we expect to receive when a command is sent. We can then receive and
-        # validate each message as it arrives.
+        # This have to be hardcoded and kept up to date, a bit crappy, but at least they are in one
+        # place and asserts when it doesn't know what to do.
+        # This is basically describing the messages that we expect to receive when a command is sent.
+        # We can then receive and validate each message as it arrives.
         if state == 'lnet_up':
-            actions = ['start_lnet', 'device_plugin', 'device_plugin', 'device_plugin']    # It will do start_lnet, followed by 2 requests for data.
+            actions = ['start_lnet', 'device_plugin']    # It will do start_lnet, followed by 1 request for data.
         elif state == 'lnet_down':
-            actions = ['stop_lnet', 'device_plugin', 'device_plugin', 'device_plugin']      # It will do stop_lnet, followed by 2 requests for data.
+            actions = ['stop_lnet', 'device_plugin']     # It will do stop_lnet, followed by 1 request for data.
         else:
             raise AssertionError("Unknown state '%s' requested for _request_action" % state)
 

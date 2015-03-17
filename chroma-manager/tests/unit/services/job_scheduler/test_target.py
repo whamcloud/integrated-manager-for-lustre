@@ -1,6 +1,6 @@
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.target import ManagedTargetMount
-from chroma_core.models.lnet_configuration import Nid
+from chroma_core.models import ManagedTargetMount
+from chroma_core.models import Nid
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
 
@@ -88,8 +88,8 @@ class TestTargetTransitions(JobTestCaseWithHost):
         stopping the target calculated as a dependency of that"""
 
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, 'mounted')
-        self.host = self.assertState(self.host, 'lnet_up')
-        consequences = JobSchedulerClient.get_transition_consequences(self.host, 'lnet_down')
+        self.lnetconfiguration = self.assertState(self.host.lnet_configuration, 'lnet_up')
+        consequences = JobSchedulerClient.get_transition_consequences(self.host.lnet_configuration, 'lnet_down')
         self.assertEqual(len(consequences['dependency_jobs']), 1)
         self.assertEqual(consequences['dependency_jobs'][0]['class'], 'StopTargetJob')
 

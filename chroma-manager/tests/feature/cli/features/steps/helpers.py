@@ -33,7 +33,8 @@ def step(context, count):
 @given('the {entity} {field} on {subject} should be {value}')
 @then('the {entity} {field} on {subject} should be {value}')
 def step(context, entity, field, subject, value):
-    entity_map = {'server': "host"}
+    entity_map = {'server': 'host'}
+
     from chroma_cli.api import ApiHandle
     ah = ApiHandle()
     try:

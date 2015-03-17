@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -30,7 +30,6 @@ import logging
 import json
 import threading
 from collections import defaultdict
-from django.utils.timezone import now
 
 from django.db.models.aggregates import Count
 from django.db.models.query_utils import Q
@@ -816,7 +815,7 @@ class ResourceManager(object):
             host = ManagedHost.objects.get(pk = scannable_resource.host_id)
 
         # We want to raise an alert if the nid configuration changes. So remember it at the start.
-        previous_nids = host.lnetconfiguration.get_nids()
+        previous_nids = host.lnet_configuration.get_nids()
 
         node_resources = {}
 
@@ -851,25 +850,23 @@ class ResourceManager(object):
         for lnet_state_resource in node_resources[LNETModules]:
             lnet_state = lnet_state_resource.to_resource()
 
-            if (lnet_state.host_id == host.id):
-                lnet_configuration, created = LNetConfiguration.objects.get_or_create(host = lnet_state.host_id)
+            # Really this code should be more tightly tied to the lnet_configuration classes, but in a one step
+            # at a time approach. Until lnet is !unconfigured we should not be updating it's state.
+            # Double if because the first if should be removed really, in some more perfect future.
+            if host.lnet_configuration.state != 'unconfigured':
+                if (lnet_state.host_id == host.id):
+                    lnet_configuration = LNetConfiguration.objects.get(host = lnet_state.host_id)
 
-                lnet_configuration.state = lnet_state.state
+                    # Truthfully this should use the notify which I've added as a comment to show the correct way. The problem is that
+                    # during the ConfigureLNetJob the state is changed to unloaded and this masks the notify in some way the is probably
+                    # as planned but prevents it being set back. What we really need is to somehow get a single command that goes
+                    # to a state and then to another state. post_dependencies almost. At present I can't see how to do this so I am leaving
+                    # this code as is.
+                    lnet_configuration.set_state(lnet_state.state)
+                    lnet_configuration.save()
+                    # JobSchedulerClient.notify(lnet_configuration, now(), {'state': lnet_state.state})
 
-                lnet_configuration.save()
-
-                log.debug("_persist_nid_updates lnet_configuration %s %s" % (lnet_configuration, "created" if created else "updated"))
-
-                # This is temporary whilst the host strangely has the lnet state in it, rather than the lnet configuration.
-                # If the host is in an 'lnet state' but not the right one.
-                # It seems odd that one of the from states is 'configured' but I think this just highlights how lnet configuration
-                # is not a 'state' of a host
-                # Search for this comment in _completion_hooks in job_scheduler.py - because we have to do this in 2 places to
-                # be sure it hangs together.
-                # We can just set the state of the host, no transition is required. This is not a good thing to do but as an interim
-                # change until we complete dynamic lnet it is OK.
-                if (host.state in ['configured', 'lnet_unloaded', 'lnet_down', 'lnet_up']) and (host.state != lnet_configuration.state):
-                    JobSchedulerClient.notify(host, now(), {'state': lnet_configuration.state})
+                    log.debug("_persist_nid_updates lnet_configuration %s" % lnet_configuration)
 
         # Only get the lnet_configuration if we actually have a LNetInterface (nid) to add.
         if (len(node_resources[LNETInterface]) > 0):
@@ -893,7 +890,7 @@ class ResourceManager(object):
 
         # We want to raise an alert if the nid configuration changes. So check it at the end.
         if previous_nids != []:
-            new_nids = host.lnetconfiguration.get_nids()
+            new_nids = host.lnet_configuration.get_nids()
             current = (set(previous_nids) == set(new_nids))
             LNetNidsChangedAlert.notify(host, not current)
 

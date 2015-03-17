@@ -163,14 +163,20 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             self.deploy_agents(addresses, auth_type)
             self.set_host_profiles(self.get_hosts(addresses))
 
-        # Verify the new hosts are now in the database and in the correct lnet state
+        # Verify the new hosts are now in the database and in the correct state
         new_hosts = self.get_hosts(addresses)
         self.assertEqual(len(new_hosts), len(addresses), new_hosts)
         for host in new_hosts:
-            if self.get_host_profile(host['address'])['name'] == 'base_managed':
-                self.assertEqual(host['state'], 'lnet_up', host)
+            # Deal with pre-3.0 versions.
+            if host['state'] in ['lnet_up', 'lnet_down', 'lnet_unloaded']:
+                if self.get_host_profile(host['address'])['name'] == 'base_managed':
+                    self.assertEqual(host['state'], 'lnet_up', host)
+                else:
+                    self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'], host)
             else:
-                self.assertIn(host['state'], ['lnet_up', 'lnet_down', 'lnet_unloaded'], host)
+                self.assertEqual(host['state'],
+                                 self.get_host_profile(host['address'])['initial_state'],
+                                 host)
 
         # Make sure the agent config is flushed to disk
         self.remote_operations.sync_disks([h['address'] for h in new_hosts])

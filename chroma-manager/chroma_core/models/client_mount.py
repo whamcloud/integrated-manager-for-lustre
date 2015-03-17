@@ -25,7 +25,8 @@ import os
 from django.db import models
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.host import ManagedHost, DeletableStatefulObject, HostOfflineAlert, HostContactAlert
+from chroma_core.models.host import ManagedHost, HostOfflineAlert, HostContactAlert
+from chroma_core.models.jobs import DeletableStatefulObject
 from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models.alert import AlertState
 from chroma_core.models.jobs import Job, AdvertisedJob
@@ -59,7 +60,7 @@ class LustreClientMount(DeletableStatefulObject):
         if state == 'mounted':
             # Depend on this mount's host having LNet up. If LNet is stopped
             # on the host, this filesystem will be unmounted first.
-            deps.append(DependOn(self.host, 'lnet_up', fix_state='unmounted'))
+            deps.append(DependOn(self.host.lnet_configuration, 'lnet_up', fix_state='unmounted'))
 
         if state != 'removed':
             # Depend on the fs being available.
@@ -75,6 +76,7 @@ class LustreClientMount(DeletableStatefulObject):
 
     reverse_deps = {
         'ManagedHost': lambda mh: ObjectCache.host_client_mounts(mh.id),
+        'LNetConfiguration': lambda lc: ObjectCache.host_client_mounts(lc.host.id),
         'ManagedFilesystem': lambda mf: ObjectCache.filesystem_client_mounts(mf.id)
     }
 
@@ -157,7 +159,7 @@ class MountLustreClientJob(StateChangeJob):
         return [(MountLustreFilesystemsStep, args)]
 
     def get_deps(self):
-        return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id), "lnet_up")
+        return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id).lnetconfiguration, "lnet_up")
 
     class Meta:
         app_label = 'chroma_core'

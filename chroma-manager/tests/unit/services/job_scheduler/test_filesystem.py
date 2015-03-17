@@ -1,9 +1,9 @@
 from itertools import chain
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import dbperf
-from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.models.lnet_configuration import Nid
-from chroma_core.models.target import ManagedMdt, ManagedMgs, ManagedOst, ManagedTarget, ManagedTargetMount
+from chroma_core.models import ManagedFilesystem
+from chroma_core.models import Nid
+from chroma_core.models import ManagedMdt, ManagedMgs, ManagedOst, ManagedTarget, ManagedTargetMount
 from tests.unit.chroma_core.helper import freshen, synthetic_host
 from django.db import connection
 from tests.unit.services.job_scheduler.job_test_case import JobTestCase, JobTestCaseWithHost
@@ -33,10 +33,10 @@ class TestOneHost(JobTestCase):
             with dbperf("create_from_string"):
                 host = synthetic_host('myaddress')
             with dbperf("set_state"):
-                self.set_state_delayed([(host, 'lnet_up')])
+                self.set_state_delayed([(host, 'managed')])
             with dbperf("run_next"):
                 self.set_state_complete()
-            self.assertState(host, 'lnet_up')
+            self.assertState(host, 'managed')
         finally:
             dbperf.enabled = False
 
