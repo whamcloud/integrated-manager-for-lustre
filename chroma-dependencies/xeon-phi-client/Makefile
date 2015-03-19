@@ -1,7 +1,7 @@
 include ../include/Makefile.lustre_build_meta
 
 override REPO		:= $(dir $(patsubst %/,%,$(REPO)))/repo-xeon-phi-client
-RELEASE_POSTFIX		:= +mpss3.4.2$(UNDERSCORE_RELEASE_POSTFIX)
+RELEASE_POSTFIX		:= +mpss3.4.3$(UNDERSCORE_RELEASE_POSTFIX)
 KERNEL_RELEASE		= 2.6.38.8
 KERNEL_RELEASE_MANGLED	= $(subst -,_,$(KERNEL_RELEASE))
 CHROMA_EXTERNALS_SUBDIR := lustre
