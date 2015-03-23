@@ -11,10 +11,11 @@
  * @param {Object} fsThen
  * @param {process} process
  * @param {Object} semver
+ * @param {Object} util
  * @returns {Function}
  */
 exports.wiretree = function writeDependenciesModule (config, treeClimber, path, saveTgzThen,
-                                                     saveRepoThen, log, fsThen, process, semver) {
+                                                     saveRepoThen, log, fsThen, process, semver, util) {
   var replaceRegexp = new RegExp(config.DEP_TYPES.DEPS, 'g');
 
   /**
@@ -42,7 +43,14 @@ exports.wiretree = function writeDependenciesModule (config, treeClimber, path, 
 
         writePromise = fsThen.copy(resolvedPath, fullPath);
       } else if (semver.validRange(value)) {
-        writePromise = saveTgzThen(dependencyName, value, {
+        var tgzPath = util.format('%s%s/-/%s-%s.tgz', config.registryUrl, dependencyName, dependencyName, value);
+
+        writePromise = saveTgzThen(tgzPath, {
+          path: fullPath,
+          strip: 1
+        });
+      } else if (config.tarGzRegexp.test(value)) {
+        writePromise = saveTgzThen(value, {
           path: fullPath,
           strip: 1
         });

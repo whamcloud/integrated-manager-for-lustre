@@ -6,16 +6,12 @@
  * @param {Object} requests
  * @param {zlib} zlib
  * @param {tar} tar
- * @param {util} util
- * @param {Object} config
  * @returns {Function}
  */
-exports.wiretree = function saveTgzThenModule (Promise, requests, zlib, tar, util, config) {
-  return function saveTgzThen (dependencyName, version, expandOpts) {
-    var tgzPath = util.format('%s/-/%s-%s.tgz', dependencyName, dependencyName, version);
-
+exports.wiretree = function saveTgzThenModule (Promise, requests, zlib, tar) {
+  return function saveTgzThen (tgzPath, expandOpts) {
     return new Promise(function saveTgzToDir (resolve, reject) {
-      requests.requestPipe(config.registryUrl + tgzPath)
+      requests.requestPipe(tgzPath)
         .on('error', reject)
         .pipe(zlib.createGunzip())
         .on('error', reject)

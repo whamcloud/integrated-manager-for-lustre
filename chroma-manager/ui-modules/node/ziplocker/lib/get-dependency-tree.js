@@ -10,11 +10,13 @@
  * @param {Function} resolveFromFs
  * @param {Function} resolveFromRegistry
  * @param {Function} resolveFromGithub
+ * @param {Function} resolveFromTgz
  * @param {Object} _
  * @returns {Function}
  */
 exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, semver,
-                                                     config, resolveFromFs, resolveFromRegistry, resolveFromGithub, _) {
+                                                     config, resolveFromFs, resolveFromRegistry,
+                                                     resolveFromGithub, resolveFromTgz, _) {
   var root;
 
   var SEP = '/';
@@ -101,6 +103,8 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
           resolveModule = resolveFromFs(dependencyValue);
         else if (semver.validRange(dependencyValue))
           resolveModule = resolveFromRegistry(dependency, dependencyValue);
+        else if (config.tarGzRegexp.test(dependencyValue))
+          resolveModule = resolveFromTgz(dependencyValue);
         else
           resolveModule = resolveFromGithub(dependencyValue);
 

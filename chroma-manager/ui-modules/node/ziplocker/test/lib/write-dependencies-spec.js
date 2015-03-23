@@ -6,6 +6,7 @@ var path = require('path');
 var Promise = require('promise');
 var semver = require('semver');
 var config = require('../../index').get('config');
+var util = require('util');
 
 describe('write dependencies', function () {
   var writeDependencies, saveTgzThen, saveRepoThen,
@@ -33,7 +34,7 @@ describe('write dependencies', function () {
     spyOn(treeClimber, 'climbAsync').and.callThrough();
 
     writeDependencies = writeDependenciesModule(config, treeClimber, path, saveTgzThen,
-      saveRepoThen, log, fsThen, process, semver);
+      saveRepoThen, log, fsThen, process, semver, util);
   });
 
   describe('climbing a tree', function () {
@@ -42,6 +43,9 @@ describe('write dependencies', function () {
     beforeEach(function () {
       json = {
         dependencies: {
+          'foo-bar': {
+            version: 'https://foobar.com/foo-bar.1.0.0.tar.gz'
+          },
           'primus-emitter': {
             version: '2.0.5'
           },
@@ -73,6 +77,9 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
           },
           'promise-it': {
             version: 'file://../promise-it'
+          },
+          'bar-foo': {
+            version: 'https://foobar.com/bar-foo.2.0.0.tar.gz'
           }
         }
       };
@@ -84,21 +91,48 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
       expect(treeClimber.climbAsync).toHaveBeenCalledWith(json, jasmine.any(Function), '/');
     });
 
+    pit('should invoke saveTgzThen for tar.gz url dependencies', function () {
+      return promise.then(function () {
+        expect(saveTgzThen).toHaveBeenCalledWith(
+          'https://foobar.com/foo-bar.1.0.0.tar.gz',
+          {
+            path: config.depPath + '/node_modules/foo-bar',
+            strip: 1
+          });
+      });
+    });
+
+    pit('should invoke saveTgzThen for tar.gz url devDependencies', function () {
+      return promise.then(function () {
+        expect(saveTgzThen).toHaveBeenCalledWith(
+          'https://foobar.com/bar-foo.2.0.0.tar.gz',
+          {
+            path: config.depPath + '/devDependencies/bar-foo',
+            strip: 1
+          });
+      });
+    });
+
+
     pit('should invoke saveTgzThen for dependencies', function () {
       return promise.then(function () {
-        expect(saveTgzThen).toHaveBeenCalledWith( 'primus-emitter', '2.0.5', {
-          path : config.depPath + '/node_modules/primus-emitter',
-          strip : 1
-        });
+        expect(saveTgzThen).toHaveBeenCalledWith(
+          'https://registry.npmjs.org/primus-emitter/-/primus-emitter-2.0.5.tgz',
+          {
+            path : config.depPath + '/node_modules/primus-emitter',
+            strip : 1
+          });
       });
     });
 
     pit('should invoke saveTgzThen for devDependencies', function () {
       return promise.then(function () {
-        expect(saveTgzThen).toHaveBeenCalledWith('jasmine-n-matchers', '0.0.3', {
-          path: config.depPath + '/devDependencies/jasmine-n-matchers',
-          strip: 1
-        });
+        expect(saveTgzThen).toHaveBeenCalledWith(
+          'https://registry.npmjs.org/jasmine-n-matchers/-/jasmine-n-matchers-0.0.3.tgz',
+          {
+            path: config.depPath + '/devDependencies/jasmine-n-matchers',
+            strip: 1
+          });
       });
     });
 

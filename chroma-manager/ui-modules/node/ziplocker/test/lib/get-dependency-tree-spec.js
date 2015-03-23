@@ -7,7 +7,8 @@ var config = require('../../index').get('config');
 var _ = require('lodash-mixins');
 
 describe('dependency tree', function () {
-  var packageJson, promise, log, resolveFromFs, resolveFromRegistry, resolveFromGithub;
+  var packageJson, promise, log,
+    resolveFromFs, resolveFromRegistry, resolveFromGithub, resolveFromTgz;
 
   beforeEach(function () {
     packageJson = {
@@ -15,6 +16,7 @@ describe('dependency tree', function () {
         foo: '^0.0.1',
         bar: '~1.2.3',
         bim: 'file://../bim/',
+        bapper: 'https://bapper.com/bapper-1.2.3.tar.gz',
         'coffee-script-redux': 'git+https://github.com/michaelficarra/\
 CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
       },
@@ -78,13 +80,20 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
       return Promise.resolve(responseObjects[dependency + dependencyValue]);
     });
 
+    resolveFromTgz = jasmine.createSpy('resolveFromTgz').and.returnValue(Promise.resolve({
+      response: {
+        dependencies: {}
+      },
+      value: 'https://bapper.com/bap-1.2.3.tar.gz'
+    }));
+
     log = {
       write: jasmine.createSpy('write'),
       green: jasmine.createSpy('green')
     };
 
     var dependencyTree = getDependencyTree(packageJson, Promise, log, semver, config,
-      resolveFromFs, resolveFromRegistry, resolveFromGithub, _);
+      resolveFromFs, resolveFromRegistry, resolveFromGithub, resolveFromTgz, _);
     promise = dependencyTree();
   });
 
@@ -123,6 +132,9 @@ CoffeeScriptRedux.git#9895cd1641fdf3a2424e662ab7583726bb0e35b3'
           },
           bim: {
             version: 'file://../bim/'
+          },
+          bapper: {
+            version: 'https://bapper.com/bap-1.2.3.tar.gz'
           },
           'coffee-script-redux': {
             version: 'git+https://github.com/michaelficarra/\

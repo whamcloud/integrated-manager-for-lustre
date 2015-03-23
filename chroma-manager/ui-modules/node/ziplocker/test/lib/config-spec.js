@@ -28,6 +28,7 @@ describe('config', function () {
     expect(configulator).toHaveBeenCalledWith({
       default: {
         FILE_TOKEN: 'file://',
+        tarGzRegexp: /\.tar\.gz$/,
         registryUrl: 'https://registry.npmjs.org/',
         proxyUrl: process.env.HTTP_PROXY,
         ziplockDir: process.env.ZIPLOCK_DIR,
