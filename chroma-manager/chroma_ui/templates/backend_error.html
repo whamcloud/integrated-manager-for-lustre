@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html>
   <head>
-    <link rel="stylesheet" href="{{STATIC_URL}}css/base.css" type="text/css" />
-    <link rel="stylesheet" href="{{STATIC_URL}}css/header.css" type="text/css" />
+    <link rel="stylesheet" href="<$= conf.staticUrl $>css/base.css" type="text/css" />
+    <link rel="stylesheet" href="<$= conf.staticUrl $>css/header.css" type="text/css" />
     <title>Intel&reg; Manager for Lustre* software</title>
   </head>
 
@@ -13,16 +12,23 @@
         <div class="logo"></div>
       </a>
     </div>
-    <div class='content'>
-    <p>
-      A fatal error has occurred.  Please contact support with the following information.
-    </p>
-    <pre style="border: 2px solid red; word-wrap: break-word; margin-right: 0.5em;">
-[description]
-{{ description }}
-[debug]
-{% for k,v in debug_info %}{{ k }}: {{ v }}
-{% endfor %}</pre>
+    <div class="content">
+      <p>
+        A fatal error has occurred. Please contact support with the following information.
+      </p>
+      <pre style="border: 2px solid red; word-wrap: break-word; margin-right: 0.5em;">
+<h2>[description]</h2>
+<p><$- description $></p>
+<h2>[debug]</h2>
+<p>server time: <$= getServerDate().toISOString() $></p>
+<p>build: <$= conf.build $></p>
+<p>version: <$= conf.version $></p>
+<p>is release: <$= conf.isRelease $></p>
+<p>fqdn: <$= conf.hostName $></p>
+<$ _.forEach(debug_info, function(v, k) { $>
+<p><$- k $>: <$- v $></p>
+<$ }); $>
+      </pre>
     </div>
   </body>
 </html>

@@ -10,6 +10,7 @@ types {
   text/x-component htc;
   image/png png;
   image/x-icon ico;
+  application/x-shockwave-flash swf
   application/x-makeself run;
   application/x-pilot prc pdb;
   application/x-rar-compressed rar;

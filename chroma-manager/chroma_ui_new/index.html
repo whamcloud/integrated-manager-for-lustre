@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <base href="/ui/" />
+
+    <title>Intel&reg; Manager for Lustre* software <$= title $></title>
+
+    <link rel="icon" href="<$= conf.staticUrl $>chroma_ui/iml/app/assets/images/intel.ico" />
+
+    <!-- inject:css -->
+    <!-- endinject -->
+
+    <script type="text/javascript">
+      window.STATIC_URL = '<$= conf.staticUrl $>chroma_ui/';
+      window.CACHE_INITIAL_DATA = <$= JSON.stringify(cache) $>;
+      window.HELP_TEXT = <$= JSON.stringify(conf.helpText) $>;
+      window.IS_RELEASE = <$= conf.isRelease $>;
+      window.ALLOW_ANONYMOUS_READ = <$= conf.allowAnonymousRead $>;
+      window.VERSION = '<$= conf.version $>';
+      window.BUILD = '<$= conf.build $>';
+      // How far ahead (or behind) the browser is from the server in milliseconds.
+      // Note: this is not completely accurate as server and client rendering times will push the diff to at least
+      // a second. However, if we consistently use this diff when performing operations that rely on
+      // server time, it should be close enough.
+      // Why are we doing this?: In customer installs, the ntp server is optional, meaning server time can be
+      // arbitrary.
+      window.SERVER_TIME_DIFF = new Date(<$= getServerDate().getTime() $>) - new Date();
+    </script>
+  </head>
+  <body ng-app="iml">
+    <div class="wrap">
+      <div app-view-segment="0"></div>
+    </div>
+
+    <!-- inject:js -->
+    <!-- endinject -->
+
+    </body>
+</html>

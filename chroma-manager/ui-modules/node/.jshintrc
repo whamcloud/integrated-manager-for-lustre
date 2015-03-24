@@ -8,6 +8,7 @@
     "afterEach": false,
     "pafterEach": false,
     "jasmine": false,
+    "nil": false,
     "spyOn": false,
     "it": false,
     "pit": false,

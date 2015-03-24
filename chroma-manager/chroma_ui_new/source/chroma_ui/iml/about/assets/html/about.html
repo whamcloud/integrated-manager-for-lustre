@@ -1,0 +1,45 @@
+<h3 class="page-header"><i class="fa fa-info-circle"></i> About Intel&reg; Manager for Lustre* software</h3>
+<div class="container container-full about-ctrl">
+  <div>
+    <div>
+      <div class="about-logo"></div>
+      <p ng-if="about.IS_RELEASE">
+        Intel&reg; Manager for Lustre* software {{ about.VERSION }} (build {{ about.BUILD }})
+      </p>
+      <p ng-if="!about.IS_RELEASE">
+        Intel&reg; Manager for Lustre* software build: {{ about.BUILD }}
+      </p>
+    </div>
+  </div>
+  <div>
+    <div>
+      <p>Copyright &copy; {{ about.COPYRIGHT_YEAR }} <a href="http://www.intel.com/">Intel Corporation</a>. All rights reserved.</p>
+    </div>
+  </div>
+  <div>
+    <div>
+      <p>
+        Intel is a trademark of Intel Corporation in the U.S. and other countries.
+        <br />
+        * Other names and brands may be claimed as the property of others.
+      </p>
+    </div>
+  </div>
+  <div>
+    <div>
+      <h4>Licensing notices</h4>
+      <h5>GPL components</h5>
+
+      <p>The software includes some third party software licensed under the GNU GPL.  Please
+        contact Intel if you require the source code to GPL components.</p>
+    </div>
+  </div>
+
+  <div>
+    <div>
+      <h5>Icons</h5>
+
+      <p>Some icons by Yusuke Kamiyamane. All rights reserved. Licensed under a Creative Commons Attribution 3.0 License.</p>
+    </div>
+  </div>
+</div>

@@ -83,7 +83,8 @@ class Command(BaseCommand):
                 'HTTPS_FRONTEND_PORT': settings.HTTPS_FRONTEND_PORT,
                 'HTTP_AGENT_PORT': settings.HTTP_AGENT_PORT,
                 'HTTP_API_PORT': settings.HTTP_API_PORT,
-                'REALTIME_PORT': settings.REALTIME_PORT
+                'REALTIME_PORT': settings.REALTIME_PORT,
+                'VIEW_SERVER_PORT': settings.VIEW_SERVER_PORT
             }))
             open(conf_path, 'w').write(conf_text)
 

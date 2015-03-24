@@ -295,6 +295,7 @@ fi
 %{manager_root}/chroma_ui/templates/*
 %{manager_root}/chroma_ui/static/*
 %{manager_root}/realtime/*
+%{manager_root}/ui-modules/node/view-server/*
 %{manager_root}/chroma_help/*
 %{manager_root}/chroma_core/fixtures/*
 %{manager_root}/polymorphic/COPYING

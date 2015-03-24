@@ -27,6 +27,7 @@ class SupervisorTestCase(TestCase):
     PORTS = {  # service ports to wait on binding
         'http_agent': [settings.HTTP_AGENT_PORT],
         'nginx': [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT],
+        'view_server': [settings.VIEW_SERVER_PORT]
     }
     TIMEOUT = 5  # default timeout to wait for services to start
     CONF = os.path.join(site_dir(), "supervisord.conf")

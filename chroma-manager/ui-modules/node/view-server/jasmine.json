@@ -1,0 +1,10 @@
+{
+  "spec_dir": "test",
+  "spec_files": [
+    "**/global.js",
+    "**/*-spec.js"
+  ],
+  "helpers": [
+    "**/boot.js"
+  ]
+}

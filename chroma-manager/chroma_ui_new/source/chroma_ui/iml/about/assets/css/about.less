@@ -1,0 +1,19 @@
+.about-ctrl {
+  & > div {
+    .make-row();
+
+    & > div {
+      .make-md-column(4);
+      .make-md-column-offset(4);
+    }
+  }
+
+  .about-logo {
+    .center-block();
+    background-image: url('@{base-path}/iml/about/assets/images/intel-logo-blue-trans-160x62.png');
+    background-repeat: no-repeat;
+    background-size: 160px 62px;
+    .size(160px; 62px);
+    margin-bottom: 25px;
+  }
+}

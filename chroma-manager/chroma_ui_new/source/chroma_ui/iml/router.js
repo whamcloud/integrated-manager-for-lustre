@@ -115,10 +115,17 @@ angular.module('imlRoutes', ['ngRoute', 'route-segment', 'view-segment', 'auth']
         dependencies: ['fsId', 'serverId', 'mdtId']
       });
 
-    $routeSegmentProvider.when('/configure/hsm', 'app.hsm')
+    $routeSegmentProvider
+      .when('/about', 'app.about')
+      .when('/configure/hsm', 'app.hsm')
       .when('/configure/server', 'app.server');
 
     $routeSegmentProvider.within('app')
+      .segment('about', {
+        controller: 'AboutCtrl',
+        controllerAs: 'about',
+        templateUrl: 'iml/about/assets/html/about.html'
+      })
       .segmentAuthenticated('hsm', {
         controller: 'HsmCtrl',
         templateUrl: 'iml/hsm/assets/html/hsm.html',

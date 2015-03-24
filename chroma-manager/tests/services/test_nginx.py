@@ -14,7 +14,7 @@ from tests.services.supervisor_test_case import SupervisorTestCase
 
 class NginxTestCase(SupervisorTestCase):
     # Require job_scheduler because it is queried for available_transitions when rendering /ui/
-    SERVICES = ['nginx', 'gunicorn', 'job_scheduler']
+    SERVICES = ['nginx', 'gunicorn', 'job_scheduler', 'view_server']
 
 
 class TestUi(NginxTestCase):

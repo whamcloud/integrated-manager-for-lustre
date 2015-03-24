@@ -50,6 +50,9 @@ _settings = {
     'REALTIME_PORT': {
         'all': 8888
     },
+    'VIEW_SERVER_PORT': {
+      'all': 8889
+    },
     'SSL_PATH': {
         'dev': SITE_ROOT,
         'prod': '/var/lib/chroma'

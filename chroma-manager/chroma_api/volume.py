@@ -209,7 +209,7 @@ class VolumeResource(ModelResource):
         try:
             Volume.get_unused_luns().get(id = volume['id'])
         except Volume.DoesNotExist:
-            raise AssertionError("Volume %s is in use!")
+            raise AssertionError("Volume %s is in use!" % volume['id'])
 
         lun = get_object_or_404(Volume, id = volume['id'])
         node_ids = [node['id'] for node in volume['nodes']]

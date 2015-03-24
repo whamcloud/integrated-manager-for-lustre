@@ -2,6 +2,7 @@ from time import sleep
 
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import ElementNotVisibleException
 from testconfig import config
 
 from tests.selenium.base_view import BaseView
@@ -72,7 +73,16 @@ class Navigation(BaseView):
             self.click(self.links['Configure'])
 
         for page in args:
-            self.click(self.links[page])
+            try:
+                self.click(self.links[page])
+            except ElementNotVisibleException as e:
+                prev = args.index(page) - 1
+                if prev >= 0 and args[prev] == 'Configure':
+                    self.click(self.links[args[prev]])
+                    self.click(self.links[page])
+                else:
+                    raise e
+
         self._reset_ui()
 
     def click(self, selector):

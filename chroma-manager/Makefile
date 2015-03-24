@@ -62,7 +62,7 @@ version:
 	echo 'BUILD = "$(BUILD_NUMBER)"' >> scm_version.py
 	echo 'IS_RELEASE = $(IS_RELEASE)' >> scm_version.py
 
-develop: version realtime.stamp
+develop: version realtime.stamp view-server.stamp
 	$(MAKE) -C ../chroma-agent develop
 	$(MAKE) -C ../cluster-sim develop
 	python setup.py develop
@@ -86,13 +86,19 @@ realtime.stamp: realtime/ziplock.json ziplocker.stamp $(NPM)
 	../ui-modules/node/ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../chroma-externals/'
 	touch $@
 
-gulp-build.stamp: chroma_ui_new/gulp/ziplock.json realtime.stamp ziplocker.stamp $(NPM)
+view-server.stamp: ui-modules/node/view-server/ziplock.json ziplocker.stamp $(NPM)
+	@echo "Setting up view-server module"; \
+	cd ui-modules/node/view-server && \
+	../ziplocker/bin/zip-install$(ZIP_TYPE) --overrides.ziplockDir='../../../../chroma-externals/'
+	touch $@
+
+gulp-build.stamp: chroma_ui_new/gulp/ziplock.json realtime.stamp view-server.stamp ziplocker.stamp $(NPM)
 	@echo "Setting up gulp"; \
 	cd chroma_ui_new/gulp && \
 	../../ui-modules/node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../chroma-externals/'
 	touch $@
 
-gui.stamp: $(call find, chroma_ui_new/source, *) chroma_ui_new/base.html chroma_ui_new/gulp-src-globs.json gulp-build.stamp realtime.stamp ziplocker.stamp $(NPM)
+gui.stamp: $(call find, chroma_ui_new/source, *) chroma_ui_new/index.html chroma_ui_new/gulp-src-globs.json gulp-build.stamp realtime.stamp view-server.stamp ziplocker.stamp $(NPM)
 	@echo "Building GUI for deployment"; \
 	cd chroma_ui_new/gulp && \
 	npm run build

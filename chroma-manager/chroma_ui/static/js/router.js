@@ -46,7 +46,7 @@ var RouteUtils = function() {
       "filesystem": "/configure/filesystem/list/",
       "host": "/configure/server/",
       "volume": "/configure/volume/",
-      "user": "/configure/user",
+      "user": "/configure/user/",
       "storage_resource": "/configure/storage/"
     };
 
@@ -90,6 +90,35 @@ var RouteUtils = function() {
   }
 }();
 
+  var routes = {
+    'configure/filesystem/detail/:id/': 'filesystemDetail',
+    'configure/filesystem/list/': 'filesystemList',
+    'configure/filesystem/create/': 'filesystemCreate',
+    'configure/:tab/': 'configure',
+    'configure/': 'configureIndex',
+    'command/:id/': 'command_detail',
+    'target/:id/': 'target_detail',
+    'user/:id/': 'user_detail',
+    'storage_resource/:id/': 'storage_resource_detail',
+    'job/:id/': 'job_detail',
+    'alert/': 'alert',
+    'event/': 'event',
+    'log/around-:aroundDatetime/': 'log',
+    'log/': 'log',
+    'status/': 'status',
+    'system_status/': 'system_status'
+  };
+
+  routes = Object.keys(routes).reduce(function (newRoutes, route) {
+    'use strict';
+
+    newRoutes[route] = newRoutes[route.slice(0, -1)] = routes[route];
+
+    return newRoutes;
+  }, {});
+
+
+
 /* FIXME: if router callbacks throw an exception when called
  * as a result of Backbone.history.navigate({trigger:true}),
  * the exception isn't visible at the console, and the URL
@@ -97,25 +126,7 @@ var RouteUtils = function() {
  * backbone bug?  Should we override History to fix this?
  */
 var ChromaRouter = Backbone.Router.extend({
-  routes: {
-    "configure/filesystem/detail/:id/": "filesystemDetail",
-    "configure/filesystem/list/": "filesystemList",
-    "configure/filesystem/create/": "filesystemCreate",
-    "configure/:tab/": "configure",
-    "configure/": "configureIndex",
-    "command/:id/": 'command_detail',
-    "target/:id/": 'target_detail',
-    "user/:id/": 'user_detail',
-    "storage_resource/:id/": 'storage_resource_detail',
-    "job/:id/": 'job_detail',
-    "alert/": "alert",
-    "event/": "event",
-    "log/around-:aroundDatetime/": "log",
-    "log/": "log",
-    "about/": "about",
-    "status/": "status",
-    "system_status/": "system_status"
-  },
+  routes: routes,
   conf_param_dialog: null,
   object_detail: function(id, model_class, view_class, title_attr, overridePropertiesFunc)
   {
@@ -206,9 +217,6 @@ var ChromaRouter = Backbone.Router.extend({
   {
     this.toplevel('log', aroundDatetime);
   },
-  about:function () {
-    this.toplevel('about');
-  },
   status: function () {
     this.toplevel('status');
   },
@@ -253,10 +261,14 @@ var ChromaRouter = Backbone.Router.extend({
       LogView.draw(aroundDatetime);
     }
   },
-  configureTab: function(tab)
-  {
+  configureTab: function (tab) {
     this.toplevel('configure');
-    $("#tabs").tabs('select', '#' + tab + "-tab");
+    var nextTab = $('#' + tab + '-tab');
+
+    $('#toplevel-configure')
+      .children('div[id$=tab]').not(nextTab).hide();
+
+    nextTab.show();
   },
   configure: function(tab) {
     if ( this.failed_filesystem_admin_check() )
@@ -274,6 +286,23 @@ var ChromaRouter = Backbone.Router.extend({
       StorageView.draw()
     } else if (tab == 'mgt') {
       MgtView.draw()
+    } else if (tab === 'power') {
+      // NOTE: This is only being done because of the Angular in Backbone paradigm.
+      var powerTab = angular.element('#power-tab');
+      var powerTabContents = powerTab.contents();
+      var $scope = angular.element('html').scope().$new();
+      var $compile = $('html').injector().get('$compile');
+
+      $scope.$apply(function () {
+        if (powerTabContents.length > 0) {
+          powerTabContents.scope().$destroy();
+        }
+
+        var link = $compile('<div ng-include="(( config.asStatic(\'partials/power_control.html\') ))"></div>');
+
+        powerTab.html(link($scope));
+
+      });
     }
   },
   filesystemPage: function(page) {

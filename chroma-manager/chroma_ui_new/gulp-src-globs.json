@@ -39,8 +39,8 @@
     "images": "source/chroma_ui/**/*.{png,ico}"
   },
   "templates": {
-    "django": {
-      "base": "base.html"
+    "server": {
+      "index": "index.html"
     },
     "angular": {
       "source": [

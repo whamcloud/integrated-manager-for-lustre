@@ -43,7 +43,7 @@
       <ul class="nav navbar-nav navbar-right">
         <li ng-controller="CommandMonitorCtrl" ng-include="'iml/command/assets/html/command-monitor.html'"></li>
         <li>
-          <a route-to="about/" target="_self">{{ app.RUNTIME_VERSION }}</a>
+          <a route-to="about/">{{ app.RUNTIME_VERSION }}</a>
         </li>
         <li ng-if="app.loggedIn">
           <a id="account" route-to="user/{{app.user.id}}/" target="_self">{{ app.user.username }}</a>
@@ -62,7 +62,7 @@
       <small>
         Intel&reg; Manager for Lustre* software {{ app.RUNTIME_VERSION }} is
         Copyright &copy; {{ app.COPYRIGHT_YEAR }} Intel Corporation. All rights reserved.
-        <a href="/ui/about/" class='navigation' target="_self">About Intel&reg; Manager for Lustre* software</a>
+        <a route-to="about/" class="navigation">About Intel&reg; Manager for Lustre* software</a>
         <a id="system-status" href="/ui/system_status/" restrict-to="{{ app.GROUPS.FS_ADMINS }}" target="_self">System Status</a>
       </small>
     </div>

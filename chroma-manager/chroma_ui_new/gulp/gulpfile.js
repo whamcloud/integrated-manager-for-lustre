@@ -54,7 +54,7 @@ gulp.task('default', ['static', 'clean-static'], function buildApp () {
     .pipe(gulpIf(isProduction, csso()))
     .pipe(gulp.dest('static/chroma_ui/styles', { cwd: '../../chroma_ui' }));
 
-  return gulp.src(files.templates.django.base, { cwd: '../' })
+  return gulp.src(files.templates.server.index, { cwd: '../' })
     .pipe(plumber())
     .pipe(injector(lessFile))
     .pipe(injector(scripts))
@@ -73,7 +73,7 @@ gulp.task('watch', ['default'], function watcher () {
     .concat(files.assets.fonts)
     .concat(files.assets.images)
     .concat(files.templates.angular.source)
-    .concat(files.templates.django.base);
+    .concat(files.templates.server.index);
 
   gulp.watch(sourceFiles, { cwd: '../' }, ['default']);
 });

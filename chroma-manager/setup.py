@@ -83,7 +83,14 @@ setup(
             "resources/*.js",
             "routes/*.js",
             "*.js"
-        ] + [sub(r'^realtime/', '', x) for x in findall('realtime/node_modules')]
+        ] + [sub(r'^realtime/', '', x) for x in findall('realtime/node_modules')],
+        'ui-modules': [
+            "node/view-server/*.js",
+            "node/view-server/lib/*.js",
+            "node/view-server/middleware/*.js",
+            "node/view-server/routes/*.js",
+            "node/view-server/package.json",
+        ] + [sub(r'^ui-modules/', '', x) for x in findall('ui-modules/node/view-server/node_modules')]
     },
     scripts = ["chroma-host-discover"],
     entry_points = {

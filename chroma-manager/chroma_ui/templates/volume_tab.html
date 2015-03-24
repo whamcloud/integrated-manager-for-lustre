@@ -24,8 +24,8 @@
      * Acts as the constructor for this code.
      */
     function init () {
+      var stopped = true;
       var open = false;
-      var volumePageRegexp = /configure\/volume/;
       $volumeErrorDialog = $('#volume_error_dialog');
       $applyButton = $('#btnApplyConfig').button({
         disabled: true
@@ -190,12 +190,6 @@
         }
       });
 
-      fetchVolumes()
-        .then(function populateTable (volumes) {
-          volumeDataTable.fnAddData(volumes);
-        })
-        .then(pollAndUpdate);
-
       function pollAndUpdate() {
         waitTenSeconds()
           .then(skipIfNeeded)
@@ -256,7 +250,10 @@
             if (staleVolumes.length || updatedVolumes.length || newVolumes.length)
               volumeDataTable.fnDraw(true);
           })
-          .always(pollAndUpdate);
+          .always(function turn () {
+            if (!stopped)
+              pollAndUpdate();
+          });
       }
 
       /**
@@ -359,14 +356,12 @@
 
       /**
        * Flow control to skip updating
-       * if we are not on the volume page, or a volume select is open.
+       * if a volume select is open.
        * @returns {Object} A promise.
        */
       function skipIfNeeded () {
         var deferred = $.Deferred();
-        var notOnVolumePage = volumePageRegexp.exec(Backbone.history.fragment) === null;
-
-        if (open === true || notOnVolumePage)
+        if (open === true)
           deferred.reject();
         else
           deferred.resolve();
@@ -552,6 +547,20 @@
 
       volumeDataTable.on('close', 'select', function onClose () {
         open = false;
+      });
+
+      Backbone.history.on('route', function (ev, name, params) {
+        if (name === 'configure' && params[0] === 'volume') {
+          stopped = false;
+          fetchVolumes()
+            .then(function populateTable (volumes) {
+              volumeDataTable.fnAddData(volumes);
+            })
+            .then(pollAndUpdate);
+        } else {
+          volumeDataTable.fnClearTable();
+          stopped = true;
+        }
       });
     }
 

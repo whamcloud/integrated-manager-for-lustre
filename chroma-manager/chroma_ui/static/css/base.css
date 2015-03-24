@@ -600,22 +600,6 @@ footer .row .span12 {
   bottom: 0;
 }
 
-div.about_box {
-    width: 600px;
-    margin: 12px auto 0 auto;
-    background-color: white;
-    border-radius: 6px;
-    padding: 12px;
-    box-shadow: gray 3px 3px 6px;
-}
-
-div.about_box_logo {
-    background-image: url(../images/intel-logo-blue-trans-160x62.png);
-    width: 160px;
-    height: 62px;
-    margin: 12px auto 12px auto;
-}
-
 .contextual_help_icon {
 	margin: 0.75em 0 0.75em 0.75em;
 	float: left;
