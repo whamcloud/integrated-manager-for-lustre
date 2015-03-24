@@ -15,3 +15,4 @@ chroma_ui_new
 gulp
 fp
 socket-worker
+req
