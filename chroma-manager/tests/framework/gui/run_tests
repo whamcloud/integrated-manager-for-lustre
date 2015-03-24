@@ -44,6 +44,11 @@ cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/stub-daddy
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/stub-daddy-client
 ./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=stub-daddy-client-results
 
+# Run dirp tests
+cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/dirp
+JASMINE_CONFIG_PATH=jasmine.json NODE_ENV=CI ./node_modules/.bin/jasmine
+mv dirp-results.xml \$HOME/test_reports/dirp-results.xml
+
 # Run router tests
 cd \$HOME/chroma_test_env/chroma/chroma-manager/ui-modules/node/router
 ./node_modules/.bin/mjnw --reportType=junit --JUnitReportSavePath=\$HOME/test_reports/ --JUnitReportFilePrefix=router-results
@@ -90,7 +95,7 @@ CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env no
 CLUSTER_DATA=tests/selenium/test_data.json PATH=\$PATH:\$HOME/chroma_test_env nosetests --verbosity=2 --with-xunit --xunit-file=\$HOME/test_reports/selenium-test-results-firefox.xml --tc-format=json --tc-file=\$HOME/cluster_config.json --tc=browser:Firefox tests/selenium/ || true
 EOC
 
-NUM_EXPECTED_TEST_REPORTS=40
+NUM_EXPECTED_TEST_REPORTS=41
 NUM_TEST_REPORTS=$(ssh chromatest@$TEST_RUNNER 'ls -l test_reports' | grep -v "^total " | wc -l)
 if [ $NUM_TEST_REPORTS -ne $NUM_EXPECTED_TEST_REPORTS ]; then
     echo "Incorrect number of test reports. Possible sources include a catastrophic error running one of the test suites, or adding a new test set that causes there to be an new xml file. Expected $NUM_EXPECTED_TEST_REPORTS, but found $NUM_TEST_REPORTS."

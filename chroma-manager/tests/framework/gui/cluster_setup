@@ -90,6 +90,8 @@ cd ../stub-daddy/
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../stub-daddy-client/
 ../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
+cd ../dirp/
+../ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../../isomorphic/fp/
 ../../node/ziplocker/bin/zip-install-dev --overrides.ziplockDir='../../../../chroma-externals/'
 cd ../../../realtime/

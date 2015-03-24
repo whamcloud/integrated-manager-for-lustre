@@ -7,6 +7,7 @@ router
 srcmap-reverse
 stub-daddy
 stub-daddy-client
+dirp
 realtime
 chroma_ui
 chroma_ui_new
