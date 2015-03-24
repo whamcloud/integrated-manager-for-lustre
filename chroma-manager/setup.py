@@ -55,8 +55,6 @@ setup(
                       "static/js/filters/*.js", "static/js/interceptors/*.js",
                       "static/js/models/*.js",
                       "static/js/modules/exception/assets/css/*.css", "static/js/modules/exception/*.js",
-                      "static/js/modules/configure-lnet/*.js", "static/js/modules/configure-lnet/assets/css/*.css",
-                      "static/js/modules/configure-lnet/assets/html/*.html",
                       "static/js/responsive/*.js",
                       "static/js/services/*.js",
                       "static/partials/*.html", "static/partials/dialogs/*.html",
