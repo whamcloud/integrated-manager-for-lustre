@@ -33,7 +33,7 @@ describe('resolve from fs', function () {
 
     beforeEach(function () {
       filePath = 'file://foo/bar';
-      promise = resolveFromFs(filePath);
+      promise = resolveFromFs(filePath, '/bar/bat');
     });
 
     it('should read the package.json', function () {
@@ -44,7 +44,8 @@ describe('resolve from fs', function () {
       return promise.then(function assertResponse (responseObject) {
         expect(responseObject).toEqual({
           response : {},
-          value : 'file://foo/bar'
+          value : 'file://foo/bar',
+          newPath : '/bar/bat/foo/bar'
         });
       });
     });

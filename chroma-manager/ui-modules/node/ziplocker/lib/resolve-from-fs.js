@@ -9,14 +9,18 @@
  * @returns {Function}
  */
 exports.wiretree = function resolveFromFsModule (fsThen, path, process, config) {
-  return function resolveFromFs (filePath) {
+  return function resolveFromFs (filePath, currentPath) {
     var partialPath = filePath.replace(config.FILE_TOKEN, '');
-    return fsThen.readFile(path.resolve(process.cwd(), partialPath, 'package.json'), 'utf8')
+    var newPath = path.resolve(currentPath, partialPath);
+    var newFilePath = config.FILE_TOKEN + path.relative(process.cwd(), newPath);
+
+    return fsThen.readFile(path.join(newPath, 'package.json'), 'utf8')
       .then(JSON.parse)
       .then(function buildResponseObject (packageJson) {
         return {
           response: packageJson,
-          value: filePath
+          value: newFilePath,
+          newPath: newPath
         };
       });
   };

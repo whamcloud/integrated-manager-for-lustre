@@ -28,7 +28,7 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
   return function getTree () {
     root = {};
 
-    return buildTree(packageJson, root, '', true);
+    return buildTree(packageJson, root, '', process.cwd(), true);
   };
 
   /**
@@ -36,12 +36,13 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
    * @param {Object} packageJson package.json type data describing the dependencies.
    * @param {Object} tree The tree or branch of the tree being built.
    * @param {String} path The computed path.
+   * @param {String} currentPath The current path.
    * @param {Boolean} [useDevDependencies] Should devDependencies be spidered?
    * @returns {Promise}
    */
-  function buildTree (packageJson, tree, path, useDevDependencies) {
+  function buildTree (packageJson, tree, path, currentPath, useDevDependencies) {
     var devDepsPromise = (useDevDependencies ?
-      buildDependencies(config.DEP_TYPES.DEV, packageJson, tree, path) :
+      buildDependencies(config.DEP_TYPES.DEV, packageJson, tree, path, currentPath) :
       Promise.resolve());
 
     var optionalDeps = packageJson[config.DEP_TYPES.OPTIONAL];
@@ -55,8 +56,8 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
       });
 
     return Promise.all([
-      buildDependencies(config.DEP_TYPES.DEPS, packageJson, tree, path),
-      buildDependencies(config.DEP_TYPES.OPTIONAL, packageJson, tree, path),
+      buildDependencies(config.DEP_TYPES.DEPS, packageJson, tree, path, currentPath),
+      buildDependencies(config.DEP_TYPES.OPTIONAL, packageJson, tree, path, currentPath),
       devDepsPromise
     ])
       .then(function returnTree () {
@@ -72,7 +73,7 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
    * @param {String} path The computed path.
    * @returns {Promise}
    */
-  function buildDependencies (type, packageJson, tree, path) {
+  function buildDependencies (type, packageJson, tree, path, currentPath) {
     if (!packageJson[type])
       return Promise.resolve();
 
@@ -100,7 +101,7 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
 
         var resolveModule;
         if (dependencyValue.indexOf(config.FILE_TOKEN) !== -1)
-          resolveModule = resolveFromFs(dependencyValue);
+          resolveModule = resolveFromFs(dependencyValue, currentPath);
         else if (semver.validRange(dependencyValue))
           resolveModule = resolveFromRegistry(dependency, dependencyValue);
         else if (config.tarGzRegexp.test(dependencyValue))
@@ -109,6 +110,9 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
           resolveModule = resolveFromGithub(dependencyValue);
 
         return resolveModule.then(function buildTreeComponent (obj) {
+          var newPath = obj.newPath || currentPath;
+          delete obj.newPath;
+
           if (!tree[type])
             tree[type] = {};
 
@@ -116,7 +120,7 @@ exports.wiretree = function getDependencyTreeModule (packageJson, Promise, log, 
 
           log.write('resolved', log.green(type), dependency, 'to', obj.value);
 
-          return buildTree(obj.response, tree[type][dependency], path + dependency);
+          return buildTree(obj.response, tree[type][dependency], path + dependency, newPath);
         });
       });
 
