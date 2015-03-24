@@ -1,0 +1,11 @@
+{
+  "name": "through",
+  "version": "1.0.0",
+  "description": "A collection of through modules for highland",
+  "main": "index.js",
+  "author": "IML Team",
+  "license": "MIT",
+  "dependencies": {
+    "lodash-mixins": "file://../../isomorphic/lodash-mixins"
+  }
+}
