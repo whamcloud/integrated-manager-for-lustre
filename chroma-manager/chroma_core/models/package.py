@@ -20,11 +20,11 @@
 # express and approved by Intel in writing.
 
 
-from collections import namedtuple
-from chroma_core.services import log_register
-
 from django.db import models
 from django.db.models import CharField, ForeignKey, IntegerField
+
+from chroma_core.services import log_register
+from chroma_core.chroma_common.lib.package_version_info import VersionInfo
 
 log = log_register('package_update')
 
@@ -79,27 +79,6 @@ class PackageAvailability(models.Model):
     host = ForeignKey('ManagedHost')
 
 
-class VersionInfoList(list):
-    """
-    Wrap a list of tuples to allow iterating over it as if it's a
-    list of VersionInfos
-    """
-    def __iter__(self):
-        for t in super(VersionInfoList, self).__iter__():
-            yield VersionInfo(*t)
-
-    def __getitem__(self, item):
-        return VersionInfo(super(VersionInfoList, self).__getitem__(item))
-
-
-class VersionInfo(namedtuple('BaseVersionInfo', ['epoch', 'version', 'release', 'arch'])):
-    """
-    Wrap tuples of version information to avoid hardcoding tuple manipulation
-    """
-    def __cmp__(self, other):
-        return rpm.labelCompare((self.epoch, self.version, self.release), (other.epoch, other.version, other.release))
-
-
 def update(host, package_report):
     """
     Update the Package, PackageVersion, PackageInstallation and PackageAvailability models
@@ -129,10 +108,13 @@ def update(host, package_report):
 
         return False
 
+    def _version_info_list(package_data):
+        return [VersionInfo(*package) for package in package_data]
+
     repo_names = set(host.server_profile.bundles.values_list('bundle_name', flat=True))
     for repo_name in repo_names.intersection(package_report):
         for package_name, package_data in package_report[repo_name].items():
-            for version_info in VersionInfoList(package_data['installed']):
+            for version_info in _version_info_list(package_data['installed']):
                 package, created = Package.objects.get_or_create(name=package_name)
                 package_version, created = PackageVersion.objects.get_or_create(
                     package=package, epoch=version_info.epoch, version=version_info.version,
@@ -142,7 +124,7 @@ def update(host, package_report):
                     host=host)
                 installed_ids.append(installed_package.id)
 
-            for version_info in VersionInfoList(package_data['available']):
+            for version_info in _version_info_list(package_data['available']):
                 package, created = Package.objects.get_or_create(name=package_name)
                 package_version, created = PackageVersion.objects.get_or_create(
                     package=package, epoch=version_info.epoch, version=version_info.version,
@@ -153,8 +135,8 @@ def update(host, package_report):
                 available_ids.append(available_package.id)
 
             # Are there any installed packages from this bundle with updates available?
-            updates = updates or _updates_available(VersionInfoList(
-                package_data['installed']), VersionInfoList(package_data['available']))
+            updates = updates or _updates_available(_version_info_list(
+                package_data['installed']), _version_info_list(package_data['available']))
 
     # Remove any old package records
     PackageInstallation.objects.exclude(id__in=installed_ids).filter(host=host).delete()
