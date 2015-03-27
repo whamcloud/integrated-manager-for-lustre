@@ -23,7 +23,7 @@ cleanup() {
     set +e
     if $got_aborted; then
         tmpfile=/tmp/abort.$$.debug
-        exec 2>/tmp/tmpfile
+        exec 2>$tmpfile
     fi
     python chroma/chroma-manager/tests/integration/utils/chroma_log_collector.py $WORKSPACE/test_logs shared_storage_configuration_cluster_cfg.json | tee $WORKSPACE/log_collector_out 2>&1 || true
     # look for known failures in the logs
@@ -40,7 +40,10 @@ cleanup() {
     if grep "Could not match packages: Cannot retrieve repository metadata (repomd.xml) for repository: lustre-client. Please verify its path and try again" $WORKSPACE/test_logs/*-chroma_test.log; then
         echo "bug: HYD-2948"
     fi
-    sed -e 's/provision": *true/provision": false/' < provisioner_output.json | $PROVISIONER || true
+    if !  sed -e 's/provision": *true/provision": false/' < provisioner_output.json | $PROVISIONER; then
+        rc=$?
+        echo "unprovisioning failed" >&2
+    fi
     echo "exit trap done"
     if [ -n "$tmpfile" -a -e "$tmpfile" ]; then
         cat $tmpfile | mail -s "job aborted" brian.murrell@intel.com
