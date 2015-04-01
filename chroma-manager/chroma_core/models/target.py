@@ -37,6 +37,8 @@ from chroma_core.models.utils import DeletableMetaclass, DeletableDowncastableMe
 from chroma_help.help import help_text
 from chroma_core.chroma_common.blockdevices.blockdevice import BlockDevice
 from chroma_core.chroma_common.filesystems.filesystem import FileSystem
+from chroma_core.chroma_common.lib import util
+
 import settings
 
 
@@ -330,6 +332,32 @@ class ManagedTarget(StatefulObject):
     def target_type(self):
         raise "Unimplemented method 'target_type'"
 
+    @classmethod
+    def managed_target_of_type(cls, target_type):
+        '''
+        :param target_type:  is a string describing the target required, generally ost, mdt or mgt
+        :return: Returns a klass of the type required by looking through the subclasses
+        '''
+        try:
+            # Hack I need to work out with Joe.
+            if target_type == 'mgt':
+                target_type = 'mgs'
+
+            target_type = target_type.lower()
+
+            subtype = next(klass for klass in util.all_subclasses(ManagedTarget) if target_type == klass().target_type())
+
+            return subtype
+        except StopIteration:
+            raise NotImplementedError("ManagedTarget %s unknown" % target_type)
+
+    @property
+    def filesystem_member(self):
+        '''
+        :return: True if the TargetType is a file system member, generally OST or MDT.
+        '''
+        return issubclass(type(self), FilesystemMember)
+
     def mkfs_override_options(self, filesystemtype, mkfs_options):
         """ Allows a ManagedTarget to modify the mkfs_options as required.
         :return: A list of additional options for mkfs as in those things that appear after --mkfsoptions
@@ -348,7 +376,7 @@ class ManagedOst(ManagedTarget, FilesystemMember, MeasuredEntity):
             return []
         else:
             available_states = super(ManagedOst, self).get_available_states(begin_state)
-            available_states = list(set(available_states) ^ set(['forgotten']))
+            available_states = list(set(available_states) - set(['forgotten']))
             return available_states
 
     def target_type(self):
@@ -376,7 +404,9 @@ class ManagedMdt(ManagedTarget, FilesystemMember, MeasuredEntity):
             return []
         else:
             available_states = super(ManagedMdt, self).get_available_states(begin_state)
-            available_states = list(set(available_states) - set(['removed', 'forgotten']))
+            available_states = list(set(available_states) - set(['forgotten']))
+            if self.index == 0:
+                available_states = list(set(available_states) - set(['removed', 'forgotten']))
 
             return available_states
 
@@ -527,6 +557,7 @@ class RemoveConfiguredTargetJob(StateChangeJob):
     @classmethod
     def long_description(cls, stateful_object):
         return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
+                                                    ManagedMdt: help_text["remove_mdt"],
                                                     ManagedMgs: help_text["remove_mgt"]})
 
     def get_requires_confirmation(self):
@@ -587,6 +618,7 @@ class RemoveTargetJob(StateChangeJob):
     @classmethod
     def long_description(cls, stateful_object):
         return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
+                                                    ManagedMdt: help_text["remove_mdt"],
                                                     ManagedMgs: help_text["remove_mgt"]})
 
     def description(self):
@@ -618,6 +650,7 @@ class ForgetTargetJob(StateChangeJob):
     @classmethod
     def long_description(cls, stateful_object):
         return select_description(stateful_object, {ManagedOst: help_text["remove_ost"],
+                                                    ManagedMdt: help_text["remove_mdt"],
                                                     ManagedMgs: help_text["remove_mgt"]})
 
     def description(self):

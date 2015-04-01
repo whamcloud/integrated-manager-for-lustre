@@ -939,14 +939,19 @@ class JobScheduler(object):
 
     @classmethod
     def order_targets(cls, targets_data):
-        "Return sorted sequence of target_data dicts, such that sequential OSTs will be distributed across hosts."
+        "Return sorted sequence of target_data dicts, such that sequential MDTs/OSTs will be distributed across hosts."
         volumes_ids = map(operator.itemgetter('volume_id'), targets_data)
         host_ids = dict(VolumeNode.objects.filter(volume_id__in=volumes_ids, primary=True).values_list('volume_id', 'host_id'))
         key = lambda td: host_ids[int(td['volume_id'])]
         for host_id, target_group in itertools.groupby(sorted(targets_data, key=key), key=key):
             for index, target_data in enumerate(target_group):
                 target_data['index'] = index
-        return sorted(targets_data, key=operator.itemgetter('index'))
+
+        sorted_list = sorted(targets_data, key=operator.itemgetter('index'))
+
+        # Finally an MDT entry is marked as root in the rest API to signify that this should be MDT0 so
+        # if we have an entry with 'root'=true then move it to the front of the list before returning the result
+        return sorted(sorted_list, key=lambda entry: entry.get('root', False), reverse=True)
 
     def create_client_mount(self, host_id, filesystem_id, mountpoint):
         # RPC-callable
@@ -1067,10 +1072,14 @@ class JobScheduler(object):
 
                 chroma_core.lib.conf_param.set_conf_params(fs, fs_data['conf_params'])
 
-                mdt_data = fs_data['mdt']
-                mdt, mdt_mounts = ManagedMdt.create_for_volume(mdt_data['volume_id'], reformat=mdt_data.get('reformat', False), filesystem = fs, **_target_kwargs(mdt_data))
-                mounts.extend(mdt_mounts)
-                chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
+                mdts = []
+                for mdt_data in self.order_targets(fs_data['mdts']):
+                    mdt, mdt_mounts = ManagedMdt.create_for_volume(mdt_data['volume_id'],
+                                                                   reformat=mdt_data.get('reformat', False),
+                                                                   filesystem = fs, **_target_kwargs(mdt_data))
+                    mdts.append(mdt)
+                    mounts.extend(mdt_mounts)
+                    chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data['conf_params'])
 
                 osts = []
                 for ost_data in self.order_targets(fs_data['osts']):
@@ -1085,7 +1094,8 @@ class JobScheduler(object):
             ObjectCache.add(ManagedFilesystem, fs)
             for ost in osts:
                 ObjectCache.add(ManagedTarget, ost.managedtarget_ptr)
-            ObjectCache.add(ManagedTarget, mdt.managedtarget_ptr)
+            for mdt in mdts:
+                ObjectCache.add(ManagedTarget, mdt.managedtarget_ptr)
             for mount in mounts:
                 ObjectCache.add(ManagedTargetMount, mount)
 
@@ -1106,7 +1116,7 @@ class JobScheduler(object):
         with self._lock:
             for target_data in self.order_targets(targets_data):
                 target_class = ContentType.objects.get_by_natural_key(*(target_data['content_type'])).model_class()
-                if target_class == ManagedOst:
+                if target_class().filesystem_member:
                     fs = ManagedFilesystem.objects.get(id=target_data['filesystem_id'])
                     create_kwargs = {'filesystem': fs}
                 elif target_class == ManagedMgs:

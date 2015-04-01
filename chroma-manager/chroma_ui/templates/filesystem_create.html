@@ -95,27 +95,27 @@
               }
 
               var mdt_advanced_errors = false;
-              if (errors.mdt.inode_size) {
+              if (errors.mdts.inode_size) {
                   mdt_advanced_errors = true;
-                  _.each(errors.mdt.inode_size, function(message) {
+                  _.each(errors.mdts.inode_size, function(message) {
                       ValidatedForm.add_error($('input#inode_size'), message);
                   });
-                  delete errors.mdt.inode_size;
+                  delete errors.mdts.inode_size;
               }
-              if (errors.mdt.bytes_per_inode) {
+              if (errors.mdts.bytes_per_inode) {
                   mdt_advanced_errors = true;
                   _.each(errors.mdt.bytes_per_inode, function(message) {
                       ValidatedForm.add_error($('input#bytes_per_inode'), message);
                   });
-                  delete errors.mdt.bytes_per_inode;
+                  delete errors.mdts.bytes_per_inode;
               }
 
               if (mdt_advanced_errors) {
                   set_mdt_advanced_visible(true);
               }
 
-              if (_.size(errors.mdt) == 0) {
-                  delete errors.mdt;
+              if (_.size(errors.mdts) == 0) {
+                  delete errors.mdts;
               }
 
               errors.osts = _.reject(errors.osts, function(ost_errors){return _.size(ost_errors) == 0;});

@@ -278,7 +278,7 @@ class ApiTestCase(UtilityTestCase):
                 for step in job_steps:
                     print step
 
-    def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True):
+    def wait_for_command(self, chroma_manager, command_id, timeout=TEST_TIMEOUT, verify_successful=True, test_for_eventual_completion=True):
         logger.debug("wait_for_command: %s" % self.get_json_by_uri('/api/command/%s/' % command_id))
         # TODO: More elegant timeout?
         running_time = 0
@@ -292,6 +292,14 @@ class ApiTestCase(UtilityTestCase):
 
         if running_time >= timeout:
             self._print_command(command, "TIMED OUT")
+
+            # Now wait again to see if the command eventually succeeds. The test will still fail but we get some idea
+            # if we just aren't waiting long enough of if there is an issue.
+            if test_for_eventual_completion:
+                retry_time = time.time()
+                # If it fails the second time this will throw an exception and never return.
+                self._print_command(self.wait_for_command(chroma_manager, command_id, timeout=timeout, verify_successful=verify_successful, test_for_eventual_completion=False),
+                                    "COMPLETED %s SECONDS AFTER TIMEOUT" % int(time.time() - retry_time))
         else:
             logger.debug("command complete: %s" % self.get_json_by_uri('/api/command/%s/' % command_id))
 

@@ -38,7 +38,7 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
                 )
                 self.assertTrue(response.successful, response.text)
                 host_create_command_ids.append(response.json['command']['id'])
-            self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=1200)
+            self.wait_for_commands(self.chroma_manager, host_create_command_ids, timeout=1800)
             new_hosts = self.get_hosts(addresses)
             self.assertEqual(len(new_hosts), len(addresses), "Hosts found: '%s'" % new_hosts)
             self.remote_operations.sync_disks(new_hosts)
@@ -76,11 +76,11 @@ class TestCreateFilesystem(ChromaIntegrationTestCase):
         filesystem_id = self.create_filesystem({
             'name': self.fs_name,
             'mgt': {'volume_id': mgt_volume['id']},
-            'mdt': {
+            'mdts': [{
                 'volume_id': mdt_volume['id'],
                 'conf_params': {}
 
-            },
+            }],
             'osts': [{
                 'volume_id': ost_volume['id'],
                 'conf_params': {}

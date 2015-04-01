@@ -389,10 +389,10 @@ class FilesystemSizeLimit(Benchmark):
                                                  data=json.dumps({
                                                      'name': 'testfs',
                                                      'mgt': {'volume_id': serial_to_id[serials[0]]},
-                                                     'mdt': {
+                                                     'mdts': [{
                                                          'volume_id': serial_to_id[serials[1]],
                                                          'conf_params': {}
-                                                     },
+                                                     }],
                                                      'osts': [
                                                          {
                                                              'volume_id': v_id,

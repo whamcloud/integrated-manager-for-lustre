@@ -31,7 +31,13 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         self.mdts = self.get_targets_by_kind('MDT')
         self.assertTrue(1, len(self.mdts))
-        self.mdt = self.mdts[0]
+
+        # If we have a combined mdt/mgt then find it and set mdt to it.
+        self.combined_mgt_mdt = None
+        for mdt in self.mdts:
+            if self.mgt['primary_server'] == mdt['primary_server'] and self.mgt['mount_path'] == mdt['mount_path']:
+                self.combined_mgt_mdt = mdt
+                break
 
         self.osts = self.get_targets_by_kind('OST')
         self.assertGreaterEqual(len(self.osts), 1)
@@ -122,18 +128,12 @@ class CreateLustreFilesystem(UtilityTestCase):
             logger.info("%s command %s output:\n %s" % (debug_message, command, result.stdout))
 
     def create_lustre_filesystem_for_test(self):
-        combined_mgt_mdt = self.mgt['primary_server'] == self.mdt['primary_server'] and self.mgt['mount_path'] == self.mdt['mount_path']
-
-        if not combined_mgt_mdt:
-            # TODO: Create the separate MDT
-            raise RuntimeError("Separate MGT and MDT configuration not implemented yet.")
-
         self.configure_target_device(self.mgt,
                                      'mgt',
                                      self.fsname,
                                      None,
                                      ['--reformat',
-                                      '--mdt' if combined_mgt_mdt else '',
+                                      '--mdt' if self.combined_mgt_mdt else '',
                                       '--mgs'])
 
         try:
@@ -144,6 +144,14 @@ class CreateLustreFilesystem(UtilityTestCase):
         except:
             raise RuntimeError("Could not get 'ip_address' for %s" %
                                self.mgt['primary_server'])
+
+        for index, mdt in enumerate(self.mdts):
+            if mdt != self.combined_mgt_mdt:
+                self.configure_target_device(mdt,
+                                             'mdt',
+                                             self.fsname,
+                                             mgs_nids,
+                                             ['--reformat', '--mdt'])
 
         for ost in self.osts:
             self.configure_target_device(ost,

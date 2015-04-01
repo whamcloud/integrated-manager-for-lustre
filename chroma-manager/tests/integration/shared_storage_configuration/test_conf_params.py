@@ -30,11 +30,11 @@ class TestConfParams(ChromaIntegrationTestCase):
                 {
                 'name': 'testfs',
                 'mgt': {'volume_id': mgt_volume['id']},
-                'mdt': {
+                'mdts': [{
                     'volume_id': mdt_volume['id'],
                     'conf_params': {'lov.stripesize': '2097152'}
 
-                },
+                }],
                 'osts': [{
                     'volume_id': ost_volume['id'],
                     'conf_params': {'ost.writethrough_cache_enable': '0'}
@@ -101,15 +101,15 @@ class TestConfParams(ChromaIntegrationTestCase):
         self.assertGreaterEqual(len(ha_volumes), 4)
 
         mgt_volume = ha_volumes[0]
-        mdt_volume = ha_volumes[1]
+        mdt_volumes = [ha_volumes[1]]
         ost_volumes = [ha_volumes[2]]
         filesystem_id = self.create_filesystem({
                 'name': 'testfs',
                 'mgt': {'volume_id': mgt_volume['id']},
-                'mdt': {
-                    'volume_id': mdt_volume['id'],
+                'mdts': [{
+                    'volume_id': v['id'],
                     'conf_params': {}
-                },
+                } for v in mdt_volumes],
                 'osts': [{
                     'volume_id': v['id'],
                     'conf_params': {}

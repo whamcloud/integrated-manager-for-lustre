@@ -73,10 +73,10 @@ class TestVolumes(ChromaIntegrationTestCase):
             {
                 'name': 'testfs',
                 'mgt': {'volume_id': mgt_volume['id']},
-                'mdt': {
+                'mdts': [{
                     'volume_id': mdt_volume['id'],
                     'conf_params': {}
-                },
+                }],
                 'osts': [{
                     'volume_id': ost_volume['id'],
                     'conf_params': {}

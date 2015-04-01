@@ -62,3 +62,10 @@ class ExpiringList(MutableSequence):
 
     def insert(self, index, value):
         self._container.insert(index, ExpiringValue(value, time.time() + self.grace_period))
+
+
+def all_subclasses(klass):
+    '''
+    :return: All the subclasses of the class passed, scanning the inheritance tree recursively to find ALL the subclasses.
+    '''
+    return klass.__subclasses__() + [child for subclass in klass.__subclasses__() for child in all_subclasses(subclass)]

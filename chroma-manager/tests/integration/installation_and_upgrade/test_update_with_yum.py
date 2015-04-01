@@ -33,14 +33,19 @@ class TestYumUpdate(TestCreateFilesystem):
         self.set_volume_mounts(ost1_volume, self.hosts[2]['id'], self.hosts[3]['id'])
         self.set_volume_mounts(ost2_volume, self.hosts[3]['id'], self.hosts[2]['id'])
 
+        # By providing mdts and mdt we can cope with 2.2 and 2.3. 2.2 required a single mdt, 2.3 required mdts.
         self.filesystem_id = self.create_filesystem({
             'name': self.fs_name,
             'mgt': {'volume_id': mgt_volume['id']},
             'mdt': {
                 'volume_id': mdt_volume['id'],
                 'conf_params': {}
-
             },
+            'mdts': [{
+                'volume_id': mdt_volume['id'],
+                'conf_params': {}
+
+            }],
             'osts': [{
                 'volume_id': ost1_volume['id'],
                 'conf_params': {}

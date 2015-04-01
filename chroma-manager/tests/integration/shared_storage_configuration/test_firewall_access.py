@@ -65,11 +65,11 @@ class TestFirewall(ChromaIntegrationTestCase):
         self.filesystem_id = self.create_filesystem({
             'name': 'testfs',
             'mgt': {'volume_id': mgt_volume['id']},
-            'mdt': {
+            'mdts': [{
                 'volume_id': mdt_volume['id'],
                 'conf_params': {}
 
-            },
+            }],
             'osts': [{
                 'volume_id': ost1_volume['id'],
                 'conf_params': {}

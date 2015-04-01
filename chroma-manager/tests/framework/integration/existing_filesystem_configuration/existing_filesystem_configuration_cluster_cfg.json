@@ -111,13 +111,13 @@
                 "primary_server": "hydra-2-efs-oss2",
                 "mount_path": "/mnt/ost2"
             },
-            "efs-OST0003": {
-                "kind": "OST",
+            "efs-OSTorMDT0003": {
+                "kind": "OSTorMDT",
                 "index": 3,
                 "failover_mode": "failnode",
                 "mount_server": "secondary_server",
                 "primary_server": "hydra-2-efs-oss2",
-                "mount_path": "/mnt/ost3"
+                "mount_path": "/mnt/ostORmdt3"
             }
         }
     }
