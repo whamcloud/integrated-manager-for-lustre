@@ -76,37 +76,44 @@ echo "Beginning automated efs run..."
 ORIGINAL_CLUSTER_CONFIG=$(ls $PWD/existing_filesystem_configuration_cluster_cfg.json)
 chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/cluster_setup
 
-for test_ha in true false; do
-    if [ $test_ha == true ]; then
-        device_types_to_test=(linux)
-    else
-        #devices_to_test=(zfs lvm mdraid linux); do  <--- mdraid Coming soon.
-        device_types_to_test=(zfs lvm linux)
-    fi
-
-    for device_type in ${device_types_to_test[@]}; do
-        # Not all HA tests are enabled, yet
-        if [[ ( $test_ha == true ) && ( $device_type == zfs || $device_type == lvm ) ]]; then
-            continue
+for dne in true false; do
+    for test_ha in true false; do
+        if [ $test_ha == true ]; then
+            device_types_to_test=(linux)
+        else
+            #devices_to_test=(zfs lvm mdraid linux); do  <--- mdraid Coming soon.
+            device_types_to_test=(zfs lvm linux)
         fi
 
-        echo "Beginning automated ${device_type} run..."
+        for device_type in ${device_types_to_test[@]}; do
+            echo "Beginning automated ${device_type} run..."
 
-        export CLUSTER_CONFIG=$PWD/existing_filesystem_configuration_cluster_cfg_${device_type}_HA_is_${test_ha}.json
+            export CLUSTER_CONFIG=$PWD/existing_filesystem_configuration_cluster_cfg_${device_type}_HA_is_${test_ha}_dne_is_${dne}.json
 
-        sed -e s/\"device_type\"\:\ \"linux\"/\"device_type\":\ \"${device_type}\"/g $ORIGINAL_CLUSTER_CONFIG > $CLUSTER_CONFIG
-        sed -i -e s/\"test_ha\"\:\ true/\"test_ha\":\ ${test_ha}/g $CLUSTER_CONFIG
+            sed -e s/\"device_type\"\:\ \"linux\"/\"device_type\":\ \"${device_type}\"/g $ORIGINAL_CLUSTER_CONFIG > $CLUSTER_CONFIG
+            sed -i -e s/\"test_ha\"\:\ true/\"test_ha\":\ ${test_ha}/g $CLUSTER_CONFIG
 
-        export XML_RESULTS_FILE="~/test_report_${device_type}_HA_is_${test_ha}.xml"
+            # One Kind entry is defined as "kind": "OSTorMDT" set it to be an OST for !dne or an MDT for dne
+            # The replace actually does a number of things such as the mount point etc.
+            if [ $dne == true]; then
+                sed -i -e s/OSTorMDT/MDT/g $CLUSTER_CONFIG
+                sed -i -e s/ostORmdt/mdt/g $CLUSTER_CONFIG
+            else
+                sed -i -e s/OSTorMDT/OST/g $CLUSTER_CONFIG
+                sed -i -e s/ostORmdt/ost/g $CLUSTER_CONFIG
+            fi
 
-        # Don't stop on error for this case because if one iteration of this loop fails we still want to perform the other iterations
-        set +e
-        chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup
-        cat $CLUSTER_CONFIG
-        chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests
-        set -e
+            export XML_RESULTS_FILE="~/test_report_${device_type}_HA_is_${test_ha}.xml"
 
-        echo "Automated ${device_type} run complete."
+            # Don't stop on error for this case because if one iteration of this loop fails we still want to perform the other iterations
+            set +e
+            chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/filesystem_setup
+            cat $CLUSTER_CONFIG
+            chroma/chroma-manager/tests/framework/integration/existing_filesystem_configuration/run_tests
+            set -e
+
+            echo "Automated ${device_type} run complete."
+        done
     done
 done
 

@@ -155,10 +155,10 @@ class TestFilesystemConfParamValidation(ChromaApiTestCase):
                     'volume_id': mgt_volume.id,
                     'conf_params': mgt_params
                 },
-                'mdt': {
+                'mdts': [{
                     'volume_id': mdt_volume.id,
                     'conf_params': mdt_params,
-                },
+                }],
                 'osts': [{
                     'volume_id': ost_volume.id,
                     'conf_params': ost_params
@@ -186,13 +186,13 @@ class TestFilesystemConfParamValidation(ChromaApiTestCase):
         """Check that a filesystem POST is rejected with bad params for ost"""
         response = self._post_filesystem({}, {}, {}, {'lov.qos_prio_free': '50'})
         self.assertHttpBadRequest(response)
-        self.assertEqual(self.deserialize(response)['osts'][0]['conf_params']['lov.qos_prio_free'], ["Only valid for MDT"])
+        self.assertEqual(self.deserialize(response)['osts']['conf_params']['lov.qos_prio_free'], ["Only valid for MDT"])
 
     def test_post_invalid_mdt(self):
         """Check that a filesystem POST is rejected with bad params for mdt"""
         response = self._post_filesystem({}, {}, {'osc.max_pages_per_rpc': '20'}, {})
         self.assertHttpBadRequest(response)
-        self.assertEqual(self.deserialize(response)['mdt']['conf_params']['osc.max_pages_per_rpc'], ["Only valid for OST"])
+        self.assertEqual(self.deserialize(response)['mdts']['conf_params']['osc.max_pages_per_rpc'], ["Only valid for OST"])
 
     def test_post_invalid_fs(self):
         """Check that a filesystem POST is rejected with bad params for mdt"""

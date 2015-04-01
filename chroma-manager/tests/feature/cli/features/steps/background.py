@@ -63,7 +63,7 @@ def load_filesystem_from_json(data):
         }
 
         volume = _create_volume_for_mounts(fs_info['mdt']['mounts'])
-        fs_bundle['mdt'] = {'volume_id': volume.id, 'conf_params': {}}
+        fs_bundle['mdts'] = [{'volume_id': volume.id, 'conf_params': {}}]
 
         for ost_info in fs_info['osts']:
             volume = _create_volume_for_mounts(ost_info['mounts'])

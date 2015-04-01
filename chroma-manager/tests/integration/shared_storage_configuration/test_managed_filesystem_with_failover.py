@@ -106,7 +106,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
             {
                 'name': 'testfs',
                 'mgt': {'volume_id': mgt_volume['id']},
-                'mdt': {'volume_id': mdt_volume['id'], 'conf_params': {}},
+                'mdts': [{'volume_id': mdt_volume['id'], 'conf_params': {}}],
                 'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in [ost_volume_1, ost_volume_2]],
                 'conf_params': {}
             }
@@ -283,7 +283,7 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
             {
                 'name': 'testfs',
                 'mgt': {'volume_id': ha_volumes[0]['id']},
-                'mdt': {'volume_id': ha_volumes[1]['id'], 'conf_params': {}},
+                'mdts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[1:2]],
                 'osts': [{'volume_id': v['id'], 'conf_params': {}} for v in ha_volumes[2:3]],
                 'conf_params': {}
             }

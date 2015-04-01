@@ -212,10 +212,10 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             {
                 'name': name,
                 'mgt': {'volume_id': mgt_volume['id']},
-                'mdt': {
+                'mdts': [{
                     'volume_id': mdt_volume['id'],
                     'conf_params': mdt_params
-                },
+                }],
                 'osts': [{
                     'volume_id': v['id'],
                     'conf_params': {}

@@ -30,11 +30,11 @@ class TestFilesystemSameName_HYD832(ChromaIntegrationTestCase):
                     {
                     'name': name,
                     'mgt': {'id': mgt_id},
-                    'mdt': {
+                    'mdts': [{
                         'volume_id': mdt_volume['id'],
                         'conf_params': {},
                         'reformat': reformat
-                    },
+                    }],
                     'osts': [{
                         'volume_id': v['id'],
                         'conf_params': {},

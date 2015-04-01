@@ -45,7 +45,7 @@ class TestTargetResource(ChromaApiTestCase):
 
     @create_targets_patch
     def test_patch_creation(self):
-        """Test that creating multiple OSTs using PATCH returns a target and a command"""
+        """Test that creating multiple Targets using PATCH returns a target and a command"""
         host = synthetic_host('myserver')
         self.create_simple_filesystem(host)
 
@@ -60,7 +60,7 @@ class TestTargetResource(ChromaApiTestCase):
                     'volume_id': spare_volume_1.id
                 },
                 {
-                    'kind': 'OST',
+                    'kind': 'MDT',
                     'filesystem_id': self.fs.id,
                     'volume_id': spare_volume_2.id
                 },
@@ -133,7 +133,7 @@ class TestTargetResource(ChromaApiTestCase):
         data = {
             'name': 'testfs',
             'mgt': {'volume_id': synthetic_volume_full(self.host).id, 'conf_params': {}},
-            'mdt': {'volume_id': synthetic_volume_full(self.host).id, 'conf_params': {}},
+            'mdts': [{'volume_id': synthetic_volume_full(self.host).id, 'conf_params': {}}],
             'osts': [{'volume_id': synthetic_volume_full(host).id, 'conf_params': {}} for host in sorted(hosts, key=str)],
             'conf_params': {},
         }

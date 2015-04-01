@@ -100,7 +100,7 @@ if config.get('filesystem') and config.get('lustre_servers'):
     for name, target in config['filesystem']['targets'].iteritems():
         if target['kind'] in ['MGT', 'MDT']:
             target['primary_server'] = config['lustre_servers'][0]['nodename']
-        if target['kind'] == 'OST':
+        if target['kind'] in ['OST', 'OSTorMDT']:
             # Split up the osts between the lustre servers
             target['primary_server'] = config['lustre_servers'][(int(name[-1]) % 2) + 1]['nodename']
 

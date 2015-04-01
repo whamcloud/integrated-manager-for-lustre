@@ -29,10 +29,10 @@ class TestFilesystemResource(ChromaApiTestCase):
              data = {
                 'name': 'testfs',
                 'mgt': {'volume_id': new_mgt_volume.id},
-                'mdt': {
+                'mdts': [{
                     'volume_id': mdt_volume.id,
                     'conf_params': {}
-                },
+                }],
                 'osts': [{
                     'volume_id': ost_volume.id,
                     'conf_params': {}
@@ -64,10 +64,10 @@ class TestFilesystemResource(ChromaApiTestCase):
              data = {
                 'name': 'testfs',
                 'mgt': {'id': mgt.id},
-                'mdt': {
+                'mdts': [{
                     'volume_id': mdt_volume.id,
                     'conf_params': {}
-                },
+                }],
                 'osts': [{
                     'volume_id': ost_volume.id,
                     'conf_params': {}
@@ -79,9 +79,9 @@ class TestFilesystemResource(ChromaApiTestCase):
         errors = self.deserialize(response)
         self.assertDictEqual(errors, {
             'mgt': {'id': ['MGT is unmanaged']},
-            'mdt': {},
-            'osts': [{}],
-        })
+            'mdts': {},
+            'osts': {},
+         })
 
     def test_set_state_partial(self):
         """Test operations using partial PUT containing only the state attribute, as used in Chroma 1.0.0.0 GUI"""

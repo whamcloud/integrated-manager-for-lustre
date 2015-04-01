@@ -442,16 +442,15 @@ class FilesystemHandler(Handler):
                 raise BadUserInput("Invalid mgt spec: %s" % ns.mgt[0])
         return mgt
 
-    def _resolve_mdt(self, ns):
+    def _resolve_mdts(self, ns):
         if ns.mdts is None:
-            raise BadUserInput("No MDT supplied.")
+            raise BadUserInput("At least one MDT must be supplied.")
 
-        if len(ns.mdts) > 1:
-            # NB: Following the API -- only 1 MDT supported for now.
-            raise BadUserInput("Only 1 MDT per filesystem is supported.")
-
-        mdt_vn = self._resolve_volume_node(ns.mdts[0])
-        return {'conf_params': {}, 'volume_id': mdt_vn.volume_id}
+        mdts = []
+        for mdt_spec in ns.mdts:
+            mdt_vn = self._resolve_volume_node(mdt_spec)
+            mdts.append({'conf_params': {}, 'volume_id': mdt_vn.volume_id})
+        return mdts
 
     def _resolve_osts(self, ns):
         if ns.osts is None:
@@ -468,11 +467,11 @@ class FilesystemHandler(Handler):
         kwargs = {'conf_params': {}}
         kwargs['name'] = ns.subject
         kwargs['mgt'] = self._resolve_mgt(ns)
-        kwargs['mdt'] = self._resolve_mdt(ns)
+        kwargs['mdts'] = self._resolve_mdts(ns)
         kwargs['osts'] = self._resolve_osts(ns)
 
         formatted_volumes = []
-        for target in [kwargs['mgt'], kwargs['mdt']] + kwargs['osts']:
+        for target in [kwargs['mgt']] + kwargs['mdts'] + kwargs['osts']:
             # Skip resolved MGS host
             if not 'volume_id' in target:
                 continue
@@ -525,9 +524,6 @@ class TargetHandler(Handler):
     def add(self, ns):
         vn = self._resolve_volume_node(ns.subject)
         volume = self.api.endpoints['volume'].show(vn.volume_id)
-
-        if ns.noun == 'mdt':
-            raise BadUserInput("Sorry, this version of the software only supports a single MDT per filesystem.")
 
         kwargs = {'kind': ns.noun.upper(), 'volume_id': vn.volume_id}
         if ns.noun != 'mgt':

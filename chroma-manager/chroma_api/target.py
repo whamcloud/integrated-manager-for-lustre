@@ -98,8 +98,6 @@ class TargetValidation(Validation):
 
                 if 'filesystem_id' in bundle.data:
                     bundle.data_errors['filesystem_id'].append("Cannot specify filesystem_id when creating MGT")
-            if KIND_TO_KLASS[kind] == ManagedMdt:
-                bundle.data_errors['kind'].append("Cannot create MDTs independently of filesystems")
 
             if 'conf_params' in bundle.data:
                 conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(KIND_TO_KLASS[kind], bundle.data['conf_params'])
@@ -285,18 +283,17 @@ class TargetResource(MetricResource, ConfParamResource):
         """
 
         #  Only OST and MDT are FS members.  Those subclass are joined in above
-        #  So this lookup is free accept for intial ManageFilesystem lookup
-        ost_or_mdt = bundle.obj.downcast()
-        if (type(ost_or_mdt) == ManagedOst or
-            type(ost_or_mdt) == ManagedMdt):
-            val = getattr(ost_or_mdt, 'filesystem_id', None)
+        #  So this lookup is free accept for initial ManageFilesystem lookup
+        managed_target = bundle.obj.downcast()
+        if managed_target.filesystem_member:
+            val = getattr(managed_target, 'filesystem_id', None)
             if val not in self._fs_cache:
                 #  Only DB hit in this method.
-                self._fs_cache[val] = ost_or_mdt.filesystem
+                self._fs_cache[val] = managed_target.filesystem
 
             return self._fs_cache[val]  # a ManagedFilesystem
         else:
-            raise NotAFileSystemMember(type(ost_or_mdt))
+            raise NotAFileSystemMember(type(managed_target))
 
     def dehydrate_filesystem(self, bundle):
         """Get the URL to load a ManagedFileSystem"""

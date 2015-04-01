@@ -66,7 +66,8 @@ class FilesystemValidation(Validation):
         errors = defaultdict(list)
 
         targets = defaultdict(list)
-        # Check 'mgt', 'mdt', 'osts' are present and compose
+
+        # Check 'mgt', 'mdts', 'osts' are present and compose
         # a record of targets which will be formatted
         try:
             # Check that client hasn't specified an existing MGT
@@ -80,9 +81,9 @@ class FilesystemValidation(Validation):
         except KeyError:
             errors['mgt'].append("This field is mandatory")
         try:
-            targets['mdt'].append(bundle.data['mdt'])
+            targets['mdts'].extend(bundle.data['mdts'])
         except KeyError:
-            errors['mdt'].append("This field is mandatory")
+            errors['mdts'].append("This field is mandatory")
         try:
             targets['osts'].extend(bundle.data['osts'])
         except KeyError:
@@ -98,9 +99,10 @@ class FilesystemValidation(Validation):
         if len(errors):
             return errors
 
+        # As all fields are present we can be more specific about the errors.
         errors['mgt'] = defaultdict(list)
-        errors['mdt'] = defaultdict(list)
-        errors['osts'] = []
+        errors['mdts'] = defaultdict(list)
+        errors['osts'] = defaultdict(list)
 
         # Validate filesystem name
         if len(bundle.data['name']) > 8:
@@ -155,18 +157,19 @@ class FilesystemValidation(Validation):
         except ManagedMgs.DoesNotExist:
             errors['mgt']['id'].append("MGT with ID %s not found" % (bundle.data['mgt']['id']))
 
-        try:
-            mdt_volume_id = bundle.data['mdt']['volume_id']
-            check_volume('mdt', mdt_volume_id)
-        except KeyError:
-            errors['mdt']['volume_id'].append("volume_id attribute is mandatory")
+        for mdt in bundle.data['mdts']:
+            try:
+                mdt_volume_id = mdt['volume_id']
+                check_volume('mdts', mdt_volume_id)
+            except KeyError:
+                errors['mdts']['volume_id'].append("volume_id attribute is mandatory for mdt " % mdt['id'])
 
         for ost in bundle.data['osts']:
             try:
                 volume_id = ost['volume_id']
                 check_volume('osts', volume_id)
             except KeyError:
-                errors['osts'].append("volume_id attribute is mandatory for all osts")
+                errors['osts']['volume_id'].append("volume_id attribute is mandatory for ost " % ost['id'])
 
         # If formatting an MGS, check its not on a host already used as an MGS
         # If this is an MGS, there may not be another MGS on
@@ -229,20 +232,11 @@ class FilesystemValidation(Validation):
         # Validate generic target settings
         for attr, targets in targets.items():
             for target in targets:
-                if attr == 'mdt':
-                    klass = ManagedMdt
-                elif attr == 'osts':
-                    klass = ManagedOst
-                elif attr == 'mgt':
-                    klass = ManagedMgs
-                else:
-                    raise NotImplementedError(attr)
+                klass = ManagedTarget.managed_target_of_type(attr[0:3])  # We get osts, mdts, mgs so just take the first 3 letters.
 
                 target_errors = validate_target(klass, target)
 
-                if attr == 'osts':
-                    errors[attr].append(target_errors)
-                else:
+                if target_errors:
                     errors[attr].update(target_errors)
 
         conf_param_errors = conf_param.validate_conf_params(ManagedFilesystem, bundle.data['conf_params'])
@@ -313,10 +307,8 @@ class FilesystemResource(MetricResource, ConfParamResource):
     osts = fields.ToManyField('chroma_api.target.TargetResource', null = True,
                               attribute = lambda bundle: ManagedOst.objects.filter(filesystem = bundle.obj),
                               help_text = "List of OSTs which belong to this file system")
-    # NB a filesystem must always report an MDT, although it may be deleted just before
-    # the filesystem is deleted, so use _base_manager
-    mdts = fields.ToManyField('chroma_api.target.TargetResource', full = True,
-                              attribute = lambda bundle: ManagedMdt._base_manager.filter(filesystem = bundle.obj),
+    mdts = fields.ToManyField('chroma_api.target.TargetResource', null = True, full = True,
+                              attribute = lambda bundle: ManagedMdt.objects.filter(filesystem = bundle.obj),
                               help_text = "List of MDTs in this file system, should be at least 1 unless the "
                                           "file system is in the process of being deleted")
     mgt = fields.ToOneField('chroma_api.target.TargetResource', attribute = 'mgs', full = True,
@@ -383,12 +375,11 @@ class FilesystemResource(MetricResource, ConfParamResource):
         # Have to do this here because we can't guarantee ordering during
         # full_dehydrate to ensure that the mdt bundles are available.
         try:
-            mdt = [m for m in bundle.data['mdts']
-                        if 'mdt.hsm_control' in m.data['conf_params']][0]
+            mdt = next(m for m in bundle.data['mdts'] if 'mdt.hsm_control' in m.data['conf_params'])
             bundle.data['cdt_status'] = mdt.data['conf_params']['mdt.hsm_control']
             bundle.data['cdt_mdt'] = mdt.data['resource_uri']
             bundle.data['hsm_control_params'] = self.get_hsm_control_params(mdt, bundle)
-        except IndexError:
+        except StopIteration:
             pass
 
         return bundle

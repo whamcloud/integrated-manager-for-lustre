@@ -85,6 +85,20 @@ class TestAvailableTransitions(TestCase):
         received_transitions = [t['state'] for t in self._get_transition_states(ost)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
+    def test_managed_root_mdt(self):
+        """Test the MDT possible states are correct."""
+
+        #  ost unformatted
+        mgs = ManagedMgs.objects.create(volume=self.volume)
+        fs = ManagedFilesystem.objects.create(name='mgsfs', mgs=mgs)
+        mdt = ManagedMdt.objects.create(volume=self.volume,
+            filesystem=fs, index=0)
+
+        expected_transitions = ['formatted', 'registered',
+                                'unmounted', 'mounted']
+        received_transitions = [t['state'] for t in self._get_transition_states(mdt)]
+        self.assertEqual(set(received_transitions), set(expected_transitions))
+
     def test_managed_mdt(self):
         """Test the MDT possible states are correct."""
 
@@ -95,7 +109,7 @@ class TestAvailableTransitions(TestCase):
             filesystem=fs, index=1)
 
         expected_transitions = ['formatted', 'registered',
-                                'unmounted', 'mounted']
+                                'unmounted', 'mounted', 'removed']
         received_transitions = [t['state'] for t in self._get_transition_states(mdt)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
