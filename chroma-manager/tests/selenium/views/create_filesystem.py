@@ -38,6 +38,13 @@ class CreateFilesystem(BaseView):
         """Select an MDT from MDT chooser"""
         self.volume_chooser_open_and_select('mdt_chooser', server_address, volume_name)
 
+    def toggle_dne(self):
+        self.driver.find_element_by_id('enable_dne').click()
+
+    def select_dne_volume(self, server_address, volume_name):
+        """Select an MDT from DNE MDT chooser"""
+        self.volume_chooser_select('mdt_dne_chooser', server_address, volume_name, multi=True)
+
     def select_ost_volume(self, server_address, volume_name):
         """Select an OST from OST chooser"""
         self.volume_chooser_select('ost_chooser', server_address, volume_name, multi = True)

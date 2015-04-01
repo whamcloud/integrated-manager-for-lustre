@@ -54,6 +54,10 @@
         $('#mgt_chooser').volumeChooser('clear');
         $('#mdt_chooser').volumeChooser('clear');
         $('#ost_chooser').volumeChooser('clear');
+        $('#mdt_dne_chooser').volumeChooser('clear');
+
+        if ($('#enable_dne')[0].checked)
+          $('#enable_dne').click();
 
         if (conf_param_dialog) {
           conf_param_dialog.destroy();
@@ -139,10 +143,17 @@
       );
     }
 
-    function init()
-    {
+    function init() {
+      var createJq = lodash.compose($, lodash.identity);
+
       function updateMdtEstimate() {
-        var vol = volume_chooser_store.getVolume($('#mdt_chooser').volumeChooser('val'));
+        var vols = lodash(['#mdt_chooser', '#mdt_dne_chooser'])
+          .map(createJq)
+          .invoke('volumeChooser', 'val')
+          .flatten()
+          .compact()
+          .map(volume_chooser_store.getVolume)
+          .value();
 
         var inode_size = Math.floor($('input#inode_size').val());
         var bytes_per_inode = Math.floor($('input#bytes_per_inode').val());
@@ -151,20 +162,25 @@
         var advanced_text;
         if (inode_size >= bytes_per_inode) {
           text = "Inode size " + inode_size + " too large (must be smaller than " + bytes_per_inode + ")";
-        } else if (vol) {
-          var inode_count = vol.size / bytes_per_inode;
-          var ea_fixed_size = 32 + 23;
-          var ea_stripe_size = 24;
-          var core_inode_size = 128;
-          var stripes_in_inode = Math.floor((inode_size - core_inode_size - ea_fixed_size) / ea_stripe_size);
-          text = "Estimated file limit: " + formatBigNumber(inode_count) + " files"
-          advanced_text = "Stripes without EA block:" + stripes_in_inode
+        } else if (vols.length) {
+          var counts = vols.reduce(function sum (obj, vol) {
+            obj.inode_count += vol.size / bytes_per_inode;
+            var ea_fixed_size = 32 + 23;
+            var ea_stripe_size = 24;
+            var core_inode_size = 128;
+            obj.stripes_in_inode += Math.floor((inode_size - core_inode_size - ea_fixed_size) / ea_stripe_size);
+
+            return obj;
+          }, { stripes_in_inode: 0, inode_count: 0 });
+
+          text = "Estimated file limit: " + formatBigNumber(counts.inode_count) + " files";
+          advanced_text = "Stripes without EA block: " + counts.stripes_in_inode;
         } else {
           text = "";
           advanced_text = "";
         }
-        $('span#mdt_estimate').html(text)
-        $('span#mdt_advanced_estimate').html(advanced_text)
+        $('span#mdt_estimate').html(text);
+        $('span#mdt_advanced_estimate').html(advanced_text);
       }
 
       $('input#inode_size').change(function() {
@@ -196,14 +212,25 @@
           set_mdt_advanced_visible(($('#mdt_advanced').css('display') === 'block' ? false : true ));
         });
 
+      $('#enable_dne').change(function () {
+        $('#mdt_dne_chooser').volumeChooser('slideTable', this.checked);
+
+        if (!this.checked)
+          $('#mdt_dne_chooser').volumeChooser('clear');
+      });
+
       volume_chooser_store = VolumeChooserStore();
       volume_chooser_store.load(function() {
         $('#mdt_chooser').volumeChooser({
           store: volume_chooser_store,
-          change: function() {
-            updateMdtEstimate();
-          }
+          change: updateMdtEstimate
         });
+        $('#mdt_dne_chooser').volumeChooser({
+          store: volume_chooser_store,
+          change: updateMdtEstimate,
+          multi_select: true
+        });
+        $('#mdt_dne_chooser').volumeChooser('hideTable');
         $('#ost_chooser').volumeChooser({
           store: volume_chooser_store,
           change: function() {
@@ -239,6 +266,7 @@
         var mgt_lun_id = $('#mgt_chooser').volumeChooser('val');
         var mgt_id = $('#mgt_existing_dropdown').val()
         var mdt_lun_id = $('#mdt_chooser').volumeChooser('val');
+        var mdt_dne_lun_ids = $('#mdt_dne_chooser').volumeChooser('val');
         var ost_lun_ids = $('#ost_chooser').volumeChooser('val');
 
         var errors = [];
@@ -255,7 +283,7 @@
         }
 
         if(ost_lun_ids.length==0) {
-          errors.push({element: $('#ost_chooser'), message: "At least one OST must be selected"})
+          errors.push({element: $('#ost_chooser_outer'), message: "At least one OST must be selected"})
         }
 
         if (isNaN(parseInt($('input#inode_size').val()))) {
@@ -285,23 +313,36 @@
           filesystem.mgt = {volume_id: mgt_lun_id}
         }
 
-        // Compose MDT
-        filesystem.mdt = {
-            volume_id: mdt_lun_id,
-            conf_params: {}
-        };
-
         var inode_size = $('input#inode_size').val();
-        if (inode_size) {
-          filesystem.mdt.inode_size = parseInt(inode_size);
-        }
         var bytes_per_inode = $('input#bytes_per_inode').val();
-        if (bytes_per_inode) {
-          filesystem.mdt.bytes_per_inode = parseInt(bytes_per_inode);
-        }
-        if ($('#fs_opt_enable_hsm').is(':checked')) {
-          filesystem.mdt.conf_params["mdt.hsm_control"] = "enabled";
-        }
+        var hsmChecked = $('#fs_opt_enable_hsm').is(':checked');
+
+        // Compose MDTs
+        var mdts = [{
+            volume_id: mdt_lun_id,
+            root: true,
+            conf_params: {}
+        }];
+
+        mdts = mdts.concat(mdt_dne_lun_ids.map(function (lun_id) {
+          return {
+            volume_id: lun_id,
+            conf_params: {}
+          }
+        }));
+
+        filesystem.mdts = mdts.map(function (mdt) {
+          if (inode_size)
+            mdt.inode_size = parseInt(inode_size);
+
+          if (bytes_per_inode)
+            mdt.bytes_per_inode = parseInt(bytes_per_inode);
+
+          if (hsmChecked)
+            mdt.conf_params["mdt.hsm_control"] = "enabled";
+
+          return mdt;
+        });
 
         // Compose OST list
         filesystem.osts = [];
@@ -323,6 +364,7 @@
           volume_ids.push(mgt_lun_id);
         }
         volume_ids.push(mdt_lun_id);
+        volume_ids.push.apply(volume_ids, mdt_dne_lun_ids);
         volume_ids.push.apply(volume_ids, ost_lun_ids);
         volume_chooser_store.reformatPrompt(
                 volume_ids,
@@ -330,7 +372,9 @@
                   submit(filesystem);
                 },
                 function() {
-                  filesystem.mdt.reformat = true;
+                  filesystem.mdts.forEach(function (mdt) {
+                    mdt.reformat = true;
+                  });
                   filesystem.mgt.reformat = true;
                   _.each(filesystem.osts, function(ost) {
                       ost.reformat = true;
@@ -358,7 +402,8 @@
       ContextualHelp.load_snippets("#filesystem_create_form");
 
     }
-    return {draw:draw}
+
+    return { draw: draw };
   }();
 </script>
 <h1 class="page-header"><i class="icon-sitemap"></i> Create File System</h1>
@@ -404,7 +449,7 @@
   <tr>
     <td colspan="2" align="left" valign="top">
       <div class='step_header'>
-        <span class="step_number">3.</span> <span class="step_caption">Choose one metadata target (MDT)</span><br>
+        <span class="step_number">3.</span> <span class="step_caption">Choose a primary metadata target (MDT)</span><br>
       </div>
       <div class='step_body'>
         <button id='mdt_chooser'></button>
@@ -428,6 +473,12 @@
             </table>
             <span id='mdt_advanced_estimate'></span>
           </div>
+        </div>
+        <div id="enable_dne_wrap">
+          Add Additional MDTs (DNE)? <input id="enable_dne" type="checkbox" />
+        </div>
+        <div>
+          <button id='mdt_dne_chooser'></button>
         </div>
         <span id='mdt_estimate'></span>
       </div>

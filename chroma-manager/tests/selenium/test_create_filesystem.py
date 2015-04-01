@@ -5,6 +5,7 @@ from tests.selenium.views.servers import Servers
 from tests.selenium.views.create_filesystem import CreateFilesystem
 from tests.selenium.views.volumes import Volumes
 from tests.selenium.views.conf_param_dialog import ConfParamDialog
+from selenium.common.exceptions import NoSuchElementException
 from utils.sample_data import Testdata
 
 
@@ -23,6 +24,7 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         self.mgt_volume_name, self.mgt_server_address = self.volume_and_server(0)
         self.mdt_volume_name, self.mdt_server_address = self.volume_and_server(1)
         self.ost_volume_name, self.ost_server_address = self.volume_and_server(2)
+        self.mdt_dne_volume_name, self.mdt_dne_server_address = self.volume_and_server(4)
 
         # Test data for servers
         self.host_list = test_data.get_test_data_for_server_configuration()
@@ -31,6 +33,7 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         self.mgt_volume_name, self.mgt_server_address = self.volume_and_server(0)
         self.mdt_volume_name, self.mdt_server_address = self.volume_and_server(1)
         self.ost_volume_name, self.ost_server_address = self.volume_and_server(2)
+        self.mdt_dne_volume_name, self.mdt_dne_server_address = self.volume_and_server(4)
 
         # Add the test servers
         self.navigation.go('Configure', 'Servers')
@@ -50,14 +53,15 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
 
         self.navigation.go('Configure', 'Filesystems', 'Create_new_filesystem')
 
-    def _check_filesystem_creation(self):
+    def _check_filesystem_creation(self, more_mdts=[]):
         # Inspect the name and choice of volumes to check they match input
         detail_page = EditFilesystem(self.driver)
         self.assertTrue(detail_page.visible)
         self.assertEqual(detail_page.filesystem_name, self.filesystem_name)
         self.assertEqual(detail_page.mgt_volumes, [[self.mgt_volume_name, self.mgt_server_address]])
-        self.assertEqual(detail_page.mdt_volumes, [[self.mdt_volume_name, self.mdt_server_address]])
+        self.assertEqual(detail_page.mdt_volumes, [[self.mdt_volume_name, self.mdt_server_address]] + more_mdts)
         self.assertEqual(detail_page.ost_volumes, [[self.ost_volume_name, self.ost_server_address]])
+        return detail_page
 
     def test_create_filesystem_mgt_separate(self):
         """Create an MGT then filesystem using valid params, check that it
@@ -92,6 +96,29 @@ class TestCreateFilesystem(SeleniumBaseTestCase):
         create_filesystem_page.quiesce()
 
         self._check_filesystem_creation()
+
+    def test_create_mdts_dne(self):
+        """Test that MDT is validated as present"""
+        create_filesystem_page = CreateFilesystem(self.driver)
+        create_filesystem_page.enter_name(self.filesystem_name)
+        create_filesystem_page.select_mgt_volume(self.mgt_server_address, self.mgt_volume_name)
+        create_filesystem_page.select_mdt_volume(self.mdt_server_address, self.mdt_volume_name)
+        create_filesystem_page.toggle_dne()
+        create_filesystem_page.select_dne_volume(self.mdt_dne_server_address, self.mdt_dne_volume_name)
+        create_filesystem_page.select_ost_volume(self.ost_server_address, self.ost_volume_name)
+        create_filesystem_page.create_filesystem_button.click()
+        create_filesystem_page.quiesce()
+
+        detail_page = self._check_filesystem_creation([[self.mdt_dne_volume_name, self.mdt_dne_server_address]])
+        detail_page.mdt_set_state("%s-MDT0001" % self.filesystem_name, "removed")
+        self.assertEqual(detail_page.mdt_volumes, [[self.mdt_volume_name, self.mdt_server_address]])
+
+        with self.assertRaises(NoSuchElementException):
+            try:
+                detail_page.mdt_set_state("%s-MDT0000" % self.filesystem_name, "removed")
+            except NoSuchElementException as e:
+                self.assertEqual(e.msg, 'No action found with state removed')
+                raise
 
     def test_name_validation(self):
         """Test that filesystem is validated as non-blank"""
