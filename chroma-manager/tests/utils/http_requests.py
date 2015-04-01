@@ -10,6 +10,9 @@ from tests.utils.check_server_host import check_nodes_status
 
 
 class HttpRequests(object):
+
+    requests.packages.urllib3.disable_warnings()
+
     def __init__(self, server_http_url = '', *args, **kwargs):
         self.server_http_url = server_http_url
         self.session = requests.session()
