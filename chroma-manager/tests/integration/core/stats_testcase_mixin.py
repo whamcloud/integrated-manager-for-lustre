@@ -19,6 +19,62 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
     would like to check on the stats.
     """
 
+    # Assert we can at least request each different stat without triggering
+    # an exception. This is a smoke test and many of these should have more
+    # specific testing.
+    mdt_stats = [
+        'k',
+        'stats_link',
+        'stats_ldlm_ibits_enqueue',
+        'stats_mkdir',
+        'stats_mknod',
+        'stats_mds_connect',
+        'stats_mds_getattr',
+        'stats_mds_getxattr',
+        'stats_mds_getstatus',
+        'stats_mds_statfs',
+        'stats_mds_sync',
+        'stats_obd_ping',
+        'stats_open',
+        'stats_getxattr',
+        'stats_req_active',
+        'stats_req_qdepth',
+        'stats_req_timeout',
+        'stats_req_waittime',
+        'stats_reqbuf_avail',
+        'stats_rename',
+        'stats_rmdir',
+        'stats_unlink'
+    ]
+
+    ost_stats = [
+        'filesfree',
+        'filestotal',
+        'kbytesavail',
+        'kbytesfree',
+        'kbytestotal',
+        'num_exports',
+        'stats_commitrw',
+        'stats_connect',
+        'stats_create',
+        'stats_destroy',
+        'stats_disconnect',
+        'stats_get_info',
+        'stats_get_page',
+        'stats_llog_init',
+        'stats_ping',
+        'stats_punch',
+        'stats_preprw',
+        'stats_set_info_async',
+        'stats_statfs',
+        'stats_sync',
+        'stats_read_bytes',
+        'stats_write_bytes',
+        'tot_dirty',
+        'tot_granted',
+        'tot_pending'
+    ]
+
     def assert_fs_stat(self, fs_id, name, value):
         "Wait until filesystem stat matches."
         initial = self.get_filesystem(fs_id).get(name)
@@ -116,37 +172,10 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
         #Check total bytes remained the same
         self.assertEqual(bytes_total, self.get_filesystem(filesystem_id).get('bytes_total'))
 
-        # Assert we can at least request each different stat without triggering
-        # an exception. This is a smoke test and many of these should have more
-        # specific testing.
-        mdt_stats = [
-            'stats_close',
-            'stats_link',
-            'stats_ldlm_ibits_enqueue',
-            'stats_mkdir',
-            'stats_mknod',
-            'stats_mds_connect',
-            'stats_mds_getattr',
-            'stats_mds_getxattr',
-            'stats_mds_getstatus',
-            'stats_mds_statfs',
-            'stats_mds_sync',
-            'stats_obd_ping',
-            'stats_open',
-            'stats_getxattr',
-            'stats_req_active',
-            'stats_req_qdepth',
-            'stats_req_timeout',
-            'stats_req_waittime',
-            'stats_reqbuf_avail',
-            'stats_rename',
-            'stats_rmdir',
-            'stats_unlink'
-        ]
         response = self.chroma_manager.get(
             '/api/target/metric/',
             params = {
-                'metrics': ','.join(mdt_stats),
+                'metrics': ','.join(self.mdt_stats),
                 'latest': 'true',
                 'reduce_fn': 'sum',
                 'kind': 'MDT',
@@ -154,39 +183,12 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
             }
         )
         self.assertEqual(response.successful, True, response.text)
-        self.assertEqual(len(mdt_stats), len(response.json.values()[0][0].get('data')), response.json)
+        self.assertEqual(len(self.mdt_stats), len(response.json.values()[0][0].get('data')), response.json)
 
-        ost_stats = [
-            'filesfree',
-            'filestotal',
-            'kbytesavail',
-            'kbytesfree',
-            'kbytestotal',
-            'num_exports',
-            'stats_commitrw',
-            'stats_connect',
-            'stats_create',
-            'stats_destroy',
-            'stats_disconnect',
-            'stats_get_info',
-            'stats_get_page',
-            'stats_llog_init',
-            'stats_ping',
-            'stats_punch',
-            'stats_preprw',
-            'stats_set_info_async',
-            'stats_statfs',
-            'stats_sync',
-            'stats_read_bytes',
-            'stats_write_bytes',
-            'tot_dirty',
-            'tot_granted',
-            'tot_pending'
-        ]
         response = self.chroma_manager.get(
             '/api/target/metric/',
             params = {
-                'metrics': ','.join(ost_stats),
+                'metrics': ','.join(self.ost_stats),
                 'latest': 'true',
                 'reduce_fn': 'sum',
                 'kind': 'OST',
@@ -194,4 +196,22 @@ class StatsTestCaseMixin(ChromaIntegrationTestCase):
             }
         )
         self.assertEqual(response.successful, True, response.text)
-        self.assertEqual(len(ost_stats), len(response.json.values()[0][0].get('data')), response.json)
+        self.assertEqual(len(self.ost_stats), len(response.json.values()[0][0].get('data')), response.json)
+
+    def get_mdt_stats(self, filesystem, index):
+        response = self.chroma_manager.get(
+            '/api/target/metric/',
+            params = {
+                'metrics': ','.join(self.mdt_stats),
+                'latest': 'true',
+                'reduce_fn': 'sum',
+                'kind': 'MDT',
+                'group_by': 'filesystem',
+                'id': next(mdt['id'] for mdt in filesystem['mdts'] if mdt['index'] == index)
+            }
+        )
+
+        self.assertEqual(response.successful, True, response.text)
+        self.assertEqual(len(self.mdt_stats), len(response.json.values()[0][0].get('data')), response.json)
+
+        return response.json.values()[0][0].get('data')

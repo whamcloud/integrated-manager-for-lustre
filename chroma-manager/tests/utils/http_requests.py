@@ -10,8 +10,12 @@ from tests.utils.check_server_host import check_nodes_status
 
 
 class HttpRequests(object):
-
-    requests.packages.urllib3.disable_warnings()
+    try:
+        requests.packages.urllib3.disable_warnings()
+    except AttributeError:
+        # Running on OSX the disable_warnings is not available, so catch and deal with that. The effect of
+        # ignoring the error is additional warnings so no real risk.
+        pass
 
     def __init__(self, server_http_url = '', *args, **kwargs):
         self.server_http_url = server_http_url

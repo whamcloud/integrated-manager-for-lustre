@@ -4,11 +4,10 @@ import re
 import time
 
 from testconfig import config
-from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
 from tests.integration.core.stats_testcase_mixin import StatsTestCaseMixin
 
 
-class TestFilesystemDetection(StatsTestCaseMixin, ChromaIntegrationTestCase):
+class TestFilesystemDetection(StatsTestCaseMixin):
     def setUp(self):
         super(TestFilesystemDetection, self).setUp()
 

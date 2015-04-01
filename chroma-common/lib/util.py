@@ -28,6 +28,7 @@
 # import chroma_core.chroma-common.lib.utils
 
 import time
+import threading
 from collections import MutableSequence, namedtuple
 
 ExpiringValue = namedtuple('ExpiringValue', ['value', 'expiry'])
@@ -62,6 +63,57 @@ class ExpiringList(MutableSequence):
 
     def insert(self, index, value):
         self._container.insert(index, ExpiringValue(value, time.time() + self.grace_period))
+
+
+class ExceptionThrowingThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        self._use_threads = kwargs.pop('use_threads', True)     # Sometimes not threading helps with debug.
+
+        if self._use_threads:
+            super(ExceptionThrowingThread, self).__init__(*args, **kwargs)
+        self._call_target = kwargs['target']
+        self._call_args = kwargs['args']
+        self._exception_value = None
+
+    def run(self):
+        try:
+            return super(ExceptionThrowingThread, self).run()
+        except BaseException as e:
+            self._exception_value = e
+
+    def start(self):
+        if self._use_threads:
+            return super(ExceptionThrowingThread, self).start()
+        else:
+            try:
+                self._call_target(*self._call_args)
+            except BaseException as e:
+                self._exception_value = e
+
+    def join(self):
+        if self._use_threads:
+            super(ExceptionThrowingThread, self).join()
+        if self._exception_value:
+            raise self._exception_value
+
+    @classmethod
+    def wait_for_threads(cls, threads):
+        '''
+        Wait for all the threads to finish raising an exception if any of them raise an exception
+        We have to capture and then raise one of them because we can't re-raise all of the exceptions.
+        We do this to make sure all the threads exit before we start the next test.
+        '''
+
+        exception_raised = None
+
+        for thread in threads:
+            try:
+                thread.join()
+            except Exception as e:
+                exception_raised = e
+
+        if exception_raised:
+            raise exception_raised
 
 
 def all_subclasses(klass):
