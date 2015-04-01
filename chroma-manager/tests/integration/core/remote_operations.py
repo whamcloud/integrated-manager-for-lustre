@@ -7,6 +7,7 @@ import paramiko
 import re
 
 from testconfig import config
+from tests.chroma_common.lib.util import ExceptionThrowingThread
 from tests.integration.core.constants import TEST_TIMEOUT
 from tests.integration.core.constants import UNATTENDED_BOOT_TIMEOUT
 from tests.integration.core.utility_testcase import RemoteCommandResult
@@ -168,9 +169,12 @@ class SimulatorRemoteOperations(RemoteOperations):
         # configured on these hosts withthe filesystem name in them
         pass
 
-    def exercise_filesystem(self, client_address, filesystem):
-        # TODO: do a check that the client has the filesystem mounted
-        # and that the filesystem targets are up
+    def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index, files_to_create):
+        # Lets just imagine we exercised the simulated MDT, go boy go, fetch the ball.
+        pass
+
+    def exercise_filesystem(self, client_address, filesystem, mdt_indexes = [0], no_of_files_per_mdt = None):
+        # And the same for the simulated filesystem, 1,2,3,4...1,2,3,4....
         pass
 
     def clear_lnet_config(self, servers):
@@ -538,9 +542,9 @@ class RealRemoteOperations(RemoteOperations):
                         './configuration/resources/primitive'),
                     filesystem['name']))
 
-    def exercise_filesystem(self, client_address, filesystem):
+    def exercise_filesystem_mdt(self, client_address, filesystem, mdt_index, files_to_create):
         """
-        Verify we can actually exercise a filesystem.
+        Verify we can actually exercise a filesystem on a specific mdt.
 
         Currently this only verifies that we can write to a filesystem as a
         sanity check that it was configured correctly.
@@ -556,13 +560,60 @@ class RealRemoteOperations(RemoteOperations):
         logger.debug("exercise_filesystem: API reports %s has %s bytes free"
                      % (filesystem['name'], bytes_free))
 
-        self._ssh_address(
-            client_address,
-            "dd if=/dev/zero of=/mnt/%s/exercisetest.dat bs=1000 count=%s" % (
-                filesystem['name'],
-                min((bytes_free * 0.4), 512000) / 1000
-            )
-        )
+        test_root = '/mnt/%s/mdt%s' % (filesystem['name'], mdt_index)
+
+        if mdt_index:
+            self._ssh_address(client_address,
+                              "lfs mkdir -i %s %s" % (mdt_index, test_root))
+        else:
+            self._ssh_address(client_address,
+                              "mkdir -p %s" % test_root)
+
+        def actual_exercise(client_address, test_root, file_no, bytes_to_write):
+            self._ssh_address(client_address,
+                              "mkdir -p %s/%s" % (test_root, file_no))
+
+            self._ssh_address(client_address,
+                              "dd if=/dev/zero of=%s/%s/exercisetest-%s.dat bs=1000 count=%s" % (test_root,
+                                                                                                 file_no,
+                                                                                                 file_no,
+                                                                                                 bytes_to_write))
+
+        threads = []
+
+        for file_no in range(0, files_to_create):
+            thread = ExceptionThrowingThread(target=actual_exercise,
+                                             args=(client_address, test_root, file_no, min((bytes_free * 0.4), 512000) / 1000),
+                                             use_threads=False)
+            thread.start()
+            threads.append(thread)
+
+        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
+
+        self._ssh_address(client_address,
+                          "rm -rf %s" % test_root)
+
+    def exercise_filesystem(self, client_address, filesystem, mdt_indexes = [0], no_of_files_per_mdt = None):
+        """
+        Verify we can actually exercise a filesystem.
+
+        Currently this only verifies that we can write to a filesystem as a
+        sanity check that it was configured correctly.
+        """
+
+        if not no_of_files_per_mdt:
+            no_of_files_per_mdt = [10] * len(mdt_indexes)
+
+        threads = []
+
+        for index, mdt_index in enumerate(mdt_indexes):
+            thread = ExceptionThrowingThread(target = self.exercise_filesystem_mdt,
+                                             args = (client_address, filesystem, mdt_index, no_of_files_per_mdt[index]))
+
+            thread.start()
+            threads.append(thread)
+
+        ExceptionThrowingThread.wait_for_threads(threads)               # This will raise an exception if any of the threads raise an exception
 
     def _fqdn_to_server_config(self, fqdn):
         for server in config['lustre_servers']:

@@ -316,8 +316,8 @@ class ApiTestCase(UtilityTestCase):
             self.wait_for_command(chroma_manager, command_id, timeout, verify_successful)
 
     def wait_last_command_complete(self, timeout=TEST_TIMEOUT, verify_successful=True):
-        response = self.get_json_by_uri('/api/command/')
-        self.wait_for_command(self.chroma_manager, response['meta']['total_count'], timeout, verify_successful)
+        command_id = max([int(command['id']) for command in self.get_list('/api/command/', {'limit': 0})])
+        self.wait_for_command(self.chroma_manager, command_id, timeout, verify_successful)
 
     def get_list(self, url, args = {}):
         response = self.chroma_manager.get(url, params = args)

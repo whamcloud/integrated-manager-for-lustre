@@ -179,6 +179,8 @@ class TargetResource(MetricResource, ConfParamResource):
 
     kind = fields.CharField(help_text = "Type of target, one of %s" % KIND_TO_KLASS.keys())
 
+    index = fields.IntegerField(help_text = "Index of the target", null = True)
+
     volume_name = fields.CharField(attribute = 'volume__label',
             help_text = "The ``label`` attribute of the volume on which this target exists")
 
@@ -253,8 +255,8 @@ class TargetResource(MetricResource, ConfParamResource):
 
     def dehydrate_filesystems(self, bundle):
         #  Limit this to one db hit per mgs, caching might help
-        mgs = bundle.obj.downcast()
-        if type(mgs) == ManagedMgs:
+        target = bundle.obj.downcast()
+        if type(target) == ManagedMgs:
             return [{'id': fs.id, 'name': fs.name} for fs in
                     bundle.obj.managedmgs.managedfilesystem_set.all()]
         else:
@@ -262,6 +264,14 @@ class TargetResource(MetricResource, ConfParamResource):
 
     def dehydrate_kind(self, bundle):
         return self.content_type_id_to_kind(bundle.obj.content_type_id)
+
+    def dehydrate_index(self, bundle):
+        target = bundle.obj.downcast()
+
+        if target.filesystem_member:
+            return target.index
+        else:
+            return None
 
     def dehydrate_filesystem_id(self, bundle):
 
