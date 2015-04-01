@@ -38,11 +38,7 @@
               }
               row.name = "<a class='navigation' href='configure/filesystem/detail/" + row.id +"/'>" + row.name + "</a>";
               row.mgs_hostname = row.mgt.primary_server_name
-              if (row.mdts.length > 0) {
-                row.mds_hostname = row.mdts[0].primary_server_name
-              } else {
-                row.mds_hostname = "";
-              }
+              row.mds_hostname = row.mdts.length
               row.client_count = formatBigNumber(row.client_count);
 
               if (row.bytes_total == null) {
@@ -102,7 +98,7 @@
     <tr>
       <th width="9%">File System</th>
       <th width="10%">Management Server</th>
-      <th width="10%">Metadata Server</th>
+      <th width="10%">Metadata Server Count</th>
       <th width="5%">Connected Clients</th>
       <th width="5%">Size</th>
       <th width="5%">Free</th>

@@ -271,6 +271,7 @@ var VolumeChooserStore = function ()
     var table_element = expander_div.children('table');
 
     var volumeTable = table_element.dataTable({
+      bAutoWidth: false,
       bJQueryUI: true,
       bPaginate: false,
       bInfo: false,
@@ -404,6 +405,28 @@ var VolumeChooserStore = function ()
     clear: function() {
       return this.each(function() {
         volumeChooserClear($(this));
+      });
+    },
+    hideTable: function() {
+      return this.each(function () {
+        $(this)
+          .closest('.volume_chooser_background')
+          .find('.volume_chooser_expander')
+          .hide();
+      });
+    },
+    slideTable: function (show) {
+      return this.each(function () {
+        var expander = $(this)
+          .closest('.volume_chooser_background')
+          .find('.volume_chooser_expander');
+
+        expander.find('table').width("100%");
+
+        if (show)
+          expander.slideDown();
+        else
+          expander.slideUp();
       });
     },
     val: function() {

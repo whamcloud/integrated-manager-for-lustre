@@ -528,6 +528,10 @@ span.volume_chooser_selected {
     display: none;
 }
 
+#enable_dne_wrap {
+  margin: 10px 0;
+}
+
 table.properties {
     border-top: 1px solid gray;
     border-bottom: 1px solid gray;

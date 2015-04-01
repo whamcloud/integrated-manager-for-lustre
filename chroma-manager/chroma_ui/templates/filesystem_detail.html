@@ -256,21 +256,92 @@
       // Create new OST button click handler.
       volume_chooser_store = VolumeChooserStore();
       volume_chooser_store.load(function() {
-        $('#new_ost_chooser').volumeChooser({
-            multi_select: true,
-            store: volume_chooser_store,
-            change: function() {
-                var val = $(this).volumeChooser('val');
-                $('#ost_ok_button').button('option', 'disabled', val.length == 0);
-            }
-        });
+        createChooser('ost');
+        createChooser('mdt');
       });
+
+      function createChooser (type) {
+        $('#new_%s_chooser'.sprintf(type)).volumeChooser({
+          multi_select: true,
+          store: volume_chooser_store,
+          change: function() {
+            var val = $(this).volumeChooser('val');
+            $('#%s_ok_button'.sprintf(type))
+              .button('option', 'disabled', val.length == 0);
+          }
+        });
+      }
+
       $('#btnNewOST').click(function() {
-        $('#new_ost_dialog').dialog('open');
-        $('#new_ost_dialog').find('table').width("100%");
+        var dialog = $('#new_ost_dialog');
+        dialog.dialog('open');
+        dialog.find('table').width("100%");
         volume_chooser_store.reload(); // HYD-1309 reload available targets on display
         $('#new_ost_chooser').volumeChooser('clear');
         $('#ost_ok_button').button('option', 'disabled', true)
+      });
+
+      $('#btnNewMDT').click(function () {
+        $('#new_mdt_dialog').dialog('open');
+        $('#new_mdt_dialog').find('table').width("100%");
+        volume_chooser_store.reload(); // HYD-1309 reload available targets on display
+        $('#new_mdt_chooser').volumeChooser('clear');
+        $('#mdt_ok_button').button('option', 'disabled', true)
+      });
+
+      $('#new_mdt_dialog').dialog({
+        autoOpen: false,
+        width: 1100,
+        maxHeight:470,
+        position: 'center',
+        show: 'clip',
+        modal: true,
+        buttons: {
+          Ok: {
+            text: 'Create',
+            id: 'mdt_ok_button',
+            click: function  () {
+              $(this).dialog('close');
+
+              function create_mdts (osts) {
+                Api.patch('target/', { objects: osts, deletions: [] },
+                  function(data) {
+                    var table = tables.MDT;
+                    var settings = table.settings();
+
+                    // We know what the new mdt table length will be.
+                    // We set it early so the server will send back the right page.
+                    settings._iRecordsTotal = settings._iRecordsDisplay = (settings._iRecordsTotal += data.targets.length);
+
+                    var moveTo = settings.aaSorting[0][1] === 'asc' ? 'last' : 'first';
+                    table.$selector.fnPageChange(moveTo, false);
+
+                    // Reload view
+                    volume_chooser_store.reload();
+                    loadFilesystem(filesystem.id);
+                  });
+              }
+
+              var mdts = _.map($('#new_mdt_chooser').volumeChooser('val'), function(volume_id) {
+                return {kind: 'MDT', filesystem_id: filesystem.id, volume_id: volume_id}
+              });
+
+              // Before submitting new MDTs, conditionally prompt for reformat
+              volume_chooser_store.reformatPrompt($('#new_mdt_chooser').volumeChooser('val'),
+                function() {
+                  create_mdts(mdts);
+                },
+                function() {
+                  mdts = _.map(mdts, function(ost) {ost.reformat = true ; return ost;});
+                  create_mdts(mdts);
+                }
+              )
+            }
+          },
+          Cancel: function onCancel () {
+            $(this).dialog('close');
+          }
+        }
       });
 
       $('#new_ost_dialog').dialog({
@@ -346,8 +417,8 @@
 
         /* FS summary fields */
         $('#ost_count').html(filesystem.osts.length);
+        $('#mdt_count').html(filesystem.mdts.length);
         $('#mgs_name').html(RouteUtils.uri_properties_link(filesystem.mgt.primary_server, filesystem.mgt.primary_server_name));
-        $('#mds_name').html(RouteUtils.uri_properties_link(filesystem.mdts[0].primary_server, filesystem.mdts[0].primary_server_name));
         $('#fs_alerts').html(LiveObject.alertLabel(filesystem));
         $('#fs_name').html(filesystem.name);
 
@@ -449,7 +520,7 @@
       <th>Management Server:</th><td id='mgs_name'></td>
     </tr>
     <tr>
-      <th>Metadata Server:</th><td id='mds_name'></td>
+      <th>MDTs:</th><td id='mdt_count'></td>
     </tr>
     <tr>
       <th>OSTs:</th><td id='ost_count'></td>
@@ -497,6 +568,9 @@
 </table>
 
 <h2 class='section_header'>Metadata Target</h2>
+<div class="buttonspacer">
+    <button class="add" type="button" id="btnNewMDT">Create MDT (DNE)</button>
+</div>
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="mdt" width="100%">
   <thead>
     <tr>
@@ -543,6 +617,10 @@
 <!-- new OST popup showing all usable luns-->
 <div id="new_ost_dialog" title="Create OST">
   <button id='new_ost_chooser'></button>
+</div>
+
+<div id="new_mdt_dialog" title="Create MDT">
+  <button id='new_mdt_chooser'></button>
 </div>
 </div>
 </div>
