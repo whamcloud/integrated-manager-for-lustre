@@ -20,6 +20,7 @@
 # express and approved by Intel in writing.
 
 import re
+from testconfig import config
 
 from tests.integration.utils.test_blockdevices.test_blockdevice import TestBlockDevice
 
@@ -47,12 +48,13 @@ class TestBlockDeviceZfs(TestBlockDevice):
     def clear_device_commands(cls, device_paths):
         return ["if zpool list %s; then zpool destroy %s; else exit 0; fi" % (TestBlockDeviceZfs('zfs', device_path).device_path,
                                                                               TestBlockDeviceZfs('zfs', device_path).device_path) for device_path in device_paths] + \
-               ["yum remove -y zfs spl lustre-osd-zfs*",
+               ["yum remove -y zfs libzfs2 zfs-dkms spl lustre-osd-zfs*",
                 "if [ -e /etc/zfs ]; then rm -rf /etc/zfs; else exit 0; fi"]
 
     @property
     def install_packages_commands(self):
-        return ["yum install -y zfs"]
+        installer_path = config.get('installer_path', '/tmp')
+        return ["flock -x /var/lock/lustre_installer_lock -c 'rpm -q zfs || (cd %s && tar zxf lustre-zfs-installer.tar.gz && cd lustre-zfs && ./install > /tmp/zfs_installer.stdout)'" % installer_path]
 
     @property
     def release_commands(self):

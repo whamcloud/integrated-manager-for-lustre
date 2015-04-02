@@ -9,6 +9,7 @@
     "failover_is_configured": false,
     "test_ha": true,
     "reset": true,
+    "installer_path": "/tmp",
     "test_runners": [
         {
             "distro": "el6.5",

@@ -45,10 +45,6 @@ class TestFileSystemZfs(TestFileSystem):
                                                                             self.mount_path)
 
     @property
-    def install_packages_commands(cls):
-        return ["yum install -y lustre-osd-zfs"]
-
-    @property
     def mount_path(self):
         assert self._mount_path, "Mount path unknown"
 

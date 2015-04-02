@@ -1,6 +1,7 @@
 import logging
 import json
 import sys
+import threading
 
 from testconfig import config
 from tests.integration.core.utility_testcase import UtilityTestCase
@@ -10,6 +11,23 @@ from tests.integration.utils.test_filesystems.test_filesystem import TestFileSys
 
 logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
+
+
+class ExceptionThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        super(ExceptionThread, self).__init__(*args, **kwargs)
+        self._exception_value = None
+
+    def run(self):
+        try:
+            return super(ExceptionThread, self).run()
+        except BaseException as e:
+            self._exception_value = e
+
+    def join(self):
+        super(ExceptionThread, self).join()
+        if self._exception_value:
+            raise self._exception_value
 
 
 class CreateLustreFilesystem(UtilityTestCase):
@@ -121,6 +139,16 @@ class CreateLustreFilesystem(UtilityTestCase):
             result = self.remote_command(target, command)
             logger.info("%s command %s output:\n %s" % (debug_message, command, result.stdout))
 
+    def _execute_simultaneous_commands(self, commands, targets, debug_message):
+        threads = []
+        for target in targets:
+            th = ExceptionThread(target=self._execute_commands,
+                                 args=(commands, target,
+                                       '%s: %s' % (target, debug_message)))
+            th.start()
+            threads.append(th)
+        map(lambda th: th.join(), threads)
+
     def create_lustre_filesystem_for_test(self):
         combined_mgt_mdt = self.mgt['primary_server'] == self.mdt['primary_server'] and self.mgt['mount_path'] == self.mdt['mount_path']
 
@@ -146,11 +174,7 @@ class CreateLustreFilesystem(UtilityTestCase):
                                self.mgt['primary_server'])
 
         for ost in self.osts:
-            self.configure_target_device(ost,
-                                         'ost',
-                                         self.fsname,
-                                         mgs_nids,
-                                         ['--reformat', '--ost'])
+            self.configure_target_device(ost, 'ost', self.fsname, mgs_nids, ['--reformat', '--ost'])
 
         for server in config['lustre_servers']:
             self.remote_command(
@@ -258,10 +282,9 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         block_device = TestBlockDevice(device_type, device_path)
 
-        for targ in targets.values():
-            self._execute_commands(block_device.install_packages_commands,
-                                   targ,
-                                   'install blockdevice packages')
+        self._execute_simultaneous_commands(block_device.install_packages_commands,
+                                            targets.values(),
+                                            'install blockdevice packages')
 
         self._execute_commands(block_device.prepare_device_commands,
                                targets['primary_server'],
@@ -269,10 +292,9 @@ class CreateLustreFilesystem(UtilityTestCase):
 
         filesystem = TestFileSystem(block_device.preferred_fstype, block_device.device_path)
 
-        for targ in targets.values():
-            self._execute_commands(filesystem.install_packages_commands,
-                                   targ,
-                                   'install filesystem packages')
+        self._execute_simultaneous_commands(filesystem.install_packages_commands,
+                                            targets.values(),
+                                            'install filesystem packages')
 
         result = self.remote_command(targets['primary_server'],
                                      filesystem.mkfs_command(target,

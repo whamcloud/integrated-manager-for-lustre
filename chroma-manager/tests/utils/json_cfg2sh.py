@@ -40,3 +40,4 @@ if user.get("email"):
     print "CHROMA_EMAIL=\"%s\"" % user["email"]
 if chroma_manager.get("ntp_server"):
     print "CHROMA_NTP_SERVER=\"%s\"" % chroma_manager["ntp_server"]
+print "INSTALLER_PATH=\"%s\"" % config.get('installer_path', '/tmp')
