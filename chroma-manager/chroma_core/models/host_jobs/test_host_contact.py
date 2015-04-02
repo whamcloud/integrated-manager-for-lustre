@@ -163,7 +163,7 @@ exit(missing_electric_fence)"
         except AgentException:
             job_log.exception("Exception thrown while trying to invoke agent on '%s':" % address)
             return False
-        return not (rc or err)
+        return not rc
 
     def _try_ssh_cmd(self, agent_ssh, auth_args, cmd):
         from chroma_core.services.job_scheduler.agent_rpc import AgentException
