@@ -1,10 +1,11 @@
 from collections import defaultdict
+
 import mock
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_api.tastypie_test import ResourceTestCase
-from tests.unit.chroma_core.helper import synthetic_volume_full
+from tests.unit.chroma_core.helpers import synthetic_volume_full
 from chroma_core.models import ManagedTarget
 
 
@@ -24,7 +25,7 @@ class ChromaApiTestCase(ResourceTestCase):
         self.old_is_authenticated = CsrfAuthentication.is_authenticated
         CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
         self.api_client.client.login(username = self.username, password = self.password)
-        from tests.unit.chroma_core.helper import load_default_profile
+        from tests.unit.chroma_core.helpers import load_default_profile
         load_default_profile()
 
         # If the test that just ran imported storage_plugin_manager, it will

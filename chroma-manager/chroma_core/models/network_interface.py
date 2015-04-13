@@ -20,7 +20,6 @@
 # otherwise. Any license under such intellectual property rights must be
 # express and approved by Intel in writing.
 
-
 from django.db import models
 
 from chroma_core.models import Nid
@@ -31,6 +30,8 @@ class NetworkInterface(models.Model):
 
     name = models.CharField(max_length=32)
     inet4_address = models.CharField(max_length=128)
+    inet4_prefix = models.IntegerField()
+    corosync_configuration = models.ForeignKey('CorosyncConfiguration', null=True)
     type = models.CharField(max_length=32)          # tcp, o2ib, ... (best stick to lnet types!)
     state_up = models.BooleanField()
 

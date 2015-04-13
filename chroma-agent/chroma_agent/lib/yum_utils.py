@@ -25,6 +25,15 @@ from chroma_agent.log import daemon_log
 
 
 def yum_util(action, packages=[], fromrepo=None, enablerepo=None, narrow_updates=False):
+    '''
+    A wrapper to perform yum actions in encapsulated way.
+    :param action:  clean, install, remove, update, requires etc
+    :param packages: Packages to install or remove
+    :param fromrepo: The repo the action should be carried out from, others are disabled.
+    :param enablerepo: The repo to enable for the action, others are not disabled or enabled
+    :param narrow_updates: ?
+    :return: No return but throws CommandExecutionError on error.
+    '''
 
     if fromrepo and enablerepo:
         raise ValueError("Cannot provide fromrepo and enablerepo simultaneously")

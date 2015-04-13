@@ -63,22 +63,23 @@ class TestLinuxNetwork(unittest.TestCase):
                 interfaces = NetworkInterfaces()
 
         ResultCheck = namedtuple("ResultCheck",
-                                 ["interface", "mac_address", "type", "inet4_addr", "inet6_addr",
+                                 ["interface", "mac_address", "type", "inet4_addr", "inet4_prefix", "inet6_addr",
                                  "rx_bytes", "tx_bytes", "up", "slave"])
 
         self.assertEqual(len(interfaces), 5)
 
-        for result_check in [ResultCheck("bond0", "52:54:00:33:d9:15", "tcp", "192.168.10.79", "fe80::4e00:10ff:feac:61e0", "314203", "129834", True, False),
-                             ResultCheck("eth2", "52:54:00:33:a7:11", "tcp", "", "", "0", "0", False, False),
-                             ResultCheck("eth4", "52:54:00:33:a7:15", "tcp", "10.0.0.101", "fe80::200:ff:fe00:2", "20400", "6859022", True, False),
+        for result_check in [ResultCheck("bond0", "52:54:00:33:d9:15", "tcp", "192.168.10.79", 21, "fe80::4e00:10ff:feac:61e0", "314203", "129834", True, False),
+                             ResultCheck("eth2", "52:54:00:33:a7:11", "tcp", "", 0, "", "0", "0", False, False),
+                             ResultCheck("eth4", "52:54:00:33:a7:15", "tcp", "10.0.0.101", 24, "fe80::200:ff:fe00:2", "20400", "6859022", True, False),
                              ResultCheck("ib0", "80:00:00:48:FE:80:00:00:00:00:00:00:00:00:00:00:00:00:00:00",
-                                         "o2ib", "192.168.4.23", "fe80::225:90ff:ff1c:a229", "3286081", "4753096", True, False)]:
+                                         "o2ib", "192.168.4.23", 23, "fe80::225:90ff:ff1c:a229", "3286081", "4753096", True, False)]:
 
             interface = interfaces[result_check.interface]
 
             self.assertEqual(interface['mac_address'], result_check.mac_address)
             self.assertEqual(interface['type'], result_check.type)
             self.assertEqual(interface['inet4_address'], result_check.inet4_addr)
+            self.assertEqual(interface['inet4_prefix'], result_check.inet4_prefix)
             self.assertEqual(interface['inet6_address'], result_check.inet6_addr)
             self.assertEqual(interface['rx_bytes'], result_check.rx_bytes)
             self.assertEqual(interface['tx_bytes'], result_check.tx_bytes)

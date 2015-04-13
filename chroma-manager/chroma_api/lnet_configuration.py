@@ -52,8 +52,8 @@ class LNetConfigurationResource(StatefulModelResource):
     """
     LNetConfiguration information.
     """
-    host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=True)
-    nids = fields.ToManyField('chroma_api.nid.NidResource', 'nid_set', full=True, null=True)
+    host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=True)     # full to support the cli
+    nids = fields.ToManyField('chroma_api.nid.NidResource', 'nid_set', full=False, null=True)
 
     class Meta:
         queryset = LNetConfiguration.objects.all()

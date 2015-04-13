@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -24,20 +24,18 @@
 Corosync verification
 """
 
-from netaddr import IPNetwork
-import socket
 from os import remove
+from collections import namedtuple
 import errno
 import re
-import json
-import time
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.lib.system import add_firewall_rule, del_firewall_rule
-from chroma_agent.lib.pacemaker import cibadmin, PacemakerConfig
-from chroma_agent.log import daemon_log
-from ConfigParser import SafeConfigParser, Error as ConfigError
-from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok
+from chroma_agent.lib.corosync import CorosyncRingInterface, render_config, write_config_to_file
+from chroma_agent.lib.corosync import get_ring0, generate_ring1_network, detect_ring1
+
+from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result_ok, agent_result, agent_ok_or_error
+
 
 # The window of time in which we count resource monitor failures
 RSRC_FAIL_WINDOW = "20m"
@@ -46,44 +44,53 @@ RSRC_FAIL_WINDOW = "20m"
 RSRC_FAIL_MIGRATION_COUNT = "3"
 
 
-def configure_corosync(ring1_iface = None, ring1_ipaddr = None, ring1_netmask = None, mcast_port = None):
-    '''
-    Configure the corosync application.
+def start_corosync():
+    error = shell.run_canned_error_message(['/sbin/service', 'corosync', 'start'])
 
-    Return: Value using simple return protocol
-    '''
-    from chroma_agent.lib.corosync import CorosyncRingInterface, get_ring0, generate_ring1_network, detect_ring1, render_config, write_config_to_file
-
-    ring0 = get_ring0()
-    if not ring1_ipaddr and not ring1_netmask:
-        ring1_ipaddr, ring1_prefix = generate_ring1_network(ring0)
-    elif ring1_netmask:
-        ring1_prefix = str(IPNetwork("0.0.0.0/%s" % ring1_netmask).prefixlen)
-
-    if ring1_iface and ring1_ipaddr and ring1_prefix and mcast_port:
-        ring1 = CorosyncRingInterface(name = ring1_iface,
-                                      ringnumber = 1,
-                                      mcastport = int(mcast_port))
-        ring1.set_address(ring1_ipaddr, ring1_prefix)
+    if error:
+        return agent_error(error)
     else:
-        ring1 = detect_ring1(ring0, ring1_ipaddr, ring1_prefix)
+        return agent_result_ok
 
-    if not ring1:
-        return agent_error("Failed to detect ring1 interface")
 
-    interfaces = [ring0, ring1]
-    interfaces[0].mcastport = interfaces[1].mcastport
+def stop_corosync():
+    return agent_ok_or_error(shell.run_canned_error_message(['/sbin/service', 'corosync', 'stop']))
 
-    config = render_config(interfaces)
+InterfaceInfo = namedtuple("InterfaceInfo", ['corosync_iface', 'ipaddr', 'prefix'])
+
+
+def configure_corosync(ring0_name,
+                       mcast_port,
+                       ring1_name=None,
+                       ring0_ipaddr=None, ring0_prefix=None,
+                       ring1_ipaddr=None, ring1_prefix=None):
+
+    interfaces = [InterfaceInfo(CorosyncRingInterface(name=ring0_name,
+                                                      ringnumber=0,
+                                                      mcastport=mcast_port),
+                                ring0_ipaddr,
+                                ring0_prefix)]
+
+    if ring1_name:
+        interfaces.append(InterfaceInfo(CorosyncRingInterface(ring1_name,
+                                                              ringnumber=1,
+                                                              mcastport=mcast_port),
+                                        ring1_ipaddr,
+                                        ring1_prefix))
+
+    for interface in interfaces:
+        if interface.ipaddr:
+            interface.corosync_iface.set_address(interface.ipaddr, interface.prefix)
+
+    config = render_config([interface.corosync_iface for interface in interfaces])
+
     write_config_to_file("/etc/corosync/corosync.conf", config)
 
-    add_firewall_rule(interfaces[0].mcastport, "udp", "corosync")
+    add_firewall_rule(mcast_port, "udp", "corosync")
 
-    # pacemaker MUST be stopped before doing this or this will spin
-    # forever
-    unconfigure_pacemaker()
-    shell.try_run(['/sbin/service', 'corosync', 'restart'])
-    shell.try_run(['/sbin/chkconfig', 'corosync', 'on'])
+    error = shell.run_canned_error_message(['/sbin/chkconfig', 'corosync', 'on'])
+    if error:
+        return agent_error(error)
 
     return agent_result_ok
 
@@ -104,111 +111,6 @@ def get_cluster_size():
             n = n + 1
 
     return n
-
-
-def enable_pacemaker():
-    shell.try_run(['/sbin/chkconfig', '--add', 'pacemaker'])
-    shell.try_run(['/sbin/chkconfig', 'pacemaker', 'on'])
-
-
-def configure_pacemaker():
-    '''
-    Configure pacemaker
-    :return: Error string on failure, None on success
-    '''
-    # Corosync needs to be running for pacemaker -- if it's not, make
-    # an attempt to get it going.
-    if shell.run(['/sbin/service', 'corosync', 'status'])[0]:
-        shell.try_run(['/sbin/service', 'corosync', 'restart'])
-        shell.try_run(['/sbin/service', 'corosync', 'status'])
-
-    enable_pacemaker()
-    shell.try_run(['/sbin/service', 'pacemaker', 'restart'])
-
-    _configure_pacemaker()
-
-    # Now check that pacemaker is configured, by looking for our configuration flag.
-    # Allow 1 minute - if nothing then return an error.
-    for timeout in range(0, 60):
-        if PacemakerConfig().stonith_enabled:
-            return None
-        time.sleep(1)
-
-    return "pacemaker_configuration_failed"
-
-
-def _configure_pacemaker():
-    pc = PacemakerConfig()
-
-    if not pc.is_dc:
-        daemon_log.info("Skipping (global) pacemaker configuration because I am not the DC")
-        return
-
-    daemon_log.info("Configuring (global) pacemaker configuration because I am the DC")
-
-    # ignoring quorum should only be done on clusters of 2
-    if len(pc.nodes) > 2:
-        no_quorum_policy = "stop"
-    else:
-        no_quorum_policy = "ignore"
-
-    _unconfigure_fencing()
-    # this could race with other cluster members to make sure
-    # any errors are only due to it already existing
-    try:
-        cibadmin(["--create", "-o", "resources", "-X",
-                  "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
-    except:
-        rc, stdout, stderr = shell.run(['crm_resource', '--locate',
-                                        '--resource', "st-fencing"])
-        if rc == 0:
-            # no need to do the rest if another member is already doing it
-            return
-        else:
-            raise
-
-    pc.create_update_properyset("cib-bootstrap-options",
-                                {"no-quorum-policy": no_quorum_policy,
-                                 "symmetric-cluster": "true",
-                                 "cluster-infrastructure": "openais",
-                                 "stonith-enabled": "true"})
-
-    def set_rsc_default(name, value):
-        shell.try_run(["crm_attribute", "--type", "rsc_defaults",
-                       "--attr-name", name, "--attr-value", value])
-    set_rsc_default("resource-stickiness", "1000")
-    set_rsc_default("failure-timeout", RSRC_FAIL_WINDOW)
-    set_rsc_default("migration-threshold", RSRC_FAIL_MIGRATION_COUNT)
-
-    # Finally mark who configured it.
-    pc.create_update_properyset("intel_manager_for_lustre_configuration",
-                                {"configured_by": socket.gethostname()})
-
-
-def configure_fencing(agents):
-    pc = PacemakerConfig()
-    node = pc.get_node(socket.gethostname())
-
-    node.clear_fence_attributes()
-
-    if isinstance(agents, basestring):
-        # For CLI debugging
-        agents = json.loads(agents)
-
-    for idx, agent in enumerate(agents):
-        node.set_fence_attributes(idx, agent)
-
-
-def set_node_standby(node):
-    pc = PacemakerConfig()
-    node = pc.get_node(node)
-    node.enable_standby()
-
-
-def set_node_online(node):
-    pc = PacemakerConfig()
-    node = pc.get_node(node)
-    node.disable_standby()
 
 
 def unconfigure_corosync():
@@ -244,94 +146,32 @@ def unconfigure_corosync():
     return agent_result_ok
 
 
-def pacemaker_running():
-    rc, stdout, stderr = shell.run(["crm_mon", "-1"])
-    if rc != 0:
-        return False
+def get_corosync_autoconfig():
+    '''
+    Automatically detect the configuration for corosync.
+    :return: dictionary containing 'result' or 'error'.
+    '''
+    ring0 = get_ring0()
 
-    return True
+    if not ring0:
+        return {'error': 'Failed to detect ring0 interface'}
 
+    ring1_ipaddr, ring1_prefix = generate_ring1_network(ring0)
 
-def unconfigure_pacemaker():
-    # only unconfigure if we are the only node in the cluster
-    # but first, see if pacemaker is up to answer this
-    if not pacemaker_running():
-        # and just skip doing this if it's not
-        return 0
+    ring1 = detect_ring1(ring0, ring1_ipaddr, ring1_prefix)
 
-    if get_cluster_size() < 2:
-        # last node, nuke the CIB
-        cibadmin(["-f", "-E"])
+    if not ring1:
+        return agent_error('Failed to detect ring1 interface')
 
-    shell.try_run(['/sbin/service', 'pacemaker', 'stop'])
-
-    shell.try_run(['/sbin/chkconfig', 'pacemaker', 'off'])
-
-
-def _unconfigure_fencing():
-    cibadmin(["--delete", "-o", "resources", "-X",
-              "<primitive class=\"stonith\" id=\"st-fencing\" type=\"fence_chroma\"/>"])
+    return agent_result({'interfaces': {ring0.name: {'dedicated': False,
+                                                     'ipaddr': ring0.ipv4_address,
+                                                     'prefix': ring0.ipv4_prefixlen},
+                                        ring1.name: {'dedicated': True,
+                                                     'ipaddr': ring1.ipv4_address,
+                                                     'prefix': ring1.ipv4_prefixlen}},
+                         'mcast_port': ring1.mcastport})
 
 
-def unconfigure_fencing():
-    # only unconfigure if we are the only node in the cluster
-    # but first, see if pacemaker is up to answer this
-    if not pacemaker_running():
-        # and just skip doing this if it's not
-        return 0
-
-    if get_cluster_size() > 1:
-        return 0
-
-    _unconfigure_fencing()
-
-
-def delete_node(nodename):
-    rc, stdout, stderr = shell.run(['crm_node', '-l'])
-    node_id = None
-    for line in stdout.split('\n'):
-        node_id, name, status = line.split(" ")
-        if name == nodename:
-            break
-    shell.try_run(['crm_node', '--force', '-R', node_id])
-    cibadmin(["--delete", "-o", "nodes", "-X",
-              "<node uname=\"%s\"/>" % nodename])
-    cibadmin(["--delete", "-o", "nodes", "--crm_xml",
-              "<node_state uname=\"%s\"/>" % nodename])
-
-
-def host_corosync_config():
-    """
-    If desired, automatic corosync configuration can be bypassed by creating
-    an /etc/chroma.cfg file containing parameters for the configure_corosync
-    function.
-
-    Example 1: Allow automatic assignment of ring1 network parameters
-    [corosync]
-    mcast_port = 4400
-    ring1_iface = eth1
-
-    Example 2: Specify all parameters to completely bypass automatic config
-    [corosync]
-    mcast_port = 4400
-    ring1_iface = eth1
-    ring1_ipaddr = 10.42.42.10
-    ring1_netmask = 255.255.0.0
-    """
-    config_file = "/etc/chroma.cfg"
-
-    parser = SafeConfigParser()
-    parser.add_section('corosync')
-    try:
-        parser.read(config_file)
-        return dict(parser.items('corosync'))
-    except ConfigError as e:
-        daemon_log.error("Failed to parse %s: %s" % (config_file, e))
-        return {}
-
-
-ACTIONS = [configure_corosync, unconfigure_corosync,
-           enable_pacemaker, configure_pacemaker, unconfigure_pacemaker,
-           configure_fencing, unconfigure_fencing,
-           set_node_standby, set_node_online,
-           host_corosync_config, delete_node]
+ACTIONS = [start_corosync, stop_corosync,
+           configure_corosync, unconfigure_corosync,
+           get_corosync_autoconfig]

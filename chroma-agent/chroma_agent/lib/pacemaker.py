@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -242,14 +242,13 @@ class PacemakerConfig(object):
     def is_dc(self):
         return self.dc == self.get_node(socket.gethostname()).name
 
-    @property
-    def stonith_enabled(self):
+    def get_property_setvalue(self, property_set_name, value_name):
         '''
-        :return: True if stonith is enabled in the bootstrap options
+        :return: Value 'value_name' from a property set of name 'property_set_name'. None if no value.
         '''
-        cib_bootstrap_options = self.get_propertyset('cib-bootstrap-options')
+        property_set = self.get_propertyset(property_set_name)
 
-        return cib_bootstrap_options.get('stonith-enabled') == 'true'
+        return property_set.get(value_name, None)
 
     def create_update_properyset(self, propertyset_name, properties):
         nvpairs = ""
@@ -300,3 +299,9 @@ def cibadmin(command_args, timeout = 120):
                              % (" ".join(command_args), timeout, rc, stderr))
     else:
         raise CommandExecutionError(rc, command_args, stdout, stderr)
+
+
+def pacemaker_running():
+    rc, stdout, stderr = shell.run(['service', 'pacemaker', 'status'])
+
+    return rc == 0

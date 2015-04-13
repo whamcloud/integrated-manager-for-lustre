@@ -121,6 +121,21 @@ class SimulatorRemoteOperations(RemoteOperations):
     def stop_lnet(self, fqdn):
         self._simulator.servers[fqdn].stop_lnet()
 
+    def start_pacemaker(self, fqdn):
+        self._simulator.servers[fqdn].start_pacemaker()
+
+    def stop_pacemaker(self, fqdn):
+        self._simulator.servers[fqdn].stop_pacemaker()
+
+    def start_corosync(self, fqdn):
+        self._simulator.servers[fqdn].start_corosync()
+
+    def stop_corosync(self, fqdn):
+        self._simulator.servers[fqdn].stop_corosync()
+
+    def get_corosync_port(self, fqdn):
+        return self._simulator.servers[fqdn].state['corosync'].mcast_port
+
     def backup_cib(*args, **kwargs):
         return []
 
@@ -371,6 +386,18 @@ class RealRemoteOperations(RemoteOperations):
 
     def start_lnet(self, fqdn):
         self._ssh_fqdn(fqdn, "chroma-agent start_lnet")
+
+    def stop_pacemaker(self, fqdn):
+        self._ssh_fqdn(fqdn, "chroma-agent stop_pacemaker")
+
+    def start_pacemaker(self, fqdn):
+        self._ssh_fqdn(fqdn, "chroma-agent start_pacemaker")
+
+    def stop_corosync(self, fqdn):
+        self._ssh_fqdn(fqdn, "chroma-agent stop_corosync")
+
+    def start_corosync(self, fqdn):
+        self._ssh_fqdn(fqdn, "chroma-agent start_corosync")
 
     def inject_log_message(self, fqdn, message):
         self._ssh_fqdn(fqdn, "logger \"%s\"" % message)
@@ -981,9 +1008,9 @@ EOF
                     self._test_case.wait_until_true(lambda: not self.get_pacemaker_targets(server))
 
                     # remove firewall rules added for corosync
-                    mcastport = self.get_corosync_port(server)
-                    if mcastport:
-                        self.del_firewall_rule(server, mcastport, "udp")
+                    mcast_port = self.get_corosync_port(server['fqdn'])
+                    if mcast_port:
+                        self.del_firewall_rule(server, mcast_port, "udp")
 
                 rpm_q_result = self._ssh_address(server['address'], "rpm -q chroma-agent", expected_return_code=None)
                 if rpm_q_result.exit_status == 0:
@@ -1050,16 +1077,16 @@ EOF
 
         return rules
 
-    def get_corosync_port(self, server):
-        mcastport = None
-        for line in self._ssh_address(server['address'],
+    def get_corosync_port(self, fqdn):
+        mcast_port = None
+        for line in self._ssh_address(fqdn,
                                       "cat /etc/corosync/corosync.conf || true").stdout.split('\n'):
             match = re.match("\s*mcastport:\s*(\d+)", line)
             if match:
-                mcastport = match.group(1)
+                mcast_port = match.group(1)
                 break
 
-        return mcastport
+        return int(mcast_port)
 
     def grep_file(self, server, string, file):
         result = self._ssh_address(server['address'],

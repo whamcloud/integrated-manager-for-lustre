@@ -1,5 +1,8 @@
+import time
 
 import dateutil.parser
+import mock
+
 from chroma_core.models import ManagedHost
 from chroma_core.models import Volume
 from chroma_core.models import VolumeNode
@@ -8,9 +11,8 @@ from chroma_core.models import StopLNetJob
 from chroma_core.models import HostOfflineAlert
 from chroma_core.models import Command, StepResult
 from chroma_core.models import ManagedTarget
-import mock
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import synthetic_host
+from tests.unit.chroma_core.helpers import synthetic_host
 
 
 def _remove_host_resources(host_id):

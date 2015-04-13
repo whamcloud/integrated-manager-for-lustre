@@ -1,9 +1,11 @@
 import datetime
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+
 from django.test import TestCase
 import mock
-from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
 
+from chroma_core.services.job_scheduler import job_scheduler_notify
+from tests.unit.chroma_core.helpers import synthetic_host
+from tests.unit.chroma_core.helpers import load_default_profile
 from chroma_core.models import Package, PackageVersion, PackageAvailability
 from chroma_core.services.lustre_audit import UpdateScan
 from chroma_core.models.package import PackageInstallation
@@ -12,11 +14,10 @@ from chroma_core.models.package import PackageInstallation
 class TestAudit(TestCase):
     def setUp(self):
         load_default_profile()
-        self.old_notify = JobSchedulerClient.notify
-        JobSchedulerClient.notify = mock.Mock()
 
-    def tearDown(self):
-        JobSchedulerClient.notify = self.old_notify
+        mock.patch('chroma_core.services.job_scheduler.job_scheduler_notify.notify').start()
+
+        self.addCleanup(mock.patch.stopall)
 
     def _send_package_data(self, host, data):
         # UpdateScan is a weird class, we have to instantiate and assign a host
@@ -42,7 +43,7 @@ class TestAudit(TestCase):
         })
         # We reported different installed vs. available versions -- a notification that updates
         # are needed should have been emitted
-        JobSchedulerClient.notify.assert_called_once_with(host, self.update_scan.started_at, {'needs_update': True})
+        job_scheduler_notify.notify.assert_called_once_with(host, self.update_scan.started_at, {'needs_update': True})
 
     def test_version_recording(self):
         """

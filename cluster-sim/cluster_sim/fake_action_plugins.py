@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -115,7 +115,7 @@ class FakeActionPlugins():
                 return agent_result_ok
             elif cmd == 'set_conf_param':
                 self._server.set_conf_param(kwargs['key'], kwargs.get('value', None))
-            elif cmd in ['configure_corosync', 'unconfigure_corosync']:
+            elif cmd in ['unconfigure_corosync']:
                 return agent_result_ok
             elif cmd in ['configure_pacemaker', 'unconfigure_pacemaker',
                          'enable_pacemaker']:

@@ -45,7 +45,7 @@ class NetworkInterfaceResource(ModelResource):
     """
     NetworkInterface information.
     """
-    host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=True)
+    host = fields.ToOneField('chroma_api.host.HostResource', 'host', full=False)
     nid = fields.ToOneField('chroma_api.nid.NidResource', 'nid', full=True, null=True)
     lnd_types = fields.ListField()
 

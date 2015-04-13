@@ -2,8 +2,8 @@ import uuid
 import os
 import json
 from collections import defaultdict
+
 from nose.tools import *
-from behave import *
 
 
 def load_filesystem_from_json(data):
@@ -11,13 +11,13 @@ def load_filesystem_from_json(data):
     # are slated to be decommissioned at some point, we're just going to
     # abandon all pretense that we might be loading a non-synthetic cluster.
     from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-    from tests.unit.chroma_core.helper import synthetic_volume
+    from tests.unit.chroma_core.helpers import synthetic_volume
     from chroma_core.models import ManagedMgs, VolumeNode
 
     from chroma_core.lib.cache import ObjectCache
     from chroma_core.models import ManagedHost, ManagedTarget, ManagedTargetMount
     from chroma_core.models import Nid
-    from tests.unit.chroma_core.helper import synthetic_host
+    from tests.unit.chroma_core.helpers import synthetic_host
 
     lookup = defaultdict(dict)
 
@@ -80,7 +80,7 @@ def load_filesystem_from_json(data):
 
 @given('the "{sample_name}" data is loaded')
 def step(context, sample_name):
-    from tests.unit.chroma_core.helper import MockAgentRpc
+    from tests.unit.chroma_core.helpers import MockAgentRpc
 
     from chroma_core.models.filesystem import ManagedFilesystem
     # Don't reload all of this if a previous scenario set it up
@@ -109,7 +109,7 @@ def step(context, name):
     import os
     import json
     from chroma_core.models import Nid
-    from tests.unit.chroma_core.helper import MockAgentRpc
+    from tests.unit.chroma_core.helpers import MockAgentRpc
 
     # Skip setup if it was already done in a previous scenario.
     if len(MockAgentRpc.mock_servers) > 0:
@@ -127,7 +127,7 @@ def step(context, name):
 @given('the mock servers are set up')
 def step(context):
     from chroma_core.models.host import ManagedHost, VolumeNode
-    from tests.unit.chroma_core.helper import MockAgentRpc, synthetic_host, synthetic_volume_full
+    from tests.unit.chroma_core.helpers import MockAgentRpc, synthetic_host, synthetic_volume_full
 
     for address, host_info in sorted(MockAgentRpc.mock_servers.items()):
         if not ManagedHost.objects.filter(fqdn=host_info['fqdn']).exists():

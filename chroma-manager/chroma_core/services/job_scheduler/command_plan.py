@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -472,11 +472,12 @@ class CommandPlan(object):
 
         return command.id
 
-    def command_set_state(self, object_ids, message):
-        command = Command.objects.create(message = message)
+    def command_set_state(self, object_ids, message, command=None):
+        if not command:
+            command = Command.objects.create(message=message)
         for ct_nk, o_pk, state in object_ids:
             model_klass = ContentType.objects.get_by_natural_key(*ct_nk).model_class()
-            instance = model_klass.objects.get(pk = o_pk)
+            instance = model_klass.objects.get(pk=o_pk)
             self._set_state(instance, state, command)
 
         log.info("Created command %s (%s) with %s jobs" % (command.id, command.message, command.jobs.count()))
@@ -485,3 +486,18 @@ class CommandPlan(object):
             command.save()
 
         return command
+
+    def command_run_jobs_preserve_states(self, job_dicts, preserve_objects, message):
+        '''
+        :param job_dicts: jobs to run
+        :param preserve_objects: list of objects that should have there state restored (preserved) after the jobs have run.
+        :param message: Message for the command being run.
+        :return: id of command that contains the jobs.
+        '''
+
+        command_id = self.command_run_jobs(job_dicts, message)
+        self.command_set_state([(ContentType.objects.get_for_model(type(object)).natural_key(), object.id, object.state) for object in preserve_objects],
+                               None,
+                               Command.objects.get(id=command_id))
+
+        return command_id

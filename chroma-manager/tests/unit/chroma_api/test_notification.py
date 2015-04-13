@@ -1,12 +1,11 @@
 from datetime import timedelta
-
 import logging
+
 from django.utils import timezone
 
 from chroma_core.models import Command, Event, HostOfflineAlert, AlertState
-
 from tests.unit.chroma_api.notification_test_case import NotificationTestCase
-from tests.unit.chroma_core.helper import synthetic_host
+from tests.unit.chroma_core.helpers import synthetic_host
 
 log = logging.getLogger(__name__)
 

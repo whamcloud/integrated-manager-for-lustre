@@ -32,6 +32,7 @@ class ObjectCache(object):
 
     def __init__(self):
         from chroma_core.models import ManagedFilesystem, ManagedHost, LNetConfiguration, LustreClientMount
+        from chroma_core.models import PacemakerConfiguration, CorosyncConfiguration, NTPConfiguration, RSyslogConfiguration
         from chroma_core.models.target import ManagedTarget, ManagedTargetMount
         from chroma_core.models.copytool import Copytool
         self.objects = defaultdict(dict)
@@ -40,7 +41,10 @@ class ObjectCache(object):
             LNetConfiguration: {"host__not_deleted": True}
         }
 
-        self._cached_models = [ManagedTarget, ManagedFilesystem, ManagedHost, ManagedTargetMount, LustreClientMount, LNetConfiguration, Copytool]
+        self._cached_models = [ManagedTarget, ManagedFilesystem, ManagedHost,
+                               ManagedTargetMount, LustreClientMount, LNetConfiguration,
+                               Copytool, PacemakerConfiguration, CorosyncConfiguration,
+                               NTPConfiguration, RSyslogConfiguration]
 
         for klass in self._cached_models:
             args = filter_args.get(klass, {})

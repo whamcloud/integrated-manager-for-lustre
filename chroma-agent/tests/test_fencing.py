@@ -1,6 +1,6 @@
 import mock
 
-from chroma_agent.action_plugins.manage_corosync import configure_fencing, set_node_standby, set_node_online
+from chroma_agent.action_plugins.manage_pacemaker import configure_fencing, set_node_standby, set_node_online
 from chroma_agent.action_plugins import manage_corosync
 from chroma_agent.lib.pacemaker import PacemakerNode
 from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
@@ -90,6 +90,9 @@ class TestAgentConfiguration(FencingTestCase):
             for key in ['ipport', 'plug', 'ipaddr', 'login', 'password', 'agent']:  # The fields are the order the comamnds should occur in
                 self.add_command(('crm_attribute', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', '%d_fence_%s' % (i, key), '-v', agent[key]))
 
+        self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="cib-bootstrap-options">\n<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"/>\n'))
+        self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="intel_manager_for_lustre_configuration">\n<nvpair id="intel_manager_for_lustre_configuration-stonith_enabled_disabled_by" name="stonith_enabled_disabled_by" value="fake.host.domain"/>\n'))
+
         configure_fencing(agents)
 
         # HYD-2104: Ensure that the N_fence_agent attribute was added last.
@@ -103,6 +106,9 @@ class TestAgentConfiguration(FencingTestCase):
 
         for key in fake_attributes:
             self.add_command(('crm_attribute', '-D', '-t', 'nodes', '-U', self.fake_node_hostname, '-n', key))
+
+        self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="cib-bootstrap-options">\n<nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="false"/>\n'))
+        self.add_command(('cibadmin', '--modify', '--allow-create', '-o', 'crm_config', '-X', '<cluster_property_set id="intel_manager_for_lustre_configuration">\n<nvpair id="intel_manager_for_lustre_configuration-stonith_enabled_disabled_by" name="stonith_enabled_disabled_by" value="fake.host.domain"/>\n'))
 
         configure_fencing([])
 

@@ -98,15 +98,12 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(response.successful, True, response.text)
         # Wait for the server to be set up with the new server profile
         # Rather a long timeout because this may be installing packages, including Lustre and a new kernel
-        try:
-            command_ids = []
-            for object in response.json['objects']:
-                self.assertTrue(object['commands'], object)
-                for command in object['commands']:
-                    command_ids.append(command['id'])
-            self.assertTrue(command_ids)
-            self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT)
-        except AssertionError as e:
+        command_ids = []
+        for object in response.json['objects']:
+            for command in object['commands']:
+                command_ids.append(command['id'])
+
+        def check_for_HYD_2849_4050():
             # Debugging added for HYD-2849, must not impact normal exception handling
             check_nodes_status(config)
             # HYD-4050: spin here so that somebody can inspect if we hit this bug
@@ -117,12 +114,15 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                     job_steps = [self.get_json_by_uri(s) for s in job['steps']]
                     if job['errored']:
                         for step in job_steps:
-                            if step['state'] == 'failed' and \
-                               step['console'].find("is no initramfs") >= 0:
-                                logger.error("Waiting for developer inspection dueo to HYD-4050.  DO NOT ABORT THIS TEST.  NOTIFY DEVELOPER ASSIGNED TO HYD-4050.")
-                                while True:
-                                    time.sleep(86400)
-            raise e
+                            if step['state'] == 'failed' and step['console'].find("is no initramfs") >= 0:
+                                return True
+
+            return False
+
+        self._fetch_help(lambda: self.wait_for_commands(self.chroma_manager, command_ids, timeout=INSTALL_TIMEOUT),
+                         ['brian.murrell@intel.com'],
+                         "Waiting for developer inspection due to HYD-4050.  DO NOT ABORT THIS TEST.  NOTIFY DEVELOPER ASSIGNED TO HYD-4050.",
+                         lambda: check_for_HYD_2849_4050())
 
     def register_simulated_hosts(self, addresses):
         host_create_command_ids = {}
@@ -153,6 +153,11 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
             self.wait_for_commands(self.chroma_manager, host_create_command_ids.values())
 
     def add_hosts(self, addresses, auth_type='existing_keys_choice'):
+        return self._fetch_help(lambda: self._add_hosts(addresses, auth_type),
+                                ['chris.gearing@intel.com'],
+                                "Add hosts failed in %s" % self._testMethodName)
+
+    def _add_hosts(self, addresses, auth_type='existing_keys_choice'):
         """
         Add a list of lustre servers to chroma and ensure lnet ends in the correct state.
         """
@@ -533,13 +538,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                 new['host'] = host['resource_uri']
 
             try:
-                obj = [o for o in precreated_outlets if o['device'] == new['device'] and o['identifier'] == new['identifier']][0]
+                obj = next(o for o in precreated_outlets if o['device'] == new['device'] and o['identifier'] == new['identifier'])
                 if 'host' in new:
                     response = self.chroma_manager.patch(obj['resource_uri'],
                                                          body = {'host': new['host']})
                     self.assertEqual(response.successful, True, response.text)
                     logger.debug("Updated %s" % obj)
-            except IndexError:
+            except StopIteration:
                 obj = self.create_power_control_device_outlet(new)
                 logger.debug("Created %s" % obj)
 
@@ -560,7 +565,9 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
         self.assertEqual(len(hosts), 1, "Expected a single host to be returned got %s" % len(hosts))
         host = hosts[0]
 
-        lnet_configuration = self.get_list("/api/lnet_configuration", args={'host__id': host["id"]})
+        lnet_configuration = self.get_list("/api/lnet_configuration", args={'host__id': host["id"],
+                                                                            'dehydrate__nid': True,
+                                                                            'dehydrate__host': True})
         self.assertEqual(len(lnet_configuration), 1, "Expected a single lnet configuration to be returned got %s" % len(lnet_configuration))
         lnet_configuration = lnet_configuration[0]
 
@@ -596,13 +603,13 @@ class ChromaIntegrationTestCase(ApiTestCaseWithTestReset):
                          callback=lambda: check_if_significant(data))
         '''
 
-        key_file = '/tmp/waiting_help'
-
         try:
             return assert_test()
         except:
             if callback() == False:
                 raise
+
+            key_file = '/tmp/waiting_help'
 
             # First create the file, errors in here do destroy the original, but will be reported by the test framework
             fd = os.open(key_file, os.O_RDWR | os.O_CREAT)

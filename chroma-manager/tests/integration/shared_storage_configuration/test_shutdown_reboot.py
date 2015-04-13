@@ -93,7 +93,7 @@ class TestShutdownAndReboot(ChromaIntegrationTestCase):
             logger.debug("Found these available jobs: '%s'" % available_job_classes)
             return set(available_job_classes) == set(test_job_classes) and \
                     len(available_job_classes) == len(test_job_classes)
-        self.assertTrue(saw_expected_transitions(test_job_classes))
+        self.wait_for_assert(lambda: self.assertTrue(saw_expected_transitions(test_job_classes)))
 
         # Next, kill the server to generate a HostOfflineAlert.
         self.remote_operations.kill_server(test_server['fqdn'])

@@ -8,7 +8,7 @@ from chroma_core.lib import metrics
 from chroma_core.models import ManagedTarget, ManagedTargetMount, ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
 from chroma_core.models import Stats
 from .chroma_api_test_case import ChromaApiTestCase
-from ..chroma_core.helper import synthetic_host, synthetic_volume_full
+from tests.unit.chroma_core.helpers import synthetic_host, synthetic_volume_full
 
 
 class TestStats(ChromaApiTestCase):

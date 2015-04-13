@@ -8,7 +8,10 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-                # Adding model 'InstallHostPackagesJob'
+        # Schema migration Start
+        db.start_transaction()
+
+        # Adding model 'InstallHostPackagesJob'
         db.create_table('chroma_core_installhostpackagesjob', (
             ('job_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['chroma_core.Job'], unique=True, primary_key=True)),
             ('old_state', self.gf('django.db.models.fields.CharField')(max_length=32)),
@@ -41,10 +44,6 @@ class Migration(SchemaMigration):
             # Adding field 'StartLNetJob.lnet_configuration', default of zero for this call, when in the next piece of code.
             db.alter_column(table, 'lnet_configuration_id',
                             self.gf('django.db.models.fields.related.ForeignKey')(to=orm['chroma_core.LNetConfiguration']))
-
-        #import pydevd
-        #pydevd.settrace('cgearing-mac01.local', port=2100, stdoutToServer=True, stderrToServer=True)
-
 
         upgrade_lnet_job('chroma_core_startlnetjob')
         upgrade_lnet_job('chroma_core_stoplnetjob')
@@ -97,6 +96,22 @@ class Migration(SchemaMigration):
             if managed_host[1].startswith('lnet'):
                 managed = next(profile[1] for profile in profiles if profile[0] == managed_host[2])
                 db.execute("update chroma_core_managedhost set state='%s' where id=%s" % ('managed' if managed else 'monitored', managed_host[0]))
+
+        # Schema migration End
+        db.commit_transaction()
+
+        # Data migration Start
+        db.start_transaction()
+
+        # Update the ContentType records
+        model_name = "lnetconfiguration"
+        app_name = "chroma_core"
+        ct, _ = orm['contenttypes.ContentType'].objects.get_or_create(
+            model=model_name.lower(), app_label=app_name, defaults=dict(name=model_name))
+        orm['%s.%s' % (app_name, model_name)].objects.all().update(content_type = ct)
+
+        # Data migration End
+        db.commit_transaction()
 
     def backwards(self, orm):
         # Deleting model 'InstallHostPackagesJob'

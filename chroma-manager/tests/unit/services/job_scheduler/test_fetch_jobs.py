@@ -1,5 +1,6 @@
 from django.test import TestCase
-from tests.unit.chroma_core.helper import synthetic_host
+
+from tests.unit.chroma_core.helpers import synthetic_host
 
 
 class TestFetchJobs(TestCase):
@@ -20,7 +21,7 @@ class TestFetchJobs(TestCase):
 
         self.job_scheduler = job_scheduler.JobScheduler()
 
-        from tests.unit.chroma_core.helper import load_default_profile
+        from tests.unit.chroma_core.helpers import load_default_profile
         load_default_profile()
 
     def tearDown(self):

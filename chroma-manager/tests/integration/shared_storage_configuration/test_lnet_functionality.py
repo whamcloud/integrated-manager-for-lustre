@@ -51,7 +51,7 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
         for lnd_network, nid in enumerate(lnetinfo.nids, start = 999):
             # Now change the nid from to something else
             logger.debug("Setting lnd_network to %s for nid %s" % (lnd_network, lnetinfo.nids[0]['resource_uri']))
-            self.set_value(nid['resource_uri'], 'lnd_network', lnd_network, False)
+            self.set_value(nid['resource_uri'], 'lnd_network', lnd_network, self.VERIFY_SUCCESS_NO)
 
             # Move to another state
             self._change_lnet_state()
@@ -82,7 +82,9 @@ class TestLNetFunctionality(ChromaIntegrationTestCase):
                              self._get_lnet_info(self.host).nids)
 
             # Now try posting it back.
-            self.post_by_uri('/api/nid/', nid)
+            self._fetch_help(lambda: self.post_by_uri('/api/nid/', nid),
+                             ['chris.gearing@intel.com'],
+                             'lnet_configuration')
 
             # Move to another state
             self._change_lnet_state()

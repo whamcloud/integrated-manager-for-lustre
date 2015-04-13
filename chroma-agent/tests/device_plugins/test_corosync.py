@@ -4,7 +4,7 @@ import json
 
 
 from chroma_agent.device_plugins.corosync import CorosyncPlugin
-from tests.command_capture_testcase import CommandCaptureTestCase
+from tests.command_capture_testcase import CommandCaptureTestCase, CommandCaptureCommand
 
 log = logging.getLogger(__name__)
 
@@ -86,11 +86,17 @@ class TestCorosync(CommandCaptureTestCase):
           </resources>
         </crm_mon>""" % (feed_local_datetime,)
 
-        self.add_command(CMD, stdout=crm_one_shot_xml)
+        self.add_commands(CommandCaptureCommand(CMD, stdout=crm_one_shot_xml),
+                          CommandCaptureCommand(('service', 'corosync', 'status'), rc=0),
+                          CommandCaptureCommand(('service', 'pacemaker', 'status'), rc=0))
 
         with patch_timezone(feed_tz):
             plugin = CorosyncPlugin(None)
             result_dict = plugin.start_session()
+
+            self.assertRanAllCommandsInOrder()
+            self.assertEqual(result_dict["state"]["corosync"], 'started')
+            self.assertEqual(result_dict["state"]["pacemaker"], 'started')
 
             #  Check it's serializable.
             try:
@@ -98,15 +104,15 @@ class TestCorosync(CommandCaptureTestCase):
             except TypeError:
                 self.fail("payload from plugin can't be serialized")
 
-            def check_node(node_name, expected_status):
-                tm = result_dict['datetime']
+            def check_node(node_name, crm_info, expected_status):
+                tm = crm_info['datetime']
                 self.assertEqual(tm, feed_utc_datetime)
-                node_record = result_dict['nodes'][node_name]
+                node_record = crm_info['nodes'][node_name]
                 self.assertEqual(node_record['name'], node_name)
                 self.assertEqual(node_record['online'], expected_status)
 
-            check_node('storage0.node', ONLINE)
-            check_node('storage1.node', OFFLINE)
+            check_node('storage0.node', result_dict['crm_info'], ONLINE)
+            check_node('storage1.node', result_dict['crm_info'], OFFLINE)
 
     def test_corosync_down(self):
         """Corosync is not running - attempt was tried, but failed.
@@ -116,18 +122,17 @@ class TestCorosync(CommandCaptureTestCase):
         { 'ERROR':  'Connection to cluster failed: connection failed' }
         """
 
-        #  The result crm_mon will return when corosync is not running.
-        crm_corosync_down = """
-Connection to cluster failed: connection failed"""
-
-        self.add_command(CMD, rc=10, stdout=crm_corosync_down)
+        self.add_commands(CommandCaptureCommand(CMD, rc=10, stdout="""Connection to cluster failed: connection failed"""),
+                          CommandCaptureCommand(('service', 'corosync', 'status'), rc=1),
+                          CommandCaptureCommand(('service', 'pacemaker', 'status'), rc=1))
 
         plugin = CorosyncPlugin(None)
         result_dict = plugin.start_session()
 
-        self.assertTrue(isinstance(result_dict['nodes'], dict))
-        self.assertEqual(len(result_dict['nodes']), 0)
-        self.assertEqual(result_dict['datetime'], '')
+        self.assertEqual(result_dict["state"]["corosync"], 'stopped')
+        self.assertEqual(result_dict["state"]["pacemaker"], 'stopped')
+        self.assertEqual(result_dict["crm_info"], None)
+        self.assertRanAllCommandsInOrder()
 
     def test_corosync_causes_session_to_reestablish(self):
         """Connecting to crm_mon fails
@@ -143,9 +148,15 @@ Connection to cluster failed: connection failed"""
 
         """
 
-        #  Simulate crm_mon returning an unexcepted error code
-        self.add_command(CMD, rc=107)
+        #  Simulate crm_mon returning an unexpected error code
+        self.add_commands(CommandCaptureCommand(CMD, rc=107),
+                          CommandCaptureCommand(('service', 'corosync', 'status'), rc=1),
+                          CommandCaptureCommand(('service', 'pacemaker', 'status'), rc=1))
 
         plugin = CorosyncPlugin(None)
         result_dict = plugin.start_session()
-        self.assertTrue(result_dict is None)
+
+        self.assertEqual(result_dict["state"]["corosync"], 'stopped')
+        self.assertEqual(result_dict["state"]["pacemaker"], 'stopped')
+        self.assertEqual(result_dict["crm_info"], None)
+        self.assertRanAllCommandsInOrder()

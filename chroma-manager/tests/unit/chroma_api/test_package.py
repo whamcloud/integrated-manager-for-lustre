@@ -1,7 +1,7 @@
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 
 from chroma_core.models.package import Package, PackageVersion, PackageInstallation, PackageAvailability
-from tests.unit.chroma_core.helper import synthetic_host
+from tests.unit.chroma_core.helpers import synthetic_host
 
 from chroma_api.urls import api
 

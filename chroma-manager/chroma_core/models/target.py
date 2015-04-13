@@ -571,16 +571,11 @@ class RemoveConfiguredTargetJob(StateChangeJob):
     def description(self):
         return "Remove target %s from configuration" % (self.target)
 
-    def get_deps(self):
-        deps = []
-
-        return DependAll(deps)
-
     def get_steps(self):
         # TODO: actually do something with Lustre before deleting this from our DB
         steps = []
         for target_mount in self.target.managedtargetmount_set.all().order_by('primary'):
-            steps.append((UnconfigurePacemakerStep, {
+            steps.append((RemoveTargetFromPacemakerConfigStep, {
                 'target_mount': target_mount,
                 'target': target_mount.target,
                 'host': target_mount.host
@@ -729,7 +724,7 @@ class UnconfigureTargetStoreStep(Step):
             'uuid': target.uuid})
 
 
-class ConfigurePacemakerStep(Step):
+class AddTargetToPacemakerConfigStep(Step):
     idempotent = True
 
     def run(self, kwargs):
@@ -747,8 +742,12 @@ class ConfigurePacemakerStep(Step):
             'primary': target_mount.primary,
             'mount_point': target_mount.mount_point})
 
+    @classmethod
+    def describe(cls, kwargs):
+        return help_text['add_target_to_pacemaker_config'] % kwargs['target']
 
-class UnconfigurePacemakerStep(Step):
+
+class RemoveTargetFromPacemakerConfigStep(Step):
     idempotent = True
 
     def run(self, kwargs):
@@ -759,6 +758,10 @@ class UnconfigurePacemakerStep(Step):
                           {'ha_label': target.ha_label,
                            'uuid': target.uuid,
                            'primary': target_mount.primary})
+
+    @classmethod
+    def describe(cls, kwargs):
+        return help_text['remove_target_from_pacemaker_config'] % kwargs['target']
 
 
 class ConfigureTargetJob(StateChangeJob):
@@ -791,7 +794,7 @@ class ConfigureTargetJob(StateChangeJob):
             }))
 
         for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
-            steps.append((ConfigurePacemakerStep, {
+            steps.append((AddTargetToPacemakerConfigStep, {
                 'host': target_mount.host,
                 'target': target_mount.target,
                 'target_mount': target_mount,
@@ -805,6 +808,9 @@ class ConfigureTargetJob(StateChangeJob):
 
         prim_mtm = ObjectCache.get_one(ManagedTargetMount, lambda mtm: mtm.primary is True and mtm.target_id == self.target.id)
         deps.append(DependOn(prim_mtm.host.lnet_configuration, 'lnet_up'))
+
+        for target_mount in self.target.managedtargetmount_set.all().order_by('-primary'):
+            deps.append(DependOn(target_mount.host.pacemaker_configuration, 'started'))
 
         return DependAll(deps)
 

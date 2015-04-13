@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -220,7 +220,7 @@ def create_talker_thread(ring1):
 def discover_existing_mcastport(ring1, timeout = 10):
     subscribe_multicast(ring1)
     console_log.debug("Sniffing for packets to %s on %s" % (ring1.mcastaddr, ring1.name))
-    cap = start_cap(ring1, timeout / 10.0, "ip multicast and dst host %s and not src host %s" % (ring1.mcastaddr, ring1.ipv4_address))
+    cap = start_cap(ring1, timeout / 10, "ip multicast and dst host %s and not src host %s" % (ring1.mcastaddr, ring1.ipv4_address))
 
     def recv_packets(header, data):
         ring1.mcastport = get_dport_from_packet(data)
@@ -421,3 +421,9 @@ class CorosyncRingInterface(object):
             # If the ioctl fails, then for the purposes of this test, the
             # interface is not usable. HYD-2679
             return False
+
+
+def corosync_running():
+    rc, stdout, stderr = shell.run(['service', 'corosync', 'status'])
+
+    return rc == 0

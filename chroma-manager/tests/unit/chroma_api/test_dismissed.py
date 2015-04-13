@@ -1,13 +1,13 @@
 import logging
 from datetime import timedelta
-from dateutil.parser import parse
 
+from dateutil.parser import parse
 from django.utils import timezone
 
 from chroma_core.models import (Command, ManagedHost, Event, HostOfflineAlert)
-
 from tests.unit.chroma_api.notification_test_case import NotificationTestCase
-from tests.unit.chroma_core.helper import freshen, synthetic_host
+from tests.unit.chroma_core.helpers import freshen, synthetic_host
+
 
 INFO = logging.INFO
 WARNING = logging.WARNING

@@ -1,9 +1,11 @@
 from django.test import TestCase
+
 from chroma_core.models import DeployHostJob
 from chroma_core.models import ManagedHost
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
-from tests.unit.chroma_core.helper import synthetic_host, freshen
-from tests.unit.chroma_core.helper import load_default_profile
+from tests.unit.chroma_core.helpers import synthetic_host
+from tests.unit.chroma_core.helpers import freshen
+from tests.unit.chroma_core.helpers import load_default_profile
 
 
 class TestDeployHostJob(TestCase):

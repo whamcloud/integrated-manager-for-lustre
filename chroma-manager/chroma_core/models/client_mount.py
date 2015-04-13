@@ -159,7 +159,7 @@ class MountLustreClientJob(StateChangeJob):
         return [(MountLustreFilesystemsStep, args)]
 
     def get_deps(self):
-        return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id).lnetconfiguration, "lnet_up")
+        return DependOn(ObjectCache.get_one(ManagedHost, lambda mh: mh.id == self.lustre_client_mount.host_id).lnet_configuration, "lnet_up")
 
     class Meta:
         app_label = 'chroma_core'

@@ -60,7 +60,11 @@ help_text = {
     'managed_filesystem': 'This file system is managed by Intel® Manager for Lustre*',
     'monitored_filesystem': 'This file system is monitored and may not be modified within Intel® Manager for Lustre*',
     'setup_monitored_host': 'Setup this monitored host',
+    'setup_monitored_host_on': 'Setup monitored host %s',
     'setup_managed_host': 'Setup this managed host',
+    'setup_managed_host_on': 'Setup managed host %s',
+    'setup_worker_host': 'Setup this worker host',
+    'setup_worker_host_on': 'Setup worker host %s',
     'install_packages_on_host_long': 'Install packages on this server',
     'install_packages_on_host': 'Install packages on server %s',
     'change_state_of_lnet_to_unconfigured': 'Unconfiguring LNet',
@@ -132,6 +136,29 @@ help_text = {
 
     'configure_lnet_not_allowed': 'LNet can only be configured in managed mode.',
 
+    'configure_corosync': 'Configure Corosync on this host.',
+    'configure_corosync_on': 'Configure Corosync on %s.',
+    'stop_corosync': 'Stop Corosync on this host.',
+    'start_corosync': 'Start Corosync on this host.',
+    'enable_corosync': 'Enable Corosync on this host.',
+    'unconfigure_corosync': 'Unconfiguring Corosync',
+
+    'configure_pacemaker': 'Configure Pacemaker on this host.',
+    'configure_pacemaker_on': 'Configure Pacemaker on %s.',
+    'unconfigure_pacemaker': 'Unconfigure Pacemaker on this host.',
+    'unconfigure_pacemaker_on': 'Unconfigure Pacemaker on %s',
+
+    'stop_pacemaker': 'Stop Pacemaker on this host.',
+    'stop_pacemaker_on': 'Stop Pacemaker on %s.',
+    'start_pacemaker': 'Start Pacemaker on this host.',
+    'start_pacemaker_on': 'Start Pacemaker on %s.',
+
+    'configure_ntp': 'Configured the NTP Client on the host',
+    'unconfigure_ntp': 'Unconfigured the NTP Client on the host',
+
+    'configure_rsyslog': 'Configured rsyslog on the host',
+    'unconfigure_rsyslog': 'Unconfigured rsyslog  on the host',
+
     'start_mdt': 'Start the metadata target (MDT).',
     'stop_mdt': 'Stop the MDT. When an MDT is stopped, the file system becomes unavailable until the MDT is started again. If an object reference is known to a client, the client can continue to access the object in the file system after the MDT is shut down, but will not be able to obtain new object references.',
     'remove_mdt': 'Remove the MDT from the file system. This MDT will no longer be seen in the manager GUI. <strong>Caution</strong>: When an MDT is removed, file metadata stored on the MDT will no longer be accessible.<b> To preserve data, manually create a copy of the data elsewhere before removing the MDT.</b>',
@@ -175,6 +202,8 @@ help_text = {
     'update_packages': 'Update packages.',
     'update_nids': 'Update NIDs.',
     'configure_target': 'Configure target mount points.',
+    'remove_target_from_pacemaker_config': 'Removing target %s from pacemaker configuration',
+    'add_target_to_pacemaker_config': 'Adding target %s to pacemaker configuration',
     'register_target': 'Register target.',
     'format_target': 'Format target.',
     'migrate_target': 'Migrate target.',

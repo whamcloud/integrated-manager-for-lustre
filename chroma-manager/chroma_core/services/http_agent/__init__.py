@@ -24,7 +24,7 @@ from django.core.handlers.wsgi import WSGIHandler
 from django.db import transaction
 import gevent.wsgi
 
-from chroma_core.models import ClientCertificate
+from chroma_core.models.client_certificate import ClientCertificate
 from chroma_core.services.rpc import ServiceRpcInterface
 from chroma_core.services.http_agent.host_state import HostStateCollection, HostStatePoller
 from chroma_core.services.http_agent.queues import HostQueueCollection, AmqpRxForwarder, AmqpTxForwarder

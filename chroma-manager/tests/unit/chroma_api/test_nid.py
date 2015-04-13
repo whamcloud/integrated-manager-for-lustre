@@ -1,12 +1,12 @@
-import mock
 from collections import namedtuple
+
+import mock
 
 from chroma_core.models import Nid
 from chroma_core.models import Command
-
-from tests.unit.chroma_core.helper import MockAgentRpc, create_host_ssh_patch
+from tests.unit.chroma_core.helpers import MockAgentRpc, create_host_ssh_patch
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import log
+from tests.unit.chroma_core.helpers import log
 
 
 def mock_update_nids(nids_data):
@@ -97,7 +97,7 @@ class TestHostResource(ChromaApiTestCase):
                                        "network_interface": self._lnetinfo.network_interfaces[0]['resource_uri']},
                                  assertion_test=lambda self, response: self.assertHttpBadRequest(response))
 
-        self.assertEqual(response, {'lnd_type': [u'lnd_type blop not valid for interface %s-%s' % (self._lnetinfo.network_interfaces[0]['host']['nodename'],
+        self.assertEqual(response, {'lnd_type': [u'lnd_type blop not valid for interface %s-%s' % (self._lnetinfo.lnet_configuration['host']['nodename'],
                                                                                                    self._lnetinfo.network_interfaces[0]['name'])]})
 
     LNetInfo = namedtuple("LNetInfo", ("nids", "network_interfaces", "lnet_configuration", "host"))
@@ -109,17 +109,20 @@ class TestHostResource(ChromaApiTestCase):
         '''
 
         # We fetch the host again so that it's state is updated.
-        hosts = self.api_get_list("/api/host/", kwargs={'fqdn': host['fqdn']})
+        hosts = self.api_get_list("/api/host/", data={'fqdn': host['fqdn']})
         self.assertEqual(len(hosts), 1, "Expected a single host to be returned got %s" % len(hosts))
         host = hosts[0]
 
-        lnet_configuration = self.api_get_list("/api/lnet_configuration/", args={'host__id': host["id"]})
+        lnet_configuration = self.api_get_list("/api/lnet_configuration/", data={'host__id': host["id"],
+                                                                                 'dehydrate__nid': True,
+                                                                                 'dehydrate__host': True})
+
         self.assertEqual(len(lnet_configuration), 1, "Expected a single lnet configuration to be returned got %s" % len(lnet_configuration))
         lnet_configuration = lnet_configuration[0]
 
-        network_interfaces = self.api_get_list("/api/network_interface/", args={'host__id': host["id"]})
+        network_interfaces = self.api_get_list("/api/network_interface/", data={'host__id': host["id"]})
 
-        nids = self.api_get_list("/api/nid/", kwargs={'lnet_configuration__id': lnet_configuration["id"]})
+        nids = self.api_get_list("/api/nid/", data={'lnet_configuration__id': lnet_configuration["id"]})
 
         log.debug("Fetched Lnet info for %s" % host['fqdn'])
         log.debug("Nid info %s" % nids)

@@ -1,6 +1,6 @@
 import sys
-
 import mock
+
 from django.utils import unittest
 from chroma_agent.lib.corosync import env
 from chroma_agent.action_plugins.manage_corosync import configure_corosync
@@ -39,15 +39,14 @@ class TestConfigureCorosync(unittest.TestCase):
         super(TestConfigureCorosync, self).setUp()
 
         import chroma_agent.chroma_common.lib.shell
-        patcher = mock.patch.object(chroma_agent.chroma_common.lib.shell, 'run', return_value=(0, '', ''))
-        self.run = patcher.start()
+        mock.patch.object(chroma_agent.chroma_common.lib.shell, 'run', return_value=(0, '', '')).start()
 
         from chroma_agent.lib.corosync import CorosyncRingInterface
 
         def get_ring0():
             return CorosyncRingInterface('eth0.1.1?1b34*430')
-        patcher = mock.patch('chroma_agent.lib.corosync.get_ring0', get_ring0)
-        patcher.start()
+
+        mock.patch('chroma_agent.lib.corosync.get_ring0', get_ring0).start()
 
         self.interfaces = {
                 'eth0.1.1?1b34*430': {
@@ -72,14 +71,11 @@ class TestConfigureCorosync(unittest.TestCase):
         ethtool = fake_ethtool(self.interfaces)
         sys.modules['ethtool'] = ethtool
 
-        patcher = mock.patch('chroma_agent.node_admin.write_ifcfg')
-        self.write_ifcfg = patcher.start()
+        self.write_ifcfg = mock.patch('chroma_agent.node_admin.write_ifcfg').start()
 
-        patcher = mock.patch('chroma_agent.lib.corosync.write_config_to_file')
-        self.write_config_to_file = patcher.start()
+        self.write_config_to_file = mock.patch('chroma_agent.action_plugins.manage_corosync.write_config_to_file').start()
 
-        patcher = mock.patch('chroma_agent.action_plugins.manage_corosync.unconfigure_pacemaker')
-        patcher.start()
+        mock.patch('chroma_agent.action_plugins.manage_pacemaker.unconfigure_pacemaker').start()
 
         old_set_address = CorosyncRingInterface.set_address
 
@@ -88,8 +84,7 @@ class TestConfigureCorosync(unittest.TestCase):
                 self.interfaces[obj.name]['ipv4_address'] = address
                 self.interfaces[obj.name]['ipv4_netmask'] = prefix
             old_set_address(obj, address, prefix)
-        patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.set_address', set_address)
-        patcher.start()
+        mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.set_address', set_address).start()
 
         @property
         def has_link(obj):
@@ -97,11 +92,9 @@ class TestConfigureCorosync(unittest.TestCase):
         self.link_patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.has_link', has_link)
         self.link_patcher.start()
 
-        patcher = mock.patch('chroma_agent.lib.corosync.find_unused_port', return_value = 4242)
-        patcher.start()
+        mock.patch('chroma_agent.lib.corosync.find_unused_port', return_value = 4242).start()
 
-        patcher = mock.patch('chroma_agent.lib.corosync.discover_existing_mcastport')
-        patcher.start()
+        mock.patch('chroma_agent.lib.corosync.discover_existing_mcastport').start()
 
         self.conf_template = env.get_template('corosync.conf')
 
@@ -127,31 +120,14 @@ class TestConfigureCorosync(unittest.TestCase):
         return self.conf_template.render(interfaces = interfaces)
 
     def test_manual_ring1_config(self):
-        ring1_iface = "eth1"
+        ring0_name = "eth0.1.1?1b34*430"
+        ring1_name = "eth1"
         ring1_ipaddr = "10.42.42.42"
         ring1_netmask = "255.255.255.0"
         mcast_port = "4242"
-        configure_corosync(ring1_iface, ring1_ipaddr, ring1_netmask, mcast_port)
+        configure_corosync(ring0_name, mcast_port, ring1_name=ring1_name, ring1_ipaddr=ring1_ipaddr, ring1_prefix=ring1_netmask)
 
-        self.write_ifcfg.assert_called_with(ring1_iface, 'ba:db:ee:fb:aa:af', '10.42.42.42', '255.255.255.0')
-
-        test_config = self._render_test_config()
-        self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
-
-    def test_semi_automatic_ring1_config(self):
-        ring1_iface = "eth1"
-        mcast_port = "4242"
-        configure_corosync(ring1_iface = ring1_iface, mcast_port = mcast_port)
-
-        self.write_ifcfg.assert_called_with(ring1_iface, 'ba:db:ee:fb:aa:af', '10.0.0.1', '255.255.255.0')
-
-        test_config = self._render_test_config()
-        self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
-
-    def test_full_automatic_ring1_config(self):
-        configure_corosync()
-
-        self.write_ifcfg.assert_called_with('eth1', 'ba:db:ee:fb:aa:af', '10.0.0.1', '255.255.255.0')
+        self.write_ifcfg.assert_called_with(ring1_name, 'ba:db:ee:fb:aa:af', '10.42.42.42', '255.255.255.0')
 
         test_config = self._render_test_config()
         self.write_config_to_file.assert_called_with('/etc/corosync/corosync.conf', test_config)
@@ -174,16 +150,15 @@ class TestConfigureCorosync(unittest.TestCase):
     def test_failed_has_link(self):
         self.link_patcher.stop()
 
-        patcher = mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.__getattr__', return_value = False)
-        patcher.start()
+        mock.patch('chroma_agent.lib.corosync.CorosyncRingInterface.__getattr__', return_value = False).start()
 
         import errno
 
         def boom(*args):
             # EMULTIHOP is what gets raised with IB interfaces
             raise IOError(errno.EMULTIHOP)
-        patcher = mock.patch('fcntl.ioctl', side_effect=boom)
-        patcher.start()
+
+        mock.patch('fcntl.ioctl', side_effect=boom).start()
 
         from chroma_agent.lib.corosync import get_ring0
         iface = get_ring0()

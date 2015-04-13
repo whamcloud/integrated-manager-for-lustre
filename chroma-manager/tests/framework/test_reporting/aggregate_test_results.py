@@ -16,6 +16,9 @@ from jenkinsapi import api
 import logging
 logging.basicConfig(filename="test_aggregation.log", level=logging.INFO)
 
+import requests
+requests.packages.urllib3.disable_warnings()
+
 
 def mkdir_p(path):
     try:

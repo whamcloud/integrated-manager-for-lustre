@@ -52,6 +52,7 @@ class HostNetworkInterface(resources.NetworkInterface):
 
     name = attributes.String()
     inet4_address = attributes.String()
+    inet4_prefix = attributes.Integer()
     type = attributes.String()
     up = attributes.Boolean()
 
@@ -106,6 +107,7 @@ class LinuxNetwork(Plugin):
             iface_resource, created = self.update_or_create(HostNetworkInterface,
                                                             name = name,
                                                             inet4_address = iface['inet4_address'],
+                                                            inet4_prefix = iface['inet4_prefix'],
                                                             host_id = host_id,
                                                             type = iface['type'],
                                                             up = iface['up'])

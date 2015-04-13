@@ -46,7 +46,7 @@ class NetworkInterface(object):
     def __init__(self, ifconfig_lines, rx_tx_stats):
         match_values = ['([0-9]*):(\s*)(?P<interface>[^:]*).*',
                         '(.*)link/(?P<type>[^\s]*)(\s*)(?P<mac_address>[^\s]*).*',
-                        '(.*)inet (?P<inet4_addr>[^/]*)/(?P<inet4_mask>[0-9]*).*',
+                        '(.*)inet (?P<inet4_addr>[^/]*)/(?P<inet4_prefix>[0-9]*).*',
                         '(.*)inet6 (?P<inet6_addr>[^/]*)/(?P<inet6_mask>[0-9]*).*',
                         '.*(?P<slave>SLAVE).*',
                         '.*(?P<up>UP).*']
@@ -94,6 +94,16 @@ class NetworkInterface(object):
         :return: str: Containing the type of the inet4 address of interface, or '' if not present.
         '''
         return self._values["inet4_addr"]
+
+    @property
+    def inet4_prefix(self):
+        '''
+        :return: int: prefix len converted from the mask described by ifconfig as a slave device. Returns 32 if no prefix existed.
+        '''
+        try:
+            return int(self._values["inet4_prefix"])
+        except ValueError:
+            return 0
 
     @property
     def inet6_addr(self):
@@ -192,6 +202,7 @@ class NetworkInterfaces(dict):
             if (interface.interface not in EXCLUDE_INTERFACES) and (interface.slave == False):
                 self[interface.interface] = {'mac_address': interface.mac_address,
                                              'inet4_address': interface.inet4_addr,
+                                             'inet4_prefix': interface.inet4_prefix,
                                              'inet6_address': interface.inet6_addr,
                                              'type': interface_to_lnet_type(interface.type),
                                              'rx_bytes': interface.rx_tx_stats.rx_bytes,

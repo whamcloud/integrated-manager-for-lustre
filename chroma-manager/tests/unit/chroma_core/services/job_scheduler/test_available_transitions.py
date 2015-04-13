@@ -1,12 +1,13 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import reset_queries, connection
 from django.test import TestCase
+
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import (ManagedMgs, ManagedFilesystem, ManagedOst,
                                 ManagedMdt, RebootHostJob, ShutdownHostJob)
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
-from tests.unit.chroma_core.helper import synthetic_volume, synthetic_host
-from tests.unit.chroma_core.helper import load_default_profile
+from tests.unit.chroma_core.helpers import synthetic_volume, synthetic_host
+from tests.unit.chroma_core.helpers import load_default_profile
 
 
 class TestAvailableTransitions(TestCase):

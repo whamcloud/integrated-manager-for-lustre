@@ -43,13 +43,13 @@ class LNetConfiguration(DeletableStatefulObject):
     states = ['unconfigured', 'lnet_unloaded', 'lnet_down', 'lnet_up']
     initial_state = 'unconfigured'
 
-    host = models.OneToOneField('ManagedHost', related_name='lnetconfiguration')
+    host = models.OneToOneField('ManagedHost', related_name='lnet_configuration')
 
     def get_nids(self):
         return [n.nid_string for n in self.nid_set.all()]
 
     def __str__(self):
-        return "%s LNet configuration" % (self.host)
+        return "%s LNet configuration" % self.host
 
     class Meta:
         app_label = 'chroma_core'
@@ -69,7 +69,7 @@ class LNetConfiguration(DeletableStatefulObject):
             LNetOfflineAlert.notify(self, self.state != 'lnet_up')
 
     reverse_deps = {
-        'ManagedHost': lambda mh: LNetConfiguration.objects.filter(id = mh.lnetconfiguration.id),
+        'ManagedHost': lambda mh: LNetConfiguration.objects.filter(host_id = mh.id),
     }
 
 
@@ -92,7 +92,14 @@ class LNetOfflineAlert(AlertState):
             message_str = "LNet started on server '%s'" % self.alert_item.host,
             host = self.alert_item.host,
             alert = self,
-            severity = logging.INFO)
+            severity = logging.WARNING)
+
+    @property
+    def affected_objects(self):
+        """
+        :return: A list of objects that are affected by this alert
+        """
+        return [self.alert_item.host]
 
 
 class LNetNidsChangedAlert(AlertState):
@@ -116,12 +123,18 @@ class LNetNidsChangedAlert(AlertState):
             alert = self,
             severity = logging.INFO)
 
+    @property
+    def affected_objects(self):
+        """
+        :return: A list of objects that are affected by this alert
+        """
+        return [self.alert_item.lnet_configuration]
+
 
 class ConfigureLNetStep(Step):
     idempotent = True
 
-    # FIXME: using database=True to do the alerting update inside .set_state but
-    # should do it in a completion
+    # Truth be told the database acceses should be in the job, but for know they are in the step.
     database = True
 
     def run(self, kwargs):

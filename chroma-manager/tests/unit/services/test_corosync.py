@@ -1,20 +1,40 @@
 import logging
+import mock
 
 from django.test import TestCase
-from chroma_core.models import ManagedHost, HostOfflineAlert
+from django.utils.timezone import now
+from chroma_core.models import ManagedHost
+from chroma_core.models import HostOfflineAlert
+from chroma_core.models import CorosyncConfiguration
+from chroma_core.services.job_scheduler import job_scheduler_notify
+from chroma_core.models import PacemakerConfiguration
 from chroma_core.services.corosync import Service as CorosyncService
 
 log = logging.getLogger(__name__)
 
 ONLINE = 'true'
 OFFLINE = 'false'
+MOCKED_NOW_VALUE = now()
 
 
 class CorosyncTestCase(TestCase):
 
-    @staticmethod
-    def get_test_message(utc_iso_date_str="2013-01-11T19:04:07+00:00",
-                         node_status_list=None):
+    def setUp(self):
+        super(CorosyncTestCase, self).setUp()
+
+        #  The object being tested
+        self.corosync_service = CorosyncService()
+
+        mock.patch('chroma_core.services.job_scheduler.job_scheduler_notify.notify', mock.Mock()).start()
+        mock.patch('django.utils.timezone.now', return_value=MOCKED_NOW_VALUE).start()
+
+        self.addCleanup(mock.patch.stopall)
+
+    def get_test_message(self,
+                         utc_iso_date_str="2013-01-11T19:04:07+00:00",
+                         node_status_list=None,
+                         corosync_state='started',
+                         pacemaker_state='started'):
         """Simulate a message from the Corosync agent plugin
 
         The plugin currently sends datetime in UTC of the nodes localtime.
@@ -27,7 +47,7 @@ class CorosyncTestCase(TestCase):
 
         #  First whack up some fake node data based on input infos
         nodes = {}
-        if node_status_list is not None:
+        if node_status_list is not None and corosync_state == 'started' and pacemaker_state == 'started':
             for hs in node_status_list:
                 node = hs[0]
                 status = hs[1]  # 'true' or 'false'
@@ -42,33 +62,36 @@ class CorosyncTestCase(TestCase):
                 nodes.update(node_dict)
 
         #  Second create the message with the nodes and other envelope data.
-        message = {"nodes": nodes,
-                   "datetime": utc_iso_date_str}
+        message = {"crm_info": {"nodes": nodes,
+                                "datetime": utc_iso_date_str},
+                   "state": {'pacemaker': pacemaker_state,
+                             'corosync': corosync_state}}
 
         return message
 
-    def make_managed_host(self, nodename, domain="example.tld", save=True):
+    def make_managed_host(self, hostname, domain="example.tld", save=True):
         """Create nodes, or reuse ones that are there already."""
 
-        fqdn = "%s.%s" % (nodename, domain)
-        node = ManagedHost(address=nodename,
+        fqdn = "%s.%s" % (hostname, domain)
+        host = ManagedHost(address=hostname,
                            fqdn=fqdn,
-                           nodename=nodename)
+                           nodename=hostname)
 
         if save:
-            node.save()
+            host.save()
 
-        return node
+            CorosyncConfiguration(state='started',
+                                  host=host).save()
+
+            PacemakerConfiguration(state='started',
+                                   host=host).save()
+
+        return host
 
     def _set_status(self, node, status=False):
-        """Alter the Managednode.corosync_report_up value for testing"""
+        """Alter the Managednode.corosync_reported_up value for testing"""
 
-        ManagedHost.objects.filter(pk=node.pk).update(
-                                                corosync_reported_up=status)
-
-    def setUp(self):
-        #  The object being tested
-        self.corosync_service = CorosyncService()
+        CorosyncConfiguration.objects.filter(host__id=node.pk).update(corosync_reported_up=status)
 
 
 class CorosyncTests(CorosyncTestCase):
@@ -92,8 +115,7 @@ class CorosyncTests(CorosyncTestCase):
         node2 = self.make_managed_host('node2')
         nodes = ((node1, ONLINE), (node2, ONLINE))
 
-        self.corosync_service.on_data(None,
-                                      self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 0)
@@ -111,8 +133,7 @@ class CorosyncTests(CorosyncTestCase):
         node1 = self.make_managed_host('node1')
         node2 = self.make_managed_host('node2')
         nodes = ((node1, ONLINE), (node2, ONLINE))
-        self.corosync_service.on_data(None,
-                                      self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         #  This point, the host might be showing ONLINE, or still the
         #  default which is OFFLINE - if the DB wasn't updated.
@@ -122,8 +143,7 @@ class CorosyncTests(CorosyncTestCase):
 
         initial_alerts = HostOfflineAlert.objects.count()
 
-        self.corosync_service.on_data(None,
-                                      self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, initial_alerts + 1)
@@ -137,7 +157,7 @@ class CorosyncTests(CorosyncTestCase):
         node1 = self.make_managed_host('node1')
         node2 = self.make_managed_host('node2')
         nodes = ((node1, ONLINE), (node2, OFFLINE))
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 1)
@@ -146,7 +166,7 @@ class CorosyncTests(CorosyncTestCase):
         #  the message, and leave the alert active
         msg_date = "2013-01-11T18:04:07+00:00"
         nodes = ((node1, ONLINE), (node2, ONLINE))
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 1)
@@ -157,7 +177,7 @@ class CorosyncTests(CorosyncTestCase):
         #  Server back online - the alert should be inactive.
         msg_date = "2013-01-11T20:04:07+00:00"
         nodes = ((node1, ONLINE), (node2, ONLINE))
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 1)
@@ -177,7 +197,7 @@ class CorosyncTests(CorosyncTestCase):
         node1 = self.make_managed_host('node1')
         node2 = self.make_managed_host('node2')
         nodes = ((node1, ONLINE), (node2, ONLINE))
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         #  node it now ONLINE
 
@@ -186,7 +206,7 @@ class CorosyncTests(CorosyncTestCase):
 
         initial_alerts = HostOfflineAlert.objects.count()
 
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, initial_alerts + 1)
@@ -197,7 +217,7 @@ class CorosyncTests(CorosyncTestCase):
         msg_date = "2013-01-11T19:06:07+00:00"
         nodes = ((node1, ONLINE), (node2, ONLINE))
 
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, initial_alerts + 1)
@@ -217,7 +237,7 @@ class CorosyncTests(CorosyncTestCase):
         node2 = self.make_managed_host('node2')
         nodes = ((node1, ONLINE), (node2, OFFLINE))
 
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         msg_date = "2013-01-11T20:06:07+00:00"
         nodes = ((node1, ONLINE), (node2, ONLINE))
@@ -225,7 +245,7 @@ class CorosyncTests(CorosyncTestCase):
         initial_alerts = HostOfflineAlert.objects.count()
         self.assertEqual(initial_alerts, 1)
 
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 1)
@@ -242,8 +262,7 @@ class CorosyncTests(CorosyncTestCase):
         node2 = self.make_managed_host('node2', save=False)
         nodes = ((node1, ONLINE), (node2, OFFLINE))
 
-        self.corosync_service.on_data(None,
-                                      self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 0)
@@ -259,10 +278,44 @@ class CorosyncTests(CorosyncTestCase):
         node1 = self.make_managed_host('node1')
         node2 = self.make_managed_host('node2')
         nodes = ((node1, ONLINE), (node2, ONLINE))
-        self.corosync_service.on_data(None, self.get_test_message(msg_date, nodes))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message(msg_date, nodes))
 
         #  No nodes, no time.  Simulates messages state when corosync is down
-        self.corosync_service.on_data(None, self.get_test_message('', None))
+        self.corosync_service.on_data(node1.fqdn, self.get_test_message('', None))
 
         alerts_raised = HostOfflineAlert.objects.count()
         self.assertEqual(alerts_raised, 0)
+
+    def test_corosync_pacemaker_states(self):
+        """Agents may report that corosync was unavailable
+
+        Make sure the service gracefully handled this case.
+        """
+
+        #  Initially, corosync is up and returns online for two nodes
+        msg_date = "2013-01-11T19:06:07+00:00"
+        node1 = self.make_managed_host('node1')
+        node2 = self.make_managed_host('node2')
+        nodes = ((node1, ONLINE), (node2, ONLINE))
+
+        for node in [node1, node2]:
+            for corosync_state in ['stopped', 'started']:
+                for pacemaker_state in ['stopped', 'started']:
+                    job_scheduler_notify.notify.reset_mock()
+
+                    self.corosync_service.on_data(node.fqdn, self.get_test_message(msg_date,
+                                                                                   nodes,
+                                                                                   corosync_state=corosync_state))
+
+                    self.corosync_service.on_data(node.fqdn, self.get_test_message(msg_date,
+                                                                                   nodes,
+                                                                                   corosync_state=corosync_state,
+                                                                                   pacemaker_state=pacemaker_state))
+
+                    job_scheduler_notify.notify.assert_any_call(node.corosync_configuration,
+                                                                MOCKED_NOW_VALUE,
+                                                                {'state': corosync_state})
+
+                    job_scheduler_notify.notify.assert_any_call(node.pacemaker_configuration,
+                                                                MOCKED_NOW_VALUE,
+                                                                {'state': pacemaker_state})

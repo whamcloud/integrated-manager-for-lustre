@@ -144,6 +144,8 @@ class ClientMountResource(ModelResource):
         authentication = AnonymousAuthentication()
         authorization = DjangoAuthorization()
         list_allowed_methods = ['get', 'post']
+
+
         filtering = {'host': ['exact'], 'filesystem': ['exact']}
 
     def prepare_mount(self, client_mount):
@@ -182,12 +184,18 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation)
     server_profile = fields.ToOneField(ServerProfileResource, 'server_profile',
                                        full = True)
 
-    lnet_configuration = fields.ToOneField('chroma_api.lnet_configuration.LNetConfigurationResource', 'lnetconfiguration',
+    lnet_configuration = fields.ToOneField('chroma_api.lnet_configuration.LNetConfigurationResource', 'lnet_configuration',
                                            full = False)
+
+    corosync_configuration = fields.ToOneField('chroma_api.corosync.CorosyncConfigurationResource', 'corosync_configuration',
+                                               null= True, full = False)
+
+    pacemaker_configuration = fields.ToOneField('chroma_api.pacemaker.PacemakerConfigurationResource', 'pacemaker_configuration',
+                                                null= True, full = False)
 
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(
-            lnet_configuration = bundle.obj.lnetconfiguration)]
+            lnet_configuration = bundle.obj.lnet_configuration)]
 
     def dehydrate_member_of_active_filesystem(self, bundle):
         return bundle.obj.member_of_active_filesystem
@@ -203,7 +211,7 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation)
 
     class Meta:
         queryset = ManagedHost.objects.select_related(
-            'lnetconfiguration').prefetch_related('lnetconfiguration__nid_set')
+            'lnet_configuration').prefetch_related('lnet_configuration__nid_set')
         resource_name = 'host'
         excludes = ['not_deleted']
         authentication = AnonymousAuthentication()
@@ -212,8 +220,8 @@ class HostResource(MetricResource, StatefulModelResource, BulkResourceOperation)
         list_allowed_methods = ['get', 'post', 'put']
         detail_allowed_methods = ['get', 'put', 'delete']
         readonly = ['nodename', 'fqdn', 'nids', 'member_of_active_filesystem',
-                    'needs_fence_reconfiguration', 'needs_update', 'boot_time',
-                    'corosync_reported_up', 'client_mounts']
+                    'needs_update', 'boot_time',
+                    'client_mounts']
         # HYD-2256: remove these fields when other auth schemes work
         readonly += ['root_pw', 'private_key_passphrase', 'private_key']
         validation = HostValidation()

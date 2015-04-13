@@ -35,11 +35,14 @@ class TestEvents(ChromaIntegrationTestCase):
 
 
 class TestAlerting(ChromaIntegrationTestCase):
-    def _wait_alerts(self, count, **filters):
+    def _wait_alerts(self, expected_alerts, **filters):
         "Wait and assert correct number of matching alerts."
+        expected_alerts.sort()
+
         for index in wait(timeout=TEST_TIMEOUT):
-            alerts = self.get_list("/api/alert/", filters)
-            if len(alerts) == count:
+            alerts = [alert['alert_type'] for alert in self.get_list("/api/alert/", filters)]
+            alerts.sort()
+            if alerts == expected_alerts:
                 return alerts
         raise AssertionError(alerts)
 
@@ -49,7 +52,7 @@ class TestAlerting(ChromaIntegrationTestCase):
         fs = self.get_json_by_uri("/api/filesystem/%s/" % fs_id)
         host = self.get_list("/api/host/")[0]
 
-        self._wait_alerts(0, active=True, severity='ERROR')
+        self._wait_alerts([], active=True, severity='ERROR')
 
         mgt = fs['mgt']
 
@@ -107,12 +110,30 @@ class TestAlerting(ChromaIntegrationTestCase):
         for target in self.get_list("/api/target/"):
             self.remote_operations.stop_target(host['fqdn'], target['ha_label'])
         self.remote_operations.stop_lnet(host['fqdn'])
+        self.remote_operations.stop_pacemaker(host['fqdn'])
+        self.remote_operations.stop_corosync(host['fqdn'])
 
-        # Waiting for 3 x TargetOfflineAlert, 1 x LNetOfflineAlert = 4 Alerts.
-        self._wait_alerts(4, active=True)
+        self._wait_alerts(['TargetOfflineAlert',
+                           'TargetOfflineAlert',
+                           'TargetOfflineAlert',
+                           'LNetOfflineAlert',
+                           'PacemakerStoppedAlert',
+                           'CorosyncStoppedAlert'],
+                          active=True)
+
+        # Now with Pacemaker/Corosync/LNetDown down the machine is going to have issues and the user would expect
+        # to not be able to do things - at least they should expect, so put them back up.
+        self.remote_operations.start_lnet(host['fqdn'])
+        self.remote_operations.start_corosync(host['fqdn'])
+        self.remote_operations.start_pacemaker(host['fqdn'])
+
+        self._wait_alerts(['TargetOfflineAlert',
+                           'TargetOfflineAlert',
+                           'TargetOfflineAlert'],
+                          active=True)
 
         # Remove everything
         self.graceful_teardown(self.chroma_manager)
 
         # Check that all the alerts are gone too
-        self.assertListEqual(self.get_list('/api/alert/', {'active': True}), [])
+        self._wait_alerts([], active=True)

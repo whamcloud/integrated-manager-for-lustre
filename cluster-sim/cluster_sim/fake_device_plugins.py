@@ -82,11 +82,13 @@ class BaseFakeLinuxNetworkPlugin(DevicePlugin):
 
             interfaces[name] = {'mac_address': '12:34:56:78:90:1%s' % interface['interface_no'],
                                 'inet4_address': inet4_address,
+                                'inet4_prefix': 24,
                                 'inet6_address': 'Need An inet6 Simulated Address',
                                 'type': interface['type'],                          # We report LND types for consistency, the real version does as well
                                 'rx_bytes': '24400222349',
                                 'tx_bytes': '1789870413',
-                                'up': True}
+                                'up': True,
+                                'slave': False}
 
             if interface['lnd_network'] is not None:
                 nids[name] = {'nid_address': inet4_address,
@@ -192,8 +194,8 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
 
     _server = None
 
-    @staticmethod
-    def get_test_message(utc_iso_date_str='2013-01-11T19:04:07+00:00',
+    def get_test_message(self,
+                         utc_iso_date_str='2013-01-11T19:04:07+00:00',
                          node_status_list=None):
         '''Simulate a message from the Corosync agent plugin
 
@@ -226,8 +228,10 @@ class BaseFakeCorosyncPlugin(DevicePlugin):
                 nodes.update(node_dict)
 
         #  Second create the message with the nodes and other envelope data.
-        message = {'nodes': nodes,
-                   'datetime': utc_iso_date_str}
+        message = {'crm_info': {'nodes': nodes,
+                                'datetime': utc_iso_date_str},
+                   'state': {'corosync': self._server.state['corosync'].state,
+                             'pacemaker': self._server.state['pacemaker'].state}}
 
         return message
 

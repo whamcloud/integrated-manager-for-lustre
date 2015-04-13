@@ -1,8 +1,8 @@
 import mock
+
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_api.test_misc import remove_host_resources_patch
-from tests.unit.chroma_core.helper import synthetic_host
-
+from tests.unit.chroma_core.helpers import synthetic_host
 from chroma_core.models.host import ForceRemoveHostJob, RemoveHostJob
 from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.chroma_common.lib.agent_rpc import agent_result_ok
@@ -15,7 +15,7 @@ class LustreClientMountTests(ChromaApiTestCase):
         self.host = synthetic_host(address = 'foo')
         self.create_simple_filesystem(self.host)
 
-    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_client.JobSchedulerClient.notify', new = mock.Mock())
+    @mock.patch('chroma_core.services.job_scheduler.job_scheduler_notify.notify', new = mock.Mock())
     @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new = mock.Mock(), create = True)
     @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new = mock.Mock())
     @mock.patch("chroma_core.lib.job.Step.invoke_agent", new = mock.Mock(return_value = agent_result_ok))

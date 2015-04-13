@@ -1,9 +1,10 @@
 import mock
 from django.test import TestCase
-from tests.unit.chroma_core.helper import synthetic_host, load_default_profile
+
+from tests.unit.chroma_core.helpers import synthetic_host
+from tests.unit.chroma_core.helpers import load_default_profile
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
 from chroma_core.models import FailoverTargetJob, FailbackTargetJob, RebootHostJob, ShutdownHostJob, PoweronHostJob, PoweroffHostJob, PowercycleHostJob, MountLustreFilesystemsJob, UnmountLustreFilesystemsJob
-
 from chroma_core.lib.cache import ObjectCache
 
 
@@ -261,7 +262,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
 
     def create_fake_filesystem_client(self, active=False):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, LustreClientMount
-        from tests.unit.chroma_core.helper import synthetic_volume_full
+        from tests.unit.chroma_core.helpers import synthetic_volume_full
 
         mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name = "MGS")
         fs = ManagedFilesystem.objects.create(mgs = mgt, name = 'testfs')

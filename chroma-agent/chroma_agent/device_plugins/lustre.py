@@ -121,8 +121,6 @@ def scan_packages():
 
 
 class LustrePlugin(DevicePlugin):
-    # We always send an update every 60 cycles (60*10)seconds - 10 minutes.
-    FAILSAFEDUPDATE = 60
     delta_fields = ['capabilities', 'properties', 'mounts', 'packages', 'resource_locations']
 
     def __init__(self, session):
@@ -131,8 +129,6 @@ class LustrePlugin(DevicePlugin):
 
     def reset_state(self):
         self._mount_cache = defaultdict(dict)
-        self.last_result = defaultdict(lambda: None)
-        self.safety_send = 0
 
     @exceptionSandBox(console_log, {})
     def _scan_mounts(self):
@@ -226,22 +222,10 @@ class LustrePlugin(DevicePlugin):
         }
 
     def start_session(self):
+        super(LustrePlugin, self).start_session()
         self.reset_state()
-
-        return self._scan(initial=True)
+        self._reset_delta()
+        return self._delta_result(self._scan(initial=True), self.delta_fields)
 
     def update_session(self):
-        new_result = self._scan()
-
-        if self.safety_send < LustrePlugin.FAILSAFEDUPDATE:
-            self.safety_send += 1
-
-            for key in LustrePlugin.delta_fields:
-                if new_result[key] == self.last_result[key]:        # If the result is not new then don't send it.
-                    new_result[key] = None
-                else:
-                    self.last_result[key] = new_result[key]
-        else:
-            self.safety_send = 0
-
-        return new_result
+        return self._delta_result(self._scan(), self.delta_fields)

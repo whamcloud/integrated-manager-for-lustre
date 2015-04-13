@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -23,6 +23,8 @@
 import os
 import glob
 import traceback
+import collections
+
 from chroma_agent.log import daemon_log
 EXCLUDED_PLUGINS = []
 
@@ -108,8 +110,11 @@ class DevicePlugin(object):
     A plugin which maintains a state and sends and receives messages.
     """
 
+    FAILSAFEDUPDATE = 60                # We always send an update every 60 cycles (60*10)seconds - 10 minutes.
+
     def __init__(self, session):
         self._session = session
+        self._reset_delta()
 
     def start_session(self):
         """
@@ -159,6 +164,27 @@ class DevicePlugin(object):
             self._session.send_message(body, callback)
         else:
             self._session.send_message(DevicePluginMessage(body), callback)
+
+    def _delta_result(self, result, delta_fields = None):
+        if not delta_fields:
+            delta_fields = result.keys()
+
+        if self._safety_send < DevicePlugin.FAILSAFEDUPDATE:
+            self._safety_send += 1
+
+            for key in delta_fields:
+                if result[key] == self.last_result[key]:        # If the result is not new then don't send it.
+                    result[key] = None
+                else:
+                    self.last_result[key] = result[key]
+        else:
+            self._safety_send = 0
+
+        return result if result else None                       # Turn {} into None, None will mean no message sent.
+
+    def _reset_delta(self):
+        self.last_result = collections.defaultdict(lambda: None)
+        self._safety_send = 0
 
 
 # For use with Queue.PriorityQueue (lower number is higher priority)

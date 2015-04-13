@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,24 +27,12 @@ is used for updates received from agent reports.  Access to both of these, along
 non-remote functionality is wrapped in JobSchedulerClient.
 
 """
-import datetime
-
-from django.contrib.contenttypes.models import ContentType
-from django.db.models import DateTimeField
-
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.services import log_register
-from chroma_core.services.job_scheduler.lock_cache import LockCache
-from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
 from chroma_core.models import ManagedHost, Command
 
 
 log = log_register(__name__)
-
-
-class NotificationQueue(ServiceQueue):
-    name = 'job_scheduler_notifications'
 
 
 class JobSchedulerRpc(ServiceRpcInterface):
@@ -65,7 +53,9 @@ class JobSchedulerRpc(ServiceRpcInterface):
                'create_targets',
                'available_transitions',
                'available_jobs',
-               'get_locks'
+               'get_locks',
+               'update_corosync_configuration',
+               'get_transition_consequences'
                ]
 
 
@@ -104,54 +94,6 @@ class JobSchedulerClient(object):
 
         """
         return JobSchedulerRpc().set_state(object_ids, message, run)
-
-    @classmethod
-    def notify(cls, instance, time, update_attrs, from_states = []):
-        """Having detected that the state of an object in the database does not
-        match information from real life (i.e. chroma-agent), call this to
-        request an update to the object.
-
-        :param instance: An instance of a StatefulObject
-        :param time: A UTC datetime.datetime object
-        :param update_attrs: Dict of attribute name to json-serializable value of the changed attributes
-        :param from_states: (Optional) A list of states from which the instance may be
-                            set to the new state.  This lets updates happen
-                            safely without risking e.g. notifying an 'unconfigured'
-                            LNet state to 'lnet_down'.  If this is ommitted, the notification
-                            will be applied irrespective of the object's state.
-
-        :return: None
-
-        """
-
-        if (not from_states) or instance.state in from_states:
-            log.info("Enqueuing notify %s at %s:" % (instance, time))
-            for attr, value in update_attrs.items():
-                log.info("  .%s %s->%s" % (attr, getattr(instance, attr), value))
-
-            # Encode datetimes
-            encoded_attrs = {}
-            for attr, value in update_attrs.items():
-                try:
-                    field = [f for f in instance._meta.fields if f.name == attr][0]
-                except IndexError:
-                    # e.g. _id names, they can't be datetimes so pass through
-                    encoded_attrs[attr] = value
-                else:
-                    if isinstance(field, DateTimeField):
-                        assert isinstance(value, datetime.datetime), "Attribute %s of %s must be datetime" % (attr, instance.__class__)
-                        encoded_attrs[attr] = value.isoformat()
-                    else:
-                        encoded_attrs[attr] = value
-
-            time_serialized = time.isoformat()
-            NotificationQueue().put({
-                'instance_natural_key': ContentType.objects.get_for_model(instance).natural_key(),
-                'instance_id': instance.id,
-                'time': time_serialized,
-                'update_attrs': encoded_attrs,
-                'from_states': from_states
-            })
 
     @classmethod
     def available_transitions(cls, object_list):
@@ -197,12 +139,9 @@ class JobSchedulerClient(object):
         :param new_state: Hypothetical new value of the 'state' attribute
 
         """
-        from chroma_core.services.job_scheduler.command_plan import CommandPlan
-
-        # FIXME: deps calls use a global instance of ObjectCache, calling them from outside
-        # the JobScheduler service is a problem -- get rid of the singletons and pass refs around.
-        ObjectCache.clear()
-        return CommandPlan(LockCache(), None).get_transition_consequences(stateful_object, new_state)
+        return JobSchedulerRpc().get_transition_consequences(stateful_object.__class__.__name__,
+                                                             stateful_object.id,
+                                                             new_state)
 
     @classmethod
     def cancel_job(cls, job_id):
@@ -226,6 +165,12 @@ class JobSchedulerClient(object):
     @classmethod
     def test_host_contact(cls, address, root_pw=None, pkey=None, pkey_pw=None):
         command_id = JobSchedulerRpc().test_host_contact(address, root_pw, pkey, pkey_pw)
+
+        return Command.objects.get(pk = command_id)
+
+    @classmethod
+    def update_corosync_configuration(cls, corosync_configuration_id, mcast_port, network_interface_ids):
+        command_id = JobSchedulerRpc().update_corosync_configuration(corosync_configuration_id, mcast_port, network_interface_ids)
 
         return Command.objects.get(pk = command_id)
 

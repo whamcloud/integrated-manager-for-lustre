@@ -40,6 +40,9 @@ class UtilityTestCase(TestCase):
     Adds a few non-api specific utility functions for the integration tests.
     """
 
+    def setUp(self):
+        self.maxDiff = None                                     # By default show the complete diff on errors.
+
     def remote_command(self, server, command, expected_return_code=0, timeout=TEST_TIMEOUT):
         """
         Executes a command on a remote server over ssh.

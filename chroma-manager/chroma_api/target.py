@@ -226,7 +226,7 @@ class TargetResource(MetricResource, ConfParamResource):
             'volume__storage_resource__resource_class__storage_plugin',
             'managedost', 'managedmdt', 'managedmgs').prefetch_related(
             'managedtargetmount_set', 'managedtargetmount_set__host',
-            'managedtargetmount_set__host__lnetconfiguration')
+            'managedtargetmount_set__host__lnet_configuration')
         resource_name = 'target'
         excludes = ['not_deleted', 'bytes_per_inode', 'reformat']
         filtering = {'kind': ['exact'], 'filesystem_id': ['exact'], 'host_id': ['exact'], 'id': ['exact', 'in'], 'immutable_state': ['exact'], 'name': ['exact']}

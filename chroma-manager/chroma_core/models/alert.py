@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -82,8 +82,6 @@ class AlertState(models.Model):
     def to_dict(self):
         from chroma_core.lib.util import time_str
         return {
-         'begin': self.begin,
-         'end': self.end,
          'alert_severity': 'alert',  # FIXME: Still need to figure out wheather to pass enum or display string.
          'alert_item': str(self.alert_item),
          'alert_message': self.message(),
@@ -95,6 +93,13 @@ class AlertState(models.Model):
          'alert_item_id': self.alert_item_id,
          'alert_item_content_type_id': self.alert_item_type_id
         }
+
+    @property
+    def affected_objects(self):
+        """
+        :return: A list of objects other than the alert_item that are affected by this alert
+        """
+        return []
 
     def duration(self):
         return self.end - self.begin

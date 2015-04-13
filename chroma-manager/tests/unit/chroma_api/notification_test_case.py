@@ -1,9 +1,8 @@
 import logging
 
 from chroma_core.models import (Command, HostOfflineAlert, ManagedHost, Event, AlertState, SyslogEvent)
-
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import freshen, synthetic_host, random_str, make_command
+from tests.unit.chroma_core.helpers import freshen, synthetic_host, random_str, make_command
 
 INFO = logging.INFO
 WARNING = logging.WARNING

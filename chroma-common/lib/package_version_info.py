@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -25,10 +25,21 @@
 try:
     import rpm as rpm_lib
 except:
-    class rpm_lib(object):
-        @classmethod
-        def labelCompare(cls, a, b):
-            return cmp(a, b)
+    try:
+        # Allow an override in local settings, because I want to get real output I run it on a remote linux node from my mac.
+        # I have this in my local_settings.py : Chris
+        # class rpm_lib(object):
+        #     @classmethod
+        #     def labelCompare(cls, a, b):
+        #         from subprocess import Popen, PIPE
+        #         result = Popen(["ssh", "lotus-33",  "python -c \"import rpm\nimport sys\nsys.stdout.write(str(rpm.labelCompare(('%s', '%s', '%s'), ('%s', '%s', '%s'))))\"" % (a[0], a[1], a[2], b[0], b[1], b[2])], stdout=PIPE).communicate()[0]
+        #         return int(result
+        from local_settings import rpm_lib
+    except:
+        class rpm_lib(object):
+            @classmethod
+            def labelCompare(cls, a, b):
+                return cmp(a, b)
 
 
 class VersionInfo(object):

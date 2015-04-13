@@ -16,8 +16,8 @@ class ChromaHaTestCase(ChromaIntegrationTestCase):
         self.add_hosts([s['address'] for s in self.config_servers])
 
         def all_servers_up():
-            servers = self.get_list("/api/host/")
-            return all([server['corosync_reported_up'] for server in servers])
+            corosync_configurations = self.get_list("/api/corosync_configuration/")
+            return all([corosync_configuration['corosync_reported_up'] for corosync_configuration in corosync_configurations])
 
         self.wait_until_true(all_servers_up)
 

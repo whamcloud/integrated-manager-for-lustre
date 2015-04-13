@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -36,9 +36,10 @@ from chroma_core.models.event import AlertEvent
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.jobs import Job, AdvertisedJob, job_log
 from chroma_core.models.utils import DeletableMetaclass
+from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_help.help import help_text
 
-from chroma_core.lib.job import Step, DependOn
+from chroma_core.lib.job import Step
 
 
 class DeletablePowerControlModel(models.Model):
@@ -376,12 +377,11 @@ class PowerControlDeviceOutlet(DeletablePowerControlModel):
         from django.db import transaction
         transaction.commit()
 
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-        reconfigure = {'needs_fence_reconfiguration': True}
-        previous = old_self.host if old_self and old_self.host else None
+        reconfigure = {'reconfigure_fencing': True}
+        previous = old_self.host if old_self else None
         for host in self._hosts_for_fence_reconfiguration(self.host, previous):
-            if host.is_lustre_server:
-                JobSchedulerClient.notify(host, tznow(), reconfigure)
+            if host.pacemaker_configuration:
+                job_scheduler_notify.notify(host.pacemaker_configuration, tznow(), reconfigure)
             else:
                 job_log.debug("Skipping reconfiguration of non-server %s" % host)
 
@@ -550,67 +550,3 @@ class TogglePduOutletStateStep(Step):
     def run(self, args):
         from chroma_core.services.power_control.client import PowerControlClient
         PowerControlClient.toggle_device_outlets(args['toggle_state'], args['outlets'])
-
-
-class ConfigureHostFencingJob(Job):
-    host = models.ForeignKey(ManagedHost)
-    requires_confirmation = False
-    verb = "Configure Host Fencing"
-
-    class Meta:
-        app_label = 'chroma_core'
-        ordering = ['id']
-
-    @classmethod
-    def get_args(cls, host):
-        return {'host_id': host.id}
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text['configure_host_fencing']
-
-    def description(self):
-        return "Configure fencing agent on %s" % self.host
-
-    def get_steps(self):
-        return [(ConfigureHostFencingStep, {'host': self.host})]
-
-    def get_deps(self):
-        return DependOn(self.host, 'managed', acceptable_states=self.host.not_state('removed'))
-
-    def on_success(self):
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-        reconfigure = {'needs_fence_reconfiguration': False}
-        JobSchedulerClient.notify(self.host, tznow(), reconfigure)
-
-
-class ConfigureHostFencingStep(Step):
-    idempotent = True
-    # Needs database in order to query host outlets
-    database = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        if host.immutable_state:
-            return
-
-        agent_kwargs = []
-        for outlet in host.outlets.select_related().all():
-            fence_kwargs = {
-                'agent': outlet.device.device_type.agent,
-                'login': outlet.device.username,
-                'password': outlet.device.password
-            }
-            # IPMI fencing config doesn't need most of these attributes.
-            if (outlet.device.is_ipmi
-                and outlet.device.device_type.agent != 'fence_virsh'):
-                fence_kwargs['ipaddr'] = outlet.identifier
-                fence_kwargs['lanplus'] = '2.0' in outlet.device.device_type.model  # lanplus
-            else:
-                fence_kwargs['plug'] = outlet.identifier
-                fence_kwargs['ipaddr'] = outlet.device.address
-                fence_kwargs['ipport'] = outlet.device.port
-
-            agent_kwargs.append(fence_kwargs)
-
-        self.invoke_agent(host, "configure_fencing", {'agents': agent_kwargs})

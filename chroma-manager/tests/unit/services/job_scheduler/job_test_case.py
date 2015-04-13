@@ -1,15 +1,17 @@
 import json
 from contextlib import contextmanager
 from itertools import chain
+
+from django.test import TestCase
+import mock
+
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command, ManagedTarget, ManagedTargetMount, LNetConfiguration, Nid
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import ServiceRpcInterface
-from django.test import TestCase
-import mock
-from tests.unit.chroma_core.helper import MockAgentRpc, synthetic_volume_full, freshen
-from tests.unit.chroma_core.helper import MockAgentSsh, log, load_default_profile, synthetic_host, parse_synthentic_device_info
+from tests.unit.chroma_core.helpers import MockAgentRpc, synthetic_volume_full, freshen
+from tests.unit.chroma_core.helpers import MockAgentSsh, log, load_default_profile, synthetic_host, parse_synthentic_device_info
 
 
 class JobTestCase(TestCase):
@@ -131,7 +133,8 @@ class JobTestCase(TestCase):
 
         from chroma_core.services.job_scheduler.dep_cache import DepCache
         from chroma_core.services.job_scheduler.job_scheduler import JobScheduler, RunJobThread
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc, NotificationQueue
+        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc
+        from chroma_core.services.job_scheduler.job_scheduler_notify import NotificationQueue
 
         ObjectCache.clear()
         self.job_scheduler = JobScheduler()

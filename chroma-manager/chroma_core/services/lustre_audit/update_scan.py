@@ -30,7 +30,7 @@ from chroma_core.models.target import ManagedTarget, TargetRecoveryInfo, TargetR
 from chroma_core.models.host import ManagedHost
 from chroma_core.models.client_mount import LustreClientMount
 from chroma_core.models.filesystem import ManagedFilesystem
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.models import ManagedTargetMount
 import chroma_core.models.package
 from chroma_core.services.stats import StatsQueue
@@ -79,7 +79,7 @@ class UpdateScan(object):
             properties = json.dumps(properties)
             # use the job scheduler to update, but only as necessary
             if self.host.properties != properties:
-                JobSchedulerClient.notify(self.host, self.started_at, {'properties': properties})
+                job_scheduler_notify.notify(self.host, self.started_at, {'properties': properties})
 
     def update_packages(self, packages):
         if not packages:
@@ -113,7 +113,7 @@ class UpdateScan(object):
                     break
 
         log.info("update_packages(%s): updates=%s" % (self.host, needs_update))
-        JobSchedulerClient.notify(self.host, self.started_at, {'needs_update': needs_update})
+        job_scheduler_notify.notify(self.host, self.started_at, {'needs_update': needs_update})
 
     def update_client_mounts(self):
         # Client mount audit comes in via metrics due to the way the
@@ -138,7 +138,7 @@ class UpdateScan(object):
         for expected_mount in expected_fs_mounts:
             if expected_mount.active and expected_mount.filesystem.name not in actual_fs_mounts:
                 update = dict(state = 'unmounted', mountpoint = None)
-                JobSchedulerClient.notify(expected_mount,
+                job_scheduler_notify.notify(expected_mount,
                                           self.started_at,
                                           update)
                 log.info("updated mount %s on %s -> inactive" % (expected_mount.mountpoint, self.host))
@@ -151,7 +151,7 @@ class UpdateScan(object):
                 if not mount.active:
                     update = dict(state = 'mounted',
                                   mountpoint = actual_mount['mountpoint'])
-                    JobSchedulerClient.notify(mount,
+                    job_scheduler_notify.notify(mount,
                                               self.started_at,
                                               update)
                     log.info("updated mount %s on %s -> active" % (actual_mount['mountpoint'], self.host))
@@ -190,14 +190,14 @@ class UpdateScan(object):
             if target_mount.target.immutable_state:
                 target = target_mount.target
                 if mounted_locally:
-                    JobSchedulerClient.notify(target, self.started_at, {
+                    job_scheduler_notify.notify(target, self.started_at, {
                         'state': 'mounted',
                         'active_mount_id': target_mount.id
                     }, ['mounted', 'unmounted'])
                 elif not mounted_locally and target.active_mount == target_mount:
                     log.debug("clearing active_mount, %s %s", self.started_at, self.host)
 
-                    JobSchedulerClient.notify(target, self.started_at, {
+                    job_scheduler_notify.notify(target, self.started_at, {
                         'state': 'unmounted',
                         'active_mount_id': None
                     }, ['mounted', 'unmounted'])
@@ -253,7 +253,7 @@ class UpdateScan(object):
                         log.warning("Resource location node '%s' does not match any Host" % (node_name))
                         active_mount = None
 
-                JobSchedulerClient.notify(target, self.started_at, {
+                job_scheduler_notify.notify(target, self.started_at, {
                     'state': ['unmounted', 'mounted'][active_mount != None],
                     'active_mount_id': None if active_mount is None else active_mount.id
                 }, ['mounted', 'unmounted'])

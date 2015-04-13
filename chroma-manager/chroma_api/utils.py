@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -623,8 +623,8 @@ class BulkResourceOperation(object):
                                   request,
                                   http.HttpBadRequest if errors_exist else http.HttpAccepted,
                                   {'objects': [{object_name: bulk_action_result.object,
-                                                                                  'error': bulk_action_result.error,
-                                                                                  'traceback': bulk_action_result.traceback} for bulk_action_result in bulk_action_results]})
+                                                'error': bulk_action_result.error,
+                                                'traceback': bulk_action_result.traceback} for bulk_action_result in bulk_action_results]})
 
         if errors_exist:
             # Return 400, a failure here could mean many things.
@@ -633,9 +633,19 @@ class BulkResourceOperation(object):
                 'traceback': bulk_action_results[0].traceback,
             })
         else:
+            # REMOVE BEFORE LANDING
+            # TODO: Horrible special case that I don't want to fix up at this time. When command is returned it is returned command: data
+            # but everything else is just data.
+            # I'm not going to raise a ticket because it will not make the backlog, but at some point the front and back should remove
+            # this anomaly.
+            if object_name == 'csssommand':
+                result = {'command': bulk_action_results[0].object}
+            else:
+                result = bulk_action_results[0].object
+
             raise custom_response(self,
                                   request,
                                   http.HttpAccepted if bulk_action_results[0].object else http.HttpNoContent,
-                                  bulk_action_results[0].object)
+                                  result)
 
     BulkActionResult = namedtuple('BulkActionResult', ['object', 'error', 'traceback'])

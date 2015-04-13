@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -27,19 +27,6 @@ from chroma_core.services import log_register
 from chroma_core.chroma_common.lib.package_version_info import VersionInfo
 
 log = log_register('package_update')
-
-try:
-    import rpm
-    rpm  # silence pyflakes
-except ImportError:
-    # For pure-python environments (i.e. not EL6), a weak implementation just good
-    # enough to make it through some tests.
-    log.warning("Cannot import rpm module, using dummy version (this is only OK if you are running in development mode)")
-
-    class rpm(object):
-        @classmethod
-        def labelCompare(cls, a, b):
-            return cmp(a, b)
 
 
 class Package(models.Model):

@@ -43,12 +43,18 @@ import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.server_profile import ServerProfile
-from chroma_core.models import Command, StateLock, ManagedHost, ManagedMdt, FilesystemMember
+from chroma_core.models import Command
+from chroma_core.models import StateLock
+from chroma_core.models import ManagedHost
+from chroma_core.models import ManagedMdt
+from chroma_core.models import FilesystemMember
 from chroma_core.models import ConfigureLNetJob
 from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject, StepResult
 from chroma_core.models import ManagedMgs, ManagedFilesystem, NetworkInterface, LNetConfiguration
-from chroma_core.models import ManagedTargetMount, VolumeNode, ConfigureHostFencingJob
+from chroma_core.models import ManagedTargetMount, VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
+from chroma_core.models import CorosyncConfiguration, PacemakerConfiguration
+from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -56,6 +62,8 @@ from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
+from disabled_connection import DISABLED_CONNECTION
+
 from chroma_help.help import help_text
 
 import chroma_core.lib.conf_param
@@ -142,13 +150,6 @@ class SimpleConnectionQuota(object):
             _disable_database()
 
         self._semaphore.release()
-
-
-class DisabledConnection(object):
-    def __getattr__(self, item):
-        raise RuntimeError("Attempted to use database from a step which does not have database=True")
-
-DISABLED_CONNECTION = DisabledConnection()
 
 
 def _disable_database():
@@ -491,8 +492,8 @@ class JobScheduler(object):
 
         self.progress = JobProgress(self)
 
-        """ This is an actual list of hooks, so that we can actually have completion hooks in our code. Basic today
-        but maybe improved in the future. """
+        # This is an actual list of hooks, so that we can actually have completion hooks in our code. Basic today
+        # but maybe improved in the future.
         self.completion_hooks = []
 
     def join_run_threads(self):
@@ -670,12 +671,6 @@ class JobScheduler(object):
             if 'needs_update' in updated_attrs:
                 UpdatesAvailableAlert.notify(changed_item, changed_item.needs_update)
 
-            if changed_item.needs_fence_reconfiguration:
-                job = ConfigureHostFencingJob(host = changed_item)
-                if not command:
-                    command = Command.objects.create(message = "Configuring fencing agent on %s" % changed_item)
-                self.CommandPlan.add_jobs([job], command)
-
         if isinstance(changed_item, ManagedTarget):
             # See if any MGS conf params need applying
             if issubclass(changed_item.downcast_class, FilesystemMember):
@@ -695,6 +690,12 @@ class JobScheduler(object):
             from chroma_core.models import TargetFailoverAlert
             failed_over = changed_item.active_mount is not None and changed_item.active_mount != changed_item.managedtargetmount_set.get(primary = True)
             TargetFailoverAlert.notify(changed_item, failed_over)
+
+        if isinstance(changed_item, PacemakerConfiguration) and 'reconfigure_fencing' in updated_attrs:
+            job = ConfigureHostFencingJob(host = changed_item.host)
+            if not command:
+                command = Command.objects.create(message = "Configuring fencing agent on %s" % changed_item)
+            self.CommandPlan.add_jobs([job], command)
 
     def _drain_notification_buffer(self):
         # Give any buffered notifications a chance to drain out
@@ -812,6 +813,35 @@ class JobScheduler(object):
             self.progress.advance()
             return result
 
+    def get_transition_consequences(cls, stateful_object_class, stateful_object_id, new_state):
+        """Query what the side effects of a state transition are.  Effectively does
+        a dry run of scheduling jobs for the transition.
+
+        The return format is like this:
+        ::
+
+            {
+                'transition_job': <job dict>,
+                'dependency_jobs': [<list of job dicts>]
+            }
+            # where each job dict is like
+            {
+                'class': '<job class name>',
+                'requires_confirmation': <boolean, whether to prompt for confirmation>,
+                'confirmation_prompt': <string, confirmation prompt>,
+                'description': <string, description of the job>,
+                'stateful_object_id': <ID of the object modified by this job>,
+                'stateful_object_content_type_id': <Content type ID of the object modified by this job>
+            }
+
+        :param stateful_object: A StatefulObject instance
+        :param new_state: Hypothetical new value of the 'state' attribute
+
+        """
+        stateful_object = ObjectCache.get_by_id(getattr(sys.modules[__name__], stateful_object_class), stateful_object_id)
+
+        return CommandPlan(LockCache(), None).get_transition_consequences(stateful_object, new_state)
+
     @transaction.commit_on_success
     def cancel_job(self, job_id):
         cancelled_thread = None
@@ -920,6 +950,28 @@ class JobScheduler(object):
         self.progress.advance()
 
         return command
+
+    def update_corosync_configuration(self, corosync_configuration_id, mcast_port, network_interface_ids):
+        with self._lock:
+            with transaction.commit_on_success():
+                # For now we only support 1 or 2 network configurations, jobs aren't so helpful at supporting lists
+                corosync_configuration = CorosyncConfiguration.objects.get(id=corosync_configuration_id)
+                assert len(network_interface_ids) == 1 or len(network_interface_ids) == 2
+                network_interface_0 = NetworkInterface.objects.get(id = network_interface_ids[0])
+                network_interface_1 = None if len(network_interface_ids) == 1 else NetworkInterface.objects.get(id = network_interface_ids[1])
+
+                command_id = CommandPlan(self._lock_cache, self._job_collection).command_run_jobs_preserve_states(
+                    [{"class_name": "ConfigureCorosyncJob",
+                      "args": {"corosync_configuration": corosync_configuration,
+                               "mcast_port": mcast_port,
+                               "network_interface_0": network_interface_0,
+                               "network_interface_1": network_interface_1}}],
+                    [corosync_configuration, corosync_configuration.host.pacemaker_configuration],
+                    "Update Corosync Configuration on host %s" % corosync_configuration.host.fqdn)
+
+        self.progress.advance()
+
+        return command_id
 
     @classmethod
     def order_targets(cls, targets_data):

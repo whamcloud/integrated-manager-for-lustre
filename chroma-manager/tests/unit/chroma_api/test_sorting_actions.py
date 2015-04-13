@@ -1,9 +1,10 @@
 import logging
+
 from chroma_core.models import ConfigureLNetJob
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
-
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helper import synthetic_host
+from tests.unit.chroma_core.helpers import synthetic_host
+
 
 log = logging.getLogger(__name__)
 

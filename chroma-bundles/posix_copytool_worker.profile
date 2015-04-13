@@ -3,7 +3,7 @@
   "managed": true,
   "worker": true,
   "name": "posix_copytool_worker",
-  "initial_state": "managed",
+  "initial_state": "working",
   "bundles": [
     "iml-agent",
     "lustre-client"

@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -29,7 +29,8 @@ from chroma_agent.chroma_common.lib import shell
 from chroma_agent.log import daemon_log
 from chroma_agent.plugin_manager import DevicePlugin
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
-
+from chroma_agent.lib.corosync import corosync_running
+from chroma_agent.lib.pacemaker import pacemaker_running
 
 try:
     # Python 2.7
@@ -68,20 +69,20 @@ class CorosyncPlugin(DevicePlugin):
     def _parse_crm_as_xml(self, raw):
         """ Parse the crm_mon response
 
-        returns dict of node status or ERROR if corosync is down
+        returns dict of nodes status or None if corosync is down
         """
 
-        return_dict = {}
+        return_dict = None
+
         try:
             root = xml.fromstring(raw)
         except ParseError:
             # not xml, might be a known error message
-            if CorosyncPlugin.COROSYNC_CONNECTION_FAILURE in raw:
-                return_dict['datetime'] = ''
-                return_dict['nodes'] = {}
-            else:
+            if CorosyncPlugin.COROSYNC_CONNECTION_FAILURE not in raw:
                 daemon_log.warning("Bad xml from corosync crm_mon:  %s" % raw)
         else:
+            return_dict = {}
+
             #  Got node info, pack it up and return
             tm_str = root.find('summary/last_update').get('time')
             return_dict.update({'datetime': self._convert_utc_datetime(tm_str)})
@@ -117,16 +118,27 @@ class CorosyncPlugin(DevicePlugin):
 
         return stdout
 
-    def start_session(self):
-        return self.update_session()
-
-    @exceptionSandBox(daemon_log, None)
-    def update_session(self):
+    def _scan(self):
         """Respond to poll.  Only return if has valid data"""
+
+        result = {}
 
         raw_output = self._read_crm_mon_as_xml()
         if raw_output:
-            dict_status = self._parse_crm_as_xml(raw_output)
+            result['crm_info'] = self._parse_crm_as_xml(raw_output)
+        else:
+            result['crm_info'] = None
 
-            if dict_status:
-                return dict_status
+        result["state"] = {}
+        result["state"]["corosync"] = "started" if corosync_running() else "stopped"
+        result["state"]["pacemaker"] = "started" if pacemaker_running() else "stopped"
+
+        return result
+
+    def start_session(self):
+        self._reset_delta()
+        return self.update_session()
+
+    @exceptionSandBox(daemon_log, ['state', 'nodes'])
+    def update_session(self):
+        return self._delta_result(self._scan())

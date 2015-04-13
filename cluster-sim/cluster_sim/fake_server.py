@@ -48,6 +48,39 @@ MIN_SHUTDOWN_DURATION = 10
 # this long.
 MIN_STARTUP_DURATION = 20
 
+# It is my intention to create a factory class that will actually allow these to be created with a definition
+# like the namedtuple.
+# PacemakerState = namedstruct(PacemakerState, ['state'])
+# CorosyncState = namedstruct(CorosyncState, ['state', 'mcast_port])
+
+
+class PacemakerState(dict):
+    def __init__(self, state):
+        super(PacemakerState, self).__init__()
+        self['state'] = state
+
+    @property
+    def state(self):
+        return self['state']
+
+    @state.setter
+    def state(self, value):
+        self['state'] = value
+
+
+class CorosyncState(PacemakerState):
+    def __init__(self, state, mcast_port):
+        super(CorosyncState, self).__init__(state)
+        self['mcast_port'] = mcast_port
+
+    @property
+    def mcast_port(self):
+        return self['mcast_port']
+
+    @mcast_port.setter
+    def mcast_port(self, value):
+        self['mcast_port'] = value
+
 
 class FakeServer(Persisted):
     """Represent a single storage server.  Initialized with an arbitrary
@@ -60,7 +93,9 @@ class FakeServer(Persisted):
         'lnet_loaded': False,
         'lnet_up': False,
         'stats': None,
-        'packages': {}
+        'packages': {},
+        'corosync': CorosyncState('stopped', 3000),
+        'pacemaker': PacemakerState('stopped')
     }
 
     def __init__(self, simulator, fake_cluster, server_id, fqdn, nodename, nid_tuples_or_network_interfaces, worker=False, client_mounts=None):
@@ -140,8 +175,8 @@ class FakeServer(Persisted):
     def add_client_mount(self, mountspec, mountpoint):
         fsname = mountspec.split(':/')[1]
         mountpoint = "%s/%s" % (mountpoint, fsname)
+        self.start_lnet()
         with self._lock:
-            self.start_lnet()
             self.state['client_mounts'][mountspec] = mountpoint
             self.save()
         log.debug("Mounted %s on %s" % (mountspec, mountpoint))
@@ -604,44 +639,110 @@ class FakeServer(Persisted):
 
         self.startup(simulate_reboot)
 
+    def start_corosync(self):
+        with self._lock:
+            self.state['corosync'].state = 'started'
+            self.save()
+            return agent_result_ok
+
+    def stop_corosync(self):
+        with self._lock:
+            self.state['corosync'].state = 'stopped'
+            self.save()
+            return agent_result_ok
+
+    def configure_corosync(self,
+                           ring0_name,
+                           mcast_port,
+                           ring1_name=None,
+                           ring0_ipaddr=None, ring0_prefix=None,
+                           ring1_ipaddr=None, ring1_prefix=None):
+        with self._lock:
+            self.state['corosync'].mcast_port = mcast_port
+            self.save()
+            return agent_result_ok
+
+    def get_corosync_autoconfig(self):
+        with self._lock:
+            port_names = {'tcp': 'eth', 'o2ib': 'ib'}
+            inet4_addresses = []
+            names = []
+
+            for inet4_address in self.network_interfaces.keys():
+                interface = self.network_interfaces[inet4_address]
+                inet4_addresses.append(inet4_address)
+                names.append('%s%s' % (port_names[interface['type']], interface['interface_no']))
+
+            return agent_result({'interfaces': {names[0]: {'dedicated': False,
+                                                           'ipaddr': inet4_addresses[0],
+                                                           'prefix': 24},
+                                                names[1]: {'dedicated': True,
+                                                           'ipaddr': inet4_addresses[1],
+                                                           'prefix': 24}},
+                                 'mcast_port': self.state['corosync'].mcast_port})
+
+    def start_pacemaker(self):
+        with self._lock:
+            self.state['pacemaker'].state = 'started'
+            self.save()
+            return agent_result_ok
+
+    def stop_pacemaker(self):
+        with self._lock:
+            self.state['pacemaker'].state = 'stopped'
+            self.save()
+            return agent_result_ok
+
     def start_lnet(self):
-        self.state['lnet_loaded'] = True
-        self.state['lnet_up'] = True
-        self.save()
+        with self._lock:
+            self.state['lnet_loaded'] = True
+            self.state['lnet_up'] = True
+            self.save()
+            return agent_result_ok
 
     def stop_lnet(self):
-        self.state['lnet_loaded'] = True
-        self.state['lnet_up'] = False
-        self.save()
+        with self._lock:
+            self.state['lnet_loaded'] = True
+            self.state['lnet_up'] = False
+            self.save()
+            return agent_result_ok
 
     def unload_lnet(self):
-        self.state['lnet_loaded'] = False
-        self.state['lnet_up'] = False
-        self.save()
+        with self._lock:
+            self.state['lnet_loaded'] = False
+            self.state['lnet_up'] = False
+            self.save()
+            return agent_result_ok
 
     def load_lnet(self):
-        self.state['lnet_loaded'] = True
-        self.state['lnet_up'] = False
-        self.save()
+        with self._lock:
+            self.state['lnet_loaded'] = True
+            self.state['lnet_up'] = False
+            self.save()
+            return agent_result_ok
 
     def configure_lnet(self, **kwargs):
-        lnet_configuration = kwargs['lnet_configuration']
+        with self._lock:
+            lnet_configuration = kwargs['lnet_configuration']
 
-        # First off destroy all the current nids
-        for inet4_address in self.network_interfaces:
-            self.network_interfaces[inet4_address]['lnd_network'] = None
+            # First off destroy all the current nids
+            for inet4_address in self.network_interfaces:
+                self.network_interfaces[inet4_address]['lnd_network'] = None
 
-        for nid in lnet_configuration['network_interfaces']:
-            inet4_address = nid[0]
-            self.network_interfaces[inet4_address]['lnd_type'] = nid[1]
-            self.network_interfaces[inet4_address]['lnd_network'] = nid[2]
+            for nid in lnet_configuration['network_interfaces']:
+                inet4_address = nid[0]
+                self.network_interfaces[inet4_address]['lnd_type'] = nid[1]
+                self.network_interfaces[inet4_address]['lnd_network'] = nid[2]
 
-        self.state['network_interfaces'] = self.network_interfaces
-        self.save()
+            self.state['network_interfaces'] = self.network_interfaces
+            self.save()
+            return agent_result_ok
 
     def unconfigure_lnet(self):
+        # No with lock because configure_lnet does the with lock.
         self.configure_lnet(lnet_configuration = {'network_interfaces': [],
                                                   'state': 'lnet_unloaded'})
+        return agent_result_ok
 
     def writeconf_target(self, writeconf=False, erase_params=False, device=None, mgsnode=None, failnode=None):
         if mgsnode is None:

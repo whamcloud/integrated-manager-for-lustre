@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -214,9 +214,9 @@ class AlertResource(SeverityResource):
         # >> FIXME HYD-421 Hack: this info should be provided in a more generic way by
         #    AlertState subclasses
         # NB adding a 'what_do_i_affect' method to
-        a = bundle.obj.downcast()
+        alert = bundle.obj.downcast()
 
-        affected_objects = set()
+        affected_objects = []
 
         from chroma_core.models import StorageResourceAlert, StorageAlertPropagated
         from chroma_core.models import Volume
@@ -226,43 +226,36 @@ class AlertResource(SeverityResource):
 
         def affect_target(target):
             target = target.downcast()
-            affected_objects.add(target)
+            affected_objects.append(target)
             if isinstance(target, FilesystemMember):
-                affected_objects.add(target.filesystem)
+                affected_objects.append(target.filesystem)
             elif isinstance(target, ManagedMgs):
                 for fs in target.managedfilesystem_set.all():
-                    affected_objects.add(fs)
+                    affected_objects.append(fs)
 
-        if isinstance(a, StorageResourceAlert):
-            affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = a).values('storage_resource_id')]
-            affected_srrs.append(a.alert_item_id)
+        affected_objects.extend(alert.affected_objects)
+
+        if isinstance(alert, StorageResourceAlert):
+            affected_srrs = [sap['storage_resource_id'] for sap in StorageAlertPropagated.objects.filter(alert_state = alert).values('storage_resource_id')]
+            affected_srrs.append(alert.alert_item_id)
             luns = Volume.objects.filter(storage_resource__in = affected_srrs)
             for l in luns:
                 for ln in l.volumenode_set.all():
                     tms = ManagedTargetMount.objects.filter(volume_node = ln)
                     for tm in tms:
                         affect_target(tm.target)
-        elif isinstance(a, TargetFailoverAlert):
-            affect_target(a.alert_item)
-        elif isinstance(a, TargetOfflineAlert) or isinstance(a, TargetRecoveryAlert):
-            affect_target(a.alert_item)
-        elif isinstance(a, HostContactAlert):
-            tms = ManagedTargetMount.objects.filter(host = a.alert_item)
+        elif isinstance(alert, TargetFailoverAlert):
+            affect_target(alert.alert_item)
+        elif isinstance(alert, TargetOfflineAlert) or isinstance(alert, TargetRecoveryAlert):
+            affect_target(alert.alert_item)
+        elif isinstance(alert, HostContactAlert):
+            tms = ManagedTargetMount.objects.filter(host = alert.alert_item)
             for tm in tms:
                 affect_target(tm.target)
 
-        result = []
-        affected_objects.add(a.alert_item)
-        for ao in affected_objects:
-            ct = ContentType.objects.get_for_model(ao)
-            result.append({
-                "id": ao.pk,
-                "content_type_id": ct.pk,
-                "resource_uri": api.get_resource_uri(ao)
-            })
+        affected_objects.append(alert.alert_item)
 
-        return result
-        # <<
+        return [api.get_resource_uri(ao)for ao in set(affected_objects)]
 
     def build_filters(self, filters = None):
 

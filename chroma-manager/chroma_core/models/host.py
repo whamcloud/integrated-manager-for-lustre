@@ -35,18 +35,23 @@ from django.db.models.sql import aggregates as sql_aggregates
 from django.db.models.query_utils import Q
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models.jobs import StateChangeJob, DeletableStatefulObject
-from chroma_core.models.jobs import NullStateChangeJob
-from chroma_core.models.event import Event
-from chroma_core.models.alert import AlertState
-from chroma_core.models.event import AlertEvent
-from chroma_core.models.server_profile import ServerProfile
-from chroma_core.models.jobs import Job, AdvertisedJob, StateLock
-
+from chroma_core.models import StateChangeJob, DeletableStatefulObject
+from chroma_core.models import NullStateChangeJob
+from chroma_core.models import Event
+from chroma_core.models import AlertState
+from chroma_core.models import AlertEvent
+from chroma_core.models import ServerProfile
+from chroma_core.models import PacemakerConfiguration
+from chroma_core.models import CorosyncConfiguration
+from chroma_core.models import NTPConfiguration
+from chroma_core.models import RSyslogConfiguration
+from chroma_core.models import Job, AdvertisedJob, StateLock
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn, DependAll, DependAny, Step
 from chroma_core.models.utils import MeasuredEntity, DeletableMetaclass
 from chroma_help.help import help_text
+from chroma_core.services.job_scheduler import job_scheduler_notify
+
 import settings
 
 
@@ -98,15 +103,6 @@ class HostListMixin(Job):
         return self._hosts
 
 
-class ClientCertificate(models.Model):
-    host = models.ForeignKey('ManagedHost')
-    serial = models.CharField(max_length = 16)
-    revoked = models.BooleanField(default = False)
-
-    class Meta:
-        app_label = 'chroma_core'
-
-
 class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     address = models.CharField(max_length = 255, help_text = "A URI like 'user@myhost.net:22'")
 
@@ -119,15 +115,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # The last known boot time
     boot_time = models.DateTimeField(null = True, blank = True)
 
-    # Up from the point of view of a peer in the corosync cluster for this node
-    corosync_reported_up = models.BooleanField(default=False,
-                                               help_text="True if corosync "
-                                                         "on a node in "
-                                                         "this node's cluster "
-                                                         "reports that this "
-                                                         "node is online")
-
-    # Recursive relationship to keep track of corosync cluster peers
+    # Recursive relationship to keep track of cluster peers
     ha_cluster_peers = models.ManyToManyField('self', null = True, blank = True, help_text = "List of peers in this host's HA cluster")
 
     # Profile of the server specifying some configured characteristics
@@ -136,9 +124,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
 
     needs_update = models.BooleanField(default=False,
                                        help_text="True if there are package updates available for this server")
-
-    needs_fence_reconfiguration = models.BooleanField(default = False,
-                                                      help_text = "Indicates that the host's fencing configuration should be updated")
 
     client_filesystems = models.ManyToManyField('ManagedFilesystem', related_name="workers", through="LustreClientMount", help_text="Filesystems for which this node is a non-server worker")
 
@@ -154,7 +139,7 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
     # JSON object of properties suitable for validation
     properties = models.TextField(default='{}')
 
-    states = ['undeployed', 'unconfigured', 'packages_installed', 'managed', 'monitored', 'removed']
+    states = ['undeployed', 'unconfigured', 'packages_installed', 'managed', 'monitored', 'working', 'removed']
     initial_state = 'unconfigured'
 
     class Meta:
@@ -203,15 +188,6 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
         # This host is not related to any available filesystems.
         return False
 
-    @property
-    def lnet_configuration(self):
-        '''
-        This property is purely to placeholder that will be used in a later patch that makes corosync and pacemaker stateful
-        objects. At that point all this items become optional and so we need to deal with the null state.
-        :return:
-        '''
-        return self.lnetconfiguration
-
     def get_label(self):
         """Return the FQDN if it is known, else the address"""
         name = self.fqdn
@@ -235,8 +211,8 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return [self.server_profile.initial_state] if self.install_method != ManagedHost.INSTALL_MANUAL else []
 
         if self.immutable_state:
-            if begin_state in ['undeployed', 'unconfigured']:
-                return ['removed', 'monitored', 'managed']
+            if begin_state in ['undeployed', 'unconfigured', 'packages_installed']:
+                return ['removed', 'monitored', 'managed', 'working']
             else:
                 return ['removed']
         else:
@@ -313,6 +289,58 @@ class ManagedHost(DeletableStatefulObject, MeasuredEntity):
             return [{"class_name": "SetHostProfileJob",
                      "args": {"host": self,
                               "server_profile": server_profile}}]
+
+    @property
+    def pacemaker_configuration(self):
+        '''
+        We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
+        return None when there is no forward reference. So for now we have to place this reference reference handles in
+        that return none if there is no reference
+        :return: Reference to object or None if not object.
+        '''
+        try:
+            return self._pacemaker_configuration
+        except PacemakerConfiguration.DoesNotExist:
+            return None
+
+    @property
+    def corosync_configuration(self):
+        '''
+        We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
+        return None when there is no forward reference. So for now we have to place this reference reference handles in
+        that return none if there is no reference
+        :return: Reference to object or None if not object.
+        '''
+        try:
+            return self._corosync_configuration
+        except CorosyncConfiguration.DoesNotExist:
+            return None
+
+    @property
+    def ntp_configuration(self):
+        '''
+        We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
+        return None when there is no forward reference. So for now we have to place this reference reference handles in
+        that return none if there is no reference
+        :return: Reference to object or None if not object.
+        '''
+        try:
+            return self._ntp_configuration
+        except NTPConfiguration.DoesNotExist:
+            return None
+
+    @property
+    def rsyslog_configuration(self):
+        '''
+        We can't rely on the standard related_name functionality because it doesn't (as far as I can tell) allow us to
+        return None when there is no forward reference. So for now we have to place this reference reference handles in
+        that return none if there is no reference
+        :return: Reference to object or None if not object.
+        '''
+        try:
+            return self._rsyslog_configuration
+        except RSyslogConfiguration.DoesNotExist:
+            return None
 
 
 class Volume(models.Model):
@@ -440,87 +468,6 @@ class VolumeNode(models.Model):
 
     def __str__(self):
         return "%s:%s" % (self.host, self.path)
-
-
-class ConfigurePacemakerStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-
-        error = self.invoke_agent(host, "configure_pacemaker")
-
-        if error:
-            from chroma_core.services.job_scheduler.agent_rpc import AgentException
-            error = help_text[error]
-            self.log(error)
-            raise AgentException(host.fqdn, "ConfigurePacemaker", kwargs, error)
-
-
-class ConfigureCorosyncStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-
-        # Empty dict if no host-side config.
-        config = self.invoke_agent(host, "host_corosync_config")
-
-        self.invoke_agent_expect_result(host, "configure_corosync", config)
-
-
-class ConfigureRsyslogStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        self.invoke_agent(host, "configure_rsyslog")
-
-
-class ConfigureNTPStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        if settings.NTP_SERVER_HOSTNAME:
-            ntp_server = settings.NTP_SERVER_HOSTNAME
-        else:
-            import socket
-            ntp_server = socket.getfqdn()
-
-        host = kwargs['host']
-        self.invoke_agent_expect_result(host, "configure_ntp", {'ntp_server': ntp_server})
-
-
-class UnconfigurePacemakerStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        self.invoke_agent(host, "unconfigure_pacemaker")
-
-
-class UnconfigureCorosyncStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        self.invoke_agent_expect_result(host, "unconfigure_corosync")
-
-
-class UnconfigureRsyslogStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        self.invoke_agent(host, "unconfigure_rsyslog")
-
-
-class UnconfigureNTPStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs['host']
-        self.invoke_agent_expect_result(host, "unconfigure_ntp")
 
 
 class RemoveServerConfStep(Step):
@@ -768,20 +715,12 @@ class InstallHostPackagesJob(StateChangeJob):
 
         if self.managed_host.is_managed:
             steps.extend([
-                (ConfigureNTPStep, {'host': self.managed_host}),
-                (ConfigureRsyslogStep, {'host': self.managed_host}),
                 (InstallPackagesStep, {'repos': [b['bundle_name'] for b in self.managed_host.server_profile.bundles.all().values('bundle_name')],
                                        'host': self.managed_host,
                                        'packages': list(self.managed_host.server_profile.packages) + ['chroma-agent-management']}),
                 (RebootIfNeededStep, {'host': self.managed_host,
                                       'timeout': settings.INSTALLATION_REBOOT_TIMEOUT})
             ])
-
-            if self.managed_host.is_lustre_server:
-                steps.extend([
-                    (ConfigureCorosyncStep, {'host': self.managed_host}),
-                    (ConfigurePacemakerStep, {'host': self.managed_host})
-                ])
 
         return steps
 
@@ -797,14 +736,42 @@ class SetupHostJob(NullStateChangeJob):
         ordering = ['id']
 
     def get_deps(self):
-        return DependOn(self.target_object.lnet_configuration, 'lnet_up')
+        # It really does not feel right that this is in here, but it does sort of work. These are the things
+        # it is dependent on so create them. Also I can't work out with today's state machine anywhere else to
+        # put them that works.
+        if self.target_object.pacemaker_configuration is None:
+            pacemaker_configuration, _ = PacemakerConfiguration.objects.get_or_create(host=self.target_object)
+            corosync_configuration, _ = CorosyncConfiguration.objects.get_or_create(host=self.target_object)
+            ntp_configuration, _ = NTPConfiguration.objects.get_or_create(host=self.target_object)
+            rsyslog_configuration, _ = RSyslogConfiguration.objects.get_or_create(host=self.target_object)
+
+            ObjectCache.add(CorosyncConfiguration, corosync_configuration)
+            ObjectCache.add(PacemakerConfiguration, pacemaker_configuration)
+            ObjectCache.add(NTPConfiguration, ntp_configuration)
+            ObjectCache.add(RSyslogConfiguration, rsyslog_configuration)
+
+        deps = []
+
+        if self.target_object.lnet_configuration:
+            deps.append(DependOn(self.target_object.lnet_configuration, 'lnet_up'))
+
+        if self.target_object.pacemaker_configuration:
+            deps.append(DependOn(self.target_object.pacemaker_configuration, 'started'))
+
+        if self.target_object.ntp_configuration:
+            deps.append(DependOn(self.target_object.ntp_configuration, 'configured'))
+
+        if self.target_object.rsyslog_configuration:
+            deps.append(DependOn(self.target_object.rsyslog_configuration, 'configured'))
+
+        return DependAll(deps)
 
     def description(self):
-        return "Setup managed server %s" % self.target_object
+        return help_text['setup_managed_host_on'] % self.target_object
 
     @classmethod
     def can_run(cls, host):
-        return host.is_managed
+        return host.is_managed and not host.is_worker
 
 
 class SetupMonitoredHostJob(NullStateChangeJob):
@@ -822,11 +789,33 @@ class SetupMonitoredHostJob(NullStateChangeJob):
         return DependOn(self.target_object.lnet_configuration, 'lnet_unloaded', unacceptable_states=['unconfigured'])
 
     def description(self):
-        return "Setup monitored server %s" % self.target_object
+        return help_text['setup_monitored_host_on'] % self.target_object
 
     @classmethod
     def can_run(cls, host):
         return host.is_monitored
+
+
+class SetupWorkertJob(NullStateChangeJob):
+    target_object = models.ForeignKey(ManagedHost)
+    state_transition = (ManagedHost, 'packages_installed', 'working')
+    _long_description = help_text['setup_worker_host']
+    state_verb = 'Setup worker node'
+
+    class Meta:
+        app_label = 'chroma_core'
+        ordering = ['id']
+
+    def get_deps(self):
+        # Moving out of unconfigured will mean that lnet will start monitoring and responding to the state.
+        return DependOn(self.target_object.lnet_configuration, 'lnet_unloaded', unacceptable_states=['unconfigured'])
+
+    def description(self):
+        return help_text['setup_worker_host_on'] % self.target_object
+
+    @classmethod
+    def can_run(cls, host):
+        return host.is_managed and host.is_worker
 
 
 class DetectTargetsStep(Step):
@@ -891,18 +880,17 @@ class SetHostProfileStep(Step):
 
     def run(self, kwargs):
         from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 
         host = kwargs['host']
         server_profile = kwargs['server_profile']
 
         self.invoke_agent_expect_result(host, 'update_profile', {"profile": server_profile.as_dict})
 
-        JobSchedulerClient.notify(host,
+        job_scheduler_notify.notify(host,
                                   tznow(),
                                   {'server_profile_id': server_profile.id})
 
-        JobSchedulerClient.notify(host,
+        job_scheduler_notify.notify(host,
                                   tznow(),
                                   {'immutable_state': not server_profile.managed})
 
@@ -1028,7 +1016,7 @@ class DeleteHostStep(Step):
 
 
 class RemoveHostJob(StateChangeJob):
-    state_transition = (ManagedHost, ['unconfigured', 'managed', 'monitored'], 'removed')
+    state_transition = (ManagedHost, ['unconfigured', 'managed', 'monitored', 'working'], 'removed')
     stateful_object = 'host'
     host = models.ForeignKey(ManagedHost)
     state_verb = 'Remove'
@@ -1059,34 +1047,25 @@ class RemoveHostJob(StateChangeJob):
         return "Remove host %s from configuration" % self.host
 
     def get_deps(self):
-        if self.host.is_monitored:
-            return DependAll()
+        deps = []
 
-        if self.host.is_managed:
-            return DependOn(self.host.lnet_configuration, 'unconfigured')
+        if self.host.lnet_configuration:
+            deps.append(DependOn(self.host.lnet_configuration, 'unconfigured'))
 
-        raise NotImplemented("Host is of unknown configuration")
+        if self.host.corosync_configuration:
+            deps.append(DependOn(self.host.corosync_configuration, 'unconfigured'))
+
+        if self.host.ntp_configuration:
+            deps.append(DependOn(self.host.ntp_configuration, 'unconfigured'))
+
+        if self.host.rsyslog_configuration:
+            deps.append(DependOn(self.host.rsyslog_configuration, 'unconfigured'))
+
+        return DependAll(deps)
 
     def get_steps(self):
-        steps = []
-
-        if self.host.is_managed:
-            steps.append((UnconfigureNTPStep, {'host': self.host}))
-
-            if self.host.is_lustre_server:
-                steps.extend([
-                    (UnconfigurePacemakerStep, {'host': self.host}),
-                    (UnconfigureCorosyncStep, {'host': self.host})
-                ])
-
-            steps.append((UnconfigureRsyslogStep, {'host': self.host}))
-
-        steps.extend([
-            (RemoveServerConfStep, {'host': self.host}),
-            (DeleteHostStep, {'host': self.host, 'force': False})
-        ])
-
-        return steps
+        return [(RemoveServerConfStep, {'host': self.host}),
+                (DeleteHostStep, {'host': self.host, 'force': False})]
 
 
 class ForceRemoveHostJob(AdvertisedJob):
@@ -1141,7 +1120,8 @@ class ForceRemoveHostJob(AdvertisedJob):
 
     def get_deps(self):
         return DependAny([DependOn(self.host, 'managed', acceptable_states=self.host.not_state('removed')),
-                          DependOn(self.host, 'monitored', acceptable_states=self.host.not_state('removed'))])
+                          DependOn(self.host, 'monitored', acceptable_states=self.host.not_state('removed')),
+                          DependOn(self.host, 'working', acceptable_states=self.host.not_state('removed'))])
 
     def get_steps(self):
         return [(DeleteHostStep, {'host': self.host, 'force': True})]
@@ -1332,8 +1312,11 @@ class UpdatePackagesStep(RebootIfNeededStep):
 
         # Now do some managed things
         if host.is_managed:
-            # Upgrade of pacemaker packages could have left it disabled
-            self.invoke_agent(kwargs['host'], 'enable_pacemaker')
+            if host.pacemaker_configuration:
+                # Upgrade of pacemaker packages could have left it disabled
+                self.invoke_agent(kwargs['host'], 'enable_pacemaker')
+                # and not running,
+                self.invoke_agent(kwargs['host'], 'start_pacemaker')
 
             # Check if we are running the required (lustre) kernel
             kernel_status = self.invoke_agent(kwargs['host'], 'kernel_status')

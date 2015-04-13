@@ -1,8 +1,10 @@
 import glob
 import json
+import os
+
 from django.test import TestCase
 import mock
-import os
+
 from chroma_core.services.job_scheduler.agent_rpc import AgentException
 from chroma_core.models import ManagedFilesystem
 from chroma_core.models import Nid
@@ -13,7 +15,7 @@ from chroma_core.models import DetectTargetsJob
 from chroma_core.models import ManagedOst
 from chroma_core.models import ManagedTargetMount
 from chroma_core.models import ManagedTarget
-from tests.unit.chroma_core.helper import synthetic_host, synchronous_run_job, load_default_profile
+from tests.unit.chroma_core.helpers import synthetic_host, synchronous_run_job, load_default_profile
 
 
 class TestDetection(TestCase):

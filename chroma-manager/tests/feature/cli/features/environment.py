@@ -3,8 +3,8 @@
 # Copyright (c) 2012 Whamcloud, Inc.  All rights reserved.
 # ========================================================
 
-import mock
 import json
+import mock
 
 from chroma_core.lib.util import chroma_settings
 from chroma_core.chroma_common.lib.name_value_list import NameValueList
@@ -90,7 +90,8 @@ def before_feature(context, feature):
 
     patch_test_host_contact_task(context)
 
-    from tests.unit.chroma_core.helper import synthetic_host, freshen
+    from tests.unit.chroma_core.helpers import synthetic_host
+    from tests.unit.chroma_core.helpers import freshen
     from chroma_core.lib.cache import ObjectCache
     from chroma_core.models import ManagedHost, Command
     from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
@@ -150,7 +151,7 @@ def before_feature(context, feature):
     context.old_is_authenticated = CsrfAuthentication.is_authenticated
     CsrfAuthentication.is_authenticated = mock.Mock(return_value = True)
 
-    from tests.unit.chroma_core.helper import load_default_profile
+    from tests.unit.chroma_core.helpers import load_default_profile
     from chroma_core.models import ServerProfile
     if not ServerProfile.objects.all().exists():
         load_default_profile()

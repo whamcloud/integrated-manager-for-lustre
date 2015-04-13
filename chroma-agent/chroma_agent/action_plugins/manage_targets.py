@@ -1,7 +1,7 @@
 #
 # INTEL CONFIDENTIAL
 #
-# Copyright 2013-2014 Intel Corporation All Rights Reserved.
+# Copyright 2013-2015 Intel Corporation All Rights Reserved.
 #
 # The source code contained or described herein and all documents related
 # to the source code ("Material") are owned by Intel Corporation or its
@@ -33,6 +33,8 @@ from chroma_agent.log import daemon_log, console_log
 from chroma_agent import config
 from chroma_agent.chroma_common.lib.exception_sandbox import exceptionSandBox
 from chroma_agent.chroma_common.lib.agent_rpc import agent_error, agent_result, agent_result_ok
+from chroma_agent.lib.pacemaker import cibadmin
+from chroma_agent.action_plugins.manage_pacemaker import PreservePacemakerCorosyncState
 
 
 def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
@@ -104,36 +106,18 @@ def writeconf_target(device=None, target_types=(), mgsnode=(), fsname=None,
 
 
 def get_resource_location(resource_name):
-    # FIXME: this may break on non-english systems or new versions of pacemaker
-    rc, lines_text, stderr = shell.run(["crm_mon", "-1", "-r"])
-    if rc != 0:
+    '''
+    Given a resource name testfs-MDT0000_f64edc for example, return the host it is mounted on
+    :param resource_name: Name of resource to find.
+    :return: host currently mounted on or None if not mounted.
+    '''
+    locations = get_resource_locations()
+
+    if type(locations) is not dict:
         # Pacemaker not running, or no resources configured yet
         return None
 
-    before_resources = True
-    for line in lines_text.split("\n"):
-        # skip down to the resources part
-        if before_resources:
-            if line.startswith("Full list of resources:"):
-                before_resources = False
-            continue
-
-        # only interested in Target resources
-        if not "(ocf::chroma:Target)" in line:
-            continue
-
-        # The line can have 3 or 4 arguments so pad it out to at least 4 and
-        # throw away any extra
-        # credit it goes to Aric Coady for this little trick
-        rsc_id, type, status, host = (line.rstrip().lstrip().split() + [None])[:4]
-
-        if rsc_id == resource_name:
-            # host will be None if it's not started due to the trick above
-            # because the host only shows up as the 4th item when it's
-            # started and gets the padded value of None above when it's not
-            return host
-
-    return None
+    return locations.get(resource_name)
 
 
 @exceptionSandBox(console_log, None)
@@ -303,27 +287,27 @@ def unconfigure_target_ha(primary, ha_label, uuid):
 
     Return: Value using simple return protocol
     '''
-    from chroma_agent.lib.pacemaker import cibadmin
 
-    if get_resource_location(ha_label):
-        return "cannot unconfigure-ha: %s is still running " % ha_label
+    with PreservePacemakerCorosyncState():
+        if get_resource_location(ha_label):
+            return agent_error("cannot unconfigure-ha: %s is still running " % ha_label)
 
-    if primary:
-        rc, stdout, stderr = cibadmin(["-D", "-X",
-                                       "<rsc_location id=\"%s-primary\">" %
-                                       ha_label])
-        rc, stdout, stderr = cibadmin(["-D", "-X", "<primitive id=\"%s\">" %
-                                       ha_label])
+        if primary:
+            rc, stdout, stderr = cibadmin(["-D", "-X",
+                                           "<rsc_location id=\"%s-primary\">" %
+                                           ha_label])
+            rc, stdout, stderr = cibadmin(["-D", "-X", "<primitive id=\"%s\">" %
+                                           ha_label])
 
-        if rc != 0 and rc != 234:
-            return agent_error("Error %s trying to cleanup resource %s" % (rc, ha_label))
+            if rc != 0 and rc != 234:
+                return agent_error("Error %s trying to cleanup resource %s" % (rc, ha_label))
 
-    else:
-        rc, stdout, stderr = cibadmin(["-D", "-X",
-                                       "<rsc_location id=\"%s-secondary\">" %
-                                       ha_label])
+        else:
+            rc, stdout, stderr = cibadmin(["-D", "-X",
+                                           "<rsc_location id=\"%s-secondary\">" %
+                                           ha_label])
 
-    return agent_result_ok
+        return agent_result_ok
 
 
 def unconfigure_target_store(uuid):
@@ -354,7 +338,6 @@ def configure_target_ha(primary, device, ha_label, uuid, mount_point):
 
     Return: Value using simple return protocol
     '''
-    from chroma_agent.action_plugins.manage_corosync import cibadmin
 
     if primary:
         # If the target already exists with the same params, skip.
@@ -450,6 +433,41 @@ def unmount_target(uuid):
     filesystem.umount(info['target_name'], info['mntpt'])
 
 
+def _wait_target(ha_label, started):
+    '''
+    Wait for a target to be started/stopped
+    :param ha_label: Label of target to wait for
+    :param started: True if waiting for started, False if waiting for stop.
+    :return: True if successful.
+    '''
+
+    # Now wait for it to stop, if a log of things are starting/stopping this can take a long long time.
+    # So if the number of things started is changing we keep going, but when nothing at all has stopped
+    # for 2 minutes we timeout, but an overall timeout of 20 minutes.
+    master_timeout = 1200
+    activity_timeout = 120
+    started_items = -1
+
+    while (master_timeout > 0) and (activity_timeout > 0):
+        locations = get_resource_locations()
+
+        if (locations.get(ha_label) != None) == started:
+            return True
+
+        current_started_items = reduce(lambda x, y: x + 1 if y is not None else x, [0] + locations.values())
+
+        if started_items != current_started_items:
+            started_items = current_started_items
+            activity_timeout = 120
+
+        time.sleep(1)
+
+        master_timeout -= 1
+        activity_timeout -= 1
+
+    return False
+
+
 def start_target(ha_label):
     '''
     Start the high availability target
@@ -467,14 +485,7 @@ def start_target(ha_label):
             return agent_error(error)
 
         # now wait for it to start
-        timeout = 100
-        n = 0
-        while n < timeout:
-            if get_resource_location(ha_label):
-                break
-
-            time.sleep(1)
-            n += 1
+        _wait_target(ha_label, True)
 
         # and make sure it didn't start but (the RA) fail(ed)
         rc, stdout, stderr = shell.run(['crm_mon', '-1'])
@@ -515,19 +526,10 @@ def stop_target(ha_label):
     if error:
         return agent_error(error)
 
-    # now wait for it to stop
-    timeout = 100
-    n = 0
-    while n < timeout:
-        if not get_resource_location(ha_label):
-            break
-        time.sleep(1)
-        n += 1
+    if _wait_target(ha_label, False):
+        return agent_result_ok
 
-    if n == timeout:
-        return agent_error("failed to stop target %s" % ha_label)
-
-    return agent_result_ok
+    return agent_error("failed to stop target %s" % ha_label)
 
 
 # common plumbing for failover/failback

@@ -68,7 +68,6 @@ class TestManagedFilesystemWithFailover(FailoverTestCaseMixin, StatsTestCaseMixi
             )
 
     def test_create_filesystem_with_failover_mds(self):
-
         filesystem_id, volumes_expected_hosts_in_normal_state = self._test_create_filesystem_with_failover()
 
         # Test failover if the cluster config indicates that failover has

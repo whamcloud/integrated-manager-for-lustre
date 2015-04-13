@@ -22,10 +22,10 @@
 
 from django.db import models
 from chroma_core.lib.job import DependOn, DependAll, Step, job_log
-from chroma_core.models.target import ManagedTargetMount, ManagedMgs, FilesystemMember, ManagedTarget
-from chroma_core.models.host import NoNidsPresent
-from chroma_core.models.jobs import StatefulObject, StateChangeJob, StateLock, Job
-from chroma_core.models.utils import DeletableDowncastableMetaclass, MeasuredEntity
+from chroma_core.models import ManagedTargetMount, ManagedMgs, FilesystemMember, ManagedTarget
+from chroma_core.models import NoNidsPresent
+from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job
+from chroma_core.models import DeletableDowncastableMetaclass, MeasuredEntity
 from chroma_core.lib.cache import ObjectCache
 from django.db.models import Q
 from chroma_help.help import help_text

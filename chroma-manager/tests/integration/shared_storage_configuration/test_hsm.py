@@ -9,7 +9,6 @@ logger = logging.getLogger('test')
 logger.setLevel(logging.DEBUG)
 
 from tests.integration.core.chroma_integration_testcase import ChromaIntegrationTestCase
-from tests.integration.core.api_testcase import COPYTOOL_TESTING_FIFO_ROOT
 
 
 class TestHsmCoordinatorControl(ChromaIntegrationTestCase):
@@ -143,7 +142,7 @@ def patch_fifo(obj):
 @patch('cluster_sim.fake_hsm_copytool.FakeHsmCopytoolThread._open_fifo', patch_fifo)
 class TestHsmCopytoolEventRelay(ManagedCopytoolTestCase):
     def _get_fifo_writer(self, copytool):
-        fifo_path = os.path.join(COPYTOOL_TESTING_FIFO_ROOT,
+        fifo_path = os.path.join(self.COPYTOOL_TESTING_FIFO_ROOT,
                                  "%s-%s-events" % (copytool['host']['address'],
                                                    copytool['label']))
         logger.info("Opening %s for write in test harness" % fifo_path)

@@ -29,8 +29,7 @@ from django.db import transaction
 from django.db.models import DateTimeField
 from django.db.models.query_utils import Q
 
-from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
-from chroma_core.services.job_scheduler.job_scheduler_client import NotificationQueue
+from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services import ChromaService, ServiceThread, log_register
 from chroma_core.models.jobs import Job, Command
 
@@ -39,11 +38,11 @@ log = log_register(__name__)
 
 
 class QueueHandler(object):
-    """Service ModiticationNotificationQueue and call into JobScheduler on message
+    """Service ModificationNotificationQueue and call into JobScheduler on message
 
     """
     def __init__(self, job_scheduler):
-        self._queue = NotificationQueue()
+        self._queue = job_scheduler_notify.NotificationQueue()
         self._queue.purge()
         self._job_scheduler = job_scheduler
 
@@ -96,6 +95,7 @@ class Service(ChromaService):
     def run(self):
         from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
         from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerRpc
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
 
         # Cancel anything that's left behind from a previous run
         Command.objects.filter(complete = False).update(complete = True, cancelled = True)
@@ -122,6 +122,8 @@ class Service(ChromaService):
             self._job_scheduler.cancel_job(job.id)
 
     def stop(self):
+        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
+
         # Guard against trying to stop after child threads are created, but before they are started
         self._children_started.wait()
 

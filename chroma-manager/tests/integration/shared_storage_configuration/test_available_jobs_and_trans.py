@@ -36,24 +36,27 @@ class TestAvailable(ChromaIntegrationTestCase):
     def test_available_jobs(self):
         """Test that hosts job can be looked on the JobScheduler over RPC"""
 
+        def check_expected_jobs(server, expected_jobs):
+            host = self.get_list("/api/host/",
+                                  args={'fqdn': server['fqdn']})[0]
+
+            returned_jobs = [job['class_name'] for job in host['available_jobs']]
+
+            self.assertEqual(set(returned_jobs), set(expected_jobs),
+                             'Host state %s (%s)\n Host Alerts [%s]' % (
+                                 host['state'],
+                                 self.get_json_by_uri(host['resource_uri'])['state'],
+                                 ', '.join([alert['alert_type'] for alert in self.get_list("/api/alert/", {'active': True,
+                                                                                                           'alert_item_id': host['id']})])))
+
         server_config_1 = config['lustre_servers'][0]
 
         # Add two hosts
         self.add_hosts([server_config_1['address']])
 
-        host1 = self.get_list("/api/host/",
-                              args={'fqdn': server_config_1['fqdn']})[0]
-
         #  Since no jobs are incomplete (could check it, but na...)
         #  We ought to get some available states, more than 1 at least.
-        returned_jobs = [job['class_name'] for job in host1['available_jobs']]
-        expected_jobs = ['ForceRemoveHostJob', 'RebootHostJob', 'ShutdownHostJob']
-        self.assertEqual(set(returned_jobs),
-                         set(expected_jobs),
-                         'Host state %s (%s)\n Host Alerts [%s]' % (host1['state'],
-                                                                    self.get_json_by_uri(host1['resource_uri'])['state'],
-                                                                   ', '.join([alert['alert_type'] for alert in self.get_list("/api/alert/", {'active': True,
-                                                                                                                                              'alert_item_id': host1['id']})])))
+        self.wait_for_assert(lambda: check_expected_jobs(server_config_1, ['ForceRemoveHostJob', 'RebootHostJob', 'ShutdownHostJob']))
 
     def test_available_actions(self):
         """Test that hosts actions can be looked on the JobScheduler over RPC

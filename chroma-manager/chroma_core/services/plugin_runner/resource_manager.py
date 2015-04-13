@@ -41,6 +41,7 @@ from chroma_core.lib.storage_plugin.base_plugin import BaseStoragePlugin
 from chroma_core.lib.storage_plugin.query import ResourceQuery
 
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
+from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.dbutils import advisory_lock
 from chroma_core.lib.storage_plugin.api import attributes, relations
 
@@ -835,17 +836,23 @@ class ResourceManager(object):
             nw_resource = nw_resource.to_resource()
 
             if (nw_resource.host_id == host.id):
-                nw_interface, created = NetworkInterface.objects.get_or_create(host = host,
-                                                                               name = nw_resource.name)
+                try:
+                    nw_interface = NetworkInterface.objects.get(host = host,
+                                                                name = nw_resource.name)
+                except NetworkInterface.DoesNotExist:
+                    nw_interface = NetworkInterface.objects.create(host = host,
+                                                                   name = nw_resource.name,
+                                                                   inet4_prefix = nw_resource.inet4_prefix)
 
                 nw_interface.inet4_address = nw_resource.inet4_address
+                nw_interface.inet4_prefix = nw_resource.inet4_prefix
                 nw_interface.type = nw_resource.type
                 nw_interface.state_up = nw_resource.up
                 nw_interface.save()
 
                 nw_interfaces[nw_resource._handle] = nw_interface
 
-                log.debug("_persist_nid_updates nw_resource %s %s" % (nw_interface, "created" if created else "updated"))
+                log.debug("_persist_nid_updates nw_resource %s" % nw_interface)
 
         for lnet_state_resource in node_resources[LNETModules]:
             lnet_state = lnet_state_resource.to_resource()

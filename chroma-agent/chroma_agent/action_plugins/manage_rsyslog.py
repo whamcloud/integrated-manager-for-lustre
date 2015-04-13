@@ -22,6 +22,7 @@ import os
 
 from chroma_agent.chroma_common.lib import shell
 from chroma_agent.device_plugins.syslog import SYSLOG_PORT
+from chroma_agent.chroma_common.lib.agent_rpc import agent_ok_or_error
 
 
 def unconfigure_rsyslog():
@@ -30,7 +31,7 @@ def unconfigure_rsyslog():
 
     :return: None
     """
-    _configure_rsyslog("")
+    return _configure_rsyslog("")
 
 
 def configure_rsyslog():
@@ -39,7 +40,7 @@ def configure_rsyslog():
 
     :return: None
     """
-    _configure_rsyslog("127.0.0.1")
+    return _configure_rsyslog("127.0.0.1")
 
 
 def _configure_rsyslog(destination):
@@ -67,10 +68,14 @@ def _configure_rsyslog(destination):
     os.chmod(tmp_name, 0644)
     os.rename(tmp_name, "/etc/rsyslog.conf")
 
+    error = None
+
     # signal the process
     rc, stdout, stderr = shell.run(['service', 'rsyslog', 'reload'])
     if rc != 0:
-        shell.try_run(['service', 'rsyslog', 'restart'])
+        error = shell.run_canned_error_message(['service', 'rsyslog', 'restart'])
+
+    return agent_ok_or_error(error)
 
 
 ACTIONS = [configure_rsyslog, unconfigure_rsyslog]
