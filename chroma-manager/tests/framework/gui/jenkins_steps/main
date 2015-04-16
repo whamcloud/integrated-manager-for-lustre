@@ -65,7 +65,10 @@ cat selenium_cluster_config.json
 # --------------------------------------------------------------------
 eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py selenium_cluster_config.json)
 ssh root@$CHROMA_MANAGER "set -xe
-sed -i -e 's/\(distro=el6\).3\//\1\//' -e \"s/Aitahd9u/$JENKINS_PULL/g\"  -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' /etc/yum.repos.d/autotest.repo
+set +x
+echo \"+ sed -i -e 's/\(distro=el6\).3\//\1\//' -e 's/Aitahd9u/$JENKINS_PULL/g' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' -e 's|jenkins:8080/|${JENKINS_URL#*//}|g' /etc/yum.repos.d/autotest.repo\"
+sed -i -e 's/\(distro=el6\).3\//\1\//' -e 's/Aitahd9u/$JENKINS_PULL/g' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' -e 's|jenkins:8080/|${JENKINS_URL#*//}|g' /etc/yum.repos.d/autotest.repo
+set -x
 cd /etc/yum.repos.d/
 for f in *.repo; do
   sed -i -e 's/distro=[^\/][^\/]*/distro=el6.4/' \$f

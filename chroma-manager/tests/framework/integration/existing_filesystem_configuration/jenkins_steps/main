@@ -51,17 +51,14 @@ fi
 python chroma/chroma-manager/tests/framework/utils/provisioner_interface/provisioner_json2test_json.py provisioner_output.json existing_filesystem_configuration_cluster_cfg.json
 cat existing_filesystem_configuration_cluster_cfg.json
 
-# see if this cures the 401 errors from jenkins
 eval $(python chroma/chroma-manager/tests/utils/json_cfg2sh.py existing_filesystem_configuration_cluster_cfg.json)
 pdsh -R ssh -l root -S -w $(spacelist_to_commalist ${STORAGE_APPLIANCES[@]} ${WORKERS[@]} $CHROMA_MANAGER $TEST_RUNNER) "exec 2>&1; set -xe
-if [ -f /etc/yum.repos.d/autotest.repo ]; then
-    set +x
-    sed -i -e 's/Aitahd9u/$JENKINS_PULL/g' /etc/yum.repos.d/autotest.repo
-    set -x
-fi
 pushd /etc/yum.repos.d/
 for f in *.repo; do
-  sed -i -e 's/distro=[^\/][^\/]*/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' \$f
+  set +x
+  echo \"+ sed -i -e 's/distro=[^\/][^\/]*/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' -e 's/Aitahd9u/********/g' -e 's|jenkins:8080/|${JENKINS_URL#*//}|g' \$f\"
+  sed -i -e 's/distro=[^\/][^\/]*/distro=el6.4/' -e 's/http:\/\/jenkins-pull/https:\/\/jenkins-pull/g' -e 's/Aitahd9u/$JENKINS_PULL/g' -e 's|jenkins:8080/|${JENKINS_URL#*//}|g' \$f
+  set -x
 done
 popd
 
